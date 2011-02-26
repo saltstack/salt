@@ -11,6 +11,8 @@ import tempfile
 from M2Crypto import RSA
 # Import zeromq libs
 import zmq
+# Import salt utils
+import salt.utils
 
 class Auth(object):
     '''
@@ -22,6 +24,9 @@ class Auth(object):
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
 
     def __foo_pass(self):
+        '''
+        used as a workaround for the no-passphrase issue in M2Crypto.RSA
+        '''
         return 'foo'
 
     def get_priv_key(self):
@@ -33,7 +38,7 @@ class Auth(object):
             gen.save_key(self.rsa_path, callback=self.__foo_pass)
             pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
             gen.save_pub_key(pub_path)
-        key = RSA.load_key(rsa_path, callback=self.__foo_pass)
+        key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
         return key
 
     def minion_sign_in_payload(self):
@@ -58,7 +63,7 @@ class Auth(object):
         Returns the decrypted aes seed key, a string
         '''
         key = self.get_priv_key()
-        return key.private_decrypt(enc_aes)
+        return key.private_decrypt(enc_aes, 4)
     
     def verify_master(self, master_pub, token):
         '''
