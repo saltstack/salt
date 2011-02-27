@@ -5,7 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 # Import python modules
 import os
 import random
-import multiprocesing
+import multiprocessing
 # Import zeromq
 import zmq
 # Import salt modules
@@ -41,7 +41,7 @@ class Publisher(multiprocessing.Process):
         '''
         Start the publisher
         '''
-        self._bind()
+        self.__bind()
 
 
 class ReqServer(multiprocessing.Process):
