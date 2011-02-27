@@ -15,7 +15,7 @@ def daemonize():
             # exit first parent
             sys.exit(0) 
     except OSError, e: 
-        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+        print >> sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
         sys.exit(1)
 
     # decouple from parent environment
@@ -30,7 +30,7 @@ def daemonize():
             # print "Daemon PID %d" % pid 
             sys.exit(0) 
     except OSError, e: 
-        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
+        print >> sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
         sys.exit(1) 
 
     dev_null = open('/dev/null','rw') 
