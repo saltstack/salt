@@ -45,3 +45,10 @@ class Minion(object):
                'config': options.config}
 
         return cli
+
+    def start(self):
+        '''
+        Execute this method to start up a minion.
+        '''
+        minion = salt.Minion(opts)
+        minion.tune_in()
