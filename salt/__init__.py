@@ -50,5 +50,5 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
-        minion = salt.Minion(opts)
+        minion = salt.Minion(self.opts)
         minion.tune_in()
