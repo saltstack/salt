@@ -36,7 +36,8 @@ class Minion(object):
         Parses through the modules in the modules directory and loads up all of
         the functions.
         '''
-        # This is going to need some work to clean it up and expand functionality.
+        # This is going to need some work to clean it up and expand
+        # functionality.
         functions = {}
         mods = set()
         mod_dir = os.path.join(distutils.sysconfig.get_python_lib(),
@@ -44,9 +45,9 @@ class Minion(object):
         for fn_ in os.listdir(mod_dir):
             if fn_.startswith('__init__.py'):
                 continue
-            if fn_.endswith('.pyo')
-                or fn_.endswith('.py') 
-                or fn_.endswith('.pyc'):
+            if fn_.endswith('.pyo')\
+                    or fn_.endswith('.py')\
+                    or fn_.endswith('.pyc'):
                 mods.add(fn_[:fn_.rindex('.')])
         for mod in mods:
             imp = __import__('salt.modules.' + mod)
