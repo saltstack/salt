@@ -105,6 +105,6 @@ class Auth(object):
         if not self.verify_master(ret['pub_key'], ret['token']):
             return auth
         auth['aes'] = self.decrypt_master_aes(ret['aes'])
-        auth['master_publish'] = ret['master_publish']
+        auth['master_publish_port'] = ret['master_publish_port']
         return auth
 
