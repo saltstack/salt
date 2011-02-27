@@ -1,4 +1,7 @@
 #!/usr/bin/python2
+'''
+The setup script for salt
+'''
 
 from distutils.core import setup
 
