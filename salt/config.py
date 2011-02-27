@@ -1,4 +1,6 @@
-
+'''
+All salt configuration loading and defaults should be in this module
+'''
 # Import python modules
 import os
 import socket
@@ -16,7 +18,7 @@ def minion_config(path):
             }
 
     if os.path.isfile(path):
-        opts.update(yaml.load(open(conf, 'r')))
+        opts.update(yaml.load(open(path, 'r')))
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
 
@@ -29,6 +31,6 @@ def master_config(path):
     opts = {}
 
     if os.path.isfile(path):
-        opts.update(yaml.load(open(conf, 'r')))
+        opts.update(yaml.load(open(path, 'r')))
     
     return opts
