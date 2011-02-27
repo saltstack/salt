@@ -1,0 +1,15 @@
+#!/usr/bin/env python2
+'''
+This script is used to kick off a 
+'''
+import salt
+
+def main():
+    '''
+    The main function
+    '''
+    minion = salt.Minion()
+    minion.start()
+
+if __name__ == '__main__':
+    main()
