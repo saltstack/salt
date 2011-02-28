@@ -7,6 +7,7 @@ import optparse
 # Import salt libs
 import salt.master
 import salt.minion
+import salt.config
 import salt.utils
 
 class Master(object):
@@ -21,7 +22,7 @@ class Minion(object):
     '''
     def __init__(self):
         self.cli = self.__parse_cli()
-        self.opts = salt.utils.minion_config(self.cli)
+        self.opts = salt.config.minion_config(self.cli)
 
     def __parse_cli(self):
         '''

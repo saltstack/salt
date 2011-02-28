@@ -14,7 +14,7 @@ makedepends=()
 optdepends=()
 options=()
 source=("$pkgname-$pkgver.tar.gz")
-md5sums=('44957d7faabbe6dece7d8ddee5ac1af9')
+md5sums=('923fe5de8ec88900e70b6996ae3a2ff1')
 
 package() {
   cd $srcdir/$pkgname-$pkgver
