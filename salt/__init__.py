@@ -95,7 +95,7 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
-        minion = salt.Minion(self.opts)
+        minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             salt.utils.daemonize()
         minion.tune_in()
