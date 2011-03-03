@@ -119,7 +119,7 @@ class ReqServer(threading.Thread):
         self.__bind()
 
 
-class LocalServer(threading.Thread):
+class LocalServer(ReqServer):
     '''
     Create the localhost communication interface for root clients to connect
     to
@@ -133,7 +133,7 @@ class LocalServer(threading.Thread):
         self.publisher = Publisher(opts)
         self.publisher.start()
         # Create clients socket
-        self.c_uri = 'tcp://localhost:' + self.opts['local_port']
+        self.c_uri = 'tcp://127.0.0.1:' + self.opts['local_port']
         self.clients = self.context.socket(zmq.XREP)
         # Create workers inproc
         self.w_uri = 'inproc://locals'
@@ -172,23 +172,3 @@ class LocalServer(threading.Thread):
                 continue
             cmd = salt.utils.prep_publish_cmd(message['cmd'])
             self.publisher.command(cmd)
-
-    def __bind(self):
-        '''
-        Binds the reply server
-        '''
-        self.clients.bind(self.c_uri)
-
-        self.workers.bind(self.w_uri)
-
-        for ind in range(int(self.num_threads)):
-            proc = threading.Thread(target=self.__worker)
-            proc.start()
-
-        zmq.device(zmq.QUEUE, self.clients, self.workers)
-
-    def run(self):
-        '''
-        Start up the ReqServer
-        '''
-        self.__bind()
