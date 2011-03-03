@@ -6,7 +6,6 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import random
 import time
-import multiprocessing
 import threading
 # Import zeromq
 import zmq
@@ -35,13 +34,13 @@ class Master(object):
             time.sleep(1)
 
 
-class Publisher(multiprocessing.Process):
+class Publisher(threading.Thread):
     '''
     The publihing interface, a simple zeromq publisher that sends out the
     commands.
     '''
     def __init__(self, opts):
-        multiprocessing.Process.__init__(self)
+        threading.Thread.__init__(self)
         self.opts = opts
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
@@ -69,13 +68,13 @@ class Publisher(multiprocessing.Process):
         self.__bind()
 
 
-class ReqServer(multiprocessing.Process):
+class ReqServer(threading.Thread):
     '''
-    Starts up a multiproceesing request server, minions send results to this
+    Starts up a threaded request server, minions send results to this
     interface.
     '''
     def __init__(self, opts):
-        multiprocessing.Process.__init__(self)
+        threading.Thread.__init__(self)
         self.opts = opts
         self.num_threads = self.opts['worker_threads']
         self.context = zmq.Context(1)
@@ -89,7 +88,7 @@ class ReqServer(multiprocessing.Process):
 
     def __worker(self):
         '''
-        Starts up a worker multiprocess
+        Starts up a worker thread
         '''
         socket = self.context.socket(zmq.REP)
         socket.connect(self.w_uri)
