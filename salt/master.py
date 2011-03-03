@@ -136,7 +136,8 @@ class LocalServer(ReqServer):
         clients are required to run as root.
         '''
         keyfile = os.path.join(self.opts['cachedir'], 'root_key')
-        key = random.randint(100000000000000000000000, 999999999999999999999999)
+        key = str(random.randint(100000000000000000000000,
+            999999999999999999999999))
         open(keyfile, 'w+').write(key)
         return key
 
