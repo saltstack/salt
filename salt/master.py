@@ -5,6 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 # Import python modules
 import os
 import random
+import time
 import multiprocessing
 import threading
 # Import zeromq
@@ -26,12 +27,12 @@ class Master(object):
         '''
         Turn on the master server components
         '''
-        publister = Publisher(self.opts)
         reqserv = ReqServer(self.opts)
         local = LocalServer(self.opts)
-        publister.start()
         reqserv.start()
         local.start()
+        while True:
+            time.sleep(1)
 
 
 class Publisher(multiprocessing.Process):
@@ -51,6 +52,7 @@ class Publisher(multiprocessing.Process):
         '''
         binder = 'tcp://' + self.opts['interface'] + ':'\
                + self.opts['publish_port']
+        print binder
         self.socket.bind(binder)
 
     def command(self, cmd):
@@ -126,10 +128,18 @@ class LocalServer(ReqServer):
     def __init__(self, opts):
         ReqServer.__init__(self, opts)
         self.num_threads = self.opts['local_threads']
+        # Prep context
+        self.context = zmq.Context(1)
+        # Initialize Publisher
         self.publisher = Publisher(opts)
         self.publisher.start()
+        # Create clients socket
         self.c_uri = 'tcp://localhost:' + self.opts['local_port']
+        self.clients = self.context.socket(zmq.XREP)
+        # Create workers inproc
         self.w_uri = 'inproc://locals'
+        self.workers = self.context.socket(zmq.XREQ)
+        # Generate communication key - make this key more awesome
         self.key = self.__prep_key()
 
     def __prep_key(self):
