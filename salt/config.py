@@ -22,7 +22,7 @@ def minion_config(path):
         try:
             opts.update(yaml.load(open(path, 'r')))
         except:
-            err = 'The master configuration file did not parse correctly,'\
+            err = 'The minon configuration file did not parse correctly,'\
                 + ' please check your configuration file.\nUsing defaults'
             sys.stderr.write(err + '\n')
 
@@ -37,6 +37,11 @@ def master_config(path):
     opts = {}
 
     if os.path.isfile(path):
-        opts.update(yaml.load(open(path, 'r')))
+        try:
+            opts.update(yaml.load(open(path, 'r')))
+        except:
+            err = 'The master configuration file did not parse correctly,'\
+                + ' please check your configuration file.\nUsing defaults'
+            sys.stderr.write(err + '\n')
     
     return opts
