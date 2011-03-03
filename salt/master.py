@@ -25,9 +25,9 @@ class Master(object):
         '''
         Turn on the master server components
         '''
-        publister = Publisher(opts)
-        reqserv = ReqServer(opts)
-        local = LocalServer(opts)
+        publister = Publisher(self.opts)
+        reqserv = ReqServer(self.opts)
+        local = LocalServer(self.opts)
         publister.start()
         reqserv.start()
         local.start()
