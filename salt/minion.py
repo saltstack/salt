@@ -16,7 +16,7 @@ import salt.utils
 # 3. Authenticate with the master
 # 4. Store the aes key
 # 5. connect to the publisher
-#
+# 6. handle publications
 
 class Minion(object):
     '''
