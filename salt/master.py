@@ -106,7 +106,7 @@ class ReqServer(multiprocessing.Process):
         self.workers.bind(self.w_uri)
 
         for ind in range(int(self.num_threads)):
-            proc = multiprocessing.Process(target=self.__worker)
+            proc = threading.Thread(target=self.__worker)
             proc.start()
 
         zmq.device(zmq.QUEUE, self.clients, self.workers)
