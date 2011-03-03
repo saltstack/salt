@@ -11,6 +11,28 @@ import zmq
 # Import salt modules
 import salt.utils
 
+class Master(object):
+    '''
+    The salt master server
+    '''
+    def __init__(self, opts):
+        '''
+        Create a salt master server instance
+        '''
+        self.opts = opts
+
+    def start(self):
+        '''
+        Turn on the master server components
+        '''
+        publister = Publisher(opts)
+        reqserv = ReqServer(opts)
+        local = LocalServer(opts)
+        publister.start()
+        reqserv.start()
+        local.start()
+
+
 class Publisher(multiprocessing.Process):
     '''
     The publihing interface, a simple zeromq publisher that sends out the
