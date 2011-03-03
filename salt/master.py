@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import random
 import multiprocessing
+import threading
 # Import zeromq
 import zmq
 # Import salt modules
@@ -82,7 +83,7 @@ class ReqServer(multiprocessing.Process):
         self.clients = self.context.socket(zmq.XREP)
 
         self.workers = self.context.socket(zmq.XREQ)
-        self.w_uri = 'tcp://localhost:' + self.opts['worker_port']
+        self.w_uri = 'inproc://wokers'
 
     def __worker(self):
         '''
@@ -105,7 +106,8 @@ class ReqServer(multiprocessing.Process):
         self.workers.bind(self.w_uri)
 
         for ind in range(int(self.num_threads)):
-            multiprocessing.Process(target=self.__worker).start()
+            proc = multiprocessing.Process(target=self.__worker)
+            proc.start()
 
         zmq.device(zmq.QUEUE, self.clients, self.workers)
 
@@ -127,7 +129,7 @@ class LocalServer(ReqServer):
         self.publisher = Publisher(opts)
         self.publisher.start()
         self.c_uri = 'tcp://localhost:' + self.opts['local_port']
-        self.w_uri = 'tcp://localhost:' + self.opts['local_worker_port']
+        self.w_uri = 'inproc://locals'
         self.key = self.__prep_key()
 
     def __prep_key(self):
