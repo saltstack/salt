@@ -41,10 +41,19 @@ class Master(object):
 
         return cli
 
+    def _verify_env(self):
+        '''
+        Verify that the named direcotries are in place and that the environment
+        can shake the salt
+        '''
+        if not os.path.isdir(self.opts['cachedir']):
+            os.makedirs(self.opts['cachedir'])
+
     def start(self):
         '''
         Run the sequence to start a salt master server
         '''
+        self._verify_env()
         master = salt.master.Master(self.opts)
         master.start()
 
