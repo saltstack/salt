@@ -13,7 +13,7 @@ def minion_config(path):
     Reads in the minion configuration file and sets up special options
     '''
     opts = {'master': 'mcp',
-            'master_port': '7777',
+            'master_port': '4505',
             'pki_dir': '/etc/salt/pki',
             'hostname': socket.getfqdn(),
             }
@@ -35,13 +35,11 @@ def master_config(path):
     Reads in the master configuration file and sets up default options
     '''
     opts = {'interface': '0.0.0.0',
-            'publish_port': '7777',
+            'publish_port': '4505',
             'worker_threads': 5,
-            'worker_port': '7778',
-            'ret_port': '7776',
+            'ret_port': '4506',
             'local_threads': 5,
-            'local_port': '7775',
-            'local_worker_port': '7774',
+            'local_port': '4507',
             'cachedir': '/var/cache/salt'}
 
     if os.path.isfile(path):
