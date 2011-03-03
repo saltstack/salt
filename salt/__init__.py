@@ -45,8 +45,8 @@ class Master(object):
         '''
         Run the sequence to start a salt master server
         '''
-        pass
-
+        master = salt.Master(self.opts)
+        master.start()
 
 
 class Minion(object):
