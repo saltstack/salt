@@ -45,7 +45,7 @@ class Master(object):
         '''
         Run the sequence to start a salt master server
         '''
-        master = salt.Master(self.opts)
+        master = salt.master.Master(self.opts)
         master.start()
 
 
