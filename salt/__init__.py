@@ -23,12 +23,12 @@ class Master(object):
         Parse the cli for options passed to a master daemon
         '''
         parser = optparse.OptionParser()
-        parser.add_option('-f',
-                '--foreground',
-                dest='foreground',
+        parser.add_option('-d',
+                '--daemon',
+                dest='daemon',
                 default=False,
                 action='store_true',
-                help='Run the master in the foreground')
+                help='Run the master in a daemon')
         parser.add_option('-c',
                 '--config',
                 dest='config',
@@ -36,7 +36,7 @@ class Master(object):
                 help='Pass in an alternative configuration file')
         
         options, args = parser.parse_args()
-        cli = {'foreground': options.foreground,
+        cli = {'daemon': options.daemon,
                'config': options.config}
 
         return cli
@@ -55,6 +55,8 @@ class Master(object):
         '''
         self._verify_env()
         master = salt.master.Master(self.opts)
+        if self.opts['daemon']:
+            salt.utils.daemonize()
         master.start()
 
 
@@ -71,12 +73,12 @@ class Minion(object):
         Parse the cli input
         '''
         parser = optparse.OptionParser()
-        parser.add_option('-f',
-                '--foreground',
-                dest='foreground',
+        parser.add_option('-d',
+                '--daemon',
+                dest='daemon',
                 default=False,
                 action='store_true',
-                help='Run the minion in the foreground')
+                help='Run the minion as a daemon')
         parser.add_option('-c',
                 '--config',
                 dest='config',
@@ -84,7 +86,7 @@ class Minion(object):
                 help='Pass in an alternative configuration file')
         
         options, args = parser.parse_args()
-        cli = {'foreground': options.foreground,
+        cli = {'daemon': options.daemon,
                'config': options.config}
 
         return cli
@@ -94,4 +96,6 @@ class Minion(object):
         Execute this method to start up a minion.
         '''
         minion = salt.Minion(self.opts)
+        if self.opts['daemon']:
+            salt.utils.daemonize()
         minion.tune_in()
