@@ -16,7 +16,7 @@ class Master(object):
     '''
     def __init__(self):
         self.cli = self.__parse_cli()
-        self.opts = salt.config.master_config(self.cli)
+        self.opts = salt.config.master_config(self.cli['config'])
 
     def __parse_cli(self):
         '''

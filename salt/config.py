@@ -3,6 +3,7 @@ All salt configuration loading and defaults should be in this module
 '''
 # Import python modules
 import os
+import sys
 import socket
 # Import third party libs
 import yaml
@@ -18,7 +19,12 @@ def minion_config(path):
             }
 
     if os.path.isfile(path):
-        opts.update(yaml.load(open(path, 'r')))
+        try:
+            opts.update(yaml.load(open(path, 'r')))
+        except:
+            err = 'The master configuration file did not parse correctly,'\
+                + ' please check your configuration file.\nUsing defaults'
+            sys.stderr.write(err + '\n')
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
 
