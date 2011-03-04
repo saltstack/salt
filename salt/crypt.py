@@ -105,7 +105,7 @@ class Auth(object):
         socket.connect(self.opts['master_uri'])
         payload = salt.payload.package(self.minion_sign_in_payload())
         socket.send(payload)
-        ret = salt.utils.unpackage(socket.recv())
+        ret = salt.payload.unpackage(socket.recv())
         if not self.verify_master(ret['pub_key'], ret['token']):
             return auth
         auth['aes'] = self.decrypt_master_aes(ret['aes'])

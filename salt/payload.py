@@ -20,6 +20,23 @@ def package(payload, form='pickle', protocol=2):
         package = pickle.dumps(payload, protocol)
     return package
 
+def unpackage(package):
+    '''
+    Unpackages a payload
+    '''
+    # yes, this is dirty for json support, I know it needs some love
+    payload = None
+    try:
+        payload = pickle.loads(package)
+    except:
+        pass
+    if not payload:
+        try:
+            payload = json.loads(package)
+        except ValueError:
+            pass
+    return payload
+
 def aes(payload, key):
     '''
     Encrypt the payload with AES encryption.
