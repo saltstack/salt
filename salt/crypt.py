@@ -99,7 +99,7 @@ class Auth(object):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
-        payload = salt.utils.package_payload(self.minion_sign_in_payload())
+        payload = salt.payload.package_payload(self.minion_sign_in_payload())
         socket.send(payload)
         ret = salt.utils.unpackage(socket.recv())
         if not self.verify_master(ret['pub_key'], ret['token']):
