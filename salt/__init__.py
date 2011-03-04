@@ -10,6 +10,15 @@ import salt.minion
 import salt.config
 import salt.utils
 
+def verify_env(dirs):
+    '''
+    Verify that the named direcotries are in place and that the environment
+    can shake the salt
+    '''
+    for dir_ in dirs:
+        if not os.path.isdir(dir_):
+            os.makedirs(dir_)
+
 class Master(object):
     '''
     Creates a master server
@@ -41,19 +50,11 @@ class Master(object):
 
         return cli
 
-    def _verify_env(self):
-        '''
-        Verify that the named direcotries are in place and that the environment
-        can shake the salt
-        '''
-        if not os.path.isdir(self.opts['cachedir']):
-            os.makedirs(self.opts['cachedir'])
-
     def start(self):
         '''
         Run the sequence to start a salt master server
         '''
-        self._verify_env()
+        verify_env([self.opts['pki_dir'], self.opts['cachedir']])
         master = salt.master.Master(self.opts)
         if self.cli['daemon']:
             salt.utils.daemonize()
@@ -95,6 +96,7 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
+        verify_env([self.opts['pki_dir'], self.opts['cachedir']])
         minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             salt.utils.daemonize()
