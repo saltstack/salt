@@ -4,7 +4,6 @@ encrypted keys to general payload dynamics and packaging, these happen in here
 '''
 import os
 import cPickle as pickle
-import json
 
 def package(payload, form='pickle', protocol=2):
     '''
@@ -13,29 +12,13 @@ def package(payload, form='pickle', protocol=2):
     flexibility and compression, of json, for more compatability. The default
     is pickle
     '''
-    package = ''
-    if form == 'json':
-        package = json.dumps(payload)
-    else:
-        package = pickle.dumps(payload, protocol)
-    return package
+    return pickle.dumps(payload, protocol)
 
 def unpackage(package):
     '''
     Unpackages a payload
     '''
-    # yes, this is dirty for json support, I know it needs some love
-    payload = None
-    try:
-        payload = pickle.loads(package)
-    except:
-        pass
-    if not payload:
-        try:
-            payload = json.loads(package)
-        except ValueError:
-            pass
-    return payload
+    return = pickle.loads(package)
 
 def aes(payload, key):
     '''
