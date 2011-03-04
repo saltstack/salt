@@ -24,7 +24,7 @@ class Auth(object):
         self.opts = opts
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
 
-    def __foo_pass(self):
+    def __foo_pass(self, data=''):
         '''
         used as a workaround for the no-passphrase issue in M2Crypto.RSA
         '''
@@ -34,12 +34,15 @@ class Auth(object):
         '''
         Retruns a private key object derived from the passed host key
         '''
-        if not os.path.isfile(self.rsa_path):
+        key = None
+        try:
+            key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
+        except:
             gen = RSA.gen_key(2048, 1)
             gen.save_key(self.rsa_path, callback=self.__foo_pass)
             pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
             gen.save_pub_key(pub_path)
-        key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
+            key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
         return key
 
     def minion_sign_in_payload(self):
