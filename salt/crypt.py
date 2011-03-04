@@ -55,7 +55,8 @@ class Auth(object):
         key = self.get_priv_key()
         tmp_pub = tempfile.mktemp()
         key.save_pub_key(tmp_pub)
-        payload['cmd'] = 'auth'
+        payload['cmd'] = '_auth'
+        payload['id'] = '_auth'
         payload['hostname'] = self.opts['hostname']
         payload['pub'] = open(tmp_pub, 'r').read()
         return payload
