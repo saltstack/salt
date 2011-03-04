@@ -95,9 +95,10 @@ class ReqServer(threading.Thread):
         socket.connect(self.w_uri)
 
         while True:
-            message = socket.recv()
-            salt.payload.package(message)
-            socket.send(1)
+            package = socket.recv()
+            payload = salt.payload.unpackage(package)
+            ret = self._handle_payload(payload)
+            socket.send(ret)
 
     def __bind(self):
         '''
@@ -112,6 +113,39 @@ class ReqServer(threading.Thread):
             proc.start()
 
         zmq.device(zmq.QUEUE, self.clients, self.workers)
+
+    def _handle_payload(self, payload):
+        '''
+        The _handle_payload method is the key method used to figure out what
+        needs to be done with communication to the server
+        '''
+        return {'aes': self._handle_aes,
+                'pub': self._handle_pub,
+                'clear': self._handle_clear}[payload['enc']](payload[load])
+
+    def _handle_clear(self, load):
+        '''
+        Take care of a cleartext command
+        '''
+        return getattr(self, load['cmd'])(load)
+
+    def _handle_pub(self, load):
+        '''
+        Handle a command sent via a public key pair
+        '''
+        pass
+
+    def _handle_aes(self. load):
+        '''
+        Handle a command sent via an aes key
+        '''
+        pass
+
+    def _auth(self, load):
+        '''
+        Authenticate the client, use the sent public key to encrypt the aes key
+        which was generated at start up
+        '''
 
     def run(self):
         '''
