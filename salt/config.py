@@ -7,6 +7,8 @@ import sys
 import socket
 # Import third party libs
 import yaml
+# Import salt libs
+import salt.crypt
 
 def minion_config(path):
     '''
@@ -28,6 +30,7 @@ def minion_config(path):
             sys.stderr.write(err + '\n')
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
+    opts['aes'] = salt.crypt.gen_aes()
 
     return opts
 

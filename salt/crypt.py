@@ -7,6 +7,9 @@ authenticating peers
 # Import python libs
 import os
 import tempfile
+import random
+import hashlib
+import string
 # Import M2Crypto libs
 from M2Crypto import RSA
 # Import zeromq libs
@@ -14,6 +17,13 @@ import zmq
 # Import salt utils
 import salt.utils
 import salt.payload
+
+def gen_aes():
+    '''
+    Generate a random aes key
+    '''
+    return hashlib.sha512(''.join(random.choice(string.ascii_letters +\
+        string.digits) for x in range(random.randint(48, 128)))).digest()
 
 class Auth(object):
     '''
