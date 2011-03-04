@@ -16,6 +16,7 @@ def minion_config(path):
             'master_port': '4506',
             'pki_dir': '/etc/salt/pki',
             'hostname': socket.getfqdn(),
+            'cachedir': '/var/cache/salt',
             }
 
     if os.path.isfile(path):
@@ -40,7 +41,9 @@ def master_config(path):
             'ret_port': '4506',
             'local_threads': 5,
             'local_port': '4507',
-            'cachedir': '/var/cache/salt'}
+            'pki_dir': '/etc/salt/pki',
+            'cachedir': '/var/cache/salt',
+            }
 
     if os.path.isfile(path):
         try:
