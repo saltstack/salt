@@ -11,6 +11,7 @@ import threading
 import zmq
 # Import salt modules
 import salt.utils
+import salt.payload
 
 class Master(object):
     '''
@@ -95,7 +96,7 @@ class ReqServer(threading.Thread):
 
         while True:
             message = socket.recv()
-            salt.utils.pickle_message(message)
+            salt.payload.package(message)
             socket.send(1)
 
     def __bind(self):
