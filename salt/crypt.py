@@ -61,13 +61,14 @@ class Auth(object):
         key = self.get_priv_key()
         tmp_pub = tempfile.mktemp()
         key.save_pub_key(tmp_pub)
-        payload['cmd'] = '_auth'
-        payload['id'] = '_auth'
-        payload['hostname'] = self.opts['hostname']
-        payload['pub'] = open(tmp_pub, 'r').read()
+        payload['enc'] = 'clear'
+        payload['load'] = {}
+        payload['load']['cmd'] = '_auth'
+        payload['load']['hostname'] = self.opts['hostname']
+        payload['load']['pub'] = open(tmp_pub, 'r').read()
         return payload
 
-    def decrypt_master_aes(self, enc_aes):
+    def decrypt_auth(self, payload):
         '''
         This function is used to decrypt the aes seed phrase returned from the
         master server, the seed phrase is decrypted with the ssh rsa host key.
@@ -75,7 +76,7 @@ class Auth(object):
         Returns the decrypted aes seed key, a string
         '''
         key = self.get_priv_key()
-        return key.private_decrypt(enc_aes, 4)
+        return key.public_decrypt(payload['load'], 4)
     
     def verify_master(self, master_pub, token):
         '''
@@ -113,11 +114,11 @@ class Auth(object):
         socket.connect(self.opts['master_uri'])
         payload = salt.payload.package(self.minion_sign_in_payload())
         socket.send(payload)
-        ret = salt.payload.unpackage(socket.recv())
-        if not self.verify_master(ret['pub_key'], ret['token']):
+        load = self.decrypt_auth(salt.payload.unpackage(socket.recv()))
+        if not self.verify_master(load['pub_key'], load['token']):
             return auth
-        auth['aes'] = self.decrypt_master_aes(ret['aes'])
-        auth['master_publish_port'] = ret['master_publish_port']
+        auth['aes'] = load['aes']
+        auth['master_publish_port'] = load['master_publish_port']
         return auth
 
 
