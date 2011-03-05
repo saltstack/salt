@@ -32,9 +32,7 @@ class Master(object):
         Turn on the master server components
         '''
         reqserv = ReqServer(self.opts)
-        local = LocalServer(self.opts)
         reqserv.start()
-        local.start()
         while True:
             # Add something to keep the jobs dir clean
             time.sleep(1)
