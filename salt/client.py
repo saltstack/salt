@@ -1,5 +1,11 @@
 '''
 The client module is used to create a client connection to the publisher
+The data structurte needs to be:
+    {'enc': 'clear',
+     'load': {'fun': '<mod.callable>',
+              'arg':, ('arg1', 'arg2', ...),
+              'tgt': '<glob or hostname>',
+              'key': '<read in the key file>'}
 '''
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
