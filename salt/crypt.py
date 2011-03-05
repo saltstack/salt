@@ -39,6 +39,7 @@ class MasterKeys(dict):
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
         self.key = self.__get_priv_key()
         self.pub_str = self.get_pub_str()
+        self.token = self.__gen_token()
 
     def __get_priv_key(self):
         '''
@@ -61,6 +62,12 @@ class MasterKeys(dict):
         if not os.path.isfile(self.pub_path):
             key.save_pub_key(self.pub_path)
         return open(self.pub_path, 'r').read()
+
+    def __gen_token(self):
+        '''
+        Generate the authentication token
+        '''
+        return self.key.private_encrypt('salty bacon')
 
 
 class Auth(object):
