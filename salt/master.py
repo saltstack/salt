@@ -164,15 +164,17 @@ class ReqServer(threading.Thread):
                 # The keys don't authenticate, return a failure
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
+                return ret
         else:
             open(pubfn, 'w+').write(load['pub'])
         key = RSA.load_pub_key(pubfn)
-        ret = {'enc': 'pub'}
-        load = {'pub_key': self.master_key.pub_str,
-                'token': self.master_key.token,
-                'aes': self.opts['aes'],
-                'publish_port': self.opts['publish_port']}
-        ret['load'] = key.encrypt_private(salt.payload.packag(load))
+        ret = {'enc': 'pub',
+               'pub_key': self.master_key.pub_str,
+               'token': self.master_key.token,
+               'publish_port': self.opts['publish_port'],
+              }
+        ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
+        return ret
 
     def run(self):
         '''
