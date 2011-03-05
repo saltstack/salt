@@ -18,22 +18,5 @@ def unpackage(package):
     '''
     Unpackages a payload
     '''
-    return = pickle.loads(package)
+    return pickle.loads(package)
 
-def aes(payload, key):
-    '''
-    Encrypt the payload with AES encryption.
-    '''
-    pass
-
-def rsa_pub(payload, key):
-    '''
-    Encrypt the payload with an rsa public key
-    '''
-    pass
-
-def rsa_priv(payload, key):
-    '''
-    Encrypt the payload with an rsa private key
-    '''
-    pass
