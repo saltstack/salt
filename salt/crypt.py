@@ -21,6 +21,40 @@ import zmq
 import salt.utils
 import salt.payload
 
+def foo_pass(self, data=''):
+    '''
+    used as a workaround for the no-passphrase issue in M2Crypto.RSA
+    '''
+    return 'foo'
+
+
+class MasterKeys(object):
+    '''
+    The Master Keys class is used to manage the public key pair used for
+    authentication by the master.
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
+        self.key = self.get_priv_key()
+
+    def get_priv_key(self):
+        '''
+        Retruns a private key object for the master
+        '''
+        key = None
+        try:
+            key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
+        except:
+            gen = RSA.gen_key(2048, 1)
+            gen.save_key(self.rsa_path, callback=foo_pass)
+            pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
+            gen.save_pub_key(pub_path)
+            key = RSA.load_key(self.rsa_path, callback=foo_pass)
+        return key
+
+
+
 class Auth(object):
     '''
     The Auth class provides the sequence for setting up communication with the
@@ -30,25 +64,19 @@ class Auth(object):
         self.opts = opts
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
 
-    def __foo_pass(self, data=''):
-        '''
-        used as a workaround for the no-passphrase issue in M2Crypto.RSA
-        '''
-        return 'foo'
-
     def get_priv_key(self):
         '''
-        Retruns a private key object derived from the passed host key
+        Retruns a private key object for the minion
         '''
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
         except:
             gen = RSA.gen_key(2048, 1)
-            gen.save_key(self.rsa_path, callback=self.__foo_pass)
+            gen.save_key(self.rsa_path, callback=foo_pass)
             pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
             gen.save_pub_key(pub_path)
-            key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
+            key = RSA.load_key(self.rsa_path, callback=foo_pass)
         return key
 
     def minion_sign_in_payload(self):
