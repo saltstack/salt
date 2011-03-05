@@ -1,0 +1,11 @@
+# Set the location of the salt master server
+#master: mcp
+# Set the post used by the master reply and autnentication server
+#master_port: 4506
+# The directory to store the pki information in
+#pki_dir: /etc/salt/pki
+# Explicitly declare the hostname rather than detecting it
+#hostname:
+# Where cace data goes
+#cachedir: /var/cache/salt
+

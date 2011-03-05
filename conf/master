@@ -1,0 +1,17 @@
+# The address of the interface to bind to
+#interface: 0.0.0.0
+# The port used by the publisher
+#publish_port: 4505
+# The number of worker threads to start
+#worker_threads: 5
+# The port used by the communication interface
+#ret_port: 4506
+# The number of threads used by the local communicator
+#local_threads: 5
+# The port that the local command listener uses
+#local_port: 4507
+# Directory used to store public key data
+#pki_dir: /etc/salt/pki
+# Directory to store job and cache data
+#cachedir: /var/cache/salt
+
