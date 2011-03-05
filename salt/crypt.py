@@ -47,7 +47,7 @@ class MasterKeys(dict):
         '''
         key = None
         try:
-            key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
+            key = RSA.load_key(self.rsa_path, callback=foo_pass)
         except:
             gen = RSA.gen_key(2048, 1)
             gen.save_key(self.rsa_path, callback=foo_pass)
@@ -67,7 +67,7 @@ class MasterKeys(dict):
         '''
         Generate the authentication token
         '''
-        return self.key.private_encrypt('salty bacon')
+        return self.key.private_encrypt('salty bacon', 5)
 
 
 class Auth(object):
@@ -85,7 +85,7 @@ class Auth(object):
         '''
         key = None
         try:
-            key = RSA.load_key(self.rsa_path, callback=self.__foo_pass)
+            key = RSA.load_key(self.rsa_path, callback=foo_pass)
         except:
             gen = RSA.gen_key(2048, 1)
             gen.save_key(self.rsa_path, callback=foo_pass)
@@ -119,7 +119,7 @@ class Auth(object):
         Returns the decrypted aes seed key, a string
         '''
         key = self.get_priv_key()
-        return key.public_decrypt(payload['load'], 4)
+        return key.public_decrypt(payload['load'], 5)
     
     def verify_master(self, master_pub, token):
         '''
@@ -141,7 +141,7 @@ class Auth(object):
         else:
             open(m_pub_fn, 'w+').write(master_pub)
         pub = RSA.load_pub_key(tmp_pub)
-        if pub.private_decrypt(token) == 'salty bacon':
+        if pub.private_decrypt(token, 5) == 'salty bacon':
             return True
         return False
 
