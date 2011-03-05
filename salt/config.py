@@ -30,7 +30,6 @@ def minion_config(path):
             sys.stderr.write(err + '\n')
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
-    opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     return opts
 
@@ -56,4 +55,6 @@ def master_config(path):
                 + ' please check your configuration file.\nUsing defaults'
             sys.stderr.write(err + '\n')
     
+    opts['aes'] = salt.crypt.Crypticle.generate_key_string()
+
     return opts

@@ -102,7 +102,7 @@ class ReqServer(threading.Thread):
         while True:
             package = socket.recv()
             payload = salt.payload.unpackage(package)
-            ret = self.payload.package(self._handle_payload(payload))
+            ret = salt.payload.package(self._handle_payload(payload))
             socket.send(ret)
 
     def __bind(self):
