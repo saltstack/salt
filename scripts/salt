@@ -1,0 +1,18 @@
+#!/usr/bin/env python2
+'''
+Publish commands to the salt system from the command line on the master.
+'''
+# Eventually we need to be able to interlink salt masters and form quorums,
+# and create the ability for externel systesm to talk to salt.  This interface
+# is just a cli interface so that we can get this kicked off and working
+import salt
+
+def main():
+    '''
+    The main function
+    '''
+    client = salt.Client()
+    client.start()
+
+if __name__ == '__main__':
+    main()
