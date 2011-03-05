@@ -28,17 +28,19 @@ def foo_pass(self, data=''):
     return 'foo'
 
 
-class MasterKeys(object):
+class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for
     authentication by the master.
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
-        self.key = self.get_priv_key()
+        self.key = self.__get_priv_key()
+        self.pub_str = self.get_pub_str()
 
-    def get_priv_key(self):
+    def __get_priv_key(self):
         '''
         Retruns a private key object for the master
         '''
@@ -48,11 +50,17 @@ class MasterKeys(object):
         except:
             gen = RSA.gen_key(2048, 1)
             gen.save_key(self.rsa_path, callback=foo_pass)
-            pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
-            gen.save_pub_key(pub_path)
+            gen.save_pub_key(self.pub_path)
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
         return key
 
+    def __get_pub_str(self):
+        '''
+        Returns the tring contents of the public key
+        '''
+        if not os.path.isfile(self.pub_path):
+            key.save_pub_key(self.pub_path)
+        return open(self.pub_path, 'r').read()
 
 
 class Auth(object):
