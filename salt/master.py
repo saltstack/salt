@@ -11,6 +11,7 @@ import threading
 import zmq
 # Import salt modules
 import salt.utils
+import salt.crypt
 import salt.payload
 # Import cryptogrogphy modules
 from M2Crypto import RSA
@@ -80,6 +81,7 @@ class ReqServer(threading.Thread):
     def __init__(self, opts):
         threading.Thread.__init__(self)
         self.opts = opts
+        self.master_key = salt.crypt.MasterKeys(self.opts)
         self.num_threads = self.opts['worker_threads']
         self.context = zmq.Context(1)
         
@@ -166,8 +168,8 @@ class ReqServer(threading.Thread):
             open(pubfn, 'w+').write(load['pub'])
         key = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub'}
-        load = {'pub_key': None,
-                'token': None,
+        load = {'pub_key': self.master_key.pub_str,
+                'token': self.master_key.token,
                 'aes': self.opts['aes'],
                 'publish_port': self.opts['publish_port']}
         ret['load'] = key.
