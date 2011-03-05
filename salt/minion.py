@@ -75,14 +75,14 @@ class Minion(object):
         auth = salt.crypt.Auth(self.opts)
         creds = auth.sign_in()
         self.aes = creds['aes']
-        self.master_publish_port = creds['master_publish_port']
+        self.publish_port = creds['publish_port']
 
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
         master_pub = 'tcp://' + self.opts['master'] + ':'\
-                   + str(self.master_publish_port)
+                   + str(self.publish_port)
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.connect(master_pub)
