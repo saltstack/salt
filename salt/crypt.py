@@ -124,6 +124,7 @@ class Auth(object):
 
 class AuthenticationError(Exception): pass
 
+
 class Crypticle(object):
     '''
     Authenticated encryption class

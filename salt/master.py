@@ -12,6 +12,9 @@ import zmq
 # Import salt modules
 import salt.utils
 import salt.payload
+# Import cryptogrogphy modules
+from M2Crypto import RSA
+
 
 class Master(object):
     '''
@@ -97,7 +100,7 @@ class ReqServer(threading.Thread):
         while True:
             package = socket.recv()
             payload = salt.payload.unpackage(package)
-            ret = self._handle_payload(payload)
+            ret = self.payload.package(self._handle_payload(payload))
             socket.send(ret)
 
     def __bind(self):
@@ -121,7 +124,7 @@ class ReqServer(threading.Thread):
         '''
         return {'aes': self._handle_aes,
                 'pub': self._handle_pub,
-                'clear': self._handle_clear}[payload['enc']](payload[load])
+                'clear': self._handle_clear}[payload['enc']](payload['load'])
 
     def _handle_clear(self, load):
         '''
@@ -146,6 +149,28 @@ class ReqServer(threading.Thread):
         Authenticate the client, use the sent public key to encrypt the aes key
         which was generated at start up
         '''
+        # 1. Verify that the key we are recieving matches the stored key
+        # 2. Store the key if it is not there
+        # 3. make an rsa key with the pub key
+        # 4. encrypt the aes key as an encrypted pickle
+        # 5. package the return and return it
+        pubfn = os.path.join(self.opts['pki_dir'],
+                'minions',
+                load['hostname'] + '.pub')
+        if os.path.isfile(pubfn):
+            if not open(pubfn, 'r').read() == load['pub']:
+                # The keys don't authenticate, return a failure
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
+        else:
+            open(pubfn, 'w+').write(load['pub'])
+        key = RSA.load_pub_key(pubfn)
+        ret = {'enc': 'pub'}
+        load = {'pub_key': None,
+                'token': None,
+                'aes': self.opts['aes'],
+                'publish_port': self.opts['publish_port']}
+        ret['load'] = key.
 
     def run(self):
         '''
