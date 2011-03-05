@@ -38,7 +38,7 @@ class MasterKeys(dict):
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
         self.key = self.__get_priv_key()
-        self.pub_str = self.get_pub_str()
+        self.pub_str = self.__get_pub_str()
         self.token = self.__gen_token()
 
     def __get_priv_key(self):
