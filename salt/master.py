@@ -140,7 +140,7 @@ class ReqServer(threading.Thread):
         '''
         pass
 
-    def _handle_aes(self. load):
+    def _handle_aes(self, load):
         '''
         Handle a command sent via an aes key
         '''
@@ -172,7 +172,7 @@ class ReqServer(threading.Thread):
                 'token': self.master_key.token,
                 'aes': self.opts['aes'],
                 'publish_port': self.opts['publish_port']}
-        ret['load'] = key.
+        ret['load'] = key.encrypt_private(salt.payload.packag(load))
 
     def run(self):
         '''
