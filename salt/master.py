@@ -144,7 +144,7 @@ class ReqServer(threading.Thread):
             os.makedirs(jid)
             pickle.dump(load, open(os.path.join(jid_dir, 'load.p')))
         else:
-            return self._gen_jid(load)
+            return self._prep_jid(load)
         return jid
 
     def _handle_payload(self, payload):
@@ -208,19 +208,19 @@ class ReqServer(threading.Thread):
         '''
         This method sends out publications to the minions
         '''
-        jid = self._gen_jid()
         if not load['key'] == self.key:
-            return False
+            return ''
+        jid = self._prep_jid()
         payload = {'enc': 'aes'}
         load = {
                 'fun': load['fun'],
                 'arg': load['arg'],
                 'tgt': load['tgt'],
-                'jid': self._prep_jid(load),
+                'jid': jid,
                }
         payload['load'] = self.crypticle.dumps(load)
         self.publisher.publish(salt.payload.package(payload))
-        return True
+        return jid
 
     def run(self):
         '''
