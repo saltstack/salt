@@ -186,7 +186,7 @@ class ReqServer(threading.Thread):
         # 5. package the return and return it
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
-                load['hostname'] + '.pub')
+                load['hostname'])
         if os.path.isfile(pubfn):
             if not open(pubfn, 'r').read() == load['pub']:
                 # The keys don't authenticate, return a failure
