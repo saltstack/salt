@@ -20,3 +20,15 @@ def unpackage(package):
     '''
     return pickle.loads(package)
 
+def format_payload(enc, cmd, **kwargs):
+    '''
+    Pass in the required arguments for a payload, the enc type and the cmd,
+    then a list of keyword args to generate the body of the load dict.
+    '''
+    payload = {'enc': enc}
+    load = {'cmd': cmd}
+    for key in kwargs:
+        load[key: kwargs[key]]
+    payload['load'] = load
+    return payload
+
