@@ -96,7 +96,7 @@ class LocalClient(object):
             jid:
                 A string, as returned by the publisher, which is the job id,
                 this will inform the client where to get the job results
-            targets:
+            minions:
                 A set, the targets that the tgt passed should match.
         '''
         # Run a check_minions, if no minons match return False
@@ -108,15 +108,22 @@ class LocalClient(object):
         # return what we get back
         minions = self.check_minons(tgt)
         if not minions:
-            err = 'The passed target will not run on any minions'
-            raise SaltClientError(err)
-        package = salt.payload.('aes', tgt=tgt, fun=fun, arg=arg, key=self.key)
+            return {'jid': '',
+                    'minions': minions}
+        package = salt.payload.('clear',
+                cmd='publish',
+                tgt=tgt,
+                fun=fun,
+                arg=arg,
+                key=self.key)
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect('tcp://127.0.0.1:' + self.opts['ret_port'])
-        socket.send(payload)
+        socket.send(package)
         payload = salt.payload.unpackage(socket.recv())
+        return {'jid': payload['load']['jid'],
+                'minions': minions}
 
 
 
