@@ -5,12 +5,10 @@ encrypted keys to general payload dynamics and packaging, these happen in here
 import os
 import cPickle as pickle
 
-def package(payload, form='pickle', protocol=2):
+def package(payload, protocol=2):
     '''
-    Package up the salt communication payload, pass in the payload and the
-    optional form paramater. Form can be either pickle for greater speed,
-    flexibility and compression, of json, for more compatability. The default
-    is pickle
+    This method for now just wraps pickle.dumps, but it is here so that we can
+    make the serialization a custom option in the future with ease.
     '''
     return pickle.dumps(payload, protocol)
 
@@ -29,5 +27,5 @@ def format_payload(enc, **kwargs):
     for key in kwargs:
         load[key: kwargs[key]]
     payload['load'] = load
-    return payload
+    return package(payload)
 

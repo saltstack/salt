@@ -28,8 +28,12 @@ The data structurte needs to be:
 import os
 import re
 
+# Import zmq modules
+import zmq
+
 # Import salt modules
 import salt.config
+import salt.payload
 
 
 class SaltClientError(Exception): pass
@@ -53,7 +57,7 @@ class LocalClient(object):
         except:
             raise SaltClientError('Failed to read in the salt root key')
 
-    def check_minions(self, expr, expr_type='re'):
+    def check_minions(self, expr, expr_type='glob'):
         '''
         Check the passed glob or regex against the available minions' public
         keys stored for authentication. This should return a set of hostnames
@@ -70,6 +74,7 @@ class LocalClient(object):
             for fn_ in os.listdir('.'):
                 if reg.match(fn_):
                     ret.add(fn_)
+        os.chdir(cwd)
         return ret
             
     def publish(self, tgt, fun, arg=()):
@@ -87,4 +92,31 @@ class LocalClient(object):
             arg:
                 The arg option needs to be a tuple of arguments to pass to the
                 calling function, if left blank 
+        Returns:
+            jid:
+                A string, as returned by the publisher, which is the job id,
+                this will inform the client where to get the job results
+            targets:
+                A set, the targets that the tgt passed should match.
         '''
+        # Run a check_minions, if no minons match return False
+        # format the payload - make a function that does this in the payload
+        #   module
+        # make the zmq client
+        # connect to the req server
+        # send!
+        # return what we get back
+        minions = self.check_minons(tgt)
+        if not minions:
+            err = 'The passed target will not run on any minions'
+            raise SaltClientError(err)
+        package = salt.payload.('aes', tgt=tgt, fun=fun, arg=arg, key=self.key)
+        # Prep zmq
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect('tcp://127.0.0.1:' + self.opts['ret_port'])
+        socket.send(payload)
+        payload = salt.payload.unpackage(socket.recv())
+
+
+
