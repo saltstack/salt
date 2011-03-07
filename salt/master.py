@@ -143,7 +143,7 @@ class ReqServer(threading.Thread):
         jid_dir = os.path.join(jid_root, jid)
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
-            pickle.dump(load, open(os.path.join(jid_dir, 'load.p')))
+            pickle.dump(load, open(os.path.join(jid_dir, 'load.p'), 'w+'))
         else:
             return self._prep_jid(load)
         return jid
