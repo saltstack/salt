@@ -100,7 +100,7 @@ class ReqServer(threading.Thread):
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
-        keyfile = os.path.join(self.opts['cachedir'], 'root_key')
+        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
         key = salt.crypt.Crypticle.generate_key_string()
         open(keyfile, 'w+').write(key)
         return key
