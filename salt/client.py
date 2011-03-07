@@ -25,6 +25,13 @@ The data structurte needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
+import os
+import re
+
+# Import salt modules
+import salt.config
+
+
 class SaltClientError(Exception): pass
 
 class LocalClient(object):
@@ -45,6 +52,39 @@ class LocalClient(object):
             return key
         except:
             raise SaltClientError('Failed to read in the salt root key')
+
+    def check_minions(self, expr, expr_type='re'):
+        '''
+        Check the passed glob or regex against the available minions' public
+        keys stored for authentication. This should return a set of hostnames
+        which match the glob or regex, this will then be used to parse the
+        returns to make sure everyone has checked back in.
+        '''
+        ret = set()
+        cwd = os.getcwd()
+        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        if expr_type == 'glob':
+            ret = set(glob.glob(expr))
+        else:
+            reg = re.compile(expr)
+            for fn_ in os.listdir('.'):
+                if reg.match(fn_):
+                    ret.add(fn_)
+        return ret
             
-
-
+    def publish(self, tgt, fun, arg=()):
+        '''
+        Take the required arguemnts and publish the given command.
+        Arguments:
+            tgt:
+                The tgt is a regex or a glob used to match up the hostname on
+                the minions. Salt works by always publishing every command to
+                all of the minions and then the minions determine if the
+                command is for them based on the tgt value.
+            fun:
+                The function nane to be called on the remote host(s), this must
+                be a string in the format "<modulename>.<function name>"
+            arg:
+                The arg option needs to be a tuple of arguments to pass to the
+                calling function, if left blank 
+        '''
