@@ -110,7 +110,7 @@ class LocalClient(object):
         if not minions:
             return {'jid': '',
                     'minions': minions}
-        package = salt.payload.('clear',
+        package = salt.payload.format_payload('clear',
                 cmd='publish',
                 tgt=tgt,
                 fun=fun,
