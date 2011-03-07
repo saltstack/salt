@@ -77,7 +77,7 @@ class LocalClient(object):
         os.chdir(cwd)
         return ret
             
-    def publish(self, tgt, fun, arg=()):
+    def pub(self, tgt, fun, arg=()):
         '''
         Take the required arguemnts and publish the given command.
         Arguments:
