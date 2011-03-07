@@ -24,8 +24,9 @@ def format_payload(enc, **kwargs):
     then a list of keyword args to generate the body of the load dict.
     '''
     payload = {'enc': enc}
+    load = {}
     for key in kwargs:
-        load[key: kwargs[key]]
+        load[key] = kwargs[key]
     payload['load'] = load
     return package(payload)
 

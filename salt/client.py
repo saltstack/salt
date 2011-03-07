@@ -27,6 +27,7 @@ The data structurte needs to be:
 
 import os
 import re
+import glob
 
 # Import zmq modules
 import zmq
@@ -106,7 +107,7 @@ class LocalClient(object):
         # connect to the req server
         # send!
         # return what we get back
-        minions = self.check_minons(tgt)
+        minions = self.check_minions(tgt)
         if not minions:
             return {'jid': '',
                     'minions': minions}
