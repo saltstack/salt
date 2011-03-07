@@ -210,7 +210,7 @@ class ReqServer(threading.Thread):
         '''
         if not load['key'] == self.key:
             return ''
-        jid = self._prep_jid()
+        jid = self._prep_jid(load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': load['fun'],
