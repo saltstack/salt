@@ -7,6 +7,7 @@ import os
 import random
 import time
 import threading
+import cPickle as pickle
 # Import zeromq
 import zmq
 # Import salt modules
@@ -141,7 +142,7 @@ class ReqServer(threading.Thread):
         jid = str(time.time())
         jid_dir = os.path.join(jid_root, jid)
         if not os.path.isdir(jid_dir):
-            os.makedirs(jid)
+            os.makedirs(jid_dir)
             pickle.dump(load, open(os.path.join(jid_dir, 'load.p')))
         else:
             return self._prep_jid(load)
