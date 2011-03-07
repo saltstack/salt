@@ -220,7 +220,8 @@ class ReqServer(threading.Thread):
                }
         payload['load'] = self.crypticle.dumps(load)
         self.publisher.publish(salt.payload.package(payload))
-        return jid
+        return = {'enc': 'clear',
+                  'load': {'jid': jid}}
 
     def run(self):
         '''
