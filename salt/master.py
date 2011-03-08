@@ -209,7 +209,7 @@ class ReqServer(threading.Thread):
         '''
         This method sends out publications to the minions
         '''
-        if not load['key'] == self.key:
+        if not load.pop('key') == self.key:
             return ''
         jid = self._prep_jid(load)
         payload = {'enc': 'aes'}
