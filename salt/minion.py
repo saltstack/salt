@@ -35,16 +35,25 @@ class Minion(object):
         the functions.
         '''
         # This is going to need some work to clean it up and expand
-        # functionality, right now it just loads up all callable objects in the
-        # modules package
+        # functionality.
         functions = {}
-        for mod in dir(salt.modules):
-            if not mod.startswith('_'):
-                module = getattr(salt.modules, mod)
-                for attr in dir(module):
-                    if not attr.startswith('_'):
-                        if callable(getattr(module, attr)):
-                            functions[mod + '.' + attr] = getattr(module, attr)
+        mods = set()
+        mod_dir = os.path.join(distutils.sysconfig.get_python_lib(),
+                'salt/modules')
+        for fn_ in os.listdir(mod_dir):
+            if fn_.startswith('__init__.py'):
+                continue
+            if fn_.endswith('.pyo')\
+                    or fn_.endswith('.py')\
+                    or fn_.endswith('.pyc'):
+                mods.add(fn_[:fn_.rindex('.')])
+        for mod in mods:
+            module = importlib.import_module('salt.modules.' + mod)
+            for attr in dir(module):
+                if attr.startswith('_'):
+                    continue
+                if callable(getattr(imp, attr)):
+                    functions[mod + '.' + attr] = getattr(imp, attr)
         print functions
         return functions
 
