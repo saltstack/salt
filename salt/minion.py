@@ -1,9 +1,6 @@
 '''
 Routines to set up a minion
 '''
-# Import python libs
-import os
-import distutils.sysconfig
 # Import zeromq libs
 import zmq
 # Import salt libs
@@ -40,7 +37,6 @@ class Minion(object):
         # This is going to need some work to clean it up and expand
         # functionality, right now it just loads up all callable objects in the
         # modules package
-        mods = {}
         functions = {}
         for mod in dir(salt.modules):
             if not mod.startswith('_'):
@@ -48,7 +44,7 @@ class Minion(object):
                 for attr in dir(module):
                     if not attr.startswith('_'):
                         if callable(getattr(module, attr)):
-                            functions{mod + '.' + attr: getattr(module, attr)}
+                            functions[mod + '.' + attr] = getattr(module, attr)
         print functions
         return functions
 
