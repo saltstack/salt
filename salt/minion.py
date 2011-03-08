@@ -62,12 +62,49 @@ class Minion(object):
         print functions
         return functions
 
+    def _verify_tgt(self, tgt):
+        '''
+        Checks the tgt information sent with a publication to see if it
+        matches the minion, takes a tgt string, returns a bool
+        '''
+        self.opts['hostname']
+
     def _handle_payload(self, payload):
         '''
         Takes a payload from the master publisher and does whatever the
         master wants done.
         '''
-        pass
+        ret = {'aes': self._handle_aes,
+               'pub': self._handle_pub,
+               'clear': self._handle_clear}[payload['enc']](payload['load'])
+        self._return_pub(ret)
+
+    def _handle_aes(self, load):
+        '''
+        Takes the aes encrypted load, decypts is and runs the encapsulated
+        instructions
+        '''
+        data = None
+        ret = {}
+        try:
+            data = self.crypticle.loads(load)
+        except AuthenticationError:
+            self.authenticate()
+            data = self.crypticle.loads(load)
+        # Verify that the publication is valid
+        if not data.has_key('tgt')\
+                or not data.has_key('jid')\
+                or not data.has_key('fun')\
+                or not data.has_key('arg'):
+            return ret
+        # Verify that the publication applies to this minion
+        if not self._verify_tgt(data['tgt']):
+            return ret
+
+        if self.functions.has_key(data['fun']):
+            ret['return'] = apply(self.functions[data['fun']], data['arg'])
+        ret['jid'] = data['jid']
+        return ret
 
     def authenticate(self):
         '''
@@ -80,6 +117,7 @@ class Minion(object):
         creds = auth.sign_in()
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
+        self.crypticle = salt.crypt.Crypticle(self.aes)
 
     def tune_in(self):
         '''
