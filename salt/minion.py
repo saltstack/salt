@@ -1,6 +1,11 @@
 '''
 Routines to set up a minion
 '''
+# Import python libs
+import os
+import distutils.sysconfig
+import importlib
+
 # Import zeromq libs
 import zmq
 # Import salt libs
@@ -52,8 +57,8 @@ class Minion(object):
             for attr in dir(module):
                 if attr.startswith('_'):
                     continue
-                if callable(getattr(imp, attr)):
-                    functions[mod + '.' + attr] = getattr(imp, attr)
+                if callable(getattr(module, attr)):
+                    functions[mod + '.' + attr] = getattr(module, attr)
         print functions
         return functions
 
