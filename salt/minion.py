@@ -9,6 +9,7 @@ import zmq
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.modules
 
 # To set up a minion:
 # 1, Read in the configuration
@@ -37,30 +38,23 @@ class Minion(object):
         the functions.
         '''
         # This is going to need some work to clean it up and expand
-        # functionality.
+        # functionality, right now it just loads up all callable objects in the
+        # modules package
+        mods = {}
         functions = {}
-        mods = set()
-        mod_dir = os.path.join(distutils.sysconfig.get_python_lib(),
-                'salt/modules')
-        for fn_ in os.listdir(mod_dir):
-            if fn_.startswith('__init__.py'):
-                continue
-            if fn_.endswith('.pyo')\
-                    or fn_.endswith('.py')\
-                    or fn_.endswith('.pyc'):
-                mods.add(fn_[:fn_.rindex('.')])
-        for mod in mods:
-            imp = __import__('salt.modules.' + mod)
-            for attr in dir(imp):
-                if attr.startswith('_'):
-                    continue
-                if callable(getattr(imp, attr)):
-                    functions[mod + '.' + attr] = getattr(imp, attr)
+        for mod in dir(salt.modules):
+            if not mod.startswith('_'):
+                module = getattr(salt.modules, mod)
+                for attr in dir(module):
+                    if not attr.startswith('_'):
+                        if callable(getattr(module, attr)):
+                            functions{mod + '.' + attr: getattr(module, attr)}
+        print functions
         return functions
 
     def _handle_payload(self, payload):
         '''
-        Takes a payload from the master publisher and edoes whatever the
+        Takes a payload from the master publisher and does whatever the
         master wants done.
         '''
         pass
