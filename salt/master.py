@@ -173,7 +173,8 @@ class ReqServer(threading.Thread):
         '''
         Handle a command sent via an aes key
         '''
-        pass
+        data = self.crypticle.loads(load)
+        return getattr(self, load['cmd'])(load)
 
     def _auth(self, load):
         '''
@@ -204,6 +205,23 @@ class ReqServer(threading.Thread):
               }
         ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
         return ret
+
+    def _return(self, load):
+        '''
+        Handle the return data sent from the minions
+        '''
+        # If the return data is invalid, just ignore it
+        if not load.has_key('return')\
+                or not load.has_key('jid')\
+                or not load.has_key('hostname'):
+            return False
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        if not os.path.isdir(jid_dir):
+            return False
+        hn_dir = os.path.join(jid_dir, load['hostname'])
+        if not os.path.isdir(hn_dir):
+            os.makedirs(hn_dir)
+        pickle.dump(load['return'], os.path.join(hn_dir, 'return.p'))
 
     def publish(self, load):
         '''
