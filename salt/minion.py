@@ -5,6 +5,7 @@ Routines to set up a minion
 import os
 import distutils.sysconfig
 import importlib
+import re
 
 # Import zeromq libs
 import zmq
@@ -62,13 +63,6 @@ class Minion(object):
         print functions
         return functions
 
-    def _verify_tgt(self, tgt):
-        '''
-        Checks the tgt information sent with a publication to see if it
-        matches the minion, takes a tgt string, returns a bool
-        '''
-        self.opts['hostname']
-
     def _handle_payload(self, payload):
         '''
         Takes a payload from the master publisher and does whatever the
@@ -98,13 +92,28 @@ class Minion(object):
                 or not data.has_key('arg'):
             return ret
         # Verify that the publication applies to this minion
-        if not self._verify_tgt(data['tgt']):
+        if not re.match(data['tgt'], self.opts['hostname']):
             return ret
 
         if self.functions.has_key(data['fun']):
             ret['return'] = apply(self.functions[data['fun']], data['arg'])
         ret['jid'] = data['jid']
         return ret
+
+    def _return_pub(self, ret):
+        '''
+        Returnt the data from the executed command to the master server
+        '''
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(self.opts['master_uri'])
+        payload = {'enc': 'aes'}
+        load = {'return': ret['return'],
+                'cmd': '_return',
+                'jid': ret['jid'],
+                'hostname': self.opts['hostname']}
+        payload['load'] = self.crypticle.dumps(load)
+        socket.send_pyobj(payload)
 
     def authenticate(self):
         '''
