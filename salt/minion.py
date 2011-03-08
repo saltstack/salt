@@ -92,6 +92,6 @@ class Minion(object):
         socket.connect(master_pub)
         socket.setsockopt(zmq.SUBSCRIBE, '')
         while True:
-            payload = socket.recv()
+            payload = socket.recv_pyobj()
             self._handle_payload(payload)
 
