@@ -27,7 +27,6 @@ The data structurte needs to be:
 
 import os
 import re
-import glob
 
 # Import zmq modules
 import zmq
@@ -58,23 +57,20 @@ class LocalClient(object):
         except:
             raise SaltClientError('Failed to read in the salt root key')
 
-    def check_minions(self, expr, expr_type='glob'):
+    def check_minions(self, expr):
         '''
-        Check the passed glob or regex against the available minions' public
+        Check the passed regex against the available minions' public
         keys stored for authentication. This should return a set of hostnames
-        which match the glob or regex, this will then be used to parse the
+        which match the regex, this will then be used to parse the
         returns to make sure everyone has checked back in.
         '''
         ret = set()
         cwd = os.getcwd()
         os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        if expr_type == 'glob':
-            ret = set(glob.glob(expr))
-        else:
-            reg = re.compile(expr)
-            for fn_ in os.listdir('.'):
-                if reg.match(fn_):
-                    ret.add(fn_)
+        reg = re.compile(expr)
+        for fn_ in os.listdir('.'):
+            if reg.match(fn_):
+                ret.add(fn_)
         os.chdir(cwd)
         return ret
             
