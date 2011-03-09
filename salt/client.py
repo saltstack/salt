@@ -72,7 +72,7 @@ class LocalClient(object):
         specified jid
         '''
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
-        start = int(time.time())
+        start = 999999999999
         ret = {}
         # Wait for the hosts to check in
         while True:
@@ -80,8 +80,12 @@ class LocalClient(object):
                 if fn_.startswith('.'):
                     continue
                 if not ret.has_key(fn_):
-                    ret[fn_] = pickle.load(open(os.path.join(jid_dir,
-                        fn_, 'return.p'), 'r'))
+                    retp = os.path.join(jid_dir, fn_, 'return.p')
+                    if not os.path.isfile(retp):
+                        continue
+                    ret[fn_] = pickle.load(open(retp, 'r'))
+            if ret:
+                start = int(time.time())
             if len(ret) >= len(minions):
                 return ret
             if int(time.time()) > start + timeout:
