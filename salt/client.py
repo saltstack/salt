@@ -77,7 +77,7 @@ class LocalClient(object):
         os.chdir(cwd)
         return ret
 
-    def _check_re_minions(self, expr):
+    def _check_pcre_minions(self, expr):
         '''
         Return the minions found by looking via regular expresions
         '''
