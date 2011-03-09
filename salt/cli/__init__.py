@@ -28,6 +28,7 @@ class SaltCMD(object):
         parser.add_option('-t',
                 '--timeout',
                 default=5,
+                type=int,
                 dest='timeout',
                 help='Set the return timeout for batch jobs')
 
@@ -36,9 +37,9 @@ class SaltCMD(object):
         opts = {}
 
         opts['timeout'] = options.timeout
-        opts['tgt'] = args[1]
-        opts['fun'] = args[2]
-        opts['arg'] = args[3:]
+        opts['tgt'] = args[0]
+        opts['fun'] = args[1]
+        opts['arg'] = args[2:]
 
         return opts
 
