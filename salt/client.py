@@ -64,7 +64,7 @@ class LocalClient(object):
         Execute a salt command and return.
         '''
         pub_data = self.pub(tgt, fun, arg)
-        return get_returns(pub_data['jid'], pub_data['minions'], timeout)
+        return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
 
     def get_returns(self, jid, minions, timeout=5):
         '''

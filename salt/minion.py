@@ -100,6 +100,19 @@ class Minion(object):
         ret['jid'] = data['jid']
         return ret
 
+    def _handle_pub(self, load):
+        '''
+        Handle public key payloads
+        '''
+        pass
+    
+    def _handle_clear(self, load):
+        '''
+        Handle unencrypted transmisions
+        '''
+        pass
+
+
     def _return_pub(self, ret):
         '''
         Returnt the data from the executed command to the master server
