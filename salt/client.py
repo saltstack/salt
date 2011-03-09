@@ -77,6 +77,8 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             for fn_ in os.listdir(jid_dir):
+                if fn_.startswith('.'):
+                    continue
                 if not ret.has_key(fn_):
                     ret[fn_] = pickle.loads(open(os.path.join(jid_dir,
                         fn_, 'return.p'), 'r'))
