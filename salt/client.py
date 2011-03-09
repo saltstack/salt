@@ -109,7 +109,7 @@ class LocalClient(object):
                     if not os.path.isfile(retp):
                         continue
                     ret[fn_] = pickle.load(open(retp, 'r'))
-            if ret:
+            if ret and start == 999999999999:
                 start = int(time.time())
             if len(ret) >= len(minions):
                 return ret
