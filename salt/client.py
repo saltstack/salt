@@ -80,7 +80,7 @@ class LocalClient(object):
                 if fn_.startswith('.'):
                     continue
                 if not ret.has_key(fn_):
-                    ret[fn_] = pickle.loads(open(os.path.join(jid_dir,
+                    ret[fn_] = pickle.load(open(os.path.join(jid_dir,
                         fn_, 'return.p'), 'r'))
             if len(ret) >= len(minions):
                 return ret
