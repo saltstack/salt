@@ -5,6 +5,7 @@ Routines to set up a minion
 import os
 import distutils.sysconfig
 import importlib
+import glob
 import re
 import tempfile
 
