@@ -27,6 +27,7 @@ The data structurte needs to be:
 
 import os
 import re
+import glob
 import time
 import cPickle as pickle
 
@@ -66,6 +67,30 @@ class LocalClient(object):
         pub_data = self.pub(tgt, fun, arg)
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
 
+    def _check_glob_minions(self, expr):
+        '''
+        Return the minions found by looking via globs
+        '''
+        cwd = os.getcwd()
+        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        ret = set(glob.glob(expr))
+        os.chdir(cwd)
+        return ret
+
+    def _check_re_minions(self, expr):
+        '''
+        Return the minions found by looking via regular expresions
+        '''
+        ret = set()
+        cwd = os.getcwd()
+        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        reg = re.compile(expr)
+        for fn_ in os.listdir('.'):
+            if reg.match(fn_):
+                ret.add(fn_)
+        os.chdir(cwd)
+        return ret
+
     def get_returns(self, jid, minions, timeout=5):
         '''
         This method starts off a watcher looking at the return data for a
@@ -92,22 +117,15 @@ class LocalClient(object):
                 return ret
             time.sleep(0.02)
 
-    def check_minions(self, expr):
+    def check_minions(self, expr, expr_form='glob'):
         '''
         Check the passed regex against the available minions' public
         keys stored for authentication. This should return a set of hostnames
         which match the regex, this will then be used to parse the
         returns to make sure everyone has checked back in.
         '''
-        ret = set()
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        reg = re.compile(expr)
-        for fn_ in os.listdir('.'):
-            if reg.match(fn_):
-                ret.add(fn_)
-        os.chdir(cwd)
-        return ret
+        return {'glob': self._check_glob_minions,
+                'pcre': self._check_pcre_minions}[exper_form](expr)
             
     def pub(self, tgt, fun, arg=()):
         '''
@@ -148,6 +166,8 @@ class LocalClient(object):
                 fun=fun,
                 arg=arg,
                 key=self.key)
+        if self.opts.has_key('tgt_type'):
+            package['tgt_type': self.opts['tgt_type']]
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
