@@ -221,7 +221,7 @@ class ReqServer(threading.Thread):
         hn_dir = os.path.join(jid_dir, load['hostname'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
-        pickle.dump(load['return'], os.path.join(hn_dir, 'return.p'))
+        pickle.dump(load['return'], open(os.path.join(hn_dir, 'return.p'), 'w+'))
 
     def publish(self, load):
         '''
