@@ -11,6 +11,7 @@ import re
 import zmq
 # Import salt libs
 import salt.crypt
+from salt.crypt import AuthenticationError
 import salt.utils
 import salt.modules
 
