@@ -174,7 +174,7 @@ class ReqServer(threading.Thread):
         Handle a command sent via an aes key
         '''
         data = self.crypticle.loads(load)
-        return getattr(self, load['cmd'])(load)
+        return getattr(self, data['cmd'])(data)
 
     def _auth(self, load):
         '''
