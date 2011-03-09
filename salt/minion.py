@@ -6,6 +6,7 @@ import os
 import distutils.sysconfig
 import importlib
 import re
+import tempfile
 
 # Import zeromq libs
 import zmq
@@ -93,8 +94,12 @@ class Minion(object):
                 or not data.has_key('arg'):
             return ret
         # Verify that the publication applies to this minion
-        if not re.match(data['tgt'], self.opts['hostname']):
-            return ret
+        if data.has_key('tgt_type'):
+            if not apply(self, '_' + data['tgt_type'] + 'match', data['tgt']):
+                return ret
+        else:
+            if not self._glob_match(data['tgt']):
+                return ret
 
         if self.functions.has_key(data['fun']):
             ret['return'] = apply(self.functions[data['fun']], data['arg'])
@@ -113,6 +118,23 @@ class Minion(object):
         '''
         pass
 
+    def _glob_match(self, tgt):
+        '''
+        Returns true if the passed glob matches the hostname
+        '''
+        tmp_dir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(tmp_dir)
+        open(self.opts['hostname'], 'w+').write('salt')
+        ret = bool(glob.glob(tgt))
+        os.chdir(cwd)
+        return ret
+
+    def _pcre_match(self, tgt):
+        '''
+        Returns true if the passed pcre regex matches
+        '''
+        return bool(re.match(tgt, self.opts['hostname']))
 
     def _return_pub(self, ret):
         '''
