@@ -94,7 +94,7 @@ class ReqServer(threading.Thread):
         self.publisher.start()
         # Prepare the aes key
         self.key = self.__prep_key()
-        self.crypticle = salt.crypt.Crypticle(self.key)
+        self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
 
     def __prep_key(self):
         '''
