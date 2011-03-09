@@ -27,6 +27,8 @@ The data structurte needs to be:
 
 import os
 import re
+import time
+import cPickle as pickle
 
 # Import zmq modules
 import zmq
@@ -56,6 +58,33 @@ class LocalClient(object):
             return key
         except:
             raise SaltClientError('Failed to read in the salt root key')
+
+    def cmd(self, tgt, fun, arg=(), timeout=5):
+        '''
+        Execute a salt command and return.
+        '''
+        pub_data = self.pub(tgt, fun, arg)
+        return get_returns(pub_data['jid'], pub_data['minions'], timeout)
+
+    def get_returns(self, jid, minions, timeout=5):
+        '''
+        This method starts off a watcher looking at the return data for a
+        specified jid
+        '''
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
+        start = int(time.time())
+        ret = {}
+        # Wait for the hosts to check in
+        while True:
+            for fn_ in os.listdir(jid_dir):
+                if not ret.has_key(fn_):
+                    ret[fn_] = pickle.loads(open(os.path.join(jid_dir),
+                                                 fn_, 'return.p'), 'r')
+            if len(ret) >= len(minions):
+                return ret
+            if int(time.time()) > start + timeout:
+                return ret
+            time.sleep(0.02)
 
     def check_minions(self, expr):
         '''
