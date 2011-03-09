@@ -128,6 +128,7 @@ class Minion(object):
                 'hostname': self.opts['hostname']}
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
+        return socket.recv()
 
     def authenticate(self):
         '''
