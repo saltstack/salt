@@ -78,8 +78,8 @@ class LocalClient(object):
         while True:
             for fn_ in os.listdir(jid_dir):
                 if not ret.has_key(fn_):
-                    ret[fn_] = pickle.loads(open(os.path.join(jid_dir),
-                                                 fn_, 'return.p'), 'r')
+                    ret[fn_] = pickle.loads(open(os.path.join(jid_dir,
+                        fn_, 'return.p'), 'r'))
             if len(ret) >= len(minions):
                 return ret
             if int(time.time()) > start + timeout:
