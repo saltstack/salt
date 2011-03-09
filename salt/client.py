@@ -125,7 +125,7 @@ class LocalClient(object):
         returns to make sure everyone has checked back in.
         '''
         return {'glob': self._check_glob_minions,
-                'pcre': self._check_pcre_minions}[exper_form](expr)
+                'pcre': self._check_pcre_minions}[expr_form](expr)
             
     def pub(self, tgt, fun, arg=()):
         '''
