@@ -167,10 +167,17 @@ class Auth(object):
                         + ' public key for this minion on the Salt Master'\
                         + ' and restart this minion.\nOr restart the Salt'\
                         + ' Master in open mode to clean out the keys.'
-                    sys.stderr.write(err)
+                    sys.stderr.write(err + '\n')
                     sys.exit(42)
         if not self.verify_master(payload['pub_key'], payload['token']):
-            return auth
+            m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
+            err = 'The Salt Master server\'s public key did not authenticate!'\
+                + '\nIf you are confident that you are connecting to a valid'\
+                + ' Salt Master, then remove the master public key and'\
+                + ' restart the Salt Minion.\nThe master public key can be'\
+                + ' found at:\n' + m_pub_fn
+            sys.stderr.write(err + '\n')
+            sys.exit(42)
         auth['aes'] = self.decrypt_aes(payload['aes'])
         auth['publish_port'] = payload['publish_port']
         return auth
