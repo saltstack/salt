@@ -6,6 +6,7 @@ authenticating peers
 
 # Import python libs
 import os
+import sys
 import hmac
 import tempfile
 import random
@@ -158,6 +159,16 @@ class Auth(object):
         payload = salt.payload.package(self.minion_sign_in_payload())
         socket.send(payload)
         payload = salt.payload.unpackage(socket.recv())
+        if payload.has_key('load'):
+            if payload['load'].has_key('ret'):
+                if not payload['load']['ret']:
+                    err = 'The Salt Master has rejected this minion\'s'\
+                        + ' public key!\nTo repair this issue, delete the'\
+                        + ' public key for this minion on the Salt Master'\
+                        + ' and restart this minion.\nOr restart the Salt'\
+                        + ' Master in open mode to clean out the keys.'
+                    sys.stderr.write(err)
+                    sys.exit(42)
         if not self.verify_master(payload['pub_key'], payload['token']):
             return auth
         auth['aes'] = self.decrypt_aes(payload['aes'])
