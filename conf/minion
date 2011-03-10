@@ -8,4 +8,8 @@
 #hostname:
 # Where cace data goes
 #cachedir: /var/cache/salt
-
+# Enable "open mode", this mode still maintains encryption, but turns off
+# authentication, this is only intended for highly secure environments or for
+# the situation where your keys end up in a bad state. If you run in open more
+# you do so at your own risk!
+#open_mode: False
