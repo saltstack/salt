@@ -35,7 +35,7 @@ def minion_config(path):
     # Enableing open mode requires that the value be set to True, and nothing
     # else!
     if opts['open_mode']:
-        if opts['open_mode'] == 'True':
+        if opts['open_mode'] == True:
             opts['open_mode'] = True
         else:
             opts['open_mode'] = False
@@ -71,10 +71,9 @@ def master_config(path):
     # Enableing open mode requires that the value be set to True, and nothing
     # else!
     if opts['open_mode']:
-        if opts['open_mode'] == 'True':
+        if opts['open_mode'] == True:
             opts['open_mode'] = True
         else:
             opts['open_mode'] = False
-
 
     return opts
