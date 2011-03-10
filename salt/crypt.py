@@ -134,7 +134,7 @@ class Auth(object):
         tmp_pub = tempfile.mktemp()
         open(tmp_pub, 'w+').write(master_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
-        if os.path.isfile(m_pub_fn):
+        if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = open(m_pub_fn).read()
             if not master_pub == local_master_pub:
                 # This is not the last master we connected to
