@@ -19,17 +19,26 @@ def minion_config(path):
             'pki_dir': '/etc/salt/pki',
             'hostname': socket.getfqdn(),
             'cachedir': '/var/cache/salt',
+            'open_mode': False,
             }
 
     if os.path.isfile(path):
         try:
             opts.update(yaml.load(open(path, 'r')))
         except:
-            err = 'The minon configuration file did not parse correctly,'\
+            err = 'The salt minon configuration file did not parse correctly,'\
                 + ' please check your configuration file.\nUsing defaults'
             sys.stderr.write(err + '\n')
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
+    
+    # Enableing open mode requires that the value be set to True, and nothing
+    # else!
+    if opts['open_mode']:
+        if opts['open_mode'] == 'True':
+            opts['open_mode'] = True
+        else:
+            opts['open_mode'] = False
 
     return opts
 
@@ -45,16 +54,27 @@ def master_config(path):
             'local_port': '4507',
             'pki_dir': '/etc/salt/pki',
             'cachedir': '/var/cache/salt',
+            'open_mode': False,
             }
 
     if os.path.isfile(path):
         try:
             opts.update(yaml.load(open(path, 'r')))
         except:
-            err = 'The master configuration file did not parse correctly,'\
+            err = 'The salt master configuration file did not parse'\
+                + ' correctly,'\
                 + ' please check your configuration file.\nUsing defaults'
             sys.stderr.write(err + '\n')
     
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
+
+    # Enableing open mode requires that the value be set to True, and nothing
+    # else!
+    if opts['open_mode']:
+        if opts['open_mode'] == 'True':
+            opts['open_mode'] = True
+        else:
+            opts['open_mode'] = False
+
 
     return opts
