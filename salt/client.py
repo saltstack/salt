@@ -177,5 +177,3 @@ class LocalClient(object):
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 
-
-
