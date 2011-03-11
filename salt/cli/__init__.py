@@ -31,12 +31,20 @@ class SaltCMD(object):
                 type=int,
                 dest='timeout',
                 help='Set the return timeout for batch jobs')
+        parser.add_option('-E',
+                '--pcre',
+                default=False,
+                dest='pcre',
+                action='store_true'
+                help='Instead of using shell globs to evaluate the target'\
+                   + ' servers, use pcre regular expressions')
 
         options, args = parser.parse_args()
 
         opts = {}
 
         opts['timeout'] = options.timeout
+        opts['pcre'] = options.pcre
         opts['tgt'] = args[0]
         opts['fun'] = args[1]
         opts['arg'] = args[2:]
