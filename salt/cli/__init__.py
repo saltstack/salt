@@ -56,8 +56,12 @@ class SaltCMD(object):
         Execute the salt command line
         '''
         local = salt.client.LocalClient()
-        print local.cmd(self.opts['tgt'],
+        args = [self.opts['tgt'],
                 self.opts['fun'],
                 self.opts['arg'],
-                self.opts['timeout'])
+                self.opts['timeout'],
+                ]
+        if self.opts['pcre']:
+            args.append('pcre')
+        print local.cmd(*args)
 

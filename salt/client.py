@@ -60,7 +60,7 @@ class LocalClient(object):
         except:
             raise SaltClientError('Failed to read in the salt root key')
 
-    def cmd(self, tgt, fun, arg=(), expr_form='glob', timeout=5):
+    def cmd(self, tgt, fun, arg=(), timeout=5, expr_form='glob'):
         '''
         Execute a salt command and return.
         '''
