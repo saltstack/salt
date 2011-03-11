@@ -96,14 +96,14 @@ class Minion(object):
             return ret
         # Verify that the publication applies to this minion
         if data.has_key('tgt_type'):
-            if not apply(self, '_' + data['tgt_type'] + 'match', data['tgt']):
+            if not getattr(self, '_' + data['tgt_type'] + '_match')(*(data['tgt'])):
                 return ret
         else:
             if not self._glob_match(data['tgt']):
                 return ret
 
         if self.functions.has_key(data['fun']):
-            ret['return'] = apply(self.functions[data['fun']], data['arg'])
+            ret['return'] = self.functions[data['fun']](*data['arg'])
         ret['jid'] = data['jid']
         return ret
 
