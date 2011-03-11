@@ -38,6 +38,20 @@ class SaltCMD(object):
                 action='store_true'
                 help='Instead of using shell globs to evaluate the target'\
                    + ' servers, use pcre regular expressions')
+        parser.add_option('-Q',
+                '--query',
+                dest='query',
+                default=False,
+                action='store_true',
+                help='Execute a salt command query, this can be used to find'\
+                    + ' previous function calls, of to look up a call that'\
+                    + ' occured at a specific time.')
+        parser.add_option('-c',
+                '--cmd',
+                dest='cmd',
+                default='',
+                help='Used with the Query option, pass in the command to get'\
+                    + ' results from.')
 
         options, args = parser.parse_args()
 
@@ -45,9 +59,13 @@ class SaltCMD(object):
 
         opts['timeout'] = options.timeout
         opts['pcre'] = options.pcre
-        opts['tgt'] = args[0]
-        opts['fun'] = args[1]
-        opts['arg'] = args[2:]
+        if options.query:
+            opts['query'] = options.query
+            opts['cmd'] = options.cmd
+        else:
+            opts['tgt'] = args[0]
+            opts['fun'] = args[1]
+            opts['arg'] = args[2:]
 
         return opts
 
@@ -55,6 +73,8 @@ class SaltCMD(object):
         '''
         Execute the salt command line
         '''
+        if opts['query']:
+            cli = 
         local = salt.client.LocalClient()
         args = [self.opts['tgt'],
                 self.opts['fun'],
