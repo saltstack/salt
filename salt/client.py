@@ -60,11 +60,11 @@ class LocalClient(object):
         except:
             raise SaltClientError('Failed to read in the salt root key')
 
-    def cmd(self, tgt, fun, arg=(), timeout=5):
+    def cmd(self, tgt, fun, arg=(), expr_form='glob', timeout=5):
         '''
         Execute a salt command and return.
         '''
-        pub_data = self.pub(tgt, fun, arg)
+        pub_data = self.pub(tgt, fun, arg, expr_form)
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
 
     def _check_glob_minions(self, expr):
@@ -127,7 +127,7 @@ class LocalClient(object):
         return {'glob': self._check_glob_minions,
                 'pcre': self._check_pcre_minions}[expr_form](expr)
             
-    def pub(self, tgt, fun, arg=()):
+    def pub(self, tgt, fun, arg=(), expr_form='glob'):
         '''
         Take the required arguemnts and publish the given command.
         Arguments:
@@ -156,7 +156,7 @@ class LocalClient(object):
         # connect to the req server
         # send!
         # return what we get back
-        minions = self.check_minions(tgt)
+        minions = self.check_minions(tgt, expr_form)
         if not minions:
             return {'jid': '',
                     'minions': minions}
@@ -166,8 +166,7 @@ class LocalClient(object):
                 fun=fun,
                 arg=arg,
                 key=self.key)
-        if self.opts.has_key('tgt_type'):
-            package['tgt_type': self.opts['tgt_type']]
+        package['tgt_type': expr_form]
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
