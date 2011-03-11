@@ -1,6 +1,5 @@
 '''
-Module for shelling out commands, inclusion of this module should be
-configurable for security reasons
+Module for running arbitrairy tests
 '''
 
 def echo(text):
@@ -9,3 +8,10 @@ def echo(text):
     '''
     print 'Echo got called!'
     return text
+
+def ping():
+    '''
+    Just used to make sure the minion is up and responding
+    Return True
+    '''
+    return True
