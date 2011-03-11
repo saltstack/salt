@@ -46,12 +46,6 @@ class SaltCMD(object):
                 help='Execute a salt command query, this can be used to find'\
                     + ' previous function calls, of to look up a call that'\
                     + ' occured at a specific time.')
-        parser.add_option('-c',
-                '--cmd',
-                dest='cmd',
-                default='',
-                help='Used with the Query option, pass in the command to get'\
-                    + ' results from.')
 
         options, args = parser.parse_args()
 
@@ -61,7 +55,12 @@ class SaltCMD(object):
         opts['pcre'] = options.pcre
         if options.query:
             opts['query'] = options.query
-            opts['cmd'] = options.cmd
+            if len(args) < 1:
+                err = 'Please pass in a command to query the old salt calls'\
+                    + ' for.'
+                sys.stderr.write(err, + '\n')
+                sys.exit('2')
+            opts['cmd'] = args[0]
         else:
             opts['tgt'] = args[0]
             opts['fun'] = args[1]
@@ -73,15 +72,16 @@ class SaltCMD(object):
         '''
         Execute the salt command line
         '''
-        if opts['query']:
-            cli = 
         local = salt.client.LocalClient()
-        args = [self.opts['tgt'],
-                self.opts['fun'],
-                self.opts['arg'],
-                self.opts['timeout'],
-                ]
-        if self.opts['pcre']:
-            args.append('pcre')
-        print local.cmd(*args)
+        if self.opts['query']:
+            print local.find_cmd(self.opts['cmd'])
+        else:
+            args = [self.opts['tgt'],
+                    self.opts['fun'],
+                    self.opts['arg'],
+                    self.opts['timeout'],
+                    ]
+            if self.opts['pcre']:
+                args.append('pcre')
+            print local.cmd(*args)
 
