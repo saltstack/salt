@@ -100,7 +100,7 @@ class SaltCMD(object):
         for host in ret:
             for fun in ret['host']:
                 if not docs.has_key(fun):
-                    docs[fun] = ret[host][fun].__doc__
+                    docs[fun] = ret[host][fun]
         for fun in docs:
             print fun
             print docs[fun]

@@ -64,9 +64,18 @@ class Minion(object):
                 if callable(getattr(module, attr)):
                     functions[mod + '.' + attr] = getattr(module, attr)
         functions['sys.list_functions'] = lambda: functions.keys()
-        functions['sys.doc'] = lambda: functions
+        functions['sys.doc'] = lambda: self.__get_docs()
         print functions
         return functions
+
+    def __get_docs(self):
+        '''
+        Return a dict containing all of the doc strings in the functions dict
+        '''
+        docs = {}
+        for fun in self.functions:
+            docs[fun] = self.functions[fun].__doc__
+        return docs
 
     def _handle_payload(self, payload):
         '''
