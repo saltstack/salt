@@ -64,6 +64,7 @@ class Minion(object):
                 if callable(getattr(module, attr)):
                     functions[mod + '.' + attr] = getattr(module, attr)
         functions['sys.list_functions'] = lambda: functions.keys()
+        functions['sys.doc'] = lambda: functions
         print functions
         return functions
 

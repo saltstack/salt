@@ -83,5 +83,25 @@ class SaltCMD(object):
                     ]
             if self.opts['pcre']:
                 args.append('pcre')
-            print local.cmd(*args)
+            
+            ret = local.cmd(*args)
+
+            # Handle special case commands
+            if self.opts['fun'] == 'sys.cmd':
+                self._print_docs(ret)
+            else:
+                print ret
+
+    def print_docs(self, ret):
+        '''
+        Print out the docstrings for all of the functions on the minions
+        '''
+        docs = {}
+        for host in ret:
+            for fun in ret['host']:
+                if not docs.has_key(fun):
+                    docs[fun] = ret[host][fun].__doc__
+        for fun in docs:
+            print fun
+            print docs[fun]
 
