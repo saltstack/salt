@@ -68,6 +68,7 @@ class Minion(object):
                     functions[mod + '.' + attr] = getattr(module, attr)
         functions['sys.list_functions'] = lambda: functions.keys()
         functions['sys.doc'] = lambda: self.__get_docs()
+        functions['sys.reload_functions'] = lambda: self.reload_functions()
         print functions
         return functions
 
@@ -166,6 +167,12 @@ class Minion(object):
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
         return socket.recv()
+
+    def reload_functions(self):
+        '''
+        Reload the functions dict for this minion, reading in any new functions
+        '''
+        self.functions = self.__load_functions()
 
     def authenticate(self):
         '''
