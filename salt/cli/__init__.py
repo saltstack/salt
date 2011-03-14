@@ -35,7 +35,7 @@ class SaltCMD(object):
                 '--pcre',
                 default=False,
                 dest='pcre',
-                action='store_true'
+                action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
                    + ' servers, use pcre regular expressions')
         parser.add_option('-Q',
