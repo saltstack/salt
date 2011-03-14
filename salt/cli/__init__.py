@@ -38,6 +38,13 @@ class SaltCMD(object):
                 action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
                    + ' servers, use pcre regular expressions')
+        parser.add_option('-L',
+                '--list',
+                default=False,
+                dest='list_',
+                action='store_true',
+                help='Instead of using shell globs to evaluate the target'\
+                   + ' servers, take a comma delimited list of servers.')
         parser.add_option('-Q',
                 '--query',
                 dest='query',
@@ -53,6 +60,7 @@ class SaltCMD(object):
 
         opts['timeout'] = options.timeout
         opts['pcre'] = options.pcre
+        opts['list'] = options.list_
         if options.query:
             opts['query'] = options.query
             if len(args) < 1:
@@ -83,6 +91,8 @@ class SaltCMD(object):
                     ]
             if self.opts['pcre']:
                 args.append('pcre')
+            elif self.opts['list']:
+                args.append('list')
             
             ret = local.cmd(*args)
 
@@ -100,9 +110,10 @@ class SaltCMD(object):
         for host in ret:
             for fun in ret[host]:
                 if not docs.has_key(fun):
-                    if ret[host][fun]
+                    if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in docs:
-            print fun
+            print fun + ':'
             print docs[fun]
+            print ''
 
