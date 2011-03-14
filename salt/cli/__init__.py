@@ -73,7 +73,7 @@ class SaltCMD(object):
         Execute the salt command line
         '''
         local = salt.client.LocalClient()
-        if self.opts['query']:
+        if self.opts.has_key('query'):
             print local.find_cmd(self.opts['cmd'])
         else:
             args = [self.opts['tgt'],
