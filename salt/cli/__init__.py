@@ -70,7 +70,10 @@ class SaltCMD(object):
                 sys.exit('2')
             opts['cmd'] = args[0]
         else:
-            opts['tgt'] = args[0]
+            if opts['list']:
+                opts['tgt'] = args[0].split(',')
+            else:
+                opts['tgt'] = args[0]
             opts['fun'] = args[1]
             opts['arg'] = args[2:]
 

@@ -152,6 +152,12 @@ class Minion(object):
         '''
         return bool(re.match(tgt, self.opts['hostname']))
 
+    def _list_match(self, tgt):
+        '''
+        Determines if this host is on the list
+        '''
+        return bool(tgt.count(self.opts['hostname']))
+
     def _return_pub(self, ret):
         '''
         Returnt the data from the executed command to the master server
