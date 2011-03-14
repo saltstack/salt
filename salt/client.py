@@ -193,8 +193,8 @@ class LocalClient(object):
                 tgt=tgt,
                 fun=fun,
                 arg=arg,
-                key=self.key)
-        package['tgt_type'] = expr_form
+                key=self.key,
+                tgt_type=expr_form)
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
