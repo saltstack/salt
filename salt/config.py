@@ -19,6 +19,7 @@ def minion_config(path):
             'pki_dir': '/etc/salt/pki',
             'hostname': socket.getfqdn(),
             'cachedir': '/var/cache/salt',
+            'disable_modules': [],
             'open_mode': False,
             }
 

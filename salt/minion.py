@@ -57,6 +57,8 @@ class Minion(object):
                     or fn_.endswith('.pyc'):
                 mods.add(fn_[:fn_.rindex('.')])
         for mod in mods:
+            if self.opts['disable_modules'].count(mod):
+                continue
             module = importlib.import_module('salt.modules.' + mod)
             for attr in dir(module):
                 if attr.startswith('_'):
