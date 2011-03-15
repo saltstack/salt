@@ -1,7 +1,18 @@
 '''
 A module to wrap pacman calls, since Arch is the best :)
 '''
+
 import subprocess
+
+def _list_removed(old, new):
+    '''
+    List the pachages which have been removed between the two package objects
+    '''
+    pkgs = []
+    for pkg in old:
+        if not new.has_key():
+            pkgs.append(pkg)
+    return pkgs
 
 def list_pkgs():
     '''
@@ -112,4 +123,34 @@ def upgrade():
                           'new': new[npkg]}
     return pkgs
     
+def remove(pkg):
+    '''
+    Remove a single package with pacman -R
+
+    Return a list containing the removed packages:
     
+    CLI Example:
+    salt '*' pacman.remove <package name>
+    '''
+    old = list_pkgs()
+    cmd = 'pacman -R --noprogressbar --noconfirm ' + pkg
+    subprocess.call(cmd, shell=True)
+    new = list_pkgs()
+    return _list_removed(old, new)
+
+def purge(pkg):
+    '''
+    Recursively remove a package and all dependencies which were installed
+    with it, this will call a pacman -Rsc
+
+    Return a list containing the removed packages:
+    
+    CLI Example:
+    salt '*' pacman.purge <package name>
+
+    '''
+    old = list_pkgs()
+    cmd = 'pacman -R --noprogressbar --noconfirm ' + pkg
+    subprocess.call(cmd, shell=True)
+    new = list_pkgs()
+    return _list_removed(old, new)
