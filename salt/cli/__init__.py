@@ -115,7 +115,7 @@ class SaltCMD(object):
                 if not docs.has_key(fun):
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
-        for fun in docs:
+        for fun in sorted(docs):
             print fun + ':'
             print docs[fun]
             print ''
