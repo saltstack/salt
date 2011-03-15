@@ -39,7 +39,7 @@ def get( name ):
 
 def set( name, value ):
     '''
-    Return a single sysctl parameter for this minion
+    Set a single sysctl parameter for this minion
 
     CLI Example:
     salt '*' sysctl.set net.ipv4.ip_forward 1
