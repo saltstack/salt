@@ -7,6 +7,9 @@ def list_pkgs():
     '''
     List the packages currently installed in a dict:
     {'<package_name>': '<version>'}
+
+    CLI Example:
+    salt '*' pacman.list_pkgs
     '''
     cmd = 'pacman -Q'
     ret = {}
@@ -24,6 +27,9 @@ def refresh_db():
     '''
     Just run a pacman -Sy, return a dict:
     {'<database name>': Bool}
+
+    CLI Example:
+    salt '*' pacman.refresh_db
     '''
     cmd = 'pacman -Sy'
     ret = {}
@@ -49,6 +55,9 @@ def install(pkg, refresh=False):
     Return a dict containing the new package names and versions:
     {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
+
+    CLI Example:
+    salt '*' pacman.install <package name>
     '''
     old = list_pkgs()
     cmd = 'pacman -S --noprogressbar --noconfirm ' + pkg
@@ -79,6 +88,9 @@ def upgrade():
     Return a dict containing the new package names and versions:
     {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
+
+    CLI Example:
+    salt '*' pacman.upgrade
     '''
     old = list_pkgs()
     cmd = 'pacman -Syu --noprogressbar --noconfirm '

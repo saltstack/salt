@@ -59,14 +59,29 @@ class Minion(object):
         for mod in mods:
             if self.opts['disable_modules'].count(mod):
                 continue
-            module = importlib.import_module('salt.modules.' + mod)
+            try:
+                module = importlib.import_module('salt.modules.' + mod)
+            except:
+                continue
             for attr in dir(module):
                 if attr.startswith('_'):
                     continue
                 if callable(getattr(module, attr)):
                     functions[mod + '.' + attr] = getattr(module, attr)
+        functions['sys.list_functions'] = lambda: functions.keys()
+        functions['sys.doc'] = lambda: self.__get_docs()
+        functions['sys.reload_functions'] = lambda: self.reload_functions()
         print functions
         return functions
+
+    def __get_docs(self):
+        '''
+        Return a dict containing all of the doc strings in the functions dict
+        '''
+        docs = {}
+        for fun in self.functions:
+            docs[fun] = self.functions[fun].__doc__
+        return docs
 
     def _handle_payload(self, payload):
         '''
@@ -139,6 +154,12 @@ class Minion(object):
         '''
         return bool(re.match(tgt, self.opts['hostname']))
 
+    def _list_match(self, tgt):
+        '''
+        Determines if this host is on the list
+        '''
+        return bool(tgt.count(self.opts['hostname']))
+
     def _return_pub(self, ret):
         '''
         Returnt the data from the executed command to the master server
@@ -154,6 +175,12 @@ class Minion(object):
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
         return socket.recv()
+
+    def reload_functions(self):
+        '''
+        Reload the functions dict for this minion, reading in any new functions
+        '''
+        self.functions = self.__load_functions()
 
     def authenticate(self):
         '''

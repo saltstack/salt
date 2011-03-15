@@ -35,9 +35,16 @@ class SaltCMD(object):
                 '--pcre',
                 default=False,
                 dest='pcre',
-                action='store_true'
+                action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
                    + ' servers, use pcre regular expressions')
+        parser.add_option('-L',
+                '--list',
+                default=False,
+                dest='list_',
+                action='store_true',
+                help='Instead of using shell globs to evaluate the target'\
+                   + ' servers, take a comma delimited list of servers.')
         parser.add_option('-Q',
                 '--query',
                 dest='query',
@@ -53,6 +60,7 @@ class SaltCMD(object):
 
         opts['timeout'] = options.timeout
         opts['pcre'] = options.pcre
+        opts['list'] = options.list_
         if options.query:
             opts['query'] = options.query
             if len(args) < 1:
@@ -62,7 +70,10 @@ class SaltCMD(object):
                 sys.exit('2')
             opts['cmd'] = args[0]
         else:
-            opts['tgt'] = args[0]
+            if opts['list']:
+                opts['tgt'] = args[0].split(',')
+            else:
+                opts['tgt'] = args[0]
             opts['fun'] = args[1]
             opts['arg'] = args[2:]
 
@@ -73,7 +84,7 @@ class SaltCMD(object):
         Execute the salt command line
         '''
         local = salt.client.LocalClient()
-        if self.opts['query']:
+        if self.opts.has_key('query'):
             print local.find_cmd(self.opts['cmd'])
         else:
             args = [self.opts['tgt'],
@@ -83,5 +94,29 @@ class SaltCMD(object):
                     ]
             if self.opts['pcre']:
                 args.append('pcre')
-            print local.cmd(*args)
+            elif self.opts['list']:
+                args.append('list')
+            
+            ret = local.cmd(*args)
+
+            # Handle special case commands
+            if self.opts['fun'] == 'sys.doc':
+                self._print_docs(ret)
+            else:
+                print ret
+
+    def _print_docs(self, ret):
+        '''
+        Print out the docstrings for all of the functions on the minions
+        '''
+        docs = {}
+        for host in ret:
+            for fun in ret[host]:
+                if not docs.has_key(fun):
+                    if ret[host][fun]:
+                        docs[fun] = ret[host][fun]
+        for fun in docs:
+            print fun + ':'
+            print docs[fun]
+            print ''
 

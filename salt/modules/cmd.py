@@ -10,7 +10,10 @@ import tempfile
 
 def run(cmd):
     '''
-    Execute the passed command and return the output
+    Execute the passed command and return the output as a string
+
+    CLI Example:
+    salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
     return subprocess.Popen(cmd,
             shell=True,
@@ -20,6 +23,9 @@ def run(cmd):
 def run_stdout(cmd):
     '''
     Execute a command, and only return the standard out
+
+    CLI Example:
+    salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
     return subprocess.Popen(cmd,
             shell=True,
@@ -28,6 +34,9 @@ def run_stdout(cmd):
 def run_stderr(cmd):
     '''
     Executa a command and only return the 
+
+    CLI Example:
+    salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
     return subprocess.Popen(cmd,
             shell=True,

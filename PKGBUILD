@@ -9,7 +9,9 @@ url="https://github.com/thatch45/salt"
 license=("APACHE")
 depends=('python2'
          'pyzmq'
-         'python-m2crypto')
+         'python-m2crypto'
+         'python-yaml'
+         'pycrypto')
 makedepends=()
 optdepends=()
 options=()
