@@ -34,7 +34,6 @@ def get( name ):
     out = subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
-    ret[name] = out[0]
     return out[0]
 
 def set( name, value ):
