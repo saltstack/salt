@@ -30,7 +30,6 @@ def get( name ):
     salt '*' sysctl.get net.ipv4.ip_forward
     '''
     cmd = 'sysctl -n %s' % name
-    ret = {}
     out = subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
