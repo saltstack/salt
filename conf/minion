@@ -8,6 +8,9 @@
 #hostname:
 # Where cace data goes
 #cachedir: /var/cache/salt
+# Disable specific modules, this will allow the admin to limit the level os 
+# access the master has to the minion
+#disable_modules: [cmd,test]
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
 # the situation where your keys end up in a bad state. If you run in open more
