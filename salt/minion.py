@@ -122,7 +122,7 @@ class Minion(object):
         if self.functions.has_key(data['fun']):
             ret['return'] = self.functions[data['fun']](*data['arg'])
         else:
-            ret['return'] = ''
+            ret['return'] = Exception('Failed to find the specified module')
         ret['jid'] = data['jid']
         return ret
 
