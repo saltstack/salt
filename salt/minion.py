@@ -121,6 +121,8 @@ class Minion(object):
 
         if self.functions.has_key(data['fun']):
             ret['return'] = self.functions[data['fun']](*data['arg'])
+        else:
+            ret['return'] = ''
         ret['jid'] = data['jid']
         return ret
 
@@ -162,7 +164,7 @@ class Minion(object):
 
     def _return_pub(self, ret):
         '''
-        Returnt the data from the executed command to the master server
+        Return the data from the executed command to the master server
         '''
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
