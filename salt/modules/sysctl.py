@@ -3,12 +3,12 @@ Module for viewing and modifying sysctl paramters
 '''
 import subprocess
 
-def list():
+def show():
     '''
     Return a list of sysctl parameters for this minion
 
     CLI Example:
-    salt '*' sysctl.list
+    salt '*' sysctl.show
     '''
     cmd = 'sysctl -a'
     ret = {}
@@ -22,7 +22,7 @@ def list():
         ret[comps[0]] = comps[1]
     return ret
 
-def get( name ):
+def get(name):
     '''
     Return a single sysctl parameter for this minion
 
@@ -35,12 +35,12 @@ def get( name ):
             stdout=subprocess.PIPE).communicate()[0]
     return out[0]
 
-def set( name, value ):
+def assign(name, value):
     '''
-    Set a single sysctl parameter for this minion
+    Assign a single sysctl parameter for this minion
 
     CLI Example:
-    salt '*' sysctl.set net.ipv4.ip_forward 1
+    salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
     cmd = 'sysctl -w %s=%s' % ( name, value )
     ret = {}
