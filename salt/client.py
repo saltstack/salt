@@ -102,13 +102,14 @@ class LocalClient(object):
         os.chdir(cwd)
         return ret
 
-    def get_returns(self, jid, minions, timeout=5):
+    def get_returns(self, jid, minions, timeout=5, global_timeout=10):
         '''
         This method starts off a watcher looking at the return data for a
         specified jid
         '''
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = 999999999999
+        gstart = int(time.time())
         ret = {}
         # Wait for the hosts to check in
         while True:
@@ -125,6 +126,10 @@ class LocalClient(object):
             if len(ret) >= len(minions):
                 return ret
             if int(time.time()) > start + timeout:
+                return ret
+            if int(time.time()) > gstart + global_timeout and not ret:
+                # No minions have replied within the specified global timeout,
+                # return an empty dict
                 return ret
             time.sleep(0.02)
 
