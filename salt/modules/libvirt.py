@@ -1,6 +1,10 @@
 '''
 Work with vitual machines managed by libvirt
 '''
+# Special Thanks to Michael Dehann, many of the concepts, and a few structures
+# of his in the virt func module have been used
+
+
 # Import Python Libs
 import os
 import sub_process
@@ -39,11 +43,10 @@ def list_vms():
     vms = []
     names = conn.listDefinedDomains()
         for name in names:
-            vm = conn.lookupByName(name)
-            vms.append(vm)
+            vms.append(name)
     return vms
 
-def _info():
+def info():
     '''
     Return detailed information about the vms on this hyper in a dict:
     [{'cpus': <int>,
@@ -54,7 +57,16 @@ def _info():
     info = {}
     conn = __get_conn()
     for vm in list_vms():
-        raw = vm.info()
+        dom = dom = conn.lookupByName(vm)
+        raw = dom.info()
+        info[vm] = {
+                'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown'),
+                'maxMem': int(raw[1]),
+                'mem': int(raw[2]),
+                'cpu': raw[3],
+                'cputime': int(data[4]),
+                }
+    return info
 
 
 
