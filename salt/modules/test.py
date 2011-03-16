@@ -22,7 +22,7 @@ def ping():
     '''
     return True
 
-def facter_data():
+def facter():
     '''
     Return the facter data
 
