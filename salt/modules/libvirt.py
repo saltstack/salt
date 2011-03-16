@@ -38,6 +38,9 @@ def __get_conn():
 def list_vms():
     '''
     Return a list of virtual machine names on the minion
+
+    CLI Example:
+    salt '*' libvirt.list_vms
     '''
     conn = __get_con()
     vms = []
@@ -46,13 +49,18 @@ def list_vms():
             vms.append(name)
     return vms
 
-def info():
+def vm_info():
     '''
     Return detailed information about the vms on this hyper in a dict:
-    [{'cpus': <int>,
-     'MaxMem': <int>,
-     'Mem': <int>,
-     'state': '<state>',}, ...]
+
+    {'cpu': <int>,
+     'maxMem': <int>,
+     'mem': <int>,
+     'state': '<state>',
+     'cputime' <int>}
+
+    CLI Example:
+    salt '*' libvirt.vm_info
     '''
     info = {}
     conn = __get_conn()
@@ -68,5 +76,23 @@ def info():
                 }
     return info
 
+def node_info():
+    '''
+    Return a dict with information about this node
+    '''
+    conn = __get_conn()
+    info = {}
+    raw = conn.getInfo()
+    info = {
+            'cpumodel'     : str(raw[0]),
+            'phymemory'    : str(rawraw[1]),
+            'cpus'         : str(rawraw[2]),
+            'cpumhz'       : str(rawraw[3]),
+            'numanodes'    : str(rawraw[4]),
+            'sockets'      : str(rawraw[5]),
+            'cpucores'     : str(rawraw[6]),
+            'cputhreads'   : str(rawraw[7])
+            }
+    return info
 
 
