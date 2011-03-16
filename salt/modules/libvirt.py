@@ -35,6 +35,13 @@ def __get_conn():
     # all vm layers supported by libvirt
     return libvirt.open("qemu:///system")
 
+def _get_dom(vm):
+    '''
+    Return a domain object for the named vm 
+    '''
+    conn = __get_con()
+    return conn.lookupByName(vm)
+
 def list_vms():
     '''
     Return a list of virtual machine names on the minion
@@ -120,8 +127,8 @@ def shutdown(vm):
     CLI Example:
     salt '*' libvirt.shutdown <vm name>
     '''
-    conn = __get_conn()
-    conn.shutdown(vm)
+    dom = _get_dom(vm)
+    dom.shutdown()
     return True
 
 def pause(vm):
@@ -131,8 +138,8 @@ def pause(vm):
     CLI Example:
     salt '*' libvirt.pause <vm name>
     '''
-    conn = __get_conn()
-    conn.suspend(vm)
+    dom = _get_dom(vm)
+    dom.suspend()
     return True
 
 def unpause(vm):
@@ -142,8 +149,8 @@ def unpause(vm):
     CLI Example:
     salt '*' libvirt.unpause <vm name>
     '''
-    conn = __get_conn()
-    conn.resume(vm)
+    dom = _get_dom(vm)
+    dom.unpause()
     return True
 
 def create(vm):
@@ -153,8 +160,8 @@ def create(vm):
     CLI Example:
     salt '*' libvirt.create <vm name>
     '''
-    conn = __get_conn()
-    conn.create(vm)
+    dom = _get_dom(vm)
+    dom.create()
     return True
 
 def create_xml_str(xml):
@@ -187,7 +194,19 @@ def destroy(vm):
     CLI Example:
     salt '*' libvirt.destroy <vm name>
     '''
-    conn = __get_conn()
-    conn.destroy(vm)
+    dom = _get_dom(vm)
+    dom.destroy()
+    return True
+
+def undefine(vm):
+    '''
+    Remove a defined vm, this does not purge the virtual machine image, and
+    this only works if the vm is powered down
+
+    CLI Example:
+    salt '*' libvirt.undefine <vm name>
+    '''
+    dom = _get_dom(vm)
+    dom.undefine()
     return True
 
