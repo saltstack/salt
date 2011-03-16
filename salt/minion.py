@@ -141,10 +141,10 @@ class Minion(object):
             if not self._glob_match(data['tgt']):
                 return ret
 
-        if self.functions.has_key(data['fun']):
+        try:
             ret['return'] = self.functions[data['fun']](*data['arg'])
-        else:
-            ret['return'] = Exception('Failed to find the specified module')
+        except Exception as exc:
+            ret['return'] = exc
         ret['jid'] = data['jid']
         return ret
 
