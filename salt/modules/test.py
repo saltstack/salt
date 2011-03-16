@@ -21,3 +21,12 @@ def ping():
     salt '*' test.ping
     '''
     return True
+
+def facter_data():
+    '''
+    Return the facter data
+
+    CLI Example:
+    salt '*' test.facter_data
+    '''
+    return facter
