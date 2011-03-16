@@ -85,14 +85,88 @@ def node_info():
     raw = conn.getInfo()
     info = {
             'cpumodel'     : str(raw[0]),
-            'phymemory'    : str(rawraw[1]),
-            'cpus'         : str(rawraw[2]),
-            'cpumhz'       : str(rawraw[3]),
-            'numanodes'    : str(rawraw[4]),
-            'sockets'      : str(rawraw[5]),
-            'cpucores'     : str(rawraw[6]),
-            'cputhreads'   : str(rawraw[7])
+            'phymemory'    : raw[1],
+            'cpus'         : raw[2],
+            'cpumhz'       : raw[3],
+            'numanodes'    : raw[4],
+            'sockets'      : raw[5],
+            'cpucores'     : raw[6],
+            'cputhreads'   : raw[7]
             }
     return info
 
+def freemem():
+    '''
+    Return an int representing the amount of memory that has not been given
+    to virtual machines on this node
+
+    CLI Example:
+    salt '*' libvirt.freemem
+    '''
+    conn = __get_conn()
+    mem = conn.getInfo()[1]
+    # Take off just enough to sustain the hypervisor
+    mem -= 256
+    for vm in list_vms():
+        dom = conn.lookupByName(vm)
+        if dom.ID() > 0:
+            mem -= vm.info()[2]/1024
+    return mem
+
+def shutdown(self, vm):
+    '''
+    Send a soft shutdown signal to the named vm
+
+    CLI Example:
+    salt '*' libvirt.shutdown <vm name>
+    '''
+    conn = __get_conn()
+    conn.shutdown(vm)
+    return True
+
+def pause(self, vm):
+    '''
+    Pause the named vm
+
+    CLI Example:
+    salt '*' libvirt.pause <vm name>
+    '''
+    conn = __get_conn()
+    conn.suspend(vm)
+    return True
+
+def unpause(self, vm):
+    '''
+    Unpause the named vm
+
+    CLI Example:
+    salt '*' libvirt.unpause <vm name>
+    '''
+    conn = __get_conn()
+    conn.resume(vm)
+    return True
+
+def create(self, vm):
+    '''
+    Start a defined domain
+
+    CLI Example:
+    salt '*' libvirt.create <vm name>
+    '''
+    conn = __get_conn()
+    conn.create(vm)
+    return True
+# Crate more "create" functions to wrap the libvirt api better
+
+def destroy(self, vm):
+    '''
+    Hard power down the virtual machine, this is equivelent to pulling the
+    power
+
+    CLI Example:
+    salt '*' libvirt.destroy <vm name>
+    '''
+    conn = __get_conn()
+    conn.destroy(vm)
+    return True
 
