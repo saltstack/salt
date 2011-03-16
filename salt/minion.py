@@ -65,7 +65,7 @@ class Minion(object):
                 continue
             try:
                 module = importlib.import_module('salt.modules.' + mod)
-                module.facter = facter
+                module.__facter__ = facter
             except:
                 continue
             for attr in dir(module):

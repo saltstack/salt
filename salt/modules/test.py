@@ -29,4 +29,4 @@ def facter_data():
     CLI Example:
     salt '*' test.facter_data
     '''
-    return facter
+    return __facter__
