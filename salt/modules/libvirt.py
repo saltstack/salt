@@ -113,7 +113,7 @@ def freemem():
             mem -= vm.info()[2]/1024
     return mem
 
-def shutdown(self, vm):
+def shutdown(vm):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -124,7 +124,7 @@ def shutdown(self, vm):
     conn.shutdown(vm)
     return True
 
-def pause(self, vm):
+def pause(vm):
     '''
     Pause the named vm
 
@@ -135,7 +135,7 @@ def pause(self, vm):
     conn.suspend(vm)
     return True
 
-def unpause(self, vm):
+def unpause(vm):
     '''
     Unpause the named vm
 
@@ -146,7 +146,7 @@ def unpause(self, vm):
     conn.resume(vm)
     return True
 
-def create(self, vm):
+def create(vm):
     '''
     Start a defined domain
 
@@ -156,9 +156,30 @@ def create(self, vm):
     conn = __get_conn()
     conn.create(vm)
     return True
-# Crate more "create" functions to wrap the libvirt api better
 
-def destroy(self, vm):
+def create_xml_str(xml):
+    '''
+    Start a domain based on the xml passed to the function
+
+    CLI Example:
+    salt '*' libvirt.create_xml_str <xml in string format>
+    '''
+    conn = __get_conn()
+    conn.createXML(xml)
+    return True
+
+def create_xml_path(path):
+    '''
+    Start a defined domain
+
+    CLI Example:
+    salt '*' libvirt.create_xml_path <path to xml file on the node>
+    '''
+    if not os.path.isfile(path):
+        return False
+    return create_xml_str(open(path, 'r').read())
+
+def destroy(vm):
     '''
     Hard power down the virtual machine, this is equivelent to pulling the
     power
