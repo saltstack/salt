@@ -47,6 +47,9 @@ class Minion(object):
         # functionality.
         functions = {}
         mods = set()
+        # Load up the facter information
+        facter = self._facter_data()
+
         mod_dir = os.path.join(distutils.sysconfig.get_python_lib(),
                 'salt/modules')
         for fn_ in os.listdir(mod_dir):
@@ -61,6 +64,7 @@ class Minion(object):
                 continue
             try:
                 module = importlib.import_module('salt.modules.' + mod)
+                module.facter = facter
             except:
                 continue
             for attr in dir(module):
@@ -82,6 +86,23 @@ class Minion(object):
         for fun in self.functions:
             docs[fun] = self.functions[fun].__doc__
         return docs
+
+    def _facter_data(self):
+        '''
+        Returns a dict of data about the minion allowing modules to differ
+        based on information gathered about the minion.
+        So far only facter information is loaded
+        '''
+        facts = subprocess.Popen('facter',
+                shell=True,
+                stdout=subprocess.PIPE).communicate()[0]
+        facter = {}
+        for line in facts:
+            if line.count('=>'):
+                comps = line.split('=>')
+                facter[comps[0]] = comps[1]
+
+        return facter
 
     def _handle_payload(self, payload):
         '''
