@@ -8,6 +8,7 @@ import importlib
 import glob
 import re
 import tempfile
+import subprocess
 
 # Import zeromq libs
 import zmq
@@ -97,7 +98,7 @@ class Minion(object):
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
         facter = {}
-        for line in facts:
+        for line in facts.split('\n'):
             if line.count('=>'):
                 comps = line.split('=>')
                 facter[comps[0]] = comps[1]
