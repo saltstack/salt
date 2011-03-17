@@ -5,6 +5,7 @@ The management of salt command line utilities are stored in here
 import optparse
 import os
 import sys
+import yaml
 
 # Import salt components
 import salt.client
@@ -110,7 +111,8 @@ class SaltCMD(object):
             if self.opts['fun'] == 'sys.doc':
                 self._print_docs(ret)
             else:
-                print ret
+                if type(ret) == type(list()) or type(ret) == type(dict()):
+                    print yaml.dump(ret)
 
     def _print_docs(self, ret):
         '''
