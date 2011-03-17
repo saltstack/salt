@@ -135,7 +135,7 @@ class Minion(object):
             return ret
         # Verify that the publication applies to this minion
         if data.has_key('tgt_type'):
-            if not getattr(self, '_' + data['tgt_type'] + '_match')(*(data['tgt'])):
+            if not getattr(self, '_' + data['tgt_type'] + '_match')(data['tgt']):
                 return ret
         else:
             if not self._glob_match(data['tgt']):
