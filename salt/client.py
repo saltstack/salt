@@ -120,7 +120,7 @@ class LocalClient(object):
                     retp = os.path.join(jid_dir, fn_, 'return.p')
                     if not os.path.isfile(retp):
                         continue
-                    while not ret.has_key[fn_]:
+                    while not ret.has_key(fn_):
                         try:
                             ret[fn_] = pickle.load(open(retp, 'r'))
                         except:
