@@ -25,4 +25,5 @@ package() {
   cd $srcdir/$pkgname-$pkgver
 
   python2 setup.py install --root=$pkgdir/ --optimize=1
+  chmod +x $pkgdir/etc/rc.d/*
 }
