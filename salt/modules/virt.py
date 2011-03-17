@@ -136,15 +136,15 @@ def pause(vm_):
     dom.suspend()
     return True
 
-def unpause(vm_):
+def resume(vm_):
     '''
-    Unpause the named vm
+    Resume the named vm
 
     CLI Example:
-    salt '*' virt.unpause <vm name>
+    salt '*' virt.resume <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.unpause()
+    dom.resume()
     return True
 
 def create(vm_):
@@ -166,7 +166,7 @@ def create_xml_str(xml):
     salt '*' virt.create_xml_str <xml in string format>
     '''
     conn = __get_conn()
-    conn.createXML(xml)
+    conn.createXML(xml, 0)
     return True
 
 def create_xml_path(path):
