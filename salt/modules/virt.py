@@ -99,6 +99,18 @@ def node_info():
             }
     return info
 
+def full_info():
+    '''
+    Return the node_info, vm_info and freemem
+
+    CLI Example:
+    salt '*' virt.full_info
+    '''
+    return {'freemem': freemem(),
+            'node_info': node_info(),
+            'vm_info': vm_info()}
+
+
 def freemem():
     '''
     Return an int representing the amount of memory that has not been given
