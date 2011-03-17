@@ -74,6 +74,8 @@ def vm_info():
                 'mem': int(raw[2]),
                 'cpu': raw[3],
                 'cputime': int(raw[4]),
+                'spice': '',
+                'vnc': '',
                 }
     return info
 
@@ -99,18 +101,6 @@ def node_info():
             }
     return info
 
-def full_info():
-    '''
-    Return the node_info, vm_info and freemem
-
-    CLI Example:
-    salt '*' virt.full_info
-    '''
-    return {'freemem': freemem(),
-            'node_info': node_info(),
-            'vm_info': vm_info()}
-
-
 def freemem():
     '''
     Return an int representing the amount of memory that has not been given
@@ -128,6 +118,34 @@ def freemem():
         if dom.ID() > 0:
             mem -= vm_.info()[2]/1024
     return mem
+
+def freecpu():
+    '''
+    Return an int representing the number of unallocated cpus on this
+    hypervisor
+
+    CLI Example:
+    salt '*' virt.freemem
+    '''
+    conn = __get_conn()
+    cpus = conn.getInfo()[2]
+    for vm_ in list_vms():
+        dom = conn.lookupByName(vm_)
+        if dom.ID() > 0:
+            cpus -= vm_.info()[3]
+    return cpus
+
+def full_info():
+    '''
+    Return the node_info, vm_info and freemem
+
+    CLI Example:
+    salt '*' virt.full_info
+    '''
+    return {'freemem': freemem(),
+            'node_info': node_info(),
+            'vm_info': vm_info(),
+            'freecpu': freecpu()}
 
 def shutdown(vm_):
     '''
