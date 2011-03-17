@@ -207,3 +207,23 @@ def undefine(vm_):
     dom.undefine()
     return True
 
+def virt_type():
+    '''
+    Returns the virtual machine type as a string
+    
+    CLI Example:
+    salt '*' virt.virt_type
+    '''
+    return __facter__['virtual']
+
+def is_kvm_hyper():
+    '''
+    Returns a bool whether or not this node is a hypervisor
+    '''
+    if __facter__['virtual'] != 'physical':
+        return False
+    if subprocess.call('lsmod | grep kvm_', shell=True):
+        return False
+    if subprocess.call('ps aux | grep libvirtd | grep -v grep', shell=True):
+        return False
+    return True
