@@ -27,9 +27,7 @@ def minion_config(path):
         try:
             opts.update(yaml.load(open(path, 'r')))
         except:
-            err = 'The salt minon configuration file did not parse correctly,'\
-                + ' please check your configuration file.\nUsing defaults'
-            sys.stderr.write(err + '\n')
+            pass
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
     
@@ -62,10 +60,7 @@ def master_config(path):
         try:
             opts.update(yaml.load(open(path, 'r')))
         except:
-            err = 'The salt master configuration file did not parse'\
-                + ' correctly,'\
-                + ' please check your configuration file.\nUsing defaults'
-            sys.stderr.write(err + '\n')
+            pass
     
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
