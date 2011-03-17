@@ -1,7 +1,7 @@
 # Maintainer: Thomas S Hatch <thatch45@gmail.com>
 
 pkgname=salt
-pkgver=0.1
+pkgver=0.6
 pkgrel=1
 pkgdesc="A distributed remote execution system"
 arch=(any)
@@ -11,7 +11,8 @@ depends=('python2'
          'pyzmq'
          'python-m2crypto'
          'python-yaml'
-         'pycrypto')
+         'pycrypto'
+         'facter')
 makedepends=()
 optdepends=()
 options=()
