@@ -80,6 +80,9 @@ def vm_info():
 def node_info():
     '''
     Return a dict with information about this node
+
+    CLI Example:
+    salt '*' virt.node_info
     '''
     conn = __get_conn()
     info = {}
