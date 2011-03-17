@@ -120,7 +120,11 @@ class LocalClient(object):
                     retp = os.path.join(jid_dir, fn_, 'return.p')
                     if not os.path.isfile(retp):
                         continue
-                    ret[fn_] = pickle.load(open(retp, 'r'))
+                    while not ret.has_key[fn_]:
+                        try:
+                            ret[fn_] = pickle.load(open(retp, 'r'))
+                        except:
+                            pass
             if ret and start == 999999999999:
                 start = int(time.time())
             if len(ret) >= len(minions):
