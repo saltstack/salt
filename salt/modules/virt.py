@@ -9,6 +9,7 @@ Work with vitual machines managed by libvirt
 import os
 import StringIO
 from xml.dom import minidom
+import subprocess
 
 # Import libvirt
 import libvirt
@@ -78,7 +79,7 @@ def vm_info():
                 'mem': int(raw[2]),
                 'cpu': raw[3],
                 'cputime': int(raw[4]),
-                'console': graphics(vm_),
+                'graphics': get_graphics(vm_),
                 }
     return info
 
@@ -104,16 +105,20 @@ def node_info():
             }
     return info
 
-def graphics(vm_):
+def get_graphics(vm_):
     '''
     Returns the information on vnc for a given vm
     '''
-    out = {'autoport': 'None', 'keymap': 'None', 'type': 'vnc', 'port': 'None', 'listen': 'None'}
+    out = {'autoport': 'None',
+           'keymap': 'None',
+           'type': 'vnc',
+           'port': 'None',
+           'listen': 'None'}
     xml = get_xml(vm_)
     ssock = StringIO.StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
-        graphics = node.getAttribute("devices")
+        #graphics = node.getAttribute("devices")
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
             for key in g_node.attributes.keys():
