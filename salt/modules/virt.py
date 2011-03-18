@@ -74,8 +74,7 @@ def vm_info():
                 'mem': int(raw[2]),
                 'cpu': raw[3],
                 'cputime': int(raw[4]),
-                'spice': '',
-                'vnc': '',
+                'console': graphics(vm_),
                 }
     return info
 
@@ -100,6 +99,22 @@ def node_info():
             'cputhreads'   : raw[7]
             }
     return info
+
+def graphics(vm_):
+    '''
+    Returns the information on vnc for a given vm
+    '''
+    out = {'autoport': 'None', 'keymap': 'None', 'type': 'vnc', 'port': 'None', 'listen': 'None'}
+    xml = self.get_xml(vmid)
+    ssock = StringIO.StringIO(xml)
+    doc = minidom.parse(ssock)
+    for node in doc.getElementsByTagName("domain"):
+        graphics = node.getAttribute("devices")
+        L = node.getElementsByTagName("graphics")
+        for node2 in L:
+            for k in node2.attributes.keys():
+                out[k] = node2.getAttribute(k)
+    return out
 
 def freemem():
     '''
