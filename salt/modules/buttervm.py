@@ -27,7 +27,6 @@ def full_butter_data(local_path):
     salt '*' buttervm.full_butter_data <image_path>
     '''
     info = virt.full_info()
-    info['butter'] = {}
-    info['butter']['local_images'] = local_images(local_path)
+    info['local_images'] = local_images(local_path)
     return info
 
