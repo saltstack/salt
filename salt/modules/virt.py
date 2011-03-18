@@ -7,6 +7,8 @@ Work with vitual machines managed by libvirt
 
 # Import Python Libs
 import os
+import StringIO
+from xml.dom import minidom
 
 # Import libvirt
 import libvirt
@@ -35,6 +37,8 @@ def _get_dom(vm_):
     Return a domain object for the named vm 
     '''
     conn = __get_conn()
+    if not list_vms().count(vm_):
+        raise Exception('The specified vm is not present')
     return conn.lookupByName(vm_)
 
 def list_vms():
@@ -105,15 +109,15 @@ def graphics(vm_):
     Returns the information on vnc for a given vm
     '''
     out = {'autoport': 'None', 'keymap': 'None', 'type': 'vnc', 'port': 'None', 'listen': 'None'}
-    xml = self.get_xml(vmid)
+    xml = get_xml(vm_)
     ssock = StringIO.StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
         graphics = node.getAttribute("devices")
-        L = node.getElementsByTagName("graphics")
-        for node2 in L:
-            for k in node2.attributes.keys():
-                out[k] = node2.getAttribute(k)
+        g_nodes = node.getElementsByTagName("graphics")
+        for g_node in g_nodes:
+            for key in g_node.attributes.keys():
+                out[key] = g_node.getAttribute(key)
     return out
 
 def freemem():
@@ -129,7 +133,7 @@ def freemem():
     # Take off just enough to sustain the hypervisor
     mem -= 256
     for vm_ in list_vms():
-        dom = conn.lookupByName(vm_)
+        dom = _get_dom(vm_)
         if dom.ID() > 0:
             mem -= vm_.info()[2]/1024
     return mem
@@ -145,7 +149,7 @@ def freecpu():
     conn = __get_conn()
     cpus = conn.getInfo()[2]
     for vm_ in list_vms():
-        dom = conn.lookupByName(vm_)
+        dom = _get_dom(vm_)
         if dom.ID() > 0:
             cpus -= vm_.info()[3]
     return cpus
@@ -161,6 +165,13 @@ def full_info():
             'node_info': node_info(),
             'vm_info': vm_info(),
             'freecpu': freecpu()}
+
+def get_xml(vm_):
+    '''
+    Returns the xml for a given vm
+    '''
+    dom = _get_dom(vm_)
+    return dom.XMLDesc(0)
 
 def shutdown(vm_):
     '''
