@@ -80,6 +80,7 @@ def vm_info():
                 'cpu': raw[3],
                 'cputime': int(raw[4]),
                 'graphics': get_graphics(vm_),
+                'disks': get_disks(vm_),
                 }
     return info
 
@@ -124,6 +125,28 @@ def get_graphics(vm_):
             for key in g_node.attributes.keys():
                 out[key] = g_node.getAttribute(key)
     return out
+
+def get_disks(vm_):
+    '''
+    Return the disks of a named vm
+    '''
+    disks = {}
+    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    for elem in doc.getElementsByTagName('disk'):
+        sources = elem.getElementsByTagName('source')
+        targets = elem.getElementsByTagName('target')
+        if len(sources) > 0:
+            source = sources[0]
+        else:
+            continue
+        if len(targets) > 0:
+            target = targets[0]
+        else:
+            continue
+        if target.attributes.keys().count('dev')\
+                and source.attributes.keys().count('file'):
+            disks[target.getAttribute('dev')] = source.getAttribute('file')
+    return disks
 
 def freemem():
     '''
