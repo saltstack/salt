@@ -21,6 +21,9 @@ def minion_config(path):
             'cachedir': '/var/cache/salt',
             'disable_modules': [],
             'open_mode': False,
+            'log_file': '/var/log/salt/master',
+            'log_level': 'DEBUG',
+            'out_level': 'ERROR',
             }
 
     if os.path.isfile(path):
@@ -54,6 +57,9 @@ def master_config(path):
             'pki_dir': '/etc/salt/pki',
             'cachedir': '/var/cache/salt',
             'open_mode': False,
+            'log_file': '/var/log/salt/master',
+            'log_level': 'DEBUG',
+            'out_level': 'ERROR',
             }
 
     if os.path.isfile(path):
@@ -73,3 +79,4 @@ def master_config(path):
             opts['open_mode'] = False
 
     return opts
+
