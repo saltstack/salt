@@ -4,6 +4,7 @@ Some of the utils used by salt
 # Import python libs
 import os
 import sys
+import logging
 
 def daemonize():
     '''
@@ -48,4 +49,42 @@ def check_root():
                 + ' in a privileged environment to do what it does.\n' \
                 + 'http://xkcd.com/838/'
         sys.exit(1)
+
+def master_logger():
+    '''
+    Returns a logger fo use with a salt master
+    '''
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    fh = logging.FileHandler('test.log')
+    fh.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+
+def minion_logger():
+    '''
+    Returns a logger fo use with a salt minion
+    '''
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    fh = logging.FileHandler('test.log')
+    fh.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.addHandler(fh)
 
