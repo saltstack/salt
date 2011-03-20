@@ -6,7 +6,7 @@ The setup script for salt
 from distutils.core import setup
 
 setup(name='salt',
-      version='0.4',
+      version='0.6.0',
       description='Portable, distrubuted, remote execution system',
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',

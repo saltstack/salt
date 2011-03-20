@@ -1,0 +1,49 @@
+# Maintainer: Thomas S Hatch <thatch45 at gmail dot com>
+pkgname=salt-git
+pkgver=20110310
+pkgrel=1
+pkgdesc="A remote execution and communication system built on zeromq"
+arch=('any')
+url="https://github.com/thatch45/salt"
+license=('APACHE')
+groups=()
+depends=('python2'
+         'pyzmq'
+         'python-m2crypto'
+         'python-yaml'
+         'pycrypto'
+         'facter')
+makedepends=('git')
+provides=()
+backup=('etc/salt/master' 
+        'etc/salt/minion')
+options=()
+source=()
+
+_gitroot="git://github.com/thatch45/salt.git"
+_gitname="salt"
+
+build() {
+  cd "$srcdir"
+  msg "Connecting to GIT server...."
+
+  if [ -d $_gitname ] ; then
+    cd $_gitname && git pull origin
+    msg "The local files are updated."
+  else
+    git clone $_gitroot $_gitname
+  fi
+
+  msg "GIT checkout done or server timeout"
+  msg "Starting make..."
+
+  rm -rf "$srcdir/$_gitname-build"
+  git clone "$srcdir/$_gitname" "$srcdir/$_gitname-build"
+
+}
+
+package() {
+  cd "$srcdir/$_gitname-build"
+  python2 setup.py install --root=$pkgdir/ --optimize=1
+  chmod +x $pkgdir/etc/rc.d/*
+} 

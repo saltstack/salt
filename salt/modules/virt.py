@@ -7,6 +7,9 @@ Work with vitual machines managed by libvirt
 
 # Import Python Libs
 import os
+import StringIO
+from xml.dom import minidom
+import subprocess
 
 # Import libvirt
 import libvirt
@@ -35,6 +38,8 @@ def _get_dom(vm_):
     Return a domain object for the named vm 
     '''
     conn = __get_conn()
+    if not list_vms().count(vm_):
+        raise Exception('The specified vm is not present')
     return conn.lookupByName(vm_)
 
 def list_vms():
@@ -74,6 +79,8 @@ def vm_info():
                 'mem': int(raw[2]),
                 'cpu': raw[3],
                 'cputime': int(raw[4]),
+                'graphics': get_graphics(vm_),
+                'disks': get_disks(vm_),
                 }
     return info
 
@@ -99,6 +106,48 @@ def node_info():
             }
     return info
 
+def get_graphics(vm_):
+    '''
+    Returns the information on vnc for a given vm
+    '''
+    out = {'autoport': 'None',
+           'keymap': 'None',
+           'type': 'vnc',
+           'port': 'None',
+           'listen': 'None'}
+    xml = get_xml(vm_)
+    ssock = StringIO.StringIO(xml)
+    doc = minidom.parse(ssock)
+    for node in doc.getElementsByTagName("domain"):
+        #graphics = node.getAttribute("devices")
+        g_nodes = node.getElementsByTagName("graphics")
+        for g_node in g_nodes:
+            for key in g_node.attributes.keys():
+                out[key] = g_node.getAttribute(key)
+    return out
+
+def get_disks(vm_):
+    '''
+    Return the disks of a named vm
+    '''
+    disks = {}
+    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    for elem in doc.getElementsByTagName('disk'):
+        sources = elem.getElementsByTagName('source')
+        targets = elem.getElementsByTagName('target')
+        if len(sources) > 0:
+            source = sources[0]
+        else:
+            continue
+        if len(targets) > 0:
+            target = targets[0]
+        else:
+            continue
+        if target.attributes.keys().count('dev')\
+                and source.attributes.keys().count('file'):
+            disks[target.getAttribute('dev')] = source.getAttribute('file')
+    return disks
+
 def freemem():
     '''
     Return an int representing the amount of memory that has not been given
@@ -112,10 +161,45 @@ def freemem():
     # Take off just enough to sustain the hypervisor
     mem -= 256
     for vm_ in list_vms():
-        dom = conn.lookupByName(vm_)
+        dom = _get_dom(vm_)
         if dom.ID() > 0:
             mem -= vm_.info()[2]/1024
     return mem
+
+def freecpu():
+    '''
+    Return an int representing the number of unallocated cpus on this
+    hypervisor
+
+    CLI Example:
+    salt '*' virt.freemem
+    '''
+    conn = __get_conn()
+    cpus = conn.getInfo()[2]
+    for vm_ in list_vms():
+        dom = _get_dom(vm_)
+        if dom.ID() > 0:
+            cpus -= vm_.info()[3]
+    return cpus
+
+def full_info():
+    '''
+    Return the node_info, vm_info and freemem
+
+    CLI Example:
+    salt '*' virt.full_info
+    '''
+    return {'freemem': freemem(),
+            'node_info': node_info(),
+            'vm_info': vm_info(),
+            'freecpu': freecpu()}
+
+def get_xml(vm_):
+    '''
+    Returns the xml for a given vm
+    '''
+    dom = _get_dom(vm_)
+    return dom.XMLDesc(0)
 
 def shutdown(vm_):
     '''
@@ -207,3 +291,23 @@ def undefine(vm_):
     dom.undefine()
     return True
 
+def virt_type():
+    '''
+    Returns the virtual machine type as a string
+    
+    CLI Example:
+    salt '*' virt.virt_type
+    '''
+    return __facter__['virtual']
+
+def is_kvm_hyper():
+    '''
+    Returns a bool whether or not this node is a hypervisor
+    '''
+    if __facter__['virtual'] != 'physical':
+        return False
+    if subprocess.call('lsmod | grep kvm_', shell=True):
+        return False
+    if subprocess.call('ps aux | grep libvirtd | grep -v grep', shell=True):
+        return False
+    return True

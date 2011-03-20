@@ -1,1 +1,0 @@
-Salt is a remote execution system that uses zeromq and pycrypto, the idea is that commands are published to listening clients and then the clients return the results in an encrypted package. Encryption is done with rsa keys and only the package is encrypted, so we don't need certs, everything will we done with simple rsa keys.
