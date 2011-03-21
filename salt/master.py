@@ -207,6 +207,8 @@ class ReqServer(threading.Thread):
                'publish_port': self.opts['publish_port'],
               }
         ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
+        if self.opts['cluster_masters']:
+            publish(self._cluster_load())
         return ret
 
     def _return(self, load):
@@ -225,6 +227,22 @@ class ReqServer(threading.Thread):
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
         pickle.dump(load['return'], open(os.path.join(hn_dir, 'return.p'), 'w+'))
+
+    def _cluster_load(self):
+        '''
+        Generates the data sent to the cluster nodes.
+        '''
+        load = {}
+        load['key'] = self.key
+        load['fun'] = 'cluster.sync'
+        load['tgt'] = self.opts['cluster_masters']
+        load['tgt_type'] = 'list'
+        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
+        load['arg'] = {}
+        for host in os.listdir(minion_dir):
+            pub = os.path.join(minion_dir, host)
+            load['arg'][host] = open(host, 'r').read()
+        return load
 
     def publish(self, clear_load):
         '''
