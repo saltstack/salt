@@ -238,10 +238,10 @@ class ReqServer(threading.Thread):
         load['tgt'] = self.opts['cluster_masters']
         load['tgt_type'] = 'list'
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
-        load['arg'] = {}
+        load['arg'] = [{}]
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
-            load['arg'][host] = open(host, 'r').read()
+            load['arg'][0][host] = open(host, 'r').read()
         return load
 
     def publish(self, clear_load):
