@@ -291,6 +291,16 @@ def undefine(vm_):
     dom.undefine()
     return True
 
+def purge(vm_):
+    '''
+    Recursively destroy and delete a virtual machine
+    '''
+    disks = get_disks(vm_)
+    destroy(vm_)
+    for disk in disks:
+        os.remove(disks[disk])
+    return True
+
 def virt_type():
     '''
     Returns the virtual machine type as a string
