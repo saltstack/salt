@@ -60,6 +60,7 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': 'DEBUG',
             'out_level': 'ERROR',
+            'cluster_masters': [],
             }
 
     if os.path.isfile(path):
