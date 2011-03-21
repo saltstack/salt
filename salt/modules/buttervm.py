@@ -26,10 +26,38 @@ def _place_image(image, vda):
         return
     shutil.move(os.path.join(image_d, images[0]), vda)
 
-def _gen_pin_drives(local_path, pin):
+def _gen_pin_drives(pins):
     '''
-    Set up the pin drives called for in the creation of a new vm
+    Generate the "pinned" vm image
     '''
+    creds = libvirt_creds()
+    for pin in pins:
+        dirname = os.path.dirname(pin['path'])
+        if os.path.exists(pin['path']):
+            continue
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+            tdir = copy.deepcopy(dirname)
+            while not tdir == '/':
+                os.chmod(tdir, 493)
+                tdir = os.path.dirname(tdir)
+
+        i_cmd = 'qemu-img create ' + pin['path'] + ' ' + pin['size'] + 'G'
+        f_cmd = 'yes | mkfs.' + pin['filesystem'] + ' ' + pin['path']
+        ch_cmd = 'chown ' + creds['user'] + ':' + creds['group'] + ' '\
+               + pin['path']
+        subprocess.call(i_cmd, shell=True)
+        subprocess.call(f_cmd, shell=True)
+        if pin['filesystem'].startswith('ext'):
+            t_cmd = 'tune2fs -c 0 -i 0 ' + pin['filesystem']
+            subprocess.call(t_cmd, shell=True)
+        if pin['format'] == 'qcow2':
+            q_cmd = 'qemu-img convert -O qcow2 ' + pin['path'] + ' '\
+                  + pin['path'] + '.tmp'
+            subprocess.call(q_cmd, shell=True)
+            shutil.move(pin['path'] + '.tmp', pin['path'])
+        subprocess.call(ch_cmd, shell=True)
+    return True
 
 def _apply_overlay(vda, overlay):
     '''
@@ -48,6 +76,21 @@ def _apply_overlay(vda, overlay):
     subprocess.call(g_cmd, shell=True)
     os.remove(tarball)
     os.chdir(cwd)
+
+def libvirt_creds():
+    '''
+    Returns the user and group that the disk images should be owned by
+    '''
+    g_cmd = 'grep group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep user /etc/libvirt/qemu.conf'
+    group = subprocess.Popen(g_cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+    user = subprocess.Popen(u_cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+    return {'user': user, 'group': group)
+
 
 def local_images(local_path):
     '''
@@ -91,6 +134,6 @@ def create(instance, vda, image, pin):
     local_path = os.path.dirname(vda)
     overlay = os.path.join(instance, overlay)
     _place_image()
-    _gen_pin_drives(local_path, pin)
+    _gen_pin_drives(pin)
     _apply_overlay(vda, overlay)
 
