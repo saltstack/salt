@@ -136,4 +136,4 @@ def create(instance, vda, image, pin):
     _place_image()
     _gen_pin_drives(pin)
     _apply_overlay(vda, overlay)
-
+    virt.create_xml_path(os.path.join(instance, 'config.xml'))
