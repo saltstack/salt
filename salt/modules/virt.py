@@ -291,14 +291,21 @@ def undefine(vm_):
     dom.undefine()
     return True
 
-def purge(vm_):
+def purge(vm_, dirs=False):
     '''
-    Recursively destroy and delete a virtual machine
+    Recursively destroy and delete a virtual machine, pass True for dirs to
+    also delete the directories containing the virtual machine disk images -
+    USE WITH EXTREAME CAUTION!
     '''
     disks = get_disks(vm_)
     destroy(vm_)
+    directories = set()
     for disk in disks:
         os.remove(disks[disk])
+        directories.add(os.path.dirname(disks[disk]))
+    if dirs:
+        for dir_ in directories:
+            shutil.rmtree(dir_)
     return True
 
 def virt_type():
