@@ -42,6 +42,8 @@ def minion_config(path):
         else:
             opts['open_mode'] = False
 
+    opts['facter'] = facter_data()
+
     return opts
 
 def master_config(path):
@@ -81,3 +83,19 @@ def master_config(path):
 
     return opts
 
+def facter_data():
+    '''
+    Returns a dict of data about the minion allowing modules to differ
+    based on information gathered about the minion.
+    So far only facter information is loaded
+    '''
+    facts = subprocess.Popen('facter',
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0]
+    facter = {}
+    for line in facts.split('\n'):
+        if line.count('=>'):
+            comps = line.split('=>')
+            facter[comps[0]] = comps[1]
+
+    return facter
