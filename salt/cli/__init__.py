@@ -52,6 +52,15 @@ class SaltCMD(object):
                 action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
                    + ' servers, take a comma delimited list of servers.')
+        parser.add_option('-F',
+                '--facter',
+                default=False,
+                dest='facter',
+                action='store_true',
+                help='Instead of using shell globs to evaluate the target'\
+                   + ' use a facter value to identify targets, the syntax'\
+                   + ' for the target is the facter key followed by a pcre'\
+                   + ' regular expresion:\n"operatingsystem:Arch.*"')
         parser.add_option('-Q',
                 '--query',
                 dest='query',
@@ -69,6 +78,7 @@ class SaltCMD(object):
         opts['global_timeout'] = options.global_timeout
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
+        opts['facter'] = options.facter
         if options.query:
             opts['query'] = options.query
             if len(args) < 1:
@@ -104,6 +114,8 @@ class SaltCMD(object):
                 args.append('pcre')
             elif self.opts['list']:
                 args.append('list')
+            elif self.opts['facter']:
+                args.append('facter')
             
             ret = local.cmd(*args)
 
