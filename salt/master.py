@@ -208,7 +208,7 @@ class ReqServer(threading.Thread):
               }
         ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
         if self.opts['cluster_masters']:
-            publish(self._cluster_load())
+            self._send_cluster()
         return ret
 
     def _return(self, load):
@@ -228,21 +228,48 @@ class ReqServer(threading.Thread):
             os.makedirs(hn_dir)
         pickle.dump(load['return'], open(os.path.join(hn_dir, 'return.p'), 'w+'))
 
+    def _send_cluster(self):
+        '''
+        Send the cluser data out
+        '''
+        payload = self._cluster_load()
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        for host in self.opts['cluster_masters']:
+            master_uri = 'tcp://' + host + ':' + self.opts['master_port']
+            socket.connect(master_uri)
+            socket.send(payload)
+            socket.recv()
+
+
+    def _cluster(self, load):
+        '''
+        Recieve the cluster data
+        '''
+        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
+        if not os.path.isdir(minion_dir):
+            os.makedirs(minion_dir)
+        for host in load['minions']:
+            open(os.path.join(minion_dir, host),
+                'w+').write(load['minions'][host])
+        return True
+
     def _cluster_load(self):
         '''
         Generates the data sent to the cluster nodes.
         '''
-        load = {}
-        load['key'] = self.key
-        load['fun'] = 'cluster.sync'
-        load['tgt'] = self.opts['cluster_masters']
-        load['tgt_type'] = 'list'
+        payload['enc'] = 'clear'
+        payload['load'] = {}
+        payload['load']['cmd'] = '_cluster'
+
+        minions = {}
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
-        load['arg'] = [{}]
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
-            load['arg'][0][host] = open(host, 'r').read()
-        return load
+            minions[host] = open(host, 'r').read()
+
+        payload['load']['minions'] = minions
+        return payload
 
     def publish(self, clear_load):
         '''
