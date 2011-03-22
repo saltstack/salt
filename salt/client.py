@@ -102,6 +102,12 @@ class LocalClient(object):
         os.chdir(cwd)
         return ret
 
+    def _check_facter_minions(self, expr):
+        '''
+        Return the minions found by looking via a list
+        '''
+        return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+
     def get_returns(self, jid, minions, timeout=5, global_timeout=10):
         '''
         This method starts off a watcher looking at the return data for a
@@ -175,6 +181,7 @@ class LocalClient(object):
         return {'glob': self._check_glob_minions,
                 'pcre': self._check_pcre_minions,
                 'list': self._check_list_minions,
+                'facter': self._check_facter_minions,
                 }[expr_form](expr)
             
     def pub(self, tgt, fun, arg=(), expr_form='glob'):
