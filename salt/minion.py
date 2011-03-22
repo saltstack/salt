@@ -165,6 +165,13 @@ class Minion(object):
         '''
         return bool(tgt.count(self.opts['hostname']))
 
+    def _facter_match(self, tgt):
+        '''
+        Reads in the facter regular expresion match
+        '''
+        comps = tgt.split()
+        return bool(re.match(comps[1], self.opts['facter'][comps[0]])
+
     def _return_pub(self, ret):
         '''
         Return the data from the executed command to the master server
