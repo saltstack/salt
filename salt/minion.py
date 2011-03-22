@@ -169,7 +169,7 @@ class Minion(object):
         '''
         Reads in the facter regular expresion match
         '''
-        comps = tgt.split()
+        comps = tgt.split(':')
         return bool(re.match(comps[1], self.opts['facter'][comps[0]]))
 
     def _return_pub(self, ret):
