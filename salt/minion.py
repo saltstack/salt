@@ -48,7 +48,7 @@ class Minion(object):
         # functionality.
         mods = set()
         # Load up the facter information
-
+        functions = {}
         mod_dir = os.path.join(distutils.sysconfig.get_python_lib(),
                 'salt/modules')
         for fn_ in os.listdir(mod_dir):
@@ -170,7 +170,7 @@ class Minion(object):
         Reads in the facter regular expresion match
         '''
         comps = tgt.split()
-        return bool(re.match(comps[1], self.opts['facter'][comps[0]])
+        return bool(re.match(comps[1], self.opts['facter'][comps[0]]))
 
     def _return_pub(self, ret):
         '''

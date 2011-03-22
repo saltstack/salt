@@ -5,6 +5,7 @@ All salt configuration loading and defaults should be in this module
 import os
 import sys
 import socket
+import subprocess
 # Import third party libs
 import yaml
 # Import salt libs
