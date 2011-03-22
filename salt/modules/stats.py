@@ -22,19 +22,19 @@ def loadavg():
     salt '*' stats.loadavg
     '''
     comps = open('/proc/loadavg', 'r').read().strip()
-    loadavg = re.search('^(.*?) (.*?) (.*?) ', comps)
+    loadavg = comps.split()
     return { 
-        '1-min':  loadavg.group(1),
-        '5-min':  loadavg.group(2),
-        '15-min': loadavg.group(3),
+        '1-min':  loadavg[1],
+        '5-min':  loadavg[2],
+        '15-min': loadavg[3],
     }
 
-def cpu():
+def cpustats():
     '''
     Return the CPU stats for this minon
 
     CLI Example:
-    salt '*' stats.cpu
+    salt '*' stats.cpustats
     '''
     stats = open('/proc/stat', 'r').read().split('\n')
     ret = {}
