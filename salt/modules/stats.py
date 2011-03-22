@@ -88,3 +88,24 @@ def meminfo():
             ret[comps[0]]['unit'] = comps[2]
     return ret
 
+def cpuinfo():
+    ''' 
+    Return the CPU info for this minon
+
+    CLI Example:
+    salt '*' stats.cpuinfo
+    '''
+    stats = open('/proc/cpuinfo', 'r').read().split('\n')
+    ret = {}
+    for line in stats:
+        if not line.count(' '):
+            continue
+        comps = line.split(':')
+        comps[0] = comps[0].strip()
+        if comps[0] == 'flags':
+            ret[comps[0]] = comps[1].split()
+        else:
+            comps[1] = comps[1].strip()
+            ret[comps[0]] = comps[1]
+    return ret 
+
