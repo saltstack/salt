@@ -97,6 +97,6 @@ def facter_data():
     for line in facts.split('\n'):
         if line.count('=>'):
             comps = line.split('=>')
-            facter[comps[0]] = comps[1]
+            facter[comps[0].strip()] = comps[1].strip()
 
     return facter
