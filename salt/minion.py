@@ -169,8 +169,9 @@ class Minion(object):
         '''
         Reads in the facter regular expresion match
         '''
+        facter = salt.config.facter_data()
         comps = tgt.split(':')
-        return bool(re.match(comps[1], self.opts['facter'][comps[0]]))
+        return bool(re.match(comps[1], facter[comps[0]]))
 
     def _return_pub(self, ret):
         '''
