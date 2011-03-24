@@ -198,7 +198,7 @@ class Minion(object):
     def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        pardigmn, it will update the master information from a fesh sign in,
+        pardigmn, it will update the master information from a fresh sign in,
         signing in can occur as often as needed to keep up with the revolving
         master aes key.
         '''
