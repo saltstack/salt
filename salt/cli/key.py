@@ -46,7 +46,7 @@ class Key(object):
         List all keys
         '''
         self._list_pre()
-        self.list_accepted()
+        self._list_accepted()
 
     def _accept(self, key):
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
@@ -92,13 +92,13 @@ class Key(object):
         '''
         Run the logic for saltkey
         '''
-        if opts['list']:
-            self._list()
-        elif opts['list_all']:
+        if self.opts['list']:
+            self._list_pre()
+        elif self.opts['list_all']:
             self._list_all()
-        elif opts['accept']:
-            self._accept(opts['accept'])
-        elif opts['accept_all']:
+        elif self.opts['accept']:
+            self._accept(self.opts['accept'])
+        elif self.opts['accept_all']:
             self._accept_all()
         else:
             self._list_all()

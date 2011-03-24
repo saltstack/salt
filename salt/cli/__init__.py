@@ -166,13 +166,13 @@ class SaltKey(object):
                 '--list-all',
                 dest='list_all',
                 default=False,
-                action='strore_true',
+                action='store_true',
                 help='List all public keys')
         
         parser.add_option('-a',
                 '--accept',
                 dest='accept',
-                default=''
+                default='',
                 help='Accept the following key')
 
         parser.add_option('-A',
