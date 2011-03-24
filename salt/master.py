@@ -192,14 +192,32 @@ class ReqServer(threading.Thread):
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['hostname'])
-        if os.path.isfile(pubfn) and not self.opts['open_mode']:
+        pubfn_pend = os.path.join(self.opts['pki_dir'],
+                'minions_pre',
+                load['hostname'])
+        if self.opts['open_mode']:
+            # open mode is turned on, nuts to checks and overwrite whatever
+            # is there
+            pass
+        elif os.path.isfile(pubfn):
+            # The key has been accepted check it
             if not open(pubfn, 'r').read() == load['pub']:
                 # The keys don't authenticate, return a failure
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 return ret
-        else:
-            open(pubfn, 'w+').write(load['pub'])
+        elif not os.path.isfile(pubfn_pend)\
+                and not self.opts['auto_accept']:
+            # This is a new key, stick it in pre
+            open(pubfn_pend, 'w+').write(load['pub'])
+                ret = {'enc': 'clear',
+                       'load': {'ret': True}}
+                return ret
+        elif and not os.path.isfile(pubfn_pend)\
+                and self.opts['auto_accept']:
+            # This is a new key and auto_accept is turned on
+            pass
+        open(pubfn, 'w+').write(load['pub'])
         key = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
                'pub_key': self.master_key.pub_str,
