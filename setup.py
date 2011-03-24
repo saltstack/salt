@@ -6,7 +6,7 @@ The setup script for salt
 from distutils.core import setup
 
 setup(name='salt',
-      version='0.6.0',
+      version='0.6.9',
       description='Portable, distrubuted, remote execution system',
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
@@ -14,6 +14,7 @@ setup(name='salt',
       packages=['salt', 'salt.modules', 'salt.cli'],
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
+               'scripts/saltkey',
                'scripts/salt'],
       data_files=[('/etc/salt',
                     ['conf/master',
