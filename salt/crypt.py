@@ -169,6 +169,13 @@ class Auth(object):
                         + ' Master in open mode to clean out the keys.'
                     sys.stderr.write(err + '\n')
                     sys.exit(42)
+                else:
+                    err = 'The Salt Master has cached the public key for'\
+                        + ' this node, this salt minion will wait for 10'\
+                        + ' seconds before attempting to re-authenticate'
+                    sys.stderr.write(err + '\n')
+                    time.sleep(10)
+                    self.sign_in()
         if not self.verify_master(payload['pub_key'], payload['token']):
             m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
             err = 'The Salt Master server\'s public key did not authenticate!'\
