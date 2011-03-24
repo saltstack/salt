@@ -55,8 +55,8 @@ class Master(object):
         Run the sequence to start a salt master server
         '''
         verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
-                    os.path.join(self.opts['pki_dir'], 'minions_pre')
-                    self.opts['cachedir']])
+                    os.path.join(self.opts['pki_dir'], 'minions_pre'),
+                    self.opts['cachedir']],)
         master = salt.master.Master(self.opts)
         if self.cli['daemon']:
             salt.utils.daemonize()

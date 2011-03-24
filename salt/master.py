@@ -210,10 +210,10 @@ class ReqServer(threading.Thread):
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre
             open(pubfn_pend, 'w+').write(load['pub'])
-                ret = {'enc': 'clear',
-                       'load': {'ret': True}}
-                return ret
-        elif and not os.path.isfile(pubfn_pend)\
+            ret = {'enc': 'clear',
+                   'load': {'ret': True}}
+            return ret
+        elif not os.path.isfile(pubfn_pend)\
                 and self.opts['auto_accept']:
             # This is a new key and auto_accept is turned on
             pass
