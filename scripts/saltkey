@@ -1,0 +1,15 @@
+#!/usr/bin/env python2
+'''
+Manage the authentication keys with saltkey
+'''
+import salt.cli
+
+def main():
+    '''
+    The main function
+    '''
+    saltkey = salt.cli.SaltKey()
+    saltkey.run()
+
+if __name__ == '__main__':
+    main()
