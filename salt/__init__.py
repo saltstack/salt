@@ -99,7 +99,7 @@ class Minion(object):
         Execute this method to start up a minion.
         '''
         verify_env([self.opts['pki_dir'], self.opts['cachedir']])
-        minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             salt.utils.daemonize()
+        minion = salt.minion.Minion(self.opts)
         minion.tune_in()
