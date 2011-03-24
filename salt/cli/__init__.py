@@ -9,6 +9,7 @@ import yaml
 
 # Import salt components
 import salt.client
+import salt.cli.key
 
 class SaltCMD(object):
     '''
@@ -141,3 +142,67 @@ class SaltCMD(object):
             print docs[fun]
             print ''
 
+class SaltKey(object):
+    '''
+    Initialize the Salt key manager
+    '''
+    def __init__(self):
+        self.opts = self.__parse()
+
+    def __parse(self):
+        '''
+        Parse the command line options for the salt key
+        '''
+        parser = optparse.OptionParser()
+
+        parser.add_option('-l',
+                '--list',
+                dest='list_',
+                default=False,
+                action='store_true',
+                help='List the unaccepted public keys')
+
+        parser.add_option('-L',
+                '--list-all',
+                dest='list_all',
+                default=False,
+                action='strore_true',
+                help='List all public keys')
+        
+        parser.add_option('-a',
+                '--accept',
+                dest='accept',
+                default=''
+                help='Accept the following key')
+
+        parser.add_option('-A',
+                '--accept-all',
+                dest='accept_all',
+                default=False,
+                help='Accept all pending keys')
+
+        parser.add_option('-c',
+                '--config',
+                dest='config',
+                default='/etc/salt/master',
+                help='Pass in an alternative configuration file')
+
+        options, args = parser.parse_args()
+
+        opts = {}
+
+        opts['list'] = options.list_
+        opts['list_all'] = options.list_all
+        opts['accept'] = options.accept
+        opts['accept_all'] = options.accept_all
+
+        opts.update(salt.config.master_config(options.config))
+
+        return opts
+
+    def run(self):
+        '''
+        Execute saltkey
+        '''
+        key = salt.cli.key.Key(self.opts)
+        key.run()
