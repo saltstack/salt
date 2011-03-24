@@ -60,6 +60,7 @@ def master_config(path):
             'pki_dir': '/etc/salt/pki',
             'cachedir': '/var/cache/salt',
             'open_mode': False,
+            'auto_accept': False,
             'log_file': '/var/log/salt/master',
             'log_level': 'DEBUG',
             'out_level': 'ERROR',
@@ -81,6 +82,11 @@ def master_config(path):
             opts['open_mode'] = True
         else:
             opts['open_mode'] = False
+    if opts['auto_accept']:
+        if opts['auto_accept'] == True:
+            opts['auto_accept'] = True
+        else:
+            opts['auto_accept'] = False
 
     return opts
 
