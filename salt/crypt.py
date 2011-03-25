@@ -55,6 +55,7 @@ class MasterKeys(dict):
             gen.save_key(self.rsa_path, callback=foo_pass)
             gen.save_pub_key(self.pub_path)
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
+            os.chmod(self.rsa_path, 256)
         return key
 
     def __get_pub_str(self):
@@ -94,6 +95,7 @@ class Auth(object):
             pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
             gen.save_pub_key(pub_path)
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
+            os.chmod(self.rsa_path, 256)
         return key
 
     def minion_sign_in_payload(self):
