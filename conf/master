@@ -19,3 +19,6 @@
 # the situation where your keys end up in a bad state. If you run in open more
 # you do so at your own risk!
 #open_mode: False
+# Enable auto_accept, this setting will automatically accept all incoming
+# public keys from the minions
+#auto_accept: False
