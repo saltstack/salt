@@ -9,7 +9,6 @@ import glob
 import re
 import time
 import tempfile
-import subprocess
 
 # Import zeromq libs
 import zmq
@@ -75,7 +74,8 @@ class Minion(object):
         functions['sys.list_functions'] = lambda: functions.keys()
         functions['sys.doc'] = lambda: self.__get_docs()
         functions['sys.reload_functions'] = lambda: self.reload_functions()
-        self.opts['logger'].info('Loaded the following functions: ' + str(functions))
+        self.opts['logger'].info('Loaded the following functions: '\
+                + str(functions))
         return functions
 
     def __get_docs(self):
