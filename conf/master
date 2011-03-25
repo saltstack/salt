@@ -22,3 +22,9 @@
 # Enable auto_accept, this setting will automatically accept all incoming
 # public keys from the minions
 #auto_accept: False
+# Logging information:
+#log_file: /var/log/salt/master
+#log_level: WARNING
+# The log level for posting to the terminal
+#out_level: ERROR
+

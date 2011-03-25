@@ -16,3 +16,9 @@
 # the situation where your keys end up in a bad state. If you run in open more
 # you do so at your own risk!
 #open_mode: False
+# Logging information:
+#log_file: /var/log/salt/master
+#log_level: WARNING
+# The log level for posting to the terminal
+#out_level: ERROR
+
