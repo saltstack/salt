@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import random
 import time
+import shutil
 import threading
 import cPickle as pickle
 # Import zeromq
@@ -28,6 +29,17 @@ class Master(object):
         '''
         self.opts = opts
 
+    def _clear_old_jobs(self):
+        '''
+        Clean out the old jobs
+        '''
+        diff = self.opts['keep_jobs'] * 60 * 60
+        keep = int(time.time()) - diff
+        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
+        for jid in os.listdir(jid_root):
+            if int(jid) < keep:
+                shutil.rmtree(os.path.join(jid_root, jid))
+
     def start(self):
         '''
         Turn on the master server components
@@ -36,8 +48,8 @@ class Master(object):
         reqserv = ReqServer(self.opts)
         reqserv.start()
         while True:
-            # Add something to keep the jobs dir clean
-            time.sleep(1)
+            self._clear_old_jobs()
+            time.sleep(60)
 
 
 class Publisher(threading.Thread):
