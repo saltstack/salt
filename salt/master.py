@@ -33,6 +33,8 @@ class Master(object):
         '''
         Clean out the old jobs
         '''
+        if self.opts['keep_jobs'] == 0:
+            return
         diff = self.opts['keep_jobs'] * 60 * 60
         keep = int(time.time()) - diff
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
