@@ -75,7 +75,7 @@ class Minion(object):
         functions['sys.list_functions'] = lambda: functions.keys()
         functions['sys.doc'] = lambda: self.__get_docs()
         functions['sys.reload_functions'] = lambda: self.reload_functions()
-        print functions
+        self.opts['logger'].info('Loaded the following functions: ' + str(functions))
         return functions
 
     def __get_docs(self):
@@ -126,6 +126,8 @@ class Minion(object):
         try:
             ret['return'] = self.functions[data['fun']](*data['arg'])
         except Exception as exc:
+            self.opts['logger'].warning('The minion function caused an'\
+                    + ' exception: ' + str(exc))
             ret['return'] = exc
         ret['jid'] = data['jid']
         return ret
@@ -178,6 +180,8 @@ class Minion(object):
         '''
         Return the data from the executed command to the master server
         '''
+        self.opts['logger'].info('Returning information for job: '\
+                + ret['jid'])
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
@@ -195,6 +199,8 @@ class Minion(object):
         Reload the functions dict for this minion, reading in any new functions
         '''
         self.functions = self.__load_functions()
+        self.opts['logger'].debug('Refreshed functions, loaded functions: '\
+                + str(self.functions))
 
     def authenticate(self):
         '''
@@ -203,11 +209,17 @@ class Minion(object):
         signing in can occur as often as needed to keep up with the revolving
         master aes key.
         '''
+        self.opts['logger'].debug('Attempting to authenticate with the Salt'\
+                + ' Master')
         auth = salt.crypt.Auth(self.opts)
         while True:
             creds = auth.sign_in()
             if creds != 'retry':
+                self.opts['logger'].info('Authentication with master'\
+                        + ' sucessful!')
                 break
+            self.opts['logger'].info('Waiting for minion key to be accepted'\
+                    + ' by the master.')
             time.sleep(10)
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
