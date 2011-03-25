@@ -71,20 +71,21 @@ class Minion(object):
                     continue
                 if callable(getattr(module, attr)):
                     functions[mod + '.' + attr] = getattr(module, attr)
-        functions['sys.list_functions'] = lambda: functions.keys()
-        functions['sys.doc'] = lambda: self.__get_docs()
-        functions['sys.reload_functions'] = lambda: self.reload_functions()
+        functions['sys.list_functions'] = functions.keys
+        functions['sys.doc'] = self.__get_docs
+        functions['sys.reload_functions'] = self.reload_functions
         self.opts['logger'].info('Loaded the following functions: '\
                 + str(functions))
         return functions
 
-    def __get_docs(self):
+    def __get_docs(self, module=''):
         '''
         Return a dict containing all of the doc strings in the functions dict
         '''
         docs = {}
         for fun in self.functions:
-            docs[fun] = self.functions[fun].__doc__
+            if fun.startswith(module):
+                docs[fun] = self.functions[fun].__doc__
         return docs
 
     def _handle_payload(self, payload):
