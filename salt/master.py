@@ -32,6 +32,7 @@ class Master(object):
         '''
         Turn on the master server components
         '''
+        self.opts['logger'].info('Starting the Salt Master')
         reqserv = ReqServer(self.opts)
         reqserv.start()
         while True:
@@ -56,13 +57,14 @@ class Publisher(threading.Thread):
         '''
         binder = 'tcp://' + self.opts['interface'] + ':'\
                + self.opts['publish_port']
-        print binder
+        self.opts['logger'].info('Starting the Salt Publisher on ' + binder)
         self.socket.bind(binder)
 
     def publish(self, package):
         '''
         Publish out a command to the minions, takes a cmd structure
         '''
+        self.opts['logger'].info('Publishing command')
         self.socket.send(package)
 
     def run(self):
@@ -101,6 +103,7 @@ class ReqServer(threading.Thread):
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
+        self.opts['logger'].info('Preparing the root key for local comunication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
         key = salt.crypt.Crypticle.generate_key_string()
         if os.path.isfile(keyfile):
@@ -126,6 +129,7 @@ class ReqServer(threading.Thread):
         '''
         Binds the reply server
         '''
+        self.opts['logger'].info('Setting up the master communication server')
         self.clients.bind(self.c_uri)
 
         self.workers.bind(self.w_uri)
@@ -138,8 +142,8 @@ class ReqServer(threading.Thread):
 
     def _prep_jid(self, load):
         '''
-        Parses the job return directory and generates a job id and sets up the
-        job id directory
+        Parses the job return directory, generates a job id and sets up the
+        job id directory.
         '''
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         jid = str(time.time())
@@ -164,18 +168,23 @@ class ReqServer(threading.Thread):
         '''
         Take care of a cleartext command
         '''
+        self.opts['logger'].info('Clear payload recieved with commnad '\
+                + load['cmd'])
         return getattr(self, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
         Handle a command sent via a public key pair
         '''
-        pass
+        self.opts['logger'].info('Pubkey payload recieved with commnad '\
+                + load['cmd'])
 
     def _handle_aes(self, load):
         '''
         Handle a command sent via an aes key
         '''
+        self.opts['logger'].info('AES payload recieved with commnad '\
+                + load['cmd'])
         data = self.crypticle.loads(load)
         return getattr(self, data['cmd'])(data)
 
@@ -189,6 +198,8 @@ class ReqServer(threading.Thread):
         # 3. make an rsa key with the pub key
         # 4. encrypt the aes key as an encrypted pickle
         # 5. package the return and return it
+        self.opts['logger'].info('Authentication request from '\
+                + load['hostname'])
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['hostname'])
@@ -202,13 +213,18 @@ class ReqServer(threading.Thread):
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
             if not open(pubfn, 'r').read() == load['pub']:
-                # The keys don't authenticate, return a failure
+                self.opts['logger'].error('Authentication attempt from '\
+                        + load['hostname'] + ' failed, the public keys did'\
+                        + ' not match. This may be an attempt to compromise'\
+                        + ' the Salt cluster.')
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre
+            self.opts['logger'].info('New public key placed in pending for '\
+                    + load['hostname'])
             open(pubfn_pend, 'w+').write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
@@ -218,9 +234,18 @@ class ReqServer(threading.Thread):
             # This key is in pending, if it is the same key ret True, else
             # ret False
             if not open(pubfn_pend, 'r').read() == load['pub']:
+                self.opts['logger'].error('Authentication attempt from '\
+                        + load['hostname'] + ' failed, the public keys in'\
+                        + ' pending did'\
+                        + ' not match. This may be an attempt to compromise'\
+                        + ' the Salt cluster.')
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
+                self.opts['loger'].info('Authentication failed from host '\
+                        + load['hostname'] + ', the key is in pending and'\
+                        + ' needs to be accepted with saltkey -a '\
+                        + load['hostname'])
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif not os.path.isfile(pubfn_pend)\
@@ -232,6 +257,8 @@ class ReqServer(threading.Thread):
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
+        self.opts['logger'].info('Authentication accepted from '\
+                + load['hostname'])
         open(pubfn, 'w+').write(load['pub'])
         key = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
@@ -253,8 +280,13 @@ class ReqServer(threading.Thread):
                 or not load.has_key('jid')\
                 or not load.has_key('hostname'):
             return False
+        self.opts['logger'].info('Got return from ' + load['hostname']\
+                + ' for job ' + load['jid'])
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
         if not os.path.isdir(jid_dir):
+            self.opts['logger'].error('An inconsistency occured, a job was'\
+                    + ' recieved with a job id that is not present on the'\
+                    + ' master: ' + load['jid'])
             return False
         hn_dir = os.path.join(jid_dir, load['hostname'])
         if not os.path.isdir(hn_dir):
