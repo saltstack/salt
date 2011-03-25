@@ -7,6 +7,7 @@ import distutils.sysconfig
 import importlib
 import glob
 import re
+import time
 import tempfile
 import subprocess
 
@@ -207,6 +208,7 @@ class Minion(object):
             creds = auth.sign_in()
             if creds != 'retry':
                 break
+            time.sleep(10)
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.aes)

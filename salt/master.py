@@ -213,6 +213,16 @@ class ReqServer(threading.Thread):
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
             return ret
+        elif os.path.isfile(pubfn_pend)\
+                and not self.opts['auto_accept']:
+            # This key is in pending, if it is the same key ret True, else
+            # ret False
+            if not open(pubfn_pend, 'r').read() == load['pub']:
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+            else:
+                return {'enc': 'clear',
+                        'load': {'ret': True}}
         elif not os.path.isfile(pubfn_pend)\
                 and self.opts['auto_accept']:
             # This is a new key and auto_accept is turned on
