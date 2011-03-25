@@ -227,6 +227,11 @@ class ReqServer(threading.Thread):
                 and self.opts['auto_accept']:
             # This is a new key and auto_accept is turned on
             pass
+        else:
+            # Something happened that I have not accounted for, FAIL!
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
+
         open(pubfn, 'w+').write(load['pub'])
         key = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
