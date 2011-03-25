@@ -41,11 +41,11 @@ def daemonize():
 
 def check_root():
     '''
-    Most of the clay scripts need to run as root, this function will simple
+    Most of the salt scripts need to run as root, this function will simply
     verify that root is the user before the application discovers it.
     '''
     if os.getuid():
-        print 'Sorry, the salt minion must run as root, it needs to opperate'\
+        print 'Sorry, the salt must run as root, it needs to opperate'\
                 + ' in a privileged environment to do what it does.\n' \
                 + 'http://xkcd.com/838/'
         sys.exit(1)
