@@ -6,6 +6,7 @@ import os
 import sys
 import socket
 import subprocess
+import logging
 # Import third party libs
 import yaml
 # Import salt libs
@@ -102,6 +103,8 @@ def master_logger(log_file, log_level, console_level):
     '''
     Returns a logger fo use with a salt master
     '''
+    if not os.path.isdir(os.path.dirname(log_file)):
+        os.makedirs(os.path.dirname(log_file))
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
@@ -123,6 +126,8 @@ def minion_logger(log_file, log_level, console_level):
     '''
     Returns a logger fo use with a salt minion
     '''
+    if not os.path.isdir(os.path.dirname(log_file)):
+        os.makedirs(os.path.dirname(log_file))
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
