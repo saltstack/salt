@@ -49,6 +49,9 @@ class Key(object):
         self._list_accepted()
 
     def _accept(self, key):
+        '''
+        Accept a specified host's public key
+        '''
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions = os.path.join(self.opts['pki_dir'], 'minions')
         if not os.path.isdir(minions):
