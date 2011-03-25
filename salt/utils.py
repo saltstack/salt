@@ -4,7 +4,6 @@ Some of the utils used by salt
 # Import python libs
 import os
 import sys
-import logging
 
 def daemonize():
     '''
