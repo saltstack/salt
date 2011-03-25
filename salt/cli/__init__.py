@@ -179,6 +179,7 @@ class SaltKey(object):
                 '--accept-all',
                 dest='accept_all',
                 default=False,
+                action='store_true',
                 help='Accept all pending keys')
 
         parser.add_option('-c',
