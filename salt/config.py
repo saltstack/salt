@@ -24,7 +24,7 @@ def minion_config(path):
             'disable_modules': [],
             'open_mode': False,
             'log_file': '/var/log/salt/master',
-            'log_level': 'DEBUG',
+            'log_level': 'WARNING',
             'out_level': 'ERROR',
             }
 
@@ -67,7 +67,7 @@ def master_config(path):
             'open_mode': False,
             'auto_accept': False,
             'log_file': '/var/log/salt/master',
-            'log_level': 'DEBUG',
+            'log_level': 'WARNING',
             'out_level': 'ERROR',
             'cluster_masters': [],
             }
