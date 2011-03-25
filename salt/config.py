@@ -3,7 +3,6 @@ All salt configuration loading and defaults should be in this module
 '''
 # Import python modules
 import os
-import sys
 import socket
 import subprocess
 import logging
@@ -31,7 +30,7 @@ def minion_config(path):
     if os.path.isfile(path):
         try:
             opts.update(yaml.load(open(path, 'r')))
-        except:
+        except Exception:
             pass
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
@@ -76,7 +75,7 @@ def master_config(path):
     if os.path.isfile(path):
         try:
             opts.update(yaml.load(open(path, 'r')))
-        except:
+        except Exception:
             pass
     
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
@@ -109,17 +108,18 @@ def master_logger(log_file, log_level, console_level):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(getattr(logging, log_level))
+    fh_ = logging.FileHandler(log_file)
+    fh_.setLevel(getattr(logging, log_level))
 
-    ch = logging.StreamHandler()
-    ch.setLevel(getattr(logging, console_level))
+    ch_ = logging.StreamHandler()
+    ch_.setLevel(getattr(logging, console_level))
 
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    fh.setFormatter(formatter)
-    logger.addHandler(ch)
-    logger.addHandler(fh)
+    fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    formatter = logging.Formatter(fmt)
+    ch_.setFormatter(formatter)
+    fh_.setFormatter(formatter)
+    logger.addHandler(ch_)
+    logger.addHandler(fh_)
 
     return logger
 
@@ -132,17 +132,18 @@ def minion_logger(log_file, log_level, console_level):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(getattr(logging, log_level))
+    fh_ = logging.FileHandler(log_file)
+    fh_.setLevel(getattr(logging, log_level))
 
-    ch = logging.StreamHandler()
-    ch.setLevel(getattr(logging, console_level))
+    ch_ = logging.StreamHandler()
+    ch_.setLevel(getattr(logging, console_level))
 
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    fh.setFormatter(formatter)
-    logger.addHandler(ch)
-    logger.addHandler(fh)
+    fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    formatter = logging.Formatter(fmt)
+    ch_.setFormatter(formatter)
+    fh_.setFormatter(formatter)
+    logger.addHandler(ch_)
+    logger.addHandler(fh_)
 
     return logger
 
