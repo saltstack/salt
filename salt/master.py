@@ -4,7 +4,6 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 # Import python modules
 import os
-import random
 import time
 import shutil
 import threading
@@ -117,7 +116,8 @@ class ReqServer(threading.Thread):
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
-        self.opts['logger'].info('Preparing the root key for local comunication')
+        self.opts['logger'].info('Preparing the root key for local'\
+                + ' comunication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
         key = salt.crypt.Crypticle.generate_key_string()
         if os.path.isfile(keyfile):
@@ -305,7 +305,8 @@ class ReqServer(threading.Thread):
         hn_dir = os.path.join(jid_dir, load['hostname'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
-        pickle.dump(load['return'], open(os.path.join(hn_dir, 'return.p'), 'w+'))
+        pickle.dump(load['return'],
+                open(os.path.join(hn_dir, 'return.p'), 'w+'))
 
     def _send_cluster(self):
         '''
@@ -337,6 +338,7 @@ class ReqServer(threading.Thread):
         '''
         Generates the data sent to the cluster nodes.
         '''
+        payload = {}
         payload['enc'] = 'clear'
         payload['load'] = {}
         payload['load']['cmd'] = '_cluster'
@@ -345,7 +347,7 @@ class ReqServer(threading.Thread):
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
-            minions[host] = open(host, 'r').read()
+            minions[host] = open(host, 'r').read(pub)
 
         payload['load']['minions'] = minions
         return payload
