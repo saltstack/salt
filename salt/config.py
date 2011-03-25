@@ -43,6 +43,10 @@ def minion_config(path):
         else:
             opts['open_mode'] = False
 
+    opts['logger'] = master_logger(opts['log_file'],
+                                   opts['log_level'],
+                                   opts['out_level'])
+
     opts['facter'] = facter_data()
 
     return opts
@@ -88,7 +92,53 @@ def master_config(path):
         else:
             opts['auto_accept'] = False
 
+    opts['logger'] = master_logger(opts['log_file'],
+                                   opts['log_level'],
+                                   opts['out_level'])
+
     return opts
+
+def master_logger(log_file, log_level, console_level):
+    '''
+    Returns a logger fo use with a salt master
+    '''
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(getattr(logging, log_level))
+
+    ch = logging.StreamHandler()
+    ch.setLevel(getattr(logging, console_level))
+
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+
+    return logger
+
+def minion_logger(log_file, log_level, console_level):
+    '''
+    Returns a logger fo use with a salt minion
+    '''
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(getattr(logging, log_level))
+
+    ch = logging.StreamHandler()
+    ch.setLevel(getattr(logging, console_level))
+
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+
+    return logger
 
 def facter_data():
     '''
