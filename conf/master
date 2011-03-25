@@ -14,6 +14,8 @@
 #pki_dir: /etc/salt/pki
 # Directory to store job and cache data
 #cachedir: /var/cache/salt
+# Set the number of hours to keep old job information
+#keep_jobs: 24
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
 # the situation where your keys end up in a bad state. If you run in open more

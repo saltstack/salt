@@ -62,6 +62,7 @@ def master_config(path):
             'ret_port': '4506',
             'local_threads': 5,
             'local_port': '4507',
+            'keep_jobs': 24,
             'pki_dir': '/etc/salt/pki',
             'cachedir': '/var/cache/salt',
             'open_mode': False,
