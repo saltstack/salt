@@ -38,7 +38,7 @@ class Master(object):
         keep = int(time.time()) - diff
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         for jid in os.listdir(jid_root):
-            if int(jid) < keep:
+            if int(jid.split('.')[0]) < keep:
                 shutil.rmtree(os.path.join(jid_root, jid))
 
     def start(self):
