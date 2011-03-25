@@ -2,7 +2,6 @@
 Many aspects of the salt payload need to be managed, from the return of
 encrypted keys to general payload dynamics and packaging, these happen in here
 '''
-import os
 import cPickle as pickle
 
 def package(payload, protocol=2):
@@ -12,11 +11,11 @@ def package(payload, protocol=2):
     '''
     return pickle.dumps(payload, protocol)
 
-def unpackage(package):
+def unpackage(package_):
     '''
     Unpackages a payload
     '''
-    return pickle.loads(package)
+    return pickle.loads(package_)
 
 def format_payload(enc, **kwargs):
     '''
