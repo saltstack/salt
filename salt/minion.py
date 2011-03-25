@@ -203,7 +203,10 @@ class Minion(object):
         master aes key.
         '''
         auth = salt.crypt.Auth(self.opts)
-        creds = auth.sign_in()
+        while True:
+            creds = auth.sign_in()
+            if creds != 'retry':
+                break
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.aes)
