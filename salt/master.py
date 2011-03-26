@@ -256,7 +256,7 @@ class ReqServer(threading.Thread):
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
-                self.opts['loger'].info('Authentication failed from host '\
+                self.opts['logger'].info('Authentication failed from host '\
                         + load['hostname'] + ', the key is in pending and'\
                         + ' needs to be accepted with saltkey -a '\
                         + load['hostname'])
