@@ -197,9 +197,9 @@ class ReqServer(threading.Thread):
         '''
         Handle a command sent via an aes key
         '''
-        self.opts['logger'].info('AES payload recieved with commnad '\
-                + load['cmd'])
         data = self.crypticle.loads(load)
+        self.opts['logger'].info('AES payload recieved with commnad '\
+                + data['cmd'])
         return getattr(self, data['cmd'])(data)
 
     def _auth(self, load):
