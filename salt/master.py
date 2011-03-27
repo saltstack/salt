@@ -316,7 +316,7 @@ class ReqServer(threading.Thread):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         for host in self.opts['cluster_masters']:
-            master_uri = 'tcp://' + host + ':' + self.opts['master_port']
+            master_uri = 'tcp://' + host + ':' + self.opts['ret_port']
             socket.connect(master_uri)
             socket.send(payload)
             socket.recv()
@@ -341,16 +341,18 @@ class ReqServer(threading.Thread):
         payload = {}
         payload['enc'] = 'clear'
         payload['load'] = {}
-        payload['load']['cmd'] = '_cluster'
+        load = {}
+        load['cmd'] = '_cluster'
 
         minions = {}
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
-            minions[host] = open(host, 'r').read(pub)
+            minions[host] = open(pub, 'r').read()
 
-        payload['load']['minions'] = minions
-        return payload
+        load['minions'] = minions
+        payload['load'] = load
+        return salt.payload.package(payload)
 
     def publish(self, clear_load):
         '''
