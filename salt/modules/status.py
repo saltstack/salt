@@ -1,25 +1,24 @@
 '''
-Module for returning statistics about a minion
+Module for returning various status data about a minion. These data can be useful for compiling into stats later.
 '''
 import subprocess
-import re
 
 def uptime():
     '''
     Return the uptime for this minion
 
     CLI Example:
-    salt '*' stats.uptime
+    salt '*' status.uptime
     '''
     return subprocess.Popen(['uptime'],
-            stdout=subprocess.PIPE).communicate()[0].strip()
+            stdout=subprocess.PIPE).communicate()[0]
 
 def loadavg():
     '''
     Return the load averages for this minion
 
     CLI Example:
-    salt '*' stats.loadavg
+    salt '*' status.loadavg
     '''
     comps = open('/proc/loadavg', 'r').read().strip()
     loadavg = comps.split()
@@ -34,7 +33,7 @@ def cpustats():
     Return the CPU stats for this minon
 
     CLI Example:
-    salt '*' stats.cpustats
+    salt '*' status.cpustats
     '''
     stats = open('/proc/stat', 'r').read().split('\n')
     ret = {}
@@ -72,7 +71,7 @@ def meminfo():
     Return the CPU stats for this minon
 
     CLI Example:
-    salt '*' stats.meminfo
+    salt '*' status.meminfo
     '''
     stats = open('/proc/meminfo', 'r').read().split('\n')
     ret = {}
@@ -93,7 +92,7 @@ def cpuinfo():
     Return the CPU info for this minon
 
     CLI Example:
-    salt '*' stats.cpuinfo
+    salt '*' status.cpuinfo
     '''
     stats = open('/proc/cpuinfo', 'r').read().split('\n')
     ret = {}
@@ -108,4 +107,96 @@ def cpuinfo():
             comps[1] = comps[1].strip()
             ret[comps[0]] = comps[1]
     return ret 
+
+def diskstats():
+    '''
+    Return the disk stats for this minon
+
+    CLI Example:
+    salt '*' status.diskstats
+    '''
+    stats = open('/proc/diskstats', 'r').read().split('\n')
+    ret = {}
+    for line in stats:
+        if not line.count(' '):
+            continue
+        comps = line.split()
+        ret[comps[2]] = {
+            'major':                   comps[0],
+            'minor':                   comps[1],
+            'device':                  comps[2],
+            'reads_issued':            comps[3],
+            'reads_merged':            comps[4],
+            'sectors_read':            comps[5],
+            'ms_spent_reading':        comps[6],
+            'writes_completed':        comps[7],
+            'writes_merged':           comps[8],
+            'sectors_written':         comps[9],
+            'ms_spent_writing':        comps[10],
+            'io_in_progress':          comps[11],
+            'ms_spent_in_io':          comps[12],
+            'weighted_ms_spent_in_io': comps[13],
+        }
+    return ret
+
+def vmstats():
+    '''
+    Return the virtual memory stats for this minon
+
+    CLI Example:
+    salt '*' status.vmstats
+    '''
+    stats = open('/proc/vmstat', 'r').read().split('\n')
+    ret = {}
+    for line in stats:
+        if not line.count(' '):
+            continue
+        comps = line.split()
+        ret[comps[0]] = comps[1]
+    return ret
+
+def all():
+    '''
+    Return a composite of all status data and info for this minon. Warning: There is a LOT here!
+
+    CLI Example:
+    salt '*' status.all
+    '''
+    return {
+        'cpustats':  cpustats(),
+        'diskstats': diskstats(),
+        'loadavg':   loadavg(),
+        'meminfo':   meminfo(),
+        'uptime':    uptime(),
+        'vmstats':   vmstats(),
+
+        'cpuinfo':   cpuinfo(),
+    }
+
+def all_status():
+    '''
+    Return a composite of all status data for this minon. Warning: There is a LOT here!
+
+    CLI Example:
+    salt '*' status.all_stats
+    '''
+    return {
+        'cpustats':  cpustats(),
+        'diskstats': diskstats(),
+        'loadavg':   loadavg(),
+        'meminfo':   meminfo(),
+        'uptime':    uptime(),
+        'vmstats':   vmstats(),
+    }
+
+def all_info():
+    '''
+    Return a composite of all info for this minon. Warning: There is a LOT here!
+
+    CLI Example:
+    salt '*' status.info
+    '''
+    return {
+        'cpuinfo':   cpuinfo(),
+    }
 
