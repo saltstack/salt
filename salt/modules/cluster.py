@@ -23,5 +23,5 @@ def distrib(minions, master_conf, master_pem, conf_file):
         open(os.path.join(minion_dir, minion), 'w+').write(minions[minion])
     # Commit the master.pem
     if master_pem:
-        open(os.path.join(opts['pki_dir'], 'master.pem')).write(master_pem)
+        open(os.path.join(opts['pki_dir'], 'master.pem'), 'w+').write(master_pem)
 
