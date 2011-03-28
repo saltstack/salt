@@ -6,14 +6,14 @@ components
 import os
 import yaml
 
-def distrib(minions, master_conf, master_pem):
+def distrib(minions, master_conf, master_pem, conf_file):
     '''
     Set up this minion as a failover master
     '''
     # Get the distributed master config opts
     opts = yaml.load(master_conf)
     # Write the master config file
-    open(opts['conf_file'], 'w+').write(master_conf)
+    open(conf_file, 'w+').write(master_conf)
     # Commit the minions
     minion_dir = os.path.join(opts['pki_dir'], 'minions')
     if not os.path.isdir(minion_dir):
