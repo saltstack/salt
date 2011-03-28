@@ -14,7 +14,7 @@ def distrib(minions, master_conf, master_pem, conf_file):
     # Write the master config file
     open(conf_file, 'w+').write(master_conf)
     # Get the distributed master config opts
-    opts = salt.config.master(conf_file)
+    opts = salt.config.master_config(conf_file)
     # Commit the minions
     minion_dir = os.path.join(opts['pki_dir'], 'minions')
     if not os.path.isdir(minion_dir):
