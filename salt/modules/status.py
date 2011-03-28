@@ -11,7 +11,7 @@ def uptime():
     salt '*' status.uptime
     '''
     return subprocess.Popen(['uptime'],
-            stdout=subprocess.PIPE).communicate()[0]
+            stdout=subprocess.PIPE).communicate()[0].strip()
 
 def loadavg():
     '''
