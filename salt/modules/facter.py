@@ -2,15 +2,6 @@
 Control aspects of the facter data
 '''
 
-import salt.config
-
-def reload():
-    '''
-    Reload the Facter data for this minion
-    '''
-    __facter__ = salt.config.facter_data()
-    return True
-
 def list():
     '''
     Return the facter data

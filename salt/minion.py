@@ -199,9 +199,11 @@ class Minion(object):
         '''
         Reload the functions dict for this minion, reading in any new functions
         '''
+        self.opts['facter'] = salt.config.facter_data()
         self.functions = self.__load_functions()
         self.opts['logger'].debug('Refreshed functions, loaded functions: '\
                 + str(self.functions))
+        return True
 
     def authenticate(self):
         '''
