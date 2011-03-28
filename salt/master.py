@@ -14,6 +14,7 @@ import zmq
 import salt.utils
 import salt.crypt
 import salt.payload
+import salt.client
 # Import cryptogrogphy modules
 from M2Crypto import RSA
 
