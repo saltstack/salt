@@ -315,12 +315,14 @@ class ReqServer(threading.Thread):
         '''
         Send the cluser data out
         '''
-        self.local.cmd(self.opts['cluster_masters'],
+        self.opts['logger'].debug('Sending out cluster data')
+        ret = self.local.cmd(self.opts['cluster_masters'],
                 'cluster.distrib',
                 self._cluster_load(),
                 0,
                 'list'
                 )
+        self.opts['logger'].debug('Cluster distributed: ' + str(ret))
 
     def _cluster_load(self):
         '''
