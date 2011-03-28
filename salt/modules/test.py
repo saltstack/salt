@@ -22,11 +22,3 @@ def ping():
     '''
     return True
 
-def facter():
-    '''
-    Return the facter data
-
-    CLI Example:
-    salt '*' test.facter_data
-    '''
-    return __facter__
