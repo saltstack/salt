@@ -110,6 +110,8 @@ class ReqServer(threading.Thread):
         # Prepare the aes key
         self.key = self.__prep_key()
         self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
+        # Make a client
+        self.local = salt.client.LocalClient()
 
     def __prep_key(self):
         '''
@@ -312,47 +314,27 @@ class ReqServer(threading.Thread):
         '''
         Send the cluser data out
         '''
-        payload = self._cluster_load()
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        for host in self.opts['cluster_masters']:
-            master_uri = 'tcp://' + host + ':' + self.opts['ret_port']
-            socket.connect(master_uri)
-            socket.send(payload)
-            socket.recv()
-
-
-    def _cluster(self, load):
-        '''
-        Recieve the cluster data
-        '''
-        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
-        if not os.path.isdir(minion_dir):
-            os.makedirs(minion_dir)
-        for host in load['minions']:
-            open(os.path.join(minion_dir, host),
-                'w+').write(load['minions'][host])
-        return True
+        self.local.cmd(self.opts['cluster_masters'],
+                'cluster.distrib',
+                self._cluster_load(),
+                0,
+                'list'
+                )
 
     def _cluster_load(self):
         '''
         Generates the data sent to the cluster nodes.
         '''
-        payload = {}
-        payload['enc'] = 'clear'
-        payload['load'] = {}
-        load = {}
-        load['cmd'] = '_cluster'
-
         minions = {}
+        master_pem = ''
+        master_conf = open(self.opts['conf_path'], 'r').read()
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
             minions[host] = open(pub, 'r').read()
-
-        load['minions'] = minions
-        payload['load'] = load
-        return salt.payload.package(payload)
+        if self.opts['cluster_mode'] == 'full':
+            master_pem = open(os.path.join(self.opts['pki_dir'], 'master.pem')).read()
+        return [minions, master_conf, master_pem]
 
     def publish(self, clear_load):
         '''
