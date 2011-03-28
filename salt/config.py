@@ -72,6 +72,7 @@ def master_config(path):
             'log_level': 'WARNING',
             'out_level': 'ERROR',
             'cluster_masters': [],
+            'cluster_mode': 'parinoid',
             }
 
     if os.path.isfile(path):
