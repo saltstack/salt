@@ -328,7 +328,7 @@ class ReqServer(threading.Thread):
         '''
         minions = {}
         master_pem = ''
-        master_conf = open(self.opts['conf_path'], 'r').read()
+        master_conf = open(self.opts['conf_file'], 'r').read()
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
