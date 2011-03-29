@@ -1,23 +1,41 @@
-# Set the location of the salt master server
+##### Primary configuration settings #####
+##########################################
+# Set the location of the salt master server, if the master server cannot be
+# resolved, then the minion will fail to start
 #master: mcp
+
 # Set the post used by the master reply and autnentication server
 #master_port: 4506
+
 # The directory to store the pki information in
 #pki_dir: /etc/salt/pki
+
 # Explicitly declare the hostname rather than detecting it
 #hostname:
-# Where cace data goes
+
+# Where cache data goes
 #cachedir: /var/cache/salt
+
+
+#####   Minion module management     #####
+##########################################
 # Disable specific modules, this will allow the admin to limit the level os 
 # access the master has to the minion
 #disable_modules: [cmd,test]
+
+
+######        Security settings       #####
+###########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
-# the situation where your keys end up in a bad state. If you run in open more
+# the situation where your keys end up in a bad state. If you run in open mode
 # you do so at your own risk!
 #open_mode: False
-# Logging information:
-#log_file: /var/log/salt/master
+
+
+######         Logging settings       #####
+###########################################
+#log_file: /var/log/salt/minion
 #log_level: WARNING
 # The log level for posting to the terminal
 #out_level: ERROR
