@@ -337,7 +337,10 @@ class ReqServer(threading.Thread):
             minions[host] = open(pub, 'r').read()
         if self.opts['cluster_mode'] == 'full':
             master_pem = open(os.path.join(self.opts['pki_dir'], 'master.pem')).read()
-        return [minions, master_conf, master_pem, self.opts['conf_file']]
+        return [minions,
+                master_conf,
+                master_pem,
+                self.opts['conf_file']]
 
     def publish(self, clear_load):
         '''
