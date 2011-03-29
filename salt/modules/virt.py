@@ -162,7 +162,7 @@ def freemem():
     for vm_ in list_vms():
         dom = _get_dom(vm_)
         if dom.ID() > 0:
-            mem -= vm_.info()[2]/1024
+            mem -= dom.info()[2]/1024
     return mem
 
 def freecpu():
@@ -178,7 +178,7 @@ def freecpu():
     for vm_ in list_vms():
         dom = _get_dom(vm_)
         if dom.ID() > 0:
-            cpus -= vm_.info()[3]
+            cpus -= dom.info()[3]
     return cpus
 
 def full_info():
