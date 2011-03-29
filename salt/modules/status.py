@@ -155,6 +155,34 @@ def vmstats():
         ret[comps[0]] = comps[1]
     return ret
 
+def netstats():
+    ''' 
+    Return the network stats for this minon
+
+    CLI Example:
+    salt '*' status.netstats
+    '''
+    stats = open('/proc/net/netstat', 'r').read().split('\n')
+    ret = {}
+    headers = ['']
+    for line in stats:
+        if not line.count(' '):
+            continue
+        comps = line.split()
+        if comps[0] == headers[0]:
+            index = len(headers) - 1 
+            row = {}
+            for field in range(index):
+                if field < 1:
+                    continue
+                else:
+                    row[headers[field]] = comps[field]
+            rowname = headers[0].replace(':', '') 
+            ret[rowname] = row 
+        else:
+            headers = comps
+    return ret 
+
 def all():
     '''
     Return a composite of all status data and info for this minon. Warning: There is a LOT here!
@@ -167,6 +195,7 @@ def all():
         'diskstats': diskstats(),
         'loadavg':   loadavg(),
         'meminfo':   meminfo(),
+        'netstats':  netstats(),
         'uptime':    uptime(),
         'vmstats':   vmstats(),
 
