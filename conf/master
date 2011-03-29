@@ -1,3 +1,5 @@
+##### Primary configuration settings #####
+##########################################
 # The address of the interface to bind to
 #interface: 0.0.0.0
 # The port used by the publisher
@@ -16,6 +18,10 @@
 #cachedir: /var/cache/salt
 # Set the number of hours to keep old job information
 #keep_jobs: 24
+
+
+#####        Security settings       #####
+##########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
 # the situation where your keys end up in a bad state. If you run in open more
@@ -24,9 +30,26 @@
 # Enable auto_accept, this setting will automatically accept all incoming
 # public keys from the minions
 #auto_accept: False
-# Logging information:
-#log_file: /var/log/salt/master
-#log_level: WARNING
-# The log level for posting to the terminal
-#out_level: ERROR
 
+
+#####         Cluster settings       #####
+##########################################
+# Salt supports automatic clustering, salt creates a single ip address which
+# is shared among the individual salt components using ucarp. The private key
+# and all of the minion keys are maintained across the defined cluster masters
+# The failover service is automatically managed via thse settings
+#
+#cluster_masters: []
+#cluster_mode: parinoid
+#cluster_interface: eth0
+#cluster_addr: 
+
+
+#####         Logging settings       #####
+##########################################
+# The location of the master log file
+#log_file: /var/log/salt/master
+# The level of messages to send to the log file
+#log_level: WARNING
+# The level of messages for posting to the terminal
+#out_level: ERROR
