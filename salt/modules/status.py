@@ -183,6 +183,34 @@ def netstats():
             headers = comps
     return ret 
 
+def w():
+    ''' 
+    Return a list of logged in users for this minon, using the w command
+
+    CLI Example:
+    salt '*' status.w
+    '''
+    users = subprocess.Popen(['w -h'],
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    user_list = []
+    for row in users:
+        if not row.count(' '):
+            continue
+        comps = row.split()
+        print comps
+        rec = { 
+            'user':  comps[0],
+            'tty':   comps[1],
+            'login': comps[2],
+            'idle':  comps[3],
+            'jcpu':  comps[4],
+            'pcpu':  comps[5],
+            'what':  ' '.join(comps[6:]),
+        }   
+        user_list.append( rec )
+    return user_list
+
 def all():
     '''
     Return a composite of all status data and info for this minon. Warning: There is a LOT here!
@@ -191,6 +219,7 @@ def all():
     salt '*' status.all
     '''
     return {
+        'cpuinfo':   cpuinfo(),
         'cpustats':  cpustats(),
         'diskstats': diskstats(),
         'loadavg':   loadavg(),
@@ -198,34 +227,6 @@ def all():
         'netstats':  netstats(),
         'uptime':    uptime(),
         'vmstats':   vmstats(),
-
-        'cpuinfo':   cpuinfo(),
-    }
-
-def all_status():
-    '''
-    Return a composite of all status data for this minon. Warning: There is a LOT here!
-
-    CLI Example:
-    salt '*' status.all_stats
-    '''
-    return {
-        'cpustats':  cpustats(),
-        'diskstats': diskstats(),
-        'loadavg':   loadavg(),
-        'meminfo':   meminfo(),
-        'uptime':    uptime(),
-        'vmstats':   vmstats(),
-    }
-
-def all_info():
-    '''
-    Return a composite of all info for this minon. Warning: There is a LOT here!
-
-    CLI Example:
-    salt '*' status.info
-    '''
-    return {
-        'cpuinfo':   cpuinfo(),
+        'w':         w(),
     }
 
