@@ -45,15 +45,14 @@ def _get_dom(vm_):
 def list_vms():
     '''
     Return a list of virtual machine names on the minion
-
+    
     CLI Example:
     salt '*' virt.list_vms
     '''
     conn = __get_conn()
     vms = []
-    names = conn.listDefinedDomains()
-    for name in names:
-        vms.append(name)
+    for id_ in conn.listDomainsID():
+        vms.append(conn.lookupByID(id_).name())
     return vms
 
 def vm_info():
