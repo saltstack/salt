@@ -2,20 +2,24 @@
 ##########################################
 # The address of the interface to bind to
 #interface: 0.0.0.0
+
 # The port used by the publisher
 #publish_port: 4505
-# The number of worker threads to start
+
+# The number of worker threads to start, these threads are used to manage
+# return calls made from minions to the master, if the master seems to be
+# running slowly, increase the number of threads
 #worker_threads: 5
+
 # The port used by the communication interface
 #ret_port: 4506
-# The number of threads used by the local communicator
-#local_threads: 5
-# The port that the local command listener uses
-#local_port: 4507
+
 # Directory used to store public key data
 #pki_dir: /etc/salt/pki
+
 # Directory to store job and cache data
 #cachedir: /var/cache/salt
+
 # Set the number of hours to keep old job information
 #keep_jobs: 24
 
@@ -27,6 +31,7 @@
 # the situation where your keys end up in a bad state. If you run in open more
 # you do so at your own risk!
 #open_mode: False
+
 # Enable auto_accept, this setting will automatically accept all incoming
 # public keys from the minions
 #auto_accept: False
@@ -38,10 +43,26 @@
 # is shared among the individual salt components using ucarp. The private key
 # and all of the minion keys are maintained across the defined cluster masters
 # The failover service is automatically managed via thse settings
-#
+
+# List the identifiers for the other cluster masters in this manner:
+# [saltmaster-01.foo.com,saltmaster-02.foo.com,saltmaster-03.foo.com]
+# The members of this master array must be running as salt minions to
+# facilitate the distribution of cluster information
 #cluster_masters: []
+
+# The cluster modes are "parinoid" and "full"
+# parinoid will only distribute the signed minion public keys
+# full will also distribute the master private key and turn on the ucarp
+# managed interface, if full is selected ensure that cluster_interface and
+# cluster_addr values are set, otherwise the full cluster will fail to start
+# the ucarp interface
 #cluster_mode: parinoid
+
+# The network interface to bind the ucarp shared ip address to
 #cluster_interface: eth0
+
+# The network address used by ucarp, this is the adress that the minions
+# should be referencing as the master
 #cluster_addr: 
 
 
