@@ -24,6 +24,10 @@ setup(name='salt',
                     ['init/salt-minion',
                      'init/salt-master',
                     ]),
+                ('/usr/libexec/salt',
+                    ['libexec/clust-up',
+                     'libexec/clust-down',
+                    ]),
                  ],
 
      )
