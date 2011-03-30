@@ -227,7 +227,8 @@ class LocalClient(object):
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
-        socket.connect('tcp://127.0.0.1:' + self.opts['ret_port'])
+        socket.connect('tcp://' + self.opts['interface'] + ':'\
+                + str(self.opts['ret_port']))
         socket.send(package)
         payload = salt.payload.unpackage(socket.recv())
         return {'jid': payload['load']['jid'],
