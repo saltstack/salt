@@ -9,6 +9,8 @@ import os
 import shutil
 import hashlib
 import random
+import subprocess
+import copy
 
 def _place_image(image, vda):
     '''
@@ -67,7 +69,8 @@ def _apply_overlay(vda, overlay):
         return False
     instance = os.path.dirname(overlay)
     tarball = os.path.join(instance,
-        str(hashlib.md5(str(random.randint(1000000,9999999))) + '.tgz')
+        str(hashlib.md5(str(random.randint(1000000,9999999))).hexdigest\
+            + '.tgz'))
     cwd = os.getcwd()
     os.chdir(overlay)
     t_cmd = 'tar czf ' + tarball + ' *'
@@ -89,7 +92,7 @@ def libvirt_creds():
     user = subprocess.Popen(u_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
-    return {'user': user, 'group': group)
+    return {'user': user, 'group': group}
 
 
 def local_images(local_path):
@@ -130,10 +133,10 @@ def create(instance, vda, image, pin):
     images to generate.
     '''
     # Generate convenience data
-    fqdn = os.path.basename(instance)
-    local_path = os.path.dirname(vda)
-    overlay = os.path.join(instance, overlay)
-    _place_image()
+    #fqdn = os.path.basename(instance)
+    #local_path = os.path.dirname(vda)
+    overlay = os.path.join(instance, 'overlay')
+    _place_image(image, vda)
     _gen_pin_drives(pin)
     _apply_overlay(vda, overlay)
     virt.create_xml_path(os.path.join(instance, 'config.xml'))
