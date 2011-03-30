@@ -11,6 +11,7 @@ import hashlib
 import random
 import subprocess
 import copy
+import tempfile
 
 def _place_image(image, vda):
     '''
@@ -117,6 +118,23 @@ def full_butter_data(local_path):
     info = virt.full_info()
     info['local_images'] = local_images(local_path)
     return info
+
+def apply_overlay(vda, instance):
+    '''
+    Use libguestfs to apply the overlay inder the specified instance to the
+    specified vda
+    '''
+    overlay = os.path.join(instance, 'overlay')
+    tar = os.path.join(tempfile.mkdtemp(), 'host.tgz')
+    cwd = os.getcwd()
+    os.chdir(overlay)
+    t_cmd = 'tar cvzf ' + tar + ' *'
+    subprocess.call(t_cmd, shell=True)
+    os.chdir(cwd)
+    g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tar + ' /'
+    subprocess.call(g_cmd, shell=True)
+    shutil.rmtree(os.path.dirname(tar))
+    return True
 
 def create(instance, vda, image, pin):
     '''
