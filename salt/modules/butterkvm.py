@@ -62,25 +62,6 @@ def _gen_pin_drives(pins):
         subprocess.call(ch_cmd, shell=True)
     return True
 
-def _apply_overlay(vda, overlay):
-    '''
-    Sets up the overlay on the passed vda
-    '''
-    if not os.path.isdir(overlay):
-        return False
-    instance = os.path.dirname(overlay)
-    tarball = os.path.join(instance,
-        str(hashlib.md5(str(random.randint(1000000,9999999))).hexdigest\
-            + '.tgz'))
-    cwd = os.getcwd()
-    os.chdir(overlay)
-    t_cmd = 'tar czf ' + tarball + ' *'
-    subprocess.call(t_cmd, shell=True)
-    g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tarball + ' /'
-    subprocess.call(g_cmd, shell=True)
-    os.remove(tarball)
-    os.chdir(cwd)
-
 def libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
@@ -124,6 +105,8 @@ def apply_overlay(vda, instance):
     Use libguestfs to apply the overlay inder the specified instance to the
     specified vda
     '''
+    if not os.path.isdir(overlay):
+        return False
     overlay = os.path.join(instance, 'overlay')
     tar = os.path.join(tempfile.mkdtemp(), 'host.tgz')
     cwd = os.getcwd()
