@@ -70,6 +70,13 @@ class SaltCMD(object):
                 help='Execute a salt command query, this can be used to find'\
                     + ' previous function calls, of to look up a call that'\
                     + ' occured at a specific time.')
+        parser.add_option('-c',
+                '--config',
+                default='/etc/salt/master',
+                dest='conf_file',
+                help='The location of the salt master configuration file,'\
+                    + ' the salt master settings are required to know where'\
+                    + ' the connections are; default=/etc/salt/master')
 
         options, args = parser.parse_args()
 
@@ -80,6 +87,8 @@ class SaltCMD(object):
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['facter'] = options.facter
+        opts['conf_file'] = options.conf_file
+
         if options.query:
             opts['query'] = options.query
             if len(args) < 1:
@@ -102,7 +111,7 @@ class SaltCMD(object):
         '''
         Execute the salt command line
         '''
-        local = salt.client.LocalClient()
+        local = salt.client.LocalClient(self.opts['conf_file'])
         if self.opts.has_key('query'):
             print local.find_cmd(self.opts['cmd'])
         else:

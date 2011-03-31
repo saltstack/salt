@@ -112,7 +112,7 @@ class ReqServer(threading.Thread):
         self.key = self.__prep_key()
         self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
         # Make a client
-        self.local = salt.client.LocalClient()
+        self.local = salt.client.LocalClient(self.opts['conf_file'])
 
     def __prep_key(self):
         '''
@@ -336,7 +336,8 @@ class ReqServer(threading.Thread):
             pub = os.path.join(minion_dir, host)
             minions[host] = open(pub, 'r').read()
         if self.opts['cluster_mode'] == 'full':
-            master_pem = open(os.path.join(self.opts['pki_dir'], 'master.pem')).read()
+            master_pem = open(os.path.join(self.opts['pki_dir'],
+                'master.pem')).read()
         return [minions,
                 master_conf,
                 master_pem,
