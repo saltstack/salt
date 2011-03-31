@@ -34,7 +34,8 @@ def minion_config(path):
         except Exception:
             pass
 
-    opts['master_uri'] = 'tcp://' + opts['master'] + ':' + opts['master_port']
+    opts['master_uri'] = 'tcp://' + opts['master'] + ':'\
+                       + str(opts['master_port'])
     
     # Enableing open mode requires that the value be set to True, and nothing
     # else!

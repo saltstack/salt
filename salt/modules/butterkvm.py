@@ -62,24 +62,24 @@ def _gen_pin_drives(pins):
         subprocess.call(ch_cmd, shell=True)
     return True
 
-def _apply_overlay(vda, overlay):
+def _apply_overlay(vda, instance):
     '''
-    Sets up the overlay on the passed vda
+    Use libguestfs to apply the overlay inder the specified instance to the
+    specified vda
     '''
     if not os.path.isdir(overlay):
         return False
-    instance = os.path.dirname(overlay)
-    tarball = os.path.join(instance,
-        str(hashlib.md5(str(random.randint(1000000,9999999))).hexdigest\
-            + '.tgz'))
+    overlay = os.path.join(instance, 'overlay')
+    tar = os.path.join(tempfile.mkdtemp(), 'host.tgz')
     cwd = os.getcwd()
     os.chdir(overlay)
-    t_cmd = 'tar czf ' + tarball + ' *'
+    t_cmd = 'tar cvzf ' + tar + ' *'
     subprocess.call(t_cmd, shell=True)
-    g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tarball + ' /'
-    subprocess.call(g_cmd, shell=True)
-    os.remove(tarball)
     os.chdir(cwd)
+    g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tar + ' /'
+    subprocess.call(g_cmd, shell=True)
+    shutil.rmtree(os.path.dirname(tar))
+    return True
 
 def libvirt_creds():
     '''
@@ -119,23 +119,6 @@ def full_butter_data(local_path):
     info['local_images'] = local_images(local_path)
     return info
 
-def apply_overlay(vda, instance):
-    '''
-    Use libguestfs to apply the overlay inder the specified instance to the
-    specified vda
-    '''
-    overlay = os.path.join(instance, 'overlay')
-    tar = os.path.join(tempfile.mkdtemp(), 'host.tgz')
-    cwd = os.getcwd()
-    os.chdir(overlay)
-    t_cmd = 'tar cvzf ' + tar + ' *'
-    subprocess.call(t_cmd, shell=True)
-    os.chdir(cwd)
-    g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tar + ' /'
-    subprocess.call(g_cmd, shell=True)
-    shutil.rmtree(os.path.dirname(tar))
-    return True
-
 def create(instance, vda, image, pin):
     '''
     Create a virtual machine, this is part of the butter vm system and assumes
@@ -153,8 +136,7 @@ def create(instance, vda, image, pin):
     # Generate convenience data
     #fqdn = os.path.basename(instance)
     #local_path = os.path.dirname(vda)
-    overlay = os.path.join(instance, 'overlay')
     _place_image(image, vda)
     _gen_pin_drives(pin)
-    _apply_overlay(vda, overlay)
+    _apply_overlay(vda, instance)
     virt.create_xml_path(os.path.join(instance, 'config.xml'))
