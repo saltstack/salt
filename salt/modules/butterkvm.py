@@ -18,6 +18,8 @@ def _place_image(image, vda):
     Moves the image file from the image pool into the final destination.
     '''
     image_d = image + '.d'
+    if not os.path.isdir(os.path.dirname(vda)):
+        os.makedirs(os.path.dirname(vda))
     if not os.path.isdir(image_d):
         # No available images in the pool, copying fresh image
         shutil.copy(image, vda)
