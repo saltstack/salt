@@ -326,7 +326,7 @@ def is_kvm_hyper():
         return False
     libvirt_ret = subprocess.Popen('ps ef',
             shell=True,
-            stdout=subprocess.PIPE).communicate[0].count('libvirtd')
+            stdout=subprocess.PIPE).communicate()[0].count('libvirtd')
     if not libvirt_ret:
         return False
     return True
