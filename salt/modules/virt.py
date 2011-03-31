@@ -324,7 +324,7 @@ def is_kvm_hyper():
         return False
     if not open('/proc/modules').read().count('kvm_'):
         return False
-    libvirt_ret = subprocess.Popen('ps ef',
+    libvirt_ret = subprocess.Popen('ps aux',
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].count('libvirtd')
     if not libvirt_ret:
