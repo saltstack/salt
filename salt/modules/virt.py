@@ -322,8 +322,11 @@ def is_kvm_hyper():
     '''
     if __facter__['virtual'] != 'physical':
         return False
-    if not subprocess.call('lsmod | grep kvm_', shell=True):
+    if not open('/proc/modules').read().count('kvm_'):
         return False
-    if not subprocess.call('ps aux | grep libvirtd | grep -v grep', shell=True):
+    libvirt_ret = subprocess.Popen('ps ef',
+            shell=True,
+            stdout=subprocess.PIPE).communicate[0].count('libvirtd')
+    if not libvirt_ret:
         return False
     return True
