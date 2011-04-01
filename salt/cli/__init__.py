@@ -33,12 +33,6 @@ class SaltCMD(object):
                 type=int,
                 dest='timeout',
                 help='Set the return timeout for batch jobs; default=5 seconds')
-        parser.add_option('-g',
-                '--global-timeout',
-                default=10,
-                type=int,
-                dest='global_timeout',
-                help='How long to wait if no minions reply; default=10 seconds')
         parser.add_option('-E',
                 '--pcre',
                 default=False,
@@ -83,7 +77,6 @@ class SaltCMD(object):
         opts = {}
 
         opts['timeout'] = options.timeout
-        opts['global_timeout'] = options.global_timeout
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['facter'] = options.facter

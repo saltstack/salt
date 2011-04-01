@@ -108,7 +108,7 @@ class LocalClient(object):
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
 
-    def get_returns(self, jid, minions, timeout=5, global_timeout=10):
+    def get_returns(self, jid, minions, timeout=5):
         '''
         This method starts off a watcher looking at the return data for a
         specified jid
@@ -137,7 +137,7 @@ class LocalClient(object):
                 return ret
             if int(time.time()) > start + timeout:
                 return ret
-            if int(time.time()) > gstart + global_timeout and not ret:
+            if int(time.time()) > gstart + timeout and not ret:
                 # No minions have replied within the specified global timeout,
                 # return an empty dict
                 return ret
