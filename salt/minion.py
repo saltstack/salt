@@ -93,9 +93,9 @@ class Minion(object):
         Takes a payload from the master publisher and does whatever the
         master wants done.
         '''
-        ret = {'aes': self._handle_aes,
-               'pub': self._handle_pub,
-               'clear': self._handle_clear}[payload['enc']](payload['load'])
+        {'aes': self._handle_aes,
+         'pub': self._handle_pub,
+         'clear': self._handle_clear}[payload['enc']](payload['load'])
         if ret:
             self._return_pub(ret)
 
@@ -105,7 +105,6 @@ class Minion(object):
         instructions
         '''
         data = None
-        ret = {}
         try:
             data = self.crypticle.loads(load)
         except AuthenticationError:
@@ -116,23 +115,16 @@ class Minion(object):
                 or not data.has_key('jid')\
                 or not data.has_key('fun')\
                 or not data.has_key('arg'):
-            return ret
+            return
         # Verify that the publication applies to this minion
         if data.has_key('tgt_type'):
             if not getattr(self, '_' + data['tgt_type'] + '_match')(data['tgt']):
-                return ret
+                return
         else:
             if not self._glob_match(data['tgt']):
-                return ret
+                return
 
-        try:
-            ret['return'] = self.functions[data['fun']](*data['arg'])
-        except Exception as exc:
-            self.opts['logger'].warning('The minion function caused an'\
-                    + ' exception: ' + str(exc))
-            ret['return'] = exc
-        ret['jid'] = data['jid']
-        return ret
+        threading.Thread(target=self._thread_return).start()
 
     def _handle_pub(self, load):
         '''
@@ -177,6 +169,21 @@ class Minion(object):
         facter = salt.config.facter_data()
         comps = tgt.split(':')
         return bool(re.match(comps[1], facter[comps[0]]))
+
+    def _thread_return(self):
+        '''
+        This methos should be used as a threading target, start the actual
+        minion side execution.
+        '''
+        ret = {}
+        try:
+            ret['return'] = self.functions[data['fun']](*data['arg'])
+        except Exception as exc:
+            self.opts['logger'].warning('The minion function caused an'\
+                    + ' exception: ' + str(exc))
+            ret['return'] = exc
+        ret['jid'] = data['jid']
+        self._return_pub(ret)
 
     def _return_pub(self, ret):
         '''
