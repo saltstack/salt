@@ -31,8 +31,6 @@ def _place_image(image, vda):
     shutil.move(os.path.join(image_d, images[0]), vda)
 
     creds = libvirt_creds()
-    if os.path.exists():
-        continue
     if not os.path.isdir(vda_dir):
         os.makedirs(vda_dir)
         tdir = copy.deepcopy(vda_dir)
