@@ -16,8 +16,9 @@ def _place_image(image, vda):
     Moves the image file from the image pool into the final destination.
     '''
     image_d = image + '.d'
-    if not os.path.isdir(os.path.dirname(vda)):
-        os.makedirs(os.path.dirname(vda))
+    vda_dir = os.path.dirname(vda)
+    if not os.path.isdir(vda_dir):
+        os.makedirs(vda_dir)
     if not os.path.isdir(image_d):
         # No available images in the pool, copying fresh image
         shutil.copy(image, vda)
@@ -28,6 +29,14 @@ def _place_image(image, vda):
         shutil.copy(image, vda)
         return
     shutil.move(os.path.join(image_d, images[0]), vda)
+    if os.path.exists():
+        continue
+    if not os.path.isdir(vda_dir):
+        os.makedirs(vda_dir)
+        tdir = copy.deepcopy(vda_dir)
+        while not tdir == '/':
+            os.chmod(tdir, 493)
+            tdir = os.path.dirname(tdir)
 
 def _gen_pin_drives(pins):
     '''
