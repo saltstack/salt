@@ -7,8 +7,6 @@ import virt
 # Import python modules
 import os
 import shutil
-import hashlib
-import random
 import subprocess
 import copy
 import tempfile
