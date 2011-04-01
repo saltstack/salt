@@ -9,6 +9,7 @@ import glob
 import re
 import time
 import tempfile
+import threading
 
 # Import zeromq libs
 import zmq
@@ -122,7 +123,7 @@ class Minion(object):
             if not self._glob_match(data['tgt']):
                 return
 
-        threading.Thread(target=self._thread_return).start()
+        threading.Thread(target=lambda: self._thread_return(data)).start()
 
     def _handle_pub(self, load):
         '''
@@ -168,7 +169,7 @@ class Minion(object):
         comps = tgt.split(':')
         return bool(re.match(comps[1], facter[comps[0]]))
 
-    def _thread_return(self):
+    def _thread_return(self, data):
         '''
         This methos should be used as a threading target, start the actual
         minion side execution.
