@@ -119,7 +119,10 @@ def local_images(local_path):
     CLI Example:
     salt '*' buttervm.local_images <image_path>
     '''
-    return os.listdir(local_path).sort()
+    images = os.listdir(local_path)
+    images.sort()
+    return images
+
 
 def full_butter_data(local_path):
     '''
