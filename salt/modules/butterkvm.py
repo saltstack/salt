@@ -69,10 +69,11 @@ def _apply_overlay(vda, instance):
     Use libguestfs to apply the overlay inder the specified instance to the
     specified vda
     '''
+    overlay = os.path.join(instance, 'overlay')
     if not os.path.isdir(overlay):
         return False
-    overlay = os.path.join(instance, 'overlay')
-    tar = os.path.join(tempfile.mkdtemp(), 'host.tgz')
+    tmp = tempfile.mkdtemp()
+    tar = os.path.join(tmp, 'host.tgz')
     cwd = os.getcwd()
     os.chdir(overlay)
     t_cmd = 'tar cvzf ' + tar + ' *'
@@ -80,7 +81,7 @@ def _apply_overlay(vda, instance):
     os.chdir(cwd)
     g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tar + ' /'
     subprocess.call(g_cmd, shell=True)
-    shutil.rmtree(os.path.dirname(tar))
+    shutil.rmtree(os.path.dirname(tmp))
     return True
 
 def libvirt_creds():
