@@ -96,8 +96,6 @@ class Minion(object):
         {'aes': self._handle_aes,
          'pub': self._handle_pub,
          'clear': self._handle_clear}[payload['enc']](payload['load'])
-        if ret:
-            self._return_pub(ret)
 
     def _handle_aes(self, load):
         '''
