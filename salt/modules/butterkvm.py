@@ -29,6 +29,8 @@ def _place_image(image, vda):
         shutil.copy(image, vda)
         return
     shutil.move(os.path.join(image_d, images[0]), vda)
+
+    creds = libvirt_creds()
     if os.path.exists():
         continue
     if not os.path.isdir(vda_dir):
@@ -37,6 +39,9 @@ def _place_image(image, vda):
         while not tdir == '/':
             os.chmod(tdir, 493)
             tdir = os.path.dirname(tdir)
+    ch_cmd = 'chown ' + creds['user'] + ':' + creds['group'] + ' '\
+           + vda
+    subprocess.call(f_cmd, shell=True)
 
 def _gen_pin_drives(pins):
     '''
