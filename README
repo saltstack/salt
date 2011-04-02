@@ -1,1 +1,5 @@
-Because salt goes EVERYWHERE
+Salt is a paralell execution system for managing swaths of servers and is used to collect and act upon live state data.
+
+Feel free to email the main developer, Thomas Hatch, of better still, hop on the salt-users mailing list:
+
+http://groups.google.com/group/salt-users
