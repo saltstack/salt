@@ -1,16 +1,16 @@
 # Maintainer: Thomas S Hatch <thatch45@gmail.com>
 
 pkgname=salt
-pkgver=0.6.0
+pkgver=0.7.0
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=(any)
 url="https://github.com/thatch45/salt"
 license=("APACHE")
 depends=('python2'
-         'pyzmq'
+         'python2-pyzmq'
          'python-m2crypto'
-         'python-yaml'
+         'python2-yaml'
          'pycrypto'
          'facter')
 backup=('etc/salt/master' 

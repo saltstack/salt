@@ -8,9 +8,9 @@ url="https://github.com/thatch45/salt"
 license=('APACHE')
 groups=()
 depends=('python2'
-         'pyzmq'
+         'python2-pyzmq'
          'python-m2crypto'
-         'python-yaml'
+         'python2-yaml'
          'pycrypto'
          'facter')
 makedepends=('git')
