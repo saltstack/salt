@@ -50,20 +50,10 @@
 # facilitate the distribution of cluster information
 #cluster_masters: []
 
-# The cluster modes are "parinoid" and "full"
-# parinoid will only distribute the signed minion public keys
-# full will also distribute the master private key and turn on the ucarp
-# managed interface, if full is selected ensure that cluster_interface and
-# cluster_addr values are set, otherwise the full cluster will fail to start
-# the ucarp interface
-#cluster_mode: parinoid
-
-# The network interface to bind the ucarp shared ip address to
-#cluster_interface: eth0
-
-# The network address used by ucarp, this is the adress that the minions
-# should be referencing as the master
-#cluster_addr: 
+# The cluster modes are "paranoid" and "full"
+# paranoid will only distribute the accepted minion public keys.
+# full will also distribute the master private key.
+#cluster_mode: paranoid
 
 
 #####         Logging settings       #####
