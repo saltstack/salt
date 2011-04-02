@@ -21,7 +21,7 @@ def _map_cmd(cmd, args=[]):
     if args:
         args = [args]
     pro = factmap[__facter__['operatingsystem']]
-    return getattr('salt.modules.' + pro + '.' + cmd)(*args)
+    return getattr(getattr(salt.modules, pro), cmd)(*args)
 
 def list_pkgs():
     '''
