@@ -22,7 +22,7 @@ def list_pkgs():
     CLI Example:
     salt '*' yum.list_pkgs
     '''
-    cmd = 'rpm -qa --qf '%{NAME}\t%{VERSION}-%{RELEASE}\n''
+    cmd = "rpm -qa --qf '%{NAME}\\t%{VERSION}-%{RELEASE}\\n'"
     ret = {}
     out = subprocess.Popen(cmd,
             shell=True,
@@ -136,4 +136,4 @@ def purge(pkg):
     salt '*' yum.purge <package name>
 
     '''
-    return remove pkg
+    return remove(pkg)

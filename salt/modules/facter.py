@@ -2,7 +2,7 @@
 Control aspects of the facter data
 '''
 
-def list():
+def items():
     '''
     Return the facter data
 

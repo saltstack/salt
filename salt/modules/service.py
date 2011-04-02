@@ -3,6 +3,7 @@ Top level package command wrapper, used to translate the os detected by facter
 to the correct package manager
 '''
 import subprocess
+import os
 
 factmap = {
            'Archlinux': '/etc/rc.d',
