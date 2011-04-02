@@ -18,12 +18,19 @@ backup=('etc/salt/master'
 makedepends=()
 optdepends=()
 options=()
-source=("$pkgname-$pkgver.tar.gz")
-md5sums=('923fe5de8ec88900e70b6996ae3a2ff1')
+source=("https://github.com/downloads/thatch45/salt/$pkgname-$pkgver.tar.gz"
+        "salt-master"
+        "salt-minion")
+md5sums=('93cc483021fbcc9920cb4daa3b2c36e2'
+         '4baf45d1610d771b742de2cbd8951b9f'
+         '11bc2e9042a5764e029fefbe49dddcc7')
 
 package() {
   cd $srcdir/$pkgname-$pkgver
 
   python2 setup.py install --root=$pkgdir/ --optimize=1
+
+  mkdir -p $pkgdir/etc/rc.d/
+  cp $srcdir/salt-m* $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
 }
