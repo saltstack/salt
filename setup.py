@@ -11,7 +11,9 @@ setup(name='salt',
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
       url='https://github.com/thatch45/salt',
-      packages=['salt', 'salt.modules', 'salt.cli'],
+      packages=['salt',
+                'salt.modules',
+                'salt.cli'],
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
                'scripts/saltkey',
@@ -25,10 +27,10 @@ setup(name='salt',
                      'man/saltkey.1',
                      'man/salt.1',
                      'man/salt-minion.1',
-                    ])
+                    ]),
                 ('share/man/man7',
                     ['salt.7',
-                    ])
+                    ]),
                  ],
 
      )
