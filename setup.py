@@ -24,6 +24,15 @@ setup(name='salt',
                     ['init/salt-minion',
                      'init/salt-master',
                     ]),
+                ('share/man/man1',
+                    ['man/salt-master.1',
+                     'man/saltkey.1',
+                     'man/salt.1',
+                     'man/salt-minion.1',
+                    ])
+                ('share/man/man7',
+                    ['salt.7',
+                    ])
                  ],
 
      )
