@@ -29,7 +29,7 @@ setup(name='salt',
                      'man/salt-minion.1',
                     ]),
                 ('share/man/man7',
-                    ['salt.7',
+                    ['man/salt.7',
                     ]),
                  ],
 
