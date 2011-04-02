@@ -1,0 +1,69 @@
+.TH salt 7 "April 2011" "salt 0.7.0" "salt Manual"
+
+.SH NAME
+salt \- The salt distributed system controller
+
+.SH SYNOPSIS
+.B salt-master [options]
+
+.B salt-minion [options]
+
+.B salt [options]
+
+.SH DESCRIPTION
+Salt is a powerful remote execution manager that can be used to administer servers in a fast and efficient way.
+
+.SH SETTING UP SALT
+The Salt system setup is amazingly simple, as this is one of the central design goals of Salt. Setting up Salt only requires that the salt master be running and the salt minions point to the salt master.
+
+.SS INSTALATION
+The salt install is simple, for many distributions pakages should be available for download, or salt can be installed via the python packaging tools.
+.P
+Installing salt from source is a simple task, download the latest source tarball from
+.URL "https://github.com/thatch45/salt/downloads"
+
+Next untar the download and run the python setup:
+
+# tar xvf salt-<version>.tar.gz
+
+# cd salt-<version>
+
+# python2 setup.py install
+
+.SS SALT DEPENDENCIES
+This is a basic python setup, nothing fancy. Salt does require a number of dependencies though, all of which should be available in your distribution's packages.
+
+.TP 
+\(bu 
+python2.7 - python2.6 should work, but it is untested
+.TP 
+\(bu
+pyzmq - zeromq python bindings
+.TP 
+\(bu
+python-m2crypto - Crypto backend
+.TP
+\(bu
+python-yaml - Reading configuration files
+.TP
+\(bu
+pycrypto - Another crypto backend
+.TP
+\(bu
+facter - Gathers information about minions
+
+.SS RUNNING SALT
+To run Salt you need to ensure that a master and a minion are running and referencing each other. Starting the master and minion daemons is done with the respective commands.
+
+On the salt master server:
+
+# salt-master -d
+
+On the salt minion servers:
+
+# salt-minion -d
+
+.SH AUTHORS
+Thomas S. Hatch <thatch@gmail.com>
+.TP
+Joseph Hall <perlhoser@gmail.com>
