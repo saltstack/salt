@@ -1,6 +1,6 @@
 # Maintainer: Thomas S Hatch <thatch45 at gmail dot com>
 pkgname=salt-git
-pkgver=20110401
+pkgver=20110402
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
