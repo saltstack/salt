@@ -62,8 +62,7 @@ class SaltCMD(object):
                 default=False,
                 action='store_true',
                 help='Execute a salt command query, this can be used to find'\
-                    + ' previous function calls, of to look up a call that'\
-                    + ' occured at a specific time.')
+                    + ' the results os a previous function call: -Q test.echo')
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
