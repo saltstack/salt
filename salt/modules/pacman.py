@@ -10,7 +10,7 @@ def _list_removed(old, new):
     '''
     pkgs = []
     for pkg in old:
-        if not new.has_key():
+        if not new.has_key(pkg):
             pkgs.append(pkg)
     return pkgs
 
