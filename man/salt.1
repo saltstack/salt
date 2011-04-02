@@ -1,0 +1,50 @@
+.TH salt 1 "April 2011" "salt 0.7.0" "salt Manual"
+
+.SH NAME
+salt \- Parallel remote execution system
+
+.SH SYNOPSIS
+.B salt '*' [ options ] sys.doc
+
+.B salt -E '.*' [ options ] sys.doc cmd
+
+.B salt -F 'operatingsystem:Arch.*' [ options ] test.ping
+
+.B salt -Q test.ping
+
+.SH DESCRIPTION
+Salt allows for commands to be executed across a swath of remote systems in parallel. This means that remote systems can be both controleed and querried with ease.
+
+.SH OPTIONS
+.TP
+-h, --help
+Print a usage message briefly summarizing these command-line options
+
+.TP
+-t TIMEOUT, --timeout=TIMEOUT
+The timeout in seconds to wait for replies from the salt minions.
+
+.TP
+-E, --pcre
+The target expresion will be interpereted as a pcre regular expression rather than a shell glob.
+
+.TP
+-L, --list
+The target expression will be interpereted as a comma delimited list, example: server1.foo.bar,server2.foo.bar,example7.quo.qux
+
+.TP
+-F, --facter
+The target expression matches values returned by facter on the minions. The target expresion is in the format of '<facter value>:<pcre regular expresion>'; example: 'operatingsystem:Arch.*'
+
+.TP
+-Q, --query
+Execute a salt command query, this can be used to find the results os a previous function call: -Q test.echo')
+
+.TP
+-c CONFIG, --config=CONFIG
+The location of the salt master configuration file, the salt master settings are required to know where the connections are; default=/etc/salt/master
+
+.SH AUTHORS
+Thomas S. Hatch <thatch@gmail.com>
+.P
+Joseph Hall <perlhoser@gmail.com>
