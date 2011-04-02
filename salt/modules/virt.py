@@ -10,6 +10,7 @@ import os
 import StringIO
 from xml.dom import minidom
 import subprocess
+import shutil
 
 # Import libvirt
 import libvirt
