@@ -73,7 +73,8 @@ class Minion(object):
             if self.opts['disable_modules'].count(mod):
                 continue
             try:
-                __import__('salt.modules.' + mod, globals(), locals())
+                tmodule = __import__('salt.modules', globals(), locals(), [mod])
+                module = getattr(tmodule, mod)
                 module.__facter__ = self.opts['facter']
             except:
                 continue
