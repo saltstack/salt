@@ -48,7 +48,7 @@ def collatz(start):
     CLI Example:
     salt '*' test.collatz 3
     '''
-    start = time.time()
+    begin = time.time()
     steps = []
     while start != 1:
         steps.append(start)
@@ -57,5 +57,5 @@ def collatz(start):
                 start = start / 2
             else:
                 start = start * 3 + 1
-    return steps, time.time() - start
+    return steps, time.time() - begin
 
