@@ -2,8 +2,12 @@
 '''
 The setup script for salt
 '''
-
+import os
 from distutils.core import setup
+from distutils.extension import Extension
+from distutils.sysconfig import get_python_lib
+
+mod_path = os.path.join(get_python_lib(), 'salt/modules/')
 
 setup(name='salt',
       version='0.7.0',
@@ -31,6 +35,8 @@ setup(name='salt',
                 ('share/man/man7',
                     ['man/salt.7',
                     ]),
+                (mod_path,
+                    ['salt/modules/cytest.pyx',
+                    ])
                  ],
-
      )
