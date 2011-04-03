@@ -2,10 +2,11 @@
 Module for gathering and managing network information
 '''
 import subprocess
+from socket import *
 
 def ping( host ):
     '''
-    Return usage information for volumes mounted on this minion
+    Performs a ping to a host
     
     CLI Example:
     salt '*' network.ping archlinux.org -c 4
@@ -92,7 +93,7 @@ def traceroute( host ):
 
 def dig( host ):
     '''
-    Return usage information for volumes mounted on this minion
+    Performs a DNS lookup with dig
     
     CLI Example:
     salt '*' network.dig archlinux.org
@@ -104,17 +105,16 @@ def dig( host ):
             stdout=subprocess.PIPE).communicate()[0]
     return out
 
-def isportopen( port ):
+def isportopen( host, port ):
     '''
-    Return usage information for volumes mounted on this minion
+    Return status of a port
     
     CLI Example:
-    salt '*' network.isportopen 22
+    salt '*' network.isportopen 127.0.0.1 22
     '''
-    cmd = 'nc -zv localhost %s' % port
 
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stderr=subprocess.PIPE).communicate()[1]
+    s = socket(AF_INET, SOCK_STREAM)
+    out = s.connect_ex((ip, int(port)))
+
     return out
 
