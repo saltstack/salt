@@ -22,7 +22,7 @@ def run(cmd):
 
 def run_stdout(cmd):
     '''
-    Execute a command, and only return the standard out
+    Execute a command, and only return the standard out 
 
     CLI Example:
     salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
@@ -33,7 +33,7 @@ def run_stdout(cmd):
 
 def run_stderr(cmd):
     '''
-    Executa a command and only return the 
+    Executa a command and only return the standard error
 
     CLI Example:
     salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
