@@ -21,7 +21,7 @@ options=()
 source=("https://github.com/downloads/thatch45/salt/$pkgname-$pkgver.tar.gz"
         "salt-master"
         "salt-minion")
-md5sums=('93cc483021fbcc9920cb4daa3b2c36e2'
+md5sums=('26456860e89f53deaf75193da50b449a'
          '4baf45d1610d771b742de2cbd8951b9f'
          '11bc2e9042a5764e029fefbe49dddcc7')
 

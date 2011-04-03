@@ -4,7 +4,6 @@ Routines to set up a minion
 # Import python libs
 import os
 import distutils.sysconfig
-import importlib
 import glob
 import re
 import time
@@ -63,7 +62,7 @@ class Minion(object):
             if self.opts['disable_modules'].count(mod):
                 continue
             try:
-                module = importlib.import_module('salt.modules.' + mod)
+                __import__('salt.modules.' + mod, globals(), locals())
                 module.__facter__ = self.opts['facter']
             except:
                 continue
