@@ -50,7 +50,7 @@ def collatz(long start):
     CLI Example:
     salt '*' test.collatz 3
     '''
-    cdef float start = time.time()
+    cdef float begin = time.time()
     steps = []
     while start != 1:
         steps.append(start)
@@ -59,6 +59,6 @@ def collatz(long start):
                 start = start / 2
             else:
                 start = start * 3 + 1
-    cdef float end = time.time() - start
+    cdef float end = time.time() - begin
     return steps, end
 
