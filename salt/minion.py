@@ -18,6 +18,14 @@ from salt.crypt import AuthenticationError
 import salt.utils
 import salt.modules
 
+cython_enable = False
+try:
+    import pyximport; pyximport.install()
+    cython_enable = True
+except:
+    pass
+
+
 # To set up a minion:
 # 1, Read in the configuration
 # 2. Generate the function mapping dict
@@ -58,6 +66,9 @@ class Minion(object):
                     or fn_.endswith('.py')\
                     or fn_.endswith('.pyc'):
                 mods.add(fn_[:fn_.rindex('.')])
+            if fn_.endswith('.pyx') and cython_enable:
+                mods.add(fn_[:fn_.rindex('.')])
+
         for mod in mods:
             if self.opts['disable_modules'].count(mod):
                 continue
@@ -174,6 +185,12 @@ class Minion(object):
         minion side execution.
         '''
         ret = {}
+        for ind in range(0, len(data['arg'])):
+            try:
+                data['arg'][ind] = eval(data['arg'][ind])
+            except:
+                pass
+
         try:
             ret['return'] = self.functions[data['fun']](*data['arg'])
         except Exception as exc:
