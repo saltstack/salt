@@ -149,10 +149,10 @@ def create(instance, vda, image, pin):
     pin - a "pin" data structure defining the myriad of possible vdb-vbz disk
     images to generate.
     '''
-    # Generate convenience data
-    #fqdn = os.path.basename(instance)
-    #local_path = os.path.dirname(vda)
-    _place_image(image, vda)
-    _gen_pin_drives(pin)
-    _apply_overlay(vda, instance)
+    if not os.path.isfile(vda):
+        # Check that this is a fresh vm image, if so, copy it into place any
+        # apply the overlay, otherwise, just start the vm
+        _place_image(image, vda)
+        _gen_pin_drives(pin)
+        _apply_overlay(vda, instance)
     virt.create_xml_path(os.path.join(instance, 'config.xml'))
