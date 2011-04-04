@@ -39,7 +39,7 @@ def _place_image(image, vda):
             tdir = os.path.dirname(tdir)
     ch_cmd = 'chown ' + creds['user'] + ':' + creds['group'] + ' '\
            + vda
-    subprocess.call(f_cmd, shell=True)
+    subprocess.call(ch_cmd, shell=True)
 
 def _gen_pin_drives(pins):
     '''
