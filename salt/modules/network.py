@@ -3,6 +3,10 @@ Module for gathering and managing network information
 '''
 import subprocess
 from socket import *
+from string import ascii_letters, digits
+
+def _sanitize_host ( host ):
+    return "".join([c for c in host[0:255] if c in (ascii_letters + digits + '.')])
 
 def ping( host ):
     '''
@@ -11,7 +15,7 @@ def ping( host ):
     CLI Example:
     salt '*' network.ping archlinux.org -c 4
     '''
-    cmd = 'ping -c 4 %s' % host
+    cmd = 'ping -c 4 %s' % _sanitize_host(host)
 
     out = subprocess.Popen(cmd,
             shell=True,
@@ -66,7 +70,7 @@ def traceroute( host ):
     CLI Example:
     salt '*' network.traceroute archlinux.org
     '''
-    cmd = 'traceroute %s' % host
+    cmd = 'traceroute %s' % _sanitize_host(host)
     ret = []
     out = subprocess.Popen(cmd,
             shell=True,
@@ -98,7 +102,7 @@ def dig( host ):
     CLI Example:
     salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig %s' % host
+    cmd = 'dig %s' % _sanitize_host(host)
 
     out = subprocess.Popen(cmd,
             shell=True,
@@ -113,8 +117,10 @@ def isportopen( host, port ):
     salt '*' network.isportopen 127.0.0.1 22
     '''
 
+    if not (1 <= int(port) <= 65535):
+        return False
+
     s = socket(AF_INET, SOCK_STREAM)
-    out = s.connect_ex((ip, int(port)))
+    out = s.connect_ex((_sanitize_host(host), int(port)))
 
     return out
-
