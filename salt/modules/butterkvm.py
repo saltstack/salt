@@ -91,7 +91,7 @@ def _apply_overlay(vda, instance):
     os.chdir(cwd)
     g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tar + ' /'
     subprocess.call(g_cmd, shell=True)
-    shutil.rmtree(os.path.dirname(tmp))
+    shutil.rmtree(tmp)
     return True
 
 def libvirt_creds():
