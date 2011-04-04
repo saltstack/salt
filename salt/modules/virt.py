@@ -275,8 +275,11 @@ def destroy(vm_):
     CLI Example:
     salt '*' virt.destroy <vm name>
     '''
-    dom = _get_dom(vm_)
-    dom.destroy()
+    try:
+        dom = _get_dom(vm_)
+        dom.destroy()
+    except:
+        return False
     return True
 
 def undefine(vm_):
@@ -287,8 +290,11 @@ def undefine(vm_):
     CLI Example:
     salt '*' virt.undefine <vm name>
     '''
-    dom = _get_dom(vm_)
-    dom.undefine()
+    try:
+        dom = _get_dom(vm_)
+        dom.undefine()
+    except:
+        return False
     return True
 
 def purge(vm_, dirs=False):
