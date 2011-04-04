@@ -23,7 +23,7 @@ class Key(object):
                 + ' master server has been started'
             sys.stderr.write(err + '\n')
             sys.exit(42)
-        print 'Unaccepted Keys:'
+        print '######################\nUnaccepted Keys:'
         for fn_ in os.listdir(pre_dir):
             print fn_
 
@@ -37,7 +37,7 @@ class Key(object):
                 + ' master server has been started'
             sys.stderr.write(err + '\n')
             sys.exit(42)
-        print 'Accepted Keys:'
+        print '######################\nAccepted Keys:'
         for fn_ in os.listdir(minions):
             print fn_
 
