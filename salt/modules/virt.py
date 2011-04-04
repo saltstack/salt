@@ -304,17 +304,14 @@ def purge(vm_, dirs=False):
     USE WITH EXTREAME CAUTION!
     '''
     disks = get_disks(vm_)
-    print disks
     destroy(vm_)
     directories = set()
     for disk in disks:
-        print 'Will remove ' + str(disks[disk])
-        #os.remove(disks[disk])
+        os.remove(disks[disk])
         directories.add(os.path.dirname(disks[disk]))
     if dirs:
         for dir_ in directories:
-            print 'Will remove ' + str(dir)
-            #shutil.rmtree(dir_)
+            shutil.rmtree(dir_)
     return True
 
 def virt_type():
