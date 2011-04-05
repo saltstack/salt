@@ -17,6 +17,8 @@ def recv(files, dest):
             final = dest
         elif os.path.isdir(dest):
             final = os.path.join(dest, os.path.basename(path))
+        elif os.path.isdir(os.path.dirname(dest)):
+            final = dest
         else:
             return 'Destination not available'
 
