@@ -39,7 +39,7 @@ def _place_image(image, vda):
             tdir = os.path.dirname(tdir)
     ch_cmd = 'chown ' + creds['user'] + ':' + creds['group'] + ' '\
            + vda
-    subprocess.call(f_cmd, shell=True)
+    subprocess.call(ch_cmd, shell=True)
 
 def _gen_pin_drives(pins):
     '''
@@ -91,7 +91,7 @@ def _apply_overlay(vda, instance):
     os.chdir(cwd)
     g_cmd = 'guestfish -i -a ' + vda + ' tgz-in ' + tar + ' /'
     subprocess.call(g_cmd, shell=True)
-    shutil.rmtree(os.path.dirname(tmp))
+    shutil.rmtree(tmp)
     return True
 
 def libvirt_creds():
@@ -149,10 +149,10 @@ def create(instance, vda, image, pin):
     pin - a "pin" data structure defining the myriad of possible vdb-vbz disk
     images to generate.
     '''
-    # Generate convenience data
-    #fqdn = os.path.basename(instance)
-    #local_path = os.path.dirname(vda)
-    _place_image(image, vda)
-    _gen_pin_drives(pin)
-    _apply_overlay(vda, instance)
+    if not os.path.isfile(vda):
+        # Check that this is a fresh vm image, if so, copy it into place any
+        # apply the overlay, otherwise, just start the vm
+        _place_image(image, vda)
+        _gen_pin_drives(pin)
+        _apply_overlay(vda, instance)
     virt.create_xml_path(os.path.join(instance, 'config.xml'))
