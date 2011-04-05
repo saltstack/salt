@@ -209,7 +209,7 @@ class SaltFTP(object):
         else:
             opts['tgt'] = args[0]
         opts['src'] = args[1:-1]
-        opts['tgt'] = args[-1]
+        opts['dest'] = args[-1]
 
         return opts
 
