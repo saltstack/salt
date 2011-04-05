@@ -158,6 +158,7 @@ class Minion(object):
         open(self.opts['hostname'], 'w+').write('salt')
         ret = bool(glob.glob(tgt))
         os.chdir(cwd)
+        shutil.rmtree(tmp_dir)
         return ret
 
     def _pcre_match(self, tgt):
