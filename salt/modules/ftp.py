@@ -1,6 +1,7 @@
 '''
 Minion side functions for salt-ftp
 '''
+import os
 
 def recv(files, dest):
     '''
@@ -15,14 +16,14 @@ def recv(files, dest):
                 and not os.path.isdir(dest):
             final = dest
         elif os.path.isdir(dest):
-            final = os.path.join(dest, os.path.basname(path))
+            final = os.path.join(dest, os.path.basename(path))
         else:
             return 'Destination not available'
 
         try:
             open(final, 'w+').write(data)
             ret[final] = True
-        except:
+        except IOError:
             ret[final] = False
 
     return ret

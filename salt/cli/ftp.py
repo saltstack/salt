@@ -6,8 +6,9 @@ Salt-ftp can be used to distribute configuration files
 '''
 # Import python modules
 import os
-import stat
 import sys
+# Import third party libs
+import yaml
 # Import salt modules
 import salt.client
 

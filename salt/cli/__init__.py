@@ -217,7 +217,7 @@ class SaltFTP(object):
         '''
         Execute salt-ftp
         '''
-        ftp = salt.cli.ftp.FTP(opts)
+        ftp = salt.cli.ftp.SaltFTP(self.opts)
         ftp.run()
 
 
