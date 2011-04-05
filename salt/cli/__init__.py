@@ -143,6 +143,84 @@ class SaltCMD(object):
             print docs[fun]
             print ''
 
+
+class SaltFTP(object):
+    '''
+    Run the salt-ftp command line client
+    '''
+    def __init__(self):
+        self.opts = self.__parse()
+
+    def __parse(self):
+        '''
+        Parse the command line
+        '''
+        parser = optparse.OptionParser()
+        
+        parser.add_option('-t',
+                '--timeout',
+                default=5,
+                type=int,
+                dest='timeout',
+                help='Set the return timeout for batch jobs; default=5 seconds')
+        parser.add_option('-E',
+                '--pcre',
+                default=False,
+                dest='pcre',
+                action='store_true',
+                help='Instead of using shell globs to evaluate the target'\
+                   + ' servers, use pcre regular expressions')
+        parser.add_option('-L',
+                '--list',
+                default=False,
+                dest='list_',
+                action='store_true',
+                help='Instead of using shell globs to evaluate the target'\
+                   + ' servers, take a comma delimited list of servers.')
+        parser.add_option('-F',
+                '--facter',
+                default=False,
+                dest='facter',
+                action='store_true',
+                help='Instead of using shell globs to evaluate the target'\
+                   + ' use a facter value to identify targets, the syntax'\
+                   + ' for the target is the facter key followed by a pcre'\
+                   + ' regular expresion:\n"operatingsystem:Arch.*"')
+        parser.add_option('-c',
+                '--config',
+                default='/etc/salt/master',
+                dest='conf_file',
+                help='The location of the salt master configuration file,'\
+                    + ' the salt master settings are required to know where'\
+                    + ' the connections are; default=/etc/salt/master')
+
+        options, args = parser.parse_args()
+
+        opts = {}
+
+        opts['timeout'] = options.timeout
+        opts['pcre'] = options.pcre
+        opts['list'] = options.list_
+        opts['facter'] = options.facter
+        opts['conf_file'] = options.conf_file
+
+        if opts['list']:
+            opts['tgt'] = args[0].split(',')
+        else:
+            opts['tgt'] = args[0]
+        opts['src'] = args[1:-1]
+        opts['tgt'] = args[-1]
+
+        return opts
+
+    def run(self):
+        '''
+        Execute salt-ftp
+        '''
+        ftp = salt.cli.ftp.FTP(opts)
+        ftp.run()
+
+
 class SaltKey(object):
     '''
     Initialize the Salt key manager
