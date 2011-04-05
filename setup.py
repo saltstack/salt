@@ -10,7 +10,7 @@ from distutils.sysconfig import get_python_lib
 mod_path = os.path.join(get_python_lib(), 'salt/modules/')
 
 setup(name='salt',
-      version='0.7.0',
+      version='0.7.1',
       description='Portable, distrubuted, remote execution system',
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
@@ -21,6 +21,7 @@ setup(name='salt',
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
                'scripts/saltkey',
+               'scripts/salt-ftp',
                'scripts/salt'],
       data_files=[('/etc/salt',
                     ['conf/master',
