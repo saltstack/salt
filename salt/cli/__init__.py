@@ -10,6 +10,7 @@ import yaml
 # Import salt components
 import salt.client
 import salt.cli.key
+import salt.cli.ftp
 
 class SaltCMD(object):
     '''
