@@ -8,6 +8,7 @@ import glob
 import re
 import time
 import tempfile
+import shutil
 import threading
 
 # Import zeromq libs
