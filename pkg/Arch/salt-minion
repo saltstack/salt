@@ -7,7 +7,7 @@ daemon_name='salt-minion'
 [ -f /etc/conf.d/$daemon_name ] && . /etc/conf.d/$daemon_name
 
 get_pid() {
-	ps aux | grep -v grep | grep '/usr/bin/python2 /usr/bin/salt-minion -d' | awk '{print $2}'
+	ps aux | grep -v grep | grep '/usr/bin/python2 /usr/bin/salt-minion' | awk '{print $2}'
 }
 
 case "$1" in

@@ -7,7 +7,7 @@ daemon_name='salt-master'
 [ -f /etc/conf.d/$daemon_name ] && . /etc/conf.d/$daemon_name
 
 get_pid() {
-	ps aux | grep -v grep | grep '/usr/bin/python2 /usr/bin/salt-master -d' | awk '{print $2}'
+	ps aux | grep -v grep | grep '/usr/bin/python2 /usr/bin/salt-master' | awk '{print $2}'
 }
 
 case "$1" in
