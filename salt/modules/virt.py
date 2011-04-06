@@ -311,6 +311,33 @@ def migrate(vm_, target):
     return dom.migrate(dconn, 
         libvirt.VIR_MIGRATE_LIVE)
 
+def seed_non_shared_migrate(disks, force=False):
+    '''
+    Non shared migration reqiuires that the disks be present on the migration
+    destination, pass the disks information via this function, to the
+    migration destination before executing the migration.
+    '''
+    {'file': path}
+    for dev, data in disks:
+        fn_ = data['file']
+        form = data['file format']
+        size = data['virtual size'].split()[1][1:]
+        if os.path.isfile(fn_) and not force:
+            # the target exists, check to see if is is compatable
+            pre = yaml.load(subprocess.Popen('qemu-img info arch',
+                shell=True,
+                stdout=subprocess.PIPE).communicate()[0])
+            if not pre['file format'] == data['file format']\
+                    and not pre['virtual size'] == data['virtual size']:
+                return False
+        if not os.path.isdir(os.path.dirname(fn_)):
+            os.makedirs(os.path.dirname(fn_))
+        if os.path.isfile(fn_):
+            os.remove(fn_)
+        cmd = 'qemu-img create -f ' + form + ' ' + fn_ + ' ' + size
+        subprocess.call(cmd, shell=True)
+    return True
+
 def destroy(vm_):
     '''
     Hard power down the virtual machine, this is equivelent to pulling the
