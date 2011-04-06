@@ -392,8 +392,8 @@ def purge(vm_, dirs=False):
     destroy(vm_)
     directories = set()
     for disk in disks:
-        os.remove(disks[disk])
-        directories.add(os.path.dirname(disks[disk]))
+        os.remove(disks[disk]['file'])
+        directories.add(os.path.dirname(disks[disk]['file']))
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
