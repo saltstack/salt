@@ -293,37 +293,35 @@ def migrate_non_shared(vm_, target):
     '''
     Attempt to execute non-shared storage "all" migration
     '''
-    dom = _get_dom(vm_)
-    try:
-        dconn = libvirt.open('qemu://' + target  + '/system')
-    except:
-        return 'Failed to connect to the destination server'
-    return dom.migrate(dconn, 
-        libvirt.VIR_MIGRATE_LIVE | libvirt.VIR_MIGRATE_NON_SHARED_DISK)
+    cmd = 'virsh migrate --live --copy-storage-all ' + vm_\
+        + ' qemu://' + target + '/system'
+
+    return subprocess.Popen(cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0]
 
 def migrate_non_shared_inc(vm_, target):
     '''
     Attempt to execute non-shared storage "all" migration
     '''
-    dom = _get_dom(vm_)
-    try:
-        dconn = libvirt.open('qemu://' + target  + '/system')
-    except:
-        return 'Failed to connect to the destination server'
-    return dom.migrate(dconn, 
-        libvirt.VIR_MIGRATE_LIVE | libvirt.VIR_MIGRATE_NON_SHARED_INC)
+    cmd = 'virsh migrate --live --copy-storage-inc ' + vm_\
+        + ' qemu://' + target + '/system'
+
+    return subprocess.Popen(cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0]
 
 def migrate(vm_, target):
     '''
     Shared storage migration
     '''
+    cmd = 'virsh migrate --live ' + vm_\
+        + ' qemu://' + target + '/system'
+
+    return subprocess.Popen(cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0]
     dom = _get_dom(vm_)
-    try:
-        dconn = libvirt.open('qemu://' + target  + '/system')
-    except:
-        return 'Failed to connect to the destination server'
-    return dom.migrate(dconn, 
-        libvirt.VIR_MIGRATE_LIVE)
 
 def seed_non_shared_migrate(disks, force=False):
     '''
