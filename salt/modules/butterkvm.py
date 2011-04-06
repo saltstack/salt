@@ -108,7 +108,6 @@ def libvirt_creds():
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
     return {'user': user, 'group': group}
 
-
 def local_images(local_path):
     '''
     return the virtual machine names for all of the images located in the
