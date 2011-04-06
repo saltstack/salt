@@ -164,7 +164,8 @@ def get_disks(vm_):
             disks[target.getAttribute('dev')] =\
                     {'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.load(subprocess.Popen('qemu-img info arch',
+        disks[dev].update(yaml.load(subprocess.Popen('qemu-img info '\
+            + disks[dev]['file'],
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]))
     return disks
