@@ -122,7 +122,6 @@ def get_graphics(vm_):
     ssock = StringIO.StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
-        #graphics = node.getAttribute("devices")
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
             for key in g_node.attributes.keys():
