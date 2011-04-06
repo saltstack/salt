@@ -46,6 +46,20 @@ def _get_dom(vm_):
         raise Exception('The specified vm is not present')
     return conn.lookupByName(vm_)
 
+def _libvirt_creds():
+    '''
+    Returns the user and group that the disk images should be owned by
+    '''
+    g_cmd = 'grep group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep user /etc/libvirt/qemu.conf'
+    group = subprocess.Popen(g_cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+    user = subprocess.Popen(u_cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+    return {'user': user, 'group': group}
+
 def list_vms():
     '''
     Return a list of virtual machine names on the minion
@@ -334,6 +348,9 @@ def seed_non_shared_migrate(disks, force=False):
         if os.path.isfile(fn_):
             os.remove(fn_)
         cmd = 'qemu-img create -f ' + form + ' ' + fn_ + ' ' + size
+        subprocess.call(cmd, shell=True)
+        creds = _libvirt_creds()
+        cmd = 'chown ' + creds['user'] + ':' + creds['group'] + ' ' + fn_
         subprocess.call(cmd, shell=True)
     return True
 
