@@ -267,6 +267,42 @@ def create_xml_path(path):
         return False
     return create_xml_str(open(path, 'r').read())
 
+def migrate_non_shared(vm_, target):
+    '''
+    Attempt to execute non-shared storage "all" migration
+    '''
+    dom = _get_dom(vm_)
+    try:
+        dconn = libvirt.open('qemu://' + target  + '/system')
+    except:
+        return 'Failed to connect to the destination server'
+    return dom.migrate(dconn, 
+        libvirt.VIR_MIGRATE_LIVE | libvirt.VIR_MIGRATE_NON_SHARED_DISK)
+
+def migrate_non_shared_inc(vm_, target):
+    '''
+    Attempt to execute non-shared storage "all" migration
+    '''
+    dom = _get_dom(vm_)
+    try:
+        dconn = libvirt.open('qemu://' + target  + '/system')
+    except:
+        return 'Failed to connect to the destination server'
+    return dom.migrate(dconn, 
+        libvirt.VIR_MIGRATE_LIVE | libvirt.VIR_MIGRATE_NON_SHARED_INC)
+
+def migrate(vm_, target):
+    '''
+    Shared storage migration
+    '''
+    dom = _get_dom(vm_)
+    try:
+        dconn = libvirt.open('qemu://' + target  + '/system')
+    except:
+        return 'Failed to connect to the destination server'
+    return dom.migrate(dconn, 
+        libvirt.VIR_MIGRATE_LIVE)
+
 def destroy(vm_):
     '''
     Hard power down the virtual machine, this is equivelent to pulling the
