@@ -15,6 +15,9 @@ import shutil
 # Import libvirt
 import libvirt
 
+# Import Third Party Libs
+import yaml
+
 VIRT_STATE_NAME_MAP = {
    0 : "running",
    1 : "running",
@@ -145,7 +148,12 @@ def get_disks(vm_):
             continue
         if target.attributes.keys().count('dev')\
                 and source.attributes.keys().count('file'):
-            disks[target.getAttribute('dev')] = source.getAttribute('file')
+            disks[target.getAttribute('dev')] =\
+                    {'file': source.getAttribute('file')}
+    for dev in disks:
+        disks[dev].update(yaml.load(subprocess.Popen('qemu-img info arch',
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0]))
     return disks
 
 def freemem():
