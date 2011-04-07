@@ -329,7 +329,7 @@ def seed_non_shared_migrate(disks, force=False):
     destination, pass the disks information via this function, to the
     migration destination before executing the migration.
     '''
-    for dev, data in disks:
+    for dev, data in disks.items():
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
