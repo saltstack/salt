@@ -49,8 +49,6 @@ def minion_config(path):
                                    opts['log_level'],
                                    opts['out_level'])
 
-    opts['facter'] = facter_data()
-
     return opts
 
 def master_config(path):

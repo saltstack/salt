@@ -56,6 +56,7 @@ class Minion(object):
         # This is going to need some work to clean it up and expand
         # functionality.
         mods = set()
+        facter_data = salt.config.facter_data()
         # Load up the facter information
         functions = {}
         mod_dir = os.path.join(distutils.sysconfig.get_python_lib(),
@@ -76,7 +77,8 @@ class Minion(object):
             try:
                 tmodule = __import__('salt.modules', globals(), locals(), [mod])
                 module = getattr(tmodule, mod)
-                module.__facter__ = self.opts['facter']
+                module.__facter__ = facter_data
+                module.__opts__ = self.opts
             except:
                 continue
             for attr in dir(module):
