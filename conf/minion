@@ -40,3 +40,20 @@
 # The log level for posting to the terminal
 #out_level: ERROR
 
+
+######      Module configuration      #####
+###########################################
+# Salt allows for modules to be passed arbitrairy configuration data, any data
+# passed here in valid yaml format will be passed on to the salt minion modules
+# for use. It is STRONGLY recomended that a naming convention be used in which
+# the module name is followed by a . and then the value. Also, all top level
+# data must be allied via the yaml dict construct, some examples:
+#
+# A simple value for the test module:
+#test.foo: foo
+#
+# A list for the test module:
+#test.bar: [baz,quo]
+#
+# A dict for the test moule:
+#test.baz: {spam: sausage, cheese: bread}
