@@ -35,9 +35,18 @@ def conf_test():
     the default value
 
     CLI Example:
-    salt '*' test.ping
+    salt '*' test.conf_test
     '''
     return __opts__['test.foo']
+
+def get_opts():
+    '''
+    Return the configuration options passed to this minion
+
+    CLI Example:
+    salt '*' test.get_opts
+    '''
+    return __opts__
 
 def fib(num):
     '''
