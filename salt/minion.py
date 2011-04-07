@@ -78,7 +78,10 @@ class Minion(object):
                 tmodule = __import__('salt.modules', globals(), locals(), [mod])
                 module = getattr(tmodule, mod)
                 module.__facter__ = facter_data
-                module.__opts__ = self.opts
+                if hasattr(module, '__opts__'):
+                    module.__opts__.update(self.opts)
+                else:
+                    module.__opts__ = self.opts
             except:
                 continue
             for attr in dir(module):
