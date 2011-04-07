@@ -4,6 +4,11 @@ Module for running arbitrairy tests
 
 import time
 
+# Load in default options for the module
+__opts__ = {
+            'test.foo': 'foo'
+            }
+
 def echo(text):
     '''
     Return a string - used for testing the connection
@@ -23,6 +28,16 @@ def ping():
     salt '*' test.ping
     '''
     return True
+
+def conf_test():
+    '''
+    Return the value for test.foo in the minion configuration file, or return
+    the default value
+
+    CLI Example:
+    salt '*' test.ping
+    '''
+    return __opts__['test.foo']
 
 def fib(num):
     '''
