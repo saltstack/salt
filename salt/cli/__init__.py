@@ -57,6 +57,13 @@ class SaltCMD(object):
                    + ' use a facter value to identify targets, the syntax'\
                    + ' for the target is the facter key followed by a pcre'\
                    + ' regular expresion:\n"operatingsystem:Arch.*"')
+        parser.add_option('-X',
+                '--exsel',
+                default=False,
+                dest='exsel',
+                action='store_true',
+                help='Instead of using shell globs use the return code'\
+                   + ' of a function.')
         parser.add_option('-Q',
                 '--query',
                 dest='query',
@@ -80,6 +87,7 @@ class SaltCMD(object):
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['facter'] = options.facter
+        opts['exsel'] = options.exsel
         opts['conf_file'] = options.conf_file
 
         if options.query:
@@ -119,7 +127,9 @@ class SaltCMD(object):
                 args.append('list')
             elif self.opts['facter']:
                 args.append('facter')
-            
+            elif self.opts['exsel']:
+                args.append('exsel')
+        
             ret = local.cmd(*args)
 
             # Handle special case commands

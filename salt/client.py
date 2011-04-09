@@ -182,6 +182,7 @@ class LocalClient(object):
                 'pcre': self._check_pcre_minions,
                 'list': self._check_list_minions,
                 'facter': self._check_facter_minions,
+                'exsel': self._check_facter_minions
                 }[expr_form](expr)
             
     def pub(self, tgt, fun, arg=(), expr_form='glob'):

@@ -187,6 +187,14 @@ class Minion(object):
         comps = tgt.split(':')
         return bool(re.match(comps[1], facter[comps[0]]))
 
+    def _exsel_match(self, tgt):
+        '''
+        Runs a function and return the exit code
+        '''
+        if not self.functions.has_key(tgt):
+            return False
+        return(self.functions[tgt]())
+
     def _thread_return(self, data):
         '''
         This methos should be used as a threading target, start the actual
