@@ -1,7 +1,44 @@
 '''
-Module for returning various status data about a minion. These data can be useful for compiling into stats later.
+Module for returning various status data about a minion.
+These data can be useful for compiling into stats later.
 '''
 import subprocess
+
+__opts__ = {}
+
+def custom():
+    ''' 
+    Return a custom composite of status data and info for this minon,
+    based on the minion config file. An example config like might be:
+
+    status.cpustats.custom: [ 'cpu', 'ctxt', 'btime', 'processes' ]
+
+    ...where status refers to status.py, cpustats is the function
+    where we get our data, and custom is this function It is followed
+    by a list of keys that we want returned.
+
+    This function is meant to replace all_status(), which returns
+    anything and everything, which we probably don't want.
+    
+    By default, nothing is returned. Warning: Depending on what you
+    include, there can be a LOT here!
+
+    CLI Example:
+    salt '*' status.custom
+    '''
+
+    ret = {}
+    for opt in __opts__:
+        keys = opt.split('.')
+        if keys[0] != 'status':
+            continue
+        func = '%s()' % keys[1]
+        vals = eval(func)
+
+        for item in __opts__[opt]:
+            ret[item] = vals[item]
+
+    return ret 
 
 def uptime():
     '''
@@ -21,11 +58,11 @@ def loadavg():
     salt '*' status.loadavg
     '''
     comps = open('/proc/loadavg', 'r').read().strip()
-    loadavg = comps.split()
+    load_avg = comps.split()
     return { 
-        '1-min':  loadavg[1],
-        '5-min':  loadavg[2],
-        '15-min': loadavg[3],
+        '1-min':  load_avg[1],
+        '5-min':  load_avg[2],
+        '15-min': load_avg[3],
     }
 
 def cpustats():
@@ -104,8 +141,7 @@ def cpuinfo():
         if comps[0] == 'flags':
             ret[comps[0]] = comps[1].split()
         else:
-            comps[1] = comps[1].strip()
-            ret[comps[0]] = comps[1]
+            ret[comps[0]] = comps[1].strip()
     return ret 
 
 def diskstats():
@@ -198,7 +234,6 @@ def w():
         if not row.count(' '):
             continue
         comps = row.split()
-        print comps
         rec = { 
             'user':  comps[0],
             'tty':   comps[1],
@@ -211,12 +246,12 @@ def w():
         user_list.append( rec )
     return user_list
 
-def all():
+def all_status():
     '''
     Return a composite of all status data and info for this minon. Warning: There is a LOT here!
 
     CLI Example:
-    salt '*' status.all
+    salt '*' status.all_status
     '''
     return {
         'cpuinfo':   cpuinfo(),
