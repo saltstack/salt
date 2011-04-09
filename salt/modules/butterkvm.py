@@ -94,11 +94,6 @@ def _apply_overlay(vda, instance):
     shutil.rmtree(tmp)
     return True
 
-def clean_images():
-    '''
-    '''
-    pass
-
 def libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
