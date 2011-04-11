@@ -6,6 +6,12 @@ import optparse
 import os
 import sys
 import yaml
+JSON = False
+try:
+    import json
+    JSON = True
+except:
+    pass
 
 # Import salt components
 import salt.client
@@ -85,11 +91,12 @@ class SaltCMD(object):
                 help='Print the output from the salt command in raw python'\
                    + ' form, this is suitible for re-reading the output into'\
                    + ' an executing python script with eval.')
-        parser.add_option('--json-out',
-                default=False,
-                action='store_true',
-                dest='json_out',
-                help='Print the output from the salt command in json.')
+        if JSON:
+            parser.add_option('--json-out',
+                    default=False,
+                    action='store_true',
+                    dest='json_out',
+                    help='Print the output from the salt command in json.')
 
         options, args = parser.parse_args()
 
@@ -102,7 +109,10 @@ class SaltCMD(object):
         opts['exsel'] = options.exsel
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
-        opts['json_out'] = options.json_out
+        if JSON:
+            opts['json_out'] = options.json_out
+        else:
+            opts['json_out'] = False
 
         if options.query:
             opts['query'] = options.query
@@ -151,7 +161,12 @@ class SaltCMD(object):
                 self._print_docs(ret)
             else:
                 if type(ret) == type(list()) or type(ret) == type(dict()):
-                    print yaml.dump(ret)
+                    if self.opts['raw_out']:
+                        print ret
+                    elif self.opts['json_out']:
+                        print json.dumps(ret)
+                    else:
+                        print yaml.dump(ret)
 
     def _print_docs(self, ret):
         '''
