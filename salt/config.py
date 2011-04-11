@@ -23,6 +23,7 @@ def minion_config(path):
             'conf_file': path,
             'disable_modules': [],
             'open_mode': False,
+            'multiprocessing': False,
             'log_file': '/var/log/salt/master',
             'log_level': 'WARNING',
             'out_level': 'ERROR',

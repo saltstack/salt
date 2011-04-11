@@ -33,6 +33,20 @@
 #open_mode: False
 
 
+######         Thread settings        #####
+###########################################
+# Enable multiprocessing support, by default when a minion recieves a
+# publication a new thread is spawned and the command is executed therein. This
+# is the optimal behavior for the use case where salt is used for data querires
+# and distributed system managment, but not the optimal use case when salt is
+# used for distributed computation. Since python threads are bad at cpu bound
+# tasks salt allows for a multiprocessing process to be used for the execution
+# instead. This addis more initial overhead to publications, but cpu bound
+# executions will be faster. This feature requires python 2.6 or higher on the
+# minion, if set to True and python 2.6 or higher is not present then it will
+# fall back to python threads
+#multiprocessing: False
+
 ######         Logging settings       #####
 ###########################################
 #log_file: /var/log/salt/minion
