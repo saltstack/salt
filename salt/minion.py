@@ -10,6 +10,12 @@ import time
 import tempfile
 import shutil
 import threading
+MULTI = False
+try:
+    import multiprocessing
+    MULTI = True
+except:
+    pass
 
 # Import zeromq libs
 import zmq
@@ -139,8 +145,10 @@ class Minion(object):
         else:
             if not self._glob_match(data['tgt']):
                 return
-
-        threading.Thread(target=lambda: self._thread_return(data)).start()
+        if MULTI and self.opts['multiprocessing']:
+            multiprocessing.Process(target=lambda: self._thread_return(data)).start()
+        else:
+            threading.Thread(target=lambda: self._thread_return(data)).start()
 
     def _handle_pub(self, load):
         '''
