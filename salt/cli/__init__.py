@@ -78,6 +78,18 @@ class SaltCMD(object):
                 help='The location of the salt master configuration file,'\
                     + ' the salt master settings are required to know where'\
                     + ' the connections are; default=/etc/salt/master')
+        parser.add_option('--raw-out',
+                default=False,
+                action='store_true',
+                dest='raw_out',
+                help='Print the output from the salt command in raw python'\
+                   + ' form, this is suitible for re-reading the output into'\
+                   + ' an executing python script with eval.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
 
         options, args = parser.parse_args()
 
@@ -89,6 +101,8 @@ class SaltCMD(object):
         opts['facter'] = options.facter
         opts['exsel'] = options.exsel
         opts['conf_file'] = options.conf_file
+        opts['raw_out'] = options.raw_out
+        opts['json_out'] = options.json_out
 
         if options.query:
             opts['query'] = options.query
