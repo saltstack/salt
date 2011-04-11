@@ -48,7 +48,7 @@ class Master(object):
         '''
         self.opts['logger'].info('Starting the Salt Master')
         reqserv = ReqServer(self.opts)
-        reqserv.start()
+        reqserv.run()
         while True:
             self._clear_old_jobs()
             time.sleep(60)
@@ -88,23 +88,19 @@ class Publisher(threading.Thread):
         self.__bind()
 
 
-class ReqServer(threading.Thread):
+class ReqServer():
     '''
     Starts up a threaded request server, minions send results to this
     interface.
     '''
     def __init__(self, opts):
-        threading.Thread.__init__(self)
         self.opts = opts
         self.master_key = salt.crypt.MasterKeys(self.opts)
-        self.num_threads = self.opts['worker_threads']
         self.context = zmq.Context(1)
         # Prepare the zeromq sockets
-        self.c_uri = 'tcp://' + self.opts['interface'] + ':'\
+        self.uri = 'tcp://' + self.opts['interface'] + ':'\
                    + self.opts['ret_port']
-        self.clients = self.context.socket(zmq.XREP)
-        self.workers = self.context.socket(zmq.XREQ)
-        self.w_uri = 'inproc://wokers'
+        self.socket = self.context.socket(zmq.REP)
         # Start the publisher
         self.publisher = Publisher(opts)
         self.publisher.start()
@@ -129,33 +125,18 @@ class ReqServer(threading.Thread):
         os.chmod(keyfile, 256)
         return key
 
-    def __worker(self):
-        '''
-        Starts up a worker thread
-        '''
-        socket = self.context.socket(zmq.REP)
-        socket.connect(self.w_uri)
-
-        while True:
-            package = socket.recv()
-            payload = salt.payload.unpackage(package)
-            ret = salt.payload.package(self._handle_payload(payload))
-            socket.send(ret)
-
     def __bind(self):
         '''
         Binds the reply server
         '''
         self.opts['logger'].info('Setting up the master communication server')
-        self.clients.bind(self.c_uri)
-
-        self.workers.bind(self.w_uri)
-
-        for ind in range(int(self.num_threads)):
-            proc = threading.Thread(target=self.__worker)
-            proc.start()
-
-        zmq.device(zmq.QUEUE, self.clients, self.workers)
+        self.socket.bind(self.uri)
+        while True:
+            package = self.socket.recv()
+            payload = salt.payload.unpackage(package)
+            ret = salt.payload.package(self._handle_payload(payload))
+            self.socket.send(ret)
+            
 
     def _prep_jid(self, load):
         '''
