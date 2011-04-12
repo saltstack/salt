@@ -1,11 +1,11 @@
 '''
-Minion side functions for salt-ftp
+Minion side functions for salt-cp
 '''
 import os
 
 def recv(files, dest):
     '''
-    Used with salt-ftp, pass the files dict, and the destination
+    Used with salt-cp, pass the files dict, and the destination
     '''
     if not os.path.isdir(dest) or not os.path.isdir(os.path.dirname(dest)):
         return 'Destination not available'
