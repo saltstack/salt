@@ -16,7 +16,7 @@ except:
 # Import salt components
 import salt.client
 import salt.cli.key
-import salt.cli.ftp
+import salt.cli.cp
 
 class SaltCMD(object):
     '''
@@ -184,9 +184,9 @@ class SaltCMD(object):
             print ''
 
 
-class SaltFTP(object):
+class SaltCP(object):
     '''
-    Run the salt-ftp command line client
+    Run the salt-cp command line client
     '''
     def __init__(self):
         self.opts = self.__parse()
@@ -255,10 +255,10 @@ class SaltFTP(object):
 
     def run(self):
         '''
-        Execute salt-ftp
+        Execute salt-cp
         '''
-        ftp = salt.cli.ftp.SaltFTP(self.opts)
-        ftp.run()
+        cp_ = salt.cli.cp.SaltCP(self.opts)
+        cp_.run()
 
 
 class SaltKey(object):
