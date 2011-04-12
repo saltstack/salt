@@ -164,12 +164,12 @@ class Minion(object):
 
     def _glob_match(self, tgt):
         '''
-        Returns true if the passed glob matches the hostname
+        Returns true if the passed glob matches the id
         '''
         tmp_dir = tempfile.mkdtemp()
         cwd = os.getcwd()
         os.chdir(tmp_dir)
-        open(self.opts['hostname'], 'w+').write('salt')
+        open(self.opts['id'], 'w+').write('salt')
         ret = bool(glob.glob(tgt))
         os.chdir(cwd)
         shutil.rmtree(tmp_dir)
@@ -179,13 +179,13 @@ class Minion(object):
         '''
         Returns true if the passed pcre regex matches
         '''
-        return bool(re.match(tgt, self.opts['hostname']))
+        return bool(re.match(tgt, self.opts['id']))
 
     def _list_match(self, tgt):
         '''
         Determines if this host is on the list
         '''
-        return bool(tgt.count(self.opts['hostname']))
+        return bool(tgt.count(self.opts['id']))
 
     def _facter_match(self, tgt):
         '''
@@ -237,7 +237,7 @@ class Minion(object):
         load = {'return': ret['return'],
                 'cmd': '_return',
                 'jid': ret['jid'],
-                'hostname': self.opts['hostname']}
+                'id': self.opts['id']}
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
         return socket.recv()

@@ -197,13 +197,13 @@ class ReqServer():
         # 4. encrypt the aes key as an encrypted pickle
         # 5. package the return and return it
         self.opts['logger'].info('Authentication request from '\
-                + load['hostname'])
+                + load['id'])
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
-                load['hostname'])
+                load['id'])
         pubfn_pend = os.path.join(self.opts['pki_dir'],
                 'minions_pre',
-                load['hostname'])
+                load['id'])
         if self.opts['open_mode']:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -212,7 +212,7 @@ class ReqServer():
             # The key has been accepted check it
             if not open(pubfn, 'r').read() == load['pub']:
                 self.opts['logger'].error('Authentication attempt from '\
-                        + load['hostname'] + ' failed, the public keys did'\
+                        + load['id'] + ' failed, the public keys did'\
                         + ' not match. This may be an attempt to compromise'\
                         + ' the Salt cluster.')
                 ret = {'enc': 'clear',
@@ -222,7 +222,7 @@ class ReqServer():
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre
             self.opts['logger'].info('New public key placed in pending for '\
-                    + load['hostname'])
+                    + load['id'])
             open(pubfn_pend, 'w+').write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
@@ -233,7 +233,7 @@ class ReqServer():
             # ret False
             if not open(pubfn_pend, 'r').read() == load['pub']:
                 self.opts['logger'].error('Authentication attempt from '\
-                        + load['hostname'] + ' failed, the public keys in'\
+                        + load['id'] + ' failed, the public keys in'\
                         + ' pending did'\
                         + ' not match. This may be an attempt to compromise'\
                         + ' the Salt cluster.')
@@ -241,9 +241,9 @@ class ReqServer():
                         'load': {'ret': False}}
             else:
                 self.opts['logger'].info('Authentication failed from host '\
-                        + load['hostname'] + ', the key is in pending and'\
+                        + load['id'] + ', the key is in pending and'\
                         + ' needs to be accepted with saltkey -a '\
-                        + load['hostname'])
+                        + load['id'])
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif not os.path.isfile(pubfn_pend)\
@@ -256,7 +256,7 @@ class ReqServer():
                     'load': {'ret': False}}
 
         self.opts['logger'].info('Authentication accepted from '\
-                + load['hostname'])
+                + load['id'])
         open(pubfn, 'w+').write(load['pub'])
         key = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
@@ -276,9 +276,9 @@ class ReqServer():
         # If the return data is invalid, just ignore it
         if not load.has_key('return')\
                 or not load.has_key('jid')\
-                or not load.has_key('hostname'):
+                or not load.has_key('id'):
             return False
-        self.opts['logger'].info('Got return from ' + load['hostname']\
+        self.opts['logger'].info('Got return from ' + load['id']\
                 + ' for job ' + load['jid'])
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
         if not os.path.isdir(jid_dir):
@@ -286,7 +286,7 @@ class ReqServer():
                     + ' recieved with a job id that is not present on the'\
                     + ' master: ' + load['jid'])
             return False
-        hn_dir = os.path.join(jid_dir, load['hostname'])
+        hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
         pickle.dump(load['return'],
