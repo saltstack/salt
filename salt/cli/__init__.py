@@ -301,6 +301,18 @@ class SaltKey(object):
                 action='store_true',
                 help='Accept all pending keys')
 
+        parser.add_option('-p',
+                '--print',
+                dest='print',
+                default='',
+                help='Print the specified public key')
+
+        parser.add_option('-P',
+                '--print-all',
+                dest='print_all',
+                default='',
+                help='Print all public keys')
+
         parser.add_option('-c',
                 '--config',
                 dest='config',
