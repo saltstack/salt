@@ -28,7 +28,7 @@ class Key(object):
         elif key_type == 'acc':
             subdir == 'minions'
         dir_ = os.path.join(self.opts['pki_dir'], subdir)
-        if not os.path.isdir(pre_dir):
+        if not os.path.isdir(dir_):
             err = 'The ' + subdir + ' directory is not present, ensure that'\
                 + ' the master server has been started'
             sys.stderr.write(err + '\n')
@@ -45,8 +45,7 @@ class Key(object):
         '''
         List the unaccepted keys
         '''
-        print '######################\n  ' + utils.LIGHT_RED\
-            + 'Unaccepted Keys:' + utils.ENDC
+        print utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC
         for key in self._keys('pre'):
             print utils.RED + key + utils.ENDC
 
@@ -54,8 +53,7 @@ class Key(object):
         '''
         List the accepted public keys
         '''
-        print '######################\n  ' + utils.LIGHT_GREEN\
-            + 'Accepted Keys:' + utils.ENDC
+        print utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC
         for key in self._keys('acc'):
             print utils.GREEN + key + utils.ENDC
 
