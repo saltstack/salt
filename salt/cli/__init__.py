@@ -127,8 +127,19 @@ class SaltCMD(object):
                 opts['tgt'] = args[0].split(',')
             else:
                 opts['tgt'] = args[0]
-            opts['fun'] = args[1]
-            opts['arg'] = args[2:]
+            if args[1].count(','):
+                opts['fun'] = arg[1].split(',')
+                opts['arg'] = []
+                for comp in ' '.join(arg[2:]).split(','):
+                    opts['arg'].append(comp.split())
+                if len(opts['fun']) != len(opts['arg']):
+                    err = 'Cannot execute compound command without defining'\
+                        + ' all arguments.'
+                    sys.stderr.write(err + '\n')
+                    sys.exit(42)
+            else:
+                opts['fun'] = args[1]
+                opts['arg'] = args[2:]
 
         return opts
 
