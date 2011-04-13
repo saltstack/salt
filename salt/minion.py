@@ -146,9 +146,15 @@ class Minion(object):
             if not self._glob_match(data['tgt']):
                 return
         if MULTI and self.opts['multiprocessing']:
-            multiprocessing.Process(target=lambda: self._thread_return(data)).start()
+            if type(data['fun']) == type(list()):
+                multiprocessing.Process(target=lambda: self._thread_multi_return(data)).start()
+            else:
+                multiprocessing.Process(target=lambda: self._thread_return(data)).start()
         else:
-            threading.Thread(target=lambda: self._thread_return(data)).start()
+            if type(data['fun']) == type(list()):
+                threading.Thread(target=lambda: self._thread_multi_return(data)).start()
+            else:
+                threading.Thread(target=lambda: self._thread_return(data)).start()
 
     def _handle_pub(self, load):
         '''
@@ -222,6 +228,29 @@ class Minion(object):
                     + ' exception: ' + str(exc))
             ret['return'] = exc
         ret['jid'] = data['jid']
+        self._return_pub(ret)
+
+    def _thread_multi_return(self, data):
+        '''
+        This methos should be used as a threading target, start the actual
+        minion side execution.
+        '''
+        ret = {'return': {}}
+        for ind in range(0, data['fun']):
+            for ind in range(0, len(data['arg'][ind])):
+                try:
+                    data['arg'][ind] = eval(data['arg'][ind])
+                except:
+                    pass
+
+            try:
+                ret['return'][data['fun']]\
+                    = self.functions[data['fun'][ind]](*data['arg'][ind])
+            except Exception as exc:
+                self.opts['logger'].warning('The minion function caused an'\
+                        + ' exception: ' + str(exc))
+                ret['return'][data['fun']] = exc
+            ret['jid'] = data['jid']
         self._return_pub(ret)
 
     def _return_pub(self, ret):
