@@ -26,7 +26,7 @@ class Key(object):
         if key_type == 'pre':
             subdir = 'minions_pre'
         elif key_type == 'acc':
-            subdir == 'minions'
+            subdir = 'minions'
         dir_ = os.path.join(self.opts['pki_dir'], subdir)
         if not os.path.isdir(dir_):
             err = 'The ' + subdir + ' directory is not present, ensure that'\
