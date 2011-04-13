@@ -46,7 +46,7 @@ class Key(object):
         List the unaccepted keys
         '''
         print utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC
-        for key in self._keys('pre'):
+        for key in sorted(self._keys('pre')):
             print utils.RED + key + utils.ENDC
 
     def _list_accepted(self):
@@ -54,7 +54,7 @@ class Key(object):
         List the accepted public keys
         '''
         print utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC
-        for key in self._keys('acc'):
+        for key in sorted(self._keys('acc')):
             print utils.GREEN + key + utils.ENDC
 
     def _list_all(self):
@@ -69,7 +69,7 @@ class Key(object):
         Print out the specified public key
         '''
         keys = self._keys('pre', True).union(self._keys('acc', True))
-        for key in keys:
+        for key in sorted(keys):
             if key.endswith(name):
                 print open(key, 'r').read()
 
@@ -78,11 +78,11 @@ class Key(object):
         Print out the public keys, all of em'
         '''
         print utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC
-        for key in self._keys('pre', True):
+        for key in sorted(self._keys('pre', True)):
             print '  ' + utils.RED + os.path.basename(key) + utils.ENDC
             print open(key, 'r').read()
         print utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC
-        for key in self._keys('acc', True):
+        for key in sorted(self._keys('acc', True)):
             print '  ' + utils.GREEN + os.path.basename(key) + utils.ENDC
             print open(key, 'r').read()
 
