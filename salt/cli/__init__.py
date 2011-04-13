@@ -327,6 +327,8 @@ class SaltKey(object):
         opts['list_all'] = options.list_all
         opts['accept'] = options.accept
         opts['accept_all'] = options.accept_all
+        opts['print'] = options.print
+        opts['print_all'] = options.print_all
 
         opts.update(salt.config.master_config(options.config))
 
