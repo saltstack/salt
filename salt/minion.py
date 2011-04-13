@@ -237,9 +237,9 @@ class Minion(object):
         '''
         ret = {'return': {}}
         for ind in range(0, len(data['fun'])):
-            for ind in range(0, len(data['arg'][ind])):
+            for index in range(0, len(data['arg'][ind])):
                 try:
-                    data['arg'][ind] = eval(data['arg'][ind])
+                    data['arg'][ind][index] = eval(data['arg'][ind][index])
                 except:
                     pass
 
