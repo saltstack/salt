@@ -303,7 +303,7 @@ class SaltKey(object):
 
         parser.add_option('-p',
                 '--print',
-                dest='print',
+                dest='print_',
                 default='',
                 help='Print the specified public key')
 
@@ -327,7 +327,7 @@ class SaltKey(object):
         opts['list_all'] = options.list_all
         opts['accept'] = options.accept
         opts['accept_all'] = options.accept_all
-        opts['print'] = options.print
+        opts['print'] = options.print_
         opts['print_all'] = options.print_all
 
         opts.update(salt.config.master_config(options.config))
