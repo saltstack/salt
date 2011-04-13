@@ -4,7 +4,7 @@ The data structurte needs to be:
     {'enc': 'clear',
      'load': {'fun': '<mod.callable>',
               'arg':, ('arg1', 'arg2', ...),
-              'tgt': '<glob or hostname>',
+              'tgt': '<glob or id>',
               'key': '<read in the key file>'}
 '''
 # The components here are simple, and they need to be and stay simple, we
@@ -174,7 +174,7 @@ class LocalClient(object):
     def check_minions(self, expr, expr_form='glob'):
         '''
         Check the passed regex against the available minions' public
-        keys stored for authentication. This should return a set of hostnames
+        keys stored for authentication. This should return a set of ids
         which match the regex, this will then be used to parse the
         returns to make sure everyone has checked back in.
         '''
@@ -190,7 +190,7 @@ class LocalClient(object):
         Take the required arguemnts and publish the given command.
         Arguments:
             tgt:
-                The tgt is a regex or a glob used to match up the hostname on
+                The tgt is a regex or a glob used to match up the ids on
                 the minions. Salt works by always publishing every command to
                 all of the minions and then the minions determine if the
                 command is for them based on the tgt value.

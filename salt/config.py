@@ -18,7 +18,7 @@ def minion_config(path):
     opts = {'master': 'mcp',
             'master_port': '4506',
             'pki_dir': '/etc/salt/pki',
-            'hostname': socket.getfqdn(),
+            'id': socket.getfqdn(),
             'cachedir': '/var/cache/salt',
             'conf_file': path,
             'disable_modules': [],

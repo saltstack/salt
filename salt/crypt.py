@@ -115,7 +115,7 @@ class Auth(object):
         payload['enc'] = 'clear'
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
-        payload['load']['hostname'] = self.opts['hostname']
+        payload['load']['id'] = self.opts['id']
         payload['load']['pub'] = open(tmp_pub, 'r').read()
         return payload
 

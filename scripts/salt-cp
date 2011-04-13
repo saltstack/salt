@@ -11,8 +11,8 @@ def main():
     '''
     The main function
     '''
-    ftp = salt.cli.SaltFTP()
-    ftp.run()
+    cp_ = salt.cli.SaltCP()
+    cp_.run()
 
 if __name__ == '__main__':
     main()

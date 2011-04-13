@@ -1,8 +1,8 @@
 '''
-The ftp module is used to execute the logic used by the salt-ftp command
-line application, salt-ftp is NOT intended to broadcast large files, it is
+The cp module is used to execute the logic used by the salt-cp command
+line application, salt-cp is NOT intended to broadcast large files, it is
 intened to handle text files.
-Salt-ftp can be used to distribute configuration files
+Salt-cp can be used to distribute configuration files
 '''
 # Import python modules
 import os
@@ -12,9 +12,9 @@ import yaml
 # Import salt modules
 import salt.client
 
-class SaltFTP(object):
+class SaltCP(object):
     '''
-    Create a salt ftp object, used to distribute simple files with salt
+    Create a salt cp object, used to distribute simple files with salt
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -62,7 +62,7 @@ class SaltFTP(object):
         arg = [self._load_files(), self.opts['dest']]
         local = salt.client.LocalClient(self.opts['conf_file'])
         args = [self.opts['tgt'],
-                'ftp.recv',
+                'cp.recv',
                 arg,
                 self.opts['timeout'],
                 ]
