@@ -138,7 +138,7 @@ class Key(object):
         elif self.opts['list_all']:
             self._list_all()
         elif self.opts['print']:
-            self._print(self.opts['print'])
+            self._print_key(self.opts['print'])
         elif self.opts['print_all']:
             self._print_all()
         elif self.opts['accept']:

@@ -310,7 +310,8 @@ class SaltKey(object):
         parser.add_option('-P',
                 '--print-all',
                 dest='print_all',
-                default='',
+                default=False,
+                action='store_true',
                 help='Print all public keys')
 
         parser.add_option('-c',
