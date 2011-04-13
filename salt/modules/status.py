@@ -219,6 +219,42 @@ def netstats():
             headers = comps
     return ret 
 
+def netdev():
+    '''
+    Return the network device stats for this minon
+
+    CLI Example:
+    salt '*' status.netdev
+    '''
+    stats = open('/proc/net/dev', 'r').read().split('\n')
+    ret = {}
+    for line in stats:
+        if not line.count(' '):
+            continue
+        if line.find(':') < 0:
+            continue
+        comps = line.split()
+        ret[comps[0]] = {
+            'iface':         comps[0],
+            'rx_bytes':      comps[1],
+            'rx_packets':    comps[2],
+            'rx_errs':       comps[3],
+            'rx_drop':       comps[4],
+            'rx_fifo':       comps[5],
+            'rx_frame':      comps[6],
+            'rx_compressed': comps[7],
+            'rx_multicast':  comps[8],
+            'tx_bytes':      comps[9],
+            'tx_packets':    comps[10],
+            'tx_errs':       comps[11],
+            'tx_drop':       comps[12],
+            'tx_fifo':       comps[13],
+            'tx_colls':      comps[14],
+            'tx_carrier':    comps[15],
+            'tx_compressed': comps[16],
+        }
+    return ret
+
 def w():
     ''' 
     Return a list of logged in users for this minon, using the w command
@@ -259,6 +295,7 @@ def all_status():
         'diskstats': diskstats(),
         'loadavg':   loadavg(),
         'meminfo':   meminfo(),
+        'netdev':    netdev(),
         'netstats':  netstats(),
         'uptime':    uptime(),
         'vmstats':   vmstats(),
