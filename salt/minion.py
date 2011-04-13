@@ -236,7 +236,7 @@ class Minion(object):
         minion side execution.
         '''
         ret = {'return': {}}
-        for ind in range(0, data['fun']):
+        for ind in range(0, len(data['fun'])):
             for ind in range(0, len(data['arg'][ind])):
                 try:
                     data['arg'][ind] = eval(data['arg'][ind])
@@ -244,12 +244,12 @@ class Minion(object):
                     pass
 
             try:
-                ret['return'][data['fun']]\
+                ret['return'][data['fun'][ind]]\
                     = self.functions[data['fun'][ind]](*data['arg'][ind])
             except Exception as exc:
                 self.opts['logger'].warning('The minion function caused an'\
                         + ' exception: ' + str(exc))
-                ret['return'][data['fun']] = exc
+                ret['return'][data['fun'][ind]] = exc
             ret['jid'] = data['jid']
         self._return_pub(ret)
 
