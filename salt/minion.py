@@ -138,6 +138,8 @@ class Minion(object):
             if hasattr(module, 'returners'):
                 if callable(module.returners):
                     returners[mod] = module.returners
+        self.opts['logger'].info('Loaded the following returners: '\
+                + str(returners))
             
         return returners
 
