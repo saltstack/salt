@@ -267,9 +267,9 @@ class Minion(object):
                     + ' exception: ' + str(exc))
             ret['return'] = exc
         ret['jid'] = data['jid']
-        if data['return']:
+        if data['ret']:
             try:
-                self.returners[data['return']](ret)
+                self.returners[data['ret']](ret)
             except Exception as exc:
                 self.opts['logger'].error('The return failed for job'\
                     + data['jid'] + ' ' + exc)

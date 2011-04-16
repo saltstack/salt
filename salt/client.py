@@ -60,7 +60,7 @@ class LocalClient(object):
         except:
             raise SaltClientError('Failed to read in the salt root key')
 
-    def cmd(self, tgt, fun, arg=(), timeout=5, expr_form='glob', ret='master'):
+    def cmd(self, tgt, fun, arg=(), timeout=5, expr_form='glob', ret=''):
         '''
         Execute a salt command and return.
         '''
@@ -185,7 +185,7 @@ class LocalClient(object):
                 'exsel': self._check_facter_minions
                 }[expr_form](expr)
             
-    def pub(self, tgt, fun, arg=(), expr_form='glob', ret='master'):
+    def pub(self, tgt, fun, arg=(), expr_form='glob', ret=''):
         '''
         Take the required arguemnts and publish the given command.
         Arguments:
