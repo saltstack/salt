@@ -24,6 +24,7 @@ import salt.crypt
 from salt.crypt import AuthenticationError
 import salt.utils
 import salt.modules
+import salt.returners
 
 cython_enable = False
 try:
@@ -51,7 +52,9 @@ class Minion(object):
         Pass in the options dict
         '''
         self.opts = opts
+        self.facter_data = salt.config.facter_data()
         self.functions = self.__load_functions()
+        self.returners = self.__load_returners()
         self.authenticate()
 
     def __load_functions(self):
@@ -62,7 +65,6 @@ class Minion(object):
         # This is going to need some work to clean it up and expand
         # functionality.
         mods = set()
-        facter_data = salt.config.facter_data()
         # Load up the facter information
         functions = {}
         mod_dir = os.path.join(distutils.sysconfig.get_python_lib(),
@@ -83,7 +85,7 @@ class Minion(object):
             try:
                 tmodule = __import__('salt.modules', globals(), locals(), [mod])
                 module = getattr(tmodule, mod)
-                module.__facter__ = facter_data
+                module.__facter__ = self.facter_data
                 if hasattr(module, '__opts__'):
                     module.__opts__.update(self.opts)
                 else:
@@ -101,6 +103,43 @@ class Minion(object):
         self.opts['logger'].info('Loaded the following functions: '\
                 + str(functions))
         return functions
+
+    def __load_returners(self):
+        '''
+        Parses over the returner modules and loads in the dynamic returners.
+        '''
+        mods = set()
+        returners = {}
+        ret_dir = os.path.join(distutils.sysconfig.get_python_lib(),
+                'salt/returners')
+        for fn_ in os.listdir(ret_dir):
+            if fn_.startswith('__init__.py'):
+                continue
+            if fn_.endswith('.pyo')\
+                    or fn_.endswith('.py')\
+                    or fn_.endswith('.pyc'):
+                mods.add(fn_[:fn_.rindex('.')])
+            if fn_.endswith('.pyx') and cython_enable:
+                mods.add(fn_[:fn_.rindex('.')])
+
+        for mod in mods:
+            if self.opts['disable_returners'].count(mod):
+                continue
+            try:
+                tmodule = __import__('salt.returners', globals(), locals(), [mod])
+                module = getattr(tmodule, mod)
+                module.__facter__ = self.facter_data
+                if hasattr(module, '__opts__'):
+                    module.__opts__.update(self.opts)
+                else:
+                    module.__opts__ = self.opts
+            except:
+                continue
+            if hasattr(module, 'returners'):
+                if callable(module.returners):
+                    returners[mod] = module.returners
+            
+        return returners
 
     def __get_docs(self, module=''):
         '''
@@ -228,7 +267,14 @@ class Minion(object):
                     + ' exception: ' + str(exc))
             ret['return'] = exc
         ret['jid'] = data['jid']
-        self._return_pub(ret)
+        if data['return']:
+            try:
+                self.returners[data['return']](ret)
+            except Exception as exc:
+                self.opts['logger'].error('The return failed for job'\
+                    + data['jid'] + ' ' + exc)
+        else:
+            self._return_pub(ret)
 
     def _thread_multi_return(self, data):
         '''

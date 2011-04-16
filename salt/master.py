@@ -337,6 +337,7 @@ class ReqServer():
                 'arg': clear_load['arg'],
                 'tgt': clear_load['tgt'],
                 'jid': jid,
+                'ret': clear_load['ret'],
                }
         if clear_load.has_key('tgt_type'):
             load['tgt_type'] = clear_load['tgt_type']

@@ -70,6 +70,13 @@ class SaltCMD(object):
                 action='store_true',
                 help='Instead of using shell globs use the return code'\
                    + ' of a function.')
+        parser.add_option('--return',
+                default='',
+                dest='return_',
+                help='Set an alternative return method. By default salt will'\
+                    + ' send the return data from the command back to the'\
+                    + ' master, but the return data can be redirected into'\
+                    + ' any number of systems, databases or applications.')
         parser.add_option('-Q',
                 '--query',
                 dest='query',
@@ -107,6 +114,7 @@ class SaltCMD(object):
         opts['list'] = options.list_
         opts['facter'] = options.facter
         opts['exsel'] = options.exsel
+        opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
         if JSON:
@@ -164,7 +172,11 @@ class SaltCMD(object):
                 args.append('facter')
             elif self.opts['exsel']:
                 args.append('exsel')
+            else:
+                args.append('glob')
         
+            if self.opts['return']:
+                args.append(self.opts['return'])
             ret = local.cmd(*args)
 
             # Handle special case commands
