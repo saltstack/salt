@@ -22,6 +22,7 @@ def minion_config(path):
             'cachedir': '/var/cache/salt',
             'conf_file': path,
             'disable_modules': [],
+            'disable_returners': [],
             'open_mode': False,
             'multiprocessing': False,
             'log_file': '/var/log/salt/master',
