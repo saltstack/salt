@@ -297,7 +297,14 @@ class Minion(object):
                         + ' exception: ' + str(exc))
                 ret['return'][data['fun'][ind]] = exc
             ret['jid'] = data['jid']
-        self._return_pub(ret)
+        if data['ret']:
+            try:
+                self.returners[data['ret']](ret)
+            except Exception as exc:
+                self.opts['logger'].error('The return failed for job'\
+                    + data['jid'] + ' ' + exc)
+        else:
+            self._return_pub(ret)
 
     def _return_pub(self, ret):
         '''
