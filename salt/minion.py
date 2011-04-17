@@ -53,9 +53,18 @@ class Minion(object):
         '''
         self.opts = opts
         self.facter_data = salt.config.facter_data()
+        self.mod_opts = self.__prep_mod_opts()
         self.functions = self.__load_functions()
         self.returners = self.__load_returners()
         self.authenticate()
+
+    def __prep_mod_opts(self):
+        '''
+        Returns a deep copy of the opts with key bits stripped out
+        '''
+        mod_opts = copy.deepcopy(self.opts)
+        mod_opts.pop('logger')
+        return mod_opts
 
     def __load_functions(self):
         '''
@@ -87,9 +96,9 @@ class Minion(object):
                 module = getattr(tmodule, mod)
                 module.__facter__ = self.facter_data
                 if hasattr(module, '__opts__'):
-                    module.__opts__.update(self.opts)
+                    module.__opts__.update(self.mod_opts)
                 else:
-                    module.__opts__ = self.opts
+                    module.__opts__ = self.mod_opts
             except:
                 continue
             for attr in dir(module):
@@ -130,9 +139,9 @@ class Minion(object):
                 module = getattr(tmodule, mod)
                 module.__facter__ = self.facter_data
                 if hasattr(module, '__opts__'):
-                    module.__opts__.update(self.opts)
+                    module.__opts__.update(self.mod_opts)
                 else:
-                    module.__opts__ = self.opts
+                    module.__opts__ = self.mod_opts
             except:
                 continue
             if hasattr(module, 'returner'):
