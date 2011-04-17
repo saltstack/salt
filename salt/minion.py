@@ -6,7 +6,6 @@ import os
 import distutils.sysconfig
 import glob
 import re
-import copy
 import time
 import tempfile
 import shutil
@@ -63,8 +62,11 @@ class Minion(object):
         '''
         Returns a deep copy of the opts with key bits stripped out
         '''
-        mod_opts = copy.deepcopy(self.opts)
-        mod_opts.pop('logger')
+        mod_opts = {}
+        for key, val in self.opts.items():
+            if key == 'logger':
+                continue
+            mod_opts[key] = val
         return mod_opts
 
     def __load_functions(self):
