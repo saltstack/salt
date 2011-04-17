@@ -110,7 +110,7 @@ class Minion(object):
                 if callable(getattr(module, attr)):
                     functions[mod + '.' + attr] = getattr(module, attr)
         functions['sys.list_functions'] = functions.keys
-        functions['sys.list_modules'] = list(mods)
+        functions['sys.list_modules'] = lambda: list(mods)
         functions['sys.doc'] = self.__get_docs
         functions['sys.reload_functions'] = self.reload_functions
         self.opts['logger'].info('Loaded the following functions: '\
