@@ -135,9 +135,9 @@ class Minion(object):
                     module.__opts__ = self.opts
             except:
                 continue
-            if hasattr(module, 'returners'):
-                if callable(module.returners):
-                    returners[mod] = module.returners
+            if hasattr(module, 'returner'):
+                if callable(module.returner):
+                    returners[mod] = module.returner
         self.opts['logger'].info('Loaded the following returners: '\
                 + str(returners))
             
