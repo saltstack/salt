@@ -6,6 +6,7 @@ import os
 import distutils.sysconfig
 import glob
 import re
+import copy
 import time
 import tempfile
 import shutil
