@@ -283,11 +283,12 @@ class Minion(object):
             ret['return'] = exc
         ret['jid'] = data['jid']
         if data['ret']:
+            ret['id'] = self.opts['id']
             try:
                 self.returners[data['ret']](ret)
             except Exception as exc:
                 self.opts['logger'].error('The return failed for job'\
-                    + data['jid'] + ' ' + exc)
+                    + data['jid'] + ' ' + str(exc))
         else:
             self._return_pub(ret)
 
@@ -313,11 +314,12 @@ class Minion(object):
                 ret['return'][data['fun'][ind]] = exc
             ret['jid'] = data['jid']
         if data['ret']:
+            ret['id'] = self.opts['id']
             try:
                 self.returners[data['ret']](ret)
             except Exception as exc:
                 self.opts['logger'].error('The return failed for job'\
-                    + data['jid'] + ' ' + exc)
+                    + data['jid'] + ' ' + str(exc))
         else:
             self._return_pub(ret)
 
