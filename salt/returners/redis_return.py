@@ -4,7 +4,8 @@ This is a VERY simple example for pushing data to a redis server and is not
 nessisarily intended as a usable interface.
 '''
 
-import redis as redispy
+import redis
+import json
 
 __opts__ = {
             'redis.host': 'mcp',
@@ -16,8 +17,8 @@ def returner(ret):
     '''
     Return data to a redis data store
     '''
-    serv = redispy.Redis(
+    serv = redis.Redis(
             host=__opts__['redis.host'],
             port=__opts__['redis.port'],
             db=__opts__['redis.db'])
-    serv.set(ret['id'] + ':' + red['jid'], str(ret['return']))
+    serv.set(ret['id'] + ':' + red['jid'], json.dumps(ret['return']))
