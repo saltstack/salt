@@ -144,7 +144,7 @@ class ReqServer():
         job id directory.
         '''
         jid_root = os.path.join(self.opts['cachedir'], 'jobs')
-        jid = str(time.time())
+        jid = time.strftime('%Y%m%d%H%M%S')
         jid_dir = os.path.join(jid_root, jid)
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
