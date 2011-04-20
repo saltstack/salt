@@ -25,7 +25,7 @@ def minion_config(path):
             'disable_returners': [],
             'open_mode': False,
             'multiprocessing': False,
-            'log_file': '/var/log/salt/master',
+            'log_file': '/var/log/salt/minion',
             'log_level': 'WARNING',
             'out_level': 'ERROR',
             }
