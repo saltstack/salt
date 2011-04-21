@@ -21,7 +21,7 @@ def returner(ret):
             host=__opts__['redis.host'],
             port=__opts__['redis.port'],
             db=__opts__['redis.db'])
-    serv.sadd(ret['id'] + 'jobs', ret['jid'])
+    serv.sadd(ret['id'] + ':' + 'jobs', ret['jid'])
     serv.set(ret['jid'] + ':' + ret['id'], json.dumps(ret['return']))
     serv.sadd('jobs', ret['jid'])
     serv.sadd(ret['jid'], ret['id'])
