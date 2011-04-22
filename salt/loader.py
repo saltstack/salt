@@ -78,8 +78,11 @@ class Loader(object):
                     or fn_.endswith('.pyx'):
                     mods.add(fn_[:fn_.rindex('.')])
         for name in mods:
-            fn_, path, desc = imp.find_module(name, self.module_dirs)
-            mod = imp.load_module(name, fn_, path, desc)
+            try:
+                fn_, path, desc = imp.find_module(name, self.module_dirs)
+                mod = imp.load_module(name, fn_, path, desc)
+            except ImportError:
+                continue
             if hasattr(mod, '__opts__'):
                 mod.__opts__.update(self.opts)
             else:
@@ -89,7 +92,7 @@ class Loader(object):
                 if attr.startswith('_'):
                     continue
                 if callable(getattr(mod, attr)):
-                    funcs[mod + '.' + attr] = getattr(mod, attr)
+                    funcs[name + '.' + attr] = getattr(mod, attr)
         return funcs
 
     def filter_func(self, name):
@@ -98,7 +101,7 @@ class Loader(object):
         the returners for the salt minion
         '''
         funcs = {}
-        for key, fun in self.gen_functions():
+        for key, fun in self.gen_functions().items():
             if key[key.rindex('.'):] == name:
                 funcs[key[:key.rindex('.')]] = fun
         return funcs
