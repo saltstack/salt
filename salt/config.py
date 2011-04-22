@@ -23,6 +23,8 @@ def minion_config(path):
             'conf_file': path,
             'disable_modules': [],
             'disable_returners': [],
+            'module_dirs': [],
+            'returner_dirs': [],
             'open_mode': False,
             'multiprocessing': False,
             'log_file': '/var/log/salt/minion',
