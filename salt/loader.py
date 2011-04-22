@@ -18,6 +18,17 @@ def minion_mods(opts):
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/modules'),
         ] + opts['module_dirs']
     load = Loader(module_dirs, opts)
+    return load.gen_functions()
+
+def returners(opts):
+    '''
+    Returns the returner modules
+    '''
+    module_dirs = [
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/returners'),
+        ] + opts['returner_dirs']
+    load = Loader(module_dirs, opts)
+    return load.filter_func('returner')
 
 
 class Loader(object):
