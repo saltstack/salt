@@ -25,6 +25,7 @@ from salt.crypt import AuthenticationError
 import salt.utils
 import salt.modules
 import salt.returners
+import salt.loader
 
 cython_enable = False
 try:
@@ -54,8 +55,7 @@ class Minion(object):
         self.opts = opts
         self.facter_data = salt.config.facter_data()
         self.mod_opts = self.__prep_mod_opts()
-        self.functions = self.__load_functions()
-        self.returners = self.__load_returners()
+        self.functions, self.returners = self.__load_modules()
         self.authenticate()
 
     def __prep_mod_opts(self):
@@ -68,6 +68,14 @@ class Minion(object):
                 continue
             mod_opts[key] = val
         return mod_opts
+
+    def __load_modules(self):
+        '''
+        Return the functions and the returners loaded up from the loader module
+        '''
+        functions = salt.loader.minion_mods(self.opts)
+        returners = salt.loader.returners(self.opts)
+        return functions, returners
 
     def __load_functions(self):
         '''
