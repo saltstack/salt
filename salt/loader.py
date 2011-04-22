@@ -5,9 +5,20 @@ Routines to set up a minion
 import os
 import sys
 import imp
+import distutils.sysconfig
 
 # Import cython
 import pyximport; pyximport.install()
+
+def minion_mods(opts):
+    '''
+    Returns the minion modules
+    '''
+    module_dirs = [
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/modules'),
+        ] + opts['module_dirs']
+    load = Loader(module_dirs, opts)
+
 
 class Loader(object):
     '''
@@ -58,6 +69,11 @@ class Loader(object):
         for name in mods:
             fn_, path, desc = imp.find_module(name, self.module_dirs)
             mod = imp.load_module(name, fn_, path, desc)
+            if hasattr(mod, '__opts__'):
+                mod.__opts__.update(self.opts)
+            else:
+                mod.__opts__ = self.opts
+
             for attr in dir(mod):
                 if attr.startswith('_'):
                     continue
