@@ -368,3 +368,46 @@ class SaltKey(object):
         '''
         key = salt.cli.key.Key(self.opts)
         key.run()
+
+class SaltCall(object):
+    '''
+    Used to locally execute a salt command
+    '''
+    def __init__(self):
+        self.opts = self.__parse()
+
+    def __parse(self):
+        '''
+        Parse the command line arguments
+        '''
+        parser = optparse.OptionParser()
+
+        parser.add_option('-s',
+                '--stats',
+                dest='stats',
+                default=False,
+                action='store_true',
+                help='Return all of the basic salt call data')
+        parser.add_option('-d',
+                '--module-dirs',
+                dest='module_dirs',
+                default='',
+                help='Specify an additional directory to pull modules from')
+
+        options, args = parser.parse_args()
+
+        opts = {}
+
+        opts['stats'] = options.stats
+        opts['module_dirs'] - options.module_dirs
+        opts['fun'] = args[0]
+        opts['arg'] = args[1:]
+
+        return opts
+
+    def run(self):
+        '''
+        Execute the salt call!
+        '''
+        caller = salt.cli.caller.Caller(self.opts)
+        caller.run()
