@@ -2,6 +2,9 @@
 The caller module is used as a frontend to manage direct calls to the salt
 minion modules.
 '''
+# Import python modules
+import os
+import distutils.sysconfig
 # Import salt libs
 import salt.loader
 
@@ -30,6 +33,6 @@ class Caller(object):
         '''
         Execute the salt call logic
         '''
-        self.call()
+        print self.call()
 
 

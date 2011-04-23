@@ -93,7 +93,7 @@ class Loader(object):
                         mod = pyximport.load_module(name, names[name], '/tmp')
                         return getattr(mod, fun[fun.rindex('.'):])(*arg)
 
-        return getattr(mod, fun[fun.rindex('.'):])(*arg)
+        return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
     def gen_functions(self):
         '''
