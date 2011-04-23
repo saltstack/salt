@@ -66,13 +66,24 @@ class Loader(object):
                 docs[fun] = funcs[fun].__doc__
         return docs
 
-    def call(self, fun, arg=[]):
+    def call(self, fun, arg=[], dirs=[]):
         '''
         Call a function in the load path.
         '''
+        dirs += self.module_dirs
         name = fun[:fun.rindex('.')]
-        fn_, path, desc = imp.find_module(name, self.module_dirs)
-        mod = imp.load_module(name, fn_, path, desc)
+        try:
+            fn_, path, desc = imp.find_module(name, dirs)
+            mod = imp.load_module(name, fn_, path, desc)
+        except ImportError:
+            # The module was not found, try to find a cython module
+            for mod_dir in dirs:
+                for fn_ in os.listdir(mod_dir):
+                    if name == fn_[:fn_.rindex('.')]:
+                        # Found it, load the mod and break the loop
+                        mod = pyximport.load_module(name, names[name], '/tmp')
+                        return getattr(mod, fun[fun.rindex('.'):])(*arg)
+
         return getattr(mod, fun[fun.rindex('.'):])(*arg)
 
     def gen_functions(self):
