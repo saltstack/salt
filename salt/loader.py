@@ -130,6 +130,6 @@ class Loader(object):
         '''
         funcs = {}
         for key, fun in self.gen_functions().items():
-            if key[key.rindex('.'):] == name:
-                funcs[key[:key.rindex('.')]] = fun
+            if key[key.index('.') + 1:] == name:
+                funcs[:key[key.index('.')]] = fun
         return funcs
