@@ -393,14 +393,15 @@ class SaltCall(object):
                 '--module-dirs',
                 dest='module_dirs',
                 default='',
-                help='Specify an additional directory to pull modules from')
+                help='Specify an additional directories to pull modules from,'\
+                    + ' multiple directories can be delimited by commas')
 
         options, args = parser.parse_args()
 
         opts = {}
 
         opts['stats'] = options.stats
-        opts['module_dirs'] - options.module_dirs
+        opts['module_dirs'] = options.module_dirs.split(',')
         opts['fun'] = args[0]
         opts['arg'] = args[1:]
 
