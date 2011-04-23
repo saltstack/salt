@@ -57,9 +57,9 @@ class Loader(object):
         Return a dict containing all of the doc strings in the functions dict
         '''
         docs = {}
-        for fun in self.functions:
+        for fun in funcs:
             if fun.startswith(module):
-                docs[fun] = self.functions[fun].__doc__
+                docs[fun] = funcs[fun].__doc__
         return docs
 
     def call(self, fun, arg=[]):
