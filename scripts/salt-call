@@ -1,0 +1,16 @@
+#!/usr/bin/env python2
+'''
+Directly call a salt command in the modules, does not require a 
+'''
+
+import salt.cli
+
+def main():
+    '''
+    The main function
+    '''
+    client = salt.cli.SaltCall()
+    client.run()
+
+if __name__ == '__main__':
+    main()
