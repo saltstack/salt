@@ -18,7 +18,7 @@ def minion_mods(opts):
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/modules'),
         ] + opts['module_dirs']
     load = Loader(module_dirs, opts)
-    return load.gen_functions()
+    return load.apply_introspection(load.gen_functions())
 
 def returners(opts):
     '''
@@ -51,6 +51,16 @@ class Loader(object):
                 continue
             mod_opts[key] = val
         return mod_opts
+
+    def get_docs(self, funcs, module=''):
+        '''
+        Return a dict containing all of the doc strings in the functions dict
+        '''
+        docs = {}
+        for fun in self.functions:
+            if fun.startswith(module):
+                docs[fun] = self.functions[fun].__doc__
+        return docs
 
     def call(self, fun, arg=[]):
         '''
@@ -94,6 +104,16 @@ class Loader(object):
                 if callable(getattr(mod, attr)):
                     funcs[name + '.' + attr] = getattr(mod, attr)
         return funcs
+
+    def apply_introspection(self, funcs):
+        '''
+        Pass in a function object returned from get_functions to load in
+        introspection functions.
+        '''
+        funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
+        funcs['sys.list_modules'] = lambda: funcs.keys()
+        funcs['sys.doc'] = lambda module='': self.get_docs(funcs, module)
+        #funcs['sys.reload_functions'] = self.reload_functions
 
     def filter_func(self, name):
         '''
