@@ -40,9 +40,10 @@ class Caller(object):
                 if ret[name].__doc__:
                     docs[name] = ret[name].__doc__
         for name in sorted(docs):
-            print name + ':'
-            print docs[name]
-            print ''
+            if name.startswith(self.opts['fun']):
+                print name + ':'
+                print docs[name]
+                print ''
                    
     def run(self):
         '''
