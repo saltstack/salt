@@ -90,8 +90,8 @@ class Loader(object):
                 for fn_ in os.listdir(mod_dir):
                     if name == fn_[:fn_.rindex('.')]:
                         # Found it, load the mod and break the loop
-                        mod = pyximport.load_module(name, names[name], '/tmp')
-                        return getattr(mod, fun[fun.rindex('.'):])(*arg)
+                        mod = pyximport.load_module(name, os.path.join(mod_dir, fn_))
+                        return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
