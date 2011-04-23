@@ -1,6 +1,9 @@
 '''
 Routines to set up a minion
 '''
+# This module still needs package support, so that the functions dict returned
+# can send back functions like: foo.bar.baz
+
 # Import python libs
 import os
 import sys
