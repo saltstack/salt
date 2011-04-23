@@ -121,6 +121,7 @@ class Loader(object):
         funcs['sys.list_modules'] = lambda: funcs.keys
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
         #funcs['sys.reload_functions'] = self.reload_functions
+        return funcs
 
     def filter_func(self, name):
         '''
