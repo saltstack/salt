@@ -415,7 +415,7 @@ class SaltCall(object):
             opts['arg'] = args[1:]
         else:
             opts['fun'] = ''
-            opts['args'] = []
+            opts['arg'] = []
 
         return opts
 

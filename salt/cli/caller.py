@@ -33,8 +33,7 @@ class Caller(object):
         '''
         Pick up the documentation for all of the modules and print it out.
         '''
-        funcs = loader.minion_mods(self.opts)
-        ret = funcs['sys.doc'](*self.opts['arg'])
+        ret = self.loader.call('sys.doc', self.opts['arg'])
         docs = {}
         for host in ret:
             for fun in ret[host]:
