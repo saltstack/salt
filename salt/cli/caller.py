@@ -29,10 +29,30 @@ class Caller(object):
         '''
         return self.loader.call(self.opts['fun'], self.opts['arg'])
 
+    def print_docs(self):
+        '''
+        Pick up the documentation for all of the modules and print it out.
+        '''
+        funcs = loader.minion_mods(self.opts)
+        ret = funcs['sys.doc'](*self.opts['arg'])
+        docs = {}
+        for host in ret:
+            for fun in ret[host]:
+                if not docs.has_key(fun):
+                    if ret[host][fun]:
+                        docs[fun] = ret[host][fun]
+        for fun in sorted(docs):
+            print fun + ':'
+            print docs[fun]
+            print ''
+
     def run(self):
         '''
         Execute the salt call logic
         '''
-        print self.call()
+        if self.opts['doc']:
+            self.print_docs()
+        else:
+            print self.call()
 
 
