@@ -34,6 +34,16 @@ def returners(opts):
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
 
+def call(fun, arg=[], dirs=[]):
+    '''
+    Directly call a function inside a loader directory
+    '''
+    module_dirs = [
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/modules'),
+        ] + dirs
+    load = Loader(module_dirs)
+    return load.call(fun, args)
+
 
 class Loader(object):
     '''
@@ -66,18 +76,17 @@ class Loader(object):
                 docs[fun] = funcs[fun].__doc__
         return docs
 
-    def call(self, fun, arg=[], dirs=[]):
+    def call(self, fun, arg=[]):
         '''
         Call a function in the load path.
         '''
-        dirs += self.module_dirs
         name = fun[:fun.rindex('.')]
         try:
-            fn_, path, desc = imp.find_module(name, dirs)
+            fn_, path, desc = imp.find_module(name, module_dirs)
             mod = imp.load_module(name, fn_, path, desc)
         except ImportError:
             # The module was not found, try to find a cython module
-            for mod_dir in dirs:
+            for mod_dir in module_dirs:
                 for fn_ in os.listdir(mod_dir):
                     if name == fn_[:fn_.rindex('.')]:
                         # Found it, load the mod and break the loop
