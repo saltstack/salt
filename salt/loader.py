@@ -131,5 +131,5 @@ class Loader(object):
         funcs = {}
         for key, fun in self.gen_functions().items():
             if key[key.index('.') + 1:] == name:
-                funcs[:key[key.index('.')]] = fun
+                funcs[key[:key.index('.')]] = fun
         return funcs
