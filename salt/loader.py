@@ -82,11 +82,11 @@ class Loader(object):
         '''
         name = fun[:fun.rindex('.')]
         try:
-            fn_, path, desc = imp.find_module(name, module_dirs)
+            fn_, path, desc = imp.find_module(name, self.module_dirs)
             mod = imp.load_module(name, fn_, path, desc)
         except ImportError:
             # The module was not found, try to find a cython module
-            for mod_dir in module_dirs:
+            for mod_dir in self.module_dirs:
                 for fn_ in os.listdir(mod_dir):
                     if name == fn_[:fn_.rindex('.')]:
                         # Found it, load the mod and break the loop
