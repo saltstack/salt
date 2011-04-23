@@ -8,7 +8,8 @@ import imp
 import distutils.sysconfig
 
 # Import cython
-import pyximport; pyximport.install()
+import pyximport
+pyximport.install()
 
 def minion_mods(opts):
     '''
@@ -75,7 +76,8 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
-        mods = set()
+        names = {}
+        modules = []
         funcs = {}
         for mod_dir in self.module_dirs:
             for fn_ in os.listdir(mod_dir):
@@ -86,13 +88,18 @@ class Loader(object):
                     or fn_.endswith('.pyo')\
                     or fn_.endswith('.so')\
                     or fn_.endswith('.pyx'):
-                    mods.add(fn_[:fn_.rindex('.')])
-        for name in mods:
+                    names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
+        for name in names:
             try:
-                fn_, path, desc = imp.find_module(name, self.module_dirs)
-                mod = imp.load_module(name, fn_, path, desc)
+                if names[name].endswith('.pyx'):
+                    mod = pyximport.load_module(name, names[name], '/tmp')
+                else:
+                    fn_, path, desc = imp.find_module(name, self.module_dirs)
+                    mod = imp.load_module(name, fn_, path, desc)
             except ImportError:
                 continue
+            modules.append(mod)
+        for mod in modules:
             if hasattr(mod, '__opts__'):
                 mod.__opts__.update(self.opts)
             else:
@@ -102,7 +109,7 @@ class Loader(object):
                 if attr.startswith('_'):
                     continue
                 if callable(getattr(mod, attr)):
-                    funcs[name + '.' + attr] = getattr(mod, attr)
+                    funcs[mod.__name__ + '.' + attr] = getattr(mod, attr)
         return funcs
 
     def apply_introspection(self, funcs):
@@ -111,8 +118,8 @@ class Loader(object):
         introspection functions.
         '''
         funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
-        funcs['sys.list_modules'] = lambda: funcs.keys()
-        funcs['sys.doc'] = lambda module='': self.get_docs(funcs, module)
+        funcs['sys.list_modules'] = lambda: funcs.keys
+        funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
         #funcs['sys.reload_functions'] = self.reload_functions
 
     def filter_func(self, name):
