@@ -17,6 +17,7 @@ except:
 import salt.client
 import salt.cli.key
 import salt.cli.cp
+import salt.cli.caller
 
 class SaltCMD(object):
     '''
