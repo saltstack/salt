@@ -103,6 +103,8 @@ class Loader(object):
         modules = []
         funcs = {}
         for mod_dir in self.module_dirs:
+            if not mod_dir.startswith('/'):
+                continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
                     continue

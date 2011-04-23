@@ -33,18 +33,17 @@ class Caller(object):
         '''
         Pick up the documentation for all of the modules and print it out.
         '''
-        ret = self.loader.call('sys.doc', self.opts['arg'])
+        ret = self.loader.apply_introspection(self.loader.gen_functions())
         docs = {}
-        for host in ret:
-            for fun in ret[host]:
-                if not docs.has_key(fun):
-                    if ret[host][fun]:
-                        docs[fun] = ret[host][fun]
-        for fun in sorted(docs):
-            print fun + ':'
-            print docs[fun]
+        for name in ret:
+            if not docs.has_key(name):
+                if ret[name].__doc__:
+                    docs[name] = ret[name].__doc__
+        for name in sorted(docs):
+            print name + ':'
+            print docs[name]
             print ''
-
+                   
     def run(self):
         '''
         Execute the salt call logic
