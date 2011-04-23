@@ -389,12 +389,19 @@ class SaltCall(object):
                 default=False,
                 action='store_true',
                 help='Return all of the basic salt call data')
-        parser.add_option('-d',
+        parser.add_option('-m',
                 '--module-dirs',
                 dest='module_dirs',
                 default='',
                 help='Specify an additional directories to pull modules from,'\
                     + ' multiple directories can be delimited by commas')
+        parser.add_option('-d',
+                '--doc',
+                dest='doc',
+                default=False,
+                action='store_true',
+                help="Return the documentation for the specified module of'\
+                    + ' for all modules if none are specified")
 
         options, args = parser.parse_args()
 
@@ -402,8 +409,13 @@ class SaltCall(object):
 
         opts['stats'] = options.stats
         opts['module_dirs'] = options.module_dirs.split(',')
-        opts['fun'] = args[0]
-        opts['arg'] = args[1:]
+        opts['doc'] = options.doc
+        if len(args) >= 1:
+            opts['fun'] = args[0]
+            opts['arg'] = args[1:]
+        else:
+            opts['fun'] = ''
+            opts['args'] = []
 
         return opts
 
