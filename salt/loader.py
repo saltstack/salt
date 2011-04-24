@@ -34,6 +34,17 @@ def returners(opts):
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
 
+def grains(opts):
+    '''
+    Return the functions for the dynamic grains and the values for the static
+    grains.
+    '''
+    module_dirs = [
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/grains'),
+        ] + opts['grains_dirs']
+    load = Loader(module_dirs, opts)
+    return load.chop_mods()
+
 def call(fun, arg=[], dirs=[]):
     '''
     Directly call a function inside a loader directory
@@ -105,6 +116,8 @@ class Loader(object):
         for mod_dir in self.module_dirs:
             if not mod_dir.startswith('/'):
                 continue
+            if not os.path.isdir(mod_dir):
+                continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
                     continue
@@ -157,4 +170,14 @@ class Loader(object):
         for key, fun in self.gen_functions().items():
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
+        return funcs
+
+    def chop_mods(self):
+        '''
+        Chop off the module names so that the raw functions are exposed, used
+        to generate the grains
+        '''
+        funcs = {}
+        for key, fun in self.gen_functions().items():
+            funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
