@@ -406,13 +406,13 @@ def virt_type():
     CLI Example:
     salt '*' virt.virt_type
     '''
-    return __facter__['virtual']
+    return __grains__['virtual']
 
 def is_kvm_hyper():
     '''
     Returns a bool whether or not this node is a hypervisor
     '''
-    if __facter__['virtual'] != 'physical':
+    if __grains__['virtual'] != 'physical':
         return False
     if not open('/proc/modules').read().count('kvm_'):
         return False

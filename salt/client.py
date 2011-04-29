@@ -102,7 +102,7 @@ class LocalClient(object):
         os.chdir(cwd)
         return ret
 
-    def _check_facter_minions(self, expr):
+    def _check_grain_minions(self, expr):
         '''
         Return the minions found by looking via a list
         '''
@@ -181,8 +181,8 @@ class LocalClient(object):
         return {'glob': self._check_glob_minions,
                 'pcre': self._check_pcre_minions,
                 'list': self._check_list_minions,
-                'facter': self._check_facter_minions,
-                'exsel': self._check_facter_minions
+                'grain': self._check_grain_minions,
+                'exsel': self._check_grain_minions,
                 }[expr_form](expr)
             
     def pub(self, tgt, fun, arg=(), expr_form='glob', ret=''):

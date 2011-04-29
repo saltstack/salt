@@ -1,6 +1,6 @@
 '''
-Top level package command wrapper, used to translate the os detected by facter
-to the correct package manager
+Top level package command wrapper, used to translate the os detected by the
+grains to the correct package manager
 '''
 import salt.modules.pacman
 import salt.modules.yum
@@ -20,7 +20,7 @@ def _map_cmd(cmd, args=[]):
     '''
     if args:
         args = [args]
-    pro = factmap[__facter__['operatingsystem']]
+    pro = factmap[__grains__['operatingsystem']]
     return getattr(getattr(salt.modules, pro), cmd)(*args)
 
 def list_pkgs():

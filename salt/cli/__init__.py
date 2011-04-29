@@ -55,14 +55,14 @@ class SaltCMD(object):
                 action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
                    + ' servers, take a comma delimited list of servers.')
-        parser.add_option('-F',
-                '--facter',
+        parser.add_option('-G',
+                '--grain',
                 default=False,
-                dest='facter',
+                dest='grain',
                 action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
-                   + ' use a facter value to identify targets, the syntax'\
-                   + ' for the target is the facter key followed by a pcre'\
+                   + ' use a grain value to identify targets, the syntax'\
+                   + ' for the target is the grain key followed by a pcre'\
                    + ' regular expresion:\n"operatingsystem:Arch.*"')
         parser.add_option('-X',
                 '--exsel',
@@ -113,7 +113,7 @@ class SaltCMD(object):
         opts['timeout'] = options.timeout
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
-        opts['facter'] = options.facter
+        opts['grain'] = options.grain
         opts['exsel'] = options.exsel
         opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
@@ -173,8 +173,8 @@ class SaltCMD(object):
                 args.append('pcre')
             elif self.opts['list']:
                 args.append('list')
-            elif self.opts['facter']:
-                args.append('facter')
+            elif self.opts['grain']:
+                args.append('grain')
             elif self.opts['exsel']:
                 args.append('exsel')
             else:
@@ -245,14 +245,14 @@ class SaltCP(object):
                 action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
                    + ' servers, take a comma delimited list of servers.')
-        parser.add_option('-F',
-                '--facter',
+        parser.add_option('-G',
+                '--grain',
                 default=False,
-                dest='facter',
+                dest='grain',
                 action='store_true',
                 help='Instead of using shell globs to evaluate the target'\
-                   + ' use a facter value to identify targets, the syntax'\
-                   + ' for the target is the facter key followed by a pcre'\
+                   + ' use a grain value to identify targets, the syntax'\
+                   + ' for the target is the grains key followed by a pcre'\
                    + ' regular expresion:\n"operatingsystem:Arch.*"')
         parser.add_option('-c',
                 '--config',
@@ -269,7 +269,7 @@ class SaltCP(object):
         opts['timeout'] = options.timeout
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
-        opts['facter'] = options.facter
+        opts['grain'] = options.grain
         opts['conf_file'] = options.conf_file
 
         if opts['list']:

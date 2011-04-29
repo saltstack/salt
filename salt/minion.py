@@ -53,7 +53,6 @@ class Minion(object):
         Pass in the options dict
         '''
         self.opts = opts
-        self.facter_data = salt.config.facter_data()
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.authenticate()
@@ -158,13 +157,12 @@ class Minion(object):
         '''
         return bool(tgt.count(self.opts['id']))
 
-    def _facter_match(self, tgt):
+    def _grain_match(self, tgt):
         '''
-        Reads in the facter regular expresion match
+        Reads in the grains regular expresion match
         '''
-        facter = salt.config.facter_data()
         comps = tgt.split(':')
-        return bool(re.match(comps[1], facter[comps[0]]))
+        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
 
     def _exsel_match(self, tgt):
         '''
@@ -256,7 +254,6 @@ class Minion(object):
         '''
         Reload the functions dict for this minion, reading in any new functions
         '''
-        self.opts['facter'] = salt.config.facter_data()
         self.functions = self.__load_functions()
         self.opts['logger'].debug('Refreshed functions, loaded functions: '\
                 + str(self.functions))

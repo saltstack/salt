@@ -71,8 +71,8 @@ class SaltCP(object):
             args.append('pcre')
         elif self.opts['list']:
             args.append('list')
-        elif self.opts['facter']:
-            args.append('facter')
+        elif self.opts['grain']:
+            args.append('grain')
         
         ret = local.cmd(*args)
 

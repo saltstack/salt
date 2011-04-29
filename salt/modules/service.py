@@ -1,6 +1,6 @@
 '''
-Top level package command wrapper, used to translate the os detected by facter
-to the correct package manager
+Top level package command wrapper, used to translate the os detected by the
+grains to the correct service manager
 '''
 import subprocess
 import os
@@ -17,7 +17,7 @@ def start(svc):
     '''
     Start the specified service
     '''
-    cmd = os.path.join(factmap[__facter__['operatingsystem']],
+    cmd = os.path.join(factmap[__grains__['operatingsystem']],
             svc + ' start')
     return not subprocess.call(cmd, shell=True)
 
@@ -25,7 +25,7 @@ def stop(svc):
     '''
     Stop the specified service
     '''
-    cmd = os.path.join(factmap[__facter__['operatingsystem']],
+    cmd = os.path.join(factmap[__grains__['operatingsystem']],
             svc + ' stop')
     return not subprocess.call(cmd, shell=True)
 
