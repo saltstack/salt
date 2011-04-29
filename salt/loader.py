@@ -34,14 +34,14 @@ def returners(opts):
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
 
-def grains(opts):
+def grains():
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
     module_dirs = [
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/grains'),
-        ] + opts['grains_dirs']
+        ]
     load = Loader(module_dirs, opts)
     return load.gen_grains()
 
@@ -64,6 +64,10 @@ class Loader(object):
     '''
     def __init__(self, module_dirs, opts={}):
         self.module_dirs = module_dirs
+        if opts.has_key('grains'):
+            self.grains = opts['grains']
+        else:
+            self.grains = {}
         self.opts = self.__prep_mod_opts(opts)
 
     def __prep_mod_opts(self, opts):
@@ -73,6 +77,8 @@ class Loader(object):
         mod_opts = {}
         for key, val in opts.items():
             if key == 'logger':
+                continue
+            if key == 'grains':
                 continue
             mod_opts[key] = val
         return mod_opts
@@ -142,6 +148,8 @@ class Loader(object):
                 mod.__opts__.update(self.opts)
             else:
                 mod.__opts__ = self.opts
+
+            mod.__grains__ = self.grains
 
             for attr in dir(mod):
                 if attr.startswith('_'):

@@ -10,6 +10,7 @@ import logging
 import yaml
 # Import salt libs
 import salt.crypt
+import salt.loader
 
 def minion_config(path):
     '''
@@ -52,6 +53,8 @@ def minion_config(path):
     opts['logger'] = master_logger(opts['log_file'],
                                    opts['log_level'],
                                    opts['out_level'])
+
+    opts['grains'] = salt.loader.grains
 
     return opts
 
@@ -153,19 +156,3 @@ def minion_logger(log_file, log_level, console_level):
 
     return logger
 
-def facter_data():
-    '''
-    Returns a dict of data about the minion allowing modules to differ
-    based on information gathered about the minion.
-    So far only facter information is loaded
-    '''
-    facts = subprocess.Popen('facter',
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
-    facter = {}
-    for line in facts.split('\n'):
-        if line.count('=>'):
-            comps = line.split('=>')
-            facter[comps[0].strip()] = comps[1].strip()
-
-    return facter
