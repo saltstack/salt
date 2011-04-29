@@ -1,43 +1,31 @@
 '''
-The static grains, these grains only need to be executed once!
+The static grains, these are the core, or built in grains.
 
-We use some "python tricks" here to make sure that the static grains are only
-executed once, but are available to each other in a logical sequence. To do
-this some naming semantics are im place, the grains are functions that return
-values that are generated when the module is loaded.
-Local grain values are preceeded with __ while functions which acctually
-generate the values are preceeded with a single _ so that the loader module
-ignores them. Really, the only public stuff are the functions that return the
-previously generated grain values
+When grains are loaded they are not loaded in the same way that modules are
+loaded, grain functions are detected and executed, the functions MUST
+return a dict which will be applied to the main grains dict. This module
+will always be executed first, so that any grains loaded here in the core
+module can be overwritten just by returning dict keys with the same value
+as those returned here
 '''
 # Import python modules
 import os
 import subprocess
 
-
-__kernel = _kernel()
-kernel = lambda: __kernel
-
-__cpuarch = _cpuarch()
-cpuarch = lambda: __cpuarch
-
-__operatingsystem = _operatingsystem()
-operatingsystem = labmda: __operatingsystem
-
-__fqdn, __host, __domain = _hostname()
-fqdn = lambda: __fqdn
-host = lambda: __host
-domain = lambda: __domain
-
-__path = _path()
-path = lambda: __path
-
 def _kernel():
     '''
     Return the kernel type
     '''
-    return subprocess.Popen(['uname', '-s'],
+    grains = {}
+    grains['kernel'] = subprocess.Popen(['uname', '-s'],
         stdout=subprocess.PIPE).communicate()[0].strip()
+    if grains['kernel'] == 'aix':
+        grains['kernelrelease'] = subprocess.Popen(['oslevel', '-s'],
+            stdout=subprocess.PIPE).communicate()[0].strip()
+    else:
+        grains['kernelrelease'] = subprocess.Popen(['uname', '-r'],
+            stdout=subprocess.PIPE).communicate()[0].strip()
+    return grains
 
 def _cpuarch():
     '''
@@ -46,76 +34,85 @@ def _cpuarch():
     return subprocess.Popen(['uname', '-m'],
         stdout=subprocess.PIPE).communicate()[0].strip()
 
-def _operatingsystem():
+def os_data():
     '''
-    Return a string defining the operating system
+    Return grins pertaining to the operating system
     '''
-    if __kernel == 'Linux':
+    grains = {}
+    grains.update(_kernel())
+    grains.update(_cpuarch())
+    if grains['kernel'] == 'Linux':
         if os.path.isfile('/etc/arch-release'):
-            return 'Arch'
+            grains['operatingsystem'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
-            return 'Debian'
+            grains['operatingsystem'] = 'Debian'
         elif os.path.isfile('/etc/gentoo-version'):
-            return 'Gentoo'
+            grains['operatingsystem'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-version'):
-            return 'Fedora'
+            grains['operatingsystem'] = 'Fedora'
         elif os.path.isfile('/etc/mandriva-version'):
-            return 'Mandriva'
+            grains['operatingsystem'] =  'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
-            return 'Mandrake'
+            grains['operatingsystem'] = 'Mandrake'
         elif os.path.isfile('/etc/meego-version'):
-            return 'MeeGo'
+            grains['operatingsystem'] = 'MeeGo'
         elif os.path.isfile('/etc/vmware-version'):
-            return 'VMWareESX'
+            grains['operatingsystem'] = 'VMWareESX'
         elif os.path.isfile('/etc/bluewhite64-version'):
-            return 'Bluewhite64'
+            grains['operatingsystem'] = 'Bluewhite64'
         elif os.path.isfile('/etc/slamd64-version'):
-            return 'Slamd64'
+            grains['operatingsystem'] = 'Slamd64'
         elif os.path.isfile('/etc/slackware-version'):
-            return 'Slackware'
+            grains['operatingsystem'] = 'Slackware'
         elif os.path.isfile('/etc/enterprise-release'):
             if os.path.isfile('/etc/ovs-release'):
-                return 'OVS'
+                grains['operatingsystem'] = 'OVS'
             else:
-                return 'OEL'
+                grains['operatingsystem'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
             data = open('/etc/redhat-release', 'r').read()
             if data.count('centos'):
-                return 'CentOS'
+                grains['operatingsystem'] = 'CentOS'
             elif data.count('scientific'):
-                return 'Scientific'
+                grains['operatingsystem'] = 'Scientific'
             else:
-                return RedHat
+                grains['operatingsystem'] = 'RedHat'
         elif os.path.isfile('/etc/SuSE-release'):
             data = open('/etc/SuSE-release', 'r').read()
             if data.count('SUSE LINUX Enterprise Server'):
-                return 'SLES'
+                grains['operatingsystem'] = 'SLES'
             elif data.count('SUSE LINUX Enterprise Desktop'):
-                return 'SLED'
+                grains['operatingsystem'] = 'SLED'
             elif data.count('openSUSE'):
-                return 'openSUSE'
+                grains['operatingsystem'] = 'openSUSE'
             else:
-                return 'SUSE'
-    elif __kernel == 'sunos':
-        return 'Solaris'
-    elif __kernel == 'VMkernel':
-        return 'ESXi'
+                grains['operatingsystem'] = 'SUSE'
+    elif grains['kernel'] == 'sunos':
+        grains['operatingsystem'] = 'Solaris'
+    elif grains['kernel'] == 'VMkernel':
+        grains['operatingsystem'] = 'ESXi'
     else:
-        return __kernel
+        grains['operatingsystem'] = kernel
 
-def _hostname():
+    return grains
+
+def hostname():
     '''
-    Return a tuple, (fqdn, hostname, domainname)
+    Return fqdn, hostname, domainname
     '''
     # This is going to need some work
     host = subprocess.Popen(['hostname'],
         stdout=subprocess.PIPE).communicate()[0].strip()
     domain = subprocess.Popen(['dnsdomainname'],
         stdout=subprocess.PIPE).communicate()[0].strip()
-    return (host + '.' + domain, host, domain)
+    return {'host': host,
+            'domain': domain,
+            'fqdn': host + '.' + domain}
 
-def _path():
+def path():
     '''
     Return the path
     '''
-    return os.environ['PATH'].strip()
+    return {'path': os.environ['PATH'].strip()}
+
+
