@@ -129,9 +129,11 @@ def hostname():
         stdout=subprocess.PIPE).communicate()[0].strip()
     domain = subprocess.Popen(['dnsdomainname'],
         stdout=subprocess.PIPE).communicate()[0].strip()
-    return {'host': host,
-            'domain': domain,
-            'fqdn': host + '.' + domain}
+    grains =  {'host': host}
+    if domain:
+        grains['domain'] = domain
+        grains['fqdn'] = host + '.' + domain
+    return grains
 
 def path():
     '''
