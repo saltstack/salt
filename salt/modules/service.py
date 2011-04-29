@@ -5,7 +5,7 @@ grains to the correct service manager
 import subprocess
 import os
 
-factmap = {
+grainmap = {
            'Archlinux': '/etc/rc.d',
            'Fedora': '/etc/init.d',
            'RedHat': '/etc/init.d',
@@ -17,7 +17,7 @@ def start(svc):
     '''
     Start the specified service
     '''
-    cmd = os.path.join(factmap[__grains__['operatingsystem']],
+    cmd = os.path.join(grainmap[__grains__['operatingsystem']],
             svc + ' start')
     return not subprocess.call(cmd, shell=True)
 
@@ -25,7 +25,7 @@ def stop(svc):
     '''
     Stop the specified service
     '''
-    cmd = os.path.join(factmap[__grains__['operatingsystem']],
+    cmd = os.path.join(grainmap[__grains__['operatingsystem']],
             svc + ' stop')
     return not subprocess.call(cmd, shell=True)
 

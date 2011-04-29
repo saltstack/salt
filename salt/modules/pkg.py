@@ -6,7 +6,7 @@ import salt.modules.pacman
 import salt.modules.yum
 #import salt.modules.apt
 
-factmap = {
+grainmap = {
            'Archlinux': 'pacman',
            'Fedora': 'yum',
            'RedHat': 'yum',
@@ -20,7 +20,7 @@ def _map_cmd(cmd, args=[]):
     '''
     if args:
         args = [args]
-    pro = factmap[__grains__['operatingsystem']]
+    pro = grainmap[__grains__['operatingsystem']]
     return getattr(getattr(salt.modules, pro), cmd)(*args)
 
 def list_pkgs():

@@ -13,7 +13,7 @@ def items():
 
 def item(key):
     '''
-    Return a singe component of the facter data
+    Return a singe component of the grains data
 
     CLI Example:
     salt '*' grains.item operatingsystem
