@@ -43,7 +43,7 @@ def grains(opts):
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/grains'),
         ] + opts['grains_dirs']
     load = Loader(module_dirs, opts)
-    return load.chop_mods()
+    return load.gen_grains()
 
 def call(fun, arg=[], dirs=[]):
     '''
@@ -181,3 +181,28 @@ class Loader(object):
         for key, fun in self.gen_functions().items():
             funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
+
+    def gen_grains(self):
+        '''
+        Read the grains directory and execute all of the public callable
+        members. then verify that the returns are python dicts and return a
+        dict containing all of the returned values.
+        '''
+        grains = {}
+        funcs = self.gen_functions()
+        for key, fun in funcs.items():
+            if not key[key.index('.') + 1:] == 'core':
+                continue
+            ret = fun()
+            if not type(ret) == type(dict()):
+                continue
+            grains.update(ret)
+        for key, fun in funcs.items():
+            if key[key.index('.') + 1:] == 'core':
+                continue
+            ret = fun()
+            if not type(ret) == type(dict()):
+                continue
+            grains.update(ret)
+        return grains
+
