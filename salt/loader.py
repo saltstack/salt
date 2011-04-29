@@ -42,7 +42,7 @@ def grains():
     module_dirs = [
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/grains'),
         ]
-    load = Loader(module_dirs, opts)
+    load = Loader(module_dirs)
     return load.gen_grains()
 
 def call(fun, arg=[], dirs=[]):
