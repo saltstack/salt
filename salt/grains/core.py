@@ -31,8 +31,9 @@ def _cpuarch():
     '''
     Return the cpu architecture
     '''
-    return subprocess.Popen(['uname', '-m'],
+    arch = subprocess.Popen(['uname', '-m'],
         stdout=subprocess.PIPE).communicate()[0].strip()
+    return {'cpuarch': arch}
 
 def _virtual(os_data):
     '''
