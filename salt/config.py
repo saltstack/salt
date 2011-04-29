@@ -54,7 +54,7 @@ def minion_config(path):
                                    opts['log_level'],
                                    opts['out_level'])
 
-    opts['grains'] = salt.loader.grains
+    opts['grains'] = salt.loader.grains()
 
     return opts
 
