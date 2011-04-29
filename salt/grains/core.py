@@ -34,6 +34,26 @@ def _cpuarch():
     return subprocess.Popen(['uname', '-m'],
         stdout=subprocess.PIPE).communicate()[0].strip()
 
+def _virtual(os_data):
+    '''
+    Returns what type of virtual hardware is under the hood, kvm or physical
+    '''
+    # This is going to be a monster, if you are running a vm you can test this
+    # grain with please submit patches!
+    grains = {'virtual': 'physical'}
+    if 'Linux FreeBSD OpenBSD SunOS HP-UX GNU/kFreeBSD'.count(os_data['kernel']):
+        if os.path.isdir('/proc/vz'):
+            if os.path.isfile('/proc/vz/version'):
+                grains['virtual'] = 'openvzhn'
+            else:
+                grains['virtual'] = 'openvzve'
+        if os.path.isdir('/.SUNWnative'):
+            grains['virtual'] = 'zone'
+        if os.path.isfile('/proc/cpuinfo'):
+            if open('/proc/cpuinfo', 'r').read().count('QEMU Virtual CPU'):
+                grains['virtual'] = 'kvm'
+    return grains
+
 def os_data():
     '''
     Return grins pertaining to the operating system
@@ -94,6 +114,9 @@ def os_data():
     else:
         grains['operatingsystem'] = kernel
 
+    # Load the virtual machine info
+    
+    grains.update(_virtual(grains))
     return grains
 
 def hostname():
