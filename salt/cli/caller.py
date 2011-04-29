@@ -45,12 +45,22 @@ class Caller(object):
                 print docs[name]
                 print ''
                    
+    def print_grains(self):
+        '''
+        Print out the grains
+        '''
+        grains = salt.loader.grains()
+        for grain in sorted(grains):
+            print grain + ': ' + grains[grain]
+
     def run(self):
         '''
         Execute the salt call logic
         '''
         if self.opts['doc']:
             self.print_docs()
+        elif self.opts['grains']:
+            self.print_grains()
         else:
             print self.call()
 
