@@ -152,7 +152,7 @@ class Loader(object):
 
             mod.__grains__ = self.grains
 
-            if hassattr(mod, '__virtual__'):
+            if hasattr(mod, '__virtual__'):
                 if callable(mod.__virtual__):
                     virtual = mod.__virtual__()
 
@@ -160,9 +160,12 @@ class Loader(object):
                 if attr.startswith('_'):
                     continue
                 if callable(getattr(mod, attr)):
-                    funcs[mod.__name__ + '.' + attr] = getattr(mod, attr)
                     if virtual:
                         funcs[virtual + '.' + attr] = getattr(mod, attr)
+                    elif virtual == False:
+                        pass
+                    else:
+                        funcs[mod.__name__ + '.' + attr] = getattr(mod, attr)
         return funcs
 
     def apply_introspection(self, funcs):
