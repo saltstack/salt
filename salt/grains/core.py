@@ -64,56 +64,56 @@ def os_data():
     grains.update(_cpuarch())
     if grains['kernel'] == 'Linux':
         if os.path.isfile('/etc/arch-release'):
-            grains['operatingsystem'] = 'Arch'
+            grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
-            grains['operatingsystem'] = 'Debian'
+            grains['os'] = 'Debian'
         elif os.path.isfile('/etc/gentoo-version'):
-            grains['operatingsystem'] = 'Gentoo'
+            grains['os'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-version'):
-            grains['operatingsystem'] = 'Fedora'
+            grains['os'] = 'Fedora'
         elif os.path.isfile('/etc/mandriva-version'):
-            grains['operatingsystem'] =  'Mandriva'
+            grains['os'] =  'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
-            grains['operatingsystem'] = 'Mandrake'
+            grains['os'] = 'Mandrake'
         elif os.path.isfile('/etc/meego-version'):
-            grains['operatingsystem'] = 'MeeGo'
+            grains['os'] = 'MeeGo'
         elif os.path.isfile('/etc/vmware-version'):
-            grains['operatingsystem'] = 'VMWareESX'
+            grains['os'] = 'VMWareESX'
         elif os.path.isfile('/etc/bluewhite64-version'):
-            grains['operatingsystem'] = 'Bluewhite64'
+            grains['os'] = 'Bluewhite64'
         elif os.path.isfile('/etc/slamd64-version'):
-            grains['operatingsystem'] = 'Slamd64'
+            grains['os'] = 'Slamd64'
         elif os.path.isfile('/etc/slackware-version'):
-            grains['operatingsystem'] = 'Slackware'
+            grains['os'] = 'Slackware'
         elif os.path.isfile('/etc/enterprise-release'):
             if os.path.isfile('/etc/ovs-release'):
-                grains['operatingsystem'] = 'OVS'
+                grains['os'] = 'OVS'
             else:
-                grains['operatingsystem'] = 'OEL'
+                grains['os'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
             data = open('/etc/redhat-release', 'r').read()
             if data.count('centos'):
-                grains['operatingsystem'] = 'CentOS'
+                grains['os'] = 'CentOS'
             elif data.count('scientific'):
-                grains['operatingsystem'] = 'Scientific'
+                grains['os'] = 'Scientific'
             else:
-                grains['operatingsystem'] = 'RedHat'
+                grains['os'] = 'RedHat'
         elif os.path.isfile('/etc/SuSE-release'):
             data = open('/etc/SuSE-release', 'r').read()
             if data.count('SUSE LINUX Enterprise Server'):
-                grains['operatingsystem'] = 'SLES'
+                grains['os'] = 'SLES'
             elif data.count('SUSE LINUX Enterprise Desktop'):
-                grains['operatingsystem'] = 'SLED'
+                grains['os'] = 'SLED'
             elif data.count('openSUSE'):
-                grains['operatingsystem'] = 'openSUSE'
+                grains['os'] = 'openSUSE'
             else:
-                grains['operatingsystem'] = 'SUSE'
+                grains['os'] = 'SUSE'
     elif grains['kernel'] == 'sunos':
-        grains['operatingsystem'] = 'Solaris'
+        grains['os'] = 'Solaris'
     elif grains['kernel'] == 'VMkernel':
-        grains['operatingsystem'] = 'ESXi'
+        grains['os'] = 'ESXi'
     else:
-        grains['operatingsystem'] = kernel
+        grains['os'] = kernel
 
     # Load the virtual machine info
     

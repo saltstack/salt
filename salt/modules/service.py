@@ -17,7 +17,7 @@ def start(svc):
     '''
     Start the specified service
     '''
-    cmd = os.path.join(grainmap[__grains__['operatingsystem']],
+    cmd = os.path.join(grainmap[__grains__['os']],
             svc + ' start')
     return not subprocess.call(cmd, shell=True)
 
@@ -25,7 +25,7 @@ def stop(svc):
     '''
     Stop the specified service
     '''
-    cmd = os.path.join(grainmap[__grains__['operatingsystem']],
+    cmd = os.path.join(grainmap[__grains__['os']],
             svc + ' stop')
     return not subprocess.call(cmd, shell=True)
 

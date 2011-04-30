@@ -63,7 +63,7 @@ class SaltCMD(object):
                 help='Instead of using shell globs to evaluate the target'\
                    + ' use a grain value to identify targets, the syntax'\
                    + ' for the target is the grain key followed by a pcre'\
-                   + ' regular expresion:\n"operatingsystem:Arch.*"')
+                   + ' regular expresion:\n"os:Arch.*"')
         parser.add_option('-X',
                 '--exsel',
                 default=False,
@@ -253,7 +253,7 @@ class SaltCP(object):
                 help='Instead of using shell globs to evaluate the target'\
                    + ' use a grain value to identify targets, the syntax'\
                    + ' for the target is the grains key followed by a pcre'\
-                   + ' regular expresion:\n"operatingsystem:Arch.*"')
+                   + ' regular expresion:\n"os:Arch.*"')
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',

@@ -20,7 +20,7 @@ def _map_cmd(cmd, args=[]):
     '''
     if args:
         args = [args]
-    pro = grainmap[__grains__['operatingsystem']]
+    pro = grainmap[__grains__['os']]
     return getattr(getattr(salt.modules, pro), cmd)(*args)
 
 def list_pkgs():
