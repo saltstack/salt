@@ -4,6 +4,12 @@ A module to wrap pacman calls, since Arch is the best :)
 
 import subprocess
 
+def __virtual__():
+    '''
+    Set the virtual pkg module if the os is Arch
+    '''
+    return 'pkg' if __grains__['os'] == 'Arch' else False
+
 def _list_removed(old, new):
     '''
     List the pachages which have been removed between the two package objects
