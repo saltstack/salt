@@ -21,7 +21,7 @@ def _list_removed(old, new):
             pkgs.append(pkg)
     return pkgs
 
-def is_installed(pkg):
+def version(pkg):
     '''
     Returns a bool if the package is installed or not
 
