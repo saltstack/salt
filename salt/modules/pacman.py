@@ -1,5 +1,6 @@
 '''
-A module to wrap pacman calls, since Arch is the best :)
+A module to wrap pacman calls, since Arch is the best
+(https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
 
 import subprocess
@@ -12,7 +13,7 @@ def __virtual__():
 
 def _list_removed(old, new):
     '''
-    List the pachages which have been removed between the two package objects
+    List the packages which have been removed between the two package objects
     '''
     pkgs = []
     for pkg in old:
@@ -26,7 +27,7 @@ def list_pkgs():
     {'<package_name>': '<version>'}
 
     CLI Example:
-    salt '*' pacman.list_pkgs
+    salt '*' pkg.list_pkgs
     '''
     cmd = 'pacman -Q'
     ret = {}
@@ -46,7 +47,7 @@ def refresh_db():
     {'<database name>': Bool}
 
     CLI Example:
-    salt '*' pacman.refresh_db
+    salt '*' pkg.refresh_db
     '''
     cmd = 'pacman -Sy'
     ret = {}
@@ -74,12 +75,12 @@ def install(pkg, refresh=False):
                    'new': '<new-version>']}
 
     CLI Example:
-    salt '*' pacman.install <package name>
+    salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
     cmd = 'pacman -S --noprogressbar --noconfirm ' + pkg
     if refresh:
-        cmd = 'pacman -Sy --noprogressbar --noconfirm ' + pkg
+        cmd = 'pacman -Syu --noprogressbar --noconfirm ' + pkg
     subprocess.call(cmd, shell=True)
     new = list_pkgs()
     pkgs = {}
@@ -107,7 +108,7 @@ def upgrade():
                    'new': '<new-version>']}
 
     CLI Example:
-    salt '*' pacman.upgrade
+    salt '*' pkg.upgrade
     '''
     old = list_pkgs()
     cmd = 'pacman -Syu --noprogressbar --noconfirm '
@@ -136,7 +137,7 @@ def remove(pkg):
     Return a list containing the removed packages:
     
     CLI Example:
-    salt '*' pacman.remove <package name>
+    salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + pkg
@@ -152,7 +153,7 @@ def purge(pkg):
     Return a list containing the removed packages:
     
     CLI Example:
-    salt '*' pacman.purge <package name>
+    salt '*' pkg.purge <package name>
 
     '''
     old = list_pkgs()

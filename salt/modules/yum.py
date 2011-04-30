@@ -28,7 +28,7 @@ def list_pkgs():
     {'<package_name>': '<version>'}
 
     CLI Example:
-    salt '*' yum.list_pkgs
+    salt '*' pkg.list_pkgs
     '''
     cmd = "rpm -qa --qf '%{NAME}\\t%{VERSION}-%{RELEASE}\\n'"
     ret = {}
@@ -48,7 +48,7 @@ def refresh_db():
     so that the next yum operation will have a clean database
 
     CLI Example:
-    salt '*' yum.refresh_db
+    salt '*' pkg.refresh_db
     '''
     cmd = 'yum clean dbcache'
     subprocess.call(cmd, shell=True)
@@ -64,7 +64,7 @@ def install(pkg, refresh=False):
                    'new': '<new-version>']}
 
     CLI Example:
-    salt '*' yum.install <package name>
+    salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
     cmd = 'yum -y install ' + pkg
@@ -97,7 +97,7 @@ def upgrade():
                    'new': '<new-version>']}
 
     CLI Example:
-    salt '*' yum.upgrade
+    salt '*' pkg.upgrade
     '''
     old = list_pkgs()
     cmd = 'yum -y upgrade'
@@ -126,7 +126,7 @@ def remove(pkg):
     Return a list containing the removed packages:
     
     CLI Example:
-    salt '*' yum.remove <package name>
+    salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
     cmd = 'yum -y remove ' + pkg
@@ -141,7 +141,7 @@ def purge(pkg):
     Return a list containing the removed packages:
     
     CLI Example:
-    salt '*' yum.purge <package name>
+    salt '*' pkg.purge <package name>
 
     '''
     return remove(pkg)
