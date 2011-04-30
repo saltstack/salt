@@ -21,6 +21,19 @@ def _list_removed(old, new):
             pkgs.append(pkg)
     return pkgs
 
+def is_installed(pkg):
+    '''
+    Returns a bool if the package is installed or not
+
+    CLI Example:
+    salt '*' pkg.is_installed <package name>
+    '''
+    pkgs = list_pkgs()
+    if pkgs.has_key(name):
+        return pkgs[name]
+    else:
+        return ''
+
 def list_pkgs():
     '''
     List the packages currently installed in a dict:
