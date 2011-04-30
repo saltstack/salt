@@ -4,6 +4,14 @@ Support for YUM
 
 import subprocess
 
+def __virtual__():
+    '''
+    Confine this module to yum based systems
+    '''
+    # We don't need to support pre-yum OSes because they don't support python 2.6
+    dists = 'CentOS Scientific RedHat Fedora'
+    return 'pkg' if dists.count(__grains__['os']) else False
+
 def _list_removed(old, new):
     '''
     List the pachages which have been removed between the two package objects
