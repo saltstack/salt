@@ -153,7 +153,7 @@ class Loader(object):
             mod.__grains__ = self.grains
 
             if hassattr(mod, '__virtual__'):
-                if callable(mod.__virtual__():
+                if callable(mod.__virtual__):
                     virtual = mod.__virtual__()
 
             for attr in dir(mod):
