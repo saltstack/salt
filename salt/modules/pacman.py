@@ -21,12 +21,23 @@ def _list_removed(old, new):
             pkgs.append(pkg)
     return pkgs
 
+def available_version(pkg):
+    '''
+    The available version of the package in the repository
+
+    CLI Example:
+    salt '*' pkg.available_version <package name>
+    '''
+    return subprocess.Popen('pacman -Sp --print-format %v ' + pkg,
+        shell=True,
+        stdout=subprocess.PIPE).communicate()[0].strip()
+
 def version(pkg):
     '''
     Returns a bool if the package is installed or not
 
     CLI Example:
-    salt '*' pkg.is_installed <package name>
+    salt '*' pkg.version <package name>
     '''
     pkgs = list_pkgs()
     if pkgs.has_key(name):
