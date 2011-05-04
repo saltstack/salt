@@ -65,7 +65,7 @@ class Publisher(multiprocessing.Process):
         self.opts = opts
         self.context = zmq.Context()
         self.pub_sock = self.context.socket(zmq.PUB)
-        self.pull_sock = self.context.socket(zmq.PULL)
+        self.rep_sock = self.context.socket(zmq.REP)
 
     def run(self):
         '''
@@ -73,13 +73,14 @@ class Publisher(multiprocessing.Process):
         '''
         pub_uri = 'tcp://' + self.opts['interface'] + ':'\
                + self.opts['publish_port']
-        pull_uri = 'tcp://localhost:' + self.opts['publish_pull_port']
+        rep_uri = 'tcp://localhost:' + self.opts['publish_rep_port']
         self.opts['logger'].info('Starting the Salt Publisher on ' + pub_uri)
         self.pub_sock.bind(pub_uri)
-        self.pull_sock.connect(pull_uri)
+        self.rep_sock.bind(rep_uri)
 
         while True:
-            package = self.pull_sock.recv()
+            package = self.rep_sock.recv()
+            self.rep_sock.send('')
             self.publish(package)
 
     def publish(self, package):
@@ -179,6 +180,11 @@ class MWorker(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.port = str(num + int(self.opts['worker_start_port']))
+        # Set up publish connection
+        self.context = zmq.Context(1)
+        self.pub_sock = context.socket(zmq.REQ)
+        self.pub_sock.connect('tcp://localhost:'\
+            + self.opts['publish_rep_port'])
 
     def __bind(self):
         '''
@@ -398,7 +404,8 @@ class MWorker(multiprocessing.Process):
         if clear_load.has_key('tgt_type'):
             load['tgt_type'] = clear_load['tgt_type']
         payload['load'] = self.crypticle.dumps(load)
-        self.publisher.publish(salt.payload.package(payload))
+        self.pub_sock.send(salt.payload.package(payload))
+        self.pub_sock.recv()
         return {'enc': 'clear',
                 'load': {'jid': jid}}
 
