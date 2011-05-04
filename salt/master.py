@@ -92,7 +92,7 @@ class Publisher(multiprocessing.Process):
 
 class ReqServer():
     '''
-    Starts up a threaded request server, minions send results to this
+    Starts up the master request server, minions send results to this
     interface.
     '''
     def __init__(self, opts):
@@ -130,18 +130,23 @@ class ReqServer():
         os.chmod(keyfile, 256)
         return key
 
-    def __worker(self):
+    def __worker(self, ind):
         '''
         Starts up a worker thread
         '''
-        socket = self.context.socket(zmq.REP)
-        socket.connect(self.w_uri)
+        in_socket = self.context.socket(zmq.REP)
+        in_socket.connect(self.w_uri)
+        m_worker = MWorker(self.opts, ind)
+        work_port = m_worker.port
+        m_worker.start()
+
+        out_socket = self.context.socket(zmq.REQ)
 
         while True:
-            package = socket.recv()
-            payload = salt.payload.unpackage(package)
-            ret = salt.payload.package(self._handle_payload(payload))
-            socket.send(ret)
+            package = in_socket.recv()
+            out_socket.send(package)
+            ret = out_socket.recv()
+            in_socket.send(ret)
 
     def __bind(self):
         '''
@@ -153,10 +158,41 @@ class ReqServer():
         self.workers.bind(self.w_uri)
 
         for ind in range(int(self.num_threads)):
-            proc = threading.Thread(target=self.__worker)
+            proc = threading.Thread(target=lambda: self.__worker(ind))
             proc.start()
 
         zmq.device(zmq.QUEUE, self.clients, self.workers)
+
+    def run(self):
+        '''
+        Start up the ReqServer
+        '''
+        self.__bind()
+
+
+class MWorker(multiprocessing.Process):
+    '''
+    The worker multiprocess instance to manage the backend operations for the
+    salt master.
+    '''
+    def __init__(self, opts, num):
+        multiprocessing.Process.__init__(self)
+        self.opts = opts
+        self.port = str(num + int(self.opts['worker_start_port']))
+
+    def __bind(self):
+        '''
+        Bind to the local port
+        '''
+        context = zmq.Context(1)
+        socket = context.socket(zmq.REP)
+        socket.bind('tcp://localhost:' + self.port)
+
+        while True:
+            package = socket.recv()
+            payload = salt.payload.unpackage(package)
+            ret = salt.payload.package(self._handle_payload(payload))
+            socket.send(ret)
 
     def _prep_jid(self, load):
         '''
@@ -368,7 +404,6 @@ class ReqServer():
 
     def run(self):
         '''
-        Start up the ReqServer
+        Start a Master Worker
         '''
-        self.__bind()
-
+        pass
