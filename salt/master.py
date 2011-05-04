@@ -7,6 +7,7 @@ import os
 import time
 import shutil
 import threading
+import multiprocessing
 import cPickle as pickle
 # Import zeromq
 import zmq
@@ -96,11 +97,14 @@ class ReqServer():
     def __init__(self, opts):
         self.opts = opts
         self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.num_threads = self.opts['worker_threads']
         self.context = zmq.Context(1)
         # Prepare the zeromq sockets
         self.uri = 'tcp://' + self.opts['interface'] + ':'\
                    + self.opts['ret_port']
-        self.socket = self.context.socket(zmq.REP)
+        self.clients = self.context.socket(zmq.XREP)
+        self.workers = self.context.socket(zmq.XREQ)
+        self.w_uri = 'inproc://wokers'
         # Start the publisher
         self.publisher = Publisher(opts)
         self.publisher.start()
@@ -125,18 +129,33 @@ class ReqServer():
         os.chmod(keyfile, 256)
         return key
 
+    def __worker(self):
+        '''
+        Starts up a worker thread
+        '''
+        socket = self.context.socket(zmq.REP)
+        socket.connect(self.w_uri)
+
+        while True:
+            package = socket.recv()
+            payload = salt.payload.unpackage(package)
+            ret = salt.payload.package(self._handle_payload(payload))
+            socket.send(ret)
+
     def __bind(self):
         '''
         Binds the reply server
         '''
         self.opts['logger'].info('Setting up the master communication server')
-        self.socket.bind(self.uri)
-        while True:
-            package = self.socket.recv()
-            payload = salt.payload.unpackage(package)
-            ret = salt.payload.package(self._handle_payload(payload))
-            self.socket.send(ret)
-            
+        self.clients.bind(self.c_uri)
+
+        self.workers.bind(self.w_uri)
+
+        for ind in range(int(self.num_threads)):
+            proc = threading.Thread(target=self.__worker)
+            proc.start()
+
+        zmq.device(zmq.QUEUE, self.clients, self.workers)
 
     def _prep_jid(self, load):
         '''
