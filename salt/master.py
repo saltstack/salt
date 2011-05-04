@@ -147,7 +147,7 @@ class ReqServer():
         Binds the reply server
         '''
         self.opts['logger'].info('Setting up the master communication server')
-        self.clients.bind(self.c_uri)
+        self.clients.bind(self.uri)
 
         self.workers.bind(self.w_uri)
 
