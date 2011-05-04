@@ -55,25 +55,32 @@ class Master(object):
             time.sleep(60)
 
 
-class Publisher(threading.Thread):
+class Publisher(multiprocessing.Process):
     '''
     The publihing interface, a simple zeromq publisher that sends out the
     commands.
     '''
     def __init__(self, opts):
-        threading.Thread.__init__(self)
+        multiprocessing.Process.__init__(self)
         self.opts = opts
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PUB)
+        self.pub_sock = self.context.socket(zmq.PUB)
+        self.pull_sock = self.context.socket(zmq.PULL)
 
-    def __bind(self):
+    def run(self):
         '''
         Bind to the interface specified in the configuration file
         '''
-        binder = 'tcp://' + self.opts['interface'] + ':'\
+        pub_uri = 'tcp://' + self.opts['interface'] + ':'\
                + self.opts['publish_port']
-        self.opts['logger'].info('Starting the Salt Publisher on ' + binder)
-        self.socket.bind(binder)
+        pull_uri = 'tcp://localhost:' + self.opts['publish_pull_port']
+        self.opts['logger'].info('Starting the Salt Publisher on ' + pub_uri)
+        self.pub_sock.bind(pub_uri)
+        self.pull_sock.bind(pull_uri)
+
+        while True:
+            package = self.pull_sock.recv()
+            self.publish(package)
 
     def publish(self, package):
         '''
@@ -81,12 +88,6 @@ class Publisher(threading.Thread):
         '''
         self.opts['logger'].info('Publishing command')
         self.socket.send(package)
-
-    def run(self):
-        '''
-        Start the publisher
-        '''
-        self.__bind()
 
 
 class ReqServer():
