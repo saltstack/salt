@@ -76,7 +76,7 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'tcp://localhost:' + self.opts['publish_pull_port']
         self.opts['logger'].info('Starting the Salt Publisher on ' + pub_uri)
         self.pub_sock.bind(pub_uri)
-        self.pull_sock.bind(pull_uri)
+        self.pull_sock.connect(pull_uri)
 
         while True:
             package = self.pull_sock.recv()
