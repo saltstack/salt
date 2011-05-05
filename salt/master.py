@@ -82,7 +82,6 @@ class Publisher(multiprocessing.Process):
         while True:
             package = rep_sock.recv()
             rep_sock.send('')
-            publish(package)
             self.opts['logger'].info('Publishing command')
             pub_sock.send(package)
 
@@ -95,18 +94,16 @@ class ReqServer():
     def __init__(self, opts):
         self.opts = opts
         self.master_key = salt.crypt.MasterKeys(self.opts)
-        self.num_threads = self.opts['worker_threads']
         self.context = zmq.Context(1)
         # Prepare the zeromq sockets
         self.uri = 'tcp://' + self.opts['interface'] + ':'\
                    + self.opts['ret_port']
         self.clients = self.context.socket(zmq.XREP)
         self.workers = self.context.socket(zmq.XREQ)
-        self.w_uri = 'inproc://wokers'
+        self.w_uri = 'inproc://workers'
         # Start the publisher
         self.publisher = Publisher(opts)
         self.publisher.start()
-        #Publisher(opts).start()
         # Prepare the aes key
         self.key = self.__prep_key()
         self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
@@ -134,7 +131,11 @@ class ReqServer():
         '''
         in_socket = self.context.socket(zmq.REP)
         in_socket.connect(self.w_uri)
-        m_worker = MWorker(self.opts, ind)
+        m_worker = MWorker(self.opts,
+                ind,
+                self.master_key,
+                self.key,
+                self.crypticle)
         work_port = m_worker.port
         m_worker.start()
 
@@ -175,15 +176,13 @@ class MWorker(multiprocessing.Process):
     The worker multiprocess instance to manage the backend operations for the
     salt master.
     '''
-    def __init__(self, opts, num):
+    def __init__(self, opts, num, mkey, key, crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
+        self.master_key = mkey
+        self.key = key
+        self.crypticle = crypticle
         self.port = str(num + int(self.opts['worker_start_port']))
-        # Set up publish connection
-        self.context = zmq.Context(1)
-        self.pub_sock = self.context.socket(zmq.REQ)
-        self.pub_sock.connect('tcp://localhost:'\
-            + self.opts['publish_rep_port'])
 
     def __bind(self):
         '''
@@ -227,7 +226,7 @@ class MWorker(multiprocessing.Process):
         '''
         Take care of a cleartext command
         '''
-        self.opts['logger'].info('Clear payload recieved with commnad '\
+        self.opts['logger'].info('Clear payload recieved with command '\
                 + load['cmd'])
         return getattr(self, load['cmd'])(load)
 
@@ -235,7 +234,7 @@ class MWorker(multiprocessing.Process):
         '''
         Handle a command sent via a public key pair
         '''
-        self.opts['logger'].info('Pubkey payload recieved with commnad '\
+        self.opts['logger'].info('Pubkey payload recieved with command '\
                 + load['cmd'])
 
     def _handle_aes(self, load):
@@ -243,7 +242,7 @@ class MWorker(multiprocessing.Process):
         Handle a command sent via an aes key
         '''
         data = self.crypticle.loads(load)
-        self.opts['logger'].info('AES payload recieved with commnad '\
+        self.opts['logger'].info('AES payload recieved with command '\
                 + data['cmd'])
         return getattr(self, data['cmd'])(data)
 
@@ -403,8 +402,11 @@ class MWorker(multiprocessing.Process):
         if clear_load.has_key('tgt_type'):
             load['tgt_type'] = clear_load['tgt_type']
         payload['load'] = self.crypticle.dumps(load)
-        self.pub_sock.send(salt.payload.package(payload))
-        self.pub_sock.recv()
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.REQ)
+        pub_sock.connect('tcp://127.0.0.1:' + self.opts['publish_rep_port'])
+        pub_sock.send(salt.payload.package(payload))
+        pub_sock.recv()
         return {'enc': 'clear',
                 'load': {'jid': jid}}
 
