@@ -63,32 +63,27 @@ class Publisher(multiprocessing.Process):
     def __init__(self, opts):
         multiprocessing.Process.__init__(self)
         self.opts = opts
-        self.context = zmq.Context()
-        self.pub_sock = self.context.socket(zmq.PUB)
-        self.rep_sock = self.context.socket(zmq.REP)
 
     def run(self):
         '''
         Bind to the interface specified in the configuration file
         '''
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUB)
+        rep_sock = context.socket(zmq.REP)
         pub_uri = 'tcp://' + self.opts['interface'] + ':'\
                + self.opts['publish_port']
-        rep_uri = 'tcp://localhost:' + self.opts['publish_rep_port']
+        rep_uri = 'tcp://127.0.0.1:' + self.opts['publish_rep_port']
         self.opts['logger'].info('Starting the Salt Publisher on ' + pub_uri)
-        self.pub_sock.bind(pub_uri)
-        self.rep_sock.bind(rep_uri)
+        pub_sock.bind(pub_uri)
+        rep_sock.bind(rep_uri)
 
         while True:
-            package = self.rep_sock.recv()
-            self.rep_sock.send('')
-            self.publish(package)
-
-    def publish(self, package):
-        '''
-        Publish out a command to the minions, takes a cmd structure
-        '''
-        self.opts['logger'].info('Publishing command')
-        self.socket.send(package)
+            package = rep_sock.recv()
+            rep_sock.send('')
+            publish(package)
+            self.opts['logger'].info('Publishing command')
+            pub_sock.send(package)
 
 
 class ReqServer():
@@ -110,6 +105,7 @@ class ReqServer():
         # Start the publisher
         self.publisher = Publisher(opts)
         self.publisher.start()
+        #Publisher(opts).start()
         # Prepare the aes key
         self.key = self.__prep_key()
         self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
@@ -182,7 +178,7 @@ class MWorker(multiprocessing.Process):
         self.port = str(num + int(self.opts['worker_start_port']))
         # Set up publish connection
         self.context = zmq.Context(1)
-        self.pub_sock = context.socket(zmq.REQ)
+        self.pub_sock = self.context.socket(zmq.REQ)
         self.pub_sock.connect('tcp://localhost:'\
             + self.opts['publish_rep_port'])
 
