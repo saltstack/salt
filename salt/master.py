@@ -8,6 +8,7 @@ import time
 import shutil
 import threading
 import multiprocessing
+import time
 import cPickle as pickle
 # Import zeromq
 import zmq
@@ -138,6 +139,7 @@ class ReqServer():
         m_worker.start()
 
         out_socket = self.context.socket(zmq.REQ)
+        out_socket.connect('tcp://127.0.0.1:' + str(work_port))
 
         while True:
             package = in_socket.recv()
@@ -154,9 +156,10 @@ class ReqServer():
 
         self.workers.bind(self.w_uri)
 
-        for ind in range(int(self.num_threads)):
-            proc = threading.Thread(target=lambda: self.__worker(ind))
-            proc.start()
+
+        for ind in range(int(self.opts['worker_threads'])):
+            threading.Thread(target=lambda: self.__worker(ind)).start()
+            time.sleep(0.1)
 
         zmq.device(zmq.QUEUE, self.clients, self.workers)
 
@@ -188,7 +191,7 @@ class MWorker(multiprocessing.Process):
         '''
         context = zmq.Context(1)
         socket = context.socket(zmq.REP)
-        socket.bind('tcp://localhost:' + self.port)
+        socket.bind('tcp://127.0.0.1:' + self.port)
 
         while True:
             package = socket.recv()
@@ -409,4 +412,4 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
-        pass
+        self.__bind()
