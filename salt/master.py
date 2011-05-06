@@ -4,7 +4,6 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 # Import python modules
 import os
-import time
 import shutil
 import threading
 import multiprocessing
@@ -125,14 +124,13 @@ class ReqServer():
         os.chmod(keyfile, 256)
         return key
 
-    def __worker(self, ind):
+    def __worker(self):
         '''
         Starts up a worker thread
         '''
         in_socket = self.context.socket(zmq.REP)
         in_socket.connect(self.w_uri)
         m_worker = MWorker(self.opts,
-                ind,
                 self.master_key,
                 self.key,
                 self.crypticle)
@@ -157,10 +155,8 @@ class ReqServer():
 
         self.workers.bind(self.w_uri)
 
-
         for ind in range(int(self.opts['worker_threads'])):
-            threading.Thread(target=lambda: self.__worker(ind)).start()
-            time.sleep(0.1)
+            threading.Thread(target=self.__worker).start()
 
         zmq.device(zmq.QUEUE, self.clients, self.workers)
 
@@ -176,13 +172,13 @@ class MWorker(multiprocessing.Process):
     The worker multiprocess instance to manage the backend operations for the
     salt master.
     '''
-    def __init__(self, opts, num, mkey, key, crypticle):
+    def __init__(self, opts, mkey, key, crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.master_key = mkey
         self.key = key
         self.crypticle = crypticle
-        self.port = str(num + int(self.opts['worker_start_port']))
+        self.port = str(int(self.name.split('-')[1]) - 2 + int(self.opts['worker_start_port']))
 
     def __bind(self):
         '''
