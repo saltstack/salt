@@ -34,6 +34,16 @@ def returners(opts):
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
 
+def states(opts):
+    '''
+    Returns the returner modules
+    '''
+    module_dirs = [
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/states'),
+        ] + opts['states_dirs']
+    load = Loader(module_dirs, opts)
+    return load.apply_introspection(load.gen_functions())
+
 def grains():
     '''
     Return the functions for the dynamic grains and the values for the static
