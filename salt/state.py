@@ -92,3 +92,29 @@ class State(object):
             return ret
         cdata = self.format_call(data)
         return self.states[cdata['full']](*cdata['args'])
+
+    def compile_high_data(self, high):
+        '''
+        "Compile" the high data as it is retireved from the cli or yaml into
+        the individual state executor structures
+        '''
+         'cron': {'pkg': ['installed'],
+                  'service': ['running', 'enabled', {'name': 'crond'}]},
+
+        chunks = []
+        for name, body in high.items():
+            for state, run in body.items():
+                chunk = {'state': state,
+                         'name': name}
+                funcs = set()
+                names = set()
+                for arg in run:
+                    if type(arg) == type(str()):
+                        funcs.add(arg)
+                        continue
+                    if type(arg) == type(dict()):
+                        for key, val in arg.items():
+                            if key == 'names':
+                                names.update(val)
+                                continue
+
