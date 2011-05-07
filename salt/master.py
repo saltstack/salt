@@ -71,17 +71,16 @@ class Publisher(multiprocessing.Process):
         '''
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
-        rep_sock = context.socket(zmq.REP)
+        pull_sock = context.socket(zmq.PULL)
         pub_uri = 'tcp://' + self.opts['interface'] + ':'\
                + self.opts['publish_port']
-        rep_uri = 'tcp://127.0.0.1:' + self.opts['publish_rep_port']
+        pull_uri = 'tcp://127.0.0.1:' + self.opts['publish_pull_port']
         self.opts['logger'].info('Starting the Salt Publisher on ' + pub_uri)
         pub_sock.bind(pub_uri)
-        rep_sock.bind(rep_uri)
+        pull_sock.bind(pull_uri)
 
         while True:
-            package = rep_sock.recv()
-            rep_sock.send('')
+            package = pull_sock.recv()
             self.opts['logger'].info('Publishing command')
             pub_sock.send(package)
 
@@ -401,10 +400,9 @@ class MWorker(multiprocessing.Process):
             load['tgt_type'] = clear_load['tgt_type']
         payload['load'] = self.crypticle.dumps(load)
         context = zmq.Context(1)
-        pub_sock = context.socket(zmq.REQ)
-        pub_sock.connect('tcp://127.0.0.1:' + self.opts['publish_rep_port'])
+        pub_sock = context.socket(zmq.PUSH)
+        pub_sock.connect('tcp://127.0.0.1:' + self.opts['publish_pull_port'])
         pub_sock.send(salt.payload.package(payload))
-        pub_sock.recv()
         return {'enc': 'clear',
                 'load': {'jid': jid}}
 

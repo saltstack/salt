@@ -64,7 +64,7 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
-            'publish_rep_port': '45055',
+            'publish_pull_port': '45055',
             'worker_threads': 5,
             'worker_start_port': '45056',
             'ret_port': '4506',
