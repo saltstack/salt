@@ -134,7 +134,7 @@ class State(object):
         '''
         if not os.path.isfile(template):
             return {}
-        high = self.rend[self.opts['renderer']](self.functions, self,grains)
+        high = self.rend[self.opts['renderer']](template, self.functions, self,grains)
 
     def call(self, data):
         '''
