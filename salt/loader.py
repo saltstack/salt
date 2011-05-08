@@ -44,6 +44,16 @@ def states(opts):
     load = Loader(module_dirs, opts)
     return load.apply_introspection(load.gen_functions())
 
+def render(opts):
+    '''
+    Returns the render modules
+    '''
+    module_dirs = [
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/render'),
+        ] + opts['render_dirs']
+    load = Loader(module_dirs, opts)
+    return load.gen_functions()
+
 def grains():
     '''
     Return the functions for the dynamic grains and the values for the static
