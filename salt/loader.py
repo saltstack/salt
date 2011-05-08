@@ -52,7 +52,7 @@ def render(opts):
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/renderers'),
         ] + opts['render_dirs']
     load = Loader(module_dirs, opts)
-    return load.gen_functions()
+    return load.filter_func('render')
 
 def grains():
     '''
