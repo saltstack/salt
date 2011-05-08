@@ -13,4 +13,8 @@ class Render(object):
     Render state files.
     '''
     def __init__(self, opts):
-        pass
+        self.opts = opts
+        self.rend = salt.loader.render(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts)
+
+    
