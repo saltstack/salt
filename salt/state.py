@@ -46,6 +46,15 @@ class State(object):
                                 + ' for state ' + full)
         return errors
 
+    def verify_chunks(self, chunks):
+        '''
+        Verify the chunks in a list of low data structures
+        '''
+        err = []
+        for chunk in chunks:
+            err += verify_data(chunk)
+        return err
+
     def format_call(self, data):
         '''
         Formats the data into a list of dicts used to acctually call the state,
@@ -77,22 +86,6 @@ class State(object):
             ret['args'].append(kwargs[arg])
         return data
 
-    def call(self, data):
-        '''
-        Call a state
-        '''
-        ret = {'changes': None,
-               'result': False,
-               'comment': ''}
-        errors = self.verify_data(data)
-        if errors:
-            for line in errors:
-                ret['comment'] += line + '\n'
-                sys.stderr.write(line + '\n')
-            return ret
-        cdata = self.format_call(data)
-        return self.states[cdata['full']](*cdata['args'])
-
     def compile_high_data(self, high):
         '''
         "Compile" the high data as it is retireved from the cli or yaml into
@@ -117,4 +110,46 @@ class State(object):
                             if key == 'names':
                                 names.update(val)
                                 continue
+                            chunk.update(val)
+                if names:
+                    for name in names:
+                        live  = copy.deepcopy(chunk)
+                        live['name'] = name
+                        for fun in funcs:
+                            live['fun'] = fun
+                            chunks.append(live)
+                else:
+                    live  = copy.deepcopy(chunk)
+                    for fun in funcs:
+                        live['fun'] = fun
+                        chunks.append(live)
+        return chunks
+
+    def call(self, data):
+        '''
+        Call a state directly with the low data structure, verify data before processing
+        '''
+        ret = {'changes': None,
+               'result': False,
+               'comment': ''}
+        cdata = self.format_call(data)
+        return self.states[cdata['full']](*cdata['args'])
+
+    def call_high(self, high):
+        '''
+        Process a high data call and ensure the defined states.
+        '''
+        err = []
+        rets = []
+        chunks = compile_high_data(high)
+        errors = self.verify_chunks(chunks)
+        if errors:
+            for err in errors:
+                sys.stderr.write(err + '\n')
+                sys.exit(2)
+        for chunk in chunks:
+            ret = self.call(chunk)
+            print ret
+            rets.append(ret)
+        return rets
 
