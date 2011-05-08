@@ -49,7 +49,7 @@ def render(opts):
     Returns the render modules
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/render'),
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/renderers'),
         ] + opts['render_dirs']
     load = Loader(module_dirs, opts)
     return load.gen_functions()
