@@ -24,6 +24,8 @@ class State(object):
     def __init__(self, opts):
         self.opts = opts
         self.states = salt.loader.states(opts)
+        self.rend = salt.loader.render(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts)
 
     def verify_data(self, data):
         '''
@@ -125,6 +127,15 @@ class State(object):
                         chunks.append(live)
         return chunks
 
+    def compile_template(self, template):
+        '''
+        Take the path to a template and return the high data structure derived from the
+        template.
+        '''
+        if not os.path.isfile(template):
+            return {}
+        high = self.rend[self.opts['renderer']](self.functions, self,grains)
+
     def call(self, data):
         '''
         Call a state directly with the low data structure, verify data before processing
@@ -153,3 +164,11 @@ class State(object):
             rets.append(ret)
         return rets
 
+    def call_template(self, template):
+        '''
+        Enforce the states in a template
+        '''
+        high = self.compile_template(template)
+        if high:
+            return self.call_high(high)
+        return high
