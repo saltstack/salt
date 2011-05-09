@@ -134,7 +134,18 @@ class State(object):
         '''
         if not os.path.isfile(template):
             return {}
-        high = self.rend[self.opts['renderer']](template)
+        return self.rend[self.opts['renderer']](template)
+
+    def compile_template_str(self, template):
+        '''
+        Take the path to a template and return the high data structure derived from the
+        template.
+        '''
+        fn_ = tempfile.mkstemp()[1]
+        open(fn_, 'w+').write(template)
+        high = self.rend[self.opts['renderer']](fn_)
+        os.remove(fn_)
+        return high
 
     def call(self, data):
         '''
@@ -169,6 +180,15 @@ class State(object):
         Enforce the states in a template
         '''
         high = self.compile_template(template)
+        if high:
+            return self.call_high(high)
+        return high
+
+    def call_template_str(self, template):
+        '''
+        Enforce the states in a template, pass the template as a string
+        '''
+        high = self.compile_template_str(template)
         if high:
             return self.call_high(high)
         return high
