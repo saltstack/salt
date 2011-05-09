@@ -93,9 +93,6 @@ class State(object):
         "Compile" the high data as it is retireved from the cli or yaml into
         the individual state executor structures
         '''
-         'cron': {'pkg': ['installed'],
-                  'service': ['running', 'enabled', {'name': 'crond'}]},
-
         chunks = []
         for name, body in high.items():
             for state, run in body.items():
