@@ -132,7 +132,7 @@ class Loader(object):
 
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
-    def gen_functions(self):
+    def gen_functions(self, pack=None):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -171,6 +171,13 @@ class Loader(object):
                 mod.__opts__ = self.opts
 
             mod.__grains__ = self.grains
+
+            if pack:
+                if type(pack) == type(list()):
+                    for chunk in pack:
+                        setattr(mod, chunk['name'], chunk['value'])
+                else:
+                    setattr(mod, pack['name'], pack['value'])
 
             if hasattr(mod, '__virtual__'):
                 if callable(mod.__virtual__):
