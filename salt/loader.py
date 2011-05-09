@@ -46,7 +46,7 @@ def states(opts, functions):
             'value': functions}
     return load.gen_functions(pack)
 
-def render(opts):
+def render(opts, functions):
     '''
     Returns the render modules
     '''
@@ -54,7 +54,9 @@ def render(opts):
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/renderers'),
         ] + opts['render_dirs']
     load = Loader(module_dirs, opts)
-    return load.filter_func('render')
+    pack = {'name': '__minion__',
+            'value': functions}
+    return load.filter_func('render', pack)
 
 def grains():
     '''
