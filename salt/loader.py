@@ -208,13 +208,14 @@ class Loader(object):
         #funcs['sys.reload_functions'] = self.reload_functions
         return funcs
 
-    def filter_func(self, name):
+    def filter_func(self, name, pack=None):
         '''
         Filter a specific function out of the functions, this is used to load
         the returners for the salt minion
         '''
         funcs = {}
-        for key, fun in self.gen_functions().items():
+        gen = self.gen_functions(pack) if pack else self.gen_functions()
+        for key, fun in gen.items():
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
         return funcs
