@@ -10,15 +10,15 @@ import os
 import yaml
 from jinja2 import Template
 
-def render(template, functions, grains):
+def render(template):
     '''
     Render the data passing the functions and grains into the rendering system
     '''
     if not os.path.isfile(template):
         return {}
     passthrough = {}
-    passthrough.update(functions)
-    passthrough.update(grains)
+    passthrough.update(__salt__)
+    passthrough.update(__grains__)
     template = Template(open(template, 'r').read())
     yaml_data = template.render(**passthrough)
     return yaml.load(yaml_data)
