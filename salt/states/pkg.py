@@ -1,21 +1,17 @@
 '''
-State enforcing for pacman packages
+State enforcing for packages
 '''
-
-import salt.modules.pacman as pacman
-
-__virtual__ = pacman.__virtual__
 
 def install(name):
     '''
     Verify that the package is installed, return the packages changed in the
     operation and a bool if the job was sucessfull
     '''
-    if pacman.version(name):
+    if __minion__['pkg.version'](name):
         return {'changes': {},
                 'result': True,
                 'comment': 'The package is already installed'}
-    changes = pacman.install(name)
+    changes = __minion__['pkg.install'](name)
     if not changes:
         return {'changes': changes,
                 'result': False,
@@ -28,10 +24,10 @@ def latest(name):
     '''
     Verify that the latest package is installed
     '''
-    version = pacman.version(name)
-    avail = pacman.available_version(name)
+    version = __minion__['pkg.version'](name)
+    avail = ['pkg.available_version'](name)
     if avail > version:
-        changes = pacman.install(name, True)
+        changes = __minion__['pkg.install'](name, True)
     if not changes:
         return {'changes': changes,
                 'result': False,
@@ -44,12 +40,12 @@ def remove(name):
     '''
     Verify that the package is removed
     '''
-    if not pacman.version(name):
+    if not __minion__['pkg.version'](name):
         return {'changes': {},
                 'result': True,
                 'comment': 'The package is not installed'}
     else:
-        changes = pacman.remove(name)
+        changes = __minion__['pkg.remove'](name)
     if not changes:
         return {'changes': changes,
                 'result': False,
@@ -62,12 +58,12 @@ def purge(name):
     '''
     Verify that the package is purged
     '''
-    if not pacman.version(name):
+    if not __minion__['pkg.version'](name):
         return {'changes': {},
                 'result': True,
                 'comment': 'The package is not installed'}
     else:
-        changes = pacman.purge(name)
+        changes = __minion__['pkg.purge'](name)
     if not changes:
         return {'changes': changes,
                 'result': False,
