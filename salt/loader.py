@@ -42,7 +42,7 @@ def states(opts, functions):
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/states'),
         ] + opts['states_dirs']
     load = Loader(module_dirs, opts)
-    pack = {'name': '__minion__',
+    pack = {'name': '__salt__',
             'value': functions}
     return load.gen_functions(pack)
 
@@ -54,7 +54,7 @@ def render(opts, functions):
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/renderers'),
         ] + opts['render_dirs']
     load = Loader(module_dirs, opts)
-    pack = {'name': '__minion__',
+    pack = {'name': '__salt__',
             'value': functions}
     return load.filter_func('render', pack)
 
