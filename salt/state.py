@@ -24,8 +24,8 @@ class State(object):
     def __init__(self, opts):
         self.opts = opts
         self.functions = salt.loader.minion_mods(self.opts)
-        self.states = salt.loader.states(opts, self.functions)
-        self.rend = salt.loader.render(self.opts)
+        self.states = salt.loader.states(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions)
 
     def verify_data(self, data):
         '''
@@ -134,7 +134,7 @@ class State(object):
         '''
         if not os.path.isfile(template):
             return {}
-        high = self.rend[self.opts['renderer']](template, self.functions, self,grains)
+        high = self.rend[self.opts['renderer']](template)
 
     def call(self, data):
         '''
