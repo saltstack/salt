@@ -32,6 +32,8 @@
 # returners. These paths must be fully qualified!
 #module_dirs: []
 #returner_dirs: []
+#states_dirs: []
+#render_dirs: []
 
 ######        Security settings       #####
 ###########################################
