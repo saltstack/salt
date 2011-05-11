@@ -2,13 +2,13 @@
 Module for gathering and managing network information
 '''
 import subprocess
-from socket import *
+import socket
 from string import ascii_letters, digits
 
-def _sanitize_host ( host ):
+def _sanitize_host(host):
     return "".join([c for c in host[0:255] if c in (ascii_letters + digits + '.')])
 
-def ping( host ):
+def ping(host):
     '''
     Performs a ping to a host
     
@@ -63,7 +63,7 @@ def netstat():
             } )
     return ret
 
-def traceroute( host ):
+def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
     
@@ -95,7 +95,7 @@ def traceroute( host ):
         ret.append(result)
     return ret
 
-def dig( host ):
+def dig(host):
     '''
     Performs a DNS lookup with dig
     
@@ -109,7 +109,7 @@ def dig( host ):
             stdout=subprocess.PIPE).communicate()[0]
     return out
 
-def isportopen( host, port ):
+def isportopen(host, port):
     '''
     Return status of a port
     
@@ -120,7 +120,7 @@ def isportopen( host, port ):
     if not (1 <= int(port) <= 65535):
         return False
 
-    s = socket(AF_INET, SOCK_STREAM)
-    out = s.connect_ex((_sanitize_host(host), int(port)))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    out = sock.connect_ex((_sanitize_host(host), int(port)))
 
     return out
