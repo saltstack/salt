@@ -22,6 +22,8 @@ class State(object):
     Class used to execute salt states
     '''
     def __init__(self, opts):
+        if not opts.has_key('grains'):
+            opts['grains'] = salt.loader.grains()
         self.opts = opts
         self.functions = salt.loader.minion_mods(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
