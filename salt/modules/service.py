@@ -13,19 +13,34 @@ grainmap = {
            'Ubuntu': '/etc/init.d',
           }
 
-def start(svc):
+def start(name):
     '''
     Start the specified service
+
+    CLI Example:
+    salt '*' service.start <service name>
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
-            svc + ' start')
+            name + ' start')
     return not subprocess.call(cmd, shell=True)
 
-def stop(svc):
+def stop(name):
     '''
     Stop the specified service
+
+    CLI Example:
+    salt '*' service.stop <service name>
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
-            svc + ' stop')
+            name + ' stop')
     return not subprocess.call(cmd, shell=True)
+
+#def status(name, sig=None):
+#    '''
+#    Return the status for a service, returns True or False if the service
+#    is running or not, pass a signiture to use to find the service via ps
+#
+#    CLI Example:
+#    salt '*' service.status <service name> [service signature]
+#    '''
 
