@@ -13,6 +13,7 @@ The data sent to the state calls is as follows:
 # Import python modules
 import sys
 import os
+import copy
 import inspect
 # Import Salt modules
 import salt.loader
@@ -65,7 +66,7 @@ class State(object):
         '''
         err = []
         for chunk in chunks:
-            err += verify_data(chunk)
+            err += self.verify_data(chunk)
         return err
 
     def format_call(self, data):
@@ -129,7 +130,8 @@ class State(object):
                             if key == 'names':
                                 names.update(val)
                                 continue
-                            chunk.update(val)
+                            else:
+                                chunk.update(arg)
                 if names:
                     for name in names:
                         live  = copy.deepcopy(chunk)
