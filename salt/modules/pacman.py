@@ -21,18 +21,18 @@ def _list_removed(old, new):
             pkgs.append(pkg)
     return pkgs
 
-def available_version(pkg):
+def available_version(name):
     '''
     The available version of the package in the repository
 
     CLI Example:
     salt '*' pkg.available_version <package name>
     '''
-    return subprocess.Popen('pacman -Sp --print-format %v ' + pkg,
+    return subprocess.Popen('pacman -Sp --print-format %v ' + name,
         shell=True,
         stdout=subprocess.PIPE).communicate()[0].strip()
 
-def version(pkg):
+def version(name):
     '''
     Returns a bool if the package is installed or not
 
@@ -90,7 +90,7 @@ def refresh_db():
             ret[key] = True
     return ret
 
-def install(pkg, refresh=False):
+def install(name, refresh=False):
     '''
     Install the passed package, add refresh=True to install with an -Sy
 
@@ -102,9 +102,9 @@ def install(pkg, refresh=False):
     salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -S --noprogressbar --noconfirm ' + pkg
+    cmd = 'pacman -S --noprogressbar --noconfirm ' + name
     if refresh:
-        cmd = 'pacman -Syu --noprogressbar --noconfirm ' + pkg
+        cmd = 'pacman -Syu --noprogressbar --noconfirm ' + name
     subprocess.call(cmd, shell=True)
     new = list_pkgs()
     pkgs = {}
@@ -154,7 +154,7 @@ def upgrade():
                           'new': new[npkg]}
     return pkgs
     
-def remove(pkg):
+def remove(name):
     '''
     Remove a single package with pacman -R
 
@@ -164,12 +164,12 @@ def remove(pkg):
     salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + pkg
+    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
     subprocess.call(cmd, shell=True)
     new = list_pkgs()
     return _list_removed(old, new)
 
-def purge(pkg):
+def purge(name):
     '''
     Recursively remove a package and all dependencies which were installed
     with it, this will call a pacman -Rsc
@@ -181,7 +181,7 @@ def purge(pkg):
 
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + pkg
+    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
     subprocess.call(cmd, shell=True)
     new = list_pkgs()
     return _list_removed(old, new)
