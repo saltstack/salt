@@ -34,19 +34,28 @@ class State(object):
         Verify the data, return an error statement if something is wrong
         '''
         errors = []
-        if not data.has_key('state')\
-                or not data.has_key('fun')\
-                or not data.has_key('name'):
-            return ret
-        for fun in data['fun']:
-            full = data['state'] + '.' + fun
-            if not self.states.has_key(full):
-                errors.append('Specified state ' + full + ' is unavailable.')
-                continue
+        if not data.has_key('state'):
+            errors.append('Missing "state" data')
+        if not data.has_key('fun'):
+            errors.append('Missing "fun" data')
+        if not data.has_key('name'):
+            errors.append('Missing "name" data')
+        if errors:
+            return errors
+        full = data['state'] + '.' + data['fun']
+        if not self.states.has_key(full):
+            errors.append('Specified state ' + full + ' is unavailable.')
+        else:
             aspec = inspect.getargspec(self.states[full])
-            for ind in range(len(aspec[0]) - len(aspec[3])):
-                if not data.has_key(aspec[0]):
-                    errors.append('Missing paramater ' + aspec[0]\
+            arglen = 0
+            deflen = 0
+            if type(aspec[0]) == type(list()):
+                arglen = len(aspec[0])
+            if type(aspec[3]) == type(list()):
+                arglen = len(aspec[3])
+            for ind in range(arglen - deflen):
+                if not data.has_key(aspec[0][ind]):
+                    errors.append('Missing paramater ' + aspec[0][ind]\
                                 + ' for state ' + full)
         return errors
 
