@@ -2,7 +2,7 @@
 State enforcing for packages
 '''
 
-def install(name):
+def installed(name):
     '''
     Verify that the package is installed, return the packages changed in the
     operation and a bool if the job was sucessfull
@@ -36,7 +36,7 @@ def latest(name):
             'result': True,
             'commant': 'Package installed'}
 
-def remove(name):
+def removed(name):
     '''
     Verify that the package is removed
     '''
@@ -54,7 +54,7 @@ def remove(name):
             'result': True,
             'commant': 'Package removed'}
 
-def purge(name):
+def purged(name):
     '''
     Verify that the package is purged
     '''
