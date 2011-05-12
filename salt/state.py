@@ -180,7 +180,7 @@ class State(object):
         '''
         err = []
         rets = []
-        chunks = compile_high_data(high)
+        chunks = self.compile_high_data(high)
         errors = self.verify_chunks(chunks)
         if errors:
             for err in errors:
