@@ -1,0 +1,28 @@
+vim:
+  pkg:
+    - installed
+emacs:
+  pkg:
+    - installed
+nano:
+  pkg:
+    - installed
+salt:
+  pkg: 
+    - installed
+  service: 
+    - running
+    - enabled
+    - names: 
+      - salt-master
+      - salt-minion
+butter:
+  pkg:
+    - installed
+cron:
+  pkg:
+    - installed
+  service:
+    - running
+    - enabled
+    - name: cronie
