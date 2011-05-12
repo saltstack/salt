@@ -7,11 +7,18 @@ from distutils.core import setup
 from distutils.extension import Extension
 from distutils.sysconfig import get_python_lib
 
-mod_path = os.path.join(get_python_lib(), 'salt/modules/')
+NAME = 'salt'
+VER = '0.8.6'
+DESC = 'Portable, distrubuted, remote execution system'
 
-setup(name='salt',
-      version='0.8.0',
-      description='Portable, distrubuted, remote execution system',
+mod_path = os.path.join(get_python_lib(), 'salt/modules/')
+doc_path = os.path.join('/usr/share/doc/', NAME + '-' + VER)
+example_path = os.path.join(doc_path, 'examples')
+template_path = os.path.join(example_path, 'templates')
+
+setup(name=NAME,
+      version=VER,
+      description=DESC,
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
       url='https://github.com/thatch45/salt',
@@ -39,7 +46,7 @@ setup(name='salt',
                 ],
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
-               'scripts/saltkey',
+               'scripts/salt-key',
                'scripts/salt-cp',
                'scripts/salt-call',
                'scripts/salt'],
@@ -58,6 +65,10 @@ setup(name='salt',
                     ]),
                 (mod_path,
                     ['salt/modules/cytest.pyx',
-                    ])
+                    ]),
+                (template_path,
+                    ['doc/example/templates/yaml-jinja.yml',
+                     'doc/example/templates/yaml.yml'
+                    ]),
                  ],
      )
