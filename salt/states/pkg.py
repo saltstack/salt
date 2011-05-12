@@ -2,7 +2,7 @@
 State enforcing for packages
 '''
 
-def install(name):
+def installed(name):
     '''
     Verify that the package is installed, return the packages changed in the
     operation and a bool if the job was sucessfull
@@ -16,9 +16,10 @@ def install(name):
         return {'changes': changes,
                 'result': False,
                 'comment': 'The package failed to install'}
-    return {'changes': changes,
+    return {'name': name,
+            'changes': changes,
             'result': True,
-            'commant': 'Package installed'}
+            'comment': 'Package installed'}
 
 def latest(name):
     '''
@@ -29,45 +30,53 @@ def latest(name):
     if avail > version:
         changes = __salt__['pkg.install'](name, True)
     if not changes:
-        return {'changes': changes,
+        return {'name': name,
+                'changes': changes,
                 'result': False,
                 'comment': 'The package failed to install'}
-    return {'changes': changes,
+    return {'name': name,
+            'changes': changes,
             'result': True,
-            'commant': 'Package installed'}
+            'comment': 'Package installed'}
 
-def remove(name):
+def removed(name):
     '''
     Verify that the package is removed
     '''
     if not __salt__['pkg.version'](name):
-        return {'changes': {},
+        return {'name': name,
+                'changes': {},
                 'result': True,
                 'comment': 'The package is not installed'}
     else:
         changes = __salt__['pkg.remove'](name)
     if not changes:
-        return {'changes': changes,
+        return {'name': name,
+                'changes': changes,
                 'result': False,
                 'comment': 'The package failed to remove'}
-    return {'changes': changes,
+        return {'name': name,
+            'changes': changes,
             'result': True,
-            'commant': 'Package removed'}
+            'comment': 'Package removed'}
 
-def purge(name):
+def purged(name):
     '''
     Verify that the package is purged
     '''
     if not __salt__['pkg.version'](name):
-        return {'changes': {},
+        return {'name': name,
+                'changes': {},
                 'result': True,
                 'comment': 'The package is not installed'}
     else:
         changes = __salt__['pkg.purge'](name)
     if not changes:
-        return {'changes': changes,
+        return {'name': name,
+                'changes': changes,
                 'result': False,
                 'comment': 'The package failed to purge'}
-    return {'changes': changes,
+        return {'name': name,
+            'changes': changes,
             'result': True,
-            'commant': 'Package purged'}
+            'comment': 'Package purged'}

@@ -13,6 +13,7 @@ The data sent to the state calls is as follows:
 # Import python modules
 import sys
 import os
+import copy
 import inspect
 # Import Salt modules
 import salt.loader
@@ -22,6 +23,8 @@ class State(object):
     Class used to execute salt states
     '''
     def __init__(self, opts):
+        if not opts.has_key('grains'):
+            opts['grains'] = salt.loader.grains()
         self.opts = opts
         self.functions = salt.loader.minion_mods(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
@@ -32,19 +35,28 @@ class State(object):
         Verify the data, return an error statement if something is wrong
         '''
         errors = []
-        if not data.has_key('state')\
-                or not data.has_key('fun')\
-                or not data.has_key('name'):
-            return ret
-        for fun in data['fun']:
-            full = data['state'] + '.' + fun
-            if not self.states.has_key(full):
-                errors.append('Specified state ' + full + ' is unavailable.')
-                continue
+        if not data.has_key('state'):
+            errors.append('Missing "state" data')
+        if not data.has_key('fun'):
+            errors.append('Missing "fun" data')
+        if not data.has_key('name'):
+            errors.append('Missing "name" data')
+        if errors:
+            return errors
+        full = data['state'] + '.' + data['fun']
+        if not self.states.has_key(full):
+            errors.append('Specified state ' + full + ' is unavailable.')
+        else:
             aspec = inspect.getargspec(self.states[full])
-            for ind in range(len(aspec[0]) - len(aspec[3])):
-                if not data.has_key(aspec[0]):
-                    errors.append('Missing paramater ' + aspec[0]\
+            arglen = 0
+            deflen = 0
+            if type(aspec[0]) == type(list()):
+                arglen = len(aspec[0])
+            if type(aspec[3]) == type(list()):
+                arglen = len(aspec[3])
+            for ind in range(arglen - deflen):
+                if not data.has_key(aspec[0][ind]):
+                    errors.append('Missing paramater ' + aspec[0][ind]\
                                 + ' for state ' + full)
         return errors
 
@@ -54,12 +66,12 @@ class State(object):
         '''
         err = []
         for chunk in chunks:
-            err += verify_data(chunk)
+            err += self.verify_data(chunk)
         return err
 
     def format_call(self, data):
         '''
-        Formats the data into a list of dicts used to acctually call the state,
+        Formats low data into a list of dicts used to acctually call the state,
         returns:
         {
         'full': 'module.function',
@@ -72,21 +84,30 @@ class State(object):
         verify_data
         '''
         ret = {}
-        ret['full'] = data['state'] + '.' + fun
+        ret['full'] = data['state'] + '.' + data['fun']
         ret['args'] = []
-        aspec = inspect.getargspec(self.states[full])
+        aspec = inspect.getargspec(self.states[ret['full']])
+        arglen = 0
+        deflen = 0
+        if type(aspec[0]) == type(list()):
+            arglen = len(aspec[0])
+        if type(aspec[3]) == type(list()):
+            arglen = len(aspec[3])
         kwargs = {}
-        for ind in range(len(aspec[0] - 1, 0, -1)):
-            def_minus = len(aspec[0]) - ind
-            if len(aspec[3]) - def_minus > -1:
+        for ind in range(arglen - 1, 0, -1):
+            def_minus = arglen - ind
+            if deflen - def_minus > -1:
                 minus = def_minus + 1
                 kwargs[aspec[0][ind]] = aspec[3][-minus]
         for arg in kwargs:
             if data.has_key(arg):
                 kwargs[arg] = data['arg']
         for arg in aspec[0]:
-            ret['args'].append(kwargs[arg])
-        return data
+            if kwargs.has_key(arg):
+                ret['args'].append(kwargs[arg])
+            else:
+                ret['args'].append(data[arg])
+        return ret
 
     def compile_high_data(self, high):
         '''
@@ -109,7 +130,8 @@ class State(object):
                             if key == 'names':
                                 names.update(val)
                                 continue
-                            chunk.update(val)
+                            else:
+                                chunk.update(arg)
                 if names:
                     for name in names:
                         live  = copy.deepcopy(chunk)
@@ -160,7 +182,7 @@ class State(object):
         '''
         err = []
         rets = []
-        chunks = compile_high_data(high)
+        chunks = self.compile_high_data(high)
         errors = self.verify_chunks(chunks)
         if errors:
             for err in errors:
