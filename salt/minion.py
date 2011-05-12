@@ -8,6 +8,7 @@ import glob
 import re
 import time
 import tempfile
+import traceback
 import shutil
 import threading
 import multiprocessing
@@ -182,9 +183,10 @@ class Minion(object):
         try:
             ret['return'] = self.functions[data['fun']](*data['arg'])
         except Exception as exc:
+            trb = traceback.format_exc()
             self.opts['logger'].warning('The minion function caused an'\
                     + ' exception: ' + str(exc))
-            ret['return'] = exc
+            ret['return'] = trb
         ret['jid'] = data['jid']
         if data['ret']:
             ret['id'] = self.opts['id']
@@ -213,9 +215,10 @@ class Minion(object):
                 ret['return'][data['fun'][ind]]\
                     = self.functions[data['fun'][ind]](*data['arg'][ind])
             except Exception as exc:
+                trb = traceback.format_exc()
                 self.opts['logger'].warning('The minion function caused an'\
                         + ' exception: ' + str(exc))
-                ret['return'][data['fun'][ind]] = exc
+                ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
         if data['ret']:
             ret['id'] = self.opts['id']
