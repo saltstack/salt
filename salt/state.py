@@ -70,7 +70,7 @@ class State(object):
 
     def format_call(self, data):
         '''
-        Formats the data into a list of dicts used to acctually call the state,
+        Formats low data into a list of dicts used to acctually call the state,
         returns:
         {
         'full': 'module.function',
@@ -83,21 +83,30 @@ class State(object):
         verify_data
         '''
         ret = {}
-        ret['full'] = data['state'] + '.' + fun
+        ret['full'] = data['state'] + '.' + data['fun']
         ret['args'] = []
-        aspec = inspect.getargspec(self.states[full])
+        aspec = inspect.getargspec(self.states[ret['full']])
+        arglen = 0
+        deflen = 0
+        if type(aspec[0]) == type(list()):
+            arglen = len(aspec[0])
+        if type(aspec[3]) == type(list()):
+            arglen = len(aspec[3])
         kwargs = {}
-        for ind in range(len(aspec[0] - 1, 0, -1)):
-            def_minus = len(aspec[0]) - ind
-            if len(aspec[3]) - def_minus > -1:
+        for ind in range(arglen - 1, 0, -1):
+            def_minus = arglen - ind
+            if deflen - def_minus > -1:
                 minus = def_minus + 1
                 kwargs[aspec[0][ind]] = aspec[3][-minus]
         for arg in kwargs:
             if data.has_key(arg):
                 kwargs[arg] = data['arg']
         for arg in aspec[0]:
-            ret['args'].append(kwargs[arg])
-        return data
+            if kwargs.has_key(arg):
+                ret['args'].append(kwargs[arg])
+            else:
+                ret['args'].append(data[arg])
+        return ret
 
     def compile_high_data(self, high):
         '''
