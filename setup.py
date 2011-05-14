@@ -8,7 +8,7 @@ from distutils.extension import Extension
 from distutils.sysconfig import get_python_lib
 
 NAME = 'salt'
-VER = '0.8.6'
+VER = '0.8.7'
 DESC = 'Portable, distrubuted, remote execution system'
 
 mod_path = os.path.join(get_python_lib(), 'salt/modules/')
@@ -67,6 +67,9 @@ setup(name=NAME,
                     ]),
                 (mod_path,
                     ['salt/modules/cytest.pyx',
+                    ]),
+                (doc_path,
+                    ['LICENCE'
                     ]),
                 (template_path,
                     ['doc/example/templates/yaml-jinja.yml',
