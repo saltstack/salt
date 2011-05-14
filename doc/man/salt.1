@@ -33,8 +33,8 @@ The target expresion will be interpereted as a pcre regular expression rather th
 The target expression will be interpereted as a comma delimited list, example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 
 .TP
--F, --facter
-The target expression matches values returned by facter on the minions. The target expresion is in the format of '<facter value>:<pcre regular expresion>'; example: 'operatingsystem:Arch.*'
+-G, --grain
+The target expression matches values returned by the salt grains system on the minions. The target expresion is in the format of '<grain value>:<pcre regular expresion>'; example: 'os:Arch.*'
 
 .TP
 -Q, --query
