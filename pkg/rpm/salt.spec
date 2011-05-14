@@ -3,7 +3,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name:           salt
-Version:        0.7.0
+Version:        0.8.7
 Release:        1%{?dist}
 Summary:        A parallel remote execution system
 
@@ -11,22 +11,21 @@ Group:          Development/Languages
 License:        APACHE
 URL:            https://github.com/thatch45/salt
 Source0:        %{name}-%{version}.tar.gz
-Source1:	salt-master
-Source2:	salt-minion
+Source1:        salt-master
+Source2:        salt-minion
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Requires:	python
-Requires:	PyYAML
-Requires:	facter
-Requires:	python-crypto
-Requires:	m2crypto
-Requires:	python-zmq
+Requires:       python
+Requires:       PyYAML
+Requires:       python-crypto
+Requires:       m2crypto
+Requires:       python-zmq
 
 BuildArch:      noarch
 BuildRequires:  python-devel
 
 %description
-A paralell remote execution system
+A parallel remote execution system
 
 %prep
 %setup -q
