@@ -6,10 +6,17 @@
 # The port used by the publisher
 #publish_port: 4505
 
+# The port used to communicate to the local publisher
+#publish_pull_port: 45055
+#
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
 # running slowly, increase the number of threads
 #worker_threads: 5
+# 
+# The port to begin binding workers on, the workers will be created on
+# increasingly higher ports
+#worker_start_port: 45056
 
 # The port used by the communication interface
 #ret_port: 4506
