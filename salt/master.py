@@ -174,7 +174,7 @@ class MWorker(multiprocessing.Process):
     The worker multiprocess instance to manage the backend operations for the
     salt master.
     '''
-    def __init__(self, ind, opts, mkey, key, crypticle):
+    def __init__(self, opts, ind, mkey, key, crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.master_key = mkey
