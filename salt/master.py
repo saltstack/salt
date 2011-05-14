@@ -131,7 +131,7 @@ class ReqServer():
         in_socket = self.context.socket(zmq.REP)
         in_socket.connect(self.w_uri)
         m_worker = MWorker(self.opts,
-                ind
+                ind,
                 self.master_key,
                 self.key,
                 self.crypticle)
