@@ -26,6 +26,7 @@
 # Disable specific modules, this will allow the admin to limit the level os 
 # access the master has to the minion
 #disable_modules: [cmd,test]
+#disable_returners: []
 # Modules can be loaded from arbitrairy paths, this enables the easy deployment
 # of third party modules, modules for returners and minions can be loaded.
 # Specify a list of extra directories to search for minion modules and
