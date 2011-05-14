@@ -97,6 +97,9 @@ def _apply_overlay(vda, instance):
 def libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
+
+    CLI Example:
+    salt '*' butterkvm.libvirt_creds
     '''
     g_cmd = 'grep group /etc/libvirt/qemu.conf'
     u_cmd = 'grep user /etc/libvirt/qemu.conf'
@@ -147,6 +150,10 @@ def create(instance, vda, image, pin):
     image - The image to move into place
     pin - a "pin" data structure defining the myriad of possible vdb-vbz disk
     images to generate.
+
+    CLI Example:
+    salt '*' butterkvm.create <instance dir> <root image location>\
+            <Destination> <pin data>
     '''
     if not os.path.isfile(vda):
         # Check that this is a fresh vm image, if so, copy it into place any
