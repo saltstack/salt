@@ -73,6 +73,7 @@ setup(name=NAME,
                     ]),
                 (template_path,
                     ['doc/example/templates/yaml-jinja.yml',
+                     'doc/example/templates/yaml-mako.yml',
                      'doc/example/templates/yaml.yml'
                     ]),
                  ],
