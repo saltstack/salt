@@ -11,8 +11,7 @@ depends=('python2'
          'python2-pyzmq'
          'python-m2crypto'
          'python2-yaml'
-         'pycrypto'
-         'facter')
+         'pycrypto')
 makedepends=('git')
 provides=()
 backup=('etc/salt/master' 
