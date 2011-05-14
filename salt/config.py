@@ -16,7 +16,7 @@ def minion_config(path):
     '''
     Reads in the minion configuration file and sets up special options
     '''
-    opts = {'master': 'mcp',
+    opts = {'master': 'salt',
             'master_port': '4506',
             'pki_dir': '/etc/salt/pki',
             'id': socket.getfqdn(),
