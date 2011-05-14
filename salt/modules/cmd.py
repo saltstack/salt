@@ -47,6 +47,9 @@ def exec_code(lang, code):
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. The stdout and stderr will be returned
+
+    CLI Example:
+    salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
     cfn = tempfile.mkstemp()
     open(cfn, 'w+').write(code)
