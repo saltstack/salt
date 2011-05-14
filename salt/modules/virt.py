@@ -126,6 +126,9 @@ def node_info():
 def get_graphics(vm_):
     '''
     Returns the information on vnc for a given vm
+
+    CLI Example:
+    salt '*' virt.get_graphics <vm name>
     '''
     out = {'autoport': 'None',
            'keymap': 'None',
@@ -145,6 +148,9 @@ def get_graphics(vm_):
 def get_disks(vm_):
     '''
     Return the disks of a named vm
+
+    CLI Example:
+    salt '*' virt.get_disks <vm name>
     '''
     disks = {}
     doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
@@ -219,6 +225,9 @@ def full_info():
 def get_xml(vm_):
     '''
     Returns the xml for a given vm
+
+    CLI Example:
+    salt '*' virt.get_xml <vm name>
     '''
     dom = _get_dom(vm_)
     return dom.XMLDesc(0)
@@ -292,6 +301,9 @@ def create_xml_path(path):
 def migrate_non_shared(vm_, target):
     '''
     Attempt to execute non-shared storage "all" migration
+
+    CLI Example:
+    salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
     '''
     cmd = 'virsh migrate --live --copy-storage-all ' + vm_\
         + ' qemu://' + target + '/system'
@@ -303,6 +315,9 @@ def migrate_non_shared(vm_, target):
 def migrate_non_shared_inc(vm_, target):
     '''
     Attempt to execute non-shared storage "all" migration
+
+    CLI Example:
+    salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
     '''
     cmd = 'virsh migrate --live --copy-storage-inc ' + vm_\
         + ' qemu://' + target + '/system'
@@ -314,6 +329,9 @@ def migrate_non_shared_inc(vm_, target):
 def migrate(vm_, target):
     '''
     Shared storage migration
+
+    CLI Example:
+    salt '*' virt.migrate <vm name> <target hypervisor>
     '''
     cmd = 'virsh migrate --live ' + vm_\
         + ' qemu://' + target + '/system'
@@ -328,6 +346,9 @@ def seed_non_shared_migrate(disks, force=False):
     Non shared migration reqiuires that the disks be present on the migration
     destination, pass the disks information via this function, to the
     migration destination before executing the migration.
+
+    CLI Example:
+    salt '*' virt.seed_non_shared_migrate <disks>
     '''
     for dev, data in disks.items():
         fn_ = data['file']
@@ -387,6 +408,9 @@ def purge(vm_, dirs=False):
     Recursively destroy and delete a virtual machine, pass True for dirs to
     also delete the directories containing the virtual machine disk images -
     USE WITH EXTREAME CAUTION!
+
+    CLI Example:
+    salt '*' virt.purge <vm name>
     '''
     disks = get_disks(vm_)
     destroy(vm_)
@@ -411,6 +435,9 @@ def virt_type():
 def is_kvm_hyper():
     '''
     Returns a bool whether or not this node is a hypervisor
+
+    CLI Example:
+    salt '*' virt.is_kvm_hyper
     '''
     if __grains__['virtual'] != 'physical':
         return False
