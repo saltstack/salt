@@ -35,12 +35,17 @@ def stop(name):
             name + ' stop')
     return not subprocess.call(cmd, shell=True)
 
-#def status(name, sig=None):
-#    '''
-#    Return the status for a service, returns True or False if the service
-#    is running or not, pass a signiture to use to find the service via ps
-#
-#    CLI Example:
-#    salt '*' service.status <service name> [service signature]
-#    '''
+def status(name, sig=None):
+    '''
+    Return the status for a service, returns the PID or an empty string if the
+    service is running or not, pass a signiture to use to find the service via
+    ps
 
+    CLI Example:
+    salt '*' service.status <service name> [service signature]
+    '''
+    sig = name if not sig else sig
+    cmd = __grains__['ps'] + ' | grep ' + sig + " | awk '{print $2}'"
+    return subprocess.Popen(cmd,
+            shell=True,
+            stdout=subprocess.PIPE).communicate()[0].strip()
