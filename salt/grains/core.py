@@ -129,6 +129,7 @@ def os_data():
     # Load the virtual machine info
     
     grains.update(_virtual(grains))
+    grains.update(_ps(grains))
     return grains
 
 def hostname():
