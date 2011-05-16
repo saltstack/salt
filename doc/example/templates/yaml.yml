@@ -13,6 +13,10 @@ salt:
   service: 
     - running
     - enabled
+    - require: 
+      - pkg: vim
+      - pkg: salt
+      - service: cron
     - names: 
       - salt-master
       - salt-minion
