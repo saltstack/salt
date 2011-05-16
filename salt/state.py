@@ -144,7 +144,8 @@ class State(object):
                     for fun in funcs:
                         live['fun'] = fun
                         chunks.append(live)
-        return chunks
+
+        return sorted(chunks, key=lambda k: k['state'] + k['name'] + k['fun'])
 
     def compile_template(self, template):
         '''
