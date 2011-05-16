@@ -8,6 +8,8 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
+# This needs some refactoring, I made it "as fast as I could" and could be a
+# lot clearer, so far it is spaghetti code
 # Import python modules
 import os
 import subprocess
@@ -55,9 +57,18 @@ def _virtual(os_data):
                 grains['virtual'] = 'kvm'
     return grains
 
+def _ps(os_data):
+    '''
+    Return the ps grain
+    '''
+    grains = {}
+    grains['ps'] = 'ps auxwww' if\
+            'FreeBSD NetBSD OpenBSD Darwin'.count(os_data['os']) else 'ps -ef'
+    return grains
+
 def os_data():
     '''
-    Return grins pertaining to the operating system
+    Return grains pertaining to the operating system
     '''
     grains = {}
     grains.update(_kernel())
