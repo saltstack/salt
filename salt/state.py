@@ -29,6 +29,7 @@ class State(object):
         self.functions = salt.loader.minion_mods(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
+        self.running = {}
 
     def verify_data(self, data):
         '''
@@ -176,6 +177,70 @@ class State(object):
                'comment': ''}
         cdata = self.format_call(data)
         return self.states[cdata['full']](*cdata['args'])
+
+    def call_chunks(self, chunks):
+        '''
+        Itterate over a list of chunks and call them, checking for requires.
+        '''
+        running = {}
+        for low in chunks:
+            running = self.call_chunk(low, running, chunks)
+        return running
+
+    def check_requires(self, low, running, chunks):
+        '''
+        Look into the running data to see if the requirement has been met
+        '''
+        if not low.has_key('require'):
+            return 'met'
+        reqs = []
+        status = 'unmet'
+        for req in low['require']:
+            for chunk in chunks:
+                if chunk['name'] == req[req.keys()[0]]:
+                    if chunk['state'] == req.keys()[0]:
+                        reqs.append(chunk)
+        fun_stats = []
+        for req in reqs:
+            tag = req['state'] + '.' + req['name'] + '.' + req['fun']
+            if not running.has_key(tag):
+                fun_stats.append('unmet')
+            else:
+                fun_stats.append('met' if running[tag]['result'] else 'fail')
+        for stat in fun_stats:
+            if stat == 'unmet':
+                return stat
+            elif stat == 'fail':
+                return stat
+        return 'met'
+
+    def call_chunk(self, low, running, chunks):
+        '''
+        Check if a chunk has any requires, execute the requires and then the
+        chunk
+        '''
+        tag = low['state'] + '.' + low['name'] + '.' + low['fun']
+        if low.has_key('require'):
+            status = self.check_requires(low, running, chunks)
+            if status == 'unmet':
+                reqs = []
+                for req in low['require']:
+                    for chunk in chunks:
+                        if chunk['name'] == req[req.keys()[0]]:
+                            if chunk['state'] == req.keys()[0]:
+                                reqs.append(chunk)
+                for chunk in reqs:
+                    running = self.call_chunk(chunk, running, chunks)
+                running = self.call_chunk(low, running, chunks)
+            elif status == 'met':
+                running[tag] = call(low)
+            elif status == 'fail':
+                running[tag] = {'changes': None,
+                                'result': False,
+                                'comment': 'One or more require failed'}
+        else:
+            running[tag] = call(low)
+        return running
 
     def call_high(self, high):
         '''
