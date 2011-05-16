@@ -29,7 +29,6 @@ class State(object):
         self.functions = salt.loader.minion_mods(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
-        self.running = {}
 
     def verify_data(self, data):
         '''
