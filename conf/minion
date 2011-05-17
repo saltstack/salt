@@ -36,6 +36,20 @@
 #states_dirs: []
 #render_dirs: []
 
+#####    State Management Settings    #####
+###########################################
+# The state management system executes all of the state templates on the minion
+# to enable more granular control of system state management. The type of
+# template and serialization used for state management needs to be configured
+# on the minion, the default renderer is yaml_jinja. This is a yaml file
+# rendered from a jinja template, the available options are:
+# yaml_jinja
+# yaml_mako
+# json_jinja
+# json_mako
+#
+#renderer: yaml_jinja
+
 ######        Security settings       #####
 ###########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
