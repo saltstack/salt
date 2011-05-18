@@ -231,13 +231,13 @@ class State(object):
                     running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'met':
-                running[tag] = call(low)
+                running[tag] = self.call(low)
             elif status == 'fail':
                 running[tag] = {'changes': None,
                                 'result': False,
                                 'comment': 'One or more require failed'}
         else:
-            running[tag] = call(low)
+            running[tag] = self.call(low)
         return running
 
     def call_high(self, high):
@@ -250,11 +250,7 @@ class State(object):
         errors = self.verify_chunks(chunks)
         if errors:
             return errors
-        for chunk in chunks:
-            ret = self.call(chunk)
-            print ret
-            rets.append(ret)
-        return rets
+        return self.call_chunks(chunks)
 
     def call_template(self, template):
         '''
