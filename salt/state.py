@@ -250,9 +250,7 @@ class State(object):
         chunks = self.compile_high_data(high)
         errors = self.verify_chunks(chunks)
         if errors:
-            for err in errors:
-                sys.stderr.write(err + '\n')
-                sys.exit(2)
+            return errors
         for chunk in chunks:
             ret = self.call(chunk)
             print ret
