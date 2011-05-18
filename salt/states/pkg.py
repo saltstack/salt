@@ -8,18 +8,20 @@ def installed(name):
     operation and a bool if the job was sucessfull
     '''
     if __salt__['pkg.version'](name):
-        return {'changes': {},
+        return {'name': name,
+                'changes': {},
                 'result': True,
-                'comment': 'The package is already installed'}
+                'comment': 'Package ' + name + ' is already installed'}
     changes = __salt__['pkg.install'](name)
     if not changes:
-        return {'changes': changes,
+        return {'name': name,
+                'changes': changes,
                 'result': False,
-                'comment': 'The package failed to install'}
+                'comment': 'Package ' + name + ' failed to install'}
     return {'name': name,
             'changes': changes,
             'result': True,
-            'comment': 'Package installed'}
+            'comment': 'Package ' + name + ' installed'}
 
 def latest(name):
     '''
