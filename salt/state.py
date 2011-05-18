@@ -52,8 +52,8 @@ class State(object):
             deflen = 0
             if type(aspec[0]) == type(list()):
                 arglen = len(aspec[0])
-            if type(aspec[3]) == type(list()):
-                arglen = len(aspec[3])
+            if type(aspec[3]) == type(tuple()):
+                deflen = len(aspec[3])
             for ind in range(arglen - deflen):
                 if not data.has_key(aspec[0][ind]):
                     errors.append('Missing paramater ' + aspec[0][ind]\
@@ -91,13 +91,12 @@ class State(object):
         deflen = 0
         if type(aspec[0]) == type(list()):
             arglen = len(aspec[0])
-        if type(aspec[3]) == type(list()):
-            arglen = len(aspec[3])
+        if type(aspec[3]) == type(tuple()):
+            deflen = len(aspec[3])
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
-            def_minus = arglen - ind
-            if deflen - def_minus > -1:
-                minus = def_minus + 1
+            minus = arglen - ind
+            if deflen - minus > -1:
                 kwargs[aspec[0][ind]] = aspec[3][-minus]
         for arg in kwargs:
             if data.has_key(arg):
