@@ -6,13 +6,12 @@ emacs:
     - installed
 nano:
   pkg:
-    - installed
+    - latest
 salt:
   pkg: 
     - installed
   service: 
     - running
-    - enabled
     - require: 
       - pkg: vim
       - pkg: salt
@@ -20,13 +19,9 @@ salt:
     - names: 
       - salt-master
       - salt-minion
-butter:
-  pkg:
-    - installed
 cron:
   pkg:
     - installed
   service:
     - running
-    - enabled
     - name: cronie

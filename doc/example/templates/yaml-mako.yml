@@ -1,4 +1,4 @@
-% for item in 'vim', 'emacs' ,'nano' ,'butter':
+% for item in 'vim', 'emacs', 'nano':
 ${item}:
   pkg:
     - installed
@@ -8,14 +8,16 @@ salt:
     - installed
   service: 
     - running
-    - enabled
+    - require:
+      - pkg: salt
     - names: 
       - salt-master
       - salt-minion
-cron:
+cronie:
   pkg:
     - installed
   service:
     - running
-    - enabled
-    - name: cronie
+    - require:
+      - pkg: cronie
+    - name: crond
