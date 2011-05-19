@@ -328,6 +328,14 @@ class MWorker(multiprocessing.Process):
             self._send_cluster()
         return ret
 
+    def _serve_file(self, load):
+        '''
+        Return a chunk from a file based on the data recieved
+        '''
+        if not load.has_key('path')\
+                or not load.has_key('loc'):
+            return False
+
     def _return(self, load):
         '''
         Handle the return data sent from the minions
