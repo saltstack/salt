@@ -1,6 +1,6 @@
 {
   {% for item in 'vim','emacs','nano','butter' %}
-  {{ item }}: { "pkg": ["installed"] },
+  "{{ item }}": { "pkg": ["installed"] },
   {% endfor %}
   "salt": { 
     "pkg": ["installed"],

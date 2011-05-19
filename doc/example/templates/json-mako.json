@@ -1,5 +1,5 @@
 {
-  % for item in vim,emacs,nano,butter:
+  % for item in 'vim', 'emacs', 'nano', 'butter':
   "${item}": { "pkg": ["installed"] },
   % endfor
   "salt": { 

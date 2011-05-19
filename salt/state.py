@@ -52,8 +52,8 @@ class State(object):
             deflen = 0
             if type(aspec[0]) == type(list()):
                 arglen = len(aspec[0])
-            if type(aspec[3]) == type(list()):
-                arglen = len(aspec[3])
+            if type(aspec[3]) == type(tuple()):
+                deflen = len(aspec[3])
             for ind in range(arglen - deflen):
                 if not data.has_key(aspec[0][ind]):
                     errors.append('Missing paramater ' + aspec[0][ind]\
@@ -91,13 +91,12 @@ class State(object):
         deflen = 0
         if type(aspec[0]) == type(list()):
             arglen = len(aspec[0])
-        if type(aspec[3]) == type(list()):
-            arglen = len(aspec[3])
+        if type(aspec[3]) == type(tuple()):
+            deflen = len(aspec[3])
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
-            def_minus = arglen - ind
-            if deflen - def_minus > -1:
-                minus = def_minus + 1
+            minus = arglen - ind
+            if deflen - minus > -1:
                 kwargs[aspec[0][ind]] = aspec[3][-minus]
         for arg in kwargs:
             if data.has_key(arg):
@@ -232,13 +231,13 @@ class State(object):
                     running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'met':
-                running[tag] = call(low)
+                running[tag] = self.call(low)
             elif status == 'fail':
                 running[tag] = {'changes': None,
                                 'result': False,
                                 'comment': 'One or more require failed'}
         else:
-            running[tag] = call(low)
+            running[tag] = self.call(low)
         return running
 
     def call_high(self, high):
@@ -250,14 +249,8 @@ class State(object):
         chunks = self.compile_high_data(high)
         errors = self.verify_chunks(chunks)
         if errors:
-            for err in errors:
-                sys.stderr.write(err + '\n')
-                sys.exit(2)
-        for chunk in chunks:
-            ret = self.call(chunk)
-            print ret
-            rets.append(ret)
-        return rets
+            return errors
+        return self.call_chunks(chunks)
 
     def call_template(self, template):
         '''
