@@ -56,6 +56,7 @@ def get_file(path, dest):
         if not data:
             break
         fn_.write(data)
+    return dest
 
 def cache_files(paths):
     '''
@@ -68,6 +69,7 @@ def cache_files(paths):
     socket = context.socket(zmq.REQ)
     socket.connect(__opts__['master_uri'])
     payload = {'enc': 'aes'}
+    ret = []
     for path in paths:
         dest = os.path.join(__opts__['cachedir'], 'files', path)
         dirname = os.path.dirname(dest)
@@ -84,6 +86,8 @@ def cache_files(paths):
             if not data:
                 break
             fn_.write(data)
+        ret.append(path)
+    return ret
 
 def cache_file(path):
     '''
@@ -109,6 +113,7 @@ def cache_file(path):
         if not data:
             break
         fn_.write(data)
+    return path
 
 def hash_file(path):
     '''
