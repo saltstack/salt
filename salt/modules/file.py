@@ -25,6 +25,23 @@ def group_to_gid(group):
     except KeyError:
         return ''
 
+def get_gid(path):
+    '''
+    Return the user that owns a given file
+    '''
+    if not os.path.isfile(path):
+        return False
+    return os.stat(path).st_gid
+
+def get_group(path):
+    '''
+    Return the user that owns a given file
+    '''
+    gid = get_gid(path)
+    if not gid:
+        return False
+    return gid_to_user(gid)
+
 def uid_to_user(uid):
     '''
     Convert a uid to a user name
