@@ -332,9 +332,16 @@ class MWorker(multiprocessing.Process):
         '''
         Return a chunk from a file based on the data recieved
         '''
-        if not load.has_key('path')\
-                or not load.has_key('loc'):
+        if not load.has_key('path') or not load.has_key('loc'):
             return False
+        if path.startswith('/'):
+            path = load['path'][1:]
+        path = os.path.join(self.opts['file_root'], path)
+        if not os.path.isfile(fn_):
+            return ''
+        fn_ = open(path, 'rb')
+        fn_.seek(load['loc'])
+        return self.crypticle.dumps(fn_.read(opts['file_buffer_size']))
 
     def _return(self, load):
         '''
