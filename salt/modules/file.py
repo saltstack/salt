@@ -41,7 +41,7 @@ def get_group(path):
     gid = get_gid(path)
     if not gid:
         return False
-    return gid_to_user(gid)
+    return gid_to_group(gid)
 
 def uid_to_user(uid):
     '''
