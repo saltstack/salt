@@ -3,6 +3,10 @@ Manage information about files on the minion, set/read user, group, and mode
 data
 '''
 
+# TODO
+# We should add the capability to do u+r type operations here some time in the
+# future
+
 import os
 import grp
 import pwd
@@ -114,6 +118,21 @@ def chown(path, user, group):
     if err:
         return err
     return os.chown(path, uid, gid)
+
+def chgrp(path, group):
+    '''
+    Change the group of a file
+    '''
+    gid = group_to_gid(group)
+    err = ''
+    if not gid:
+        err += 'Group does not exist\n'
+    if not os.path.isfile(path):
+        err += 'File not found'
+    if err:
+        return err
+    user = get_user(path)
+    return chown(path, user, group)
 
 def get_sum(path, form='md5'):
     '''
