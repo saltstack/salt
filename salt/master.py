@@ -5,6 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 # Import python modules
 import os
 import shutil
+import hashlib
 import threading
 import multiprocessing
 import time
@@ -342,6 +343,19 @@ class MWorker(multiprocessing.Process):
         fn_ = open(path, 'rb')
         fn_.seek(load['loc'])
         return self.crypticle.dumps(fn_.read(opts['file_buffer_size']))
+
+    def _file_hash(self, load):
+        '''
+        Return a file hash, the hash type is set in the master config file
+        '''
+        if not load.has_key('path'):
+            return False
+        path = os.path.join(self.opts['file_root'], load['path'])
+        if not os.path.isfile(path):
+            return False
+        hsum = getattr(hashlib, self.opts['hash_type'])(open(path,
+            'rb').read()).hexdigest()
+        return self.crypticle.dumps(hsum)
 
     def _return(self, load):
         '''
