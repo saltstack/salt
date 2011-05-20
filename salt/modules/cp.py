@@ -57,7 +57,7 @@ def get_file(path, dest):
             break
         fn_.write(data)
 
-def get_files(paths):
+def cache_files(paths):
     '''
     Used to gather many files from the master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrived from the
@@ -84,3 +84,28 @@ def get_files(paths):
             if not data:
                 break
             fn_.write(data)
+
+def cache_file(path):
+    '''
+    Used to cache a single file in the local salt-master file cache.
+    '''
+    auth = salt.crypt.SAuth(__opts__)
+    context = zmq.Context()
+    socket = context.socket(zmq.REQ)
+    socket.connect(__opts__['master_uri'])
+    payload = {'enc': 'aes'}
+    dest = os.path.join(__opts__['cachedir'], 'files', path)
+    dirname = os.path.dirname(dest)
+    if not os.path.isdir(dirname):
+        os.makedirs(dirname)
+    fn_ = open(dest, 'w+')
+    load = {'path': path,
+            'cmd': '_serve_file'}
+    while True:
+        load['loc'] = fn_.tell()
+        payload['load'] = self.crypticle.dumps(load)
+        socket.send_pyobj(payload)
+        data = auth.crypticle.loads(socket.recv())
+        if not data:
+            break
+        fn_.write(data)
