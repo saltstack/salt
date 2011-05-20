@@ -25,6 +25,24 @@ def group_to_gid(group):
     except KeyError:
         return ''
 
+def uid_to_user(uid):
+    '''
+    Convert a uid to a user name
+    '''
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except KeyError:
+        return ''
+
+def user_to_uid(user):
+    '''
+    Convert user name to a gid
+    '''
+    try:
+        return pwd.getpwnam(user).pw_uid
+    except KeyError:
+        return ''
+
 def get_mode(path):
     '''
     Return the mode of a file
