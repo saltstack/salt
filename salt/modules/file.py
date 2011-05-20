@@ -98,6 +98,23 @@ def set_mode(path, mode):
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
+def chown(path, user, group):
+    '''
+    Chown a file, pass the filem the desired user and group
+    '''
+    uid = user_to_uid(user)
+    gid = group_to_gid(group)
+    err = ''
+    if not uid:
+        err += 'User does not exist\n'
+    if not gid:
+        err += 'Group does not exist\n'
+    if not os.path.isfile(path):
+        err += 'File not found'
+    if err:
+        return err
+    return os.chown(path, uid, gid)
+
 def get_sum(path, form='md5'):
     '''
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
