@@ -39,7 +39,23 @@ def get_file(path, dest):
     Used to get a single file from the salt master
     '''
     auth = salt.crypt.SAuth(__opts__)
-
+    context = zmq.Context()
+    socket = context.socket(zmq.REQ)
+    socket.connect(__opts__['master_uri'])
+    payload = {'enc': 'aes'}
+    if not os.path.isdir(os.path.dirname(dest)):
+        return 'Destination unavailable'
+    fn_ = open(dest, 'w+')
+    load = {'path': path,
+            'cmd': '_serve_file'}
+    while True:
+        load['loc'] = fn_.tell()
+        payload['load'] = self.crypticle.dumps(load)
+        socket.send_pyobj(payload)
+        data = auth.crypticle.loads(socket.recv())
+        if not data:
+            break
+        fn_.write(data)
 
 def get_files(paths):
     '''
