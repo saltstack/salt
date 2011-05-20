@@ -43,6 +43,23 @@ def user_to_uid(user):
     except KeyError:
         return ''
 
+def get_uid(path):
+    '''
+    Return the user that owns a given file
+    '''
+    if not os.path.isfile(path):
+        return False
+    return os.stat(path).st_uid
+
+def get_user(path):
+    '''
+    Return the user that owns a given file
+    '''
+    uid = get_uid(path)
+    if not uid:
+        return False
+    return uid_to_user(uid)
+
 def get_mode(path):
     '''
     Return the mode of a file
