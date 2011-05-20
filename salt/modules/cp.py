@@ -109,3 +109,16 @@ def cache_file(path):
         if not data:
             break
         fn_.write(data)
+
+def hash_file(path):
+    '''
+    Return the hash of a file on the server
+    '''
+    auth = salt.crypt.SAuth(__opts__)
+    context = zmq.Context()
+    socket = context.socket(zmq.REQ)
+    socket.connect(__opts__['master_uri'])
+    payload = {'enc': 'aes'}
+    payload['load'] = self.crypticle.dumps({'path': path})
+    socket.send_pyobj(payload)
+    return auth.crypticle.loads(socket.recv())
