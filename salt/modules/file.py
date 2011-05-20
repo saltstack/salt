@@ -6,6 +6,7 @@ data
 import os
 import grp
 import pwd
+import hashlib
 
 def gid_to_group(gid):
     '''
@@ -97,4 +98,14 @@ def set_mode(path, mode):
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
-
+def get_sum(path, form='md5'):
+    '''
+    Return the sum for the given file, default is md5, sha1, sha224, sha256,
+    sha384, sha512 are supported
+    '''
+    if not os.path.isfile(path):
+        return 'File not found'
+    try:
+        return getattr(hashlib, form)(open(path, 'rb')).hexdigest()
+    except:
+        return 'Hash ' + form + ' not supported'
