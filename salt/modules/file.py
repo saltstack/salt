@@ -3,15 +3,27 @@ Manage information about files on the minion, set/read user, group, and mode
 data
 '''
 
+import os
+import grp
+import pwd
+
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
     '''
+    try:
+        return grp.getgrgid(gid).gr_name
+    except KeyError:
+        return ''
 
 def group_to_gid(group):
     '''
     Convert the group to the gid on this system
     '''
+    try:
+        return grp.getgrnam(group).gr_gid
+    except KeyError:
+        return ''
 
 def get_mode(path):
     '''
