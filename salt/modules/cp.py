@@ -5,7 +5,7 @@ Minion side functions for salt-cp
 import os
 
 # Import salt libs
-import salt.simpleauth
+import salt.crypt
 
 def recv(files, dest):
     '''
@@ -34,11 +34,11 @@ def recv(files, dest):
 
     return ret
 
-#def get_file(path, dest):
-#    '''
-#    Used to get a single file from the salt master
-#    '''
-#    auth = salt.simpleauth.SAuth(__opts__)
+def get_file(path, dest):
+    '''
+    Used to get a single file from the salt master
+    '''
+    auth = salt.crypt.SAuth(__opts__)
 
 
 def get_files(paths):
@@ -47,7 +47,7 @@ def get_files(paths):
     saved in the minion cachedir reflective to the paths retrived from the
     master.
     '''
-    auth = salt.simpleauth.SAuth(__opts__)
+    auth = salt.crypt.SAuth(__opts__)
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
     socket.connect(__opts__['master_uri'])
