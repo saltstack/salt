@@ -24,7 +24,7 @@ def recv(files, dest):
         elif os.path.isdir(os.path.dirname(dest)):
             final = dest
         else:
-            return 'Destination not available'
+            return 'Destination unavailable'
 
         try:
             open(final, 'w+').write(data)
