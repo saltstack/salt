@@ -121,7 +121,7 @@ def cache_file(path):
             if not data:
                 break
             fn_.write(data)
-        return path
+        return dest
     else:
         return False
 
