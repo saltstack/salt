@@ -353,9 +353,11 @@ class MWorker(multiprocessing.Process):
         path = os.path.join(self.opts['file_root'], load['path'])
         if not os.path.isfile(path):
             return False
-        hsum = getattr(hashlib, self.opts['hash_type'])(open(path,
+        ret = {}
+        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(open(path,
             'rb').read()).hexdigest()
-        return self.crypticle.dumps(hsum)
+        ret['hash_type'] = self.opts['hash_type']
+        return self.crypticle.dumps(ret)
 
     def _return(self, load):
         '''
