@@ -38,6 +38,9 @@ def get_file(path, dest):
     '''
     Used to get a single file from the salt master
     '''
+    if not path.startswith('salt://'):
+        return False
+    path = path[:7]
     auth = salt.crypt.SAuth(__opts__)
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
@@ -71,6 +74,9 @@ def cache_files(paths):
     payload = {'enc': 'aes'}
     ret = []
     for path in paths:
+        if not path.startswith('salt;//'):
+            return False
+    for path in paths:
         dest = os.path.join(__opts__['cachedir'], 'files', path)
         dirname = os.path.dirname(dest)
         if not os.path.isdir(dirname):
@@ -93,27 +99,31 @@ def cache_file(path):
     '''
     Used to cache a single file in the local salt-master file cache.
     '''
-    auth = salt.crypt.SAuth(__opts__)
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect(__opts__['master_uri'])
-    payload = {'enc': 'aes'}
-    dest = os.path.join(__opts__['cachedir'], 'files', path)
-    dirname = os.path.dirname(dest)
-    if not os.path.isdir(dirname):
-        os.makedirs(dirname)
-    fn_ = open(dest, 'w+')
-    load = {'path': path,
-            'cmd': '_serve_file'}
-    while True:
-        load['loc'] = fn_.tell()
-        payload['load'] = self.crypticle.dumps(load)
-        socket.send_pyobj(payload)
-        data = auth.crypticle.loads(socket.recv())
-        if not data:
-            break
-        fn_.write(data)
-    return path
+    if path.startswith('salt://'):
+        path = path[7:]
+        auth = salt.crypt.SAuth(__opts__)
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(__opts__['master_uri'])
+        payload = {'enc': 'aes'}
+        dest = os.path.join(__opts__['cachedir'], 'files', path)
+        dirname = os.path.dirname(dest)
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+        fn_ = open(dest, 'w+')
+        load = {'path': path,
+                'cmd': '_serve_file'}
+        while True:
+            load['loc'] = fn_.tell()
+            payload['load'] = self.crypticle.dumps(load)
+            socket.send_pyobj(payload)
+            data = auth.crypticle.loads(socket.recv())
+            if not data:
+                break
+            fn_.write(data)
+        return path
+    else:
+        return False
 
 def hash_file(path):
     '''
