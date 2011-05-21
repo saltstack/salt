@@ -117,13 +117,24 @@ def cache_file(path):
 
 def hash_file(path):
     '''
-    Return the hash of a file on the server
+    Return the hash of a file, to get the hash of a file on the
+    salt master file server prepend the path with salt://<file on server>
+    otherwise, prepend the file with / for a local file.
+
+    CLI Example:
     '''
-    auth = salt.crypt.SAuth(__opts__)
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect(__opts__['master_uri'])
-    payload = {'enc': 'aes'}
-    payload['load'] = self.crypticle.dumps({'path': path})
-    socket.send_pyobj(payload)
-    return auth.crypticle.loads(socket.recv())
+    if path.startswith('salt://'):
+        path = path[7:]
+        auth = salt.crypt.SAuth(__opts__)
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(__opts__['master_uri'])
+        payload = {'enc': 'aes'}
+        payload['load'] = self.crypticle.dumps({'path': path})
+        socket.send_pyobj(payload)
+        return auth.crypticle.loads(socket.recv())
+    elif os.path.isfile(path):
+        ret = {'hash_type': 'md5'}
+        ret['hsum'] = hashlib.md5(open(path, 'rb').read()).hexdigest()
+        return ret
+    return False
