@@ -100,7 +100,7 @@ class State(object):
                 kwargs[aspec[0][ind]] = aspec[3][-minus]
         for arg in kwargs:
             if data.has_key(arg):
-                kwargs[arg] = data['arg']
+                kwargs[arg] = data[arg]
         for arg in aspec[0]:
             if kwargs.has_key(arg):
                 ret['args'].append(kwargs[arg])
