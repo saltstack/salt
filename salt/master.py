@@ -335,14 +335,15 @@ class MWorker(multiprocessing.Process):
         '''
         if not load.has_key('path') or not load.has_key('loc'):
             return False
+        path = load['path']
         if path.startswith('/'):
             path = load['path'][1:]
         path = os.path.join(self.opts['file_root'], path)
-        if not os.path.isfile(fn_):
+        if not os.path.isfile(path):
             return ''
         fn_ = open(path, 'rb')
         fn_.seek(load['loc'])
-        return self.crypticle.dumps(fn_.read(opts['file_buffer_size']))
+        return self.crypticle.dumps(fn_.read(self.opts['file_buffer_size']))
 
     def _file_hash(self, load):
         '''
