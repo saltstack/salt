@@ -91,9 +91,11 @@ class Auth(object):
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            self.opts['logger'].debug('Loaded minion key: ' + self.rsa_path)
+            if self.opts.has_key('logger'):
+                self.opts['logger'].debug('Loaded minion key: ' + self.rsa_path)
         except:
-            self.opts['logger'].info('Generating minion key: ' + self.rsa_path)
+            if self.opts.has_key('logger'):
+                self.opts['logger'].info('Generating minion key: ' + self.rsa_path)
             gen = RSA.gen_key(2048, 1)
             gen.save_key(self.rsa_path, callback=foo_pass)
             pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
@@ -126,7 +128,8 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        self.opts['logger'].info('Decypting the current master AES key')
+        if self.opts.has_key('logger'):
+            self.opts['logger'].info('Decypting the current master AES key')
         key = self.get_priv_key()
         return key.private_decrypt(aes, 4)
     
@@ -146,17 +149,19 @@ class Auth(object):
             local_master_pub = open(m_pub_fn).read()
             if not master_pub == local_master_pub:
                 # This is not the last master we connected to
-                self.opts['logger'].error('The master key has changed, the'\
-                        + ' salt master could have been subverted, verify'\
-                        + ' salt master\'s public key')
+                if self.opts.has_key('logger'):
+                    self.opts['logger'].error('The master key has changed, the'\
+                            + ' salt master could have been subverted, verify'\
+                            + ' salt master\'s public key')
                 return False
         else:
             open(m_pub_fn, 'w+').write(master_pub)
         pub = RSA.load_pub_key(tmp_pub)
         if pub.public_decrypt(token, 5) == 'salty bacon':
             return True
-        self.opts['logger'].error('The salt master has failed verification'\
-                + ' for an unknown reason, verify your salt keys')
+        if self.opts.has_key('logger'):
+            self.opts['logger'].error('The salt master has failed verification'\
+                    + ' for an unknown reason, verify your salt keys')
         return False
 
     def sign_in(self):
@@ -181,13 +186,15 @@ class Auth(object):
                         + ' and restart this minion.\nOr restart the Salt'\
                         + ' Master in open mode to clean out the keys. The'\
                         + ' Salr Minion will now exit.'
-                    self.opts['logger'].critical(err)
+                    if self.opts.has_key('logger'):
+                        self.opts['logger'].critical(err)
                     sys.exit(42)
                 else:
                     err = 'The Salt Master has cached the public key for'\
                         + ' this node, this salt minion will wait for 10'\
                         + ' seconds before attempting to re-authenticate'
-                    self.opts['logger'].error(err)
+                    if self.opts.has_key('loger'):
+                        self.opts['logger'].error(err)
                     return 'retry'
         if not self.verify_master(payload['pub_key'], payload['token']):
             m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
@@ -196,7 +203,8 @@ class Auth(object):
                 + ' Salt Master, then remove the master public key and'\
                 + ' restart the Salt Minion.\nThe master public key can be'\
                 + ' found at:\n' + m_pub_fn
-            self.opts['logger'].critical(err)
+            if self.opts.has_key('logger'):
+                self.opts['logger'].critical(err)
             sys.exit(42)
         auth['aes'] = self.decrypt_aes(payload['aes'])
         auth['publish_port'] = payload['publish_port']
