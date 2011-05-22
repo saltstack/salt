@@ -343,7 +343,8 @@ class MWorker(multiprocessing.Process):
             return ''
         fn_ = open(path, 'rb')
         fn_.seek(load['loc'])
-        return self.crypticle.dumps(fn_.read(self.opts['file_buffer_size']))
+        data = {'data': fn_.read(self.opts['file_buffer_size'])}
+        return self.crypticle.dumps(data)
 
     def _file_hash(self, load):
         '''

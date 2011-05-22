@@ -120,10 +120,10 @@ def cache_file(path):
             load['loc'] = fn_.tell()
             payload['load'] = auth.crypticle.dumps(load)
             socket.send_pyobj(payload)
-            data = auth.crypticle.dumps(socket.recv())
-            if not data:
+            data = auth.crypticle.loads(socket.recv())
+            if not data['data']:
                 break
-            fn_.write(data)
+            fn_.write(data['data'])
         return dest
     else:
         return False
