@@ -77,7 +77,7 @@ def cache_files(paths):
     payload = {'enc': 'aes'}
     ret = []
     for path in paths:
-        if not path.startswith('salt;//'):
+        if not path.startswith('salt://'):
             return False
     for path in paths:
         dest = os.path.join(__opts__['cachedir'], 'files', path)
