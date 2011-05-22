@@ -7,6 +7,9 @@ import os
 # Import salt libs
 import salt.crypt
 
+# Import Third Party Libs
+import zmq
+
 def recv(files, dest):
     '''
     Used with salt-cp, pass the files dict, and the destination.
@@ -115,7 +118,7 @@ def cache_file(path):
                 'cmd': '_serve_file'}
         while True:
             load['loc'] = fn_.tell()
-            payload['load'] = self.crypticle.dumps(load)
+            payload['load'] = auth.crypticle.dumps(load)
             socket.send_pyobj(payload)
             data = auth.crypticle.loads(socket.recv())
             if not data:
