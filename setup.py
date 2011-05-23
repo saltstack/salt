@@ -5,14 +5,14 @@ The setup script for salt
 import os
 from distutils.core import setup
 from distutils.extension import Extension
-from distutils.sysconfig import get_python_lib
+from distutils.sysconfig import get_python_lib, PREFIX
 
 NAME = 'salt'
 VER = '0.8.7'
 DESC = 'Portable, distrubuted, remote execution system'
 
 mod_path = os.path.join(get_python_lib(), 'salt/modules/')
-doc_path = os.path.join('/usr/share/doc/', NAME + '-' + VER)
+doc_path = os.path.join(PREFIX, 'share/doc/', NAME + '-' + VER)
 example_path = os.path.join(doc_path, 'examples')
 template_path = os.path.join(example_path, 'templates')
 
@@ -51,7 +51,7 @@ setup(name=NAME,
                'scripts/salt-cp',
                'scripts/salt-call',
                'scripts/salt'],
-      data_files=[('/etc/salt',
+      data_files=[('etc/salt',
                     ['conf/master',
                      'conf/minion',
                     ]),
