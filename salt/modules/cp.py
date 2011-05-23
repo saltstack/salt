@@ -144,9 +144,11 @@ def hash_file(path):
         socket = context.socket(zmq.REQ)
         socket.connect(__opts__['master_uri'])
         payload = {'enc': 'aes'}
-        payload['load'] = self.crypticle.dumps({'path': path})
+        load = {'path': path,
+                'cmd': '_file_hash'}
+        payload['load'] = auth.crypticle.dumps(load)
         socket.send_pyobj(payload)
-        return auth.crypticle.loads(socket.recv())
+        return auth.crypticle.loads(socket.recv_pyobj())
     elif os.path.isfile(path):
         ret = {'hash_type': 'md5'}
         ret['hsum'] = hashlib.md5(open(path, 'rb').read()).hexdigest()
