@@ -188,7 +188,7 @@ def managed(name,
         # Get the data about the file
         luser = __salt__['file.get_user'](name)
         lgroup = __salt__['file.get_group'](name)
-        lmode = __salt__['file.get_mode'][name]
+        lmode = __salt__['file.get_mode'](name)
         # Set up user, group and mode for the file
         if user:
             changes['user'] = user
