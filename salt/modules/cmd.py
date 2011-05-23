@@ -42,6 +42,15 @@ def run_stderr(cmd):
             shell=True,
             stderr=subprocess.PIPE).communicate()[0]
 
+def retcode(cmd):
+    '''
+    Execute a shell command and return the command's return code.
+
+    CLI Example:
+    salt '*' cmd.retcode "file /bin/bash"
+    '''
+    return subprocess.call(cmd, shell=True)
+
 def exec_code(lang, code):
     '''
     Pass in two strings, the first naming the executable language, aka -
