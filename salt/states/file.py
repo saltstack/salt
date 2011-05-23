@@ -20,7 +20,7 @@ def _is_bin(path):
     Return True if a file is a bin, just checks for NULL char, this should be
     expanded to reflect how git checks for bins
     '''
-    if open(path, 'rb').read(2048).count('\0') != -1:
+    if open(path, 'rb').read(2048).count('\0'):
         return True
     return False
 
@@ -88,12 +88,14 @@ def managed(name,
     '''
     Manage a given file
     '''
+    if mode:
+        mode = str(mode)
     changes = {}
     # Check changes if the target file exists
     if os.path.isfile(name):
         # Check sums
         source_sum = __salt__['cp.hash_file'](source)
-        name_sum = getattr(hashlib, source_sum['hash_type'])(open(path,
+        name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
             'rb').read()).hexdigest()
         if not source_sum:
             return {'name': name,
@@ -133,7 +135,7 @@ def managed(name,
         # Check permissions
         luser = __salt__['file.get_user'](name)
         lgroup = __salt__['file.get_group'](name)
-        lmode = __salt__['file.get_mode'][name]
+        lmode = __salt__['file.get_mode'](name)
         # Run through the perms and detect and apply the needed changes
         if user:
             if user != luser:
@@ -152,8 +154,10 @@ def managed(name,
                 if not __opts__['test']:
                     __salt__['file.set_mode'](name, mode)
         comment = 'File ' + name + ' updated'
-        if not __opts__['test']:
+        if __opts__['test']:
             comment = 'File ' + name + ' not updated'
+        elif not changes:
+            comment = 'File ' + name + ' is in the correct state'
         return {'name': name,
                 'changes': changes,
                 'result': True,
@@ -204,9 +208,9 @@ def managed(name,
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
         # All done, apply the comment and get out of here
-        comment = 'File ' + name + ' updated'
+        comment = 'File ' + name + ' not updated'
         if not __opts__['test']:
-            comment = 'File ' + name + ' not updated'
+            comment = 'File ' + name + ' updated'
         return {'name': name,
                 'changes': changes,
                 'result': True,
