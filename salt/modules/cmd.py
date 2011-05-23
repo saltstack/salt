@@ -45,6 +45,25 @@ def run_stderr(cmd, cwd='/root'):
             cwd=cwd,
             stderr=subprocess.PIPE).communicate()[0]
 
+def run_comps(cmd, cwd='/root'):
+    '''
+    Execute the passed command and return a dict of return data
+
+    CLI Example:
+    salt '*' cmd.run_comps "ls -l | grep foo | awk '{print $2}'"
+    '''
+    ret = {}
+    proc =  subprocess.Popen(cmd,
+            shell=True,
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    out = proc.communicate()
+    ret['stdout'] = out[0]
+    ret['stderr'] = out[1]
+    ret['retcode'] = out.returncode
+    return ret
+
 def retcode(cmd, cwd='/root'):
     '''
     Execute a shell command and return the command's return code.
