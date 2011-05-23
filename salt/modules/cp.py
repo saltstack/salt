@@ -58,7 +58,7 @@ def get_file(path, dest):
         load['loc'] = fn_.tell()
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
-        data = auth.crypticle.dumps(socket.recv())
+        data = auth.crypticle.loads(socket.recv())
         if not data:
             break
         fn_.write(data)
@@ -120,10 +120,11 @@ def cache_file(path):
             load['loc'] = fn_.tell()
             payload['load'] = auth.crypticle.dumps(load)
             socket.send_pyobj(payload)
-            data = auth.crypticle.loads(socket.recv())
-            if not data['data']:
+            data = auth.crypticle.loads(socket.recv_pyobj())
+            print data
+            if not data:
                 break
-            fn_.write(data['data'])
+            fn_.write(data)
         return dest
     else:
         return False
@@ -145,7 +146,7 @@ def hash_file(path):
         payload = {'enc': 'aes'}
         payload['load'] = self.crypticle.dumps({'path': path})
         socket.send_pyobj(payload)
-        return auth.crypticle.dumps(socket.recv())
+        return auth.crypticle.loads(socket.recv())
     elif os.path.isfile(path):
         ret = {'hash_type': 'md5'}
         ret['hsum'] = hashlib.md5(open(path, 'rb').read()).hexdigest()
