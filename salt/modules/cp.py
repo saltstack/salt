@@ -58,7 +58,7 @@ def get_file(path, dest):
         load['loc'] = fn_.tell()
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
-        data = auth.crypticle.loads(socket.recv())
+        data = auth.crypticle.loads(socket.recv_pyobj())
         if not data:
             break
         fn_.write(data)
@@ -91,7 +91,7 @@ def cache_files(paths):
             load['loc'] = fn_.tell()
             payload['load'] = self.crypticle.dumps(load)
             socket.send_pyobj(payload)
-            data = auth.crypticle.dumps(socket.recv())
+            data = auth.crypticle.dumps(socket.recv_pyobj())
             if not data:
                 break
             fn_.write(data)
