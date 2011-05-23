@@ -49,6 +49,9 @@
 # json_mako
 #
 #renderer: yaml_jinja
+#
+# Test allows for the state runs to only be test runs
+#test: False
 
 ######        Security settings       #####
 ###########################################

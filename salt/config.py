@@ -34,6 +34,7 @@ def minion_config(path):
             'log_file': '/var/log/salt/minion',
             'log_level': 'WARNING',
             'out_level': 'ERROR',
+            'test': False,
             }
 
     if os.path.isfile(path):
