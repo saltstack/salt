@@ -124,6 +124,7 @@ def set_mode(path, mode):
     CLI Example:
     salt '*' file.set_mode /etc/passwd 0644
     '''
+    mode = str(mode)
     if not os.path.isfile(path):
         return 'File not found'
     try:
