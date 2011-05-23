@@ -8,7 +8,7 @@ access to the master root execution access to all salt minions
 import subprocess
 import tempfile
 
-def run(cmd):
+def run(cmd, cwd='/root'):
     '''
     Execute the passed command and return the output as a string
 
@@ -17,10 +17,11 @@ def run(cmd):
     '''
     return subprocess.Popen(cmd,
             shell=True,
+            cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
 
-def run_stdout(cmd):
+def run_stdout(cmd, cwd='/root'):
     '''
     Execute a command, and only return the standard out 
 
@@ -29,9 +30,10 @@ def run_stdout(cmd):
     '''
     return subprocess.Popen(cmd,
             shell=True,
+            cwd=cwd,
             stdout=subprocess.PIPE).communicate()[0]
 
-def run_stderr(cmd):
+def run_stderr(cmd, cwd='/root'):
     '''
     Execute a command and only return the standard error
 
@@ -40,16 +42,17 @@ def run_stderr(cmd):
     '''
     return subprocess.Popen(cmd,
             shell=True,
+            cwd=cwd,
             stderr=subprocess.PIPE).communicate()[0]
 
-def retcode(cmd):
+def retcode(cmd, cwd='/root'):
     '''
     Execute a shell command and return the command's return code.
 
     CLI Example:
     salt '*' cmd.retcode "file /bin/bash"
     '''
-    return subprocess.call(cmd, shell=True)
+    return subprocess.call(cmd, shell=True, cwd=cwd)
 
 def exec_code(lang, code):
     '''
@@ -64,5 +67,6 @@ def exec_code(lang, code):
     open(cfn, 'w+').write(code)
     return subprocess.Popen(lang + ' ' + cfn,
             shell=True,
+            cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
