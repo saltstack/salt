@@ -57,7 +57,7 @@ Writing your own customizations on top of Salt
     ref/index
     ref/python-api
     ref/modules/index
-    ref/returners
+    ref/returners/index
     ref/grains
     ref/renderers
     ref/states
