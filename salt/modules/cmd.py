@@ -45,12 +45,12 @@ def run_stderr(cmd, cwd='/root'):
             cwd=cwd,
             stderr=subprocess.PIPE).communicate()[0]
 
-def run_comps(cmd, cwd='/root'):
+def run_all(cmd, cwd='/root'):
     '''
     Execute the passed command and return a dict of return data
 
     CLI Example:
-    salt '*' cmd.run_comps "ls -l | grep foo | awk '{print $2}'"
+    salt '*' cmd.run_all "ls -l | grep foo | awk '{print $2}'"
     '''
     ret = {}
     proc =  subprocess.Popen(cmd,
