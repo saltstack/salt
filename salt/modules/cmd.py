@@ -61,8 +61,8 @@ def run_all(cmd, cwd='/root'):
     out = proc.communicate()
     ret['stdout'] = out[0]
     ret['stderr'] = out[1]
-    ret['retcode'] = out.returncode
-    ret['pid'] = out.pid
+    ret['retcode'] = proc.returncode
+    ret['pid'] = proc.pid
     return ret
 
 def retcode(cmd, cwd='/root'):
