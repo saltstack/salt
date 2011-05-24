@@ -12,8 +12,7 @@ def run(name,
         unless=None,
         cwd='/root',
         user=None,
-        group=None,
-        timeout=60):
+        group=None):
     '''
     Ensure that the named command is executed
 
@@ -26,8 +25,6 @@ def run(name,
     cwd -- Run the command from this directory, defaults to /root
     user -- Run the command as this user
     group -- run the command as this group
-    timeout -- The number of seconds to wait for the command to complete,
-    return False if the command does not return in time
     '''
     ret = {'name': name,
            'changes': {},
