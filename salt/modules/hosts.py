@@ -1,15 +1,16 @@
 '''
 Manage the information in the hosts file
 '''
+import os
 
-def list():
+def list_hosts():
     '''
     Return the hosts found in the hosts file in this format:
 
     {'<ip addr>': ['alias1', 'alias2', ...]}
 
     CLI Example:
-    salt '*' hosts.list
+    salt '*' hosts.list_hosts
     '''
     hfn = '/etc/hosts'
     ret = {}
@@ -32,7 +33,7 @@ def ip(host):
     CLI Example:
     salt '*' hosts.ip <hostname>
     '''
-    hosts = list()
+    hosts = list_hosts()
     if not hosts:
         return ''
     # Look for the op
@@ -49,10 +50,24 @@ def alias(ip):
     CLI Example:
     salt '*' hosts.alias <ip addr>
     '''
-    hosts = list()
+    hosts = list_hosts()
     if hosts.has_key(ip):
         return hosts[ip]
     return []
+
+def has_pair(ip, alias):
+    '''
+    Return true if the alias is set
+
+    CLI Example:
+    salt '*' hosts.has_pair <ip> <alias>
+    '''
+    hosts = list_hosts()
+    if not hosts.has_key(ip):
+        return False
+    if hosts[ip].count(alias):
+        return True
+    return False
 
 def set_host(ip, alias):
     '''
