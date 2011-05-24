@@ -98,6 +98,34 @@ def set_host(ip, alias):
     open(hfn, 'w+').writelines(lines)
     return True
 
+def rm_host(ip, alias):
+    '''
+    Remove a host entry from the hosts file
+
+    CLI Example:
+    salt '*' hosts.rm_host <ip> <alias>
+    '''
+    if not has_pair(ip, alias):
+        return True
+    hfn = '/etc/hosts'
+    lines = open(hfn).readlines()
+    for ind in range(len(lines)):
+        tmpline = lines[ind].strip()
+        if not tmpline:
+            continue
+        if tmpline.startswith('#'):
+            continue
+        comps = tmpline.split()
+        if comps[0] == ip:
+            newline = comps[0] + '\t'
+            for existing in comps[1:]:
+                if existing == alias:
+                    continue
+                newline += '\t' + existing
+            lines[ind] = newline
+    open(hfn, 'w+').writelines(lines)
+    return True
+
 def add_host(ip, alias):
     '''
     Add a host to an existing entry, if the entry is not in place then create
