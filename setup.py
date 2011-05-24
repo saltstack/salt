@@ -16,7 +16,10 @@ mod_path = os.path.join(get_python_lib(), 'salt/modules/')
 doc_path = os.path.join(PREFIX, 'share/doc/', NAME + '-' + VER)
 example_path = os.path.join(doc_path, 'examples')
 template_path = os.path.join(example_path, 'templates')
-etc_path = os.path.join(os.path.dirname(os.path.normpath(sys.prefix)) + 'etc')
+if os.environ.has_key('SYSCONFDIR'):
+    etc_path = os.environ['SYSCONFDIR']
+else:
+    etc_path = os.path.join(os.path.dirname(PREFIX), 'etc')
 
 setup(name=NAME,
       version=VER,
@@ -53,7 +56,7 @@ setup(name=NAME,
                'scripts/salt-cp',
                'scripts/salt-call',
                'scripts/salt'],
-      data_files=[(os.path.join(etc_path),
+      data_files=[(os.path.join(etc_path, 'salt'),
                     ['conf/master',
                      'conf/minion',
                     ]),
