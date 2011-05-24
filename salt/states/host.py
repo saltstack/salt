@@ -30,7 +30,8 @@ def absent(name, ip):
     '''
     ret = {'name': name,
            'changes': {},
-           'result': False}
+           'result': False,
+           'comment': ''}
     if not __salt__['hosts.has_pair'](ip, name):
         ret['changes'] = 'Already Absent'
         ret['result'] = True
@@ -38,8 +39,10 @@ def absent(name, ip):
     if __salt__['hosts.rm_host'](ip, name):
         ret['changes'] = {'host': name}
         ret['result'] = True
+        ret['comment'] = 'Removed host ' + host
         return ret
     else:
         ret['result'] = False
+        ret['comment'] = 'Failed to remove host'
         return ret
 
