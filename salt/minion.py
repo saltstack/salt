@@ -105,6 +105,24 @@ class Minion(object):
         else:
             if not self._glob_match(data['tgt']):
                 return
+        self._handle_decoded_payload(data)
+
+    def _handle_pub(self, load):
+        '''
+        Handle public key payloads
+        '''
+        pass
+
+    def _handle_clear(self, load):
+        '''
+        Handle unencrypted transmisions
+        '''
+        pass
+
+    def _handle_decoded_payload(self, data):
+        '''
+        Override this method if you wish to handle the decoded data diferently.
+        '''
         if self.opts['multiprocessing']:
             if type(data['fun']) == type(list()):
                 multiprocessing.Process(target=lambda: self._thread_multi_return(data)).start()
@@ -115,18 +133,6 @@ class Minion(object):
                 threading.Thread(target=lambda: self._thread_multi_return(data)).start()
             else:
                 threading.Thread(target=lambda: self._thread_return(data)).start()
-
-    def _handle_pub(self, load):
-        '''
-        Handle public key payloads
-        '''
-        pass
-    
-    def _handle_clear(self, load):
-        '''
-        Handle unencrypted transmisions
-        '''
-        pass
 
     def _glob_match(self, tgt):
         '''
@@ -170,7 +176,7 @@ class Minion(object):
 
     def _thread_return(self, data):
         '''
-        This methos should be used as a threading target, start the actual
+        This method should be used as a threading target, start the actual
         minion side execution.
         '''
         ret = {}
