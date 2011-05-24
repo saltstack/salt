@@ -14,7 +14,7 @@ def list_hosts():
     '''
     hfn = '/etc/hosts'
     ret = {}
-    if not os,path.isfile(hfn):
+    if not os.path.isfile(hfn):
         return ret
     for line in open(hfn).readlines():
         line = line.strip()
@@ -26,12 +26,12 @@ def list_hosts():
         ret[comps[0]] = comps[1:]
     return ret
 
-def ip(host):
+def get_ip(host):
     '''
     Return the ip associated with the named host
 
     CLI Example:
-    salt '*' hosts.ip <hostname>
+    salt '*' hosts.get_ip <hostname>
     '''
     hosts = list_hosts()
     if not hosts:
@@ -43,12 +43,12 @@ def ip(host):
     # ip not found
     return ''
 
-def alias(ip):
+def get_alias(ip):
     '''
     Return the list of aliases associated with an ip
 
     CLI Example:
-    salt '*' hosts.alias <ip addr>
+    salt '*' hosts.get_alias <ip addr>
     '''
     hosts = list_hosts()
     if hosts.has_key(ip):
@@ -79,7 +79,7 @@ def set_host(ip, alias):
     '''
     hfn = '/etc/hosts'
     ovr = False
-    if not os,path.isfile(hfn):
+    if not os.path.isfile(hfn):
         return False
     lines = open(hfn).readlines()
     for ind in range(len(lines)):
@@ -108,7 +108,7 @@ def add_host(ip, alias):
     '''
     hfn = '/etc/hosts'
     ovr = False
-    if not os,path.isfile(hfn):
+    if not os.path.isfile(hfn):
         return False
     lines = open(hfn).readlines()
     for ind in range(len(lines)):
@@ -123,6 +123,7 @@ def add_host(ip, alias):
             for existing in comps[1:]:
                 newline += '\t' + existing
             newline += '\t' + alias
+            lines.append(newline)
             ovr = True
     if not ovr:
         line = ip + '\t\t' + alias + '\n'
