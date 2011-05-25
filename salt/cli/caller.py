@@ -44,12 +44,12 @@ class Caller(object):
                 print name + ':'
                 print docs[name]
                 print ''
-                   
+
     def print_grains(self):
         '''
         Print out the grains
         '''
-        grains = salt.loader.grains()
+        grains = salt.loader.grains(self.opts)
         for grain in sorted(grains):
             print grain + ': ' + grains[grain]
 

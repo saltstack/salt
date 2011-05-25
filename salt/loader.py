@@ -54,7 +54,7 @@ def render(opts, functions):
             'value': functions}
     return load.filter_func('render', pack)
 
-def grains():
+def grains(opts):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
@@ -62,10 +62,10 @@ def grains():
     module_dirs = [
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/grains'),
         ]
-    load = Loader(module_dirs)
+    load = Loader(module_dirs, opts)
     return load.gen_grains()
 
-def call(fun, arg=[], dirs=[]):
+def call(fun, args=[], dirs=[]):
     '''
     Directly call a function inside a loader directory
     '''
@@ -122,7 +122,7 @@ class Loader(object):
             fn_, path, desc = imp.find_module(name, self.module_dirs)
             mod = imp.load_module(name, fn_, path, desc)
         except ImportError:
-            if self.opts['cython_enable'] is True:
+            if self.opts.get('cython_enable', True) is True:
                 # The module was not found, try to find a cython module
                 try:
                     import pyximport
@@ -153,7 +153,7 @@ class Loader(object):
         funcs = {}
 
         cython_enabled = False
-        if self.opts['cython_enable'] is True:
+        if self.opts.get('cython_enable', True) is True:
             try:
                 import pyximport
                 pyximport.install()
