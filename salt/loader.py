@@ -8,7 +8,10 @@ Routines to set up a minion
 import os
 import sys
 import imp
+import logging
 import distutils.sysconfig
+
+log = logging.getLogger(__name__)
 
 def minion_mods(opts):
     '''
@@ -96,9 +99,7 @@ class Loader(object):
         '''
         mod_opts = {}
         for key, val in opts.items():
-            if key == 'logger':
-                continue
-            if key == 'grains':
+            if key in ('logger', 'grains'):
                 continue
             mod_opts[key] = val
         return mod_opts
@@ -138,10 +139,9 @@ class Loader(object):
                                 return getattr(
                                     mod, fun[fun.rindex('.') + 1:])(*arg)
                 except ImportError:
-                    self.opts['logger'].info(
-                        "Cython is enabled in options though it's not present "
-                        "in the system path. Skipping Cython modules."
-                    )
+                    log.info("Cython is enabled in options though it's not "
+                             "present in the system path. Skipping Cython "
+                             "modules.")
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
     def gen_functions(self, pack=None):
@@ -159,10 +159,8 @@ class Loader(object):
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
-                self.opts['logger'].info(
-                    "Cython is enabled in options though it's not present in "
-                    "the system path. Skipping Cython modules."
-                )
+                log.info("Cython is enabled in options though it's not present "
+                         "in the system path. Skipping Cython modules.")
         for mod_dir in self.module_dirs:
             if not mod_dir.startswith('/'):
                 continue

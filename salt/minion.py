@@ -7,6 +7,7 @@ import distutils.sysconfig
 import glob
 import re
 import time
+import logging
 import tempfile
 import traceback
 import shutil
@@ -23,6 +24,7 @@ import salt.modules
 import salt.returners
 import salt.loader
 
+log = logging.getLogger(__name__)
 
 # To set up a minion:
 # 1, Read in the configuration
@@ -47,10 +49,8 @@ class Minion(object):
                 import pyximport
                 pyximport.install()
             except ImportError:
-                self.opts['logger'].info(
-                    "Cython is enabled in options though it's not present in "
-                    "the system path. Skipping Cython modules."
-                )
+                log.info("Cython is enabled in options though it's not present "
+                         "in the system path. Skipping Cython modules.")
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.authenticate()
@@ -192,8 +192,7 @@ class Minion(object):
             ret['return'] = self.functions[data['fun']](*data['arg'])
         except Exception as exc:
             trb = traceback.format_exc()
-            self.opts['logger'].warning('The minion function caused an'\
-                    + ' exception: ' + str(exc))
+            log.warning('The minion function caused an exception: %s', exc)
             ret['return'] = trb
         ret['jid'] = data['jid']
         if data['ret']:
@@ -201,8 +200,7 @@ class Minion(object):
             try:
                 self.returners[data['ret']](ret)
             except Exception as exc:
-                self.opts['logger'].error('The return failed for job '\
-                    + data['jid'] + ' ' + str(exc))
+                log.error('The return failed for job %s %s', data['jid'], exc)
         else:
             self._return_pub(ret)
 
@@ -224,8 +222,7 @@ class Minion(object):
                     = self.functions[data['fun'][ind]](*data['arg'][ind])
             except Exception as exc:
                 trb = traceback.format_exc()
-                self.opts['logger'].warning('The minion function caused an'\
-                        + ' exception: ' + str(exc))
+                log.warning('The minion function caused an exception: %s', exc)
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
         if data['ret']:
@@ -233,8 +230,7 @@ class Minion(object):
             try:
                 self.returners[data['ret']](ret)
             except Exception as exc:
-                self.opts['logger'].error('The return failed for job '\
-                    + data['jid'] + ' ' + str(exc))
+                log.error('The return failed for job %s %s', data['jid'], exc)
         else:
             self._return_pub(ret)
 
@@ -242,8 +238,7 @@ class Minion(object):
         '''
         Return the data from the executed command to the master server
         '''
-        self.opts['logger'].info('Returning information for job: '\
-                + ret['jid'])
+        log.info('Returning information for job: %(jid)s', ret)
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
@@ -261,8 +256,7 @@ class Minion(object):
         Reload the functions dict for this minion, reading in any new functions
         '''
         self.functions = self.__load_functions()
-        self.opts['logger'].debug('Refreshed functions, loaded functions: '\
-                + str(self.functions))
+        log.debug('Refreshed functions, loaded functions: %s', self.functions)
         return True
 
     def authenticate(self):
@@ -272,17 +266,14 @@ class Minion(object):
         signing in can occur as often as needed to keep up with the revolving
         master aes key.
         '''
-        self.opts['logger'].debug('Attempting to authenticate with the Salt'\
-                + ' Master')
+        log.debug('Attempting to authenticate with the Salt Master')
         auth = salt.crypt.Auth(self.opts)
         while True:
             creds = auth.sign_in()
             if creds != 'retry':
-                self.opts['logger'].info('Authentication with master'\
-                        + ' sucessful!')
+                log.info('Authentication with master sucessful!')
                 break
-            self.opts['logger'].info('Waiting for minion key to be accepted'\
-                    + ' by the master.')
+            log.info('Waiting for minion key to be accepted by the master.')
             time.sleep(10)
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']

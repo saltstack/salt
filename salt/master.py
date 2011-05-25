@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import shutil
 import hashlib
+import logging
 import threading
 import multiprocessing
 import time
@@ -21,6 +22,7 @@ import salt.client
 # Import cryptogrogphy modules
 from M2Crypto import RSA
 
+log = logging.getLogger(__name__)
 
 class Master(object):
     '''
@@ -49,7 +51,7 @@ class Master(object):
         '''
         Turn on the master server components
         '''
-        self.opts['logger'].info('Starting the Salt Master')
+        log.info('Starting the Salt Master')
         reqserv = ReqServer(self.opts)
         reqserv.run()
         while True:
@@ -73,16 +75,15 @@ class Publisher(multiprocessing.Process):
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         pull_sock = context.socket(zmq.PULL)
-        pub_uri = 'tcp://' + self.opts['interface'] + ':'\
-               + self.opts['publish_port']
-        pull_uri = 'tcp://127.0.0.1:' + self.opts['publish_pull_port']
-        self.opts['logger'].info('Starting the Salt Publisher on ' + pub_uri)
+        pub_uri = 'tcp://%(interface)s:%(publish_port)s' % self.opts
+        pull_uri = 'tcp://127.0.0.1:%(publish_pull_port)s' % self.opts
+        log.info('Starting the Salt Publisher on %s', pub_uri)
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
 
         while True:
             package = pull_sock.recv()
-            self.opts['logger'].info('Publishing command')
+            log.info('Publishing command')
             pub_sock.send(package)
 
 
@@ -96,8 +97,7 @@ class ReqServer():
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.context = zmq.Context(1)
         # Prepare the zeromq sockets
-        self.uri = 'tcp://' + self.opts['interface'] + ':'\
-                   + self.opts['ret_port']
+        self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
         self.clients = self.context.socket(zmq.XREP)
         self.workers = self.context.socket(zmq.XREQ)
         self.w_uri = 'inproc://workers'
@@ -115,8 +115,7 @@ class ReqServer():
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
-        self.opts['logger'].info('Preparing the root key for local'\
-                + ' comunication')
+        log.info('Preparing the root key for local comunication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
         key = salt.crypt.Crypticle.generate_key_string()
         if os.path.isfile(keyfile):
@@ -152,7 +151,7 @@ class ReqServer():
         '''
         Binds the reply server
         '''
-        self.opts['logger'].info('Setting up the master communication server')
+        log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
 
         self.workers.bind(self.w_uri)
@@ -226,24 +225,21 @@ class MWorker(multiprocessing.Process):
         '''
         Take care of a cleartext command
         '''
-        self.opts['logger'].info('Clear payload recieved with command '\
-                + load['cmd'])
+        log.info('Clear payload recieved with command %(cmd)s', load)
         return getattr(self, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
         Handle a command sent via a public key pair
         '''
-        self.opts['logger'].info('Pubkey payload recieved with command '\
-                + load['cmd'])
+        log.info('Pubkey payload recieved with command %(cmd)s', load)
 
     def _handle_aes(self, load):
         '''
         Handle a command sent via an aes key
         '''
         data = self.crypticle.loads(load)
-        self.opts['logger'].info('AES payload recieved with command '\
-                + data['cmd'])
+        log.info('AES payload recieved with command %(cmd)s', load)
         return getattr(self, data['cmd'])(data)
 
     def _auth(self, load):
@@ -256,8 +252,7 @@ class MWorker(multiprocessing.Process):
         # 3. make an rsa key with the pub key
         # 4. encrypt the aes key as an encrypted pickle
         # 5. package the return and return it
-        self.opts['logger'].info('Authentication request from '\
-                + load['id'])
+        log.info('Authentication request from %(id)s', load)
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['id'])
@@ -271,18 +266,18 @@ class MWorker(multiprocessing.Process):
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
             if not open(pubfn, 'r').read() == load['pub']:
-                self.opts['logger'].error('Authentication attempt from '\
-                        + load['id'] + ' failed, the public keys did'\
-                        + ' not match. This may be an attempt to compromise'\
-                        + ' the Salt cluster.')
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys did not match. This may be an attempt to compromise '
+                    'the Salt cluster.', load
+                )
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre
-            self.opts['logger'].info('New public key placed in pending for '\
-                    + load['id'])
+            log.info('New public key placed in pending for %(id)s', load)
             open(pubfn_pend, 'w+').write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
@@ -292,18 +287,19 @@ class MWorker(multiprocessing.Process):
             # This key is in pending, if it is the same key ret True, else
             # ret False
             if not open(pubfn_pend, 'r').read() == load['pub']:
-                self.opts['logger'].error('Authentication attempt from '\
-                        + load['id'] + ' failed, the public keys in'\
-                        + ' pending did'\
-                        + ' not match. This may be an attempt to compromise'\
-                        + ' the Salt cluster.')
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys in pending did not match. This may be an attempt to '
+                    'compromise the Salt cluster.', load
+                )
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
-                self.opts['logger'].info('Authentication failed from host '\
-                        + load['id'] + ', the key is in pending and'\
-                        + ' needs to be accepted with saltkey -a '\
-                        + load['id'])
+                log.info(
+                    'Authentication failed from host %(id)s, the key is in '
+                    'pending and needs to be accepted with saltkey -a %(id)s',
+                    load
+                )
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif not os.path.isfile(pubfn_pend)\
@@ -315,8 +311,7 @@ class MWorker(multiprocessing.Process):
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
-        self.opts['logger'].info('Authentication accepted from '\
-                + load['id'])
+        log.info('Authentication accepted from %(id)s', load)
         open(pubfn, 'w+').write(load['pub'])
         key = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
@@ -369,13 +364,13 @@ class MWorker(multiprocessing.Process):
                 or not load.has_key('jid')\
                 or not load.has_key('id'):
             return False
-        self.opts['logger'].info('Got return from ' + load['id']\
-                + ' for job ' + load['jid'])
+        log.info('Got return from %(id)s for job %(jid)s', load)
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
         if not os.path.isdir(jid_dir):
-            self.opts['logger'].error('An inconsistency occured, a job was'\
-                    + ' recieved with a job id that is not present on the'\
-                    + ' master: ' + load['jid'])
+            log.error(
+                'An inconsistency occured, a job was recieved with a job id '
+                'that is not present on the master: %(jid)s', load
+            )
             return False
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
@@ -387,14 +382,14 @@ class MWorker(multiprocessing.Process):
         '''
         Send the cluser data out
         '''
-        self.opts['logger'].debug('Sending out cluster data')
+        log.debug('Sending out cluster data')
         ret = self.local.cmd(self.opts['cluster_masters'],
                 'cluster.distrib',
                 self._cluster_load(),
                 0,
                 'list'
                 )
-        self.opts['logger'].debug('Cluster distributed: ' + str(ret))
+        log.debug('Cluster distributed: %s', ret)
 
     def _cluster_load(self):
         '''

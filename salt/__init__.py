@@ -5,10 +5,8 @@ Make me some salt!
 import os
 import optparse
 # Import salt libs
-import salt.master
-import salt.minion
 import salt.config
-import salt.utils
+
 
 def verify_env(dirs):
     '''
@@ -31,6 +29,7 @@ class Master(object):
         '''
         Parse the cli for options passed to a master daemon
         '''
+        import salt.log
         parser = optparse.OptionParser()
         parser.add_option('-d',
                 '--daemon',
@@ -43,8 +42,19 @@ class Master(object):
                 dest='config',
                 default='/etc/salt/master',
                 help='Pass in an alternative configuration file')
-        
+        parser.add_option('-l',
+                '--log-level',
+                dest='log_level',
+                default='warning',
+                choices=salt.log.LOG_LEVELS.keys(),
+                help='Console log level. One of %s. For the logfile settings '
+                     'see the config file. Default: \'%%default\'.' %
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
+                )
+
         options, args = parser.parse_args()
+        salt.log.setup_console_logger(options.log_level)
+
         cli = {'daemon': options.daemon,
                'config': options.config}
 
@@ -54,12 +64,24 @@ class Master(object):
         '''
         Run the sequence to start a salt master server
         '''
+        import salt.log
+        salt.log.setup_logfile_logger(
+            self.opts['log_file'], self.opts['log_level']
+        )
+        import logging
+        self.opts['logger'] = logging.getLogger('salt.stop-using-me')
+        print self.opts['log_level']
+        print self.opts['logger'].getEffectiveLevel()
         verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.opts['cachedir'], 'jobs'),
                     ])
+        # Late import so logging works correctly
+        import salt.master
         master = salt.master.Master(self.opts)
         if self.cli['daemon']:
+            # Late import so logging works correctly
+            import salt.utils
             salt.utils.daemonize()
         master.start()
 
@@ -76,6 +98,7 @@ class Minion(object):
         '''
         Parse the cli input
         '''
+        import salt.log
         parser = optparse.OptionParser()
         parser.add_option('-d',
                 '--daemon',
@@ -88,8 +111,17 @@ class Minion(object):
                 dest='config',
                 default='/etc/salt/minion',
                 help='Pass in an alternative configuration file')
-        
+        parser.add_option('-l',
+                '--log-level',
+                dest='log_level',
+                default='warning',
+                choices=salt.log.LOG_LEVELS.keys(),
+                help='Console log level. One of %s. For the logfile settings '
+                     'see the config file. Default: \'%%default\'.' %
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
+
         options, args = parser.parse_args()
+        salt.log.setup_console_logger(options.log_level)
         cli = {'daemon': options.daemon,
                'config': options.config}
 
@@ -99,8 +131,19 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
+        import salt.log
+        salt.log.setup_logfile_logger(
+            self.opts['log_file'], self.opts['log_level']
+        )
+        import logging
+        self.opts['logger'] = logging.getLogger('salt.stop-using-me')
+
         verify_env([self.opts['pki_dir'], self.opts['cachedir']])
         if self.cli['daemon']:
+            # Late import so logging works correctly
+            import salt.utils
             salt.utils.daemonize()
+        # Late import so logging works correctly
+        import salt.minion
         minion = salt.minion.Minion(self.opts)
         minion.tune_in()
