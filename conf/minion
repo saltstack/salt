@@ -23,7 +23,7 @@
 
 #####   Minion module management     #####
 ##########################################
-# Disable specific modules, this will allow the admin to limit the level os 
+# Disable specific modules, this will allow the admin to limit the level os
 # access the master has to the minion
 #disable_modules: [cmd,test]
 #disable_returners: []
@@ -35,6 +35,8 @@
 #returner_dirs: []
 #states_dirs: []
 #render_dirs: []
+# Enable Cython modules searching and loading. (Default: True)
+#cython_enable: true
 
 #####    State Management Settings    #####
 ###########################################

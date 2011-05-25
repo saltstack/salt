@@ -23,13 +23,6 @@ import salt.modules
 import salt.returners
 import salt.loader
 
-cython_enable = False
-try:
-    import pyximport; pyximport.install()
-    cython_enable = True
-except:
-    pass
-
 
 # To set up a minion:
 # 1, Read in the configuration
@@ -49,6 +42,15 @@ class Minion(object):
         Pass in the options dict
         '''
         self.opts = opts
+        if opts['cython_enable'] is True:
+            try:
+                import pyximport
+                pyximport.install()
+            except ImportError:
+                self.opts['logger'].info(
+                    "Cython is enabled in options though it's not present in "
+                    "the system path. Skipping Cython modules."
+                )
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.authenticate()

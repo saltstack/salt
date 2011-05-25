@@ -35,6 +35,7 @@ def minion_config(path):
             'log_level': 'WARNING',
             'out_level': 'ERROR',
             'test': False,
+            'cython_enable': True,
             }
 
     if os.path.isfile(path):
@@ -45,7 +46,7 @@ def minion_config(path):
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':'\
                        + str(opts['master_port'])
-    
+
     # Enableing open mode requires that the value be set to True, and nothing
     # else!
     if opts['open_mode']:
@@ -93,7 +94,7 @@ def master_config(path):
             opts.update(yaml.load(open(path, 'r')))
         except Exception:
             pass
-    
+
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     # Enableing open mode requires that the value be set to True, and nothing
