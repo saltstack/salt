@@ -10,10 +10,6 @@ import sys
 import imp
 import distutils.sysconfig
 
-# Import cython
-import pyximport
-pyximport.install()
-
 def minion_mods(opts):
     '''
     Returns the minion modules
@@ -126,14 +122,26 @@ class Loader(object):
             fn_, path, desc = imp.find_module(name, self.module_dirs)
             mod = imp.load_module(name, fn_, path, desc)
         except ImportError:
-            # The module was not found, try to find a cython module
-            for mod_dir in self.module_dirs:
-                for fn_ in os.listdir(mod_dir):
-                    if name == fn_[:fn_.rindex('.')]:
-                        # Found it, load the mod and break the loop
-                        mod = pyximport.load_module(name, os.path.join(mod_dir, fn_))
-                        return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
+            if self.opts['cython_enable'] is True:
+                # The module was not found, try to find a cython module
+                try:
+                    import pyximport
+                    pyximport.install()
 
+                    for mod_dir in self.module_dirs:
+                        for fn_ in os.listdir(mod_dir):
+                            if name == fn_[:fn_.rindex('.')]:
+                                # Found it, load the mod and break the loop
+                                mod = pyximport.load_module(
+                                    name, os.path.join(mod_dir, fn_)
+                                )
+                                return getattr(
+                                    mod, fun[fun.rindex('.') + 1:])(*arg)
+                except ImportError:
+                    self.opts['logger'].info(
+                        "Cython is enabled in options though it's not present "
+                        "in the system path. Skipping Cython modules."
+                    )
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
     def gen_functions(self, pack=None):
@@ -143,6 +151,18 @@ class Loader(object):
         names = {}
         modules = []
         funcs = {}
+
+        cython_enabled = False
+        if self.opts['cython_enable'] is True:
+            try:
+                import pyximport
+                pyximport.install()
+                cython_enabled = True
+            except ImportError:
+                self.opts['logger'].info(
+                    "Cython is enabled in options though it's not present in "
+                    "the system path. Skipping Cython modules."
+                )
         for mod_dir in self.module_dirs:
             if not mod_dir.startswith('/'):
                 continue
@@ -155,11 +175,13 @@ class Loader(object):
                     or fn_.endswith('.pyc')\
                     or fn_.endswith('.pyo')\
                     or fn_.endswith('.so')\
-                    or fn_.endswith('.pyx'):
+                    or (cython_enabled and fn_.endswith('.pyx')):
                     names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
         for name in names:
             try:
                 if names[name].endswith('.pyx'):
+                    # If there's a name which ends in .pyx it means the above
+                    # cython_enabled is True. Continue...
                     mod = pyximport.load_module(name, names[name], '/tmp')
                 else:
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
