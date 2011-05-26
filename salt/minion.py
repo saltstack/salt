@@ -34,6 +34,9 @@ log = logging.getLogger(__name__)
 # 5. connect to the publisher
 # 6. handle publications
 
+class MinionError(Exception): pass
+
+
 class Minion(object):
     '''
     This class instantiates a minion, runs connections for a minion, and loads
@@ -294,3 +297,85 @@ class Minion(object):
             payload = socket.recv_pyobj()
             self._handle_payload(payload)
 
+class FileClient(object):
+    '''
+    Interact with the salt master file server.
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.auth = salt.crypt.SAuth(opts)
+        self.socket = self.__get_socket()
+
+    def __get_socket(self):
+        '''
+        Return the ZeroMQ socket to use
+        '''
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(self.opts['master_uri'])
+        return socket
+
+    def _check_proto(self, path):
+        '''
+        Make sure that this path is intended for the salt master and trim it
+        '''
+        if not path.startswith('salt://'):
+            raise MinionError('Unsupported path')
+        return path[:7]
+        
+    def get_file(self, path, dest, makedirs=False):
+        '''
+        Get a single file from the salt-master
+        '''
+        path = self._check_proto(path)
+        payload = {'enc': 'aes'}
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            if makedirs:
+                os.makedirs(destdir)
+            else:
+                return False
+        fn_ = open(dest, 'w+')
+        load = {'path': path,
+                'cmd': '_serve_file'}
+        while True:
+            load['loc'] = fn_.tell()
+            payload['load'] = self.crypticle.dumps(load)
+            self.socket.send_pyobj(payload)
+            data = self.auth.crypticle.loads(self.socket.recv_pyobj())
+            if not data:
+                break
+            fn_.write(data)
+        return dest
+
+    def cache_file(self, path):
+        '''
+        Pull a file down from the file server and store it in the minion file
+        cache
+        '''
+        dest = os.path.join(self.opts['cachedir'], 'files', path)
+        return self.get_file(path, dest, True)
+
+    def cache_files(self, paths):
+        '''
+        Download a list of files stored on the master and put them in the minion
+        file cache
+        '''
+        ret = []
+        for path in paths:
+            ret.append(self.cache_file(path))
+        return ret
+
+    def hash_file(self, path):
+        '''
+        Return the hash of a file, to get the hash of a file on the
+        salt master file server prepend the path with salt://<file on server>
+        otherwise, prepend the file with / for a local file.
+        '''
+        path = self._check_proto(path)
+        payload = {'enc': 'aes'}
+        load = {'path': path,
+                'cmd': '_file_hash'}
+        payload['load'] = auth.crypticle.dumps(load)
+        self.socket.send_pyobj(payload)
+        return self.auth.crypticle.loads(socket.recv_pyobj())
