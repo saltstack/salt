@@ -4,7 +4,7 @@
 # resolved, then the minion will fail to start
 #master: salt
 
-# Set the post used by the master reply and autnentication server
+# Set the post used by the master reply and authentication server
 #master_port: 4506
 
 # The directory to store the pki information in
@@ -12,8 +12,8 @@
 
 # Explicitly declare the id for this minion to use, if left commented the id
 # will be the hostname as returned by the python call: socket.getfqdn()
-# Since salt uses detatched ids it is possible to run multiple minions on the
-# same machine but with different ids, this can be usefull for salt compute
+# Since salt uses detached ids it is possible to run multiple minions on the
+# same machine but with different ids, this can be useful for salt compute
 # clusters.
 #id:
 
@@ -27,7 +27,7 @@
 # access the master has to the minion
 #disable_modules: [cmd,test]
 #disable_returners: []
-# Modules can be loaded from arbitrairy paths, this enables the easy deployment
+# Modules can be loaded from arbitrary paths, this enables the easy deployment
 # of third party modules, modules for returners and minions can be loaded.
 # Specify a list of extra directories to search for minion modules and
 # returners. These paths must be fully qualified!
@@ -66,13 +66,13 @@
 
 ######         Thread settings        #####
 ###########################################
-# Enable multiprocessing support, by default when a minion recieves a
+# Enable multiprocessing support, by default when a minion receives a
 # publication a new thread is spawned and the command is executed therein. This
-# is the optimal behavior for the use case where salt is used for data querires
-# and distributed system managment, but not the optimal use case when salt is
+# is the optimal behavior for the use case where salt is used for data queries
+# and distributed system management, but not the optimal use case when salt is
 # used for distributed computation. Since python threads are bad at cpu bound
 # tasks salt allows for a multiprocessing process to be used for the execution
-# instead. This addis more initial overhead to publications, but cpu bound
+# instead. This adds more initial overhead to publications, but cpu bound
 # executions will be faster. This feature requires python 2.6 or higher on the
 # minion, if set to True and python 2.6 or higher is not present then it will
 # fall back to python threads
@@ -80,17 +80,29 @@
 
 ######         Logging settings       #####
 ###########################################
+# The location of the minion log file
 #log_file: /var/log/salt/minion
-#log_level: WARNING
-# The log level for posting to the terminal
-#out_level: ERROR
+# The level of messages to send to the log file.
+# One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+# Default: 'warning'
+#log_level: warning
+#
+# Logger levels can be used to tweak specific loggers logging levels.
+# Imagine you want to have the salt library at the 'warning' level, but, you
+# still wish to have 'salt.modules' at the 'debug' level:
+#   log_granular_levels: {
+#     'salt': 'warning',
+#     'salt.modules': 'debug'
+#   }
+#
+#log_granular_levels: {}
 
 
 ######      Module configuration      #####
 ###########################################
-# Salt allows for modules to be passed arbitrairy configuration data, any data
+# Salt allows for modules to be passed arbitrary configuration data, any data
 # passed here in valid yaml format will be passed on to the salt minion modules
-# for use. It is STRONGLY recomended that a naming convention be used in which
+# for use. It is STRONGLY recommended that a naming convention be used in which
 # the module name is followed by a . and then the value. Also, all top level
 # data must be allied via the yaml dict construct, some examples:
 #
@@ -100,5 +112,5 @@
 # A list for the test module:
 #test.bar: [baz,quo]
 #
-# A dict for the test moule:
+# A dict for the test module:
 #test.baz: {spam: sausage, cheese: bread}

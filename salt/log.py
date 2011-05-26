@@ -3,9 +3,11 @@
     salt.log
     ~~~~~~~~
 
+    This is were Salt's logging get's setup.
 
-    :copyright: © 2011 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: BSD, see LICENSE for more details.
+
+    :copyright: © 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :license: Apache Version 2.0, see LICENSE for more details.
 """
 
 import logging
@@ -34,6 +36,9 @@ class Logging(LoggingLoggerClass):
 
 
 def setup_console_logger(log_level):
+    """
+    Setup the console logger
+    """
     import logging
     if logging.getLoggerClass() is not Logging:
         logging.setLoggerClass(Logging)
@@ -58,6 +63,9 @@ def setup_console_logger(log_level):
 
 
 def setup_logfile_logger(log_path, log_level):
+    """
+    Setup the logfile logger
+    """
     import logging
     if logging.getLoggerClass() is not Logging:
         logging.setLoggerClass(Logging)
@@ -83,3 +91,12 @@ def setup_logfile_logger(log_path, log_level):
 
     handler.setFormatter(formatter)
     rootLogger.addHandler(handler)
+
+def set_logger_level(logger_name, log_level):
+    """
+    Tweak a specific logger's logging level
+    """
+    import logging
+    logging.getLogger(logger_name).setLevel(
+        LOG_LEVELS.get(log_level.lower(), logging.ERROR)
+    )

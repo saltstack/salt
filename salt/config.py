@@ -31,6 +31,7 @@ def minion_config(path):
             'multiprocessing': False,
             'log_file': '/var/log/salt/minion',
             'log_level': 'warning',
+            'log_granular_levels': {},
             'test': False,
             'cython_enable': True,
             }
@@ -77,6 +78,7 @@ def master_config(path):
             'auto_accept': False,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
+            'log_granular_levels': {},
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
             }
