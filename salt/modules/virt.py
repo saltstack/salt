@@ -1,5 +1,5 @@
 '''
-Work with vitual machines managed by libvirt
+Work with virtual machines managed by libvirt
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
@@ -39,7 +39,7 @@ def __get_conn():
 
 def _get_dom(vm_):
     '''
-    Return a domain object for the named vm 
+    Return a domain object for the named vm
     '''
     conn = __get_conn()
     if not list_vms().count(vm_):
@@ -63,7 +63,7 @@ def _libvirt_creds():
 def list_vms():
     '''
     Return a list of virtual machine names on the minion
-    
+
     CLI Example:
     salt '*' virt.list_vms
     '''
@@ -109,7 +109,6 @@ def node_info():
     salt '*' virt.node_info
     '''
     conn = __get_conn()
-    info = {}
     raw = conn.getInfo()
     info = {
             'cpumodel'     : str(raw[0]),
@@ -343,7 +342,7 @@ def migrate(vm_, target):
 
 def seed_non_shared_migrate(disks, force=False):
     '''
-    Non shared migration reqiuires that the disks be present on the migration
+    Non shared migration requires that the disks be present on the migration
     destination, pass the disks information via this function, to the
     migration destination before executing the migration.
 
@@ -355,7 +354,7 @@ def seed_non_shared_migrate(disks, force=False):
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
         if os.path.isfile(fn_) and not force:
-            # the target exists, check to see if is is compatable
+            # the target exists, check to see if is is compatible
             pre = yaml.load(subprocess.Popen('qemu-img info arch',
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0])
@@ -375,7 +374,7 @@ def seed_non_shared_migrate(disks, force=False):
 
 def destroy(vm_):
     '''
-    Hard power down the virtual machine, this is equivelent to pulling the
+    Hard power down the virtual machine, this is equivalent to pulling the
     power
 
     CLI Example:
@@ -405,7 +404,7 @@ def undefine(vm_):
 
 def purge(vm_, dirs=False):
     '''
-    Recursively destroy and delete a virtual machine, pass True for dirs to
+    Recursively destroy and delete a virtual machine, pass True for dir's to
     also delete the directories containing the virtual machine disk images -
     USE WITH EXTREAME CAUTION!
 
@@ -426,7 +425,7 @@ def purge(vm_, dirs=False):
 def virt_type():
     '''
     Returns the virtual machine type as a string
-    
+
     CLI Example:
     salt '*' virt.virt_type
     '''

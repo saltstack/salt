@@ -45,7 +45,7 @@ def minion_config(path):
     opts['master_uri'] = 'tcp://' + opts['master'] + ':'\
                        + str(opts['master_port'])
 
-    # Enableing open mode requires that the value be set to True, and nothing
+    # Enabling open mode requires that the value be set to True, and nothing
     # else!
     if opts['open_mode']:
         if opts['open_mode'] == True:
@@ -91,7 +91,7 @@ def master_config(path):
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
-    # Enableing open mode requires that the value be set to True, and nothing
+    # Enabling open mode requires that the value be set to True, and nothing
     # else!
     if opts['open_mode']:
         if opts['open_mode'] == True:

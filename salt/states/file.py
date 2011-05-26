@@ -3,7 +3,6 @@ Manage file states
 '''
 
 import os
-import hashlib
 import shutil
 import tempfile
 import difflib
@@ -170,7 +169,7 @@ def managed(name,
                     'changes': changes,
                     'result': False,
                     'comment': 'Source file ' + source + ' not found'}
-        # Handle any template management that is neded
+        # Handle any template management that is needed
         if template:
             t_key = '_' + template
             if locals().has_key(t_key):

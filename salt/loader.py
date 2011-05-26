@@ -81,9 +81,9 @@ def call(fun, args=[], dirs=[]):
 
 class Loader(object):
     '''
-    Used to load in arbitrairy modules from a directory, the Loader can also be
+    Used to load in arbitrary modules from a directory, the Loader can also be
     used to only load specific functions from a directory, or to call modules
-    in an arbitrairy directory directly.
+    in an arbitrary directory directly.
     '''
     def __init__(self, module_dirs, opts={}):
         self.module_dirs = module_dirs
@@ -255,7 +255,7 @@ class Loader(object):
     def gen_grains(self):
         '''
         Read the grains directory and execute all of the public callable
-        members. then verify that the returns are python dicts and return a
+        members. then verify that the returns are python dict's and return a
         dict containing all of the returned values.
         '''
         grains = {}

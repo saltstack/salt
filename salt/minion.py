@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 class Minion(object):
     '''
-    This class instanciates a minion, runs connections for a minion, and loads
+    This class instantiates a minion, runs connections for a minion, and loads
     all of the functions into the minion
     '''
     def __init__(self, opts):
@@ -85,7 +85,7 @@ class Minion(object):
 
     def _handle_aes(self, load):
         '''
-        Takes the aes encrypted load, decypts is and runs the encapsulated
+        Takes the aes encrypted load, decrypts is and runs the encapsulated
         instructions
         '''
         data = None
@@ -117,24 +117,32 @@ class Minion(object):
 
     def _handle_clear(self, load):
         '''
-        Handle unencrypted transmisions
+        Handle un-encrypted transmissions
         '''
         pass
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded data diferently.
+        Override this method if you wish to handle the decoded data differently.
         '''
         if self.opts['multiprocessing']:
             if type(data['fun']) == type(list()):
-                multiprocessing.Process(target=lambda: self._thread_multi_return(data)).start()
+                multiprocessing.Process(
+                    target=lambda: self._thread_multi_return(data)
+                ).start()
             else:
-                multiprocessing.Process(target=lambda: self._thread_return(data)).start()
+                multiprocessing.Process(
+                    target=lambda: self._thread_return(data)
+                ).start()
         else:
             if type(data['fun']) == type(list()):
-                threading.Thread(target=lambda: self._thread_multi_return(data)).start()
+                threading.Thread(
+                    target=lambda: self._thread_multi_return(data)
+                ).start()
             else:
-                threading.Thread(target=lambda: self._thread_return(data)).start()
+                threading.Thread(
+                    target=lambda: self._thread_return(data)
+                ).start()
 
     def _glob_match(self, tgt):
         '''
@@ -163,7 +171,7 @@ class Minion(object):
 
     def _grain_match(self, tgt):
         '''
-        Reads in the grains regular expresion match
+        Reads in the grains regular expression match
         '''
         comps = tgt.split(':')
         return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
@@ -206,7 +214,7 @@ class Minion(object):
 
     def _thread_multi_return(self, data):
         '''
-        This methos should be used as a threading target, start the actual
+        This method should be used as a threading target, start the actual
         minion side execution.
         '''
         ret = {'return': {}}
@@ -262,7 +270,7 @@ class Minion(object):
     def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        pardigmn, it will update the master information from a fresh sign in,
+        paradigm, it will update the master information from a fresh sign in,
         signing in can occur as often as needed to keep up with the revolving
         master aes key.
         '''
@@ -271,7 +279,7 @@ class Minion(object):
         while True:
             creds = auth.sign_in()
             if creds != 'retry':
-                log.info('Authentication with master sucessful!')
+                log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
             time.sleep(10)

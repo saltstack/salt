@@ -7,7 +7,7 @@
 
 
     :copyright: © 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: Apache Version 2.0, see LICENSE for more details.
+    :license: Apache 2.0, see LICENSE for more details.
 """
 
 import logging

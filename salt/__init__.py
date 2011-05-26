@@ -10,7 +10,7 @@ import salt.config
 
 def verify_env(dirs):
     '''
-    Verify that the named direcotries are in place and that the environment
+    Verify that the named directories are in place and that the environment
     can shake the salt
     '''
     for dir_ in dirs:

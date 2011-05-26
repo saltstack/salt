@@ -48,7 +48,7 @@ class MasterKeys(dict):
 
     def __get_priv_key(self):
         '''
-        Retruns a private key object for the master
+        Returns a private key object for the master
         '''
         key = None
         try:
@@ -89,7 +89,7 @@ class Auth(object):
 
     def get_priv_key(self):
         '''
-        Retruns a private key object for the minion
+        Returns a private key object for the minion
         '''
         key = None
         try:
@@ -107,7 +107,7 @@ class Auth(object):
 
     def minion_sign_in_payload(self):
         '''
-        Generates the payload used to autnenticate with the master server. This
+        Generates the payload used to authenticate with the master server. This
         payload consists of the passed in id_ and the ssh public key to encrypt
         the AES key sent back form the master.
         '''
@@ -129,7 +129,7 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        log.info('Decypting the current master AES key')
+        log.info('Decrypting the current master AES key')
         key = self.get_priv_key()
         return key.private_decrypt(aes, 4)
 
@@ -137,7 +137,7 @@ class Auth(object):
         '''
         Takes the master pubkey and compares it to the saved master pubkey,
         the token is encrypted with the master private key and must be
-        decrypted sucessfully to verify that the master has been connected to.
+        decrypted successfully to verify that the master has been connected to.
         The token must decrypt with the public key, and it must say:
         'salty bacon'
         returns a bool
@@ -274,7 +274,7 @@ class Crypticle(object):
 
     def loads(self, data, pickler=pickle):
         '''
-        decrypt and unpickle a python object
+        decrypt and un-pickle a python object
         '''
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
@@ -294,7 +294,7 @@ class SAuth(object):
     def __authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        pardigmn, it will update the master information from a fresh sign in,
+        paradigm, it will update the master information from a fresh sign in,
         signing in can occur as often as needed to keep up with the revolving
         master aes key.
         '''

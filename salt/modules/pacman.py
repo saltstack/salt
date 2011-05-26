@@ -153,13 +153,13 @@ def upgrade():
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
     return pkgs
-    
+
 def remove(name):
     '''
     Remove a single package with pacman -R
 
     Return a list containing the removed packages:
-    
+
     CLI Example:
     salt '*' pkg.remove <package name>
     '''
@@ -175,7 +175,7 @@ def purge(name):
     with it, this will call a pacman -Rsc
 
     Return a list containing the removed packages:
-    
+
     CLI Example:
     salt '*' pkg.purge <package name>
 

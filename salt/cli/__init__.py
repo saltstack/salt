@@ -25,7 +25,7 @@ class SaltCMD(object):
     '''
     def __init__(self):
         '''
-        Cretae a SaltCMD object
+        Create a SaltCMD object
         '''
         self.opts = self.__parse()
 
@@ -34,7 +34,7 @@ class SaltCMD(object):
         Parse the command line
         '''
         parser = optparse.OptionParser()
-        
+
         parser.add_option('-t',
                 '--timeout',
                 default=5,
@@ -63,7 +63,7 @@ class SaltCMD(object):
                 help='Instead of using shell globs to evaluate the target'\
                    + ' use a grain value to identify targets, the syntax'\
                    + ' for the target is the grain key followed by a pcre'\
-                   + ' regular expresion:\n"os:Arch.*"')
+                   + ' regular expression:\n"os:Arch.*"')
         parser.add_option('-X',
                 '--exsel',
                 default=False,
@@ -97,7 +97,7 @@ class SaltCMD(object):
                 action='store_true',
                 dest='raw_out',
                 help='Print the output from the salt command in raw python'\
-                   + ' form, this is suitible for re-reading the output into'\
+                   + ' form, this is suitable for re-reading the output into'\
                    + ' an executing python script with eval.')
         if JSON:
             parser.add_option('--json-out',
@@ -179,7 +179,7 @@ class SaltCMD(object):
                 args.append('exsel')
             else:
                 args.append('glob')
-        
+
             if self.opts['return']:
                 args.append(self.opts['return'])
             ret = local.cmd(*args)
@@ -224,7 +224,7 @@ class SaltCP(object):
         Parse the command line
         '''
         parser = optparse.OptionParser()
-        
+
         parser.add_option('-t',
                 '--timeout',
                 default=5,
@@ -253,7 +253,7 @@ class SaltCP(object):
                 help='Instead of using shell globs to evaluate the target'\
                    + ' use a grain value to identify targets, the syntax'\
                    + ' for the target is the grains key followed by a pcre'\
-                   + ' regular expresion:\n"os:Arch.*"')
+                   + ' regular expression:\n"os:Arch.*"')
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
@@ -315,7 +315,7 @@ class SaltKey(object):
                 default=False,
                 action='store_true',
                 help='List all public keys')
-        
+
         parser.add_option('-a',
                 '--accept',
                 dest='accept',

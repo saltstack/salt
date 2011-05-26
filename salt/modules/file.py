@@ -10,7 +10,6 @@ data
 import os
 import grp
 import pwd
-import hashlib
 
 def gid_to_group(gid):
     '''
@@ -135,7 +134,7 @@ def set_mode(path, mode):
 
 def chown(path, user, group):
     '''
-    Chown a file, pass the filem the desired user and group
+    Chown a file, pass the file the desired user and group
 
     CLI Example:
     salt '*' file.chown /etc/passwd root root
