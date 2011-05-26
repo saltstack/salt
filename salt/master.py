@@ -360,6 +360,12 @@ class MWorker(multiprocessing.Process):
         ret['hash_type'] = self.opts['hash_type']
         return self.crypticle.dumps(ret)
 
+    def _master_opts(self, load):
+        '''
+        Return the master options to the minion
+        '''
+        return self.crypticle.dumps(self.opts)
+
     def _return(self, load):
         '''
         Handle the return data sent from the minions
