@@ -376,6 +376,17 @@ class FileClient(object):
         payload = {'enc': 'aes'}
         load = {'path': path,
                 'cmd': '_file_hash'}
-        payload['load'] = auth.crypticle.dumps(load)
+        payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(socket.recv_pyobj())
+
+    def master_opts(self):
+        '''
+        Return the master opts data 
+        '''
+        payload = {'enc': 'aes'}
+        load = {'cmd': '_master_opts'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send_pyobj(payload)
+        return self.auth.crypticle.loads(socket.recv_pyobj())
+
