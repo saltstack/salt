@@ -44,13 +44,6 @@ class Minion(object):
         Pass in the options dict
         '''
         self.opts = opts
-        if opts['cython_enable'] is True:
-            try:
-                import pyximport
-                pyximport.install()
-            except ImportError:
-                log.info("Cython is enabled in options though it's not present "
-                         "in the system path. Skipping Cython modules.")
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.authenticate()
