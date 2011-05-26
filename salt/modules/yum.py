@@ -14,7 +14,7 @@ def __virtual__():
 
 def _list_removed(old, new):
     '''
-    List the pachages which have been removed between the two package objects
+    List the packages which have been removed between the two package objects
     '''
     pkgs = []
     for pkg in old:
@@ -118,13 +118,13 @@ def upgrade():
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
     return pkgs
-    
+
 def remove(pkg):
     '''
     Remove a single package with yum remove
 
     Return a list containing the removed packages:
-    
+
     CLI Example:
     salt '*' pkg.remove <package name>
     '''
@@ -139,7 +139,7 @@ def purge(pkg):
     Yum does not have a purge, this function calls remove
 
     Return a list containing the removed packages:
-    
+
     CLI Example:
     salt '*' pkg.purge <package name>
 

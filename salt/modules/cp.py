@@ -3,6 +3,7 @@ Minion side functions for salt-cp
 '''
 # Import python libs
 import os
+import hashlib
 
 # Import salt libs
 import salt.minion
@@ -14,7 +15,7 @@ def recv(files, dest):
     '''
     Used with salt-cp, pass the files dict, and the destination.
 
-    This function recieves small fast copy files from the master via salt-cp
+    This function receives small fast copy files from the master via salt-cp
     '''
     ret = {}
     for path, data in files.items():
@@ -47,7 +48,7 @@ def get_file(path, dest):
 def cache_files(paths):
     '''
     Used to gather many files from the master, the gathered files will be
-    saved in the minion cachedir reflective to the paths retrived from the
+    saved in the minion cachedir reflective to the paths retrieved from the
     master.
     '''
     client = salt.minion.FileClient(__opts__)

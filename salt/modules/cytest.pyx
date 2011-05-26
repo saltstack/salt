@@ -1,5 +1,5 @@
 '''
-Module for running arbitrairy tests
+Module for running arbitrary tests
 '''
 
 import time
@@ -26,7 +26,7 @@ def ping():
 
 def fib(long num):
     '''
-    Return a fibonachi sequence up to the passed number, and the time it took
+    Return a Fibonacci sequence up to the passed number, and the time it took
     to compute in seconds. Used for performance tests
 
     CLI Example:

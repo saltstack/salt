@@ -1,5 +1,5 @@
 '''
-Specilized routines used by the butter cloud component
+Specialized routines used by the butter cloud component
 '''
 # Import salt modules
 import virt
@@ -76,7 +76,7 @@ def _gen_pin_drives(pins):
 
 def _apply_overlay(vda, instance):
     '''
-    Use libguestfs to apply the overlay inder the specified instance to the
+    Use libguestfs to apply the overlay under the specified instance to the
     specified vda
     '''
     overlay = os.path.join(instance, 'overlay')

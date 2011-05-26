@@ -13,7 +13,8 @@ salt \- Parallel remote execution system
 .B salt -Q test.ping
 
 .SH DESCRIPTION
-Salt allows for commands to be executed across a swath of remote systems in parallel. This means that remote systems can be both controleed and querried with ease.
+Salt allows for commands to be executed across a swath of remote systems in parallel.
+This means that remote systems can be both controlled and queried with ease.
 
 .SH OPTIONS
 .TP
@@ -26,23 +27,29 @@ The timeout in seconds to wait for replies from the salt minions.
 
 .TP
 -E, --pcre
-The target expresion will be interpereted as a pcre regular expression rather than a shell glob.
+The target expression will be interpreted as a pcre regular expression rather than
+a shell glob.
 
 .TP
 -L, --list
-The target expression will be interpereted as a comma delimited list, example: server1.foo.bar,server2.foo.bar,example7.quo.qux
+The target expression will be interpreted as a comma delimited list,
+example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 
 .TP
 -G, --grain
-The target expression matches values returned by the salt grains system on the minions. The target expresion is in the format of '<grain value>:<pcre regular expresion>'; example: 'os:Arch.*'
+The target expression matches values returned by the salt grains system on the
+minions. The target expression is in the format of '<grain value>:<pcre regular expression>';
+example: 'os:Arch.*'
 
 .TP
 -Q, --query
-Execute a salt command query, this can be used to find the results os a previous function call: -Q test.echo')
+Execute a salt command query, this can be used to find the results os a previous
+function call: -Q test.echo')
 
 .TP
 -c CONFIG, --config=CONFIG
-The location of the salt master configuration file, the salt master settings are required to know where the connections are; default=/etc/salt/master
+The location of the salt master configuration file, the salt master settings are
+required to know where the connections are; default=/etc/salt/master
 
 .SH AUTHORS
 Thomas S. Hatch <thatch@gmail.com>

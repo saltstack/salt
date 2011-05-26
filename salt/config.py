@@ -4,8 +4,6 @@ All salt configuration loading and defaults should be in this module
 # Import python modules
 import os
 import socket
-import subprocess
-import logging
 # Import third party libs
 import yaml
 # Import salt libs
@@ -32,8 +30,8 @@ def minion_config(path):
             'open_mode': False,
             'multiprocessing': False,
             'log_file': '/var/log/salt/minion',
-            'log_level': 'WARNING',
-            'out_level': 'ERROR',
+            'log_level': 'warning',
+            'log_granular_levels': {},
             'test': False,
             'cython_enable': True,
             }
@@ -47,17 +45,13 @@ def minion_config(path):
     opts['master_uri'] = 'tcp://' + opts['master'] + ':'\
                        + str(opts['master_port'])
 
-    # Enableing open mode requires that the value be set to True, and nothing
+    # Enabling open mode requires that the value be set to True, and nothing
     # else!
     if opts['open_mode']:
         if opts['open_mode'] == True:
             opts['open_mode'] = True
         else:
             opts['open_mode'] = False
-
-    opts['logger'] = master_logger(opts['log_file'],
-                                   opts['log_level'],
-                                   opts['out_level'])
 
     opts['grains'] = salt.loader.grains(opts)
 
@@ -83,8 +77,8 @@ def master_config(path):
             'open_mode': False,
             'auto_accept': False,
             'log_file': '/var/log/salt/master',
-            'log_level': 'WARNING',
-            'out_level': 'ERROR',
+            'log_level': 'warning',
+            'log_granular_levels': {},
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
             }
@@ -97,7 +91,7 @@ def master_config(path):
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
-    # Enableing open mode requires that the value be set to True, and nothing
+    # Enabling open mode requires that the value be set to True, and nothing
     # else!
     if opts['open_mode']:
         if opts['open_mode'] == True:
@@ -109,58 +103,4 @@ def master_config(path):
             opts['auto_accept'] = True
         else:
             opts['auto_accept'] = False
-
-    opts['logger'] = master_logger(opts['log_file'],
-                                   opts['log_level'],
-                                   opts['out_level'])
-
     return opts
-
-def master_logger(log_file, log_level, console_level):
-    '''
-    Returns a logger fo use with a salt master
-    '''
-    if not os.path.isdir(os.path.dirname(log_file)):
-        os.makedirs(os.path.dirname(log_file))
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    fh_ = logging.FileHandler(log_file)
-    fh_.setLevel(getattr(logging, log_level))
-
-    ch_ = logging.StreamHandler()
-    ch_.setLevel(getattr(logging, console_level))
-
-    fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    formatter = logging.Formatter(fmt)
-    ch_.setFormatter(formatter)
-    fh_.setFormatter(formatter)
-    logger.addHandler(ch_)
-    logger.addHandler(fh_)
-
-    return logger
-
-def minion_logger(log_file, log_level, console_level):
-    '''
-    Returns a logger fo use with a salt minion
-    '''
-    if not os.path.isdir(os.path.dirname(log_file)):
-        os.makedirs(os.path.dirname(log_file))
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    fh_ = logging.FileHandler(log_file)
-    fh_.setLevel(getattr(logging, log_level))
-
-    ch_ = logging.StreamHandler()
-    ch_.setLevel(getattr(logging, console_level))
-
-    fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    formatter = logging.Formatter(fmt)
-    ch_.setFormatter(formatter)
-    fh_.setFormatter(formatter)
-    logger.addHandler(ch_)
-    logger.addHandler(fh_)
-
-    return logger
-

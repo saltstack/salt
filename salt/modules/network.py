@@ -6,12 +6,14 @@ import socket
 from string import ascii_letters, digits
 
 def _sanitize_host(host):
-    return "".join([c for c in host[0:255] if c in (ascii_letters + digits + '.')])
+    return "".join([
+        c for c in host[0:255] if c in (ascii_letters + digits + '.')
+    ])
 
 def ping(host):
     '''
     Performs a ping to a host
-    
+
     CLI Example:
     salt '*' network.ping archlinux.org -c 4
     '''
@@ -25,7 +27,7 @@ def ping(host):
 def netstat():
     '''
     Return information on open ports and states
-    
+
     CLI Example:
     salt '*' network.netstat
     '''
@@ -66,7 +68,7 @@ def netstat():
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
-    
+
     CLI Example:
     salt '*' network.traceroute archlinux.org
     '''
@@ -98,7 +100,7 @@ def traceroute(host):
 def dig(host):
     '''
     Performs a DNS lookup with dig
-    
+
     CLI Example:
     salt '*' network.dig archlinux.org
     '''
@@ -112,7 +114,7 @@ def dig(host):
 def isportopen(host, port):
     '''
     Return status of a port
-    
+
     CLI Example:
     salt '*' network.isportopen 127.0.0.1 22
     '''

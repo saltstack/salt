@@ -2,8 +2,8 @@
 '''
 Publish commands to the salt system from the command line on the master.
 '''
-# Eventually we need to be able to interlink salt masters and form quorums,
-# and create the ability for externel systesm to talk to salt.  This interface
+# Eventually we need to be able to interlink salt masters and form quorum's,
+# and create the ability for external systems to talk to salt.  This interface
 # is just a cli interface so that we can get this kicked off and working
 import salt.cli
 

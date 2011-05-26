@@ -1,8 +1,6 @@
 '''
 Control the state system on the minion
 '''
-# Import Python modules
-import os
 
 # Import salt modules
 import salt.state
@@ -41,7 +39,7 @@ def template(tem):
     '''
     st_ = salt.state.State(__opts__)
     return st_.call_template(tem)
-    
+
 def template_str(tem):
     '''
     Execute the information stored in a template file on the minion
@@ -51,4 +49,4 @@ def template_str(tem):
     '''
     st_ = salt.state.State(__opts__)
     return st_.call_template_str(tem)
-    
+

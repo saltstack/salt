@@ -38,7 +38,7 @@ def stop(name):
 def status(name, sig=None):
     '''
     Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signiture to use to find the service via
+    service is running or not, pass a signature to use to find the service via
     ps
 
     CLI Example:

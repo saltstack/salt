@@ -1,6 +1,6 @@
 '''
 The module used to execute states in salt. A state is unlike a module execution
-in that instead of just executing a command it ensure that a certian state is
+in that instead of just executing a command it ensure that a certain state is
 present on the system.
 
 The data sent to the state calls is as follows:
@@ -15,6 +15,7 @@ import sys
 import os
 import copy
 import inspect
+import tempfile
 # Import Salt modules
 import salt.loader
 
@@ -71,7 +72,7 @@ class State(object):
 
     def format_call(self, data):
         '''
-        Formats low data into a list of dicts used to acctually call the state,
+        Formats low data into a list of dict's used to actually call the state,
         returns:
         {
         'full': 'module.function',
@@ -110,7 +111,7 @@ class State(object):
 
     def compile_high_data(self, high):
         '''
-        "Compile" the high data as it is retireved from the cli or yaml into
+        "Compile" the high data as it is retrieved from the cli or yaml into
         the individual state executor structures
         '''
         chunks = []
@@ -148,8 +149,8 @@ class State(object):
 
     def compile_template(self, template):
         '''
-        Take the path to a template and return the high data structure derived from the
-        template.
+        Take the path to a template and return the high data structure derived
+        from the template.
         '''
         if not os.path.isfile(template):
             return {}
@@ -157,8 +158,8 @@ class State(object):
 
     def compile_template_str(self, template):
         '''
-        Take the path to a template and return the high data structure derived from the
-        template.
+        Take the path to a template and return the high data structure derived
+        from the template.
         '''
         fn_ = tempfile.mkstemp()[1]
         open(fn_, 'w+').write(template)
@@ -168,7 +169,8 @@ class State(object):
 
     def call(self, data):
         '''
-        Call a state directly with the low data structure, verify data before processing
+        Call a state directly with the low data structure, verify data before
+        processing.
         '''
         ret = {'changes': None,
                'result': False,
@@ -178,7 +180,7 @@ class State(object):
 
     def call_chunks(self, chunks):
         '''
-        Itterate over a list of chunks and call them, checking for requires.
+        Iterate over a list of chunks and call them, checking for requires.
         '''
         running = {}
         for low in chunks:

@@ -7,7 +7,7 @@ import subprocess
 __opts__ = {}
 
 def custom():
-    ''' 
+    '''
     Return a custom composite of status data and info for this minon,
     based on the minion config file. An example config like might be:
 
@@ -19,7 +19,7 @@ def custom():
 
     This function is meant to replace all_status(), which returns
     anything and everything, which we probably don't want.
-    
+
     By default, nothing is returned. Warning: Depending on what you
     include, there can be a LOT here!
 
@@ -38,7 +38,7 @@ def custom():
         for item in __opts__[opt]:
             ret[item] = vals[item]
 
-    return ret 
+    return ret
 
 def uptime():
     '''
@@ -59,7 +59,7 @@ def loadavg():
     '''
     comps = open('/proc/loadavg', 'r').read().strip()
     load_avg = comps.split()
-    return { 
+    return {
         '1-min':  load_avg[1],
         '5-min':  load_avg[2],
         '15-min': load_avg[3],
@@ -105,7 +105,7 @@ def cpustats():
 
 def meminfo():
     '''
-    Return the CPU stats for this minon
+    Return the CPU stats for this minion
 
     CLI Example:
     salt '*' status.meminfo
@@ -125,8 +125,8 @@ def meminfo():
     return ret
 
 def cpuinfo():
-    ''' 
-    Return the CPU info for this minon
+    '''
+    Return the CPU info for this minion
 
     CLI Example:
     salt '*' status.cpuinfo
@@ -142,11 +142,11 @@ def cpuinfo():
             ret[comps[0]] = comps[1].split()
         else:
             ret[comps[0]] = comps[1].strip()
-    return ret 
+    return ret
 
 def diskstats():
     '''
-    Return the disk stats for this minon
+    Return the disk stats for this minion
 
     CLI Example:
     salt '*' status.diskstats
@@ -177,7 +177,7 @@ def diskstats():
 
 def vmstats():
     '''
-    Return the virtual memory stats for this minon
+    Return the virtual memory stats for this minion
 
     CLI Example:
     salt '*' status.vmstats
@@ -192,8 +192,8 @@ def vmstats():
     return ret
 
 def netstats():
-    ''' 
-    Return the network stats for this minon
+    '''
+    Return the network stats for this minion
 
     CLI Example:
     salt '*' status.netstats
@@ -206,22 +206,22 @@ def netstats():
             continue
         comps = line.split()
         if comps[0] == headers[0]:
-            index = len(headers) - 1 
+            index = len(headers) - 1
             row = {}
             for field in range(index):
                 if field < 1:
                     continue
                 else:
                     row[headers[field]] = comps[field]
-            rowname = headers[0].replace(':', '') 
-            ret[rowname] = row 
+            rowname = headers[0].replace(':', '')
+            ret[rowname] = row
         else:
             headers = comps
-    return ret 
+    return ret
 
 def netdev():
     '''
-    Return the network device stats for this minon
+    Return the network device stats for this minion
 
     CLI Example:
     salt '*' status.netdev
@@ -256,8 +256,8 @@ def netdev():
     return ret
 
 def w():
-    ''' 
-    Return a list of logged in users for this minon, using the w command
+    '''
+    Return a list of logged in users for this minion, using the w command
 
     CLI Example:
     salt '*' status.w
@@ -270,7 +270,7 @@ def w():
         if not row.count(' '):
             continue
         comps = row.split()
-        rec = { 
+        rec = {
             'user':  comps[0],
             'tty':   comps[1],
             'login': comps[2],
@@ -278,13 +278,14 @@ def w():
             'jcpu':  comps[4],
             'pcpu':  comps[5],
             'what':  ' '.join(comps[6:]),
-        }   
+        }
         user_list.append( rec )
     return user_list
 
 def all_status():
     '''
-    Return a composite of all status data and info for this minon. Warning: There is a LOT here!
+    Return a composite of all status data and info for this minoon.
+    Warning: There is a LOT here!
 
     CLI Example:
     salt '*' status.all_status

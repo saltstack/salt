@@ -1,6 +1,6 @@
 '''
 The client module is used to create a client connection to the publisher
-The data structurte needs to be:
+The data structure needs to be:
     {'enc': 'clear',
      'load': {'fun': '<mod.callable>',
               'arg':, ('arg1', 'arg2', ...),
@@ -10,17 +10,17 @@ The data structurte needs to be:
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
 # option.
-# The concers are
+# The concerns are
 # 1. Who executes the command?
 # 2. what is the function being run?
 # 3. What arguments need to be passed to the function?
 # 4. How long do we wait for all of the replies?
 #
 # Next there are a number of tasks, first we need some kind of authentication
-# This Client initially will be the master root client, which will run as the 
+# This Client initially will be the master root client, which will run as the
 # root user on the master server.
 # BUT we also want a client to be able to work over the network, so that
-# controllers can exist within disperate applicaitons.
+# controllers can exist within disparate applications.
 # The problem is that this is a security nightmare, so I am going to start
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
@@ -90,7 +90,7 @@ class LocalClient(object):
 
     def _check_pcre_minions(self, expr):
         '''
-        Return the minions found by looking via regular expresions
+        Return the minions found by looking via regular expressions
         '''
         ret = set()
         cwd = os.getcwd()
@@ -184,10 +184,10 @@ class LocalClient(object):
                 'grain': self._check_grain_minions,
                 'exsel': self._check_grain_minions,
                 }[expr_form](expr)
-            
+
     def pub(self, tgt, fun, arg=(), expr_form='glob', ret=''):
         '''
-        Take the required arguemnts and publish the given command.
+        Take the required arguments and publish the given command.
         Arguments:
             tgt:
                 The tgt is a regex or a glob used to match up the ids on
@@ -195,11 +195,11 @@ class LocalClient(object):
                 all of the minions and then the minions determine if the
                 command is for them based on the tgt value.
             fun:
-                The function nane to be called on the remote host(s), this must
+                The function name to be called on the remote host(s), this must
                 be a string in the format "<modulename>.<function name>"
             arg:
                 The arg option needs to be a tuple of arguments to pass to the
-                calling function, if left blank 
+                calling function, if left blank
         Returns:
             jid:
                 A string, as returned by the publisher, which is the job id,
@@ -207,7 +207,7 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
-        # Run a check_minions, if no minons match return False
+        # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module
         # make the zmq client
@@ -229,8 +229,7 @@ class LocalClient(object):
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
-        socket.connect('tcp://' + self.opts['interface'] + ':'\
-                + str(self.opts['ret_port']))
+        socket.connect('tcp://%(interface)s:%(ret_port)s' % self.opts)
         socket.send(package)
         payload = salt.payload.unpackage(socket.recv())
         return {'jid': payload['load']['jid'],

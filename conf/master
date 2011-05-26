@@ -13,7 +13,7 @@
 # return calls made from minions to the master, if the master seems to be
 # running slowly, increase the number of threads
 #worker_threads: 5
-# 
+#
 # The port to begin binding workers on, the workers will be created on
 # increasingly higher ports
 #worker_start_port: 45056
@@ -46,9 +46,9 @@
 
 #####      File Server settings      #####
 ##########################################
-# Salt runs a lightwieght file server writen in zeromq to deliver files to
+# Salt runs a lightweight file server written in zeromq to deliver files to
 # minions. This file server is built into the master daemon and does not
-# require a dedicated port. 
+# require a dedicated port.
 
 # The file root is the root directory exposed by the file server
 #file_root: /srv/salt
@@ -66,7 +66,7 @@
 # Salt supports automatic clustering, salt creates a single ip address which
 # is shared among the individual salt components using ucarp. The private key
 # and all of the minion keys are maintained across the defined cluster masters
-# The failover service is automatically managed via thse settings
+# The failover service is automatically managed via these settings
 
 # List the identifiers for the other cluster masters in this manner:
 # [saltmaster-01.foo.com,saltmaster-02.foo.com,saltmaster-03.foo.com]
@@ -84,7 +84,17 @@
 ##########################################
 # The location of the master log file
 #log_file: /var/log/salt/master
-# The level of messages to send to the log file
-#log_level: WARNING
-# The level of messages for posting to the terminal
-#out_level: ERROR
+# The level of messages to send to the log file.
+# One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+# Default: 'warning'
+#log_level: warning
+#
+# Logger levels can be used to tweak specific loggers logging levels.
+# Imagine you want to have the salt library at the 'warning' level, but, you
+# still wish to have 'salt.modules' at the 'debug' level:
+#   log_granular_levels: {
+#     'salt': 'warning',
+#     'salt.modules': 'debug'
+#   }
+#
+#log_granular_levels: {}

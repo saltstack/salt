@@ -127,7 +127,7 @@ def os_data():
         grains['os'] = kernel
 
     # Load the virtual machine info
-    
+
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
     return grains

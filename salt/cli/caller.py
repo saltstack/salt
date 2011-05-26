@@ -1,5 +1,5 @@
 '''
-The caller module is used as a frontend to manage direct calls to the salt
+The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 '''
 # Import python modules

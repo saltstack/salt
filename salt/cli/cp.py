@@ -1,7 +1,7 @@
 '''
 The cp module is used to execute the logic used by the salt-cp command
 line application, salt-cp is NOT intended to broadcast large files, it is
-intened to handle text files.
+intended to handle text files.
 Salt-cp can be used to distribute configuration files
 '''
 # Import python modules
@@ -73,7 +73,7 @@ class SaltCP(object):
             args.append('list')
         elif self.opts['grain']:
             args.append('grain')
-        
+
         ret = local.cmd(*args)
 
         print yaml.dump(ret)

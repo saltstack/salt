@@ -37,7 +37,7 @@ def run(name,
             return ret
     if unless:
         if __salt__['cmd.retcode'](unless) == 0:
-            ret['comment'] = 'unless executed sucsessfully'
+            ret['comment'] = 'unless executed successfully'
             ret['result'] = True
             return ret
     if not os.path.isdir(cwd):

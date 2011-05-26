@@ -8,6 +8,7 @@ authenticating peers
 import os
 import sys
 import hmac
+import logging
 import tempfile
 import random
 import hashlib
@@ -22,6 +23,8 @@ import zmq
 # Import salt utils
 import salt.utils
 import salt.payload
+
+log = logging.getLogger(__name__)
 
 def foo_pass(self, data=''):
     '''
@@ -45,14 +48,14 @@ class MasterKeys(dict):
 
     def __get_priv_key(self):
         '''
-        Retruns a private key object for the master
+        Returns a private key object for the master
         '''
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            self.opts['logger'].debug('Loaded master key: ' + self.rsa_path)
+            log.debug('Loaded master key: %s', self.rsa_path)
         except:
-            self.opts['logger'].info('Generating master key: ' + self.rsa_path)
+            log.info('Generating master key: %s', self.rsa_path)
             gen = RSA.gen_key(2048, 1)
             gen.save_key(self.rsa_path, callback=foo_pass)
             gen.save_pub_key(self.pub_path)
@@ -86,16 +89,14 @@ class Auth(object):
 
     def get_priv_key(self):
         '''
-        Retruns a private key object for the minion
+        Returns a private key object for the minion
         '''
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            if self.opts.has_key('logger'):
-                self.opts['logger'].debug('Loaded minion key: ' + self.rsa_path)
+            log.debug('Loaded minion key: %s', self.rsa_path)
         except:
-            if self.opts.has_key('logger'):
-                self.opts['logger'].info('Generating minion key: ' + self.rsa_path)
+            log.info('Generating minion key: %s', self.rsa_path)
             gen = RSA.gen_key(2048, 1)
             gen.save_key(self.rsa_path, callback=foo_pass)
             pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
@@ -106,7 +107,7 @@ class Auth(object):
 
     def minion_sign_in_payload(self):
         '''
-        Generates the payload used to autnenticate with the master server. This
+        Generates the payload used to authenticate with the master server. This
         payload consists of the passed in id_ and the ssh public key to encrypt
         the AES key sent back form the master.
         '''
@@ -128,16 +129,15 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        if self.opts.has_key('logger'):
-            self.opts['logger'].info('Decypting the current master AES key')
+        log.info('Decrypting the current master AES key')
         key = self.get_priv_key()
         return key.private_decrypt(aes, 4)
-    
+
     def verify_master(self, master_pub, token):
         '''
         Takes the master pubkey and compares it to the saved master pubkey,
         the token is encrypted with the master private key and must be
-        decrypted sucessfully to verify that the master has been connected to.
+        decrypted successfully to verify that the master has been connected to.
         The token must decrypt with the public key, and it must say:
         'salty bacon'
         returns a bool
@@ -149,19 +149,17 @@ class Auth(object):
             local_master_pub = open(m_pub_fn).read()
             if not master_pub == local_master_pub:
                 # This is not the last master we connected to
-                if self.opts.has_key('logger'):
-                    self.opts['logger'].error('The master key has changed, the'\
-                            + ' salt master could have been subverted, verify'\
-                            + ' salt master\'s public key')
+                log.error('The master key has changed, the salt master could '
+                          'have been subverted, verify salt master\'s public '
+                          'key')
                 return False
         else:
             open(m_pub_fn, 'w+').write(master_pub)
         pub = RSA.load_pub_key(tmp_pub)
         if pub.public_decrypt(token, 5) == 'salty bacon':
             return True
-        if self.opts.has_key('logger'):
-            self.opts['logger'].error('The salt master has failed verification'\
-                    + ' for an unknown reason, verify your salt keys')
+        log.error('The salt master has failed verification for an unknown '
+                  'reason, verify your salt keys')
         return False
 
     def sign_in(self):
@@ -180,31 +178,30 @@ class Auth(object):
         if payload.has_key('load'):
             if payload['load'].has_key('ret'):
                 if not payload['load']['ret']:
-                    err = 'The Salt Master has rejected this minion\'s'\
-                        + ' public key!\nTo repair this issue, delete the'\
-                        + ' public key for this minion on the Salt Master'\
-                        + ' and restart this minion.\nOr restart the Salt'\
-                        + ' Master in open mode to clean out the keys. The'\
-                        + ' Salr Minion will now exit.'
-                    if self.opts.has_key('logger'):
-                        self.opts['logger'].critical(err)
+                    log.critical(
+                        'The Salt Master has rejected this minion\'s public '
+                        'key!\nTo repair this issue, delete the public key for '
+                        'this minion on the Salt Master and restart this '
+                        'minion.\nOr restart the Salt Master in open mode to '
+                        'clean out the keys. The Salt Minion will now exit.'
+                    )
                     sys.exit(42)
                 else:
-                    err = 'The Salt Master has cached the public key for'\
-                        + ' this node, this salt minion will wait for 10'\
-                        + ' seconds before attempting to re-authenticate'
-                    if self.opts.has_key('loger'):
-                        self.opts['logger'].error(err)
+                    log.error(
+                        'The Salt Master has cached the public key for this '
+                        'node, this salt minion will wait for 10 seconds '
+                        'before attempting to re-authenticate'
+                    )
                     return 'retry'
         if not self.verify_master(payload['pub_key'], payload['token']):
             m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
-            err = 'The Salt Master server\'s public key did not authenticate!'\
-                + '\nIf you are confident that you are connecting to a valid'\
-                + ' Salt Master, then remove the master public key and'\
-                + ' restart the Salt Minion.\nThe master public key can be'\
-                + ' found at:\n' + m_pub_fn
-            if self.opts.has_key('logger'):
-                self.opts['logger'].critical(err)
+            log.critical(
+                'The Salt Master server\'s public key did not authenticate!\n'
+                'If you are confident that you are connecting to a valid Salt '
+                'Master, then remove the master public key and restart the '
+                'Salt Minion.\nThe master public key can be found at:\n%s',
+                m_pub_fn
+            )
             sys.exit(42)
         auth['aes'] = self.decrypt_aes(payload['aes'])
         auth['publish_port'] = payload['publish_port']
@@ -217,7 +214,7 @@ class AuthenticationError(Exception): pass
 class Crypticle(object):
     '''
     Authenticated encryption class
-    
+
     Encryption algorithm: AES-CBC
     Signing algorithm: HMAC-SHA256
     '''
@@ -277,7 +274,7 @@ class Crypticle(object):
 
     def loads(self, data, pickler=pickle):
         '''
-        decrypt and unpickle a python object
+        decrypt and un-pickle a python object
         '''
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
@@ -297,7 +294,7 @@ class SAuth(object):
     def __authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        pardigmn, it will update the master information from a fresh sign in,
+        paradigm, it will update the master information from a fresh sign in,
         signing in can occur as often as needed to keep up with the revolving
         master aes key.
         '''

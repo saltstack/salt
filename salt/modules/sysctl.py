@@ -1,5 +1,5 @@
 '''
-Module for viewing and modifying sysctl paramters
+Module for viewing and modifying sysctl parameters
 '''
 import subprocess
 

@@ -8,7 +8,10 @@ Routines to set up a minion
 import os
 import sys
 import imp
+import logging
 import distutils.sysconfig
+
+log = logging.getLogger(__name__)
 
 def minion_mods(opts):
     '''
@@ -78,9 +81,9 @@ def call(fun, args=[], dirs=[]):
 
 class Loader(object):
     '''
-    Used to load in arbitrairy modules from a directory, the Loader can also be
+    Used to load in arbitrary modules from a directory, the Loader can also be
     used to only load specific functions from a directory, or to call modules
-    in an arbitrairy directory directly.
+    in an arbitrary directory directly.
     '''
     def __init__(self, module_dirs, opts={}):
         self.module_dirs = module_dirs
@@ -96,9 +99,7 @@ class Loader(object):
         '''
         mod_opts = {}
         for key, val in opts.items():
-            if key == 'logger':
-                continue
-            if key == 'grains':
+            if key in ('logger', 'grains'):
                 continue
             mod_opts[key] = val
         return mod_opts
@@ -138,10 +139,9 @@ class Loader(object):
                                 return getattr(
                                     mod, fun[fun.rindex('.') + 1:])(*arg)
                 except ImportError:
-                    self.opts['logger'].info(
-                        "Cython is enabled in options though it's not present "
-                        "in the system path. Skipping Cython modules."
-                    )
+                    log.info("Cython is enabled in options though it's not "
+                             "present in the system path. Skipping Cython "
+                             "modules.")
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
     def gen_functions(self, pack=None):
@@ -159,10 +159,8 @@ class Loader(object):
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
-                self.opts['logger'].info(
-                    "Cython is enabled in options though it's not present in "
-                    "the system path. Skipping Cython modules."
-                )
+                log.info("Cython is enabled in options though it's not present "
+                         "in the system path. Skipping Cython modules.")
         for mod_dir in self.module_dirs:
             if not mod_dir.startswith('/'):
                 continue
@@ -257,7 +255,7 @@ class Loader(object):
     def gen_grains(self):
         '''
         Read the grains directory and execute all of the public callable
-        members. then verify that the returns are python dicts and return a
+        members. then verify that the returns are python dict's and return a
         dict containing all of the returned values.
         '''
         grains = {}
