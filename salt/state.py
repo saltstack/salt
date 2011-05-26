@@ -16,8 +16,14 @@ import os
 import copy
 import inspect
 import tempfile
+import logging
 # Import Salt modules
 import salt.loader
+import salt.minion
+
+log = logging.getLogger(__name__)
+
+class StateError(Exception): pass
 
 class State(object):
     '''
@@ -271,3 +277,42 @@ class State(object):
         if high:
             return self.call_high(high)
         return high
+
+def HighState(object):
+    '''
+    Generate and execute the salt "High State". The High State is the compound
+    state derived from a group of template files stored on the salt master or
+    in a the local cache.
+    '''
+    def __init__(self, opts):
+        self.client = salt.minion.FileClient(opts)
+        self.opts = self.__gen_opts(opts)
+
+    def __gen_opts(self, opts):
+        '''
+        The options used by the High State object are derived from options on
+        the minion and the master, or just the minion if the high state call is
+        entirely local.
+        '''
+        # If the state is intended to be applied locally, then the local opts
+        # should have all of the needed data, otherwise overwrite the local
+        # data items with data from the master
+        if opts.has_key('local_state'):
+            if opts['local_state']:
+                return opts
+        mopts = self.client.master_opts()
+        opts['renderer'] = mopts['renderer']
+        if mopts['state_top'].startswith('salt://'):
+            opts['state_top'] = mopts['state_top']
+        elif mopts['state_top'].startswith(mopts['file_root']):
+            opts['state_top'] = os.path.join(
+                    'salt://', 
+                    os.path.relpath(
+                        mopts['state_top'], mopts['file_root'])
+                    )
+        elif not mopts['state_top'].startswith('/'):
+            opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+        else:
+            log.error('Invalid top file location')
+            raise StateError('Invalid top file location')
+        return opts
