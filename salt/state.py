@@ -287,6 +287,7 @@ def HighState(object):
     def __init__(self, opts):
         self.state = State(opts)
         self.client = salt.minion.FileClient(opts)
+        self.matcher = salt.minion.Matcher(opts)
         self.opts = self.__gen_opts(opts)
 
     def __gen_opts(self, opts):
@@ -320,7 +321,27 @@ def HighState(object):
 
     def get_top(self):
         '''
-        Returns the high data derived from the 
+        Returns the high data derived from the top file
         '''
         top = self.client.cache_file(self.opts['state_top'], 'base')
         return self.state.compile_template(top)
+
+    def top_matches(self):
+        '''
+        Search through the top high data for matches and return the states that
+        this minion needs to execute. 
+
+        Returns:
+        {'env': ['state1', 'state2', ...]}
+        '''
+        matches = {}
+        top = self.get_top()
+        for env, body in top.items():
+            for match, data in body.items():
+                if self.matcher.confirm_top(data):
+                    if not matches.has_key(env):
+                        matches[env] = []
+                    for item in data:
+                        if type(item) == type(str()):
+                            matches[env].append(item)
+        return matches
