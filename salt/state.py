@@ -345,3 +345,15 @@ def HighState(object):
                         if type(item) == type(str()):
                             matches[env].append(item)
         return matches
+
+    def gather_states(self, matches):
+        '''
+        Gather the template files from the master
+        '''
+        group = []
+        for env, states in matches.items():
+            for sls in states:
+                state = self.client.get_state(sls, env)
+                if state:
+                    group.append(state)
+        return group
