@@ -38,30 +38,30 @@ def recv(files, dest):
 
     return ret
 
-def get_file(path, dest):
+def get_file(path, dest, env='base'):
     '''
     Used to get a single file from the salt master
     '''
     client = salt.minion.FileClient(__opts__)
-    return client.get_file(path, dest)
+    return client.get_file(path, dest, False, env)
 
-def cache_files(paths):
+def cache_files(paths, env='base'):
     '''
     Used to gather many files from the master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrieved from the
     master.
     '''
     client = salt.minion.FileClient(__opts__)
-    return client.cache_files(paths)
+    return client.cache_files(paths, env)
 
-def cache_file(path):
+def cache_file(path, env='base'):
     '''
     Used to cache a single file in the local salt-master file cache.
     '''
     client = salt.minion.FileClient(__opts__)
-    return client.cache_file(path)
+    return client.cache_file(path, env)
 
-def hash_file(path):
+def hash_file(path, env='base'):
     '''
     Return the hash of a file, to get the hash of a file on the
     salt master file server prepend the path with salt://<file on server>
@@ -70,4 +70,4 @@ def hash_file(path):
     CLI Example:
     '''
     client = salt.minion.FileClient(__opts__)
-    return client.hash_file(path)
+    return client.hash_file(path, env)
