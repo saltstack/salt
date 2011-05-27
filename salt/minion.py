@@ -420,8 +420,6 @@ class FileClient(object):
         Get a state file from the master and store it in the local minion cache
         return the location of the file
         '''
-        pacman.cache = pacman/cache.sls or pacman/cache/init.sls
-        pacman = pacman/init.sls
         if sls.count('.'):
             root = sls.replace('.', '/')
             for path in [root + '.sls', os.path.join(root, 'init.sls')]:
