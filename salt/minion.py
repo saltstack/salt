@@ -49,6 +49,7 @@ class Minion(object):
         self.opts = opts
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
+        self.matcher = Matcher(self.opts, self.functions)
         self.authenticate()
 
     def __prep_mod_opts(self):
@@ -98,10 +99,10 @@ class Minion(object):
             return
         # Verify that the publication applies to this minion
         if data.has_key('tgt_type'):
-            if not getattr(self, '_' + data['tgt_type'] + '_match')(data['tgt']):
+            if not getattr(self.matcher, data['tgt_type'] + '_match')(data['tgt']):
                 return
         else:
-            if not self._glob_match(data['tgt']):
+            if not self.matcher.glob_match(data['tgt']):
                 return
         self._handle_decoded_payload(data)
 
@@ -139,46 +140,6 @@ class Minion(object):
                 threading.Thread(
                     target=lambda: self._thread_return(data)
                 ).start()
-
-    def _glob_match(self, tgt):
-        '''
-        Returns true if the passed glob matches the id
-        '''
-        tmp_dir = tempfile.mkdtemp()
-        cwd = os.getcwd()
-        os.chdir(tmp_dir)
-        open(self.opts['id'], 'w+').write('salt')
-        ret = bool(glob.glob(tgt))
-        os.chdir(cwd)
-        shutil.rmtree(tmp_dir)
-        return ret
-
-    def _pcre_match(self, tgt):
-        '''
-        Returns true if the passed pcre regex matches
-        '''
-        return bool(re.match(tgt, self.opts['id']))
-
-    def _list_match(self, tgt):
-        '''
-        Determines if this host is on the list
-        '''
-        return bool(tgt.count(self.opts['id']))
-
-    def _grain_match(self, tgt):
-        '''
-        Reads in the grains regular expression match
-        '''
-        comps = tgt.split(':')
-        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
-
-    def _exsel_match(self, tgt):
-        '''
-        Runs a function and return the exit code
-        '''
-        if not self.functions.has_key(tgt):
-            return False
-        return(self.functions[tgt]())
 
     def _thread_return(self, data):
         '''
@@ -296,6 +257,59 @@ class Minion(object):
         while True:
             payload = socket.recv_pyobj()
             self._handle_payload(payload)
+
+
+class Matcher(object):
+    '''
+    Use to return the value for matching calls from the master
+    '''
+    def __init__(self, opts, functions=None):
+        self.opts = opts
+        if not functions:
+            functions = salt.loader.minion_mods(self.opts)
+        else:
+            self.functions = functions
+
+    def _glob_match(self, tgt):
+        '''
+        Returns true if the passed glob matches the id
+        '''
+        tmp_dir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(tmp_dir)
+        open(self.opts['id'], 'w+').write('salt')
+        ret = bool(glob.glob(tgt))
+        os.chdir(cwd)
+        shutil.rmtree(tmp_dir)
+        return ret
+
+    def pcre_match(self, tgt):
+        '''
+        Returns true if the passed pcre regex matches
+        '''
+        return bool(re.match(tgt, self.opts['id']))
+
+    def list_match(self, tgt):
+        '''
+        Determines if this host is on the list
+        '''
+        return bool(tgt.count(self.opts['id']))
+
+    def grain_match(self, tgt):
+        '''
+        Reads in the grains regular expression match
+        '''
+        comps = tgt.split(':')
+        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
+
+    def exsel_match(self, tgt):
+        '''
+        Runs a function and return the exit code
+        '''
+        if not self.functions.has_key(tgt):
+            return False
+        return(self.functions[tgt]())
+
 
 class FileClient(object):
     '''
