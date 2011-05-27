@@ -323,7 +323,7 @@ class FileClient(object):
             raise MinionError('Unsupported path')
         return path[:7]
         
-    def get_file(self, path, dest, makedirs=False):
+    def get_file(self, path, dest, makedirs=False, env='base'):
         '''
         Get a single file from the salt-master
         '''
@@ -337,6 +337,7 @@ class FileClient(object):
                 return False
         fn_ = open(dest, 'w+')
         load = {'path': path,
+                'env': env,
                 'cmd': '_serve_file'}
         while True:
             load['loc'] = fn_.tell()
@@ -348,25 +349,25 @@ class FileClient(object):
             fn_.write(data)
         return dest
 
-    def cache_file(self, path):
+    def cache_file(self, path, env='base'):
         '''
         Pull a file down from the file server and store it in the minion file
         cache
         '''
         dest = os.path.join(self.opts['cachedir'], 'files', path)
-        return self.get_file(path, dest, True)
+        return self.get_file(path, dest, True, env)
 
-    def cache_files(self, paths):
+    def cache_files(self, paths, env='base'):
         '''
         Download a list of files stored on the master and put them in the minion
         file cache
         '''
         ret = []
         for path in paths:
-            ret.append(self.cache_file(path))
+            ret.append(self.cache_file(path, env))
         return ret
 
-    def hash_file(self, path):
+    def hash_file(self, path, env='base'):
         '''
         Return the hash of a file, to get the hash of a file on the
         salt master file server prepend the path with salt://<file on server>
@@ -375,6 +376,7 @@ class FileClient(object):
         path = self._check_proto(path)
         payload = {'enc': 'aes'}
         load = {'path': path,
+                'env': env,
                 'cmd': '_file_hash'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
