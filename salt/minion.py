@@ -270,7 +270,7 @@ class Matcher(object):
         else:
             self.functions = functions
 
-    def _glob_match(self, tgt):
+    def glob_match(self, tgt):
         '''
         Returns true if the passed glob matches the id
         '''
