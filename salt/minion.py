@@ -270,6 +270,23 @@ class Matcher(object):
         else:
             self.functions = functions
 
+
+    def confirm_top(self, data):            
+        '''
+        Takes the data passed to a top file environment and determines if the
+        data matches this minion
+        '''
+        matcher = 'glob'
+        for item in data:
+            if type(item) == type(dict()):
+                if item.has_key('match'):
+                    matcher = item['match']
+        if hasattr(self, matcher + '_match'):
+            return getattr(self, matcher)
+        else:
+            log.error('Attempting to match with unknown matcher: %s', matcher)
+            return False
+
     def glob_match(self, tgt):
         '''
         Returns true if the passed glob matches the id
