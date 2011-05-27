@@ -322,5 +322,5 @@ def HighState(object):
         '''
         Returns the high data derived from the 
         '''
-        top = self.client.cache_file(self.opts['state_top'])
+        top = self.client.cache_file(self.opts['state_top'], 'base')
         return self.state.compile_template(top)
