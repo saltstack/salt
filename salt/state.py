@@ -285,6 +285,7 @@ def HighState(object):
     in a the local cache.
     '''
     def __init__(self, opts):
+        self.state = State(opts)
         self.client = salt.minion.FileClient(opts)
         self.opts = self.__gen_opts(opts)
 
@@ -316,3 +317,10 @@ def HighState(object):
             log.error('Invalid top file location')
             raise StateError('Invalid top file location')
         return opts
+
+    def get_top(self):
+        '''
+        Returns the high data derived from the 
+        '''
+        top = self.client.cache_file(self.opts['state_top'])
+        return self.state.compile_template(top)
