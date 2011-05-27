@@ -344,6 +344,8 @@ class FileClient(object):
             payload['load'] = self.crypticle.dumps(load)
             self.socket.send_pyobj(payload)
             data = self.auth.crypticle.loads(self.socket.recv_pyobj())
+            if data == False:
+                return False
             if not data:
                 break
             fn_.write(data)
@@ -381,6 +383,21 @@ class FileClient(object):
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(socket.recv_pyobj())
+
+    def get_state(self, sls, env):
+        '''
+        Get a state file from the master and store it in the local minion cache
+        return the location of the file
+        '''
+        pacman.cache = pacman/cache.sls or pacman/cache/init.sls
+        pacman = pacman/init.sls
+        if sls.count('.'):
+            root = sls.replace('.', '/')
+            for path in [root + '.sls', os.path.join(root, 'init.sls')]:
+                dest = self.cache_file(path, env)
+                if dest:
+                    return dest
+        return False
 
     def master_opts(self):
         '''

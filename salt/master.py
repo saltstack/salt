@@ -347,7 +347,7 @@ class MWorker(multiprocessing.Process):
             return False
         path = self._find_file(load['path'], load['env'])
         if not path:
-            return ''
+            return False
         fn_ = open(path, 'rb')
         fn_.seek(load['loc'])
         return self.crypticle.dumps(fn_.read(self.opts['file_buffer_size']))
