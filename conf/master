@@ -61,7 +61,7 @@
 # roots cannot match, otherwise the downloaded files will not be able to be
 # reliably ensured. A base environment is required to house the top file
 # Example:
-# file_root:
+# file_roots:
 #   - base:
 #     - /srv/salt/
 #   - dev:
