@@ -372,7 +372,7 @@ class FileClient(object):
                 'cmd': '_serve_file'}
         while True:
             load['loc'] = fn_.tell()
-            payload['load'] = self.crypticle.dumps(load)
+            payload['load'] = self.auth.crypticle.dumps(load)
             self.socket.send_pyobj(payload)
             data = self.auth.crypticle.loads(self.socket.recv_pyobj())
             if data == False:
