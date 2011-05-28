@@ -278,7 +278,7 @@ class State(object):
             return self.call_high(high)
         return high
 
-def HighState(object):
+class HighState(object):
     '''
     Generate and execute the salt "High State". The High State is the compound
     state derived from a group of template files stored on the salt master or
