@@ -70,9 +70,9 @@ def master_config(path):
             'keep_jobs': 24,
             'pki_dir': '/etc/salt/pki',
             'cachedir': '/var/cache/salt',
-            'file_roots': { [
-                {'base': ['/srv/salt']},
-                ]},
+            'file_roots': {
+                'base': ['/srv/salt'],
+                },
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
