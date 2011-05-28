@@ -285,10 +285,10 @@ def HighState(object):
     in a the local cache.
     '''
     def __init__(self, opts):
-        self.state = State(opts)
-        self.client = salt.minion.FileClient(opts)
-        self.matcher = salt.minion.Matcher(opts)
         self.opts = self.__gen_opts(opts)
+        self.state = State(self.opts)
+        self.client = salt.minion.FileClient(self.opts)
+        self.matcher = salt.minion.Matcher(self.opts)
 
     def __gen_opts(self, opts):
         '''
@@ -357,3 +357,13 @@ def HighState(object):
                 if state:
                     group.append(state)
         return group
+
+    def render_highstate(self, group):
+        '''
+        Renders the collection of states into a single highstate data structure
+        '''
+        highstate = {}
+        for sls in group:
+            highstate.update( self.state.compile_template(sls))
+        return highstate
+
