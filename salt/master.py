@@ -344,10 +344,10 @@ class MWorker(multiprocessing.Process):
         if not load.has_key('path')\
                 or not load.has_key('loc')\
                 or not load.has_key('env'):
-            return False
+            return self.crypticle.dumps('')
         path = self._find_file(load['path'], load['env'])
         if not path:
-            return False
+            return self.crypticle.dumps('')
         fn_ = open(path, 'rb')
         fn_.seek(load['loc'])
         return self.crypticle.dumps(fn_.read(self.opts['file_buffer_size']))
@@ -361,7 +361,7 @@ class MWorker(multiprocessing.Process):
             return False
         path = self._find_file(load['path'], load['env'])
         if not path:
-            return ''
+            return self.crypticle.dumps('')
         ret = {}
         ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
                 open(path, 'rb').read()).hexdigest()

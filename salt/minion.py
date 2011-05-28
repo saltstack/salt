@@ -352,7 +352,7 @@ class FileClient(object):
         '''
         if not path.startswith('salt://'):
             raise MinionError('Unsupported path')
-        return path[:7]
+        return path[7:]
         
     def get_file(self, path, dest, makedirs=False, env='base'):
         '''

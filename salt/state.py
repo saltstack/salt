@@ -306,10 +306,10 @@ class HighState(object):
         opts['renderer'] = mopts['renderer']
         if mopts['state_top'].startswith('salt://'):
             opts['state_top'] = mopts['state_top']
-        elif not mopts['state_top'].startswith('/'):
-          opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
+        elif mopts['state_top'].startswith('/'):
+            opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
-          opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+            opts['state_top'] = os.path.join('salt://', mopts['state_top'])
         return opts
 
     def get_top(self):
