@@ -326,7 +326,7 @@ def HighState(object):
         top = self.client.cache_file(self.opts['state_top'], 'base')
         return self.state.compile_template(top)
 
-    def top_matches(self):
+    def top_matches(self, top):
         '''
         Search through the top high data for matches and return the states that
         this minion needs to execute. 
@@ -335,7 +335,6 @@ def HighState(object):
         {'env': ['state1', 'state2', ...]}
         '''
         matches = {}
-        top = self.get_top()
         for env, body in top.items():
             for match, data in body.items():
                 if self.matcher.confirm_top(data):
@@ -367,3 +366,12 @@ def HighState(object):
             highstate.update( self.state.compile_template(sls))
         return highstate
 
+    def call_highstate(self):
+        '''
+        Run the sequence to execute the salt highstate for this minion
+        '''
+        top = self.get_top()
+        matches = self.top_matches(top)
+        group = self.gather_states(matches)
+        high = self.render_highstate(group)
+        return self.state.call_high(high)
