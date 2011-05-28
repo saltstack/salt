@@ -50,3 +50,12 @@ def template_str(tem):
     st_ = salt.state.State(__opts__)
     return st_.call_template_str(tem)
 
+def highstate():
+    '''
+    Retrive the state data from the salt master for this minion and execute it
+
+    CLI Example:
+    salt '*' state.highstate
+    '''
+    st_ = salt.state.State(__opts__)
+    return st_.call_highstate()
