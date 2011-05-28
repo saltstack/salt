@@ -306,17 +306,10 @@ class HighState(object):
         opts['renderer'] = mopts['renderer']
         if mopts['state_top'].startswith('salt://'):
             opts['state_top'] = mopts['state_top']
-        elif mopts['state_top'].startswith(mopts['file_root']):
-            opts['state_top'] = os.path.join(
-                    'salt://', 
-                    os.path.relpath(
-                        mopts['state_top'], mopts['file_root'])
-                    )
         elif not mopts['state_top'].startswith('/'):
-            opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+          opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
-            log.error('Invalid top file location')
-            raise StateError('Invalid top file location')
+          opts['state_top'] = os.path.join('salt://', mopts['state_top'])
         return opts
 
     def get_top(self):

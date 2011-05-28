@@ -79,6 +79,7 @@ def master_config(path):
             'open_mode': False,
             'auto_accept': False,
             'renderer': 'yaml_jinja',
+            'state_top': 'top.yml',
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
             'log_granular_levels': {},
