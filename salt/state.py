@@ -285,9 +285,9 @@ class HighState(object):
     in a the local cache.
     '''
     def __init__(self, opts):
+        self.client = salt.minion.FileClient(opts)
         self.opts = self.__gen_opts(opts)
         self.state = State(self.opts)
-        self.client = salt.minion.FileClient(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
 
     def __gen_opts(self, opts):
