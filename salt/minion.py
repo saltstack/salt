@@ -433,11 +433,11 @@ class FileClient(object):
         return the location of the file
         '''
         if sls.count('.'):
-            root = sls.replace('.', '/')
-            for path in [root + '.sls', os.path.join(root, 'init.sls')]:
-                dest = self.cache_file(path, env)
-                if dest:
-                    return dest
+            sls = sls.replace('.', '/')
+        for path in [sls + '.sls', os.path.join(sls, 'init.sls')]:
+            dest = self.cache_file(path, env)
+            if dest:
+                return dest
         return False
 
     def master_opts(self):
