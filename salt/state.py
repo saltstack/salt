@@ -356,7 +356,7 @@ class HighState(object):
         '''
         highstate = {}
         for sls in group:
-            highstate.update( self.state.compile_template(sls))
+            highstate.update(self.state.compile_template(sls))
         return highstate
 
     def call_highstate(self):
