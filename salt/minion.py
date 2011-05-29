@@ -282,7 +282,7 @@ class Matcher(object):
                 if item.has_key('match'):
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
-            return getattr(self, matcher)
+            return getattr(self, matcher + '_match')
         else:
             log.error('Attempting to match with unknown matcher: %s', matcher)
             return False
