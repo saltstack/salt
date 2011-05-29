@@ -329,28 +329,36 @@ class MWorker(multiprocessing.Process):
         '''
         Search the environment for the relative path
         '''
+        fnd = {'path': '',
+               'rel': ''}
         if not self.opts['file_roots'].has_key(env):
-            return False
+            return fnd
         for root in self.opts['file_roots'][env]:
             full = os.path.join(root, path)
             if os.path.isfile(full):
-                return full
-        return False
+                fnd['path'] = full
+                fnd['rel'] = path
+                return fnd
+        return fnd
 
     def _serve_file(self, load):
         '''
         Return a chunk from a file based on the data received
         '''
+        ret = {'data': '',
+               'dest': ''}
         if not load.has_key('path')\
                 or not load.has_key('loc')\
                 or not load.has_key('env'):
-            return self.crypticle.dumps('')
-        path = self._find_file(load['path'], load['env'])
-        if not path:
-            return self.crypticle.dumps('')
-        fn_ = open(path, 'rb')
+            return self.crypticle.dumps(ret)
+        fnd = self._find_file(load['path'], load['env'])
+        if not fnd['path']:
+            return self.crypticle.dumps(ret)
+        ret['dest'] = fnd['rel']
+        fn_ = open(fnd['path'], 'rb')
         fn_.seek(load['loc'])
-        return self.crypticle.dumps(fn_.read(self.opts['file_buffer_size']))
+        ret['data'] = fn_.read(self.opts['file_buffer_size'])
+        return self.crypticle.dumps(ret)
 
     def _file_hash(self, load):
         '''
