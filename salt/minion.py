@@ -350,6 +350,7 @@ class FileClient(object):
         '''
         Make sure that this path is intended for the salt master and trim it
         '''
+        print path
         if not path.startswith('salt://'):
             raise MinionError('Unsupported path')
         return path[7:]
@@ -434,7 +435,10 @@ class FileClient(object):
         '''
         if sls.count('.'):
             sls = sls.replace('.', '/')
-        for path in [sls + '.sls', os.path.join(sls, 'init.sls')]:
+        for path in [
+                'salt://' + sls + '.sls', 
+                os.path.join('salt://', sls, 'init.sls')
+                ]:
             dest = self.cache_file(path, env)
             if dest:
                 return dest
