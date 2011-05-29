@@ -57,5 +57,5 @@ def highstate():
     CLI Example:
     salt '*' state.highstate
     '''
-    st_ = salt.state.State(__opts__)
+    st_ = salt.state.HighState(__opts__)
     return st_.call_highstate()
