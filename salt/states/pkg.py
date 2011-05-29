@@ -27,8 +27,9 @@ def latest(name):
     '''
     Verify that the latest package is installed
     '''
+    changes = {}
     version = __salt__['pkg.version'](name)
-    avail = ['pkg.available_version'](name)
+    avail = __salt__['pkg.available_version'](name)
     if avail > version:
         changes = __salt__['pkg.install'](name, True)
     if not changes:

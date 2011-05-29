@@ -49,6 +49,7 @@ class Minion(object):
         self.opts = opts
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
+        self.matcher = Matcher(self.opts, self.functions)
         self.authenticate()
 
     def __prep_mod_opts(self):
@@ -98,10 +99,10 @@ class Minion(object):
             return
         # Verify that the publication applies to this minion
         if data.has_key('tgt_type'):
-            if not getattr(self, '_' + data['tgt_type'] + '_match')(data['tgt']):
+            if not getattr(self.matcher, data['tgt_type'] + '_match')(data['tgt']):
                 return
         else:
-            if not self._glob_match(data['tgt']):
+            if not self.matcher.glob_match(data['tgt']):
                 return
         self._handle_decoded_payload(data)
 
@@ -139,46 +140,6 @@ class Minion(object):
                 threading.Thread(
                     target=lambda: self._thread_return(data)
                 ).start()
-
-    def _glob_match(self, tgt):
-        '''
-        Returns true if the passed glob matches the id
-        '''
-        tmp_dir = tempfile.mkdtemp()
-        cwd = os.getcwd()
-        os.chdir(tmp_dir)
-        open(self.opts['id'], 'w+').write('salt')
-        ret = bool(glob.glob(tgt))
-        os.chdir(cwd)
-        shutil.rmtree(tmp_dir)
-        return ret
-
-    def _pcre_match(self, tgt):
-        '''
-        Returns true if the passed pcre regex matches
-        '''
-        return bool(re.match(tgt, self.opts['id']))
-
-    def _list_match(self, tgt):
-        '''
-        Determines if this host is on the list
-        '''
-        return bool(tgt.count(self.opts['id']))
-
-    def _grain_match(self, tgt):
-        '''
-        Reads in the grains regular expression match
-        '''
-        comps = tgt.split(':')
-        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
-
-    def _exsel_match(self, tgt):
-        '''
-        Runs a function and return the exit code
-        '''
-        if not self.functions.has_key(tgt):
-            return False
-        return(self.functions[tgt]())
 
     def _thread_return(self, data):
         '''
@@ -297,6 +258,76 @@ class Minion(object):
             payload = socket.recv_pyobj()
             self._handle_payload(payload)
 
+
+class Matcher(object):
+    '''
+    Use to return the value for matching calls from the master
+    '''
+    def __init__(self, opts, functions=None):
+        self.opts = opts
+        if not functions:
+            functions = salt.loader.minion_mods(self.opts)
+        else:
+            self.functions = functions
+
+
+    def confirm_top(self, data):            
+        '''
+        Takes the data passed to a top file environment and determines if the
+        data matches this minion
+        '''
+        matcher = 'glob'
+        for item in data:
+            if type(item) == type(dict()):
+                if item.has_key('match'):
+                    matcher = item['match']
+        if hasattr(self, matcher + '_match'):
+            return getattr(self, matcher + '_match')
+        else:
+            log.error('Attempting to match with unknown matcher: %s', matcher)
+            return False
+
+    def glob_match(self, tgt):
+        '''
+        Returns true if the passed glob matches the id
+        '''
+        tmp_dir = tempfile.mkdtemp()
+        cwd = os.getcwd()
+        os.chdir(tmp_dir)
+        open(self.opts['id'], 'w+').write('salt')
+        ret = bool(glob.glob(tgt))
+        os.chdir(cwd)
+        shutil.rmtree(tmp_dir)
+        return ret
+
+    def pcre_match(self, tgt):
+        '''
+        Returns true if the passed pcre regex matches
+        '''
+        return bool(re.match(tgt, self.opts['id']))
+
+    def list_match(self, tgt):
+        '''
+        Determines if this host is on the list
+        '''
+        return bool(tgt.count(self.opts['id']))
+
+    def grain_match(self, tgt):
+        '''
+        Reads in the grains regular expression match
+        '''
+        comps = tgt.split(':')
+        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
+
+    def exsel_match(self, tgt):
+        '''
+        Runs a function and return the exit code
+        '''
+        if not self.functions.has_key(tgt):
+            return False
+        return(self.functions[tgt]())
+
+
 class FileClient(object):
     '''
     Interact with the salt master file server.
@@ -319,54 +350,70 @@ class FileClient(object):
         '''
         Make sure that this path is intended for the salt master and trim it
         '''
+        print path
         if not path.startswith('salt://'):
             raise MinionError('Unsupported path')
-        return path[:7]
+        return path[7:]
         
-    def get_file(self, path, dest, makedirs=False):
+    def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
         Get a single file from the salt-master
         '''
         path = self._check_proto(path)
         payload = {'enc': 'aes'}
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            if makedirs:
-                os.makedirs(destdir)
-            else:
-                return False
-        fn_ = open(dest, 'w+')
+        fn_ = None
+        if dest:
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
+                if makedirs:
+                    os.makedirs(destdir)
+                else:
+                    return False
+            fn_ = open(dest, 'w+')
         load = {'path': path,
+                'env': env,
                 'cmd': '_serve_file'}
         while True:
-            load['loc'] = fn_.tell()
-            payload['load'] = self.crypticle.dumps(load)
+            if not fn_:
+                load['loc'] = 0
+            else:
+                load['loc'] = fn_.tell()
+            payload['load'] = self.auth.crypticle.dumps(load)
             self.socket.send_pyobj(payload)
             data = self.auth.crypticle.loads(self.socket.recv_pyobj())
-            if not data:
+            if not data['data']:
                 break
-            fn_.write(data)
+            if not fn_:
+                dest = os.path.join(
+                    self.opts['cachedir'],
+                    'files',
+                    data['dest']
+                    )
+                destdir = os.path.dirname(dest)
+                if not os.path.isdir(destdir):
+                    os.makedirs(destdir)
+                fn_ = open(dest, 'w+')
+            fn_.write(data['data'])
         return dest
 
-    def cache_file(self, path):
+    def cache_file(self, path, env='base'):
         '''
         Pull a file down from the file server and store it in the minion file
         cache
         '''
-        dest = os.path.join(self.opts['cachedir'], 'files', path)
-        return self.get_file(path, dest, True)
+        return self.get_file(path, '', True, env)
 
-    def cache_files(self, paths):
+    def cache_files(self, paths, env='base'):
         '''
         Download a list of files stored on the master and put them in the minion
         file cache
         '''
         ret = []
         for path in paths:
-            ret.append(self.cache_file(path))
+            ret.append(self.cache_file(path, env))
         return ret
 
-    def hash_file(self, path):
+    def hash_file(self, path, env='base'):
         '''
         Return the hash of a file, to get the hash of a file on the
         salt master file server prepend the path with salt://<file on server>
@@ -375,7 +422,35 @@ class FileClient(object):
         path = self._check_proto(path)
         payload = {'enc': 'aes'}
         load = {'path': path,
+                'env': env,
                 'cmd': '_file_hash'}
-        payload['load'] = auth.crypticle.dumps(load)
+        payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(socket.recv_pyobj())
+
+    def get_state(self, sls, env):
+        '''
+        Get a state file from the master and store it in the local minion cache
+        return the location of the file
+        '''
+        if sls.count('.'):
+            sls = sls.replace('.', '/')
+        for path in [
+                'salt://' + sls + '.sls', 
+                os.path.join('salt://', sls, 'init.sls')
+                ]:
+            dest = self.cache_file(path, env)
+            if dest:
+                return dest
+        return False
+
+    def master_opts(self):
+        '''
+        Return the master opts data 
+        '''
+        payload = {'enc': 'aes'}
+        load = {'cmd': '_master_opts'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send_pyobj(payload)
+        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+

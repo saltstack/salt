@@ -43,6 +43,15 @@
 # public keys from the minions
 #auto_accept: False
 
+#####      State System settings     #####
+##########################################
+# The state system uses a "top" file to tell the minions what environment to
+# use and what modules to use. The state_top file is defined relative to the
+# root of the base environment
+#state_top: top.yml
+#
+# The renderer to use on the minions to render the state data
+#renderer: yaml_jinja
 
 #####      File Server settings      #####
 ##########################################
@@ -50,8 +59,25 @@
 # minions. This file server is built into the master daemon and does not
 # require a dedicated port.
 
-# The file root is the root directory exposed by the file server
-#file_root: /srv/salt
+# The file server works on environments passed to the master, each environment
+# can have multiple root directories, the subdirectories in the multiple file
+# roots cannot match, otherwise the downloaded files will not be able to be
+# reliably ensured. A base environment is required to house the top file
+# Example:
+# file_roots:
+#   base:
+#     - /srv/salt/
+#   dev:
+#     - /srv/salt/dev/services
+#     - /srv/salt/dev/states
+#   prod:
+#     - /srv/salt/prod/services
+#     - /srv/salt/prod/states
+# 
+# Default:
+#file_roots: 
+#  base:
+#    - /srv/salt
 
 # The hash_type is the hash to use when discovering the hash of a file on
 # the master server, the default is md5, but sha1, sha224, sha256, sha384

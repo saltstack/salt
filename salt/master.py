@@ -325,34 +325,54 @@ class MWorker(multiprocessing.Process):
             self._send_cluster()
         return ret
 
+    def _find_file(self, path, env='base'):
+        '''
+        Search the environment for the relative path
+        '''
+        fnd = {'path': '',
+               'rel': ''}
+        if not self.opts['file_roots'].has_key(env):
+            return fnd
+        for root in self.opts['file_roots'][env]:
+            full = os.path.join(root, path)
+            if os.path.isfile(full):
+                fnd['path'] = full
+                fnd['rel'] = path
+                return fnd
+        return fnd
+
     def _serve_file(self, load):
         '''
         Return a chunk from a file based on the data received
         '''
-        if not load.has_key('path') or not load.has_key('loc'):
-            return False
-        path = load['path']
-        if path.startswith('/'):
-            path = load['path'][1:]
-        path = os.path.join(self.opts['file_root'], path)
-        if not os.path.isfile(path):
-            return ''
-        fn_ = open(path, 'rb')
+        ret = {'data': '',
+               'dest': ''}
+        if not load.has_key('path')\
+                or not load.has_key('loc')\
+                or not load.has_key('env'):
+            return self.crypticle.dumps(ret)
+        fnd = self._find_file(load['path'], load['env'])
+        if not fnd['path']:
+            return self.crypticle.dumps(ret)
+        ret['dest'] = fnd['rel']
+        fn_ = open(fnd['path'], 'rb')
         fn_.seek(load['loc'])
-        return self.crypticle.dumps(fn_.read(self.opts['file_buffer_size']))
+        ret['data'] = fn_.read(self.opts['file_buffer_size'])
+        return self.crypticle.dumps(ret)
 
     def _file_hash(self, load):
         '''
         Return a file hash, the hash type is set in the master config file
         '''
-        if not load.has_key('path'):
+        if not load.has_key('path')\
+                or not load.has_key('env'):
             return False
-        path = os.path.join(self.opts['file_root'], load['path'])
-        if not os.path.isfile(path):
-            return False
+        path = self._find_file(load['path'], load['env'])
+        if not path:
+            return self.crypticle.dumps('')
         ret = {}
-        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(open(path,
-            'rb').read()).hexdigest()
+        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
+                open(path, 'rb').read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
         return self.crypticle.dumps(ret)
 
