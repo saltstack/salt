@@ -9,7 +9,7 @@ from distutils.extension import Extension
 from distutils.sysconfig import get_python_lib, PREFIX
 
 NAME = 'salt'
-VER = '0.8.7'
+VER = '0.8.8'
 DESC = 'Portable, distrubuted, remote execution system'
 
 mod_path = os.path.join(get_python_lib(), 'salt/modules/')
