@@ -350,13 +350,34 @@ class HighState(object):
                     group.append(state)
         return group
 
-    def render_highstate(self, group):
+    def render_state(self, sls, env, mods):
         '''
-        Renders the collection of states into a single highstate data structure
+        Render a state file and retrive all of the include states
+        '''
+        fn_ = self.client.get_state(sls, env)
+        state = self.state.compile_template(fn_)
+        mods.add(sls)
+        if state:
+            if state.has_key('include'):
+                for sub_sls in state['include']:
+                    if not list(mods).count(sub_sls):
+                        nstate, mods = self.render_state(sub_sls, env, mods)
+                    if nstate:
+                        state.update(nstate)
+        return state, mods
+
+    def render_highstate(self, matches):
+        '''
+        Gather the state files and render them into a single unified salt high
+        data structure. 
         '''
         highstate = {}
-        for sls in group:
-            highstate.update(self.state.compile_template(sls))
+        for env, states in matches.items():
+            mods = set()
+            for sls in states:
+                state, mods = self.render_state(sls, env, mods)
+                if state:
+                    highstate.update(state)
         return highstate
 
     def call_highstate(self):
@@ -365,6 +386,5 @@ class HighState(object):
         '''
         top = self.get_top()
         matches = self.top_matches(top)
-        group = self.gather_states(matches)
-        high = self.render_highstate(group)
+        high = self.render_highstate(matches)
         return self.state.call_high(high)
