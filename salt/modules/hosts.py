@@ -122,7 +122,10 @@ def rm_host(ip, alias):
                 if existing == alias:
                     continue
                 newline += '\t' + existing
-            lines[ind] = newline
+            if newline.strip() == ip:
+                lines[ind] = ''
+            else:
+                lines[ind] = newline
     open(hfn, 'w+').writelines(lines)
     return True
 
