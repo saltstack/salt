@@ -38,25 +38,26 @@ class Master(object):
         '''
         Clean out the old jobs
         '''
-        if self.opts['keep_jobs'] == 0:
-            return
-        diff = self.opts['keep_jobs'] * 60 * 60
-        keep = int(time.time()) - diff
-        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
-        for jid in os.listdir(jid_root):
-            if int(jid.split('.')[0]) < keep:
-                shutil.rmtree(os.path.join(jid_root, jid))
+        while True:
+            cur = datetime.datetime.strftime(
+                datetime.datetime.now(), '%Y%m%d%H'
+            )
+            if self.opts['keep_jobs'] == 0:
+                return
+            jid_root = os.path.join(self.opts['cachedir'], 'jobs')
+            for jid in os.listdir(jid_root):
+              if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                    shutil.rmtree(os.path.join(jid_root, jid))
+            time.sleep(60)
 
     def start(self):
         '''
         Turn on the master server components
         '''
         log.info('Starting the Salt Master')
+        multiprocessing.Process(target=self._clear_old_jobs).start()
         reqserv = ReqServer(self.opts)
         reqserv.run()
-        while True:
-            self._clear_old_jobs()
-            time.sleep(60)
 
 
 class Publisher(multiprocessing.Process):
