@@ -359,7 +359,7 @@ class HighState(object):
         mods.add(sls)
         if state:
             if state.has_key('include'):
-                for sub_sls in state['include']:
+                for sub_sls in state.pop('include'):
                     if not list(mods).count(sub_sls):
                         nstate, mods = self.render_state(sub_sls, env, mods)
                     if nstate:
