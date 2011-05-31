@@ -23,6 +23,9 @@ Configuring the Salt Master
 The configuration file for the salt-master is located at
 :file:`/etc/salt/master`. The available options are as follows:
 
+Primary Master Configuration
+----------------------------
+
 .. conf_master:: interface
 
 ``interface``
@@ -49,6 +52,19 @@ The network port to set up the publication interface
 
     publish_port: 4505
 
+.. conf_master:: publish_port
+
+``publish_pull_port``
+----------------
+
+Default: ``45055``
+
+The port used to communicate to the local publisher
+
+.. code-block:: yaml
+
+    publish_pull_port: 45055
+
 .. conf_master:: worker_threads
 
 ``worker_threads``
@@ -63,6 +79,19 @@ worker_threads value.
 .. code-block:: yaml
 
     worker_threads: 5
+
+``worker_start_port``
+------------------
+
+Default: ``5``
+
+The port to begin binding workers on, the workers will be created on
+increasingly higher ports
+
+
+.. code-block:: yaml
+
+    worker_start_port: 45056
 
 .. conf_master:: ret_port
 
@@ -105,6 +134,18 @@ for executed salt commands.
 
     cachedir: /var/cache/salt
 
+.. conf_master:: keep_jobs
+
+``keep_jobs``
+-------------
+
+Default: ``24``
+
+Set the number of hours to keep old job information
+
+Master Security Settings
+------------------------
+
 .. conf_master:: open_mode
 
 ``open_mode``
@@ -124,24 +165,179 @@ mode the value passed must be ``True``.
 
     open_mode: False
 
+.. conf_master:: auto_accept
+
+``auto_accept``
+---------------
+
+Default: ``False``
+
+Enable auto_accept, this setting will automatically accept all incoming
+public keys from the minions
+
+.. code_block:: yaml
+
+    auto_accept: False
+
+Master State System Settings
+---------------------------
+
+.. conf_master:: state_top
+
+``state_top``
+-------------
+
+Default: ``top.yml``
+
+The state system uses a "top" file to tell the minions what environment to
+use and what modules to use. The state_top file is defined relative to the
+root of the base environment
+
+.. code_block:: yaml
+
+    state_top: top.yml
+
+.. conf_master:: renderer
+
+``renderer``
+------------
+
+Default: ``yaml_jinja``
+
+The renderer to use on the minions to render the state data
+
+.. code_block:: yaml
+
+    renderer: yaml_jinja
+
+Master File Server Settings
+---------------------------
+
+.. conf_master:: file_roots
+
+``file_roots``
+--------------
+
+Default: ``base: [/srv/salt]``
+
+Salt runs a lightweight file server written in zeromq to deliver files to
+minions. This file server is built into the master daemon and does not
+require a dedicated port.
+The file server works on environments passed to the master, each environment
+can have multiple root directories, the subdirectories in the multiple file
+roots cannot match, otherwise the downloaded files will not be able to be
+reliably ensured. A base environment is required to house the top file
+Example:
+file_roots:
+  base:
+    - /srv/salt/
+  dev:
+    - /srv/salt/dev/services
+    - /srv/salt/dev/states
+  prod:
+    - /srv/salt/prod/services
+    - /srv/salt/prod/states
+
+.. code_block:: yaml
+
+    base:
+      - /srv/salt
+
+.. conf_master:: hash_type
+
+``hash_type``
+-------------
+
+Default: ``md5``
+
+The hash_type is the hash to use when discovering the hash of a file on
+the master server, the default is md5, but sha1, sha224, sha256, sha384
+and sha512 are also supported.
+
+.. code_block:: yaml
+
+    hash_type: md5
+
+.. conf_master:: file_buffer_size
+
+``file_buffer_size``
+--------------------
+
+Default: ``1048576``
+
+The buffer size in the file server in bytes
+
+.. code_block:: yaml
+
+    file_buffer_size: 1048576
+
+Master Logging Settings
+-----------------------
+
+.. conf_master:: log_file
+
+``log_file``
+------------
+
+Default: :file:`/etc/salt/pki`
+
+The location of the master log file
+
+.. code_block:: yaml
+
+    log_file: /var/log/salt/master
+
+.. conf_master:: log_level
+
+``log_level``
+-------------
+
+Default: ``warning``
+
+The level of messages to send to the log file.
+One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+
+.. code_block:: yaml
+
+    log_level: warning
+
+.. conf_master:: log_granular_levels
+
+``log_granular_levels``
+-----------------------
+
+Default: ``{}``
+
+Logger levels can be used to tweak specific loggers logging levels.
+Imagine you want to have the salt library at the 'warning' level, but, you
+still wish to have 'salt.modules' at the 'debug' level:
+  log_granular_levels: {
+    'salt': 'warning',
+    'salt.modules': 'debug'
+  }
+
+
 Configuring the Salt Minion
 ===========================
 
 The Salt Minion configuration is very simple, typically the only value that
 needs to be set is the master value so the minion can find its master.
 
+Minion Primary Configuration
+----------------------------
+
 .. conf_minion:: master
 
 ``master``
 ----------
 
-Default: ``mcp``
+Default: ``salt``
 
 The hostname or ipv4 of the master.
 
 .. code-block:: yaml
 
-    master: mcp
+    master: salt
 
 .. conf_minion:: master_port
 
@@ -172,18 +368,20 @@ The directory used to store the minion's public and private keys.
 
 .. conf_minion:: hostname
 
-``hostname``
+``id``
 ------------
 
 Default: hostname (as returned by the Python call: ``socket.getfqdn()``)
 
-This value is used to statically set the default indentification name for the
-minion, while this value is called hostname, salt has no hard requirement on
-DNS resolution and this value does not need to be the hostname.
+Explicitly declare the id for this minion to use, if left commented the id
+will be the hostname as returned by the python call: socket.getfqdn()
+Since salt uses detached ids it is possible to run multiple minions on the
+same machine but with different ids, this can be useful for salt compute
+clusters.
 
 .. code-block:: yaml
 
-    hostname: foo.bar.com
+    id: foo.bar.com
 
 .. conf_minion:: cachedir
 
@@ -197,6 +395,9 @@ The location for minion cache data.
 .. code-block:: yaml
 
     cachedir: /var/cache/salt
+
+Minion Module Management
+------------------------
 
 .. conf_minion:: disable_modules
 
