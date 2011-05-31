@@ -138,36 +138,36 @@ Manage Salt Public Keys
 -----------------------
 
 Salt manages authentication with RSA public keys. The keys are managed on the
-salt master via the :command:`saltkey` command. Once a salt minion checks into
+salt master via the :command:`salt-key` command. Once a salt minion checks into
 the salt master the salt master will save a copy of the minion key. Before the
 master can send commands to the minion the key needs to be "accepted". This is
-done with the :command:`saltkey` command. :command:`saltkey` can also be used
+done with the :command:`salt-key` command. :command:`salt-key` can also be used
 to list all of the minions that have checked into the master.
 
 List the accepted and unaccepted salt keys:
 
 .. code-block:: bash
 
-    saltkey -L
+    salt-key -L
 
 Accept a minion key:
 
 .. code-block:: bash
 
-    saltkey -a <minion id>
+    salt-key -a <minion id>
 
 Accept all unaccepted minion keys:
 
 .. code-block:: bash
 
-    saltkey -A
+    salt-key -A
 
-Saltkey can also print out the contents of the minion keys so that they can be
+salt-key can also print out the contents of the minion keys so that they can be
 verified:
 
 .. code-block:: bash
 
-    saltkey -p <minion id>
+    salt-key -p <minion id>
 
 Once some of the minions are communicating with the master you can move on to
 using the :command:`salt` command to execute commands on the minions.
