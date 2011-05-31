@@ -2,37 +2,97 @@
 Tutorial
 ========
 
-Setting up Salt
-===============
-
 The Salt system setup is amazingly simple, as this is one of the central design
-goals of Salt. Setting up Salt only requires that the salt master be running
-and the salt minions point to the salt master.
+goals of Salt. Setting up Salt only requires that the Salt :term:`master` be
+running and the Salt :term:`minions <minion>` point to the master.
+
+.. glossary::
+
+    master
+        The Salt master is the central server that all minions connect to. You
+        run commands on the minions through the master and minions send data
+        back to the master (unless otherwise redirected with a :doc:`returner
+        <../ref/returners/index>`). It is started with the
+        :command:`salt-master` program.
+
+    minion
+        Salt minions are the potentially hundreds or thousands of servers that
+        you query and control from the master.
 
 Installing Salt
----------------
+===============
 
 As of this writing packages for Salt only exist for Arch Linux, but rpms and
 debs will be available in the future (contributions welcome).
 
+.. contents:: Instructions by operating system
+    :depth: 1
+    :local:
+
+Installing on Arch Linux
+------------------------
+
+The Arch Linux Salt package is available in the Arch Linux AUR (if you like
+Salt vote for it on the Arch Linux AUR):
+
+https://aur.archlinux.org/packages.php?ID=47512
+
+For help using packages in the Arch Linux AUR:
+
+https://wiki.archlinux.org/index.php/AUR
+
+Installing on Debian or Ubuntu
+------------------------------
+
+Providing a .deb installer is on our short-list of things to do; until then
+this is the best way to install Salt on Debian and Ubuntu systems:
+
+1.  Install the prerequisite packages::
+
+        aptitude install python-setuptools python-yaml python-crypto python-m2crypto cython libzmq-dev
+
+    .. note:: Installing on Ubuntu Lucid (10.04 LTS)
+
+        The ZeroMQ package is available starting with Maverick but it is not
+        yet available in Lucid backports. Fortunately, Chris Lea has made a
+        `ZeroMQ PPA`_ available. Install it before installing Salt::
+
+            aptitude install python-software-properties
+            add-apt-repository ppa:chris-lea/zeromq
+            aptitude update
+            aptitude install libzmq-dev
+
+2.  Grab the latest Python ZeroMQ bindings::
+
+        easy_install pyzmq
+
+3.  Install Salt:
+
+    .. parsed-literal::
+
+        easy_install --install-layout=deb \https://github.com/downloads/thatch45/salt/salt-|version|.tar.gz
+
+    Please take note of the ``--install-layout=deb`` flag. This is important
+    for a functioning installation of Salt.
+
+.. _`ZeroMQ PPA`: https://launchpad.net/~chris-lea/+archive/zeromq
+
 Installing from the source tarball
-``````````````````````````````````
+----------------------------------
 
-Download the latest source tarball from the GitHub downloads directory for the
-Salt project:
+1.  Download the latest source tarball from the GitHub downloads directory for
+    the Salt project: https://github.com/thatch45/salt/downloads
 
-https://github.com/thatch45/salt/downloads
+2.  Untar the tarball and run the :file:`setup.py` as root:
 
-Next, untar the tarball and run the :file:`setup.py` as root:
+.. parsed-literal::
 
-.. code-block:: bash
-
-    tar xvf salt-<version>.tar.gz
-    cd salt-<version>
+    tar xvf salt-|version|.tar.gz
+    cd salt-|version|
     python2 setup.py install
 
 Salt dependencies
-+++++++++++++++++
+`````````````````
 
 This is a basic Python setup, nothing fancy. Salt does require a number of
 dependencies though, all of which should be available in your distribution's
@@ -56,40 +116,19 @@ Optional Dependencies:
 
 .. _`Cython`: http://cython.org/
 
-Installing from Arch Linux packages
-```````````````````````````````````
+Configuring Salt
+================
 
-The Arch Linux Salt package is available in the Arch Linux AUR (if you like
-Salt vote for it on the Arch Linux AUR):
+Salt configuration is very simple. The default configuration for the
+:term:`master` will work for most installations and the only requirement for
+setting up a :term:`minion` is to set the location of the master in the minion
+configuration file. The configuration files will be installed to
+:file:`/etc/salt` and are named after the respective components,
+:file:`/etc/salt/master` and :file:`/etc/salt/minion`.
 
-https://aur.archlinux.org/packages.php?ID=47512
-
-For help using packages in the Arch Linux AUR:
-
-https://wiki.archlinux.org/index.php/AUR
-
-Simple configuration
---------------------
-
-.. glossary::
-
-    master
-        Some stuff
-
-    minion
-        Other stuff
-
-The Salt configuration is very simple, the only requirement for setting up a
-salt master and minion is to set the location of the master in the minion
-configuration file. The configuration files will be installed to ``/etc/salt``
-and are named after the respective components:
-
-* :file:`/etc/salt/master` - The salt-master configuration
-* :file:`/etc/salt/minion` - The salt minion configuration
-
-To make a minion check into the correct master simply edit the master variable
-in the minion configuration file to reference the master dns name or ipv4
-address.
+To make a minion check into the correct master simply edit the
+:conf_minion:`master` variable in the minion configuration file to reference
+the master DNS name or IPv4 address.
 
 .. seealso::
 
@@ -97,77 +136,109 @@ address.
     <../ref/configuration/index>`.
 
 Running Salt
-------------
+============
 
-To run Salt you need to ensure that a master and a minion are running and
-referencing each other. Starting the master and minion daemons is done with the
-respective commands:
+1.  Start the :term:`master` in the foreground (to daemonize the process, pass
+    the :option:`-d flag <salt-master -d>`)::
 
-To run the master as a daemon:
+        salt-master
 
-.. code-block:: bash
+2.  Start the :term:`minion` in the foreground (to daemonize the process, pass
+    the :option:`-d flag <salt-minion -d>`)::
 
-    salt-master -d
+        salt-minion
 
-To run the master in the foreground:
+.. seealso:: :doc:`salt-master manpage <../ref/cli/salt-master>` and
+    :doc:`salt-minion manpage <../ref/cli/salt-minion>`
 
-.. code-block:: bash
-
-    salt-master
-
-To run the minion as a daemon:
-
-.. code-block:: bash
-
-    salt-minion -d
-
-To run the minion in the foreground:
-
-.. code-block:: bash
-
-    salt-minion
-
-Init scripts are available for Arch Linux:
+Arch Linux init scripts
+-----------------------
 
 .. code-block:: bash
 
     /etc/rc.d/salt-master start
     /etc/rc.d/salt-minion start
 
-Manage Salt Public Keys
------------------------
+Manage Salt public keys
+=======================
 
 Salt manages authentication with RSA public keys. The keys are managed on the
-salt master via the :command:`salt-key` command. Once a salt minion checks into
-the salt master the salt master will save a copy of the minion key. Before the
-master can send commands to the minion the key needs to be "accepted". This is
-done with the :command:`salt-key` command. :command:`salt-key` can also be used
-to list all of the minions that have checked into the master.
+:term:`master` via the :command:`salt-key` command. Once a :term:`minion`
+checks into the master the master will save a copy of the minion key. Before
+the master can send commands to the minion the key needs to be "accepted".
 
-List the accepted and unaccepted salt keys:
+1.  List the accepted and unaccepted salt keys::
 
-.. code-block:: bash
+        salt-key -L
 
-    salt-key -L
+2.  Accept a minion key::
 
-Accept a minion key:
+        salt-key -a <minion id>
 
-.. code-block:: bash
+    or accept all unaccepted minion keys::
 
-    salt-key -a <minion id>
+        salt-key -A
 
-Accept all unaccepted minion keys:
+.. seealso:: :doc:`salt-key manpage <../ref/cli/salt-key>`
 
-.. code-block:: bash
+Order your minions around
+=========================
 
-    salt-key -A
+Now that you have a :term:`master` and at least one :term:`minion`
+communicating with each other you can perform commands on the minion via the
+:command:`salt` command. Salt calls are comprised of three main components::
 
-salt-key can also print out the contents of the minion keys so that they can be
-verified:
+    salt '<target>' <function> [arguments]
 
-.. code-block:: bash
+.. seealso:: :doc:`salt manpage <../ref/cli/salt>`
 
-    salt-key -p <minion id>
+target
+------
 
-Once some of the minions are communicating with the master you can move on to
-using the :command:`salt` command to execute commands on the minions.
+The target component allows you to filter which minions should run the
+following function. The default filter is a glob on the minion id. E.g.::
+
+    salt '*' test.ping
+    salt '*.example.org' test.ping
+
+Targets can be based on minion system information using the grains system::
+
+    salt -G 'os:Ubuntu' test.ping
+
+    .. seealso:: :doc:`Grains system <../ref/grains>`
+
+Targets can be filtered by regular expression::
+
+    salt -E 'virtmach[0-9]' test.ping
+
+Finally, targets can be explicitly specified in a list::
+
+    salt -L foo,bar,baz,quo test.ping
+
+function
+--------
+
+A function is some functionality provided by a module. Salt ships with a large
+collection of available functions. List all available functions on your
+minions::
+
+    salt '*' sys.doc
+
+Here are some examples:
+
+Show all currently available minions::
+
+    salt '*' test.ping
+
+Run an arbitrary shell command::
+
+    salt '*' cmd.run 'uname -a'
+
+.. seealso:: :doc:`the full list of modules <../ref/modules/index>`
+
+arguments
+---------
+
+Space-delimited arguments to the function::
+
+    salt '*' cmd.exec_code python 'import sys; print sys.version'
