@@ -121,6 +121,8 @@ def local_images(local_path):
     CLI Example:
     salt '*' buttervm.local_images <image_path>
     '''
+    if not os.path.isdir(local_path):
+        os.makedirs(local_path)
     images = os.listdir(local_path)
     images.sort()
     return images
