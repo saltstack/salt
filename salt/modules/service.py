@@ -35,6 +35,17 @@ def stop(name):
             name + ' stop')
     return not subprocess.call(cmd, shell=True)
 
+def restart(name):
+    '''
+    Restart the named service
+    
+    CLI Example:
+    salt '*' service.restart <service name>
+    '''
+    cmd = os.path.join(grainmap[__grains__['os']],
+            name + ' restart')
+    return not subprocess.call(cmd, shell=True)
+
 def status(name, sig=None):
     '''
     Return the status for a service, returns the PID or an empty string if the
