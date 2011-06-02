@@ -122,7 +122,7 @@ def local_images(local_path):
     salt '*' buttervm.local_images <image_path>
     '''
     if not os.path.isdir(local_path):
-        os.makedirs(local_path)
+        return []
     images = os.listdir(local_path)
     images.sort()
     return images
