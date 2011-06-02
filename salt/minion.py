@@ -282,7 +282,7 @@ class Matcher(object):
                 if item.has_key('match'):
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
-            return getattr(self, matcher)
+            return getattr(self, matcher + '_match')
         else:
             log.error('Attempting to match with unknown matcher: %s', matcher)
             return False
@@ -350,36 +350,50 @@ class FileClient(object):
         '''
         Make sure that this path is intended for the salt master and trim it
         '''
+        print path
         if not path.startswith('salt://'):
             raise MinionError('Unsupported path')
-        return path[:7]
+        return path[7:]
         
-    def get_file(self, path, dest, makedirs=False, env='base'):
+    def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
         Get a single file from the salt-master
         '''
         path = self._check_proto(path)
         payload = {'enc': 'aes'}
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            if makedirs:
-                os.makedirs(destdir)
-            else:
-                return False
-        fn_ = open(dest, 'w+')
+        fn_ = None
+        if dest:
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
+                if makedirs:
+                    os.makedirs(destdir)
+                else:
+                    return False
+            fn_ = open(dest, 'w+')
         load = {'path': path,
                 'env': env,
                 'cmd': '_serve_file'}
         while True:
-            load['loc'] = fn_.tell()
-            payload['load'] = self.crypticle.dumps(load)
+            if not fn_:
+                load['loc'] = 0
+            else:
+                load['loc'] = fn_.tell()
+            payload['load'] = self.auth.crypticle.dumps(load)
             self.socket.send_pyobj(payload)
             data = self.auth.crypticle.loads(self.socket.recv_pyobj())
-            if data == False:
-                return False
-            if not data:
+            if not data['data']:
                 break
-            fn_.write(data)
+            if not fn_:
+                dest = os.path.join(
+                    self.opts['cachedir'],
+                    'files',
+                    data['dest']
+                    )
+                destdir = os.path.dirname(dest)
+                if not os.path.isdir(destdir):
+                    os.makedirs(destdir)
+                fn_ = open(dest, 'w+')
+            fn_.write(data['data'])
         return dest
 
     def cache_file(self, path, env='base'):
@@ -387,8 +401,7 @@ class FileClient(object):
         Pull a file down from the file server and store it in the minion file
         cache
         '''
-        dest = os.path.join(self.opts['cachedir'], 'files', path)
-        return self.get_file(path, dest, True, env)
+        return self.get_file(path, '', True, env)
 
     def cache_files(self, paths, env='base'):
         '''
@@ -421,11 +434,14 @@ class FileClient(object):
         return the location of the file
         '''
         if sls.count('.'):
-            root = sls.replace('.', '/')
-            for path in [root + '.sls', os.path.join(root, 'init.sls')]:
-                dest = self.cache_file(path, env)
-                if dest:
-                    return dest
+            sls = sls.replace('.', '/')
+        for path in [
+                'salt://' + sls + '.sls', 
+                os.path.join('salt://', sls, 'init.sls')
+                ]:
+            dest = self.cache_file(path, env)
+            if dest:
+                return dest
         return False
 
     def master_opts(self):
@@ -436,5 +452,5 @@ class FileClient(object):
         load = {'cmd': '_master_opts'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
-        return self.auth.crypticle.loads(socket.recv_pyobj())
+        return self.auth.crypticle.loads(self.socket.recv_pyobj())
 

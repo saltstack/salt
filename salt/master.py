@@ -38,25 +38,26 @@ class Master(object):
         '''
         Clean out the old jobs
         '''
-        if self.opts['keep_jobs'] == 0:
-            return
-        diff = self.opts['keep_jobs'] * 60 * 60
-        keep = int(time.time()) - diff
-        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
-        for jid in os.listdir(jid_root):
-            if int(jid.split('.')[0]) < keep:
-                shutil.rmtree(os.path.join(jid_root, jid))
+        while True:
+            cur = datetime.datetime.strftime(
+                datetime.datetime.now(), '%Y%m%d%H'
+            )
+            if self.opts['keep_jobs'] == 0:
+                return
+            jid_root = os.path.join(self.opts['cachedir'], 'jobs')
+            for jid in os.listdir(jid_root):
+              if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                    shutil.rmtree(os.path.join(jid_root, jid))
+            time.sleep(60)
 
     def start(self):
         '''
         Turn on the master server components
         '''
         log.info('Starting the Salt Master')
+        multiprocessing.Process(target=self._clear_old_jobs).start()
         reqserv = ReqServer(self.opts)
         reqserv.run()
-        while True:
-            self._clear_old_jobs()
-            time.sleep(60)
 
 
 class Publisher(multiprocessing.Process):
@@ -329,28 +330,36 @@ class MWorker(multiprocessing.Process):
         '''
         Search the environment for the relative path
         '''
+        fnd = {'path': '',
+               'rel': ''}
         if not self.opts['file_roots'].has_key(env):
-            return False
+            return fnd
         for root in self.opts['file_roots'][env]:
             full = os.path.join(root, path)
             if os.path.isfile(full):
-                return full
-        return False
+                fnd['path'] = full
+                fnd['rel'] = path
+                return fnd
+        return fnd
 
     def _serve_file(self, load):
         '''
         Return a chunk from a file based on the data received
         '''
+        ret = {'data': '',
+               'dest': ''}
         if not load.has_key('path')\
                 or not load.has_key('loc')\
                 or not load.has_key('env'):
-            return False
-        path = self._find_file(load['path'], load['env'])
-        if not path:
-            return False
-        fn_ = open(path, 'rb')
+            return self.crypticle.dumps(ret)
+        fnd = self._find_file(load['path'], load['env'])
+        if not fnd['path']:
+            return self.crypticle.dumps(ret)
+        ret['dest'] = fnd['rel']
+        fn_ = open(fnd['path'], 'rb')
         fn_.seek(load['loc'])
-        return self.crypticle.dumps(fn_.read(self.opts['file_buffer_size']))
+        ret['data'] = fn_.read(self.opts['file_buffer_size'])
+        return self.crypticle.dumps(ret)
 
     def _file_hash(self, load):
         '''
@@ -361,7 +370,7 @@ class MWorker(multiprocessing.Process):
             return False
         path = self._find_file(load['path'], load['env'])
         if not path:
-            return ''
+            return self.crypticle.dumps('')
         ret = {}
         ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
                 open(path, 'rb').read()).hexdigest()

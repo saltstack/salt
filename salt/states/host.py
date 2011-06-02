@@ -39,7 +39,7 @@ def absent(name, ip):
     if __salt__['hosts.rm_host'](ip, name):
         ret['changes'] = {'host': name}
         ret['result'] = True
-        ret['comment'] = 'Removed host ' + host
+        ret['comment'] = 'Removed host ' + name
         return ret
     else:
         ret['result'] = False

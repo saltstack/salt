@@ -49,6 +49,9 @@
 # use and what modules to use. The state_top file is defined relative to the
 # root of the base environment
 #state_top: top.yml
+#
+# The renderer to use on the minions to render the state data
+#renderer: yaml_jinja
 
 #####      File Server settings      #####
 ##########################################
@@ -62,18 +65,18 @@
 # reliably ensured. A base environment is required to house the top file
 # Example:
 # file_roots:
-#   - base:
+#   base:
 #     - /srv/salt/
-#   - dev:
+#   dev:
 #     - /srv/salt/dev/services
 #     - /srv/salt/dev/states
-#   - prod:
+#   prod:
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
 # 
 # Default:
 #file_roots: 
-#  - base:
+#  base:
 #    - /srv/salt
 
 # The hash_type is the hash to use when discovering the hash of a file on

@@ -71,7 +71,6 @@ class Master(object):
         for name, level in self.opts['log_granular_levels'].iteritems():
             salt.log.set_logger_level(name, level)
         import logging
-        self.opts['logger'] = logging.getLogger('salt.stop-using-me')
         verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.opts['cachedir'], 'jobs'),
@@ -139,7 +138,6 @@ class Minion(object):
             salt.log.set_logger_level(name, level)
 
         import logging
-        self.opts['logger'] = logging.getLogger('salt.stop-using-me')
 
         verify_env([self.opts['pki_dir'], self.opts['cachedir']])
         if self.cli['daemon']:

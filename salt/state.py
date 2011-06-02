@@ -278,17 +278,17 @@ class State(object):
             return self.call_high(high)
         return high
 
-def HighState(object):
+class HighState(object):
     '''
     Generate and execute the salt "High State". The High State is the compound
     state derived from a group of template files stored on the salt master or
     in a the local cache.
     '''
     def __init__(self, opts):
-        self.state = State(opts)
         self.client = salt.minion.FileClient(opts)
-        self.matcher = salt.minion.Matcher(opts)
         self.opts = self.__gen_opts(opts)
+        self.state = State(self.opts)
+        self.matcher = salt.minion.Matcher(self.opts)
 
     def __gen_opts(self, opts):
         '''
@@ -306,17 +306,10 @@ def HighState(object):
         opts['renderer'] = mopts['renderer']
         if mopts['state_top'].startswith('salt://'):
             opts['state_top'] = mopts['state_top']
-        elif mopts['state_top'].startswith(mopts['file_root']):
-            opts['state_top'] = os.path.join(
-                    'salt://', 
-                    os.path.relpath(
-                        mopts['state_top'], mopts['file_root'])
-                    )
-        elif not mopts['state_top'].startswith('/'):
-            opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+        elif mopts['state_top'].startswith('/'):
+            opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
-            log.error('Invalid top file location')
-            raise StateError('Invalid top file location')
+            opts['state_top'] = os.path.join('salt://', mopts['state_top'])
         return opts
 
     def get_top(self):
@@ -326,7 +319,7 @@ def HighState(object):
         top = self.client.cache_file(self.opts['state_top'], 'base')
         return self.state.compile_template(top)
 
-    def top_matches(self):
+    def top_matches(self, top):
         '''
         Search through the top high data for matches and return the states that
         this minion needs to execute. 
@@ -335,7 +328,6 @@ def HighState(object):
         {'env': ['state1', 'state2', ...]}
         '''
         matches = {}
-        top = self.get_top()
         for env, body in top.items():
             for match, data in body.items():
                 if self.matcher.confirm_top(data):
@@ -357,3 +349,42 @@ def HighState(object):
                 if state:
                     group.append(state)
         return group
+
+    def render_state(self, sls, env, mods):
+        '''
+        Render a state file and retrive all of the include states
+        '''
+        fn_ = self.client.get_state(sls, env)
+        state = self.state.compile_template(fn_)
+        mods.add(sls)
+        if state:
+            if state.has_key('include'):
+                for sub_sls in state.pop('include'):
+                    if not list(mods).count(sub_sls):
+                        nstate, mods = self.render_state(sub_sls, env, mods)
+                    if nstate:
+                        state.update(nstate)
+        return state, mods
+
+    def render_highstate(self, matches):
+        '''
+        Gather the state files and render them into a single unified salt high
+        data structure. 
+        '''
+        highstate = {}
+        for env, states in matches.items():
+            mods = set()
+            for sls in states:
+                state, mods = self.render_state(sls, env, mods)
+                if state:
+                    highstate.update(state)
+        return highstate
+
+    def call_highstate(self):
+        '''
+        Run the sequence to execute the salt highstate for this minion
+        '''
+        top = self.get_top()
+        matches = self.top_matches(top)
+        high = self.render_highstate(matches)
+        return self.state.call_high(high)

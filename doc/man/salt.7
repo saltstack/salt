@@ -1,73 +1,2128 @@
-.TH salt 7 "May 2011" "salt 0.8.7" "salt Manual"
-
+.TH "SALT" "7" "May 30, 2011" "0.8.8" "Salt"
 .SH NAME
-salt \- The salt distributed system controller
-
-.SH SYNOPSIS
-.B salt-master [options]
-
-.B salt-minion [options]
-
-.B salt [options]
-
-.SH DESCRIPTION
+salt \- Salt Documentation
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.\" Man page generated from reStructeredText.
+.
+Simplified system communication
+.sp
 Salt is a powerful remote execution manager that can be used to administer
 servers in a fast and efficient way.
-
-.SH SETTING UP SALT
+.SH GETTING STARTED
+.SS Getting help
+.INDENT 0.0
+.IP \(bu 2
+.
+Watch a presentation on Salt: \fI\%video\fP | \fI\%slides\fP (PDF)
+.IP \(bu 2
+.
+Join the \fI\%salt-users mailing list\fP, it is the best place to ask
+questions about Salt and see whats going on with Salt development!
+.IP \(bu 2
+.
+Report any bugs on the \fI\%GitHub issues page\fP.
+.UNINDENT
+.sp
+New users should start here
+.SS Introduction to Salt
+We’re not just talking about NaCl..SS Distributed remote execution
+.sp
+Salt is a distributed remote execution system used to execute commands and
+query data. It was developed in order to bring the best solutions found in the
+world of remote execution together and make them better, faster and more
+malleable. Salt accomplishes this via its ability to handle larger loads of
+information, and not just dozens, but hundreds or even thousands of individual
+servers, handle them quickly and through a simple and manageable interface.
+.SS Simplicity
+.sp
+Versatility between massive scale deployments and smaller systems may seem
+daunting, but Salt is very simple to set up and maintain, regardless of the
+size of the project. The architecture of Salt is designed to work with any
+number of servers, from a handful of local network systems to international
+deployments across disparate datacenters. The topology is a simple
+server/client model with the needed functionality built into a single set of
+daemons. While the default configuration will work with little to no
+modification, Salt can be fine tuned to meet specific needs.
+.SS Parallel execution
+.sp
+The core function of Salt is to enable remote commands to be called in parallel
+rather than in serial, to use a secure and encrypted protocol, the smallest and
+fastest network payloads possible, and with a simple programmer interface. Salt
+also introduces more granular controls to the realm of remote execution,
+allowing for commands to be executed in parallel and for systems to be targeted
+based on more than just hostname, but by system properties.
+.SS Building on proven technology
+.sp
+Salt takes advantage of a number of technologies and techniques. The networking
+layer is built with the excellent \fI\%ZeroMQ\fP networking library, so Salt itself
+contains a viable, and transparent, AMQ broker inside the daemon. Salt uses
+public keys for authentication with the master daemon, then uses faster AES
+encryption for payload communication, this means that authentication and
+encryption are also built into Salt. Salt takes advantage of communication via
+Python pickles, enabling fast and light network traffic.
+.SS Python client interface
+.sp
+In order to allow for simple expansion, Salt execution routines can be written
+as plain Python modules and the data collected from Salt executions can be sent
+back to the master server, or to any arbitrary program. Salt can be called from
+a simple Python API, or from the command line, so that Salt can be used to
+execute one\-off commands as well as operate as an integral part of a larger
+application.
+.SS Fast, flexible, scalable
+.sp
+The result is a system that can execute commands across groups of varying size,
+from very few to very many servers at considerably high speed. A system that is
+very fast, easy to set up and amazingly malleable, able to suit the needs of
+any number of servers working within the same system. Salt’s unique
+architecture brings together the best of the remote execution world, amplifies
+its capabilities and expands its range, resulting in this system that is as
+versatile as it is practical, able to suit any network.
+.SS Open
+.sp
+Salt is developed under the \fI\%Apache 2.0 licence\fP, and can be used for open and
+proprietary projects. Please submit your expansions back to the Salt project so
+that we can all benefit together as Salt grows.  So, please feel free to
+sprinkle some of this around your systems and let the deliciousness come forth.
+.SS Tutorial
+.SS Setting up Salt
+.sp
 The Salt system setup is amazingly simple, as this is one of the central design
-goals of Salt. Setting up Salt only requires that the salt master be running and
-the salt minions point to the salt master.
-
-.SS INSTALATION
-The salt install is simple, for many distributions packages should be available
-for download, or salt can be installed via the python packaging tools.
-.P
-Installing salt from source is a simple task, download the latest source tarball from
-.URL "https://github.com/thatch45/salt/downloads"
-
-Next untar the download and run the python setup:
-
-# tar xvf salt-<version>.tar.gz
-
-# cd salt-<version>
-
-# python2 setup.py install
-
-.SS SALT DEPENDENCIES
-This is a basic python setup, nothing fancy. Salt does require a number of
-dependencies though, all of which should be available in your distribution's packages.
-
+goals of Salt. Setting up Salt only requires that the salt master be running
+and the salt minions point to the salt master.
+.SS Installing Salt
+.sp
+As of this writing packages for Salt only exist for Arch Linux, but rpms and
+debs will be available in the future (contributions welcome).
+.SS Installing from the source tarball
+.sp
+Download the latest source tarball from the GitHub downloads directory for the
+Salt project:
+.sp
+\fI\%https://github.com/thatch45/salt/downloads\fP
+.sp
+Next, untar the tarball and run the \fBsetup.py\fP as root:
+.sp
+.nf
+.ft C
+tar xvf salt\-<version>.tar.gz
+cd salt\-<version>
+python2 setup.py install
+.ft P
+.fi
+.SS Salt dependencies
+.sp
+This is a basic Python setup, nothing fancy. Salt does require a number of
+dependencies though, all of which should be available in your distribution\(aqs
+packages.
+.INDENT 0.0
+.IP \(bu 2
+.
+\fI\%Python 2.6\fP
+.IP \(bu 2
+.
+\fI\%pyzmq\fP \- ZeroMQ Python bindings
+.IP \(bu 2
+.
+\fI\%M2Crypto\fP \- Python OpenSSL wrapper
+.IP \(bu 2
+.
+\fI\%YAML\fP \- Python YAML bindings
+.IP \(bu 2
+.
+\fI\%PyCrypto\fP \- The Python cryptography toolkit
+.UNINDENT
+.sp
+Optional Dependencies:
+.INDENT 0.0
+.IP \(bu 2
+.
+gcc \- dynamic \fI\%Cython\fP module compiling
+.UNINDENT
+.SS Installing from Arch Linux packages
+.sp
+The Arch Linux Salt package is available in the Arch Linux AUR (if you like
+Salt vote for it on the Arch Linux AUR):
+.sp
+\fI\%https://aur.archlinux.org/packages.php?ID=47512\fP
+.sp
+For help using packages in the Arch Linux AUR:
+.sp
+\fI\%https://wiki.archlinux.org/index.php/AUR\fP
+.SS Simple configuration
+.INDENT 0.0
 .TP
-\(bu
-python2.7 - python2.6 should work, but it is untested
+.B master
+.
+Some stuff
 .TP
-\(bu
-pyzmq - zeromq python bindings
-.TP
-\(bu
-python-m2crypto - Crypto backend
-.TP
-\(bu
-python-yaml - Reading configuration files
-.TP
-\(bu
-pycrypto - Another crypto backend
-
-.SS RUNNING SALT
+.B minion
+.
+Other stuff
+.UNINDENT
+.sp
+The Salt configuration is very simple, the only requirement for setting up a
+salt master and minion is to set the location of the master in the minion
+configuration file. The configuration files will be installed to \fB/etc/salt\fP
+and are named after the respective components:
+.INDENT 0.0
+.IP \(bu 2
+.
+\fB/etc/salt/master\fP \- The salt\-master configuration
+.IP \(bu 2
+.
+\fB/etc/salt/minion\fP \- The salt minion configuration
+.UNINDENT
+.sp
+To make a minion check into the correct master simply edit the master variable
+in the minion configuration file to reference the master dns name or ipv4
+address.
+.IP "See also"
+.sp
+For further information consult the \fBconfiguration guide\fP.
+.RE
+.SS Running Salt
+.sp
 To run Salt you need to ensure that a master and a minion are running and
 referencing each other. Starting the master and minion daemons is done with the
-respective commands.
+respective commands:
+.sp
+To run the master as a daemon:
+.sp
+.nf
+.ft C
+salt\-master \-d
+.ft P
+.fi
+.sp
+To run the master in the foreground:
+.sp
+.nf
+.ft C
+salt\-master
+.ft P
+.fi
+.sp
+To run the minion as a daemon:
+.sp
+.nf
+.ft C
+salt\-minion \-d
+.ft P
+.fi
+.sp
+To run the minion in the foreground:
+.sp
+.nf
+.ft C
+salt\-minion
+.ft P
+.fi
+.sp
+Init scripts are available for Arch Linux:
+.sp
+.nf
+.ft C
+/etc/rc.d/salt\-master start
+/etc/rc.d/salt\-minion start
+.ft P
+.fi
+.SS Manage Salt Public Keys
+.sp
+Salt manages authentication with RSA public keys. The keys are managed on the
+salt master via the \fBsaltkey\fP command. Once a salt minion checks into
+the salt master the salt master will save a copy of the minion key. Before the
+master can send commands to the minion the key needs to be "accepted". This is
+done with the \fBsaltkey\fP command. \fBsaltkey\fP can also be used
+to list all of the minions that have checked into the master.
+.sp
+List the accepted and unaccepted salt keys:
+.sp
+.nf
+.ft C
+saltkey \-L
+.ft P
+.fi
+.sp
+Accept a minion key:
+.sp
+.nf
+.ft C
+saltkey \-a <minion id>
+.ft P
+.fi
+.sp
+Accept all unaccepted minion keys:
+.sp
+.nf
+.ft C
+saltkey \-A
+.ft P
+.fi
+.sp
+Saltkey can also print out the contents of the minion keys so that they can be
+verified:
+.sp
+.nf
+.ft C
+saltkey \-p <minion id>
+.ft P
+.fi
+.sp
+Once some of the minions are communicating with the master you can move on to
+using the \fBsalt\fP command to execute commands on the minions.
+.SH USING SALT
+.SS Configuration guide
+.sp
+The Salt system is amazingly simple and easy to configure, the two components
+of the Salt system each have a respective configuration file. The
+\fBsalt\-master\fP is configured via the master configuration file, and the
+\fBsalt\-minion\fP is configured via the minion configuration file.
+.SS Configuration file examples
+.INDENT 0.0
+.IP \(bu 2
+.
+\fI\%Example master configuration file\fP
+.IP \(bu 2
+.
+\fI\%Example minion configuration file\fP
+.UNINDENT
+.SS Example master configuration file
+.sp
+.nf
+.ft C
+##### Primary configuration settings #####
+##########################################
+# The address of the interface to bind to
+#interface: 0.0.0.0
 
-On the salt master server:
+# The port used by the publisher
+#publish_port: 4505
 
-# salt-master -d
+# The port used to communicate to the local publisher
+#publish_pull_port: 45055
+#
+# The number of worker threads to start, these threads are used to manage
+# return calls made from minions to the master, if the master seems to be
+# running slowly, increase the number of threads
+#worker_threads: 5
+#
+# The port to begin binding workers on, the workers will be created on
+# increasingly higher ports
+#worker_start_port: 45056
 
-On the salt minion servers:
+# The port used by the communication interface
+#ret_port: 4506
 
-# salt-minion -d
+# Directory used to store public key data
+#pki_dir: /etc/salt/pki
 
-.SH AUTHORS
-Thomas S. Hatch <thatch@gmail.com>
+# Directory to store job and cache data
+#cachedir: /var/cache/salt
+
+# Set the number of hours to keep old job information
+#keep_jobs: 24
+
+
+#####        Security settings       #####
+##########################################
+# Enable "open mode", this mode still maintains encryption, but turns off
+# authentication, this is only intended for highly secure environments or for
+# the situation where your keys end up in a bad state. If you run in open more
+# you do so at your own risk!
+#open_mode: False
+
+# Enable auto_accept, this setting will automatically accept all incoming
+# public keys from the minions
+#auto_accept: False
+
+#####      State System settings     #####
+##########################################
+# The state system uses a "top" file to tell the minions what environment to
+# use and what modules to use. The state_top file is defined relative to the
+# root of the base environment
+#state_top: top.yml
+#
+# The renderer to use on the minions to render the state data
+#renderer: yaml_jinja
+
+#####      File Server settings      #####
+##########################################
+# Salt runs a lightweight file server written in zeromq to deliver files to
+# minions. This file server is built into the master daemon and does not
+# require a dedicated port.
+
+# The file server works on environments passed to the master, each environment
+# can have multiple root directories, the subdirectories in the multiple file
+# roots cannot match, otherwise the downloaded files will not be able to be
+# reliably ensured. A base environment is required to house the top file
+# Example:
+# file_roots:
+#   base:
+#     \- /srv/salt/
+#   dev:
+#     \- /srv/salt/dev/services
+#     \- /srv/salt/dev/states
+#   prod:
+#     \- /srv/salt/prod/services
+#     \- /srv/salt/prod/states
+# 
+# Default:
+#file_roots: 
+#  base:
+#    \- /srv/salt
+
+# The hash_type is the hash to use when discovering the hash of a file on
+# the master server, the default is md5, but sha1, sha224, sha256, sha384
+# and sha512 are also supported.
+#hash_type: md5
+
+# The buffer size in the file server can be adjusted here:
+#file_buffer_size: 1048576
+
+#####         Cluster settings       #####
+##########################################
+# Salt supports automatic clustering, salt creates a single ip address which
+# is shared among the individual salt components using ucarp. The private key
+# and all of the minion keys are maintained across the defined cluster masters
+# The failover service is automatically managed via these settings
+
+# List the identifiers for the other cluster masters in this manner:
+# [saltmaster\-01.foo.com,saltmaster\-02.foo.com,saltmaster\-03.foo.com]
+# The members of this master array must be running as salt minions to
+# facilitate the distribution of cluster information
+#cluster_masters: []
+
+# The cluster modes are "paranoid" and "full"
+# paranoid will only distribute the accepted minion public keys.
+# full will also distribute the master private key.
+#cluster_mode: paranoid
+
+
+#####         Logging settings       #####
+##########################################
+# The location of the master log file
+#log_file: /var/log/salt/master
+# The level of messages to send to the log file.
+# One of \(aqinfo\(aq, \(aqquiet\(aq, \(aqcritical\(aq, \(aqerror\(aq, \(aqdebug\(aq, \(aqwarning\(aq.
+# Default: \(aqwarning\(aq
+#log_level: warning
+#
+# Logger levels can be used to tweak specific loggers logging levels.
+# Imagine you want to have the salt library at the \(aqwarning\(aq level, but, you
+# still wish to have \(aqsalt.modules\(aq at the \(aqdebug\(aq level:
+#   log_granular_levels: {
+#     \(aqsalt\(aq: \(aqwarning\(aq,
+#     \(aqsalt.modules\(aq: \(aqdebug\(aq
+#   }
+#
+#log_granular_levels: {}
+
+.ft P
+.fi
+.SS Example minion configuration file
+.sp
+.nf
+.ft C
+##### Primary configuration settings #####
+##########################################
+# Set the location of the salt master server, if the master server cannot be
+# resolved, then the minion will fail to start
+#master: salt
+
+# Set the post used by the master reply and authentication server
+#master_port: 4506
+
+# The directory to store the pki information in
+#pki_dir: /etc/salt/pki
+
+# Explicitly declare the id for this minion to use, if left commented the id
+# will be the hostname as returned by the python call: socket.getfqdn()
+# Since salt uses detached ids it is possible to run multiple minions on the
+# same machine but with different ids, this can be useful for salt compute
+# clusters.
+#id:
+
+# Where cache data goes
+#cachedir: /var/cache/salt
+
+
+#####   Minion module management     #####
+##########################################
+# Disable specific modules, this will allow the admin to limit the level os
+# access the master has to the minion
+#disable_modules: [cmd,test]
+#disable_returners: []
+# Modules can be loaded from arbitrary paths, this enables the easy deployment
+# of third party modules, modules for returners and minions can be loaded.
+# Specify a list of extra directories to search for minion modules and
+# returners. These paths must be fully qualified!
+#module_dirs: []
+#returner_dirs: []
+#states_dirs: []
+#render_dirs: []
+# Enable Cython modules searching and loading. (Default: True)
+#cython_enable: true
+
+#####    State Management Settings    #####
+###########################################
+# The state management system executes all of the state templates on the minion
+# to enable more granular control of system state management. The type of
+# template and serialization used for state management needs to be configured
+# on the minion, the default renderer is yaml_jinja. This is a yaml file
+# rendered from a jinja template, the available options are:
+# yaml_jinja
+# yaml_mako
+# json_jinja
+# json_mako
+#
+#renderer: yaml_jinja
+#
+# Test allows for the state runs to only be test runs
+#test: False
+
+######        Security settings       #####
+###########################################
+# Enable "open mode", this mode still maintains encryption, but turns off
+# authentication, this is only intended for highly secure environments or for
+# the situation where your keys end up in a bad state. If you run in open mode
+# you do so at your own risk!
+#open_mode: False
+
+
+######         Thread settings        #####
+###########################################
+# Enable multiprocessing support, by default when a minion receives a
+# publication a new thread is spawned and the command is executed therein. This
+# is the optimal behavior for the use case where salt is used for data queries
+# and distributed system management, but not the optimal use case when salt is
+# used for distributed computation. Since python threads are bad at cpu bound
+# tasks salt allows for a multiprocessing process to be used for the execution
+# instead. This adds more initial overhead to publications, but cpu bound
+# executions will be faster. This feature requires python 2.6 or higher on the
+# minion, if set to True and python 2.6 or higher is not present then it will
+# fall back to python threads
+#multiprocessing: False
+
+######         Logging settings       #####
+###########################################
+# The location of the minion log file
+#log_file: /var/log/salt/minion
+# The level of messages to send to the log file.
+# One of \(aqinfo\(aq, \(aqquiet\(aq, \(aqcritical\(aq, \(aqerror\(aq, \(aqdebug\(aq, \(aqwarning\(aq.
+# Default: \(aqwarning\(aq
+#log_level: warning
+#
+# Logger levels can be used to tweak specific loggers logging levels.
+# Imagine you want to have the salt library at the \(aqwarning\(aq level, but, you
+# still wish to have \(aqsalt.modules\(aq at the \(aqdebug\(aq level:
+#   log_granular_levels: {
+#     \(aqsalt\(aq: \(aqwarning\(aq,
+#     \(aqsalt.modules\(aq: \(aqdebug\(aq
+#   }
+#
+#log_granular_levels: {}
+
+
+######      Module configuration      #####
+###########################################
+# Salt allows for modules to be passed arbitrary configuration data, any data
+# passed here in valid yaml format will be passed on to the salt minion modules
+# for use. It is STRONGLY recommended that a naming convention be used in which
+# the module name is followed by a . and then the value. Also, all top level
+# data must be allied via the yaml dict construct, some examples:
+#
+# A simple value for the test module:
+#test.foo: foo
+#
+# A list for the test module:
+#test.bar: [baz,quo]
+#
+# A dict for the test module:
+#test.baz: {spam: sausage, cheese: bread}
+
+.ft P
+.fi
+.IP "See also"
+.sp
+\fIexample master configuration file\fP
+|
+\fIexample minion configuration file\fP
+.RE
+.SS Configuring the Salt Master
+.sp
+The configuration file for the salt\-master is located at
+\fB/etc/salt/master\fP. The available options are as follows:
+.SS \fBinterface\fP
+.sp
+Default: \fB0.0.0.0\fP (all interfaces)
+.sp
+The local interface to bind to.
+.sp
+.nf
+.ft C
+interface: 192.168.0.1
+.ft P
+.fi
+.SS \fBpublish_port\fP
+.sp
+Default: \fB4505\fP
+.sp
+The network port to set up the publication interface
+.sp
+.nf
+.ft C
+publish_port: 4505
+.ft P
+.fi
+.SS \fBworker_threads\fP
+.sp
+Default: \fB5\fP
+.sp
+The number of threads to start for receiving commands and replies from minions.
+If minions are stalling on replies because you have many minions, raise the
+worker_threads value.
+.sp
+.nf
+.ft C
+worker_threads: 5
+.ft P
+.fi
+.SS \fBret_port\fP
+.sp
+Default: \fB4506\fP
+.sp
+The port used by the return server, this is the server used by Salt to receive
+execution returns and command executions.
+.sp
+.nf
+.ft C
+ret_port: 4506
+.ft P
+.fi
+.SS \fBpki_dir\fP
+.sp
+Default: \fB/etc/salt/pki\fP
+.sp
+The directory to store the pki authentication keys.
+.sp
+.nf
+.ft C
+pki_dir: /etc/salt/pki
+.ft P
+.fi
+.SS \fBcachedir\fP
+.sp
+Default: \fB/var/cache/salt\fP
+.sp
+The location used to store cache information, particularly the job information
+for executed salt commands.
+.sp
+.nf
+.ft C
+cachedir: /var/cache/salt
+.ft P
+.fi
+.SS \fBopen_mode\fP
+.sp
+Default: \fBFalse\fP
+.sp
+Open mode is a dangerous security feature. One problem encountered with pki
+authentication systems is that keys can become "mixed up" and authentication
+begins to fail. Open mode turns off authentication and tells the master to
+accept all authentication. This will clean up the pki keys recieved from the
+minions. Open mode should not be turned on for general use, open mode should
+only be used for a short period of time to clean up pki keys. To turn on open
+mode the value passed must be \fBTrue\fP.
+.sp
+.nf
+.ft C
+open_mode: False
+.ft P
+.fi
+.SS Configuring the Salt Minion
+.sp
+The Salt Minion configuration is very simple, typically the only value that
+needs to be set is the master value so the minion can find its master.
+.SS \fBmaster\fP
+.sp
+Default: \fBmcp\fP
+.sp
+The hostname or ipv4 of the master.
+.sp
+.nf
+.ft C
+master: mcp
+.ft P
+.fi
+.SS \fBmaster_port\fP
+.sp
+Default: \fB4506\fP
+.sp
+The port of the master ret server, this needs to coincide with the ret_port
+option on the salt master.
+.sp
+.nf
+.ft C
+master_port: 4506
+.ft P
+.fi
+.SS \fBpki_dir\fP
+.sp
+Default: \fB/etc/salt/pki\fP
+.sp
+The directory used to store the minion\(aqs public and private keys.
+.sp
+.nf
+.ft C
+pki_dir: /etc/salt/pki
+.ft P
+.fi
+.SS \fBhostname\fP
+.sp
+Default: hostname (as returned by the Python call: \fBsocket.getfqdn()\fP)
+.sp
+This value is used to statically set the default indentification name for the
+minion, while this value is called hostname, salt has no hard requirement on
+DNS resolution and this value does not need to be the hostname.
+.sp
+.nf
+.ft C
+hostname: foo.bar.com
+.ft P
+.fi
+.SS \fBcachedir\fP
+.sp
+Default: \fB/var/cache/salt\fP
+.sp
+The location for minion cache data.
+.sp
+.nf
+.ft C
+cachedir: /var/cache/salt
+.ft P
+.fi
+.SS \fBdisable_modules\fP
+.sp
+Default: \fB[]\fP (all modules are enabled by default)
+.sp
+The event may occur in which the administrator desires that a minion should not
+be able to execute a certain module. The sys module is built into the minion
+and cannot be disabled.
+.sp
+.nf
+.ft C
+disable_modules: [cmd,virt,test]
+.ft P
+.fi
+.SS \fBopen_mode\fP
+.sp
+Default: \fBFalse\fP
+.sp
+Open mode can be used to clean out the pki key recieved from the salt master,
+turn on open mode, restart the minion, then turn off open mode and restart the
+minion to clean the keys.
+.sp
+.nf
+.ft C
+open_mode: False
+.ft P
+.fi
+.SS Command line reference
+.SS \fBsalt\fP
+.SS Synopsis
+.INDENT 0.0
+.INDENT 3.5
+.sp
+salt \(aq*\(aq [ options ] sys.doc
+.sp
+salt \-E \(aq.*\(aq [ options ] sys.doc cmd
+.sp
+salt \-F \(aqoperatingsystem:Arch.*\(aq [ options ] test.ping
+.sp
+salt \-Q test.ping
+.UNINDENT
+.UNINDENT
+.SS Description
+.sp
+Salt allows for commands to be executed across a swath of remote systems in
+parallel. This means that remote systems can be both controlled and queried
+with ease.
+.SS Options
+.INDENT 0.0
 .TP
-Joseph Hall <perlhoser@gmail.com>
+.B \-h, \-\-help
+.sp
+Print a usage message briefly summarizing these command\-line options
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t TIMEOUT, \-\-timeout=TIMEOUT
+.sp
+The timeout in seconds to wait for replies from the salt minions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-E, \-\-pcre
+.sp
+The target expression will be interpreted as a pcre regular expression
+rather than a shell glob.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-L, \-\-list
+.sp
+The target expression will be interpreted as a comma delimited list,
+example: server1.foo.bar,server2.foo.bar,example7.quo.qux
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-G, \-\-grain
+.sp
+The target expression matches values returned by the salt grains system on
+the minions. The target expression is in the format of \(aq<grain value>:<pcre
+regular expression>\(aq; example: \(aqos:Arch.*\(aq
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-Q, \-\-query
+.sp
+Execute a salt command query, this can be used to find the results os a
+previous function call: \-Q test.echo\(aq)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG, \-\-config=CONFIG
+.sp
+The location of the salt master configuration file, the salt master
+settings are required to know where the connections are;
+default=/etc/salt/master
+.UNINDENT
+.SS See also
+.sp
+\fIsalt(7)\fP
+\fIsalt\-master(1)\fP
+\fIsalt\-minion(1)\fP
+.SS \fBsalt\-master\fP
+.sp
+The salt master daemon, used to control the salt minions
+.SS Synopsis
+.sp
+salt\-master [ options ]
+.SS Description
+.sp
+The master daemon controls the salt minions
+.SS Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+.sp
+Print a usage message briefly summarizing these command\-line options.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-daemon
+.sp
+Run the salt master as a daemon
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG, \-\-config=CONFIG
+.sp
+The master configuration file to use, the default is /etc/salt/master
+.UNINDENT
+.SS \fBsalt\-minion\fP
+.sp
+The salt minion daemon, recieves commands from a remote salt master.
+.SS Synopsis
+.sp
+salt\-minion [ options ]
+.SS Description
+.sp
+The salt minion recieves commands from the central salt master and replies with
+the results of said commands.
+.SS Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+.sp
+Print a usage message briefly summarizing these command\-line options.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-daemon
+.sp
+Run the salt minion as a daemon
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG, \-\-config=CONFIG
+.sp
+The minion configuration file to use, the default is /etc/salt/minion
+.UNINDENT
+.SS \fBsalt\-key\fP
+.SS Synopsis
+.sp
+salt\-key [ options ]
+.SS Description
+.sp
+Salt\-key executes simple management of salt server public keys used for
+authentication.
+.SS Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+.sp
+Print a usage message briefly summarizing these command\-line options.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-l, \-\-list
+.sp
+List the unaccepted minion public keys.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-L, \-\-list\-all
+.sp
+List all public keys on this salt master, both accepted and pending
+acceptance.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a ACCEPT, \-\-accept=ACCEPT
+.sp
+Accept the named minion public key for command execution.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-A, \-\-accept\-all
+.sp
+Accepts all pending public keys.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG, \-\-config=CONFIG
+.sp
+The master configuration file needs to be read to determine where the salt
+keys are stored via the pki_dir configuration value;
+default=/etc/salt/master
+.UNINDENT
+.SS \fBsalt\-cp\fP
+.sp
+Copy a file to a set of systems
+.SS Synopsis
+.sp
+.nf
+.ft C
+salt\-cp \(aq*\(aq [ options ] SOURCE DEST
+
+salt\-cp \-E \(aq.*\(aq [ options ] SOURCE DEST
+
+salt\-cp \-G \(aqos:Arch.*\(aq [ options ] SOURCE DEST
+.ft P
+.fi
+.SS Description
+.sp
+Salt copy copies a local file out to all of the salt minions matched by the
+given target.
+.SS Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+.sp
+Print a usage message briefly summarizing these command\-line options
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t TIMEOUT, \-\-timeout=TIMEOUT
+.sp
+The timeout in seconds to wait for replies from the salt minions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-E, \-\-pcre
+.sp
+The target expresion will be interpereted as a pcre regular expression
+rather than a shell glob.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-L, \-\-list
+.sp
+The target expression will be interpereted as a comma delimited list,
+example: server1.foo.bar,server2.foo.bar,example7.quo.qux
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-G, \-\-grain
+.sp
+The target expression matches values returned by the salt grains system on
+the minions. The target expresion is in the format of \(aq<grain value>:<pcre
+regular expresion>\(aq; example: \(aqos:Arch.*\(aq
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-Q, \-\-query
+.sp
+Execute a salt command query, this can be used to find the results os a
+previous function call: \-Q test.echo\(aq)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG, \-\-config=CONFIG
+.sp
+The location of the salt master configuration file, the salt master
+settings are required to know where the connections are;
+default=/etc/salt/master
+.UNINDENT
+.SS \fBsalt\-call\fP
+.SS Synopsis
+.sp
+.nf
+.ft C
+salt\-call [options]
+.ft P
+.fi
+.SS Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+.sp
+Print a usage message briefly summarizing these command\-line options
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-g, \-\-grains
+.sp
+Return the information generated by the salt grains
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-m MODULE_DIRS, \-\-module\-dirs=MODULE_DIRS
+.sp
+Specify an additional directories to pull modules from, multiple
+directories can be delimited by commas
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-doc
+.sp
+Return the documentation for the specified module of for all modules if
+none are specified
+.UNINDENT
+.sp
+Salt can be controlled by a command line client as root on the Salt master. The
+Salt command line client uses the Salt client API to communicate with the Salt
+master server. The Salt client is straightforward and simple to use.
+.sp
+Using the Salt client commands can be easily sent to the minions.
+.SS Using the Salt Command
+.sp
+The salt command needs a few components to send information to the salt
+minions. The target minions need to be defined, the function to call and any
+arguments the function requires.
+.SS Defining the Target Minions
+.sp
+The first argument passed to salt, defines the target minions, the target
+minions are accessed via their hostname. The default target type is a bash
+glob:
+.sp
+.nf
+.ft C
+salt \(aq*foo.com\(aq sys.doc
+.ft P
+.fi
+.sp
+Salt can also define the target minions with regular expressions:
+.sp
+.nf
+.ft C
+salt \-E \(aq.*\(aq cmd.run \(aqls \-l | grep foo\(aq
+.ft P
+.fi
+.sp
+Or to explicitly list hosts, salt can take a list:
+.sp
+.nf
+.ft C
+salt \-L foo.bar.baz,quo.qux cmd.run \(aqps aux | grep foo\(aq
+.ft P
+.fi
+.SS Calling the function
+.sp
+The function to call on the specified target is placed after the target
+specification.
+.SS Finding available minion functions
+.sp
+The Salt functions are self documenting, all of the function documentation can
+be retried from the minions via the \fBsys.doc()\fP function:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq sys.doc
+.ft P
+.fi
+.SH EXTENDING SALT
+.sp
+Writing your own customizations on top of Salt
+.SS Introduction to extending Salt
+.SS Python client API
+.sp
+Salt is written to be completely API centric, Salt minions and master can be
+built directly into third party applications as a communication layer. The Salt
+client API is very straightforward.
+.SS Using the LocalClient API
+.sp
+Sending information through the client is simple:
+.sp
+.nf
+.ft C
+# Import the salt client librairy
+import salt.client
+# create a local client object
+client = salt.client.LocalClient()
+# make calls with the cmd method
+ret = client.cmd(\(aq*\(aq, \(aqcmd.run\(aq, [\(aqls \-l\(aq])
+.ft P
+.fi
+.sp
+The cmd call is the only one needed for the local client, the arguments are as
+follows:
+.INDENT 0.0
+.TP
+.B LocalClient.cmd(tgt, fun, arg=[], timeout=5, expr_form=\(aqglob\(aq)
+.UNINDENT
+.sp
+The LocalClient object only works running as root on the salt\-master, it is the
+same interface used by the salt command line tool. The arguments are as
+follows.
+.INDENT 0.0
+.TP
+.B tgt
+.
+The tgt option is the target specification, by default a target is passed
+in as a bash shell glob. The expr_form option allows the tgt to be passed
+as either a pcre regular expresion or as a python list.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B fun
+.
+The name of the function to call on the specified minions. The
+documentation for these functions can be seen by running on the
+salt\-master: salt \(aq*\(aq sys.doc
+.UNINDENT
+.INDENT 0.0
+.TP
+.B arg
+.
+The optional arg paramater is used to pass a list of options on to the
+remote function
+.UNINDENT
+.INDENT 0.0
+.TP
+.B timeout
+.
+The number of seconds to wait after the last minion returns but before all
+minions return.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B expr_form
+.
+The type of tgt that is passed in, the allowed values are:
+.INDENT 7.0
+.IP \(bu 2
+.
+\(aqglob\(aq \- Bash glob completion \- Default
+.IP \(bu 2
+.
+\(aqpcre\(aq \- Perl style regular expresion
+.IP \(bu 2
+.
+\(aqlist\(aq \- Python list of hosts
+.UNINDENT
+.UNINDENT
+.SS Modules
+.sp
+Salt modules are the functions called by the \fBsalt\fP command.
+.SS Full list of builtin modules
+.SS \fBsalt.modules.butterkvm\fP
+.sp
+Specilized routines used by the butter cloud component
+.INDENT 0.0
+.TP
+.B salt.modules.butterkvm.create(instance, vda, image, pin)
+.sp
+Create a virtual machine, this is part of the butter vm system and assumes
+that the files prepared by butter are available via shared storage.
+AKA \- don\(aqt call this from the command line!
+.sp
+Arguments:
+instance \- string, The path to the instance directory for the given vm on
+shared storage
+vda \- The location where the virtual machine image needs to be placed
+image \- The image to move into place
+pin \- a "pin" data structure defining the myriad of possible vdb\-vbz disk
+images to generate.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.butterkvm.full_butter_data(local_path)
+.sp
+Return the full virt info, but add butter data!
+.sp
+CLI Example:
+salt \(aq*\(aq buttervm.full_butter_data <image_path>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.butterkvm.libvirt_creds()
+.sp
+Returns the user and group that the disk images should be owned by
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.butterkvm.local_images(local_path)
+.sp
+return the virtual machine names for all of the images located in the
+butter cloud\(aqs local_path in a list:
+.sp
+[\(aqvm1.boo.com\(aq, \(aqvm2.foo.com\(aq]
+.sp
+CLI Example:
+salt \(aq*\(aq buttervm.local_images <image_path>
+.UNINDENT
+.SS \fBsalt.modules.cluster\fP
+.sp
+The cluster module is used to distribute and activate salt HA cluster
+components
+.INDENT 0.0
+.TP
+.B salt.modules.cluster.distrib(minions, master_conf, master_pem, conf_file)
+.sp
+Set up this minion as a failover master \- only intended for use by the
+cluster interface
+.UNINDENT
+.SS \fBsalt.modules.cmd\fP
+.sp
+A module for shelling out
+.sp
+Keep in mind that this module is insecure, in that it can give whomever has
+access to the master root execution access to all salt minions
+.INDENT 0.0
+.TP
+.B salt.modules.cmd.exec_code(lang, code)
+.sp
+Pass in two strings, the first naming the executable language, aka \-
+python2, python3, ruby, perl, lua, etc. the second string containing
+the code you wish to execute. The stdout and stderr will be returned
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.cmd.run(cmd)
+.sp
+Execute the passed command and return the output as a string
+.sp
+CLI Example:
+salt \(aq*\(aq cmd.run "ls \-l | grep foo | awk \(aq{print $2}\(aq"
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.cmd.run_stderr(cmd)
+.sp
+Execute a command and only return the standard error
+.sp
+CLI Example:
+salt \(aq*\(aq cmd.run "ls \-l | grep foo | awk \(aq{print $2}\(aq"
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.cmd.run_stdout(cmd)
+.sp
+Execute a command, and only return the standard out
+.sp
+CLI Example:
+salt \(aq*\(aq cmd.run "ls \-l | grep foo | awk \(aq{print $2}\(aq"
+.UNINDENT
+.SS \fBsalt.modules.cmdc\fP
+.SS \fBsalt.modules.cp\fP
+.SS \fBsalt.modules.cytestx\fP
+.SS \fBsalt.modules.disk\fP
+.sp
+Module for gathering disk information
+.INDENT 0.0
+.TP
+.B salt.modules.disk.usage()
+.sp
+Return usage information for volumes mounted on this minion
+.sp
+CLI Example:
+salt \(aq*\(aq disk.usage
+.UNINDENT
+.SS \fBsalt.modules.grains\fP
+.SS \fBsalt.modules.network\fP
+.sp
+Module for gathering and managing network information
+.INDENT 0.0
+.TP
+.B salt.modules.network.dig(host)
+.sp
+Performs a DNS lookup with dig
+.sp
+CLI Example:
+salt \(aq*\(aq network.dig archlinux.org
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.network.isportopen(host, port)
+.sp
+Return status of a port
+.sp
+CLI Example:
+salt \(aq*\(aq network.isportopen 127.0.0.1 22
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.network.netstat()
+.sp
+Return information on open ports and states
+.sp
+CLI Example:
+salt \(aq*\(aq network.netstat
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.network.ping(host)
+.sp
+Performs a ping to a host
+.sp
+CLI Example:
+salt \(aq*\(aq network.ping archlinux.org \-c 4
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.network.traceroute(host)
+.sp
+Performs a traceroute to a 3rd party host
+.sp
+CLI Example:
+salt \(aq*\(aq network.traceroute archlinux.org
+.UNINDENT
+.SS \fBsalt.modules.pacman\fP
+.sp
+A module to wrap pacman calls, since Arch is the best :)
+.INDENT 0.0
+.TP
+.B salt.modules.pacman.install(pkg, refresh=False)
+.sp
+Install the passed package, add refresh=True to install with an \-Sy
+.sp
+Return a dict containing the new package names and versions:
+{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
+.INDENT 7.0
+.INDENT 3.5
+.sp
+\(aqnew\(aq: \(aq<new\-version>\(aq]}
+.UNINDENT
+.UNINDENT
+.sp
+CLI Example:
+salt \(aq*\(aq pacman.install <package name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pacman.list_pkgs()
+.sp
+List the packages currently installed in a dict:
+{\(aq<package_name>\(aq: \(aq<version>\(aq}
+.sp
+CLI Example:
+salt \(aq*\(aq pacman.list_pkgs
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pacman.purge(pkg)
+.sp
+Recursively remove a package and all dependencies which were installed
+with it, this will call a pacman \-Rsc
+.sp
+Return a list containing the removed packages:
+.sp
+CLI Example:
+salt \(aq*\(aq pacman.purge <package name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pacman.refresh_db()
+.sp
+Just run a pacman \-Sy, return a dict:
+{\(aq<database name>\(aq: Bool}
+.sp
+CLI Example:
+salt \(aq*\(aq pacman.refresh_db
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pacman.remove(pkg)
+.sp
+Remove a single package with pacman \-R
+.sp
+Return a list containing the removed packages:
+.sp
+CLI Example:
+salt \(aq*\(aq pacman.remove <package name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pacman.upgrade()
+.sp
+Run a full system upgrade, a pacman \-Syu
+.sp
+Return a dict containing the new package names and versions:
+{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
+.INDENT 7.0
+.INDENT 3.5
+.sp
+\(aqnew\(aq: \(aq<new\-version>\(aq]}
+.UNINDENT
+.UNINDENT
+.sp
+CLI Example:
+salt \(aq*\(aq pacman.upgrade
+.UNINDENT
+.SS \fBsalt.modules.service\fP
+.sp
+Top level package command wrapper, used to translate the os detected by facter
+to the correct package manager
+.INDENT 0.0
+.TP
+.B salt.modules.service.start(svc)
+.sp
+Start the specified service
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.service.stop(svc)
+.sp
+Stop the specified service
+.UNINDENT
+.SS \fBsalt.modules.state\fP
+.SS \fBsalt.modules.status\fP
+.sp
+Module for returning various status data about a minion. These data can be useful for compiling into stats later.
+.INDENT 0.0
+.TP
+.B salt.modules.status.all()
+.sp
+Return a composite of all status data and info for this minon. Warning: There is a LOT here!
+.sp
+CLI Example:
+salt \(aq*\(aq status.all
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.cpuinfo()
+.sp
+Return the CPU info for this minon
+.sp
+CLI Example:
+salt \(aq*\(aq status.cpuinfo
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.cpustats()
+.sp
+Return the CPU stats for this minon
+.sp
+CLI Example:
+salt \(aq*\(aq status.cpustats
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.diskstats()
+.sp
+Return the disk stats for this minon
+.sp
+CLI Example:
+salt \(aq*\(aq status.diskstats
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.loadavg()
+.sp
+Return the load averages for this minion
+.sp
+CLI Example:
+salt \(aq*\(aq status.loadavg
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.meminfo()
+.sp
+Return the CPU stats for this minon
+.sp
+CLI Example:
+salt \(aq*\(aq status.meminfo
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.netstats()
+.sp
+Return the network stats for this minon
+.sp
+CLI Example:
+salt \(aq*\(aq status.netstats
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.uptime()
+.sp
+Return the uptime for this minion
+.sp
+CLI Example:
+salt \(aq*\(aq status.uptime
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.vmstats()
+.sp
+Return the virtual memory stats for this minon
+.sp
+CLI Example:
+salt \(aq*\(aq status.vmstats
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.status.w()
+.sp
+Return a list of logged in users for this minon, using the w command
+.sp
+CLI Example:
+salt \(aq*\(aq status.w
+.UNINDENT
+.SS \fBsalt.modules.statusc\fP
+.SS \fBsalt.modules.sysctl\fP
+.sp
+Module for viewing and modifying sysctl paramters
+.INDENT 0.0
+.TP
+.B salt.modules.sysctl.assign(name, value)
+.sp
+Assign a single sysctl parameter for this minion
+.sp
+CLI Example:
+salt \(aq*\(aq sysctl.assign net.ipv4.ip_forward 1
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.sysctl.get(name)
+.sp
+Return a single sysctl parameter for this minion
+.sp
+CLI Example:
+salt \(aq*\(aq sysctl.get net.ipv4.ip_forward
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.sysctl.show()
+.sp
+Return a list of sysctl parameters for this minion
+.sp
+CLI Example:
+salt \(aq*\(aq sysctl.show
+.UNINDENT
+.SS \fBsalt.modules.test\fP
+.sp
+Module for running arbitrairy tests
+.INDENT 0.0
+.TP
+.B salt.modules.test.collatz(start)
+.sp
+Execute the collatz conjecture from the passed starting number, returns
+the sequence and the time it took to compute. Used for performance tests.
+.sp
+CLI Example:
+salt \(aq*\(aq test.collatz 3
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.test.echo(text)
+.sp
+Return a string \- used for testing the connection
+.sp
+CLI Example:
+salt \(aq*\(aq test.echo \(aqfoo bar baz quo qux\(aq
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.test.fib(num)
+.sp
+Return a fibonachi sequence up to the passed number, and the time it took
+to compute in seconds. Used for performance tests
+.sp
+CLI Example:
+salt \(aq*\(aq test.fib 3
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.test.ping()
+.sp
+Just used to make sure the minion is up and responding
+Return True
+.sp
+CLI Example:
+salt \(aq*\(aq test.ping
+.UNINDENT
+.SS \fBsalt.modules.virt\fP
+.sp
+Work with vitual machines managed by libvirt
+.INDENT 0.0
+.TP
+.B salt.modules.virt.create(vm_)
+.sp
+Start a defined domain
+.sp
+CLI Example:
+salt \(aq*\(aq virt.create <vm name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.create_xml_path(path)
+.sp
+Start a defined domain
+.sp
+CLI Example:
+salt \(aq*\(aq virt.create_xml_path <path to xml file on the node>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.create_xml_str(xml)
+.sp
+Start a domain based on the xml passed to the function
+.sp
+CLI Example:
+salt \(aq*\(aq virt.create_xml_str <xml in string format>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.destroy(vm_)
+.sp
+Hard power down the virtual machine, this is equivelent to pulling the
+power
+.sp
+CLI Example:
+salt \(aq*\(aq virt.destroy <vm name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.freecpu()
+.sp
+Return an int representing the number of unallocated cpus on this
+hypervisor
+.sp
+CLI Example:
+salt \(aq*\(aq virt.freemem
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.freemem()
+.sp
+Return an int representing the amount of memory that has not been given
+to virtual machines on this node
+.sp
+CLI Example:
+salt \(aq*\(aq virt.freemem
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.full_info()
+.sp
+Return the node_info, vm_info and freemem
+.sp
+CLI Example:
+salt \(aq*\(aq virt.full_info
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.get_disks(vm_)
+.sp
+Return the disks of a named vm
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.get_graphics(vm_)
+.sp
+Returns the information on vnc for a given vm
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.get_xml(vm_)
+.sp
+Returns the xml for a given vm
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.is_kvm_hyper()
+.sp
+Returns a bool whether or not this node is a hypervisor
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.list_vms()
+.sp
+Return a list of virtual machine names on the minion
+.sp
+CLI Example:
+salt \(aq*\(aq virt.list_vms
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.node_info()
+.sp
+Return a dict with information about this node
+.sp
+CLI Example:
+salt \(aq*\(aq virt.node_info
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.pause(vm_)
+.sp
+Pause the named vm
+.sp
+CLI Example:
+salt \(aq*\(aq virt.pause <vm name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.purge(vm_, dirs=False)
+.sp
+Recursively destroy and delete a virtual machine, pass True for dirs to
+also delete the directories containing the virtual machine disk images \-
+USE WITH EXTREAME CAUTION!
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.resume(vm_)
+.sp
+Resume the named vm
+.sp
+CLI Example:
+salt \(aq*\(aq virt.resume <vm name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.shutdown(vm_)
+.sp
+Send a soft shutdown signal to the named vm
+.sp
+CLI Example:
+salt \(aq*\(aq virt.shutdown <vm name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.undefine(vm_)
+.sp
+Remove a defined vm, this does not purge the virtual machine image, and
+this only works if the vm is powered down
+.sp
+CLI Example:
+salt \(aq*\(aq virt.undefine <vm name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.virt_type()
+.sp
+Returns the virtual machine type as a string
+.sp
+CLI Example:
+salt \(aq*\(aq virt.virt_type
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.virt.vm_info()
+.sp
+Return detailed information about the vms on this hyper in a dict:
+.INDENT 7.0
+.TP
+.B {\(aqcpu\(aq: <int>,
+.
+\(aqmaxMem\(aq: <int>,
+\(aqmem\(aq: <int>,
+\(aqstate\(aq: \(aq<state>\(aq,
+\(aqcputime\(aq <int>}
+.UNINDENT
+.sp
+CLI Example:
+salt \(aq*\(aq virt.vm_info
+.UNINDENT
+.SS \fBsalt.modules.yum\fP
+.sp
+Support for YUM
+.INDENT 0.0
+.TP
+.B salt.modules.yum.install(pkg, refresh=False)
+.sp
+Install the passed package, add refresh=True to clean out the yum database
+before executing
+.sp
+Return a dict containing the new package names and versions:
+{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
+.INDENT 7.0
+.INDENT 3.5
+.sp
+\(aqnew\(aq: \(aq<new\-version>\(aq]}
+.UNINDENT
+.UNINDENT
+.sp
+CLI Example:
+salt \(aq*\(aq yum.install <package name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yum.list_pkgs()
+.sp
+List the packages currently installed in a dict:
+{\(aq<package_name>\(aq: \(aq<version>\(aq}
+.sp
+CLI Example:
+salt \(aq*\(aq yum.list_pkgs
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yum.purge(pkg)
+.sp
+Yum does not have a purge, this function calls remove
+.sp
+Return a list containing the removed packages:
+.sp
+CLI Example:
+salt \(aq*\(aq yum.purge <package name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yum.refresh_db()
+.sp
+Since yum refreshes the database automatically, this runs a yum clean,
+so that the next yum operation will have a clean database
+.sp
+CLI Example:
+salt \(aq*\(aq yum.refresh_db
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yum.remove(pkg)
+.sp
+Remove a single package with yum remove
+.sp
+Return a list containing the removed packages:
+.sp
+CLI Example:
+salt \(aq*\(aq yum.remove <package name>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yum.upgrade()
+.sp
+Run a full system upgrade, a yum upgrade
+.sp
+Return a dict containing the new package names and versions:
+{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
+.INDENT 7.0
+.INDENT 3.5
+.sp
+\(aqnew\(aq: \(aq<new\-version>\(aq]}
+.UNINDENT
+.UNINDENT
+.sp
+CLI Example:
+salt \(aq*\(aq yum.upgrade
+.UNINDENT
+.SS Easy Modules to write
+.sp
+Salt modules are amazingly simple to write, just write a regular Python module
+or a regular Cython module and place it in the \fBsalt/modules\fP directory.
+.sp
+Since Salt modules are just Python/Cython modules there are no restraints as to
+what you can put inside of a salt module, and if a Salt module has errors and
+cannot import the Salt minion will continue to load without issue, the module
+with errors will simply be omitted.
+.sp
+If adding a Cython module the file must be named \fB<modulename>.pyx\fP so that
+the loader knows that the module needs to be imported as a Cython module. The
+compilation of the Cython module is automatic and happens when the minion
+starts, so only the \fB*.pyx\fP file is required.
+.SS Preloaded Modules Data
+.sp
+When interacting with modules often it is nice to be able to read information
+dynamically about the minion, or load in configuration parameters for a module.
+Salt allows for different types of data to be loaded into the modules by the
+minion, as of this writing Salt loads information gathered from the Salt Grains
+system and from the minion configuration file.
+.SS Grains Data
+.sp
+The Salt minion detects information about the system when started. This allows
+for modules to be written dynamically with respect to the underlying hardware
+and OS. This information is referred to as Salt Grains, or "grains of salt".
+The Grains system was introduced to replace Facter, since relying on a Ruby
+application from a Python application was both slow and inefficient. Grains
+support replaces Facter in all releases after 0.8
+.sp
+The values detected by the Salt Grains on the minion are available in a dict by
+the name of \fB__grains__\fP and can be accessed from within callable objects in
+the Python modules.
+.sp
+To see the contents of the grains dict for a given system in your deployment
+run the \fBgrains.items()\fP function:
+.sp
+.nf
+.ft C
+salt \(aqhostname\(aq grains.items
+.ft P
+.fi
+.sp
+To use the \fB__grains__\fP dict simply call it as a Python dict from within your
+code, an excellent example is available in the Grains module:
+\fBsalt.modules.grains\fP.
+.SS Module Configuration
+.sp
+Since parameters for configuring a module may be desired, Salt allows for
+configuration information stored in the main minion config file to be passed to
+the modules.
+.sp
+Since the minion configuration file is a yaml document, arbitrary configuration
+data can be passed in the minion config that is read by the modules. It is
+\fBstrongly\fP recommended that the values passed in the configuration file match
+the module. This means that a value intended for the \fBtest\fP module should be
+named \fBtest.<value>\fP.
+.sp
+Configuration also requires that default configuration parameters need to be
+loaded as well. This can be done simply by adding the \fB__opts__\fP dict to the
+top level of the module.
+.sp
+The test module contains usage of the module configuration, and the default
+configuration file for the minion contains the information and format used to
+pass data to the modules. \fBsalt.modules.test\fP, \fBconf/minion\fP.
+.SS Documentation
+.sp
+Salt modules are self documenting, the \fBsys.doc()\fP function will return the
+documentation for all available Facter modules:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq sys.doc
+.ft P
+.fi
+.sp
+This function simple prints out the docstrings found in the modules, when
+writing salt modules, please follow the formating conventions for docstrings as
+they appear in the other modules.
+.SS How Functions are Read
+.sp
+In Salt Python callable objects contained within a module are made available to
+the Salt minion for use. The only exception to this rule is a callable object
+with a name starting with an underscore \fB_\fP.
+.SS Objects Loaded Into the Salt Minion
+.sp
+.nf
+.ft C
+def foo(bar):
+    return bar
+
+class baz:
+    def __init__(self, quo):
+        return quo
+.ft P
+.fi
+.SS Objects NOT Loaded into the Salt Minion
+.sp
+.nf
+.ft C
+def _foobar(baz): # Preceded with an _
+    return baz
+
+cheese = {} # Not a callable python object
+.ft P
+.fi
+.SS Returners
+.sp
+Salt returners allow the return data to be sent to arbitrary locations instead
+of the salt master.
+.SS Full list of builtin returners
+.SS \fBsalt.returners.local\fP
+.SS \fBsalt.returners.redis\fP
+.SS Grains
+.sp
+Static information that Salt derives about the system it\(aqs running on.
+.SS Renderers
+.sp
+A python module that impments a render() method.
+.SS State enforcement
+.sp
+Enforce that specified packages are installed or that specified services are
+running.
+.SH GETTING INVOLVED
+.SS Community
+.sp
+If you want to help develop Salt there is a great need and your patches are
+welcome!
+.sp
+To assist in Salt development, you can help in a number of ways.
+.SS Posting patches to the mailing list
+.sp
+If you have a patch for Salt, please format it via \fBgit format\-patch\fP and
+send it to the Salt users mailing list. This allows the patch to give you the
+contributor the credit for your patch, and gives the Salt community an archive
+of the patch and a place for discussion.
+.SS Setting a Github pull request
+.sp
+This is probably the preferred method for contributions, simply create a Github
+fork, commit your changes to the fork, and then open up a pull request.
+.SS Conclusion
+.sp
+The goal here it to make contributions clear, make sure there is a trail for
+where the code has come from, but most importantly, to give credit where credit
+is due!
+.SS Release notes and upgrade instructions
+.SS Salt 0.8.7 release notes
+.sp
+It has been a month since salt 0.8.0, and it has been a long month! But Salt is
+still coming along strong. 0.8.7 has a lot of changes and a lot of updates.
+This update makes Salt’s ZeroMQ back end better, strips facter from the
+dependencies, and introduces interfaces to handle more capabilities.
+.sp
+Many of the major updates are in the background, but the changes should shine
+through to the surface. A number of the new features are still a little thin,
+but the back end to support expansion is in place.
+.sp
+I also recently gave a presentation to the Utah Python users group in Salt Lake
+City, the slides from this presentation are available here:
+\fI\%https://github.com/downloads/thatch45/salt/Salt.pdf\fP
+.sp
+The video from this presentation will be available shortly.
+.sp
+The major new features and changes in Salt 0.8.7 are:
+.INDENT 0.0
+.IP \(bu 2
+.
+Revamp ZeroMQ topology on the master for better scalability
+.IP \(bu 2
+.
+State enforcement
+.IP \(bu 2
+.
+Dynamic state enforcement managers
+.IP \(bu 2
+.
+Extract the module loader into salt.loader
+.IP \(bu 2
+.
+Make Job ids more granular
+.IP \(bu 2
+.
+Replace facter functionality with the new salt grains interface
+.IP \(bu 2
+.
+Support for “virtual” salt modules
+.IP \(bu 2
+.
+Introduce the salt\-call command
+.IP \(bu 2
+.
+Better debugging for minion modules
+.UNINDENT
+.sp
+The new ZeroMQ topology allows for better scalability, this will be required by
+the need to execute massive file transfers to multiple machines in parallel and
+state management. The new ZeroMQ topology is available in the aforementioned
+presentation.
+.sp
+0.8.7 introduces the capability to declare states, this is similar to the
+capabilities of Puppet. States in salt are declared via state data structures.
+This system is very young, but the core feature set is available. Salt states
+work around rendering files which represent Salt high data. More on the Salt
+state system will be documented in the near future.
+.sp
+The system for loading salt modules has been pulled out of the minion class to
+be a standalone module, this has enabled more dynamic loading of Salt modules
+and enables many of the updates in 0.8.7 –
+\fI\%https://github.com/thatch45/salt/blob/master/salt/loader.py\fP
+.sp
+Salt Job ids are now microsecond precise, this was needed to repair a race
+condition unveiled by the speed improvements in the new ZeroMQ topology.
+.sp
+The new grains interface replaces the functionality of Facter, the idea behind
+grains differs from Facter in that the grains are only used for static system
+data, dynamic data needs to be derived from a call to a salt module. This makes
+grains much faster to use, since the grains data is generated when the minion
+starts.
+.sp
+Virtual salt modules allows for a salt module to be presented as something
+other than its module name. The idea here is that based on information from the
+minion decisions about which module should be presented can be made. The best
+example is the pacman module. The pacman module will only load on Arch Linux
+minions, and will be called pkg. Similarly the yum module will be presented as
+pkg when the minion starts on a Fedora/RedHat system.
+.sp
+The new salt\-call command allows for minion modules to be executed from the
+minion. This means that on the minion a salt module can be executed, this is a
+great tool for testing Salt modules. The salt\-call command can also be used to
+view the grains data.
+.sp
+In previous releases when a minion module threw an exception very little data
+was returned to the master. Now the stack trace from the failure is returned
+making debugging of minion modules MUCH easier.
+.sp
+Salt is nearing the goal of 1.0, where the core feature set and capability is
+complete!
+.sp
+Salt 0.8.7 can be downloaded from github here:
+\fI\%https://github.com/downloads/thatch45/salt/salt-0.8.7.tar.gz\fP
+.sp
+\-Thomas S Hatch
+.SH INDICES, GLOSSARY AND TABLES
+.INDENT 0.0
+.IP \(bu 2
+.
+\fIgenindex\fP
+.IP \(bu 2
+.
+\fImodindex\fP
+.IP \(bu 2
+.
+\fIsearch\fP
+.UNINDENT
+.SH AUTHOR
+Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file
+.SH COPYRIGHT
+2011, Thomas Hatch
+.\" Generated by docutils manpage writer.
+.\" 
+.
