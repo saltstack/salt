@@ -446,9 +446,18 @@ class SaltRun(object):
         '''
         parser = optparse.OptionParser()
 
+        parser.add_option('-c',
+                '--config',
+                dest='config',
+                default='/etc/salt/master',
+                help='Change the location of the master configuration;'\
+                    + ' default=/etc/salt/master')
+
         options, args = parser.parse_args()
 
         opts = {}
+
+        opts['config'] = options.config
 
         if len(args > 0):
             opts['fun'] = args[0]
