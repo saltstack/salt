@@ -15,6 +15,7 @@ except:
 
 # Import salt components
 import salt.client
+import salt.runner
 import salt.cli.key
 import salt.cli.cp
 import salt.cli.caller
@@ -459,11 +460,11 @@ class SaltRun(object):
 
         opts['config'] = options.config
 
-        if len(args > 0):
+        if len(args) > 0:
             opts['fun'] = args[0]
         else:
             opts['fun'] = ''
-        if len(args > 1):
+        if len(args) > 1:
             opts['arg'] = args[1:]
         else:
             opts['arg'] = []
