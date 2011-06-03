@@ -74,6 +74,7 @@ class Master(object):
         verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.opts['cachedir'], 'jobs'),
+                    os.path.dirname(self.opts['log_file']),
                     ])
         # Late import so logging works correctly
         import salt.master
@@ -139,7 +140,9 @@ class Minion(object):
 
         import logging
 
-        verify_env([self.opts['pki_dir'], self.opts['cachedir']])
+        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
+                os.path.dirname(self.opts['log_file']),
+                ])
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
