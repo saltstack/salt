@@ -468,6 +468,8 @@ class SaltRun(object):
         else:
             opts['arg'] = []
 
+        opts.update(salt.config.master_config(options.config))
+
         return opts
 
     def run(self):
