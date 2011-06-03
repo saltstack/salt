@@ -19,3 +19,12 @@ def down():
         keys.remove(minion)
     for minion in sorted(keys):
         print minion
+
+def up():
+    '''
+    Print a list of all of the minions that are up
+    '''
+    client = salt.client.LocalClient(__opts__['config'])
+    minions = client.cmd('*', 'test.ping', timeout=1)
+    for minion in sorted(minions):
+        print minion
