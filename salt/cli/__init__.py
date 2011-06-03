@@ -342,6 +342,12 @@ class SaltKey(object):
                 action='store_true',
                 help='Print all public keys')
 
+        parser.add_option('-d',
+                '--delete',
+                dest='delete',
+                default='',
+                help='Delete the named key')
+
         parser.add_option('-c',
                 '--config',
                 dest='config',
@@ -358,6 +364,7 @@ class SaltKey(object):
         opts['accept_all'] = options.accept_all
         opts['print'] = options.print_
         opts['print_all'] = options.print_all
+        opts['delete'] = options.delete
 
         opts.update(salt.config.master_config(options.config))
 
