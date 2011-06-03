@@ -84,7 +84,7 @@ def runner(opts):
     '''
     module_dirs = [
         os.path.join(distutils.sysconfig.get_python_lib(), 'salt/runners'),
-        ] + dirs
+        ]
     load = Loader(module_dirs, opts)
     return load.gen_functions()
 
