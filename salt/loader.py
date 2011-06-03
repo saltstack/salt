@@ -78,6 +78,16 @@ def call(fun, args=[], dirs=[]):
     load = Loader(module_dirs)
     return load.call(fun, args)
 
+def runner(opts):
+    '''
+    Directly call a function inside a loader directory
+    '''
+    module_dirs = [
+        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/runners'),
+        ] + dirs
+    load = Loader(module_dirs, opts)
+    return load.gen_functions()
+
 
 class Loader(object):
     '''
