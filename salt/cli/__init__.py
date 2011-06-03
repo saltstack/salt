@@ -432,3 +432,38 @@ class SaltCall(object):
         '''
         caller = salt.cli.caller.Caller(self.opts)
         caller.run()
+
+class SaltRun(object):
+    '''
+    Used to execute salt convenience functions
+    '''
+    def __init__(self):
+        self.opts = self.__parse()
+
+    def __parse(self):
+        '''
+        Parse the command line arguments
+        '''
+        parser = optparse.OptionParser()
+
+        options, args = parser.parse_args()
+
+        opts = {}
+
+        if len(args > 0):
+            opts['fun'] = args[0]
+        else:
+            opts['fun'] = ''
+        if len(args > 1):
+            opts['arg'] = args[1:]
+        else:
+            opts['arg'] = []
+
+        return opts
+
+    def run(self):
+        '''
+        Execute the salt call!
+        '''
+        runner = salt.runner.Runner(self.opts)
+        runner.run()
