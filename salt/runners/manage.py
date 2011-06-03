@@ -12,7 +12,7 @@ def down():
     Print a list of all the down or unresponsive salt minions
     '''
     client = salt.client.LocalClient(__opts__['config'])
-    key = salt.cli.key(__opts__)
+    key = salt.cli.key.Key(__opts__)
     minions = client.cmd('*', 'test.ping', timeout=1)
     keys = key._keys('acc')
     for minion in minions:
