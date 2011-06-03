@@ -129,6 +129,31 @@ class Key(object):
         for key in os.listdir(pre_dir):
             self._accept(key)
 
+    def _delete_key(self):
+        '''
+        Delete a key
+        '''
+        pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
+        minions = os.path.join(self.opts['pki_dir'], 'minions')
+        if not os.path.isdir(minions):
+            err = 'The minions directory is not present, ensure that the'\
+                + ' master server has been started'
+            sys.stderr.write(err + '\n')
+            sys.exit(42)
+        if not os.path.isdir(pre_dir):
+            err = 'The minions_pre directory is not present, ensure that the'\
+                + ' master server has been started'
+            sys.stderr.write(err + '\n')
+            sys.exit(42)
+        pre = os.path.join(pre_dir, self.opts['delete'])
+        acc = os.path.join(minions, self.opts['delete'])
+        if os.path.exists(pre):
+            os.remove(pre)
+            print 'Removed pending key %s' % self.opts['delete']
+        if os.path.exists(acc):
+            os.remove(acc)
+            print 'Removed accepted key %s' % self.opts['delete']
+
     def run(self):
         '''
         Run the logic for saltkey
@@ -145,6 +170,8 @@ class Key(object):
             self._accept(self.opts['accept'])
         elif self.opts['accept_all']:
             self._accept_all()
+        elif self.opts['delete']:
+            self._delete_key()
         else:
             self._list_all()
 
