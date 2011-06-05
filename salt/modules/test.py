@@ -48,6 +48,16 @@ def get_opts():
     '''
     return __opts__
 
+def cross_test(func, args=[]):
+    '''
+    Execute a minion function via the __salt__ object in the test module, used
+    to verify that the minion functions can be called via the __salt__module
+
+    CLI Example:
+    salt '*' test.cross_test file.gid_to_group 0
+    '''
+    return __salt__[func](*args)
+
 def fib(num):
     '''
     Return a Fibonacci sequence up to the passed number, and the time it took
