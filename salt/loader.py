@@ -227,6 +227,8 @@ class Loader(object):
                         pass
                     else:
                         funcs[mod.__name__ + '.' + attr] = getattr(mod, attr)
+        for mod in modules:
+            mod.__salt__ = funcs
         return funcs
 
     def apply_introspection(self, funcs):
@@ -237,7 +239,6 @@ class Loader(object):
         funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
         funcs['sys.list_modules'] = lambda: funcs.keys
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
-        #funcs['sys.reload_functions'] = self.reload_functions
         return funcs
 
     def filter_func(self, name, pack=None):
