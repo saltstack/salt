@@ -178,11 +178,17 @@ class State(object):
         Call a state directly with the low data structure, verify data before
         processing.
         '''
+        log.info('Executing state %(state)s.%(fun)s', data)
         ret = {'changes': None,
                'result': False,
                'comment': ''}
         cdata = self.format_call(data)
-        return self.states[cdata['full']](*cdata['args'])
+        ret = self.states[cdata['full']](*cdata['args'])
+        log.info(
+                'The following changed occured for state %(tag)s: %(changes)s',
+                ret
+                )
+        return ret
 
     def call_chunks(self, chunks):
         '''
