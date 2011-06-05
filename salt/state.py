@@ -220,6 +220,33 @@ class State(object):
                 return stat
         return 'met'
 
+    def check_watchers(self, low, running, chunks):
+        '''
+        Look into the running data to see if the watched states have been run
+        '''
+        if not low.has_key('watch'):
+            return 'nochange'
+        reqs = []
+        status = 'unmet'
+        for req in low['watch']:
+            for chunk in chunks:
+                if chunk['name'] == req[req.keys()[0]]:
+                    if chunk['state'] == req.keys()[0]:
+                        reqs.append(chunk)
+        fun_stats = []
+        for req in reqs:
+            tag = req['state'] + '.' + req['name'] + '.' + req['fun']
+            if not running.has_key(tag):
+                fun_stats.append('unmet')
+            else:
+                fun_stats.append('change' if running[tag]['changes'] else 'nochange')
+        for stat in fun_stats:
+            if stat == 'change':
+                return stat
+            elif stat == 'unmet':
+                return stat
+        return 'nochange'
+
     def call_chunk(self, low, running, chunks):
         '''
         Check if a chunk has any requires, execute the requires and then the
@@ -241,9 +268,29 @@ class State(object):
             elif status == 'met':
                 running[tag] = self.call(low)
             elif status == 'fail':
-                running[tag] = {'changes': None,
+                running[tag] = {'changes': {},
                                 'result': False,
                                 'comment': 'One or more require failed'}
+        elif low.has_key('watch'):
+            status = self.check_watchers(low, running, chunks)
+            if status == 'unmet':
+                reqs = []
+                for req in low['watch']:
+                    for chunk in chunks:
+                        if chunk['name'] == req[req.keys()[0]]:
+                            if chunk['state'] == req.keys()[0]:
+                                reqs.append(chunk)
+                for chunk in reqs:
+                    running = self.call_chunk(chunk, running, chunks)
+                running = self.call_chunk(low, running, chunks)
+            elif status == 'nochange':
+                running[tag] = self.call(low)
+            elif status == 'change':
+                ret = self.call(low)
+                if not ret['changes']:
+                    low['fun'] = 'restart'
+                    ret = self.call(low)
+                running[tag] = ret
         else:
             running[tag] = self.call(low)
         return running
