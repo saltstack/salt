@@ -6,7 +6,7 @@ import subprocess
 import os
 
 grainmap = {
-           'Archlinux': '/etc/rc.d',
+           'Arch': '/etc/rc.d',
            'Fedora': '/etc/init.d',
            'RedHat': '/etc/init.d',
            'Debian': '/etc/init.d',
