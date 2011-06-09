@@ -12,6 +12,7 @@ as those returned here
 # lot clearer, so far it is spaghetti code
 # Import python modules
 import os
+import socket
 import subprocess
 
 def _kernel():
@@ -137,14 +138,14 @@ def hostname():
     Return fqdn, hostname, domainname
     '''
     # This is going to need some work
-    host = subprocess.Popen(['hostname'],
-        stdout=subprocess.PIPE).communicate()[0].strip()
-    domain = subprocess.Popen(['dnsdomainname'],
-        stdout=subprocess.PIPE).communicate()[0].strip()
-    grains =  {'host': host}
-    if domain:
-        grains['domain'] = domain
-        grains['fqdn'] = host + '.' + domain
+    grains = {}
+    grains['fqdn'] = socket.getfqdn()
+    comps = grains['fqdn'].split('.')
+    grains['host'] = comps[0]
+    if len(comps) > 1:
+        grains['domain'] = '.'.join(comps[1:])
+    else:
+        grains['domain'] = ''
     return grains
 
 def path():
