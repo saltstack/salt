@@ -184,9 +184,10 @@ class State(object):
                'comment': ''}
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
-        log.info(
-                'The following changed occured for state %(tag)s: %(changes)s',
-                ret
+        log.info('The following changes occured for state %s.%s: %s',
+                data['state'],
+                data['fun'],
+                str(ret['changes'])
                 )
         return ret
 
