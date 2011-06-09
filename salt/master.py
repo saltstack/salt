@@ -368,7 +368,7 @@ class MWorker(multiprocessing.Process):
         if not load.has_key('path')\
                 or not load.has_key('env'):
             return False
-        path = self._find_file(load['path'], load['env'])
+        path = self._find_file(load['path'], load['env'])['path']
         if not path:
             return self.crypticle.dumps('')
         ret = {}
