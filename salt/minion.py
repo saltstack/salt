@@ -431,7 +431,7 @@ class FileClient(object):
                 'cmd': '_file_hash'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
-        return self.auth.crypticle.loads(socket.recv_pyobj())
+        return self.auth.crypticle.loads(self.socket.recv_pyobj())
 
     def get_state(self, sls, env):
         '''
