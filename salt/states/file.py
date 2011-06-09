@@ -6,6 +6,7 @@ import os
 import shutil
 import tempfile
 import difflib
+import hashlib
 
 def _makedirs(path):
     '''
