@@ -228,7 +228,8 @@ class Loader(object):
                     else:
                         funcs[mod.__name__ + '.' + attr] = getattr(mod, attr)
         for mod in modules:
-            mod.__salt__ = funcs
+            if not hasattr(mod, '__salt__'):
+                mod.__salt__ = funcs
         return funcs
 
     def apply_introspection(self, funcs):
