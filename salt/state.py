@@ -290,7 +290,7 @@ class State(object):
             elif status == 'change':
                 ret = self.call(low)
                 if not ret['changes']:
-                    low['fun'] = 'restart'
+                    low['fun'] = 'watcher'
                     ret = self.call(low)
                 running[tag] = ret
         else:
