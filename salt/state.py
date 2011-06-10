@@ -20,9 +20,37 @@ import logging
 # Import Salt modules
 import salt.loader
 import salt.minion
-import salt.formatter
 
 log = logging.getLogger(__name__)
+
+def format_log(ret):
+    '''
+    Format the state into a log message
+    '''
+    if type(ret) == type(dict()):
+        # Looks like the ret may be a valid state return
+        if ret.has_key('changes'):
+            # Yep, looks like a valid state return
+            chg = ret['changes']
+            if type(chg) == type(dict()):
+                if chg.has_key('diff'):
+                    if type(chg['diff']) == type(str()):
+                        msg = 'File changed:\n{0}'.format(
+                                chg['diff'])
+                if type(chg[chg.keys()[0]]) == type(dict()):
+                    if chg[chg.keys()[0]].has_key('new'):
+                        # This is the return data from a package install
+                        msg = 'Installed Packages:\n'
+                        for pkg in chg:
+                            old = 'absent'
+                            if chg[pkg]['old']:
+                                old = chg[pkg]['old']
+                            msg += '{0} changed from {1} to {2}\n'.format(
+                                    pkg, old, chg[pkg]['new'])
+                if ret['result']:
+                    log.info(msg)
+                else:
+                    log.error(msg)
 
 class StateError(Exception): pass
 
@@ -182,12 +210,9 @@ class State(object):
         log.info(
                 'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(data)
                 )
-        ret = {'changes': None,
-               'result': False,
-               'comment': ''}
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
-        salt.formatter.log_state_return(ret)
+        format_log(ret)
         return ret
 
     def call_chunks(self, chunks):
