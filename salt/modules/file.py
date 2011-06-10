@@ -43,7 +43,7 @@ def get_gid(path):
     salt '*' file.get_gid /etc/passwd
     '''
     if not os.path.isfile(path):
-        return False
+        return -1
     return os.stat(path).st_gid
 
 def get_group(path):
@@ -54,7 +54,7 @@ def get_group(path):
     salt '*' file.get_group /etc/passwd
     '''
     gid = get_gid(path)
-    if not gid:
+    if gid == -1:
         return False
     return gid_to_group(gid)
 
@@ -101,7 +101,7 @@ def get_user(path):
     salt '*' file.get_user /etc/passwd
     '''
     uid = get_uid(path)
-    if not uid:
+    if uid == -1:
         return False
     return uid_to_user(uid)
 
@@ -113,7 +113,7 @@ def get_mode(path):
     salt '*' file.get_mode /etc/passwd
     '''
     if not os.path.isfile(path):
-        return False
+        return -1
     return oct(os.stat(path).st_mode)[-4:]
 
 def set_mode(path, mode):
