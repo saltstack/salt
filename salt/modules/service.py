@@ -56,7 +56,7 @@ def status(name, sig=None):
     salt '*' service.status <service name> [service signature]
     '''
     sig = name if not sig else sig
-    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{print $2}'".format(
+    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
             __grains__, sig)
     return subprocess.Popen(cmd,
             shell=True,
