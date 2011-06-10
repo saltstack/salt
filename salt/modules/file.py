@@ -114,7 +114,10 @@ def get_mode(path):
     '''
     if not os.path.isfile(path):
         return -1
-    return oct(os.stat(path).st_mode)[-4:]
+    mode = str(oct(os.stat(path).st_mode)[-4:])
+    if mode.startswith('0'):
+        return mode[1:]
+    return mode
 
 def set_mode(path, mode):
     '''
