@@ -355,7 +355,6 @@ class FileClient(object):
         '''
         Make sure that this path is intended for the salt master and trim it
         '''
-        print path
         if not path.startswith('salt://'):
             raise MinionError('Unsupported path')
         return path[7:]
