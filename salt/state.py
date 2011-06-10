@@ -20,6 +20,7 @@ import logging
 # Import Salt modules
 import salt.loader
 import salt.minion
+import salt.formatter
 
 log = logging.getLogger(__name__)
 
@@ -178,12 +179,15 @@ class State(object):
         Call a state directly with the low data structure, verify data before
         processing.
         '''
-        log.info('Executing state %(state)s.%(fun)s', data)
+        log.info(
+                'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(data)
+                )
         ret = {'changes': None,
                'result': False,
                'comment': ''}
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
+        salt.formatter.log_state_return(ret)
         return ret
 
     def call_chunks(self, chunks):
