@@ -4,10 +4,9 @@ State enforcing for packages
 
 def running(name, sig=None):
     '''
-    Verify that the package is installed, return the packages changed in the
-    operation and a bool if the job was sucessfull
+    Verify that the service is running
     '''
-    if __salt__['service.status'](name):
+    if __salt__['service.status'](name, sig):
         return {'name': name,
                 'changes': {},
                 'result': True,
@@ -27,7 +26,7 @@ def dead(name, sig=None):
     '''
     Ensure that the named service is dead
     '''
-    if not __salt__['service.status'](name):
+    if not __salt__['service.status'](name, sig):
         return {'name': name,
                 'changes': {},
                 'result': True,
@@ -42,3 +41,19 @@ def dead(name, sig=None):
             'changes': changes,
             'result': True,
             'comment': 'Service ' + name + ' killed'}
+
+def watcher(name, sig=None):
+    '''
+    The service watcher, called to invoke the watch command. 
+    '''
+    if __salt__['service.status'](name, sig):
+        changes = __salt__['service.restart'](name)
+        return {'name': name,
+                'changes': changes,
+                'result': True,
+                'comment': 'Service restarted'}
+    return {'name': name,
+            'changes': {},
+            'result': True,
+            'comment': 'Service ' + name + ' installed'}
+
