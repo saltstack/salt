@@ -32,11 +32,11 @@ def latest(name):
     avail = __salt__['pkg.available_version'](name)
     if avail > version:
         changes = __salt__['pkg.install'](name, True)
-    if not changes:
-        return {'name': name,
-                'changes': changes,
-                'result': False,
-                'comment': 'Package ' + name + ' failed to install'}
+        if not changes:
+            return {'name': name,
+                    'changes': changes,
+                    'result': False,
+                    'comment': 'Package ' + name + ' failed to install'}
     return {'name': name,
             'changes': changes,
             'result': True,
