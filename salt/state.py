@@ -50,6 +50,8 @@ def format_log(ret):
                                 old = chg[pkg]['old']
                             msg += '{0} changed from {1} to {2}\n'.format(
                                     pkg, old, chg[pkg]['new'])
+            if not msg:
+                msg = str(ret['changes'])
             if ret['result']:
                 log.info(msg)
             else:
