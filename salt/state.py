@@ -27,12 +27,15 @@ def format_log(ret):
     '''
     Format the state into a log message
     '''
+    msg = ''
     if type(ret) == type(dict()):
         # Looks like the ret may be a valid state return
         if ret.has_key('changes'):
             # Yep, looks like a valid state return
             chg = ret['changes']
-            if type(chg) == type(dict()):
+            if not chg:
+                msg = 'No changes made for {0[name]}'.format(ret)
+            elif type(chg) == type(dict()):
                 if chg.has_key('diff'):
                     if type(chg['diff']) == type(str()):
                         msg = 'File changed:\n{0}'.format(
@@ -47,10 +50,13 @@ def format_log(ret):
                                 old = chg[pkg]['old']
                             msg += '{0} changed from {1} to {2}\n'.format(
                                     pkg, old, chg[pkg]['new'])
-                if ret['result']:
-                    log.info(msg)
-                else:
-                    log.error(msg)
+            if ret['result']:
+                log.info(msg)
+            else:
+                log.error(msg)
+    else:
+        # catch unhandled data
+        log.info(str(ret))
 
 class StateError(Exception): pass
 
