@@ -36,7 +36,7 @@ def add(name,
 
     return not ret['retcode']
 
-def del(name, remove=False, force=False):
+def delete(name, remove=False, force=False):
     '''
     Remove a user from the minion
 

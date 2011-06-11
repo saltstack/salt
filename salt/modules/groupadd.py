@@ -26,7 +26,7 @@ def add(name, gid=None):
 
     return not ret['retcode']
 
-def del(name):
+def delete(name):
     '''
     Remove the named group
 

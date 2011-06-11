@@ -37,7 +37,7 @@ def set_password(name, password):
     if not os.path.isfile(s_file):
         return ret
     lines = []
-    for line in open(s_file 'rb').readlines():
+    for line in open(s_file, 'rb').readlines():
         comps = line.strip().split(':')
         if not comps[0] == name:
             lines.append(line)
