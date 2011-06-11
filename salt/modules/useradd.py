@@ -20,7 +20,7 @@ def add(name,
     Add a user to the minion
 
     CLI Example:
-    salt '*' user.add name <uid> <gid> <groups> <home> <password> <shell>
+    salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
     cmd = 'useradd -s {0} '.format(shell)
     if uid:
@@ -30,7 +30,7 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(groups)
     if home:
-        cmd += '-m '
+        cmd += '-m -d {0} '.format(home)
     cmd += name 
     ret = __salt__['cmd.run_all'](cmd)
 
@@ -57,15 +57,76 @@ def delete(name, remove=False, force=False):
 def chuid(name, uid):
     '''
     Change the uid for a named user
+
+    CLI Example:
+    salt '*' user.chuid foo 4376
     '''
     pre_info = info(name)
     if uid == pre_info['uid']:
-        return pre_info
+        return True
     cmd = 'usermod -u {0} {1}'.format(uid, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
         if post_info['uid'] == uid:
+            return True
+    return False
+
+def chgid(name, gid):
+    '''
+    Change the default group of the user
+
+    CLI Example:
+    salt '*' user.chgid foo 4376
+    '''
+    pre_info = info(name)
+    if gid == pre_info['gid']:
+        return True
+    cmd = 'usermod -g {0} {1}'.format(gid, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['gid'] != pre_info['gid']:
+        if post_info['gid'] == gid:
+            return True
+    return False
+
+def chshell(name, shell):
+    '''
+    Change the default shell of the user
+
+    CLI Example:
+    salt '*' user.chshell foo /bin/zsh
+    '''
+    pre_info = info(name)
+    if shell == pre_info['shell']:
+        return True
+    cmd = 'usermod -s {0} {1}'.format(shell, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['shell'] != pre_info['shell']:
+        if post_info['shell'] == shell:
+            return True
+    return False
+
+def chhome(name, home, persist=False):
+    '''
+    Change the home directory of the user, pass true for persist to copy files
+    to the new home dir
+
+    CLI Example:
+    salt '*' user.chhome foo /home/users/foo True
+    '''
+    pre_info = info(name)
+    if home == pre_info['home']:
+        return True
+    cmd = 'usermod -d {0} '.format(home)
+    if persist:
+        cmd += ' -m '
+    cmd += home
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['home'] != pre_info['home']:
+        if post_info['home'] == home:
             return True
     return False
 
@@ -79,7 +140,7 @@ def info(name):
     ret = {}
     data = pwd.getpwnam(name)
     ret['name'] = data.pw_name
-    ret['passwd'] = data.pw_paswd
+    ret['passwd'] = data.pw_passwd
     ret['uid'] = data.pw_uid
     ret['gid'] = data.pw_gid
     ret['home'] = data.pw_dir
