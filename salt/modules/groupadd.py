@@ -1,8 +1,6 @@
 '''
 Manage groups on Linux
 '''
-# Import python libs
-
 
 def __virtual__():
     '''
@@ -36,4 +34,21 @@ def delete(name):
     ret = __salt__['cmd.run_all']('groupdel {0}'.format(name))
 
     return not ret['retcode']
-    
+
+def chgid(name, gid):
+    '''
+    Change the default shell of the user
+
+    CLI Example:
+    salt '*' user.chshell foo /bin/zsh
+    '''
+    pre_gid = __salt__['file.group_to_gid'](name)
+    if gid == pre_gid:
+        return True
+    cmd = 'groupmod -g {0} {1}'.format(gid, name)
+    __salt__['cmd.run'](cmd)
+    post_info = __salt__['file.group_to_gid'](name)
+    if post_info != pre_info:
+        if post_info == gid:
+            return True
+    return False
