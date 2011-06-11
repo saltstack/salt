@@ -54,6 +54,21 @@ def delete(name, remove=False, force=False):
 
     return not ret['retcode']
 
+def chuid(name, uid):
+    '''
+    Change the uid for a named user
+    '''
+    pre_info = info(name)
+    if uid == pre_info['uid']:
+        return pre_info
+    cmd = 'usermod -u {0} {1}'.format(uid, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['uid'] =! pre_info['uid']:
+        if post_info['uid'] == uid:
+            return True
+    return False
+
 def info(name):
     '''
     Return user information
