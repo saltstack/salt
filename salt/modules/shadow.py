@@ -3,6 +3,7 @@ Manage the shadow file
 '''
 # Import python libs
 import os
+import spwd
 
 def user(name):
     '''
@@ -11,22 +12,16 @@ def user(name):
     CLI Example:
     salt '*' shadow.user root
     '''
-    s_file = '/etc/shadow'
-    ret = {}
-    if not os.path.isfile(s_file):
-        return ret
-    for line in open(s_file 'rb').readlines():
-        comps = line.strip().split(':')
-        if not comps[0] == name:
-            continue
-        ret['pwdp'] = comps[1]
-        ret['lstchg'] = comps[2]
-        ret['min'] = comps[3]
-        ret['max'] = comps[4]
-        ret['warn'] = comps[5]
-        ret['inact'] = comps[6]
-        ret['expire'] = comps[7]
-    return ret
+    data = spwd.getspnam(name)
+    return {
+        'name': data.sp_nam,
+        'pwd': data.sp_pwd,
+        'lstchg': data.sp_lstchg,
+        'min': data.sp_min,
+        'max': data.sp_max,
+        'warn': data.sp_warn,
+        'inact': data.sp_inact,
+        'expire': data.sp_expire}
 
 def set_password(name, password):
     '''
@@ -51,5 +46,4 @@ def set_password(name, password):
         line = ':'.join(comps)
         lines.append(line)
     open(s_file, 'w+').writelines(lines)
-
 
