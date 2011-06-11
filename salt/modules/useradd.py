@@ -31,7 +31,7 @@ def add(name,
         cmd += '-G {0} '.format(groups)
     if home:
         cmd += '-m '
-    
+    cmd += name 
     ret = __salt__['cmd.run_all'](cmd)
 
     return not ret['retcode']
@@ -48,6 +48,7 @@ def del(name, remove=False, force=False):
         cmd += '-r '
     if force:
         cmd += '-f '
+    cmd += name
 
     ret = __salt__['cmd.run_all'](cmd)
 
