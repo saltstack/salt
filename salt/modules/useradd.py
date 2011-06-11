@@ -3,6 +3,7 @@ Manage users with the useradd command
 '''
 
 import pwd
+import grp
 
 def __virtual__():
     '''
@@ -41,7 +42,7 @@ def delete(name, remove=False, force=False):
     Remove a user from the minion
 
     CLI Example:
-    salt '*' user.del name True True
+    salt '*' user.delete name True True
     '''
     cmd = 'userdel '
     if remove:
@@ -130,6 +131,28 @@ def chhome(name, home, persist=False):
             return True
     return False
 
+def chgroups(name, groups, append=False):
+    '''
+    Change the groups this user belongs to, add append to append the specified
+    groups
+
+    CLI Example:
+    salt '*' user.chgroups foo wheel,root True
+    '''
+    if type(groups) == type(str()):
+        groups = groups.split(',')
+    ugrps = set(list_groups(name))
+    if not ugrps.difference(groups):
+        return True
+    cmd = 'usermod -G {0} {1} '.format(','.join(groups), name)
+    if append:
+        cmd += '-a'
+    __salt__['cmd.run'](cmd)
+    agrps = set(list_groups(name))
+    if ugrps.difference(agrps):
+        return True
+    return False
+
 def info(name):
     '''
     Return user information
@@ -146,3 +169,16 @@ def info(name):
     ret['home'] = data.pw_dir
     ret['shell'] = data.pw_shell
     return ret
+
+def list_groups(name):
+    '''
+    Return a list of groups the named user belings to
+
+    CLI Example:
+    salt '*' user.groups foo
+    '''
+    ugrp = set()
+    for group in grp.getgrall():
+        if group.gr_mem.count(name):
+            ugrp.add(group.gr_name)
+    return list(ugrp)
