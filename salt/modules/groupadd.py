@@ -62,8 +62,8 @@ def chgid(name, gid):
         return True
     cmd = 'groupmod -g {0} {1}'.format(gid, name)
     __salt__['cmd.run'](cmd)
-    post_info = __salt__['file.group_to_gid'](name)
-    if post_info != pre_info:
-        if post_info == gid:
+    post_gid = __salt__['file.group_to_gid'](name)
+    if post_gid != pre_gid:
+        if post_gid == gid:
             return True
     return False
