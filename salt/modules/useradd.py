@@ -123,7 +123,7 @@ def chhome(name, home, persist=False):
     cmd = 'usermod -d {0} '.format(home)
     if persist:
         cmd += ' -m '
-    cmd += home
+    cmd += name
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:

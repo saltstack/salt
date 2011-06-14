@@ -5,7 +5,7 @@ Manage the shadow file
 import os
 import spwd
 
-def user(name):
+def info(name):
     '''
     Return the information for the specified user
 
@@ -46,4 +46,8 @@ def set_password(name, password):
         line = ':'.join(comps)
         lines.append(line)
     open(s_file, 'w+').writelines(lines)
+    uinfo = info(name)
+    if uinfo['pwd'] == password:
+        return True
+    return False
 
