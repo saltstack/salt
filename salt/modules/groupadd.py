@@ -50,6 +50,18 @@ def info(name):
             'gid': grinfo.gr_gid,
             'members': grinfo.gr_mem}
 
+def getent():
+    '''
+    Return info on all groups
+
+    CLI Example:
+    salt '*' group.getent
+    '''
+    ret = []
+    for grinfo in grp.getgrall():
+        ret.append(info(grinfo.gr_name))
+    return ret
+
 def chgid(name, gid):
     '''
     Change the default shell of the user
