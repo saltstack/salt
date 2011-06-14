@@ -55,6 +55,18 @@ def delete(name, remove=False, force=False):
 
     return not ret['retcode']
 
+def getent():
+    '''
+    Return the list of all info for all users
+
+    CLI Example:
+    salt '*' user.getent
+    '''
+    ret = []
+    for data in pwd.getpwall():
+        ret.append(info(data.pw_name))
+    return ret
+
 def chuid(name, uid):
     '''
     Change the uid for a named user
