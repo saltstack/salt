@@ -29,11 +29,24 @@ def delete(name):
     Remove the named group
 
     CLI Example:
-    salt '*' group.del foo
+    salt '*' group.delete foo
     '''
     ret = __salt__['cmd.run_all']('groupdel {0}'.format(name))
 
     return not ret['retcode']
+
+def info(name):
+    '''
+    Return information about a group
+
+    CLI Example:
+    salt '*' group.info foo
+    '''
+    grinfo = grp.getgrnam(name)
+    return {'name': grinfo.gr_name,
+            'passwd': grinfo.gr_passwd,
+            'gid': grinfo.gr_gid,
+            'members': grinfo.gr_mem}
 
 def chgid(name, gid):
     '''
