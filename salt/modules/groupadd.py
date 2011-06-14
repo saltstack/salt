@@ -1,6 +1,8 @@
 '''
 Manage groups on Linux
 '''
+# Import python libs
+import grp
 
 def __virtual__():
     '''
