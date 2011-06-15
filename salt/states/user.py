@@ -16,7 +16,7 @@ def present(
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': ''}
+           'comment': 'User {0} is present and up to date'}
     for lusr in __salt__['user.getent']():
         # Scan over the users
         if lusr['name'] == name:
@@ -55,7 +55,7 @@ def present(
         ret['comment'] = 'New user {0} created'.format(name)
         ret['changes'] = __salt__['user.info'](name)
     else:
-        ret['comment'] = 'Failed to create new usetr {0}'.format(name)
+        ret['comment'] = 'Failed to create new user {0}'.format(name)
         ret['result'] = False
     return ret
 
