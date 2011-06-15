@@ -25,7 +25,7 @@ def present(name, gid=None):
                         ret['comment'] = 'Changed gid to {0} for group {1}'.format(
                                 gid, name
                                 )
-                        ret['changes'] = {{name: gid}}
+                        ret['changes'] = {name: gid}
                         return ret
                     else:
                         ret['comment'] = 'Failed to change gid to {0} for group {1}'.format(
