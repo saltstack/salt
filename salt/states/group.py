@@ -45,3 +45,26 @@ def present(name, gid=None):
         ret['comment'] = 'Failed to apply group {0}'.format(name)
         return ret
 
+def absent(name):
+    '''
+    Ensure that the named group is absent
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    for lgrp in __salt__['group.getent']():
+        # Scan over the groups
+        if lgrp['name'] == name:
+            # The group is present, DESTROY!!
+            ret['result'] = __salt__['group.delete'](name)
+            if ret['result']:
+                ret['changes'] = {name: ''}
+                ret['comment'] = 'Removed group {0}'.format(name)
+                return ret
+            else:
+                ret['comment'] = 'Failed to remove group {0}'.format(name)
+                return ret
+    ret['comment'] = 'Group not present'
+    return ret
+    
