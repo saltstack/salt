@@ -154,7 +154,7 @@ def chgroups(name, groups, append=False):
     if type(groups) == type(str()):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
-    if not ugrps.difference(groups):
+    if ugrps == set(groups):
         return True
     cmd = 'usermod -G {0} {1} '.format(','.join(groups), name)
     if append:
