@@ -39,7 +39,7 @@ def present(name, gid=None):
     ret['result'] = __salt__['group.add'](name, gid)
     if ret['result']:
         ret['changes'] = __salt__['group.info'](name)
-        ret['commant'] = 'Added group {0}'.format(name)
+        ret['comment'] = 'Added group {0}'.format(name)
         return ret
     else:
         ret['comment'] = 'Failed to apply group {0}'.format(name)
