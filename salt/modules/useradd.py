@@ -180,6 +180,7 @@ def info(name):
     ret['gid'] = data.pw_gid
     ret['home'] = data.pw_dir
     ret['shell'] = data.pw_shell
+    ret['groups'] = list_groups(name)
     return ret
 
 def list_groups(name):
@@ -193,4 +194,4 @@ def list_groups(name):
     for group in grp.getgrall():
         if group.gr_mem.count(name):
             ugrp.add(group.gr_name)
-    return list(ugrp)
+    return sorted(list(ugrp))
