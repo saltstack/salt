@@ -22,4 +22,11 @@ def returner(ret):
             )
     db = conn[__opts__['mongo.db']]
     col = db[ret['id']]
-    col.insert({ret['jid']: ret['return']})
+    back = {}
+    if type(ret['return']) == type(dict()):
+        for key in ret['return']:
+            back[key.replace('.', '-')] = ret['return'][key]
+    else:
+        back = ret['return']
+    print back
+    col.insert({ret['jid']: back})
