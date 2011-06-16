@@ -107,8 +107,8 @@ class Minion(object):
         # If the minion does not have the function, don't execute, this prevents
         # minions that could not load a minion module from returning a
         # predictable exception
-        if not self.functions.has_key(data['fun']):
-            return
+        #if not self.functions.has_key(data['fun']):
+        #    return
         self._handle_decoded_payload(data)
 
     def _handle_pub(self, load):
