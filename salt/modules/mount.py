@@ -50,10 +50,23 @@ def fstab(config='/etc/fstab'):
                          'pass': comps[5]}
     return ret
 
-def mount(name, device, fstype='', opts='defaults'):
+def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     Mound a device
 
     CLI Example:
-    salt '*' mount.mount /mnt/foo /dev/sdz1 
+    salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
+    if not os.path.isfile(device):
+        return False
+    if not stat.S_ISBLK(os.stat(device).st_mode):
+        return False
+    if not os.path.exists(name) and mkmnt:
+        os.makedirs(name)
+    cmd = 'mount -o {0} {1} {2} '.format(opts, device, name)
+    if fstype:
+        cmd += ' -t {0}'.format(fstype)
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode']:
+        return out['stderr']
+    return True
