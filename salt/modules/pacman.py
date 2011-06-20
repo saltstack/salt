@@ -28,9 +28,7 @@ def available_version(name):
     CLI Example:
     salt '*' pkg.available_version <package name>
     '''
-    return subprocess.Popen('pacman -Sp --print-format %v ' + name,
-        shell=True,
-        stdout=subprocess.PIPE).communicate()[0].strip()
+    return __salt__['cmd.run']('pacman -Sp --print-format {0}'.format(name))
 
 def version(name):
     '''
