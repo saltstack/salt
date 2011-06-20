@@ -50,6 +50,19 @@ def fstab(config='/etc/fstab'):
                          'pass': comps[5]}
     return ret
 
+def rm_fstab(name, config='/etc/fstab'):
+    '''
+    Remove the mount point from the fstab
+
+    CLI Example:
+    salt '*' /mnt/foo
+    '''
+    contents = fstab(config)
+    if not contents.has_key(name):
+        return True
+    # The entry is present, get rid of it
+    
+
 def set_fstab(
         name,
         device,
