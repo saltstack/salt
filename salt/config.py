@@ -10,6 +10,24 @@ import yaml
 import salt.crypt
 import salt.loader
 
+def load_config(opts, path, env_var):
+    '''
+    Attempts to update ``opts`` dict by parsing either the file described by
+    ``path`` or the environment variable described by ``env_var`` as YAML.
+    '''
+
+    if not path or not os.path.isfile(path):
+        path = os.environ.get(env_var, '')
+
+    if os.path.isfile(path):
+        try:
+            opts.update(yaml.load(open(path, 'r')))
+            opts['conf_file'] = path
+        except Exception, e:
+            print 'Error parsing configuration file: %s - %s' % (path, e)
+    else:
+        print 'Missing configuration file: %s' % path
+
 def minion_config(path):
     '''
     Reads in the minion configuration file and sets up special options
@@ -36,11 +54,7 @@ def minion_config(path):
             'cython_enable': True,
             }
 
-    if os.path.isfile(path):
-        try:
-            opts.update(yaml.load(open(path, 'r')))
-        except Exception:
-            pass
+    load_config(opts, path, 'SALT_MINION_CONFIG')
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':'\
                        + str(opts['master_port'])
@@ -87,11 +101,7 @@ def master_config(path):
             'cluster_mode': 'paranoid',
             }
 
-    if os.path.isfile(path):
-        try:
-            opts.update(yaml.load(open(path, 'r')))
-        except Exception:
-            pass
+    load_config(opts, path, 'SALT_MASTER_CONFIG')
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
