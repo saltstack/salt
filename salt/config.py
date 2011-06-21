@@ -10,12 +10,40 @@ import yaml
 import salt.crypt
 import salt.loader
 
+def load_config(opts, path, env_var):
+    '''
+    Attempts to update ``opts`` dict by parsing either the file described by
+    ``path`` or the environment variable described by ``env_var`` as YAML.
+    '''
+
+    if not path or not os.path.isfile(path):
+        path = os.environ.get(env_var, '')
+
+    if os.path.isfile(path):
+        try:
+            opts.update(yaml.load(open(path, 'r')))
+            opts['conf_file'] = path
+        except Exception, e:
+            print 'Error parsing configuration file: %s - %s' % (path, e)
+    else:
+        print 'Missing configuration file: %s' % path
+
+def prepend_root_dir(opts):
+    '''
+    Prepends the options that represent filesystem paths with value of the
+    'root_dir' option.
+    '''
+    path_options = ('pki_dir', 'cachedir', 'log_file')
+    for path_option in path_options:
+        opts[path_option] = os.path.normpath(os.sep.join([opts['root_dir'], opts[path_option]]))
+
 def minion_config(path):
     '''
     Reads in the minion configuration file and sets up special options
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
             'id': socket.getfqdn(),
             'cachedir': '/var/cache/salt',
@@ -36,11 +64,7 @@ def minion_config(path):
             'cython_enable': True,
             }
 
-    if os.path.isfile(path):
-        try:
-            opts.update(yaml.load(open(path, 'r')))
-        except Exception:
-            pass
+    load_config(opts, path, 'SALT_MINION_CONFIG')
 
     opts['master_uri'] = 'tcp://' + opts['master'] + ':'\
                        + str(opts['master_port'])
@@ -55,6 +79,9 @@ def minion_config(path):
 
     opts['grains'] = salt.loader.grains(opts)
 
+    # Prepend root_dir to other paths
+    prepend_root_dir(opts)
+
     return opts
 
 def master_config(path):
@@ -68,6 +95,7 @@ def master_config(path):
             'worker_start_port': '45056',
             'ret_port': '4506',
             'keep_jobs': 24,
+            'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
             'cachedir': '/var/cache/salt',
             'file_roots': {
@@ -87,13 +115,12 @@ def master_config(path):
             'cluster_mode': 'paranoid',
             }
 
-    if os.path.isfile(path):
-        try:
-            opts.update(yaml.load(open(path, 'r')))
-        except Exception:
-            pass
+    load_config(opts, path, 'SALT_MASTER_CONFIG')
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
+
+    # Prepend root_dir to other paths
+    prepend_root_dir(opts)
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!

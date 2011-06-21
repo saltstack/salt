@@ -7,6 +7,9 @@
 # Set the post used by the master reply and authentication server
 #master_port: 4506
 
+# The root directory prepended to these options: pki_dir, cachedir, log_file.
+#root_dir: /
+
 # The directory to store the pki information in
 #pki_dir: /etc/salt/pki
 

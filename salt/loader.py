@@ -9,16 +9,18 @@ import os
 import sys
 import imp
 import logging
-import distutils.sysconfig
+import salt
 
 log = logging.getLogger(__name__)
+
+salt_base_path = os.path.dirname(salt.__file__)
 
 def minion_mods(opts):
     '''
     Returns the minion modules
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/modules'),
+        os.path.join(salt_base_path, 'modules'),
         ] + opts['module_dirs']
     load = Loader(module_dirs, opts)
     return load.apply_introspection(load.gen_functions())
@@ -28,7 +30,7 @@ def returners(opts):
     Returns the returner modules
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/returners'),
+        os.path.join(salt_base_path, 'returners'),
         ] + opts['returner_dirs']
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
@@ -38,7 +40,7 @@ def states(opts, functions):
     Returns the returner modules
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/states'),
+        os.path.join(salt_base_path, 'states'),
         ] + opts['states_dirs']
     load = Loader(module_dirs, opts)
     pack = {'name': '__salt__',
@@ -50,7 +52,7 @@ def render(opts, functions):
     Returns the render modules
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/renderers'),
+        os.path.join(salt_base_path, 'renderers'),
         ] + opts['render_dirs']
     load = Loader(module_dirs, opts)
     pack = {'name': '__salt__',
@@ -63,7 +65,7 @@ def grains(opts):
     grains.
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/grains'),
+        os.path.join(salt_base_path, 'grains'),
         ]
     load = Loader(module_dirs, opts)
     return load.gen_grains()
@@ -73,7 +75,7 @@ def call(fun, args=[], dirs=[]):
     Directly call a function inside a loader directory
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/modules'),
+        os.path.join(salt_base_path, 'modules'),
         ] + dirs
     load = Loader(module_dirs)
     return load.call(fun, args)
@@ -83,7 +85,7 @@ def runner(opts):
     Directly call a function inside a loader directory
     '''
     module_dirs = [
-        os.path.join(distutils.sysconfig.get_python_lib(), 'salt/runners'),
+        os.path.join(salt_base_path, 'runners'),
         ]
     load = Loader(module_dirs, opts)
     return load.gen_functions()
