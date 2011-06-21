@@ -158,12 +158,17 @@ class Minion(object):
             except:
                 pass
 
-        try:
-            ret['return'] = self.functions[data['fun']](*data['arg'])
-        except Exception as exc:
-            trb = traceback.format_exc()
-            log.warning('The minion function caused an exception: %s', exc)
-            ret['return'] = trb
+        function_name = data['fun']
+        if function_name in self.functions:
+            try:
+                ret['return'] = self.functions[data['fun']](*data['arg'])
+            except Exception as exc:
+                trb = traceback.format_exc()
+                log.warning('The minion function caused an exception: %s', exc)
+                ret['return'] = trb
+        else:
+            ret['return'] = '"%s" is not available.' % function_name
+
         ret['jid'] = data['jid']
         if data['ret']:
             ret['id'] = self.opts['id']
