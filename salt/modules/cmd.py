@@ -77,7 +77,7 @@ def run_all(cmd, cwd='/root'):
     ret['retcode'] = proc.returncode
     ret['pid'] = proc.pid
     if not ret['retcode']:
-        log.error('Command {0} failed'.format{cmd})
+        log.error('Command {0} failed'.format(cmd))
         log.error('stdout: {0}'.format(ret['stdout']))
         log.error('stderr: {0}'.format(ret['stderr']))
     else:
