@@ -64,6 +64,11 @@ class Master(object):
         '''
         Run the sequence to start a salt master server
         '''
+        verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
+                    os.path.join(self.opts['pki_dir'], 'minions_pre'),
+                    os.path.join(self.opts['cachedir'], 'jobs'),
+                    os.path.dirname(self.opts['log_file']),
+                    ])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
@@ -71,11 +76,6 @@ class Master(object):
         for name, level in self.opts['log_granular_levels'].iteritems():
             salt.log.set_logger_level(name, level)
         import logging
-        verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
-                    os.path.join(self.opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.opts['cachedir'], 'jobs'),
-                    os.path.dirname(self.opts['log_file']),
-                    ])
         # Late import so logging works correctly
         import salt.master
         master = salt.master.Master(self.opts)
@@ -131,6 +131,9 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
+        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
+                os.path.dirname(self.opts['log_file']),
+                ])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
@@ -140,9 +143,6 @@ class Minion(object):
 
         import logging
 
-        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
-                os.path.dirname(self.opts['log_file']),
-                ])
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
