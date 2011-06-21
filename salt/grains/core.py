@@ -124,8 +124,10 @@ def os_data():
         grains['os'] = 'Solaris'
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
+    elif grains['kernel'] == 'Darwin':
+        grains['os'] = 'MacOS'
     else:
-        grains['os'] = kernel
+        grains['os'] = grains['kernel']
 
     # Load the virtual machine info
 

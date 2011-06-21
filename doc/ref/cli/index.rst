@@ -18,6 +18,15 @@ master server. The Salt client is straightforward and simple to use.
 
 Using the Salt client commands can be easily sent to the minions.
 
+Each of these commands accepts an explicit `--config` option to point to either
+the master or minion configuration file.  If this option is not provided and
+the default configuration file does not exist then Salt falls back to use the
+environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
+
+.. seealso::
+
+    :doc:`../configuration/index`
+
 Using the Salt Command
 ======================
 

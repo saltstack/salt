@@ -17,7 +17,7 @@ def active():
         if not len(comps) == 6:
             # Invalid entry
             continue
-        ret{comps[2]} = {'device': comps[0],
+        ret[comps[2]] = {'device': comps[0],
                          'fstype': comps[4],
                          'opts': comps[5][1:-1].split(',')}
     return ret
