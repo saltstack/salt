@@ -28,12 +28,22 @@ def load_config(opts, path, env_var):
     else:
         print 'Missing configuration file: %s' % path
 
+def prepend_root_dir(opts):
+    '''
+    Prepends the options that represent filesystem paths with value of the
+    'root_dir' option.
+    '''
+    path_options = ('pki_dir', 'cachedir', 'log_file')
+    for path_option in path_options:
+        opts[path_option] = os.path.normpath(os.sep.join([opts['root_dir'], opts[path_option]]))
+
 def minion_config(path):
     '''
     Reads in the minion configuration file and sets up special options
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
             'id': socket.getfqdn(),
             'cachedir': '/var/cache/salt',
@@ -69,6 +79,9 @@ def minion_config(path):
 
     opts['grains'] = salt.loader.grains(opts)
 
+    # Prepend root_dir to other paths
+    prepend_root_dir(opts)
+
     return opts
 
 def master_config(path):
@@ -82,6 +95,7 @@ def master_config(path):
             'worker_start_port': '45056',
             'ret_port': '4506',
             'keep_jobs': 24,
+            'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
             'cachedir': '/var/cache/salt',
             'file_roots': {
@@ -104,6 +118,9 @@ def master_config(path):
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
+
+    # Prepend root_dir to other paths
+    prepend_root_dir(opts)
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!
