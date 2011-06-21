@@ -15,7 +15,10 @@ def verify_env(dirs):
     '''
     for dir_ in dirs:
         if not os.path.isdir(dir_):
-            os.makedirs(dir_)
+            try:
+                os.makedirs(dir_)
+            except OSError, e:
+                print 'Failed to create directory path "%s" - %s' % (dir_, e)
 
 class Master(object):
     '''
