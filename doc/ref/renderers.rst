@@ -2,4 +2,4 @@
 Renderers
 =========
 
-A python module that impments a render() method.
+A python module that implements a render() method.
