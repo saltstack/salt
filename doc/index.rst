@@ -15,7 +15,7 @@ introspection into running systems becomes a reality.
 
 Remote execution is usually used to set up a certain state on a remote system.
 Salt addresses this problem as well, the salt state system uses salt state
-files to define the state a serer needs to be in.
+files to define the state a server needs to be in.
 
 Between the remote execution system, and state management Salt addresses the
 backbone of cloud and data center management.
