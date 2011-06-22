@@ -29,6 +29,29 @@ the loader knows that the module needs to be imported as a Cython module. The
 compilation of the Cython module is automatic and happens when the minion
 starts, so only the ``*.pyx`` file is required.
 
+Cross Calling Modules
+=====================
+
+All of the salt modules are available to each other, and can be "cross called".
+This means that when creating a module functions in modules which already exist
+can be called.
+
+The variable ``__salt__`` is packed into the modules after they are loaded into
+the salt minion. This variable is a python dictionary of all of the salt 
+functions, laid out in the same way that they are made available to the salt
+command.
+
+Salt modules can be cross called by accessing the value in the ``__salt__``
+dict:
+
+.. code-block:: python
+    
+    def foo(bar):
+        return __salt__['cmd.run'](bar)
+
+This code will call the Salt cmd module's run function and pass the argument
+``bar``.
+
 Preloaded Modules Data
 ======================
 
