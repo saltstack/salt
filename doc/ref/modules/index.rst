@@ -107,6 +107,30 @@ The test module contains usage of the module configuration, and the default
 configuration file for the minion contains the information and format used to
 pass data to the modules. :mod:`salt.modules.test`, :file:`conf/minion`.
 
+Virtual Modules
+===============
+
+Sometimes a module should be presented in a generic way. A good example of this
+can be found in the package manager modules. The package manager changes from
+one operating system to another, but the salt module that interfaces with the
+package manager can be presented in a generic way.
+
+The salt modules for package managers all contain a ``__virtual__`` function
+which is called to define what systems the module should be loaded on.
+
+The ``__virtual__`` function is used to return either a string or False. If
+False is returned then the module is not loaded, if a string is returned then
+the module is loaded with the name of the string.
+
+This means that the package manager modules can be presented as the pkg module
+regardless of what the actual module is named.
+
+The package manager modules are the best example of using the ``__virtual__``
+function:
+https://github.com/thatch45/salt/blob/master/salt/modules/pacman.py
+https://github.com/thatch45/salt/blob/master/salt/modules/yum.py
+https://github.com/thatch45/salt/blob/master/salt/modules/apt.py
+
 Documentation
 =============
 
@@ -120,6 +144,30 @@ documentation for all available Facter modules:
 This function simple prints out the docstrings found in the modules, when
 writing salt modules, please follow the formating conventions for docstrings as
 they appear in the other modules.
+
+Adding Documentation to Salt Modules
+------------------------------------
+
+Since life is much better with documentation, it is strongly suggested that
+all Salt modules have documentation added. Any Salt modules submitted for
+inclusion in the main distribution of Salt will be required to have
+documentation.
+
+Documenting Salt modules is easy! Just add a python docstring to the function.
+
+.. code-block:: python
+
+    def spam(eggs):
+        '''
+        A function to make some spam with eggs!
+
+        CLI Example:
+        salt '*' test.spam eggs
+        '''
+        return eggs
+
+Now when the sys.doc call is executed the docstring will be cleanly returned
+to the calling terminal.
 
 How Functions are Read
 ======================
@@ -149,3 +197,29 @@ Objects NOT Loaded into the Salt Minion
         return baz
 
     cheese = {} # Not a callable python object
+
+Examples of Salt Modules
+========================
+
+The existing Salt modules should be fairly easy to read and understand, the
+goal of the main distribution's Salt modules is not only to build a set of
+functions for salt, but to stand as examples for building out more Salt
+modules.
+
+The existing modules can be found here:
+https://github.com/thatch45/salt/tree/master/salt/modules
+
+The most simple module is the test module, it contains the simplest salt
+function, test.ping:
+
+.. code-block:: python
+
+    def ping():
+        '''
+        Just used to make sure the minion is up and responding
+        Return True
+
+        CLI Example:
+        salt '*' test.ping
+        '''
+        return True
