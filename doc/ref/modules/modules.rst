@@ -19,25 +19,11 @@
 .. automodule:: salt.modules.cmd
     :members:
 
-========================
-:mod:`salt.modules.cmdc`
-========================
-
-.. automodule:: salt.modules.cmdc
-    :members:
-
 ======================
 :mod:`salt.modules.cp`
 ======================
 
 .. automodule:: salt.modules.cp
-    :members:
-
-===========================
-:mod:`salt.modules.cytestx`
-===========================
-
-.. automodule:: salt.modules.cytestx
     :members:
 
 ========================
@@ -87,13 +73,6 @@
 ==========================
 
 .. automodule:: salt.modules.status
-    :members:
-
-===========================
-:mod:`salt.modules.statusc`
-===========================
-
-.. automodule:: salt.modules.statusc
     :members:
 
 ==========================
