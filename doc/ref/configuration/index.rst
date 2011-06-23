@@ -175,7 +175,7 @@ Default: ``False``
 Enable auto_accept, this setting will automatically accept all incoming
 public keys from the minions
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     auto_accept: False
 
@@ -193,7 +193,7 @@ The state system uses a "top" file to tell the minions what environment to
 use and what modules to use. The state_top file is defined relative to the
 root of the base environment
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     state_top: top.yml
 
@@ -206,7 +206,7 @@ Default: ``yaml_jinja``
 
 The renderer to use on the minions to render the state data
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     renderer: yaml_jinja
 
@@ -238,7 +238,7 @@ file_roots:
     - /srv/salt/prod/services
     - /srv/salt/prod/states
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     base:
       - /srv/salt
@@ -254,7 +254,7 @@ The hash_type is the hash to use when discovering the hash of a file on
 the master server, the default is md5, but sha1, sha224, sha256, sha384
 and sha512 are also supported.
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     hash_type: md5
 
@@ -267,7 +267,7 @@ Default: ``1048576``
 
 The buffer size in the file server in bytes
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     file_buffer_size: 1048576
 
@@ -283,7 +283,7 @@ Default: :file:`/etc/salt/pki`
 
 The location of the master log file
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     log_file: /var/log/salt/master
 
@@ -297,7 +297,7 @@ Default: ``warning``
 The level of messages to send to the log file.
 One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     log_level: warning
 
