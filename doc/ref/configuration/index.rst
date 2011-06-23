@@ -55,7 +55,7 @@ The network port to set up the publication interface
 .. conf_master:: publish_port
 
 ``publish_pull_port``
-----------------
+---------------------
 
 Default: ``45055``
 
@@ -81,7 +81,7 @@ worker_threads value.
     worker_threads: 5
 
 ``worker_start_port``
-------------------
+---------------------
 
 Default: ``5``
 
@@ -180,7 +180,7 @@ public keys from the minions
     auto_accept: False
 
 Master State System Settings
----------------------------
+----------------------------
 
 .. conf_master:: state_top
 

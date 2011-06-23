@@ -13,8 +13,7 @@ suitable for general use.
 - Allow for matching minions from the salt client via facter information
 - Minion job threading, many jobs can be executed from the master at once
 - Preview of master clustering support - Still experimental
-- Introduce new minion modules for stats, virtualization, service management
-and more
+- Introduce new minion modules for stats, virtualization, service management and more
 - Add extensive logging to the master and minion daemons
 - Add sys.reload_functions for dynamic function reloading
 - Greatly improve authentication
