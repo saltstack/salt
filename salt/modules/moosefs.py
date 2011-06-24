@@ -48,13 +48,13 @@ def fileinfo(path):
 
             chunk = chunknum[0].replace('chunk ', '') 
             loc   = chunknum[1].strip()
-            id    = meta[0].replace('(id:', '') 
+            id_    = meta[0].replace('(id:', '') 
             ver   = meta[1].replace(')', '').replace('ver:', '') 
 
             ret[chunknum[0]] = { 
                 'chunk': chunk,
                 'loc':   loc,
-                'id':    id, 
+                'id':    id_, 
                 'ver':   ver,
             }   
         if 'copy' in line:
