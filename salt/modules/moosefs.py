@@ -96,3 +96,39 @@ def mounts():
             }   
     return ret
 
+def getgoal(path, opts=None):
+    ''' 
+    Return goal(s) for a file or directory
+
+    CLI Example:
+    salt '*' moosefs.getgoal /path/to/file [-[n][h|H]]
+    salt '*' moosefs.getgoal /path/to/dir/ [-[n][h|H][r]]
+    '''
+    cmd = 'mfsgetgoal'
+    ret = {}
+    if opts:
+        cmd += ' -' + opts
+    else:
+        opts = ''
+    cmd += ' ' + path
+    out = __salt__['cmd.run_all'](cmd)
+
+    output = out['stdout'].split('\n')
+    if not 'r' in opts:
+        goal = output[0].split(': ')
+        ret = { 
+            'goal': goal[1],
+        }   
+    else:
+        for line in output:
+            if not line.count(' '):
+                continue
+            if path in line:
+                continue
+            comps = line.split()
+            keytext = comps[0] + ' with goal'
+            if not ret.has_key(keytext):
+                ret[keytext] = {}
+            ret[keytext][comps[3]] = comps[5]
+    return ret
+
