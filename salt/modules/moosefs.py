@@ -66,3 +66,33 @@ def fileinfo(path):
             }   
     return ret
 
+def mounts():
+    ''' 
+    Return a list of current MooseFS mounts
+
+    CLI Example:
+    salt '*' moosefs.mounts
+    '''
+    cmd = 'mount'
+    ret = {}
+    out = __salt__['cmd.run_all'](cmd)
+
+    output = out['stdout'].split('\n')
+    for line in output:
+        if not line.count(' '):
+            continue
+        if 'fuse.mfs' in line:
+            comps = line.split(' ')
+            info1 = comps[0].split(':')
+            info2 = info1[1].split('/')
+            ret[comps[2]] = { 
+                'remote': {
+                    'master'   : info1[0],
+                    'port'     : info2[0],
+                    'subfolder': '/' + info2[1],
+                },  
+                'local':   comps[2],
+                'options': comps[5].replace('(','').replace(')','').split(','),
+            }   
+    return ret
+
