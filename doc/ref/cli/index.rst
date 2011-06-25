@@ -1,5 +1,5 @@
 ======================
-Command line reference
+Command Line Reference
 ======================
 
 .. toctree::
@@ -12,9 +12,10 @@ Command line reference
     salt-cp
     salt-call
 
-Salt can be controlled by a command line client as root on the Salt master. The
-Salt command line client uses the Salt client API to communicate with the Salt
-master server. The Salt client is straightforward and simple to use.
+Salt can be controlled by a command line client by the root user on the Salt 
+master. The Salt command line client uses the Salt client API to communicate
+with the Salt master server. The Salt client is straightforward and simple 
+to use.
 
 Using the Salt client commands can be easily sent to the minions.
 
@@ -30,7 +31,7 @@ environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
 Using the Salt Command
 ======================
 
-The salt command needs a few components to send information to the salt
+The Salt command needs a few components to send information to the salt
 minions. The target minions need to be defined, the function to call and any
 arguments the function requires.
 
@@ -73,3 +74,31 @@ be retried from the minions via the :func:`sys.doc` function:
 .. code-block:: bash
 
     salt '*' sys.doc
+
+Compound Command Execution
+--------------------------
+
+If a series of commands need to be sent to a single target specification then
+the multiple commands can be send in a single publish. This can make gathering
+groups of information faster, and lowers the stress on the network for repeated
+commands.
+
+Compound command execution works by sending a list of functions and arguments
+instead of sending a single function and argument. The functions are executed
+on the minion in the order they are defined on the command line, and then the
+data from all of the commands are returned in a dictionary. This means that
+the set of commands are called in a predictable way, and the returned data can
+be easily interpreted.
+
+Executing compound commands if done by passing a comma delimited list of
+functions, followed by a comma delimited list of arguments:
+
+.. code-block:: bash
+
+    salt '*' cmd.run,test.ping,test.echo 'cat /proc/cpuinfo',,foo
+
+The trick to look out for here, is that if a function is being passed no
+arguments, then there needs to be a placeholder for the absent arguments. This
+is why in the above example, there are two commas right next to each other.
+``test.ping`` takes no arguments, so we need to add another comma, otherwise
+Salt would attempt to pass "foo" to ``test.ping``.
