@@ -72,6 +72,7 @@ Writing your own customizations on top of Salt
     ref/grains
     ref/renderers
     ref/states
+    ref/runners
 
 
 Getting involved
