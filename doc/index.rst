@@ -26,17 +26,18 @@ Getting started
 
 .. sidebar:: Getting help
 
-    * Watch a presentation on Salt: `video`_ | `slides`_ (PDF)
+    * Watch a presentation on Salt: `video`_ | `slides`_ (PDF).
 
-    * Join the `salt-users mailing list`_, it is the best place to ask
-      questions about Salt and see whats going on with Salt development!
+    * Join the :ref:`salt-users mailing list <community-mailing-list>`.
+
+    * Chat via IRC :ref:`on OFTC in #salt <community-irc>`.
 
     * Report any bugs on the `GitHub issues page`_.
 
 .. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
 .. _`slides`: https://github.com/downloads/thatch45/salt/Salt.pdf
-.. _`salt-users mailing list`: http://groups.google.com/group/salt-users
 .. _`GitHub issues page`: https://github.com/thatch45/salt/issues
+
 
 New users should start here
 
