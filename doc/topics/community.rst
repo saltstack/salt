@@ -8,39 +8,59 @@ There are many ways to participate in and communicate with the Salt community.
 
 Salt has an active IRC channel and a mailing list.
 
+.. _community-mailing-list:
+
 Mailing List
 ============
 
-The Salt mailing list is hosted by google groups, it can be found here:
+Join the `salt-users mailing list`_. It is the best place to ask questions
+about Salt and see whats going on with Salt development! The Salt mailing list
+is hosted by Google Groups. It is open to new members.
 
 http://groups.google.com/group/salt-users
 
-It is open to new members.
+.. _`salt-users mailing list`: http://groups.google.com/group/salt-users
+
+.. _community-irc:
 
 IRC
 ===
 
-The salt irc is hosted by OFTC, connect to the OFTC irc server:
+The Salt IRC channel is hosted on the `OFTC`_ network. Connect to the OFTC
+server:
 
 irc://irc.oftc.net:6667
 
-and join #salt
+and join us in ``#salt``.
+
+.. _`OFTC`: http://www.oftc.net/oftc/
+
+.. _community-github:
 
 Follow on Github
 ================
 
-The salt code is developed via Github, watch Salt for constant updates on what
+The Salt code is developed via Github. Follow Salt for constant updates on what
 is happening in Salt development:
 
 https://github.com/thatch45/salt
+
+.. _community-blog:
 
 The Red45 Blog
 ==============
 
 News and thoughts on Salt and related projects is often posted on Thomas' blog
-``The Red45``:
+`The Red45`_:
 
 http://red45.wordpress.com/
+
+.. _`The Red45`: http://red45.wordpress.com/
+
+Follow on ohloh
+===============
+
+https://www.ohloh.net/p/salt
 
 Developing Salt
 ===============
