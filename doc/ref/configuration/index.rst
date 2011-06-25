@@ -52,7 +52,7 @@ The network port to set up the publication interface
 
     publish_port: 4505
 
-.. conf_master:: publish_port
+.. conf_master:: publish_pull_port
 
 ``publish_pull_port``
 ---------------------
@@ -228,15 +228,18 @@ can have multiple root directories, the subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
 reliably ensured. A base environment is required to house the top file
 Example:
-file_roots:
-  base:
-    - /srv/salt/
-  dev:
-    - /srv/salt/dev/services
-    - /srv/salt/dev/states
-  prod:
-    - /srv/salt/prod/services
-    - /srv/salt/prod/states
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt/
+      dev:
+        - /srv/salt/dev/services
+        - /srv/salt/dev/states
+      prod:
+        - /srv/salt/prod/services
+        - /srv/salt/prod/states
 
 .. code-block:: yaml
 
@@ -311,6 +314,9 @@ Default: ``{}``
 Logger levels can be used to tweak specific loggers logging levels.
 Imagine you want to have the salt library at the 'warning' level, but, you
 still wish to have 'salt.modules' at the 'debug' level:
+
+.. code-block:: yaml
+
   log_granular_levels: {
     'salt': 'warning',
     'salt.modules': 'debug'
