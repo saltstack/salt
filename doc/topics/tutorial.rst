@@ -205,7 +205,7 @@ Targets can be based on minion system information using the grains system::
 
     salt -G 'os:Ubuntu' test.ping
 
-    .. seealso:: :doc:`Grains system <../ref/grains>`
+.. seealso:: :doc:`Grains system <../ref/grains>`
 
 Targets can be filtered by regular expression::
 
