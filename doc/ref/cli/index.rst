@@ -59,7 +59,36 @@ Or to explicitly list hosts, salt can take a list:
 
     salt -L foo.bar.baz,quo.qux cmd.run 'ps aux | grep foo'
 
-Calling the function
+More Powerful Targets
+---------------------
+
+The simple target specifications, glob, regex and list will cover many use
+cases, and for some will cover all use cases, but more powerful options exist.
+
+Targeting with Grains
+`````````````````````
+
+The Grains interface was built into Salt to allow minions to be targeted by
+system properties. So minions running on a particular operating system can
+be called to execute a function, or a specific kernel.
+
+Calling via a grain is done by passing the -G option to salt, specifying
+a grain and a regular expression to match the value of the grain.
+
+.. code-block:: bash
+
+    salt -G 'os:Fedora' test.ping
+
+Will return True from all of the minions running Fedora.
+
+To discover what grains are available and what the values are, execute the
+grains.item salt function:
+
+.. code-block:: bash
+
+    salt '*' grains.items
+
+Calling the Function
 --------------------
 
 The function to call on the specified target is placed after the target
