@@ -26,17 +26,18 @@ Getting started
 
 .. sidebar:: Getting help
 
-    * Watch a presentation on Salt: `video`_ | `slides`_ (PDF)
+    * Watch a presentation on Salt: `video`_ | `slides`_ (PDF).
 
-    * Join the `salt-users mailing list`_, it is the best place to ask
-      questions about Salt and see whats going on with Salt development!
+    * Join the :ref:`salt-users mailing list <community-mailing-list>`.
+
+    * Chat via IRC :ref:`on OFTC in #salt <community-irc>`.
 
     * Report any bugs on the `GitHub issues page`_.
 
 .. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
 .. _`slides`: https://github.com/downloads/thatch45/salt/Salt.pdf
-.. _`salt-users mailing list`: http://groups.google.com/group/salt-users
 .. _`GitHub issues page`: https://github.com/thatch45/salt/issues
+
 
 New users should start here
 
@@ -63,16 +64,29 @@ Extending Salt
 Writing your own customizations on top of Salt
 
 .. toctree::
-    :maxdepth: 1
+    :hidden:
 
     ref/index
-    ref/python-api
     ref/modules/index
-    ref/returners/index
     ref/grains
-    ref/renderers
+    ref/returners/index
     ref/states
+    ref/renderers
+    ref/python-api
 
+* **Modules:**
+  :doc:`Writing modules <ref/modules/index>`
+  | :doc:`full list of modules <ref/modules/modules>`
+* **Grains:**
+  :doc:`Grains <ref/grains>` 
+* **Returners:**
+  :doc:`Writing returners <ref/returners/index>`
+  | :doc:`full list of returners <ref/returners/returners>`
+* **State enforcement:**
+  :doc:`States <ref/states>`
+  | :doc:`Renderers <ref/renderers>`
+* **Python API:**
+  :doc:`Python API <ref/python-api>`
 
 Getting involved
 ================
