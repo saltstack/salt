@@ -88,6 +88,19 @@ grains.item salt function:
 
     salt '*' grains.items
 
+Targeting with Executions
+`````````````````````````
+
+As of 0.8.8 targeting with executions is still under heavy development and this
+documentation is written to refernce the behavior of execution matching in the
+future.
+
+Execution matching allows for a primary function to be executed, and then based
+on the return of the primary function the main function is executed.
+
+Execution matching allows for matching minions based on any arbitrairy running
+data on tne minions.
+
 Calling the Function
 --------------------
 
