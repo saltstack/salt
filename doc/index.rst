@@ -1,7 +1,5 @@
 .. _index:
 
-.. rubric:: Simplified system communication
-
 Salt is a powerful remote execution manager that can be used to administer
 servers in a fast and efficient way.
 
