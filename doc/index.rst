@@ -1,9 +1,5 @@
 .. _index:
 
-====
-Salt
-====
-
 .. rubric:: Simplified system communication
 
 Salt is a powerful remote execution manager that can be used to administer
@@ -21,41 +17,47 @@ Between the remote execution system, and state management Salt addresses the
 backbone of cloud and data center management.
 
 
-Getting started
+Getting Started
 ===============
 
-.. sidebar:: Getting help
+A number of resources are available to get going with Salt.
 
-    * Watch a presentation on Salt: `video`_ | `slides`_ (PDF)
+Quick Start
+-----------
 
-    * Join the `salt-users mailing list`_, it is the best place to ask
-      questions about Salt and see whats going on with Salt development!
-
-    * Report any bugs on the `GitHub issues page`_.
-
-.. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
-.. _`slides`: https://github.com/downloads/thatch45/salt/Salt.pdf
-.. _`salt-users mailing list`: http://groups.google.com/group/salt-users
-.. _`GitHub issues page`: https://github.com/thatch45/salt/issues
-
-New users should start here
+If you want to get set up quickly and try out Salt, follow the tutorial.
 
 .. toctree::
     :maxdepth: 1
 
-    topics/index
     topics/tutorial
 
+Salt in Depth
+=============
 
-Using Salt
-==========
+While using and setting up Salt is a simple task, the capabilities of Salt
+run much deeper.
+
+Gaining a better understanding of how Salt works will allow you to get much
+more out of Salt.
+
+Screencasts and Presentations
+-----------------------------
+
+Presentation at SLLUG in May 2011
+`video`_ | `slides`_ (PDF)
+
+.. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
+.. _`slides`: https://github.com/downloads/thatch45/salt/Salt.pdf
+
+Configuration and CLI Usage
+---------------------------
 
 .. toctree::
     :maxdepth: 1
 
     ref/configuration/index
     ref/cli/index
-
 
 Extending Salt
 ==============
@@ -75,8 +77,10 @@ Writing your own customizations on top of Salt
     ref/runners
 
 
-Getting involved
+Getting Involved
 ================
+
+There are many ways to interact with the Salt community.
 
 .. toctree::
     :maxdepth: 1
