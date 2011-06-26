@@ -65,17 +65,30 @@ Extending Salt
 Writing your own customizations on top of Salt
 
 .. toctree::
-    :maxdepth: 1
+    :hidden:
 
     ref/index
-    ref/python-api
     ref/modules/index
-    ref/returners/index
     ref/grains
-    ref/renderers
+    ref/returners/index
     ref/states
     ref/runners
+    ref/renderers
+    ref/python-api
 
+* **Modules:**
+  :doc:`Writing modules <ref/modules/index>`
+  | :doc:`full list of modules <ref/modules/modules>`
+* **Grains:**
+  :doc:`Grains <ref/grains>` 
+* **Returners:**
+  :doc:`Writing returners <ref/returners/index>`
+  | :doc:`full list of returners <ref/returners/returners>`
+* **State enforcement:**
+  :doc:`States <ref/states>`
+  | :doc:`Renderers <ref/renderers>`
+* **Python API:**
+  :doc:`Python API <ref/python-api>`
 
 Getting Involved
 ================
