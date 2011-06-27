@@ -144,21 +144,48 @@ def set_fstab(
 
 def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
-    Mound a device
+    Mount a device
 
     CLI Example:
     salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
+    if type(opts) == type(str()):
+        opts = opts.split(',')
     if not os.path.isfile(device):
         return False
     if not stat.S_ISBLK(os.stat(device).st_mode):
         return False
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
-    cmd = 'mount -o {0} {1} {2} '.format(opts, device, name)
+    lopts = ','.join(opts)
+    cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
     if fstype:
         cmd += ' -t {0}'.format(fstype)
     out = __salt__['cmd.run_all'](cmd)
-    if out['retcode']:
+    if not out['retcode']:
         return out['stderr']
     return True
+
+def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
+    '''
+    Attempt to remount a device, if the device is not already mounted, mount
+    is called
+
+    CLI Example:
+    salt '*' mount.remount /mnt/foo /dev/sdz1 True
+    '''
+    if type(opts) == type(str()):
+        opts = opts.split(',')
+    mnts = active()
+    if mnts.has_key(name):
+        # The mount point is mounted, attempt to remount it with the given data
+        lopts = ','.join(opts.append('remount'))
+        cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
+        if fstype:
+            cmd += ' -t {0}'.format(fstype)
+        out = __salt__['cmd.run_all'](cmd)
+        if out['retcode']:
+            return opt['stderr']
+        return True
+    else:
+        return mount(name, device, mkmnt, fstype, opts)
