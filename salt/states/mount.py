@@ -2,7 +2,7 @@
 State enforcement for mount points
 '''
 
-def managed(
+def mounted(
         name,
         device,
         fstype,
