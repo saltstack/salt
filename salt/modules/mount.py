@@ -86,7 +86,7 @@ def set_fstab(
     change = False
     present = False
     if not os.path.isfile(config):
-        return False
+        return 'bad config'
     for line in open(config).readlines():
         if line.startswith('#'):
             # Commented
@@ -129,6 +129,10 @@ def set_fstab(
                         dump,
                         pass_num)
                 lines.append(newline)
+    if change:
+        # The line was changed, commit it!
+        open(config, 'w+').writelines(lines)
+        return 'change'
     if not change and not present:
         # The entry is new, add it to the end of the fstab
         newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}'.format(
@@ -140,7 +144,10 @@ def set_fstab(
                 pass_num)
         lines.append(newline)
         open(config, 'w+').writelines(lines)
-    return True
+    if present and not change:
+        # The right entry is already here
+        return 'present'
+    return 'new'
 
 def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
