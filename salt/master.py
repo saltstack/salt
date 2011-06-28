@@ -241,7 +241,7 @@ class MWorker(multiprocessing.Process):
         Handle a command sent via an aes key
         '''
         data = self.crypticle.loads(load)
-        log.info('AES payload received with command %(cmd)s', load)
+        log.info('AES payload received with command %(cmd)s', data['cmd'])
         return getattr(self, data['cmd'])(data)
 
     def _auth(self, load):
