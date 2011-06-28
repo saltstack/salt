@@ -32,7 +32,7 @@ def available_version(name):
 
 def version(name):
     '''
-    Returns a bool if the package is installed or not
+    Returns a version if the package is installed, else returns an empty string
 
     CLI Example:
     salt '*' pkg.version <package name>
