@@ -28,7 +28,7 @@ def available_version(name):
     CLI Example:
     salt '*' pkg.available_version <package name>
     '''
-    return __salt__['cmd.run']('pacman -Sp --print-format {0}'.format(name))
+    return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
 
 def version(name):
     '''
