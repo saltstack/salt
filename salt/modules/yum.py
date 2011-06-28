@@ -22,6 +22,38 @@ def _list_removed(old, new):
             pkgs.append(pkg)
     return pkgs
 
+def available_version(name):
+    '''
+    The available version of the package in the repository
+
+    CLI Example:
+    salt '*' pkg.available_version <package name>
+    '''
+    out = __salt__['cmd.stdout']('yum list {0} -q'.format(name))
+    for line in out.split('\n'):
+        # Itterate through the output
+        comps = line.split()
+        if comps[0].split('.')[0] == name:
+            if len(comps) < 2:
+                continue
+            # found it!
+            return comps[1][:comps[1].rindex('.')]
+    # Package not available
+    return ''
+
+def version(name):
+    '''
+    Returns a version if the package is installed, else returns an empty string
+
+    CLI Example:
+    salt '*' pkg.version <package name>
+    '''
+    pkgs = list_pkgs()
+    if pkgs.has_key(name):
+        return pkgs[name]
+    else:
+        return ''
+
 def list_pkgs():
     '''
     List the packages currently installed in a dict:
