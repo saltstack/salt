@@ -120,6 +120,7 @@ class Auth(object):
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
         payload['load']['pub'] = open(tmp_pub, 'r').read()
+        os.remove(tmp_pub)
         return payload
 
     def decrypt_aes(self, aes):
@@ -145,6 +146,8 @@ class Auth(object):
         tmp_pub = tempfile.mktemp()
         open(tmp_pub, 'w+').write(master_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
+        pub = RSA.load_pub_key(tmp_pub)
+        os.remove(tmp_pub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = open(m_pub_fn).read()
             if not master_pub == local_master_pub:
@@ -155,7 +158,6 @@ class Auth(object):
                 return False
         else:
             open(m_pub_fn, 'w+').write(master_pub)
-        pub = RSA.load_pub_key(tmp_pub)
         if pub.public_decrypt(token, 5) == 'salty bacon':
             return True
         log.error('The salt master has failed verification for an unknown '
