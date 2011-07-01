@@ -69,7 +69,7 @@ Writing your own customizations on top of Salt
     ref/modules/index
     ref/grains
     ref/returners/index
-    ref/states
+    ref/states/index
     ref/runners
     ref/renderers
     ref/python-api
@@ -83,7 +83,7 @@ Writing your own customizations on top of Salt
   :doc:`Writing returners <ref/returners/index>`
   | :doc:`full list of returners <ref/returners/returners>`
 * **State enforcement:**
-  :doc:`States <ref/states>`
+  :doc:`States <ref/states/index>`
   | :doc:`Renderers <ref/renderers>`
 * **Python API:**
   :doc:`Python API <ref/python-api>`
