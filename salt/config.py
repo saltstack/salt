@@ -21,12 +21,16 @@ def load_config(opts, path, env_var):
 
     if os.path.isfile(path):
         try:
-            opts.update(yaml.load(open(path, 'r')))
+            conf_opts = yaml.load(open(path, 'r'))
+            if conf_opts == None:
+                # The config file is empty and the yaml.load returned None
+                conf_opts = {}
+            opts.update(conf_opts)
             opts['conf_file'] = path
         except Exception, e:
-            print 'Error parsing configuration file: %s - %s' % (path, e)
+            print 'Error parsing configuration file: {0} - {1}'.format(path, e)
     else:
-        print 'Missing configuration file: %s' % path
+        print 'Missing configuration file: {0}'.format(path)
 
 def prepend_root_dir(opts):
     '''
@@ -35,7 +39,8 @@ def prepend_root_dir(opts):
     '''
     path_options = ('pki_dir', 'cachedir', 'log_file')
     for path_option in path_options:
-        opts[path_option] = os.path.normpath(os.sep.join([opts['root_dir'], opts[path_option]]))
+        opts[path_option] = os.path.normpath(
+                os.sep.join([opts['root_dir'], opts[path_option]]))
 
 def minion_config(path):
     '''
