@@ -60,9 +60,9 @@ def loadavg():
     comps = open('/proc/loadavg', 'r').read().strip()
     load_avg = comps.split()
     return {
-        '1-min':  load_avg[1],
-        '5-min':  load_avg[2],
-        '15-min': load_avg[3],
+        '1-min':  load_avg[0],
+        '5-min':  load_avg[1],
+        '15-min': load_avg[2],
     }
 
 def cpustats():
