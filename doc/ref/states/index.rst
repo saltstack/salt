@@ -116,3 +116,30 @@ to date, the salt-master and salt-minion daemons are running and the Salt
 minion configuration file is in place. It will also ensure everything is
 deployed in the right order and that the Salt services are restarted when the
 watched file updated.
+
+The Top File
+````````````
+
+The top file is the mapping for the state system. The top file specifies which
+minions should have which modules applied and which environments they should
+draw the states from.
+
+The top file works by specifying the environment, containing matchers with 
+lists of Salt states sent to the matching minions:
+
+.. code-block:: yaml
+
+    base:
+        '*':
+            - salt
+            - users
+            - users.admin
+        'saltmaster.*':
+            - match: pcre
+            - salt.master
+
+This simple example uses the base environment, which is built into the default
+salt setup, and then all minions will have the modules salt, users and
+users.admin since '*' will match all minions. Then the regular expression
+matcher will match all minions' with an id matching saltmaster.* and add the
+salt.master state.
