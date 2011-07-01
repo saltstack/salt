@@ -143,3 +143,26 @@ salt setup, and then all minions will have the modules salt, users and
 users.admin since '*' will match all minions. Then the regular expression
 matcher will match all minions' with an id matching saltmaster.* and add the
 salt.master state.
+
+Renderer System
+---------------
+
+The Renderer system is a key component to the state system. SLS files are
+representations of Salt "high data" structures. All Salt cares about when
+reading an sls file is the data structure that is produced from file.
+
+This allows Salt states to be represented by multiple types of files. The
+Renderer system can be used to allow different formats to be used for sls
+files.
+
+The available renderers can be found in the renderers directory in the Salt
+source code:
+
+https://github.com/thatch45/salt/tree/master/salt/renderers
+
+By default sls files are rendered using jinja as a templating engine, and yaml
+as the serialization format. Since the rendering system can be extended simply
+by adding a new renderer to the renderers directory, it is possible that any
+structured file could be used to represent the SLS files.
+
+In the future xml and raw python will be added, as well as many other formats.
