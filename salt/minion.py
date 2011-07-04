@@ -327,6 +327,12 @@ class Matcher(object):
         Reads in the grains regular expression match
         '''
         comps = tgt.split(':')
+        if len(comps) < 2:
+            log.error('Got insufficient arguments for grains from master')
+            return False
+        if not self.opts['grains'].has_key(comps[0]):
+            log.error('Got unknown grain from master: %s', comps[0])
+            return False
         return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
 
     def exsel_match(self, tgt):
