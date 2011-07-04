@@ -4,6 +4,10 @@ Salt module to manage unix mounts and the fstab file
 # Import python libs
 import os
 import stat
+import logging
+
+# Set up logger
+log = logging.getLogger(__name__)
 
 def active():
     '''
@@ -62,7 +66,27 @@ def rm_fstab(name, config='/etc/fstab'):
     if not contents.has_key(name):
         return True
     # The entry is present, get rid of it
-    
+    lines = []
+    for line in open(config).readlines():
+        if line.startswith('#'):
+            # Commented
+            lines.append(line)
+            continue
+        if not line.strip():
+            # Blank line
+            lines.append(line)
+            continue
+        comps = line.split()
+        if not len(comps) == 6:
+            # Invalid entry
+            lines.append(line)
+            continue
+        comps = line.split()
+        if comps[1] == name:
+            continue
+        lines.append(line)
+    open(config, 'w+').writelines(lines)
+    return True
 
 def set_fstab(
         name,
@@ -122,23 +146,25 @@ def set_fstab(
                 comps[5] = str(pass_num)
             if change:
                 log.debug('fstab entry for mount point {0} is being updated'.format(name))
-                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}'.format(
-                        name,
+                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
                         device,
+                        name,
                         fstype,
                         opts,
                         dump,
                         pass_num)
                 lines.append(newline)
+        else:
+            lines.append(line)
     if change:
         # The line was changed, commit it!
         open(config, 'w+').writelines(lines)
         return 'change'
     if not change and not present:
         # The entry is new, add it to the end of the fstab
-        newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}'.format(
-                name,
+        newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
                 device,
+                name,
                 fstype,
                 opts,
                 dump,
@@ -170,6 +196,8 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     if fstype:
         cmd += ' -t {0}'.format(fstype)
     out = __salt__['cmd.run_all'](cmd)
+    if not out['retcode']:
+        return out['stderr']
     return True
 
 def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
