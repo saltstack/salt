@@ -3,6 +3,7 @@ Salt module to manage unix mounts and the fstab file
 '''
 # Import python libs
 import os
+import stat
 
 def active():
     '''
@@ -158,7 +159,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
-    if not os.path.isfile(device):
+    if not os.path.exists(device):
         return False
     if not stat.S_ISBLK(os.stat(device).st_mode):
         return False
