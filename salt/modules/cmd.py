@@ -7,9 +7,17 @@ access to the master root execution access to all salt minions
 # Import Python libs
 import subprocess
 import tempfile
+import os
 import logging
+
 # Set up logging
 log = logging.getLogger(__name__)
+
+def _is_exec(path):
+    '''
+    Return true if the passed path exists and is execuatable
+    '''
+    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
 def run(cmd, cwd='/root'):
     '''
@@ -94,6 +102,21 @@ def retcode(cmd, cwd='/root'):
     '''
     log.debug('Executing command {0} in directory {1}'.format(cmd, cwd))
     return subprocess.call(cmd, shell=True, cwd=cwd)
+
+def has_exec(cmd):
+    '''
+    Returns true if the executable is available on the minion, false otherwise
+
+    CLI Example:
+    salt '*' cat
+    '''
+    if cmd.startswith('/'):
+        return _is_exec(cmd)
+    for path in os.environ['PATH'].split(os.pathsep):
+        fn_ = os.path.join(path, cmd)
+        if _is_exec(fn_):
+            return True
+    return False
 
 def exec_code(lang, code):
     '''
