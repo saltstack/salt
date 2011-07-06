@@ -21,3 +21,5 @@ def run():
     '''
     if _check_puppet():
         return __salt__['cmd.run_all']('puppetd --test')
+    else:
+        return {}
