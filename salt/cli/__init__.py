@@ -100,6 +100,12 @@ class SaltCMD(object):
                 help='Print the output from the salt command in raw python'\
                    + ' form, this is suitable for re-reading the output into'\
                    + ' an executing python script with eval.')
+        parser.add_option('--text-out',
+                default=False,
+                action='store_true',
+                dest='txt_out',
+                help='Print the output from the salt command in the same form '\
+                   + 'the shell would.')
         if JSON:
             parser.add_option('--json-out',
                     default=False,
@@ -119,6 +125,7 @@ class SaltCMD(object):
         opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
+        opts['txt_out'] = options.txt_out
         if JSON:
             opts['json_out'] = options.json_out
         else:
@@ -200,6 +207,13 @@ class SaltCMD(object):
                         print ret
                     elif self.opts['json_out']:
                         print json.dumps(ret)
+                    elif self.opts['txt_out']:
+                        for i in ret.keys():
+                            data = ret[i]
+                            if not data: continue
+                            for line in ret[i].split('\n'):
+                                if line:
+                                    print "{0}: {1}".format(i, line)
                     else:
                         print yaml.dump(ret)
 
