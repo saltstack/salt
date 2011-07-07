@@ -16,7 +16,7 @@ def _refine_enc(enc):
     elif dss.count(enc):
         return 'ssh-dss'
     else:
-        return 'ssh=rsa'
+        return 'ssh-rsa'
 
 def _format_auth_line(
         key,
