@@ -211,7 +211,7 @@ class SaltCMD(object):
                         for i in ret.keys():
                             data = ret[i]
                             if not data: continue
-                            for line in ret[i].split('\n'):
+                            for line in data.split('\n'):
                                 if line:
                                     print "{0}: {1}".format(i, line)
                     else:
