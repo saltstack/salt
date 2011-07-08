@@ -19,6 +19,7 @@ import salt.runner
 import salt.cli.key
 import salt.cli.cp
 import salt.cli.caller
+import salt.output
 
 class SaltCMD(object):
     '''
@@ -202,20 +203,19 @@ class SaltCMD(object):
             if self.opts['fun'] == 'sys.doc':
                 self._print_docs(ret)
             else:
-                if type(ret) == type(list()) or type(ret) == type(dict()):
+                if isinstance(ret, list) or isinstance(ret, dict):
+                    # Determine the proper output method and run it
+                    get_outputter = salt.output.get_outputter
                     if self.opts['raw_out']:
-                        print ret
+                        printout = get_outputter("raw")
                     elif self.opts['json_out']:
-                        print json.dumps(ret)
+                        printout = get_outputter("json")
                     elif self.opts['txt_out']:
-                        for i in ret.keys():
-                            data = ret[i]
-                            if not data: continue
-                            for line in data.split('\n'):
-                                if line:
-                                    print "{0}: {1}".format(i, line)
+                        printout = get_outputter("txt")
                     else:
-                        print yaml.dump(ret)
+                        printout = get_outputter("yaml")
+
+                    printout(ret)
 
     def _print_docs(self, ret):
         '''
