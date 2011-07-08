@@ -13,13 +13,17 @@ import logging
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Set the default working directory to the home directory
+# of the user salt-minion is running as.  Default:  /root
+DEFAULT_CWD = os.path.expanduser('~')
+
 def _is_exec(path):
     '''
     Return true if the passed path exists and is execuatable
     '''
     return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
-def run(cmd, cwd='/root'):
+def run(cmd, cwd=DEFAULT_CWD):
     '''
     Execute the passed command and return the output as a string
 
@@ -35,7 +39,7 @@ def run(cmd, cwd='/root'):
     log.debug(out)
     return out
 
-def run_stdout(cmd, cwd='/root'):
+def run_stdout(cmd, cwd=DEFAULT_CWD):
     '''
     Execute a command, and only return the standard out 
 
@@ -50,7 +54,7 @@ def run_stdout(cmd, cwd='/root'):
     log.debug(stdout)
     return stdout
 
-def run_stderr(cmd, cwd='/root'):
+def run_stderr(cmd, cwd=DEFAULT_CWD):
     '''
     Execute a command and only return the standard error
 
@@ -65,7 +69,7 @@ def run_stderr(cmd, cwd='/root'):
     log.debug(stderr)
     return stderr
 
-def run_all(cmd, cwd='/root'):
+def run_all(cmd, cwd=DEFAULT_CWD):
     '''
     Execute the passed command and return a dict of return data
 
@@ -93,7 +97,7 @@ def run_all(cmd, cwd='/root'):
         log.debug('stderr: {0}'.format(ret['stderr']))
     return ret
 
-def retcode(cmd, cwd='/root'):
+def retcode(cmd, cwd=DEFAULT_CWD):
     '''
     Execute a shell command and return the command's return code.
 
