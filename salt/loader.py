@@ -240,9 +240,27 @@ class Loader(object):
         introspection functions.
         '''
         funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
-        funcs['sys.list_modules'] = lambda: funcs.keys
+        funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
         return funcs
+
+    def list_funcs(self, funcs):
+        '''
+        List the functions
+        '''
+        return funcs.keys()
+
+    def list_modules(self, funcs):
+        '''
+        List the modules
+        '''
+        modules = set()
+        for key in funcs:
+            comps = key.split('.')
+            if len(comps) < 2:
+                continue
+            modules.add(comps[0])
+        return sorted(list(modules))
 
     def filter_func(self, name, pack=None):
         '''
