@@ -2,6 +2,8 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
+import os
+import re
 import subprocess
 
 __opts__ = {}
@@ -173,6 +175,59 @@ def diskstats():
             'ms_spent_in_io':          comps[12],
             'weighted_ms_spent_in_io': comps[13],
         }
+    return ret
+
+def diskusage( args=None ):
+    '''
+    Return the disk usage for this minion
+
+    Usage:
+    salt '*' status.diskusage [mount points and/or filesystem types]
+
+    CLI Example:
+    salt '*' status.diskusage         # usage for all filesystems
+    salt '*' status.diskusage /,/tmp  # usage for / and /tmp
+    salt '*' status.diskusage ext?    # usage for ext2, ext3, & ext4 filesystems
+    salt '*' status.diskusage /,ext?  # usage for / and all ext filesystems
+    '''
+    # load the mounted filesystems from /proc/mounts
+    existing_fs = {}
+    with open('/proc/mounts', 'r') as fp:
+        for line in fp:
+            comps  = line.split()
+            if len( comps ) >= 3:
+                mntpt  = comps[ 1 ]
+                fstype = comps[ 2 ]
+                existing_fs[ mntpt ] = fstype
+    # determine which filesystems to query
+    if args is None:
+        # no args specified, query everything
+        selected_mounts = existing_fs.keys()
+    else:
+        # figure out whether each arg is a mount point or filesystem type and
+        # if there are mounted filesystems that match the criteria
+        selected_mounts = set()
+        for arg in args.replace( ",", " ").split():
+            if arg in existing_fs:
+                # arg is a mount point
+                selected_mounts.add( arg )
+            else:
+                # arg is a filesystem pattern
+                p = re.compile( arg )
+                for mntpt, fstype in existing_fs.iteritems():
+                    if p.match( fstype ):
+                        selected_mounts.add( mntpt )
+    # Query the filesystems disk usage
+    ret = {}
+    for mntpt in selected_mounts:
+        fsstats   = os.statvfs( mntpt )
+        blksz     = fsstats.f_bsize
+        available = fsstats.f_bavail * blksz
+        total     = fsstats.f_blocks * blksz
+        fstype    = existing_fs[ mntpt ]
+        ret[ mntpt ] = { "available" : available,
+                         "total" : total,
+                         "fstype" : fstype }
     return ret
 
 def vmstats():
