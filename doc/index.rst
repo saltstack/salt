@@ -73,6 +73,7 @@ Writing your own customizations on top of Salt
     ref/runners
     ref/renderers
     ref/python-api
+    ref/file_server/index
 
 * **Modules:**
   :doc:`Writing modules <ref/modules/index>`
@@ -87,6 +88,8 @@ Writing your own customizations on top of Salt
   | :doc:`Renderers <ref/renderers>`
 * **Python API:**
   :doc:`Python API <ref/python-api>`
+* **File Server:**
+  :doc:`File Server <ref/file_server/index>`
 
 Getting Involved
 ================
