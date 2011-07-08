@@ -4,7 +4,10 @@ This is a VERY simple example for pushing data to a redis server and is not
 necessarily intended as a usable interface.
 '''
 
+import logging
 import pymongo
+
+log = logging.getLogger(__name__)
 
 __opts__ = {
             'mongo.host': 'salt',
@@ -28,5 +31,5 @@ def returner(ret):
             back[key.replace('.', '-')] = ret['return'][key]
     else:
         back = ret['return']
-    print back
+    log.debug( back )
     col.insert({ret['jid']: back})
