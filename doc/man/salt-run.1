@@ -1,6 +1,6 @@
-.TH "SALT-MINION" "1" "July 09, 2011" "0.8.9" "Salt"
+.TH "SALT-RUN" "1" "July 09, 2011" "0.8.9" "Salt"
 .SH NAME
-salt-minion \- salt-minion Documentation
+salt-run \- salt-run Documentation
 .
 .nr rst2man-indent-level 0
 .
@@ -31,32 +31,33 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" Man page generated from reStructeredText.
 .
 .sp
-The salt minion daemon, recieves commands from a remote salt master.
+Execute a Salt runner
 .SH SYNOPSIS
 .sp
-salt\-minion [ options ]
+.nf
+.ft C
+salt\-run RUNNER
+.ft P
+.fi
 .SH DESCRIPTION
 .sp
-The salt minion recieves commands from the central salt master and replies with
-the results of said commands.
+Salt run is the frontend command for executing \fBSalt Runners\fP.
+Salt runners are simple modules used to execute convenience functions on the
+master
 .SH OPTIONS
 .INDENT 0.0
 .TP
 .B \-h, \-\-help
 .sp
-Print a usage message briefly summarizing these command\-line options.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-d, \-\-daemon
-.sp
-Run the salt minion as a daemon
+Print a usage message briefly summarizing these command\-line options
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-c CONFIG, \-\-config=CONFIG
 .sp
-The minion configuration file to use, the default is /etc/salt/minion
+The location of the salt master configuration file, the salt master
+settings are required to know where the connections are;
+default=/etc/salt/master
 .UNINDENT
 .SH AUTHOR
 Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file
