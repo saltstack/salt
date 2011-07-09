@@ -60,13 +60,6 @@ class LocalClient(object):
         except:
             raise SaltClientError('Failed to read in the salt root key')
 
-    def cmd(self, tgt, fun, arg=(), timeout=5, expr_form='glob', ret=''):
-        '''
-        Execute a salt command and return.
-        '''
-        pub_data = self.pub(tgt, fun, arg, expr_form, ret)
-        return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
-
     def _check_glob_minions(self, expr):
         '''
         Return the minions found by looking via globs
@@ -107,6 +100,20 @@ class LocalClient(object):
         Return the minions found by looking via a list
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+
+    def cmd(self, tgt, fun, arg=(), timeout=5, expr_form='glob', ret=''):
+        '''
+        Execute a salt command and return.
+        '''
+        pub_data = self.pub(tgt, fun, arg, expr_form, ret)
+        return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
+
+    def cmd_full_return(self, tgt, fun, arg=(), timeout=5, expr_form='glob', ret=''):
+        '''
+        Execute a salt command and return 
+        '''
+        pub_data = self.pub(tgt, fun, arg, expr_form, ret)
+        return self.get_full_returns(pub_data['jid'], pub_data['minions'], timeout)
 
     def get_returns(self, jid, minions, timeout=5):
         '''
