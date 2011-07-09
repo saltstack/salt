@@ -405,6 +405,9 @@ class MWorker(multiprocessing.Process):
             os.makedirs(hn_dir)
         pickle.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
+        if load.has_key('out'):
+            pickle.dump(load['out'],
+                    open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
     def _send_cluster(self):
         '''
