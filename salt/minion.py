@@ -170,6 +170,7 @@ class Minion(object):
             ret['return'] = '"%s" is not available.' % function_name
 
         ret['jid'] = data['jid']
+        ret['fun'] = data['fun']
         if data['ret']:
             ret['id'] = self.opts['id']
             try:
@@ -222,6 +223,10 @@ class Minion(object):
                 'cmd': '_return',
                 'jid': ret['jid'],
                 'id': self.opts['id']}
+        if hasattr(self.functions[ret['fun']], '__outputter__'):
+            oput = self.functions[ret['fun']].__outputter__
+            if isinstance(oput, str):
+                load['out'] = oput
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
         return socket.recv()

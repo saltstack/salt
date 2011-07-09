@@ -224,15 +224,28 @@ class Loader(object):
                     continue
                 if callable(getattr(mod, attr)):
                     if virtual:
-                        funcs[virtual + '.' + attr] = getattr(mod, attr)
+                        func = getattr(mod, attr)
+                        funcs[virtual + '.' + attr] = func
+                        self._apply_outputter(func, mod)
                     elif virtual == False:
                         pass
                     else:
-                        funcs[mod.__name__ + '.' + attr] = getattr(mod, attr)
+                        func = getattr(mod, attr)
+                        funcs[mod.__name__ + '.' + attr] = func
+                        self._apply_outputter(func, mod)
         for mod in modules:
             if not hasattr(mod, '__salt__'):
                 mod.__salt__ = funcs
         return funcs
+
+    def _apply_outputter(self, func, mod):
+        '''
+        Apply the __outputter__ variable to the functions
+        '''
+        if hasattr(mod, '__outputter__'):
+            outp = mod.__outputter__
+            if outp.has_key(func.__name__):
+                func.__outputter__ = outp[func.__name__]
 
     def apply_introspection(self, funcs):
         '''

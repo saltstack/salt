@@ -8,6 +8,10 @@ import time
 __opts__ = {
             'test.foo': 'foo'
             }
+# Load the outputters for the module
+__outputter__ = {
+                 'outputter': 'txt'
+                 }
 
 def echo(text):
     '''
@@ -92,4 +96,13 @@ def collatz(start):
             else:
                 start = start * 3 + 1
     return steps, time.time() - begin
+
+def outputter(data):
+    '''
+    Test the outputter, pass in data to return
+
+    CLI Example:
+    salt '*' test.outputter foobar
+    '''
+    return data
 
