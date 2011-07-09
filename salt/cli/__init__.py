@@ -107,6 +107,11 @@ class SaltCMD(object):
                 dest='txt_out',
                 help='Print the output from the salt command in the same form '\
                    + 'the shell would.')
+        parser.add_option('--yaml-out',
+                default=False,
+                action='store_true',
+                dest='yaml_out',
+                help='Print the output from the salt command in yaml.')
         if JSON:
             parser.add_option('--json-out',
                     default=False,
@@ -127,6 +132,7 @@ class SaltCMD(object):
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
         opts['txt_out'] = options.txt_out
+        opts['yaml_out'] = options.yaml_out
         if JSON:
             opts['json_out'] = options.json_out
         else:
@@ -208,15 +214,17 @@ class SaltCMD(object):
                     # Determine the proper output method and run it
                     get_outputter = salt.output.get_outputter
                     if self.opts['raw_out']:
-                        printout = get_outputter("raw")
+                        printout = get_outputter('raw')
                     elif self.opts['json_out']:
-                        printout = get_outputter("json")
+                        printout = get_outputter('json')
                     elif self.opts['txt_out']:
-                        printout = get_outputter("txt")
+                        printout = get_outputter('txt')
+                    elif self.opts['yaml_out']:
+                        printout = get_outputter('yaml')
                     elif out:
                         printout = get_outputter(out)
                     else:
-                        printout = get_outputter("yaml")
+                        printout = get_outputter(None)
 
                     printout(ret)
 
