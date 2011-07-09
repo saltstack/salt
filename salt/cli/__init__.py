@@ -245,6 +245,8 @@ class SaltCMD(object):
         Print out the docstrings for all of the functions on the minions
         '''
         docs = {}
+        if not ret:
+            sys.stderr.write('No minions found to gather docs from\n')
         for host in ret:
             for fun in ret[host]:
                 if not docs.has_key(fun):
