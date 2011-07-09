@@ -9,8 +9,8 @@ from distutils.extension import Extension
 from distutils.sysconfig import get_python_lib, PREFIX
 
 NAME = 'salt'
-VER = '0.8.8'
-DESC = 'Portable, distrubuted, remote execution system'
+VER = '0.8.9'
+DESC = 'Portable, distrubuted, remote execution and configuration management system'
 
 mod_path = os.path.join(get_python_lib(), 'salt/modules/')
 doc_path = os.path.join(PREFIX, 'share/doc/', NAME + '-' + VER)
@@ -30,7 +30,7 @@ setup(name=NAME,
       classifiers = [
           'Programming Language :: Python',
           'Programming Language :: Cython',
-          'Programming Language :: Python :: 2.6',
+          'Programming Language :: Python :: 2.5',
           'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Intended Audience :: Developers',
@@ -67,6 +67,7 @@ setup(name=NAME,
                      'doc/man/salt-key.1',
                      'doc/man/salt.1',
                      'doc/man/salt-cp.1',
+                     'doc/man/salt-run.1',
                      'doc/man/salt-minion.1',
                     ]),
                 ('share/man/man7',
