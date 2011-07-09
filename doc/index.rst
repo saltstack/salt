@@ -30,6 +30,17 @@ If you want to get set up quickly and try out Salt, follow the tutorial.
 
     topics/tutorial
 
+Download
+--------
+
+Salt can be downloaded from the github download page:
+
+https://github.com/thatch45/salt/downloads
+
+The latest Salt is 0.8.8:
+
+https://github.com/downloads/thatch45/salt/salt-0.8.8.tar.gz
+
 Salt in Depth
 =============
 
