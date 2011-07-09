@@ -17,6 +17,11 @@ log = logging.getLogger(__name__)
 # of the user salt-minion is running as.  Default:  /root
 DEFAULT_CWD = os.path.expanduser('~')
 
+# Set up the default outputters
+__outputter__ = {
+                 'run': 'txt'
+                 }
+
 def _is_exec(path):
     '''
     Return true if the passed path exists and is execuatable
