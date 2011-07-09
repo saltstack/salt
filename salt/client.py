@@ -143,6 +143,45 @@ class LocalClient(object):
                 return ret
             time.sleep(0.02)
 
+    def get_full_returns(self, jid, minions, timeout=5):
+        '''
+        This method starts off a watcher looking at the return data for a
+        specified jid, it returns all of the information for the jid
+        '''
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
+        start = 999999999999
+        gstart = int(time.time())
+        ret = {}
+        # Wait for the hosts to check in
+        while True:
+            for fn_ in os.listdir(jid_dir):
+                if fn_.startswith('.'):
+                    continue
+                if not ret.has_key(fn_):
+                    retp = os.path.join(jid_dir, fn_, 'return.p')
+                    outp = os.path.join(jid_dir, fn_, 'out.p')
+                    if not os.path.isfile(retp):
+                        continue
+                    while not ret.has_key(fn_):
+                        try:
+                            ret_data = pickle.load(open(retp, 'r'))
+                            ret[fn_] = {'ret': ret_data}
+                            if os.path.isfile(outp):
+                                ret[fn_]['out'] = pickle.load(open(outp, 'r'))
+                        except:
+                            pass
+            if ret and start == 999999999999:
+                start = int(time.time())
+            if len(ret) >= len(minions):
+                return ret
+            if int(time.time()) > start + timeout:
+                return ret
+            if int(time.time()) > gstart + timeout and not ret:
+                # No minions have replied within the specified global timeout,
+                # return an empty dict
+                return ret
+            time.sleep(0.02)
+
     def find_cmd(self, cmd):
         '''
         Hunt through the old salt calls for when cmd was run, return a dict:
