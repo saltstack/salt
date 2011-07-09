@@ -197,7 +197,8 @@ class SaltCMD(object):
 
             if self.opts['return']:
                 args.append(self.opts['return'])
-            ret = local.cmd(*args)
+            full_ret = local.cmd_full_return(*args)
+            ret, out = self._format_ret(full_ret)
 
             # Handle special case commands
             if self.opts['fun'] == 'sys.doc':
@@ -212,10 +213,24 @@ class SaltCMD(object):
                         printout = get_outputter("json")
                     elif self.opts['txt_out']:
                         printout = get_outputter("txt")
+                    elif out:
+                        printout = get_outputter(out)
                     else:
                         printout = get_outputter("yaml")
 
                     printout(ret)
+
+    def _format_ret(self, full_ret):
+        '''
+        Take the full return data and format it to simple output
+        '''
+        ret = {}
+        out = ''
+        for key, data in full_ret.items():
+            ret[key] = data['ret']
+            if data.has_key('out'):
+                out = data['out']
+        return ret, out
 
     def _print_docs(self, ret):
         '''
