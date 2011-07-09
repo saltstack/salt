@@ -108,6 +108,25 @@ The test module contains usage of the module configuration, and the default
 configuration file for the minion contains the information and format used to
 pass data to the modules. :mod:`salt.modules.test`, :file:`conf/minion`.
 
+Printout Configuration
+======================
+
+Since module functions can return different data, and the way the data is
+printed can greatly change the presentation, Salt has a printout
+configuration.
+
+When writing a module the ``__outputter__`` dict can be declared in the module.
+The ``__outputter__`` dict contains a mapping of function name to Salt
+Outputter.
+
+.. code-block:: python
+
+    __ouputter__ = {
+                    'run': 'txt'
+                    }
+
+This will ensure that the text outputter is used.
+
 Virtual Modules
 ===============
 
