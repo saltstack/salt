@@ -1,5 +1,5 @@
 ========================
-Salt 0.8.9 release notes
+Salt 0.8.9 Release Notes
 ========================
 
 Salt 0.8.9 has finally arrived! Unfortunately this is much later than I had
@@ -13,6 +13,28 @@ for salt has grown a great deal and much of the code is from contributors.
 Also, I have filled out the documentation a great deal. So information on
 States is properly documented, and much of the documentation that was out of
 date has been filled in.
+
+Download!
+---------
+
+The Salt source can be downloaded from the salt github site:
+
+https://github.com/downloads/thatch45/salt/salt-0.8.9.tar.gz
+
+Or from PiPy:
+
+http://pypi.python.org/packages/source/s/salt/salt-0.8.9.tar.gz
+
+Here s the md5sum:
+
+7d5aca4633bc22f59045f59e82f43b56
+
+For instructions on how to set up Salt please see the tutorial
+
+.. toctree::
+    :maxdepth: 1
+
+    ../tutorial
 
 New Features
 ------------

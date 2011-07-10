@@ -14,6 +14,28 @@ files to define the state a server needs to be in.
 Between the remote execution system, and state management Salt addresses the
 backbone of cloud and data center management.
 
+News
+----
+
+0.8.9 released!
+
+Release announcement:
+
+.. toctree::
+    :maxdepth: 1
+
+    topics/releases/0.8.9
+
+Download
+--------
+
+Salt can be downloaded from the github download page:
+
+https://github.com/thatch45/salt/downloads
+
+The latest Salt is 0.8.9:
+
+https://github.com/downloads/thatch45/salt/salt-0.8.9.tar.gz
 
 Getting Started
 ===============
@@ -29,17 +51,6 @@ If you want to get set up quickly and try out Salt, follow the tutorial.
     :maxdepth: 1
 
     topics/tutorial
-
-Download
---------
-
-Salt can be downloaded from the github download page:
-
-https://github.com/thatch45/salt/downloads
-
-The latest Salt is 0.8.8:
-
-https://github.com/downloads/thatch45/salt/salt-0.8.8.tar.gz
 
 Salt in Depth
 =============
