@@ -30,21 +30,6 @@ def _kernel():
             stdout=subprocess.PIPE).communicate()[0].strip()
     return grains
 
-def _memdata():
-    '''
-    Gather information about the system memory
-    '''
-    grains = {}
-    meminfo = '/proc/meminfo'
-    if os.path.isfile(meminfo):
-        for line in open(meminfo, 'r').readlines():
-            comps = line.split(':')
-            if not len(comps) > 1:
-                continue
-            if comps[0].strip() == 'MemTotal':
-                grains['mem_total'] = int(comps[1])/1024
-    return grains
-
 def _cpudata():
     '''
     Return the cpu architecture
@@ -187,4 +172,18 @@ def path():
     '''
     return {'path': os.environ['PATH'].strip()}
 
+def memdata():
+    '''
+    Gather information about the system memory
+    '''
+    grains = {}
+    meminfo = '/proc/meminfo'
+    if os.path.isfile(meminfo):
+        for line in open(meminfo, 'r').readlines():
+            comps = line.split(':')
+            if not len(comps) > 1:
+                continue
+            if comps[0].strip() == 'MemTotal':
+                grains['mem_total'] = int(comps[1])/1024
+    return grains
 
