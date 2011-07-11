@@ -17,7 +17,7 @@ __opts__ = {
 
 def returner(ret):
     '''
-    Return data to a redis data store
+    Return data to a mongodb server
     '''
     conn = pymongo.Connection(
             __opts__['mongo.host'],
