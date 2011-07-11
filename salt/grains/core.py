@@ -30,13 +30,30 @@ def _kernel():
             stdout=subprocess.PIPE).communicate()[0].strip()
     return grains
 
-def _cpuarch():
+def _cpudata():
     '''
     Return the cpu architecture
     '''
+    grains = {}
+    cpuinfo = '/proc/cpuinfo'
+    # Grab the Arch
     arch = subprocess.Popen(['uname', '-m'],
-        stdout=subprocess.PIPE).communicate()[0].strip()
-    return {'cpuarch': arch}
+            stdout=subprocess.PIPE).communicate()[0].strip()
+    grains['cpuarch'] = arch
+    # Parse over the cpuinfo file
+    if os.path.isfile(cpuinfo):
+        data = {}
+        for line in open(cpuinfo, 'r').readlines():
+            comps = line.split(':')
+            if not len(comps) > 1:
+                continue
+            if comps[0] == 'processor':
+                grains['num_cpus'] = int(comps[1]) + 1
+            elif comps[0] == 'model name':
+                grains['cpu_model'] = comps[1]
+            elif comps[0] == 'flags':
+                grains['cpu_flags'] = comps[1].split()
+    return grains
 
 def _virtual(os_data):
     '''
@@ -73,7 +90,7 @@ def os_data():
     '''
     grains = {}
     grains.update(_kernel())
-    grains.update(_cpuarch())
+    grains.update(_cpudata())
     if grains['kernel'] == 'Linux':
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
