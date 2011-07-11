@@ -42,16 +42,15 @@ def _cpudata():
     grains['cpuarch'] = arch
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
-        data = {}
         for line in open(cpuinfo, 'r').readlines():
             comps = line.split(':')
             if not len(comps) > 1:
                 continue
-            if comps[0] == 'processor':
-                grains['num_cpus'] = int(comps[1]) + 1
-            elif comps[0] == 'model name':
-                grains['cpu_model'] = comps[1]
-            elif comps[0] == 'flags':
+            if comps[0].strip() == 'processor':
+                grains['num_cpus'] = int(comps[1].strip()) + 1
+            elif comps[0].strip() == 'model name':
+                grains['cpu_model'] = comps[1].strip()
+            elif comps[0].strip() == 'flags':
                 grains['cpu_flags'] = comps[1].split()
     return grains
 
