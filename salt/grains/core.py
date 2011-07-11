@@ -184,6 +184,6 @@ def memdata():
             if not len(comps) > 1:
                 continue
             if comps[0].strip() == 'MemTotal':
-                grains['mem_total'] = int(comps[1])/1024
+                grains['mem_total'] = int(comps[1].split()[0])/1024
     return grains
 
