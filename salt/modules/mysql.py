@@ -16,7 +16,7 @@ import MySQLdb
 
 __opts__ = {}
 
-def _connect():
+def connect():
     '''
     wrap authentication credentials here
     '''
@@ -47,7 +47,7 @@ def status():
     salt '*' mysql.status
     '''
     ret = {}
-    db = _connect()
+    db = connect()
     cur = db.cursor()
     cur.execute('SHOW STATUS')
     for i in xrange(cur.rowcount):
@@ -63,7 +63,7 @@ def version():
     CLI Example:
     salt '*' mysql.version
     '''
-    db = _connect()
+    db = connect()
     cur = db.cursor()
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
