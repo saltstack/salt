@@ -58,7 +58,6 @@ start() {
     fi
     RETVAL=$?
     echo
-    [ $RETVAL -eq 0 ] && touch $LOCKFILE
     return $RETVAL
 }
 
@@ -81,10 +80,6 @@ stop() {
     fi
     RETVAL=$?
     echo
-    if [ $RETVAL -eq 0 ]; then
-    rm -f $LOCKFILE
-        rm -f /var/run/$SERVICE.pid
-    fi
 }
 
 restart() {
