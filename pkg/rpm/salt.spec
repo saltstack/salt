@@ -3,7 +3,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name:           salt
-Version:        0.8.7
+Version:        0.8.9
 Release:        1%{?dist}
 Summary:        A parallel remote execution system
 
@@ -47,6 +47,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc %{_mandir}/*
+%doc %{_defaultdocdir}/salt*
 %{python_sitelib}/*
 %{_bindir}/*
 %config(noreplace) /etc/salt/*
