@@ -28,6 +28,10 @@ def _kernel():
     else:
         grains['kernelrelease'] = subprocess.Popen(['uname', '-r'],
             stdout=subprocess.PIPE).communicate()[0].strip()
+    if not grains.has_key('kernel'):
+        grains['kernel'] = 'Unknown'
+    if not grains['kernel']:
+        grains['kernel'] = 'Unknown'
     return grains
 
 def _cpudata():
