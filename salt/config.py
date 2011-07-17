@@ -4,6 +4,7 @@ All salt configuration loading and defaults should be in this module
 # Import python modules
 import os
 import socket
+import sys
 # Import third party libs
 import yaml
 # Import salt libs
@@ -156,12 +157,12 @@ def dns_check(addr):
         # Not a valid ip addr, check if it is an available hostname
         try:
             addr = socket.gethostbyname(addr)
-        except socket.giaerror:
+        except socket.gaierror:
             # Woah, this addr is totally bogus, die!!!
             err = 'The master address {0} could not be validated, please'\
                 + ' check that the specified master in the minion config'\
                 + ' file is correct\n'
-            err.format(addr)
+            err = err.format(addr)
             sys.stderr.write(err)
             sys.exit(42)
     return addr
