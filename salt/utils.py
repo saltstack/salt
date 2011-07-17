@@ -70,4 +70,3 @@ def check_root():
                'http://xkcd.com/838/')
         sys.exit(1)
 
-
