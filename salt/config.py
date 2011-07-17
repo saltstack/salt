@@ -9,6 +9,7 @@ import yaml
 # Import salt libs
 import salt.crypt
 import salt.loader
+import salt.utils
 
 def load_config(opts, path, env_var):
     '''
@@ -71,7 +72,9 @@ def minion_config(path):
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
 
-    opts['master_uri'] = 'tcp://' + opts['master'] + ':'\
+    opts['master_ip'] = salt.utils.dns_check(opts['master'])
+
+    opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
                        + str(opts['master_port'])
 
     # Enabling open mode requires that the value be set to True, and nothing
