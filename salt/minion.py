@@ -263,7 +263,7 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        master_pub = 'tcp://' + self.opts['master'] + ':'\
+        master_pub = 'tcp://' + self.opts['master_ip'] + ':'\
                    + str(self.publish_port)
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
