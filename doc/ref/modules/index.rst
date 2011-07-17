@@ -121,7 +121,7 @@ Outputter.
 
 .. code-block:: python
 
-    __ouputter__ = {
+    __outputter__ = {
                     'run': 'txt'
                     }
 
