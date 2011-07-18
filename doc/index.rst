@@ -29,13 +29,16 @@ Release announcement:
 Download
 --------
 
-Salt can be downloaded from the github download page:
-
-https://github.com/thatch45/salt/downloads
-
 The latest Salt is 0.8.9:
 
 https://github.com/downloads/thatch45/salt/salt-0.8.9.tar.gz
+
+Additional packages can be downloaded from the download page:
+
+.. toctree::
+    :maxdepth: 1
+
+    topics/download
 
 Getting Started
 ===============
