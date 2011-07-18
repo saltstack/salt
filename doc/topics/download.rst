@@ -57,7 +57,7 @@ Package to set up EPEL repository (provided by the EPEL project):
 http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm
 
 Salt for Arch Linux
-```````````````````
+-------------------
 
 Salt can be easily installed on Arch Linux, install the package from the Arch
 Linux AUR:
