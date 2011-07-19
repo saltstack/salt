@@ -2,8 +2,6 @@
 Support for YUM
 '''
 
-import subprocess
-
 def __virtual__():
     '''
     Confine this module to yum based systems
@@ -29,8 +27,10 @@ def available_version(name):
     CLI Example:
     salt '*' pkg.available_version <package name>
     '''
-    out = __salt__['cmd.stdout']('yum list {0} -q'.format(name))
+    out = __salt__['cmd.run_stdout']('yum list {0} -q'.format(name))
     for line in out.split('\n'):
+        if not line.strip():
+            continue
         # Itterate through the output
         comps = line.split()
         if comps[0].split('.')[0] == name:
@@ -62,15 +62,13 @@ def list_pkgs():
     CLI Example:
     salt '*' pkg.list_pkgs
     '''
-    cmd = "rpm -qa --qf '%{NAME}\\t%{VERSION}-%{RELEASE}\\n'"
+    cmd = "rpm -qa --qf '%{NAME}:%{VERSION}-%{RELEASE};'"
     ret = {}
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
-    for line in out:
-        if not line.count(' '):
+    out = __salt__['cmd.run_stdout'](cmd)
+    for line in out.split(';'):
+        if not line.count(':'):
             continue
-        comps = line.split()
+        comps = line.split(':')
         ret[comps[0]] = comps[1]
     return ret
 
@@ -83,7 +81,7 @@ def refresh_db():
     salt '*' pkg.refresh_db
     '''
     cmd = 'yum clean dbcache'
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     return True
 
 def install(pkg, refresh=False):
@@ -102,7 +100,7 @@ def install(pkg, refresh=False):
     cmd = 'yum -y install ' + pkg
     if refresh:
         refresh_db()
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -133,7 +131,7 @@ def upgrade():
     '''
     old = list_pkgs()
     cmd = 'yum -y upgrade'
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -162,7 +160,7 @@ def remove(pkg):
     '''
     old = list_pkgs()
     cmd = 'yum -y remove ' + pkg
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
 
