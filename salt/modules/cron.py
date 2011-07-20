@@ -35,3 +35,4 @@ def list_tab(user):
             dat['dayweek'] = comps[4]
             dat['cmd'] = ' '.join(comps[5:])
             ret['crons'].append(dat)
+    return ret
