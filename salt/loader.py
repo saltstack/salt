@@ -68,7 +68,10 @@ def grains(opts):
         os.path.join(salt_base_path, 'grains'),
         ]
     load = Loader(module_dirs, opts)
-    return load.gen_grains()
+    grains = load.gen_grains()
+    if opts.has_key('grains'):
+        grains.update(opts['grains'])
+    return grains
 
 def call(fun, args=[], dirs=[]):
     '''
