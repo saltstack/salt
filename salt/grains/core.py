@@ -19,6 +19,8 @@ def _kernel():
     '''
     Return the kernel type
     '''
+    # Provides:
+    # kernel
     grains = {}
     grains['kernel'] = subprocess.Popen(['uname', '-s'],
         stdout=subprocess.PIPE).communicate()[0].strip()
@@ -38,12 +40,19 @@ def _cpudata():
     '''
     Return the cpu architecture
     '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    #   cpu_flags
     grains = {}
     cpuinfo = '/proc/cpuinfo'
     # Grab the Arch
     arch = subprocess.Popen(['uname', '-m'],
             stdout=subprocess.PIPE).communicate()[0].strip()
     grains['cpuarch'] = arch
+    if not grains['cpuarch']:
+        grains['cpuarch'] = 'Unknown'
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
         for line in open(cpuinfo, 'r').readlines():
@@ -56,6 +65,12 @@ def _cpudata():
                 grains['cpu_model'] = comps[1].strip()
             elif comps[0].strip() == 'flags':
                 grains['cpu_flags'] = comps[1].split()
+    if not grains.has_key('num_cpus'):
+        grains['num_cpus'] = 0
+    if not grains.has_key['cpu_model']:
+        grains['cpu_model'] = 'Unknown'
+    if not grains.has_key['cpu_flags']:
+        grains['cpu_flags'] - []
     return grains
 
 def _virtual(os_data):
@@ -64,6 +79,8 @@ def _virtual(os_data):
     '''
     # This is going to be a monster, if you are running a vm you can test this
     # grain with please submit patches!
+    # Provides:
+    #   virtual
     grains = {'virtual': 'physical'}
     if 'Linux FreeBSD OpenBSD SunOS HP-UX GNU/kFreeBSD'.count(os_data['kernel']):
         if os.path.isdir('/proc/vz'):
@@ -160,6 +177,10 @@ def hostname():
     Return fqdn, hostname, domainname
     '''
     # This is going to need some work
+    # Provides:
+    #   fqdn
+    #   host
+    #   domain
     grains = {}
     grains['fqdn'] = socket.getfqdn()
     comps = grains['fqdn'].split('.')
@@ -174,13 +195,17 @@ def path():
     '''
     Return the path
     '''
+    # Provides:
+    #   path
     return {'path': os.environ['PATH'].strip()}
 
 def memdata():
     '''
     Gather information about the system memory
     '''
-    grains = {}
+    # Provides:
+    #   mem_total
+    grains = {'mem_total': 0}
     meminfo = '/proc/meminfo'
     if os.path.isfile(meminfo):
         for line in open(meminfo, 'r').readlines():
