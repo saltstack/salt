@@ -70,10 +70,10 @@ def _cpudata():
     if not grains.has_key['cpu_model']:
         grains['cpu_model'] = 'Unknown'
     if not grains.has_key['cpu_flags']:
-        grains['cpu_flags'] - []
+        grains['cpu_flags'] = []
     return grains
 
-def _virtual(os_data):
+def _virtual(osdata):
     '''
     Returns what type of virtual hardware is under the hood, kvm or physical
     '''
@@ -82,7 +82,7 @@ def _virtual(os_data):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    if 'Linux FreeBSD OpenBSD SunOS HP-UX GNU/kFreeBSD'.count(os_data['kernel']):
+    if 'Linux FreeBSD OpenBSD SunOS HP-UX GNU/kFreeBSD'.count(osdata['kernel']):
         if os.path.isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
@@ -95,13 +95,13 @@ def _virtual(os_data):
                 grains['virtual'] = 'kvm'
     return grains
 
-def _ps(os_data):
+def _ps(osdata):
     '''
     Return the ps grain
     '''
     grains = {}
     grains['ps'] = 'ps auxwww' if\
-            'FreeBSD NetBSD OpenBSD Darwin'.count(os_data['os']) else 'ps -ef'
+            'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -ef'
     return grains
 
 def os_data():
