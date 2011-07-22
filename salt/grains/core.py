@@ -67,9 +67,9 @@ def _cpudata():
                 grains['cpu_flags'] = comps[1].split()
     if not grains.has_key('num_cpus'):
         grains['num_cpus'] = 0
-    if not grains.has_key['cpu_model']:
+    if not grains.has_key('cpu_model'):
         grains['cpu_model'] = 'Unknown'
-    if not grains.has_key['cpu_flags']:
+    if not grains.has_key('cpu_flags'):
         grains['cpu_flags'] = []
     return grains
 
