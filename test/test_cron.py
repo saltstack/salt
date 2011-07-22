@@ -27,6 +27,15 @@ class TestTime(unittest.TestCase):
         doctest.testmod(salt.cron)
 
     def test_interval(self):
+        self._test_interval({'second'  : 1}, 1)
+        self._test_interval({'seconds' : 1}, 1)
+        self._test_interval({'minute'  : 1}, 60)
+        self._test_interval({'minutes' : 1}, 60)
+        self._test_interval({'hour'    : 1}, 60 * 60)
+        self._test_interval({'hours'   : 1}, 60 * 60)
+        self._test_interval({'day'     : 1}, 24 * 60 * 60)
+        self._test_interval({'days'    : 1}, 24 * 60 * 60)
+
         self._test_interval({'second' : 10},    10)        # 10 seconds
         self._test_interval({'second' : 0.123}, 0.123)
         self._test_interval({'minute' : 0.5},   30)        # 30 seconds

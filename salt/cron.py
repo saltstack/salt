@@ -13,23 +13,26 @@ def parse_interval(interval_dict):
     '''Translate a time interval dict into a number of seconds.
        The interval_dict is expected to have one or more of the
        following keys which map to numeric (integer or float)
-       values: day, hour, minute, second.  Missing keys default
-       to zero.  All other dict entries are ignored.
+       values: day(s), hour(s), minute(s), second(s).  Missing keys
+       default to zero.  All other dict entries are ignored.
 
-       >>> parse_interval({'day':1, 'hour':2, 'minute':3, 'second':4.5})
+       >>> parse_interval({'day':1, 'hours':2, 'minute':3, 'second':4.5})
        93784.5
        >>> parse_interval({'second':10})
        10
     '''
-    return (((interval_dict.get('day', 0) * 24 +
-              interval_dict.get('hour', 0)) * 60 +
-              interval_dict.get('minute', 0)) * 60 +
-              interval_dict.get('second', 0))
+    days = interval_dict.get('day', 0) + interval_dict.get('days', 0)
+    hours = interval_dict.get('hour', 0) + interval_dict.get('hours', 0)
+    minutes = interval_dict.get('minute', 0) + interval_dict.get('minutes', 0)
+    seconds = interval_dict.get('second', 0) + interval_dict.get('seconds', 0)
+    return ((days * 24 + hours) * 60 + minutes) * 60 + seconds
 
 class IntervalSleeper(object):
     '''Generate a sequence of regular interval sleep times.
     '''
     def __init__(self, interval):
+        if interval < 1:
+            raise ValueError('sleep interval cannot be less than one second')
         self.interval = interval
 
     def next(self):
@@ -48,8 +51,8 @@ class CronSleeper(object):
 
 class CronParser(object):
     '''Translate 'cron' dictionaries into timeout generators.
-       A cron dict may contain 'month', 'day', 'weekday', 'hour',
-       'minute', and 'second' entries were each value is a UNIX
+       A cron dict may contain 'month(s)', 'day(s)', 'weekday(s)', 'hour(s)',
+       'minute(s)', and 'second(s)' entries were each value is a UNIX
        crontab field.  For example, {'hour': '0, 1-3, 18-23/2'}
        will generate the number of seconds to sleep until the hour
        is 0 (midnight), 1, 2, 3, 18, 20, or 22.
@@ -123,12 +126,18 @@ class CronParser(object):
         '''
         result = {}
         for key, enums, minval, maxval in [
-                ('month',   self.months,   1, 12),
-                ('day',     None,          1, 31),
-                ('weekday', self.weekdays, 1, 7),
-                ('hour',    None,          0, 23),
-                ('minute',  None,          0, 59),
-                ('second',  None,          0, 61)]:
+                ('month',    self.months,   1, 12),
+                ('months',   self.months,   1, 12),
+                ('day',      None,          1, 31),
+                ('days',     None,          1, 31),
+                ('weekday',  self.weekdays, 1, 7),
+                ('weekdays', self.weekdays, 1, 7),
+                ('hour',     None,          0, 23),
+                ('hours',    None,          0, 23),
+                ('minute',   None,          0, 59),
+                ('minutes',  None,          0, 59),
+                ('second',   None,          0, 61),
+                ('seconds',   None,         0, 61)]:
             field = cron_dict.get(key)
             if field:
                 value = self._parse_cron_field(field, enums, minval, maxval)
