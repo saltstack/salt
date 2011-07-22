@@ -26,6 +26,26 @@ def parse_interval(interval_dict):
               interval_dict.get('minute', 0)) * 60 +
               interval_dict.get('second', 0))
 
+class IntervalSleeper(object):
+    '''Generate a sequence of regular interval sleep times.
+    '''
+    def __init__(self, interval):
+        self.interval = interval
+
+    def next(self):
+        return self.interval
+
+class CronSleeper(object):
+    '''Generate a sequence of sleep times based on the current time and
+       the next specified event time.
+    '''
+    def __init__(self, constraints):
+        self.constraints = constraints
+
+    def next(self):
+        raise NotImplementedError('CronSleeper')
+
+
 class CronParser(object):
     '''Translate 'cron' dictionaries into timeout generators.
        A cron dict may contain 'month', 'day', 'weekday', 'hour',
@@ -86,6 +106,17 @@ class CronParser(object):
             (?P<cruft>\S+?)
             ''',
             re.VERBOSE)
+
+    def create_sleeper(self, sleep_type, cron_dict):
+        '''Create a sleep time generator.
+        '''
+        if sleep_type == 'interval':
+            result = IntervalSleeper(parse_interval(cron_dict))
+        elif sleep_type == 'cron':
+            result = CronSleeper(self.parse(cron_dict))
+        else:
+            raise ValueError('invalid sleeper type \'{}\''.format(sleep_type))
+        return result
 
     def parse(self, cron_dict):
         '''Parse a cron dict into a structure usable for the cron timer.
