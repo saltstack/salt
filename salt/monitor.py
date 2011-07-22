@@ -116,6 +116,8 @@ import logging
 import os
 import re
 import shlex
+import threading
+import time
 
 # Import salt libs
 import salt.config
@@ -140,34 +142,43 @@ def _indent(lines, num_spaces=4):
 class MonitorCommand(object):
     '''A single monitor command.
     '''
-    def __init__(self, src, sleeper=None):
-        self.src = src
-        self.code = compile(src, 'XXX', 'exec')
+    def __init__(self, name, src, context, sleeper=None):
+        self.name    = name
+        self.code    = compile(src, 'XXX', 'exec')
         self.sleeper = sleeper
+        self.context = context
 
-    def run(self, context):
-        exec self.code in context
+    def run(self):
+        log.trace('start thread for %s', self.name)
+        if self.sleeper is None:
+            exec self.code in self.context
+        else:
+            while True:
+                log.trace('run %s', self.name)
+                exec self.code in self.context
+                duration = self.sleeper.next()
+                log.trace('sleep %s seconds', duration)
+                time.sleep(duration)
 
 class Monitor(object):
     '''The monitor daemon.
     '''
-
     def __init__(self, opts, functions):
-        self.opts = opts
-        self.functions = functions
-        if "monitor" in opts:
+        if 'monitor' in opts:
             self.commands = Loader(opts, functions).load()
         else:
-            log.warning("monitor not configured in /etc/salt/minion")
+            log.warning('monitor not configured in /etc/salt/minion')
             self.commands = []
 
     def run(self):
-        context = globals().copy()
-        context['functions'] = self.functions
         log.debug('starting monitor with {} command{}'.format(
                    len(self.commands),
                    '' if len(self.commands) == 1 else 's'))
-        self.commands[0].run(context)
+        if self.commands:
+            for cmd in self.commands:
+                threading.Thread(target=cmd.run).start()
+        else:
+            log.error('no monitor commands to run')
 
 class Loader(object):
     '''Load the monitor commands from /etc/salt/minion.
@@ -182,29 +193,32 @@ class Loader(object):
                 re.VERBOSE)
 
     def __init__(self, config, functions):
-        self.config = config
+        self.config    = config
         self.functions = functions
+        self.context   = globals().copy()
+        self.context['functions'] = self.functions
 
     def load(self):
         '''Load the monitor configuration.
         '''
-        monitorcfg = self.config.get("monitor")
+        monitorcfg = self.config.get('monitor')
         self.functions = self.functions
         self.cron_parser = salt.cron.CronParser()
-        self.default_interval = self.config.get("monitor.default_interval",
-                                           {"seconds" : DEFAULT_INTERVAL_SECONDS})
+        self.default_interval = self.config.get('monitor.default_interval',
+                                           {'seconds' : DEFAULT_INTERVAL_SECONDS})
         results = []
         for cmdnum, cmdconfig in enumerate(monitorcfg, 1):
             try:
                 log.trace(cmdconfig)
+                name = 'monitor-{}'.format(cmdnum)
                 src = self._expand_command(cmdconfig)
                 sleeper = self._create_sleeper(cmdconfig)
-                results.append(MonitorCommand(src, sleeper))
+                results.append(MonitorCommand(name, src, self.context, sleeper))
                 log.trace(src)
             except ValueError, ex:
-                log.error( "ignore monitor command #{} {!r}: {}".format(
+                log.error( 'ignore monitor command #{} {!r}: {}'.format(
                                         cmdnum,
-                                        cmdconfig.get("run", "<unknown>"),
+                                        cmdconfig.get('run', '<unknown>'),
                                         ex ) )
         return results
 
@@ -321,7 +335,7 @@ class Loader(object):
         names = [self._expand_references(param) for param in params]
         result = []
         if len(names) == 0:
-            raise ValueError("foreach missing parameter(s)")
+            raise ValueError('foreach missing parameter(s)')
         elif len(names) == 1:
             # foreach over a list or set
             result += [
@@ -340,8 +354,8 @@ class Loader(object):
                 'for {}, {} in sorted(result.iteritems()):'.format(*names),
                 ]
         else:
-            raise ValueError("foreach has too many paramters: {}".format(
-                               ", ".join(names)))
+            raise ValueError('foreach has too many paramters: {}'.format(
+                               ', '.join(names)))
         vname = names[-1]
         result += ['    if isinstance({}, dict):'.format(vname),
                    '        {0} = AttrDict({0})'.format(vname)]
