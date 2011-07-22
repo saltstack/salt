@@ -19,16 +19,16 @@ class TestMonitor(unittest.TestCase):
 
         # Late import so logging works correctly
         import salt.monitor
-        self.testobj = salt.monitor.Monitor(opts, functions)
+        self.loader = salt.monitor.Loader(opts, functions)
 
     def _test_expand(self, intext, expected):
-        self.assertEqual(self.testobj._expand_references(intext), expected)
+        self.assertEqual(self.loader._expand_references(intext), expected)
 
     def _test_call(self, intext, expected):
-        self.assertEqual(self.testobj._expand_call(intext), expected)
+        self.assertEqual(self.loader._expand_call(intext), expected)
 
     def _test_conditional(self, incond, inactions, expected):
-        actual = self.testobj._expand_conditional(incond, inactions)
+        actual = self.loader._expand_conditional(incond, inactions)
         self.assertEqual(actual, expected)
 
     def test_doc(self):

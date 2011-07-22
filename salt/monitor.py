@@ -119,8 +119,11 @@ import shlex
 
 # Import salt libs
 import salt.config
+import salt.cron
 
 log = logging.getLogger(__name__)
+
+DEFAULT_INTERVAL_SECONDS = 10
 
 def _indent(lines, num_spaces=4):
     '''Indent each line in an array of lines.
@@ -137,10 +140,10 @@ def _indent(lines, num_spaces=4):
 class MonitorCommand(object):
     '''A single monitor command.
     '''
-    def __init__(self, src, interval=None):
+    def __init__(self, src, sleeper=None):
         self.src = src
         self.code = compile(src, 'XXX', 'exec')
-        self.interval = interval
+        self.sleeper = sleeper
 
     def run(self, context):
         exec self.code in context
@@ -149,6 +152,26 @@ class Monitor(object):
     '''The monitor daemon.
     '''
 
+    def __init__(self, opts, functions):
+        self.opts = opts
+        self.functions = functions
+        if "monitor" in opts:
+            self.commands = Loader(opts, functions).load()
+        else:
+            log.warning("monitor not configured in /etc/salt/minion")
+            self.commands = []
+
+    def run(self):
+        context = globals().copy()
+        context['functions'] = self.functions
+        log.debug('starting monitor with {} command{}'.format(
+                   len(self.commands),
+                   '' if len(self.commands) == 1 else 's'))
+        self.commands[0].run(context)
+
+class Loader(object):
+    '''Load the monitor commands from /etc/salt/minion.
+    '''
     TOKEN_PATTERN = re.compile(
                 r'''(  (?:\\\\)           # match escaped backslash
                      | (?:\\\$)           # match escaped dollar
@@ -158,39 +181,48 @@ class Monitor(object):
                     )''',
                 re.VERBOSE)
 
-    def __init__(self, opts, functions):
-        self.commands = []
-        self.opts = opts
+    def __init__(self, config, functions):
+        self.config = config
         self.functions = functions
-        config = opts.get("monitor")
-        if config:
-            self.load(config)
-        else:
-            log.warning("monitor not configured in /etc/salt/minion")
 
-    def load(self, config):
+    def load(self):
         '''Load the monitor configuration.
-           config = a dict of command/response dicts loaded from /etc/salt/minion
         '''
-        for cmdnum, cmdconfig in enumerate(config, 1):
+        monitorcfg = self.config.get("monitor")
+        self.functions = self.functions
+        self.cron_parser = salt.cron.CronParser()
+        self.default_interval = config.get("monitor.default_interval",
+                                           {"seconds" : DEFAULT_INTERVAL_SECONDS})
+        results = []
+        for cmdnum, cmdconfig in enumerate(monitorcfg, 1):
             try:
                 log.trace(cmdconfig)
                 src = self._expand_command(cmdconfig)
-                self.commands.append(MonitorCommand(src))
+                sleeper = self._create_sleeper(cmdconfig)
+                results.append(MonitorCommand(src, sleeper))
                 log.trace(src)
             except ValueError, ex:
                 log.error( "ignore monitor command #{} {!r}: {}".format(
                                         cmdnum,
                                         cmdconfig.get("run", "<unknown>"),
                                         ex ) )
+        return results
 
-    def run(self):
-        context = globals().copy()
-        context['functions'] = self.functions
-        log.debug('starting monitor with {} command{}'.format(
-                   len(self.commands),
-                   '' if len(self.commands) == 1 else 's'))
-        self.commands[0].run(context)
+    def _create_sleeper(self, cmdconfig):
+        '''Create an iterator that generates a sequence of sleep times
+           until the next specified event.
+        '''
+        if 'every' in cmdconfig:
+            sleep_type = 'interval'
+            cron_dict = cmdconfig['every']
+        elif 'at' in cmdconfig:
+            sleep_type = 'cron'
+            cron_dict = cmdconfig['at']
+        else:
+            sleep_type = 'interval'
+            cron_dict = self.default_interval
+        result = self.cron_parser.create_sleeper(sleep_type, cron_dict)
+        return result
 
     def _expand_references(self, text, expand_to_string=False):
         '''Expand the $var, ${var}, and ${expression} references in a string.
