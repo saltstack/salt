@@ -2,8 +2,9 @@
 Make me some salt!
 '''
 # Import python libs
-import os
+import multiprocessing
 import optparse
+import os
 # Import salt libs
 import salt.config
 
@@ -149,8 +150,23 @@ class Minion(object):
         # Late import so logging works correctly
         import salt.minion
         minion = salt.minion.Minion(self.opts)
+        if self.opts.has_key('monitor'):
+            multiprocessing.Process(
+                                target=salt.start_monitor,
+                                args=[self.opts, minion.functions]).start()
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
             salt.utils.daemonize()
         minion.tune_in()
+
+def start_monitor(opts, functions):
+    import salt.log
+    salt.log.setup_logfile_logger(opts['log_file'], opts['log_level'])
+    for name, level in opts['log_granular_levels'].iteritems():
+        salt.log.set_logger_level(name, level)
+
+    # Late import so logging works correctly
+    import salt.monitor
+    monitor = salt.monitor.Monitor(opts, functions)
+    monitor.run()
