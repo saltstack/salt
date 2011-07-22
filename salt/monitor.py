@@ -191,7 +191,7 @@ class Loader(object):
         monitorcfg = self.config.get("monitor")
         self.functions = self.functions
         self.cron_parser = salt.cron.CronParser()
-        self.default_interval = config.get("monitor.default_interval",
+        self.default_interval = self.config.get("monitor.default_interval",
                                            {"seconds" : DEFAULT_INTERVAL_SECONDS})
         results = []
         for cmdnum, cmdconfig in enumerate(monitorcfg, 1):
