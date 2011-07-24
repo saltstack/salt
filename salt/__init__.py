@@ -161,6 +161,10 @@ class Minion(object):
         minion.tune_in()
 
 def start_monitor(opts, functions):
+    '''
+    Start up a Salt monitor daemon, this function should be run inside of a
+    multiprocess and prepares the environment for the multiprocess
+    '''
     import salt.log
     salt.log.setup_logfile_logger(opts['log_file'], opts['log_level'])
     for name, level in opts['log_granular_levels'].iteritems():
