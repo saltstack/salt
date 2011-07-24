@@ -10,16 +10,17 @@ import re
 import sys
 
 def parse_interval(interval_dict):
-    '''Translate a time interval dict into a number of seconds.
-       The interval_dict is expected to have one or more of the
-       following keys which map to numeric (integer or float)
-       values: day(s), hour(s), minute(s), second(s).  Missing keys
-       default to zero.  All other dict entries are ignored.
+    '''
+    Translate a time interval dict into a number of seconds.
+    The interval_dict is expected to have one or more of the
+    following keys which map to numeric (integer or float)
+    values: day(s), hour(s), minute(s), second(s).  Missing keys
+    default to zero.  All other dict entries are ignored.
 
-       >>> parse_interval({'day':1, 'hours':2, 'minute':3, 'second':4.5})
-       93784.5
-       >>> parse_interval({'second':10})
-       10
+    >>> parse_interval({'day':1, 'hours':2, 'minute':3, 'second':4.5})
+    93784.5
+    >>> parse_interval({'second':10})
+    10
     '''
     days = interval_dict.get('day', 0) + interval_dict.get('days', 0)
     hours = interval_dict.get('hour', 0) + interval_dict.get('hours', 0)
@@ -27,8 +28,10 @@ def parse_interval(interval_dict):
     seconds = interval_dict.get('second', 0) + interval_dict.get('seconds', 0)
     return ((days * 24 + hours) * 60 + minutes) * 60 + seconds
 
+
 class IntervalSleeper(object):
-    '''Generate a sequence of regular interval sleep times.
+    '''
+    Generate a sequence of regular interval sleep times.
     '''
     def __init__(self, interval):
         if interval < 1:
@@ -38,9 +41,11 @@ class IntervalSleeper(object):
     def next(self):
         return self.interval
 
+
 class CronSleeper(object):
-    '''Generate a sequence of sleep times based on the current time and
-       the next specified event time.
+    '''
+    Generate a sequence of sleep times based on the current time and
+    the next specified event time.
     '''
     def __init__(self, constraints):
         self.constraints = constraints
@@ -50,35 +55,36 @@ class CronSleeper(object):
 
 
 class CronParser(object):
-    '''Translate 'cron' dictionaries into timeout generators.
-       A cron dict may contain 'month(s)', 'day(s)', 'weekday(s)', 'hour(s)',
-       'minute(s)', and 'second(s)' entries were each value is a UNIX
-       crontab field.  For example, {'hour': '0, 1-3, 18-23/2'}
-       will generate the number of seconds to sleep until the hour
-       is 0 (midnight), 1, 2, 3, 18, 20, or 22.
+    '''
+    Translate 'cron' dictionaries into timeout generators.
+    A cron dict may contain 'month(s)', 'day(s)', 'weekday(s)', 'hour(s)',
+    'minute(s)', and 'second(s)' entries were each value is a UNIX
+    crontab field.  For example, {'hour': '0, 1-3, 18-23/2'}
+    will generate the number of seconds to sleep until the hour
+    is 0 (midnight), 1, 2, 3, 18, 20, or 22.
 
-       The crontab format is:
-            * [ / incr ]
-            start [ - end [ / incr ] ]
-        where
-            start = an integer (e.g. 1 or 2) or a name (e.g. jan or tuesday)
-            end   = an integer (e.g. 3 or 4) or a name (e.g. may or friday)
-            incr  = an integer indicating the step from start to end,
-                    e.g. start=1, end=5, and incr=2 produces [1,3,5]
+    The crontab format is:
+         * [ / incr ]
+         start [ - end [ / incr ] ]
+     where
+         start = an integer (e.g. 1 or 2) or a name (e.g. jan or tuesday)
+         end   = an integer (e.g. 3 or 4) or a name (e.g. may or friday)
+         incr  = an integer indicating the step from start to end,
+                 e.g. start=1, end=5, and incr=2 produces [1,3,5]
 
-        A name can be specified for the month and weekday entries.
-        Legal values include the full and abbreviated names in your
-        locale.  For example, in the 'C' locale, valid weekday names
-        include 'Monday', 'mon', 'Tuesday', 'tue', etc.  The names
-        are case-insensitive.
+     A name can be specified for the month and weekday entries.
+     Legal values include the full and abbreviated names in your
+     locale.  For example, in the 'C' locale, valid weekday names
+     include 'Monday', 'mon', 'Tuesday', 'tue', etc.  The names
+     are case-insensitive.
 
-        See also: cron(5), locale(1)
+     See also: cron(5), locale(1)
 
-        >>> p = CronParser()
-        >>> actual = p.parse({'hour': '1,2-3,18-23/2', 'weekday': 'mon-Friday/2,sunday'})
-        >>> expected = {'hour': [1, 2, 3, 18, 20, 22], 'weekday': [1, 2, 4, 6] }
-        >>> actual == expected
-        True
+     >>> p = CronParser()
+     >>> actual = p.parse({'hour': '1,2-3,18-23/2', 'weekday': 'mon-Friday/2,sunday'})
+     >>> expected = {'hour': [1, 2, 3, 18, 20, 22], 'weekday': [1, 2, 4, 6] }
+     >>> actual == expected
+     True
     '''
     def __init__(self):
         # load the locale's month names and abbreviations
@@ -111,7 +117,8 @@ class CronParser(object):
             re.VERBOSE)
 
     def create_sleeper(self, sleep_type, cron_dict):
-        '''Create a sleep time generator.
+        '''
+        Create a sleep time generator.
         '''
         if sleep_type == 'interval':
             result = IntervalSleeper(parse_interval(cron_dict))
@@ -122,7 +129,8 @@ class CronParser(object):
         return result
 
     def parse(self, cron_dict):
-        '''Parse a cron dict into a structure usable for the cron timer.
+        '''
+        Parse a cron dict into a structure usable for the cron timer.
         '''
         result = {}
         for key, enums, minval, maxval in [
@@ -145,7 +153,8 @@ class CronParser(object):
         return result
 
     def _parse_cron_field(self, field, enums, minval, maxval):
-        '''Parse one cron field into a list of numbers.
+        '''
+        Parse one cron field into a list of numbers.
         '''
         result = set()
         for match in self.cron_pattern.finditer(field):
@@ -176,7 +185,8 @@ class CronParser(object):
         return sorted(result)
 
     def _extract_cron_groups(self, match):
-        '''Extract a (start, end, incr) tuple from a regex match.
+        '''
+        Extract a (start, end, incr) tuple from a regex match.
         '''
         if match.group('all') == '*':
             start = '*'
@@ -189,26 +199,27 @@ class CronParser(object):
         return (start, end, incr)
 
     def _to_number(self, num_str, enums, minval, maxval, defval=None):
-        '''Convert a parsed word into an integer.
-           num_str  = the string to be converted or None
-           enums    = a word-to-integer mapping used to convert words
-                     like 'February' and 'feb' to a number like 2.
-                     The keys must be lowercased.
-           minval  = the minimum legal value
-           maxval  = the maximum legal value
-           defval  = the default value if num_str is None or blank.
-                     This value can be anything, not just an integer.
-           Returns an integer or defval
+        '''
+        Convert a parsed word into an integer.
+        num_str  = the string to be converted or None
+        enums    = a word-to-integer mapping used to convert words
+                  like 'February' and 'feb' to a number like 2.
+                  The keys must be lowercased.
+        minval  = the minimum legal value
+        maxval  = the maximum legal value
+        defval  = the default value if num_str is None or blank.
+                  This value can be anything, not just an integer.
+        Returns an integer or defval
 
-           >>> p = CronParser()
-           >>> p._to_number('1', p.months, 1, 12)
-           1
-           >>> p._to_number('FEBRUARY', p.months, 1, 12)
-           2
-           >>> p._to_number(' AuG ', p.months, 1, 12)
-           8
-           >>> p._to_number('', p.months, 1, 12,'foo')
-           'foo'
+        >>> p = CronParser()
+        >>> p._to_number('1', p.months, 1, 12)
+        1
+        >>> p._to_number('FEBRUARY', p.months, 1, 12)
+        2
+        >>> p._to_number(' AuG ', p.months, 1, 12)
+        8
+        >>> p._to_number('', p.months, 1, 12,'foo')
+        'foo'
         '''
         if num_str is None:
             result = defval
@@ -229,11 +240,12 @@ class CronParser(object):
         return result
 
     def _tuples_to_string(self, entries):
-        '''Convert a list of (start,end,incr) tuples into a printable string.
+        '''
+        Convert a list of (start,end,incr) tuples into a printable string.
 
-           >>> p = CronParser()
-           >>> p._tuples_to_string([ (9, None, None), (1,3,None), ('*','*',2) ])
-           '9, 1-3, */2'
+        >>> p = CronParser()
+        >>> p._tuples_to_string([ (9, None, None), (1,3,None), ('*','*',2) ])
+        '9, 1-3, */2'
         '''
         result = ''
         for start, end, incr in entries:
