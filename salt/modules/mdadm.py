@@ -49,17 +49,14 @@ def detail(device='/dev/md0'):
         if not ':' in line:
             if '/dev/' in line:
                 comps = line.split()
-                arrsize = len(comps) - 1
-                laststate = arrsize - 1
-                state = comps[4:laststate]
+                state = comps[4:-1]
                 ret['members'][comps[0]] = {
                     'number':     comps[0],
                     'major':      comps[1],
                     'minor':      comps[2],
                     'raiddevice': comps[3],
                     'state':      ' '.join(state),
-                    'device':     comps[arrsize],
-                    'laststate':  laststate,
+                    'device':     comps[-1],
                 }
             continue
         comps = line.split(':')
