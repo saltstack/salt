@@ -63,5 +63,8 @@ def detail(device='/dev/md0'):
                 }
             continue
         comps = line.split(':')
+        comps[0] = comps[0].lower()
+        comps[0] = comps[0].strip()
+        comps[0] = comps[0].replace(' ', '_')
         ret[comps[0]] = comps[1].strip()
     return ret
