@@ -24,6 +24,23 @@ from M2Crypto import RSA
 
 log = logging.getLogger(__name__)
 
+def prep_jid(cachedir, load):
+    '''
+    Parses the job return directory, generates a job id and sets up the
+    job id directory.
+    '''
+    jid_root = os.path.join(cachedir, 'jobs')
+    jid = datetime.datetime.strftime(
+        datetime.datetime.now(), '%Y%m%d%H%M%S%f'
+    )
+    jid_dir = os.path.join(jid_root, jid)
+    if not os.path.isdir(jid_dir):
+        os.makedirs(jid_dir)
+        pickle.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+    else:
+        return prep_jid(load)
+    return jid
+
 class Master(object):
     '''
     The salt master server
@@ -108,8 +125,6 @@ class ReqServer():
         # Prepare the aes key
         self.key = self.__prep_key()
         self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
-        # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
 
     def __prep_key(self):
         '''
@@ -178,10 +193,14 @@ class MWorker(multiprocessing.Process):
     def __init__(self, opts, ind, mkey, key, crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
-        self.master_key = mkey
-        self.key = key
         self.crypticle = crypticle
         self.port = str(ind + int(self.opts['worker_start_port']))
+        self.aes_funcs = AESFuncs(opts, crypticle)
+        self.clear_funcs = ClearFuncs(
+                opts,
+                key,
+                mkey,
+                crypticle)
 
     def __bind(self):
         '''
@@ -197,23 +216,6 @@ class MWorker(multiprocessing.Process):
             ret = salt.payload.package(self._handle_payload(payload))
             socket.send(ret)
 
-    def _prep_jid(self, load):
-        '''
-        Parses the job return directory, generates a job id and sets up the
-        job id directory.
-        '''
-        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
-        jid = datetime.datetime.strftime(
-            datetime.datetime.now(), '%Y%m%d%H%M%S%f'
-        )
-        jid_dir = os.path.join(jid_root, jid)
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
-            pickle.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
-        else:
-            return self._prep_jid(load)
-        return jid
-
     def _handle_payload(self, payload):
         '''
         The _handle_payload method is the key method used to figure out what
@@ -228,7 +230,7 @@ class MWorker(multiprocessing.Process):
         Take care of a cleartext command
         '''
         log.info('Clear payload received with command %(cmd)s', load)
-        return getattr(self, load['cmd'])(load)
+        return getattr(self.clear_funcs, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
@@ -242,7 +244,222 @@ class MWorker(multiprocessing.Process):
         '''
         data = self.crypticle.loads(load)
         log.info('AES payload received with command %(cmd)s', data)
-        return getattr(self, data['cmd'])(data)
+        return self.aes_funcs.run_func(data['cmd'], data)
+
+    def run(self):
+        '''
+        Start a Master Worker
+        '''
+        self.__bind()
+
+
+class AESFuncs(object):
+    '''
+    Set up functions that are available when the load is encrypted with AES
+    '''
+    # The AES Functions:
+    #
+    def __init__(self, opts, crypticle):
+        self.opts = opts
+        self.crypticle = crypticle
+
+    def __find_file(self, path, env='base'):
+        '''
+        Search the environment for the relative path
+        '''
+        fnd = {'path': '',
+               'rel': ''}
+        if not self.opts['file_roots'].has_key(env):
+            return fnd
+        for root in self.opts['file_roots'][env]:
+            full = os.path.join(root, path)
+            if os.path.isfile(full):
+                fnd['path'] = full
+                fnd['rel'] = path
+                return fnd
+        return fnd
+
+    def _serve_file(self, load):
+        '''
+        Return a chunk from a file based on the data received
+        '''
+        ret = {'data': '',
+               'dest': ''}
+        if not load.has_key('path')\
+                or not load.has_key('loc')\
+                or not load.has_key('env'):
+            return ret
+        fnd = self.__find_file(load['path'], load['env'])
+        if not fnd['path']:
+            return ret
+        ret['dest'] = fnd['rel']
+        fn_ = open(fnd['path'], 'rb')
+        fn_.seek(load['loc'])
+        ret['data'] = fn_.read(self.opts['file_buffer_size'])
+        return ret
+
+    def _file_hash(self, load):
+        '''
+        Return a file hash, the hash type is set in the master config file
+        '''
+        if not load.has_key('path')\
+                or not load.has_key('env'):
+            return ''
+        path = self.__find_file(load['path'], load['env'])['path']
+        if not path:
+            return ''
+        ret = {}
+        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
+                open(path, 'rb').read()).hexdigest()
+        ret['hash_type'] = self.opts['hash_type']
+        return ret
+
+    def _master_opts(self, load):
+        '''
+        Return the master options to the minion
+        '''
+        return self.opts
+
+    def _return(self, load):
+        '''
+        Handle the return data sent from the minions
+        '''
+        # If the return data is invalid, just ignore it
+        if not load.has_key('return')\
+                or not load.has_key('jid')\
+                or not load.has_key('id'):
+            return False
+        log.info('Got return from %(id)s for job %(jid)s', load)
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        if not os.path.isdir(jid_dir):
+            log.error(
+                'An inconsistency occurred, a job was received with a job id '
+                'that is not present on the master: %(jid)s', load
+            )
+            return False
+        hn_dir = os.path.join(jid_dir, load['id'])
+        if not os.path.isdir(hn_dir):
+            os.makedirs(hn_dir)
+        pickle.dump(load['return'],
+                open(os.path.join(hn_dir, 'return.p'), 'w+'))
+        if load.has_key('out'):
+            pickle.dump(load['out'],
+                    open(os.path.join(hn_dir, 'out.p'), 'w+'))
+
+    def minion_publish(self, clear_load):
+        '''
+        Publish a command initiated from a minion, this method executes minion
+        restrictions so that the minion publication will only work if it is
+        enabled in the config.
+        '''
+        if not self.opts.has_key('peer'):
+            return {}
+        if not isinstance(self.opts['peer'], dict):
+            return {}
+        if not clear_load.has_key('fun')\
+                or not clear_load.has_key('arg')\
+                or not clear_load.has_key('tgt')\
+                or not clear_load.has_key('ret')\
+                or not clear_load.has_key('id'):
+            return {}
+        perms = set()
+        for match in self.opts['peer']:
+            if re.match(match, clear_load['id']):
+                # This is the list of funcs/modules!
+                if isinstance(self.opts['peer'][match], list):
+                    perms.update(self.opts['peer'][match])
+        good = False
+        for perm in perms:
+            # Should this be .startswith? it would be faster...
+            if re.match(perm, clear_load['fun']):
+                good = True
+        if not good:
+            return {}
+        jid = prep_jid(self.opts['cachedir'], clear_load)
+        payload = {'enc': 'aes'}
+        load = {
+                'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'tgt': clear_load['tgt'],
+                'jid': jid,
+                'ret': clear_load['ret'],
+               }
+        if clear_load.has_key('tgt_type'):
+            load['tgt_type'] = clear_load['tgt_type']
+        payload['load'] = self.crypticle.dumps(load)
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUSH)
+        pub_sock.connect(
+                'tcp://127.0.0.1:{0}publish_pull_port]'.format(self.opts)
+                )
+        pub_sock.send(salt.payload.package(payload))
+        return {'enc': 'clear',
+                'load': {'jid': jid}}
+
+    def run_func(self, func, load):
+        '''
+        Wrapper for running functions executed with AES encryption
+        '''
+        # Don't honor private functions
+        if func.startswith('__'):
+            return self.crypticle.dumps({})
+        # Run the func
+        ret = getattr(self, func)(load)
+        # Don't encrypt the return value for the _return func
+        # (we don't care about the return value, so why encrypt it?)
+        if func == '_return':
+            return ret
+        # AES Encrypt the return
+        return self.crypticle.dumps(ret)
+
+class ClearFuncs(object):
+    '''
+    Set up functions that are safe to execute when commands sent to the master
+    without encryption and authentication
+    '''
+    # The ClearFuncs object encasulates the functions that can be executed in
+    # the clear:
+    # publish (The publish from the LocalClient)
+    # _auth
+    def __init__(self, opts, key, master_key, crypticle):
+        self.opts = opts
+        self.key = key
+        self.master_key = master_key
+        self.crypticle = crypticle
+        # Make a client
+        self.local = salt.client.LocalClient(self.opts['conf_file'])
+
+    def _send_cluster(self):
+        '''
+        Send the cluster data out
+        '''
+        log.debug('Sending out cluster data')
+        ret = self.local.cmd(self.opts['cluster_masters'],
+                'cluster.distrib',
+                self._cluster_load(),
+                0,
+                'list'
+                )
+        log.debug('Cluster distributed: %s', ret)
+
+    def _cluster_load(self):
+        '''
+        Generates the data sent to the cluster nodes.
+        '''
+        minions = {}
+        master_pem = ''
+        master_conf = open(self.opts['conf_file'], 'r').read()
+        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
+        for host in os.listdir(minion_dir):
+            pub = os.path.join(minion_dir, host)
+            minions[host] = open(pub, 'r').read()
+        if self.opts['cluster_mode'] == 'full':
+            master_pem = open(os.path.join(self.opts['pki_dir'],
+                'master.pem')).read()
+        return [minions,
+                master_conf,
+                master_pem,
+                self.opts['conf_file']]
 
     def _auth(self, load):
         '''
@@ -326,128 +543,14 @@ class MWorker(multiprocessing.Process):
             self._send_cluster()
         return ret
 
-    def _find_file(self, path, env='base'):
-        '''
-        Search the environment for the relative path
-        '''
-        fnd = {'path': '',
-               'rel': ''}
-        if not self.opts['file_roots'].has_key(env):
-            return fnd
-        for root in self.opts['file_roots'][env]:
-            full = os.path.join(root, path)
-            if os.path.isfile(full):
-                fnd['path'] = full
-                fnd['rel'] = path
-                return fnd
-        return fnd
-
-    def _serve_file(self, load):
-        '''
-        Return a chunk from a file based on the data received
-        '''
-        ret = {'data': '',
-               'dest': ''}
-        if not load.has_key('path')\
-                or not load.has_key('loc')\
-                or not load.has_key('env'):
-            return self.crypticle.dumps(ret)
-        fnd = self._find_file(load['path'], load['env'])
-        if not fnd['path']:
-            return self.crypticle.dumps(ret)
-        ret['dest'] = fnd['rel']
-        fn_ = open(fnd['path'], 'rb')
-        fn_.seek(load['loc'])
-        ret['data'] = fn_.read(self.opts['file_buffer_size'])
-        return self.crypticle.dumps(ret)
-
-    def _file_hash(self, load):
-        '''
-        Return a file hash, the hash type is set in the master config file
-        '''
-        if not load.has_key('path')\
-                or not load.has_key('env'):
-            return False
-        path = self._find_file(load['path'], load['env'])['path']
-        if not path:
-            return self.crypticle.dumps('')
-        ret = {}
-        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
-                open(path, 'rb').read()).hexdigest()
-        ret['hash_type'] = self.opts['hash_type']
-        return self.crypticle.dumps(ret)
-
-    def _master_opts(self, load):
-        '''
-        Return the master options to the minion
-        '''
-        return self.crypticle.dumps(self.opts)
-
-    def _return(self, load):
-        '''
-        Handle the return data sent from the minions
-        '''
-        # If the return data is invalid, just ignore it
-        if not load.has_key('return')\
-                or not load.has_key('jid')\
-                or not load.has_key('id'):
-            return False
-        log.info('Got return from %(id)s for job %(jid)s', load)
-        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
-        if not os.path.isdir(jid_dir):
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: %(jid)s', load
-            )
-            return False
-        hn_dir = os.path.join(jid_dir, load['id'])
-        if not os.path.isdir(hn_dir):
-            os.makedirs(hn_dir)
-        pickle.dump(load['return'],
-                open(os.path.join(hn_dir, 'return.p'), 'w+'))
-        if load.has_key('out'):
-            pickle.dump(load['out'],
-                    open(os.path.join(hn_dir, 'out.p'), 'w+'))
-
-    def _send_cluster(self):
-        '''
-        Send the cluster data out
-        '''
-        log.debug('Sending out cluster data')
-        ret = self.local.cmd(self.opts['cluster_masters'],
-                'cluster.distrib',
-                self._cluster_load(),
-                0,
-                'list'
-                )
-        log.debug('Cluster distributed: %s', ret)
-
-    def _cluster_load(self):
-        '''
-        Generates the data sent to the cluster nodes.
-        '''
-        minions = {}
-        master_pem = ''
-        master_conf = open(self.opts['conf_file'], 'r').read()
-        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
-        for host in os.listdir(minion_dir):
-            pub = os.path.join(minion_dir, host)
-            minions[host] = open(pub, 'r').read()
-        if self.opts['cluster_mode'] == 'full':
-            master_pem = open(os.path.join(self.opts['pki_dir'],
-                'master.pem')).read()
-        return [minions,
-                master_conf,
-                master_pem,
-                self.opts['conf_file']]
-
     def publish(self, clear_load):
         '''
-        This method sends out publications to the minions
+        This method sends out publications to the minions, it can only be used
+        by the LocalClient.
         '''
         if not clear_load.pop('key') == self.key:
             return ''
-        jid = self._prep_jid(clear_load)
+        jid = prep_jid(self.opts['cachedir'], clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
@@ -465,9 +568,3 @@ class MWorker(multiprocessing.Process):
         pub_sock.send(salt.payload.package(payload))
         return {'enc': 'clear',
                 'load': {'jid': jid}}
-
-    def run(self):
-        '''
-        Start a Master Worker
-        '''
-        self.__bind()

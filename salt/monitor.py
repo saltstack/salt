@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 '''
 The salt monitor daemon.
@@ -128,10 +128,11 @@ log = logging.getLogger(__name__)
 DEFAULT_INTERVAL_SECONDS = 10
 
 def _indent(lines, num_spaces=4):
-    '''Indent each line in an array of lines.
+    '''
+    Indent each line in an array of lines.
 
-       >>> _indent(['a','b','c'], 2)
-       ['  a', '  b', '  c']
+    >>> _indent(['a','b','c'], 2)
+    ['  a', '  b', '  c']
     '''
     indent = ' ' * num_spaces
     result = []
@@ -140,7 +141,8 @@ def _indent(lines, num_spaces=4):
     return result
 
 class MonitorCommand(object):
-    '''A single monitor command.
+    '''
+    A single monitor command.
     '''
     def __init__(self, name, src, context, sleeper=None):
         self.name    = name
@@ -161,7 +163,8 @@ class MonitorCommand(object):
                 time.sleep(duration)
 
 class Monitor(object):
-    '''The monitor daemon.
+    '''
+    The monitor daemon.
     '''
     def __init__(self, opts, functions):
         if 'monitor' in opts:
@@ -181,7 +184,8 @@ class Monitor(object):
             log.error('no monitor commands to run')
 
 class Loader(object):
-    '''Load the monitor commands from /etc/salt/minion.
+    '''
+    Load the monitor commands from /etc/salt/minion.
     '''
     TOKEN_PATTERN = re.compile(
                 r'''(  (?:\\\\)           # match escaped backslash
@@ -199,7 +203,8 @@ class Loader(object):
         self.context['functions'] = self.functions
 
     def load(self):
-        '''Load the monitor configuration.
+        '''
+        Load the monitor configuration.
         '''
         monitorcfg = self.config.get('monitor')
         self.functions = self.functions
@@ -223,8 +228,9 @@ class Loader(object):
         return results
 
     def _create_sleeper(self, cmdconfig):
-        '''Create an iterator that generates a sequence of sleep times
-           until the next specified event.
+        '''
+        Create an iterator that generates a sequence of sleep times
+        until the next specified event.
         '''
         if 'every' in cmdconfig:
             sleep_type = 'interval'
@@ -239,10 +245,11 @@ class Loader(object):
         return result
 
     def _expand_references(self, text, expand_to_string=False):
-        '''Expand the $var, ${var}, and ${expression} references in a string.
-           The implementation is a little tricky becasue we allow the user
-           to escape dollar signs and backslashes with a backslash (e.g. \$, \\)
-           and we need to invisibly escape the braces ({}) used by str.format().
+        '''
+        Expand the $var, ${var}, and ${expression} references in a string.
+        The implementation is a little tricky becasue we allow the user
+        to escape dollar signs and backslashes with a backslash (e.g. \$, \\)
+        and we need to invisibly escape the braces ({}) used by str.format().
         '''
         fmt = ''
         refs = []
@@ -281,9 +288,10 @@ class Loader(object):
         return result
 
     def _expand_call(self, line):
-        '''Translate one shell-like command line into a python function call.
-           For example, "echo 'the key is $key'"
-                becomes "functions['echo']('the key is {}'.format(key))"
+        '''
+        Translate one shell-like command line into a python function call.
+        For example, "echo 'the key is $key'"
+            becomes "functions['echo']('the key is {}'.format(key))"
         '''
         lexer = shlex.shlex(line)
         lexer.whitespace_split = True
@@ -305,7 +313,8 @@ class Loader(object):
         return result
 
     def _expand_conditional(self, condition, actions):
-        '''Translate one if/elif/else dict into an array of python lines.
+        '''
+        Translate one if/elif/else dict into an array of python lines.
         '''
         condition = condition.strip().replace('\t', ' ')
         condition = self._expand_references(condition)
@@ -322,15 +331,16 @@ class Loader(object):
         return result
 
     def _expand_foreach(self, params, value):
-        '''Translate one foreach dict into an array of python lines.
-           There are two forms of foreach:
-              - "foreach key, value" for dicts
-              - "foreach value" for lists and sets
-           The user selects the parameter names for key and value.
-           For example, "foreach k, v:", "foreach key, value:", or
-           "foreach filesystem, stats:".  The user can use either
-           the python variable name (e.g. key or k) or the shell-ish name
-           (e.g. $key, ${key}, $k, ${key}).
+        '''
+        Translate one foreach dict into an array of python lines.
+        There are two forms of foreach:
+           - "foreach key, value" for dicts
+           - "foreach value" for lists and sets
+        The user selects the parameter names for key and value.
+        For example, "foreach k, v:", "foreach key, value:", or
+        "foreach filesystem, stats:".  The user can use either
+        the python variable name (e.g. key or k) or the shell-ish name
+        (e.g. $key, ${key}, $k, ${key}).
         '''
         names = [self._expand_references(param) for param in params]
         result = []
@@ -368,7 +378,8 @@ class Loader(object):
         return result
 
     def _expand_command(self, cmd_dict):
-        '''Translate one command/response dict into an array of python lines.
+        '''
+        Translate one command/response dict into an array of python lines.
         '''
         cmd = self._expand_call(cmd_dict['run'])
         result = ['result = ' + cmd]

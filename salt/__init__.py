@@ -159,6 +159,12 @@ class Minion(object):
         minion.tune_in()
 
 def start_monitor(opts, functions):
+    '''
+    Start up a Salt monitor daemon.
+    This function currently forks from the minion because we need
+    the minion to process command line options, setup global services
+    like logging, and parse available salt commands.
+    '''
     pid = os.fork()
     try:
         if pid > 0:
