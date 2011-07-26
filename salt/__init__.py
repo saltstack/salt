@@ -2,7 +2,6 @@
 Make me some salt!
 '''
 # Import python libs
-import multiprocessing
 import optparse
 import os
 # Import salt libs
