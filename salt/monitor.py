@@ -144,7 +144,7 @@ class MonitorCommand(object):
     '''
     def __init__(self, name, src, context, sleeper=None):
         self.name    = name
-        self.code    = compile(src, 'XXX', 'exec')
+        self.code    = compile(src, '<monitor-config>', 'exec')
         self.sleeper = sleeper
         self.context = context
 

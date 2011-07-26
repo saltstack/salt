@@ -151,9 +151,7 @@ class Minion(object):
         import salt.minion
         minion = salt.minion.Minion(self.opts)
         if self.opts.has_key('monitor'):
-            multiprocessing.Process(
-                                target=salt.start_monitor,
-                                args=[self.opts, minion.functions]).start()
+            start_monitor(self.opts, minion.functions)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
@@ -161,12 +159,13 @@ class Minion(object):
         minion.tune_in()
 
 def start_monitor(opts, functions):
-    import salt.log
-    salt.log.setup_logfile_logger(opts['log_file'], opts['log_level'])
-    for name, level in opts['log_granular_levels'].iteritems():
-        salt.log.set_logger_level(name, level)
-
-    # Late import so logging works correctly
-    import salt.monitor
-    monitor = salt.monitor.Monitor(opts, functions)
-    monitor.run()
+    pid = os.fork()
+    try:
+        if pid > 0:
+            # child (monitor) process
+            # Late import so logging works correctly
+            import salt.monitor
+            monitor = salt.monitor.Monitor(opts, functions)
+            monitor.run()
+    except OSError, ex:
+        log.error('could not fork new monitor process' )
