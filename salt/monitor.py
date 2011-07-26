@@ -149,21 +149,21 @@ class MonitorCommand(object):
     '''
     A single monitor command.
     '''
-    def __init__(self, name, src, context, sleeper=None):
-        self.name    = name
+    def __init__(self, cmdid, src, context, sleeper=None):
+        self.cmdid   = cmdid
         self.code    = compile(src, '<monitor-config>', 'exec')
         self.sleeper = sleeper
         self.context = context
 
     def run(self):
-        log.trace('start thread for %s', self.name)
+        log.trace('start thread for %s', self.cmdid)
         if self.sleeper is None:
             exec self.code in self.context
         else:
             while True:
                 exec self.code in self.context
                 duration = self.sleeper.next()
-                log.trace('sleep %s seconds', duration)
+                log.trace('%s: sleep %s seconds', self.cmdid, duration)
                 time.sleep(duration)
 
 class Monitor(object):
