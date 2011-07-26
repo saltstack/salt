@@ -24,6 +24,23 @@ from M2Crypto import RSA
 
 log = logging.getLogger(__name__)
 
+def prep_jid(cachedir, load):
+    '''
+    Parses the job return directory, generates a job id and sets up the
+    job id directory.
+    '''
+    jid_root = os.path.join(cachedir, 'jobs')
+    jid = datetime.datetime.strftime(
+        datetime.datetime.now(), '%Y%m%d%H%M%S%f'
+    )
+    jid_dir = os.path.join(jid_root, jid)
+    if not os.path.isdir(jid_dir):
+        os.makedirs(jid_dir)
+        pickle.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+    else:
+        return prep_jid(load)
+    return jid
+
 class Master(object):
     '''
     The salt master server
@@ -108,8 +125,6 @@ class ReqServer():
         # Prepare the aes key
         self.key = self.__prep_key()
         self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
-        # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
 
     def __prep_key(self):
         '''
@@ -178,10 +193,14 @@ class MWorker(multiprocessing.Process):
     def __init__(self, opts, ind, mkey, key, crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
-        self.master_key = mkey
-        self.key = key
         self.crypticle = crypticle
         self.port = str(ind + int(self.opts['worker_start_port']))
+        self.aes_funcs = AESFuncs(opts, crypticle)
+        self.clear_funcs = ClearFuncs(
+                opts,
+                key,
+                mkey,
+                crypticle)
 
     def __bind(self):
         '''
@@ -197,23 +216,6 @@ class MWorker(multiprocessing.Process):
             ret = salt.payload.package(self._handle_payload(payload))
             socket.send(ret)
 
-    def _prep_jid(self, load):
-        '''
-        Parses the job return directory, generates a job id and sets up the
-        job id directory.
-        '''
-        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
-        jid = datetime.datetime.strftime(
-            datetime.datetime.now(), '%Y%m%d%H%M%S%f'
-        )
-        jid_dir = os.path.join(jid_root, jid)
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
-            pickle.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
-        else:
-            return self._prep_jid(load)
-        return jid
-
     def _handle_payload(self, payload):
         '''
         The _handle_payload method is the key method used to figure out what
@@ -228,7 +230,7 @@ class MWorker(multiprocessing.Process):
         Take care of a cleartext command
         '''
         log.info('Clear payload received with command %(cmd)s', load)
-        return getattr(self, load['cmd'])(load)
+        return getattr(self.clear_funcs, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
@@ -242,89 +244,24 @@ class MWorker(multiprocessing.Process):
         '''
         data = self.crypticle.loads(load)
         log.info('AES payload received with command %(cmd)s', data)
-        return getattr(self, data['cmd'])(data)
+        return getattr(self.aes_funcs, data['cmd'])(data)
 
-    def _auth(self, load):
+    def run(self):
         '''
-        Authenticate the client, use the sent public key to encrypt the aes key
-        which was generated at start up
+        Start a Master Worker
         '''
-        # 1. Verify that the key we are receiving matches the stored key
-        # 2. Store the key if it is not there
-        # 3. make an rsa key with the pub key
-        # 4. encrypt the aes key as an encrypted pickle
-        # 5. package the return and return it
-        log.info('Authentication request from %(id)s', load)
-        pubfn = os.path.join(self.opts['pki_dir'],
-                'minions',
-                load['id'])
-        pubfn_pend = os.path.join(self.opts['pki_dir'],
-                'minions_pre',
-                load['id'])
-        if self.opts['open_mode']:
-            # open mode is turned on, nuts to checks and overwrite whatever
-            # is there
-            pass
-        elif os.path.isfile(pubfn):
-            # The key has been accepted check it
-            if not open(pubfn, 'r').read() == load['pub']:
-                log.error(
-                    'Authentication attempt from %(id)s failed, the public '
-                    'keys did not match. This may be an attempt to compromise '
-                    'the Salt cluster.', load
-                )
-                ret = {'enc': 'clear',
-                       'load': {'ret': False}}
-                return ret
-        elif not os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
-            # This is a new key, stick it in pre
-            log.info('New public key placed in pending for %(id)s', load)
-            open(pubfn_pend, 'w+').write(load['pub'])
-            ret = {'enc': 'clear',
-                   'load': {'ret': True}}
-            return ret
-        elif os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
-            # This key is in pending, if it is the same key ret True, else
-            # ret False
-            if not open(pubfn_pend, 'r').read() == load['pub']:
-                log.error(
-                    'Authentication attempt from %(id)s failed, the public '
-                    'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.', load
-                )
-                return {'enc': 'clear',
-                        'load': {'ret': False}}
-            else:
-                log.info(
-                    'Authentication failed from host %(id)s, the key is in '
-                    'pending and needs to be accepted with saltkey -a %(id)s',
-                    load
-                )
-                return {'enc': 'clear',
-                        'load': {'ret': True}}
-        elif not os.path.isfile(pubfn_pend)\
-                and self.opts['auto_accept']:
-            # This is a new key and auto_accept is turned on
-            pass
-        else:
-            # Something happened that I have not accounted for, FAIL!
-            return {'enc': 'clear',
-                    'load': {'ret': False}}
+        self.__bind()
 
-        log.info('Authentication accepted from %(id)s', load)
-        open(pubfn, 'w+').write(load['pub'])
-        key = RSA.load_pub_key(pubfn)
-        ret = {'enc': 'pub',
-               'pub_key': self.master_key.pub_str,
-               'token': self.master_key.token,
-               'publish_port': self.opts['publish_port'],
-              }
-        ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
-        if self.opts['cluster_masters']:
-            self._send_cluster()
-        return ret
+
+class AESFuncs(object):
+    '''
+    Set up functions that are available when the load is encrypted with AES
+    '''
+    # The AES Functions:
+    #
+    def __init__(self, opts, crypticle):
+        self.opts = opts
+        self.crypticle = crypticle
 
     def _find_file(self, path, env='base'):
         '''
@@ -409,6 +346,23 @@ class MWorker(multiprocessing.Process):
             pickle.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
+class ClearFuncs(object):
+    '''
+    Set up functions that are safe to execute when commands sent to the master
+    without encryption and authentication
+    '''
+    # The ClearFuncs object encasulates the functions that can be executed in
+    # the clear:
+    # publish (The publish from the LocalClient)
+    # _auth
+    def __init__(self, opts, key, master_key, crypticle):
+        self.opts = opts
+        self.key = key
+        self.master_key = master_key
+        self.crypticle = crypticle
+        # Make a client
+        self.local = salt.client.LocalClient(self.opts['conf_file'])
+
     def _send_cluster(self):
         '''
         Send the cluster data out
@@ -441,13 +395,96 @@ class MWorker(multiprocessing.Process):
                 master_pem,
                 self.opts['conf_file']]
 
+    def _auth(self, load):
+        '''
+        Authenticate the client, use the sent public key to encrypt the aes key
+        which was generated at start up
+        '''
+        # 1. Verify that the key we are receiving matches the stored key
+        # 2. Store the key if it is not there
+        # 3. make an rsa key with the pub key
+        # 4. encrypt the aes key as an encrypted pickle
+        # 5. package the return and return it
+        log.info('Authentication request from %(id)s', load)
+        pubfn = os.path.join(self.opts['pki_dir'],
+                'minions',
+                load['id'])
+        pubfn_pend = os.path.join(self.opts['pki_dir'],
+                'minions_pre',
+                load['id'])
+        if self.opts['open_mode']:
+            # open mode is turned on, nuts to checks and overwrite whatever
+            # is there
+            pass
+        elif os.path.isfile(pubfn):
+            # The key has been accepted check it
+            if not open(pubfn, 'r').read() == load['pub']:
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys did not match. This may be an attempt to compromise '
+                    'the Salt cluster.', load
+                )
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
+                return ret
+        elif not os.path.isfile(pubfn_pend)\
+                and not self.opts['auto_accept']:
+            # This is a new key, stick it in pre
+            log.info('New public key placed in pending for %(id)s', load)
+            open(pubfn_pend, 'w+').write(load['pub'])
+            ret = {'enc': 'clear',
+                   'load': {'ret': True}}
+            return ret
+        elif os.path.isfile(pubfn_pend)\
+                and not self.opts['auto_accept']:
+            # This key is in pending, if it is the same key ret True, else
+            # ret False
+            if not open(pubfn_pend, 'r').read() == load['pub']:
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys in pending did not match. This may be an attempt to '
+                    'compromise the Salt cluster.', load
+                )
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+            else:
+                log.info(
+                    'Authentication failed from host %(id)s, the key is in '
+                    'pending and needs to be accepted with saltkey -a %(id)s',
+                    load
+                )
+                return {'enc': 'clear',
+                        'load': {'ret': True}}
+        elif not os.path.isfile(pubfn_pend)\
+                and self.opts['auto_accept']:
+            # This is a new key and auto_accept is turned on
+            pass
+        else:
+            # Something happened that I have not accounted for, FAIL!
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
+
+        log.info('Authentication accepted from %(id)s', load)
+        open(pubfn, 'w+').write(load['pub'])
+        key = RSA.load_pub_key(pubfn)
+        ret = {'enc': 'pub',
+               'pub_key': self.master_key.pub_str,
+               'token': self.master_key.token,
+               'publish_port': self.opts['publish_port'],
+              }
+        ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
+        if self.opts['cluster_masters']:
+            self._send_cluster()
+        return ret
+
     def publish(self, clear_load):
         '''
-        This method sends out publications to the minions
+        This method sends out publications to the minions, it can only be used
+        by the LocalClient.
         '''
         if not clear_load.pop('key') == self.key:
             return ''
-        jid = self._prep_jid(clear_load)
+        jid = prep_jid(self.opts['cachedir'], clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
@@ -465,9 +502,3 @@ class MWorker(multiprocessing.Process):
         pub_sock.send(salt.payload.package(payload))
         return {'enc': 'clear',
                 'load': {'jid': jid}}
-
-    def run(self):
-        '''
-        Start a Master Worker
-        '''
-        self.__bind()
