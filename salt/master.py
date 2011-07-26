@@ -346,6 +346,56 @@ class AESFuncs(object):
             pickle.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
+    def minion_publish(self, clear_load):
+        '''
+        Publish a command initiated from a minion, this method executes minion
+        restrictions so that the minion publication will only work if it is
+        enabled in the config.
+        '''
+        if not self.opts.has_key('peer'):
+            return {}
+        if not isinstance(self.opts['peer'], dict):
+            return {}
+        if not clear_load.has_key('fun')\
+                or not clear_load.has_key('arg')\
+                or not clear_load.has_key('tgt')\
+                or not clear_load.has_key('ret')\
+                or not clear_load.has_key('id'):
+            return {}
+        perms = set()
+        for match in self.opts['peer']:
+            if re.match(match, clear_load['id']):
+                # This is the list of funcs/modules!
+                if isinstance(self.opts['peer'][match], list):
+                    perms.update(self.opts['peer'][match])
+        good = False
+        for perm in perms:
+            # Should this be .startswith? it would be faster...
+            if re.match(perm, clear_load['fun']):
+                good = True
+        if not good:
+            return {}
+        jid = prep_jid(self.opts['cachedir'], clear_load)
+        payload = {'enc': 'aes'}
+        load = {
+                'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'tgt': clear_load['tgt'],
+                'jid': jid,
+                'ret': clear_load['ret'],
+               }
+        if clear_load.has_key('tgt_type'):
+            load['tgt_type'] = clear_load['tgt_type']
+        payload['load'] = self.crypticle.dumps(load)
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUSH)
+        pub_sock.connect(
+                'tcp://127.0.0.1:{0}publish_pull_port]'.format(self.opts)
+                )
+        pub_sock.send(salt.payload.package(payload))
+        return {'enc': 'clear',
+                'load': {'jid': jid}}
+
     def run_func(self, func, load):
         '''
         Wrapper for running functions executed with AES encryption
