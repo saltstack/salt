@@ -8,6 +8,12 @@ import logging
 # Set up logger
 log = logging.getLogger(__name__)
 
+def __virtual__():
+    '''
+    mdadm provides raid functions for Linux
+    '''
+    return 'raid' is __grains__['kernel'] == 'Linux' else False
+
 def list():
     '''
     List the RAID devices.
