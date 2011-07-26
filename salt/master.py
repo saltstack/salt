@@ -244,7 +244,7 @@ class MWorker(multiprocessing.Process):
         '''
         data = self.crypticle.loads(load)
         log.info('AES payload received with command %(cmd)s', data)
-        return getattr(self.aes_funcs, data['cmd'])(data)
+        return self.aes_funcs.run_func(data['cmd'], data)
 
     def run(self):
         '''
@@ -263,7 +263,7 @@ class AESFuncs(object):
         self.opts = opts
         self.crypticle = crypticle
 
-    def _find_file(self, path, env='base'):
+    def __find_file(self, path, env='base'):
         '''
         Search the environment for the relative path
         '''
@@ -288,15 +288,15 @@ class AESFuncs(object):
         if not load.has_key('path')\
                 or not load.has_key('loc')\
                 or not load.has_key('env'):
-            return self.crypticle.dumps(ret)
-        fnd = self._find_file(load['path'], load['env'])
+            return ret
+        fnd = self.__find_file(load['path'], load['env'])
         if not fnd['path']:
-            return self.crypticle.dumps(ret)
+            return ret
         ret['dest'] = fnd['rel']
         fn_ = open(fnd['path'], 'rb')
         fn_.seek(load['loc'])
         ret['data'] = fn_.read(self.opts['file_buffer_size'])
-        return self.crypticle.dumps(ret)
+        return ret
 
     def _file_hash(self, load):
         '''
@@ -304,21 +304,21 @@ class AESFuncs(object):
         '''
         if not load.has_key('path')\
                 or not load.has_key('env'):
-            return False
-        path = self._find_file(load['path'], load['env'])['path']
+            return ''
+        path = self.__find_file(load['path'], load['env'])['path']
         if not path:
-            return self.crypticle.dumps('')
+            return ''
         ret = {}
         ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
                 open(path, 'rb').read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
-        return self.crypticle.dumps(ret)
+        return ret
 
     def _master_opts(self, load):
         '''
         Return the master options to the minion
         '''
-        return self.crypticle.dumps(self.opts)
+        return self.opts
 
     def _return(self, load):
         '''
@@ -345,6 +345,22 @@ class AESFuncs(object):
         if load.has_key('out'):
             pickle.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
+
+    def run_func(self, func, load):
+        '''
+        Wrapper for running functions executed with AES encryption
+        '''
+        # Don't honor private functions
+        if func.startswith('__'):
+            return self.crypticle.dumps({})
+        # Run the func
+        ret = getattr(self, func)(load)
+        # Don't encrypt the return value for the _return func
+        # (we don't care about the return value, so why encrypt it?)
+        if func == '_return':
+            return ret
+        # AES Encrypt the return
+        return self.crypticle.dumps(ret)
 
 class ClearFuncs(object):
     '''
