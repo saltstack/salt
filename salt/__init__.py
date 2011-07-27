@@ -149,28 +149,74 @@ class Minion(object):
         # Late import so logging works correctly
         import salt.minion
         minion = salt.minion.Minion(self.opts)
-        if self.opts.has_key('monitor'):
-            start_monitor(self.opts, minion.functions)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
             salt.utils.daemonize()
         minion.tune_in()
 
-def start_monitor(opts, functions):
+class Monitor(object):
     '''
-    Start up a Salt monitor daemon.
-    This function currently forks from the minion because we need
-    the minion to process command line options, setup global services
-    like logging, and parse available salt commands.
+    Create a monitor server
     '''
-    pid = os.fork()
-    try:
-        if pid > 0:
-            # child (monitor) process
+    def __init__(self):
+        self.cli = self.__parse_cli()
+        self.opts = salt.config.minion_config(self.cli['config'])
+
+    def __parse_cli(self):
+        '''
+        Parse the cli input
+        '''
+        import salt.log
+        parser = optparse.OptionParser()
+        parser.add_option('-d',
+                '--daemon',
+                dest='daemon',
+                default=False,
+                action='store_true',
+                help='Run the monitor as a daemon')
+        parser.add_option('-c',
+                '--config',
+                dest='config',
+                default='/etc/salt/minion',
+                help='Pass in an alternative configuration file')
+        parser.add_option('-l',
+                '--log-level',
+                dest='log_level',
+                default='warning',
+                choices=salt.log.LOG_LEVELS.keys(),
+                help='Console log level. One of %s. For the logfile settings '
+                     'see the config file. Default: \'%%default\'.' %
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
+
+        options, args = parser.parse_args()
+        salt.log.setup_console_logger(options.log_level)
+        cli = {'daemon': options.daemon,
+               'config': options.config}
+
+        return cli
+
+    def start(self):
+        '''
+        Execute this method to start up a monitor.
+        '''
+        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
+                os.path.dirname(self.opts['log_file']),
+                ])
+        import salt.log
+        salt.log.setup_logfile_logger(
+            self.opts['log_file'], self.opts['log_level']
+        )
+        for name, level in self.opts['log_granular_levels'].iteritems():
+            salt.log.set_logger_level(name, level)
+
+        import logging
+
+        # Late import so logging works correctly
+        import salt.monitor
+        monitor = salt.monitor.Monitor(self.opts)
+        if self.cli['daemon']:
             # Late import so logging works correctly
-            import salt.monitor
-            monitor = salt.monitor.Monitor(opts, functions)
-            monitor.run()
-    except OSError, ex:
-        log.error('could not fork new monitor process' )
+            import salt.utils
+            salt.utils.daemonize()
+        monitor.start()

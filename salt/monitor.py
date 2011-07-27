@@ -127,6 +127,7 @@ import time
 # Import salt libs
 import salt.config
 import salt.cron
+import salt.minion
 
 log = logging.getLogger(__name__)
 
@@ -166,18 +167,20 @@ class MonitorCommand(object):
                 log.trace('%s: sleep %s seconds', self.cmdid, duration)
                 time.sleep(duration)
 
-class Monitor(object):
+class Monitor(salt.minion.SMinion):
     '''
     The monitor daemon.
     '''
-    def __init__(self, opts, functions):
-        if 'monitor' in opts:
-            self.commands = Loader(opts, functions).load()
+    def __init__(self, opts):
+        salt.minion.SMinion.__init__(self, opts)
+
+        if 'monitor' in self.opts:
+            self.commands = Loader(self.opts, self.functions).load()
         else:
             log.warning('monitor not configured in /etc/salt/minion')
             self.commands = []
 
-    def run(self):
+    def start(self):
         log.debug('starting monitor with {} command{}'.format(
                    len(self.commands),
                    '' if len(self.commands) == 1 else 's'))

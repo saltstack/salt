@@ -1,0 +1,21 @@
+#!/usr/bin/python2
+'''
+This script is used to kick off a salt monitor
+'''
+import salt
+import os
+
+def main():
+    '''
+    The main function
+    '''
+    pid = os.getpid()
+    try:
+        monitor = salt.Monitor()
+        monitor.start()
+    except KeyboardInterrupt:
+        os.kill(pid, 15)
+
+if __name__ == '__main__':
+    main()
+
