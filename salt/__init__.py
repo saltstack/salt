@@ -2,7 +2,6 @@
 Make me some salt!
 '''
 # Import python libs
-import multiprocessing
 import optparse
 import os
 # Import salt libs
@@ -151,9 +150,7 @@ class Minion(object):
         import salt.minion
         minion = salt.minion.Minion(self.opts)
         if self.opts.has_key('monitor'):
-            multiprocessing.Process(
-                                target=salt.start_monitor,
-                                args=[self.opts, minion.functions]).start()
+            start_monitor(self.opts, minion.functions)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
@@ -162,15 +159,18 @@ class Minion(object):
 
 def start_monitor(opts, functions):
     '''
-    Start up a Salt monitor daemon, this function should be run inside of a
-    multiprocess and prepares the environment for the multiprocess
+    Start up a Salt monitor daemon.
+    This function currently forks from the minion because we need
+    the minion to process command line options, setup global services
+    like logging, and parse available salt commands.
     '''
-    import salt.log
-    salt.log.setup_logfile_logger(opts['log_file'], opts['log_level'])
-    for name, level in opts['log_granular_levels'].iteritems():
-        salt.log.set_logger_level(name, level)
-
-    # Late import so logging works correctly
-    import salt.monitor
-    monitor = salt.monitor.Monitor(opts, functions)
-    monitor.run()
+    pid = os.fork()
+    try:
+        if pid > 0:
+            # child (monitor) process
+            # Late import so logging works correctly
+            import salt.monitor
+            monitor = salt.monitor.Monitor(opts, functions)
+            monitor.run()
+    except OSError, ex:
+        log.error('could not fork new monitor process' )

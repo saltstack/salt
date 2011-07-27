@@ -29,6 +29,8 @@ The configuration is expressed in YAML and must conform to this syntax:
 
     - run: <salt-command>
 
+      id: <cmd-id>
+
       # execute command on an interval
       every:
         day:    <number>
@@ -72,6 +74,9 @@ The configuration is expressed in YAML and must conform to this syntax:
         - <salt-commands>
 
 where:
+    cmd-id = the command identifier used in error and log messages;
+             defaults to 'monitor-#' where # is the command's position in
+             /etc/salt/minion
     salt-command = a shell-like commands line of the command and arguments
     salt-commands = salt commands on separate lines and prefixed with '-'
     number = a integer or floating point number
@@ -144,22 +149,21 @@ class MonitorCommand(object):
     '''
     A single monitor command.
     '''
-    def __init__(self, name, src, context, sleeper=None):
-        self.name    = name
-        self.code    = compile(src, 'XXX', 'exec')
+    def __init__(self, cmdid, src, context, sleeper=None):
+        self.cmdid   = cmdid
+        self.code    = compile(src, '<monitor-config>', 'exec')
         self.sleeper = sleeper
         self.context = context
 
     def run(self):
-        log.trace('start thread for %s', self.name)
+        log.trace('start thread for %s', self.cmdid)
         if self.sleeper is None:
             exec self.code in self.context
         else:
             while True:
-                log.trace('run %s', self.name)
                 exec self.code in self.context
                 duration = self.sleeper.next()
-                log.trace('sleep %s seconds', duration)
+                log.trace('%s: sleep %s seconds', self.cmdid, duration)
                 time.sleep(duration)
 
 class Monitor(object):
@@ -215,11 +219,11 @@ class Loader(object):
         for cmdnum, cmdconfig in enumerate(monitorcfg, 1):
             try:
                 log.trace(cmdconfig)
-                name = 'monitor-{}'.format(cmdnum)
-                src = self._expand_command(cmdconfig)
+                cmdid = cmdconfig.get('id', 'monitor-{}'.format(cmdnum))
+                src = self._expand_command(cmdid, cmdconfig)
                 sleeper = self._create_sleeper(cmdconfig)
-                results.append(MonitorCommand(name, src, self.context, sleeper))
-                log.trace(src)
+                results.append(MonitorCommand(cmdid, src, self.context, sleeper))
+                log.trace("generated command source:\n%s", src)
             except ValueError, ex:
                 log.error( 'ignore monitor command #{} {!r}: {}'.format(
                                         cmdnum,
@@ -293,6 +297,8 @@ class Loader(object):
         For example, "echo 'the key is $key'"
             becomes "functions['echo']('the key is {}'.format(key))"
         '''
+        if isinstance(line, dict):
+            raise ValueError('cannot use ":" in salt command line')
         lexer = shlex.shlex(line)
         lexer.whitespace_split = True
         cmd = []
@@ -377,12 +383,15 @@ class Loader(object):
                 result += _indent(self._expand_conditional(condition, actions))
         return result
 
-    def _expand_command(self, cmd_dict):
+    def _expand_command(self, cmdid, cmd_dict):
         '''
         Translate one command/response dict into an array of python lines.
         '''
-        cmd = self._expand_call(cmd_dict['run'])
-        result = ['result = ' + cmd]
+        raw_cmd = cmd_dict['run']
+        cmd = self._expand_call(raw_cmd)
+        result = ['log.trace("{}: run: {}")'.format(cmdid, raw_cmd),
+                  'result = ' + cmd,
+                  'log.trace("{}: result: %s",result)'.format(cmdid)]
         for key, value in cmd_dict.iteritems():
             key = key.strip().replace('\t', ' ')
             if key.startswith('foreach '):

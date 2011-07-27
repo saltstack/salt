@@ -12,7 +12,7 @@ def __virtual__():
     '''
     mdadm provides raid functions for Linux
     '''
-    return 'raid' is __grains__['kernel'] == 'Linux' else False
+    return 'raid' if __grains__['kernel'] == 'Linux' else False
 
 def list():
     '''

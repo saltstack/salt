@@ -117,3 +117,32 @@
 #
 # A dict for the test module:
 #test.baz: {spam: sausage, cheese: bread}
+
+######     Monitor configuration      #####
+###########################################
+# When the 'monitor' value is set salt will run the commands at the specified
+# interval or at the default interval.
+#
+#monitor.default_interval:
+#  second: 10
+#
+#monitor:
+#  - id: low-disk
+#    run: status.diskusage / /var
+#    every:
+#      minute: 0
+#      second: 10
+#    foreach mntpt, usage:
+#      - if ${usage.available} * 100 / ${usage.total} < 90:
+#        - test.echo 'free disk space running low on $mntpt, ${usage.available/2.0**30} GB free'
+#
+#  - id: high-load
+#    run: status.loadavg
+#    every:
+#      minute: 0
+#      second: 30
+#    foreach interval, loadavg:
+#      - if interval == '10-min' and loadavg > 20:
+#        - test.echo 'WARNING 10 minute load average is $loadavg'
+#      - elif interval == '10-min' and loadavg > 10:
+#        - test.echo 'NOTICE 10 minute load average is $loadavg'
