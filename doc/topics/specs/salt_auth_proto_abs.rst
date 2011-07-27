@@ -23,7 +23,7 @@ The message itself is abstracted as a python dict in this fashion:
     {'enc': 'aes',
      'load': <encrypted python pickle>}
 
-When this message is recieved the load can be decrypted using the shared AES
+When this message is received the load can be decrypted using the shared AES
 key. The 'enc' dict ket can also be "pub" for pubkey encryption, or "clear"
 for passing messages in the clear.
 
@@ -60,7 +60,7 @@ the minion subscriber to the master publisher.
 All messages sent from the publisher are encypted using the revolving AES key,
 in the event that the master restarts the minions will all have an invalid
 AES key because it has been regenerated on the master. The master will then
-send out a publication that the minions cannot decrypt. If the minion recieves
+send out a publication that the minions cannot decrypt. If the minion receives
 a publication that cannot be decrypted then the minion will re-authenticate,
 obtain the correct AES key, and decrypt the message. This means that the
 AES key on the salt master can safely revolve without inturupting the minion

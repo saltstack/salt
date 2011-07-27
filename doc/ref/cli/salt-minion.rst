@@ -2,7 +2,7 @@
 ``salt-minion``
 ===============
 
-The salt minion daemon, recieves commands from a remote salt master.
+The salt minion daemon, receives commands from a remote salt master.
 
 Synopsis
 ========
@@ -12,7 +12,7 @@ salt-minion [ options ]
 Description
 ===========
 
-The salt minion recieves commands from the central salt master and replies with
+The salt minion receives commands from the central salt master and replies with
 the results of said commands.
 
 Options

@@ -156,7 +156,7 @@ Default: ``False``
 Open mode is a dangerous security feature. One problem encountered with pki
 authentication systems is that keys can become "mixed up" and authentication
 begins to fail. Open mode turns off authentication and tells the master to
-accept all authentication. This will clean up the pki keys recieved from the
+accept all authentication. This will clean up the pki keys received from the
 minions. Open mode should not be turned on for general use, open mode should
 only be used for a short period of time to clean up pki keys. To turn on open
 mode the value passed must be ``True``.
@@ -427,7 +427,7 @@ and cannot be disabled.
 
 Default: ``False``
 
-Open mode can be used to clean out the pki key recieved from the salt master,
+Open mode can be used to clean out the pki key received from the salt master,
 turn on open mode, restart the minion, then turn off open mode and restart the
 minion to clean the keys.
 

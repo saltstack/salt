@@ -17,7 +17,7 @@ This is where the returner interface comes in. Returners are modules called
 in place of returning the data to the salt master.
 
 The returner interface allows the return data to be sent to any system that
-can recieve data. This means that return data can be sent to a Redis server,
+can receive data. This means that return data can be sent to a Redis server,
 a MongoDB server, a MySQL server, or any system!
 
 .. seealso:: :doc:`Full list of builtin returners <returners>`

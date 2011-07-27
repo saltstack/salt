@@ -794,7 +794,7 @@ Default: \fBFalse\fP
 Open mode is a dangerous security feature. One problem encountered with pki
 authentication systems is that keys can become "mixed up" and authentication
 begins to fail. Open mode turns off authentication and tells the master to
-accept all authentication. This will clean up the pki keys recieved from the
+accept all authentication. This will clean up the pki keys received from the
 minions. Open mode should not be turned on for general use, open mode should
 only be used for a short period of time to clean up pki keys. To turn on open
 mode the value passed must be \fBTrue\fP.
@@ -1022,7 +1022,7 @@ disable_modules: [cmd,virt,test]
 .sp
 Default: \fBFalse\fP
 .sp
-Open mode can be used to clean out the pki key recieved from the salt master,
+Open mode can be used to clean out the pki key received from the salt master,
 turn on open mode, restart the minion, then turn off open mode and restart the
 minion to clean the keys.
 .sp
@@ -1136,13 +1136,13 @@ The master configuration file to use, the default is /etc/salt/master
 .UNINDENT
 .SS \fBsalt\-minion\fP
 .sp
-The salt minion daemon, recieves commands from a remote salt master.
+The salt minion daemon, receives commands from a remote salt master.
 .SS Synopsis
 .sp
 salt\-minion [ options ]
 .SS Description
 .sp
-The salt minion recieves commands from the central salt master and replies with
+The salt minion receives commands from the central salt master and replies with
 the results of said commands.
 .SS Options
 .INDENT 0.0
@@ -2859,7 +2859,7 @@ This is where the returner interface comes in. Returners are modules called
 in place of returning the data to the salt master.
 .sp
 The returner interface allows the return data to be sent to any system that
-can recieve data. This means that return data can be sent to a Redis server,
+can receive data. This means that return data can be sent to a Redis server,
 a MongoDB server, a MySQL server, or any system!
 .IP "See also"
 .sp
