@@ -4,9 +4,11 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 # Import python modules
 import os
+import re
 import shutil
 import hashlib
 import logging
+import tempfile
 import threading
 import multiprocessing
 import time
@@ -262,6 +264,8 @@ class AESFuncs(object):
     def __init__(self, opts, crypticle):
         self.opts = opts
         self.crypticle = crypticle
+        # Make a client
+        self.local = salt.client.LocalClient(self.opts['conf_file'])
 
     def __find_file(self, path, env='base'):
         '''
@@ -278,6 +282,29 @@ class AESFuncs(object):
                 fnd['rel'] = path
                 return fnd
         return fnd
+
+    def __verify_minion(self, id_, token):
+        '''
+        Take a minion id and a string encrypted with the minion private key
+        The string needs to decrypt as 'salt' with the minion public key
+        '''
+        minion_pub = open(
+                os.path.join(
+                    self.opts['pki_dir'],
+                    'minions',
+                    id_
+                    ),
+                'r'
+                ).read()
+        tmp_pub = tempfile.mktemp()
+        open(tmp_pub, 'w+').write(minion_pub)
+        pub = RSA.load_pub_key(tmp_pub)
+        os.remove(tmp_pub)
+        if pub.public_decrypt(token, 5) == 'salt':
+            return True
+        log.error('Salt minion claiming to be {0} has attempted to'.format(id_)
+                  'communicate with the master and could not be verified')
+        return False
 
     def _serve_file(self, load):
         '''
@@ -352,6 +379,7 @@ class AESFuncs(object):
         restrictions so that the minion publication will only work if it is
         enabled in the config.
         '''
+        # Verify that the load is valid
         if not self.opts.has_key('peer'):
             return {}
         if not isinstance(self.opts['peer'], dict):
@@ -360,7 +388,13 @@ class AESFuncs(object):
                 or not clear_load.has_key('arg')\
                 or not clear_load.has_key('tgt')\
                 or not clear_load.has_key('ret')\
+                or not clear_load.has_key('tok')\
                 or not clear_load.has_key('id'):
+            return {}
+        # Check the permisions for this minion
+        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
+            # The minion is not who it says it is! 
+            # We don't want to listen to it!
             return {}
         perms = set()
         for match in self.opts['peer']:
@@ -370,11 +404,11 @@ class AESFuncs(object):
                     perms.update(self.opts['peer'][match])
         good = False
         for perm in perms:
-            # Should this be .startswith? it would be faster...
             if re.match(perm, clear_load['fun']):
                 good = True
         if not good:
             return {}
+        # Set up the publication payload
         jid = prep_jid(self.opts['cachedir'], clear_load)
         payload = {'enc': 'aes'}
         load = {
@@ -384,17 +418,31 @@ class AESFuncs(object):
                 'jid': jid,
                 'ret': clear_load['ret'],
                }
+        expr_form = 'glob'
+        timeout = 5
         if clear_load.has_key('tgt_type'):
             load['tgt_type'] = clear_load['tgt_type']
+            expr_form = load['tgt_type']
+        if clear_load.has_key('timeout'):
+            timeout = clear_load('timeout')
+        # Encrypt!
         payload['load'] = self.crypticle.dumps(load)
+        # Connect to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
         pub_sock.connect(
                 'tcp://127.0.0.1:{0}publish_pull_port]'.format(self.opts)
                 )
         pub_sock.send(salt.payload.package(payload))
-        return {'enc': 'clear',
-                'load': {'jid': jid}}
+        # Run the client get_returns method
+        return self.local._get_returns(
+                jid,
+                self.local.check_minions(
+                    clear_load['tgt'],
+                    expr_form
+                    ),
+                timeout
+                )
 
     def run_func(self, func, load):
         '''
