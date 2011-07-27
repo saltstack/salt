@@ -302,8 +302,9 @@ class AESFuncs(object):
         os.remove(tmp_pub)
         if pub.public_decrypt(token, 5) == 'salt':
             return True
-        log.error('Salt minion claiming to be {0} has attempted to'.format(id_)
-                  'communicate with the master and could not be verified')
+        log.error('Salt minion claiming to be {0} has attempted to'
+                  'communicate with the master and could not be verified'
+                  .format(id_))
         return False
 
     def _serve_file(self, load):
