@@ -274,6 +274,23 @@ class Minion(object):
             self._handle_payload(payload)
 
 
+class SMinion(object):
+    '''
+    Create an object that has loaded all of the minion module functions,
+    grains, modules, returners etc.
+    The SMinion allows developers to generate all of the salt minion functions
+    and present them with these functions for general use.
+    '''
+    def __init__(self, minion_conf):
+        # Generate all of the minion side components
+        self.opts = salt.config.minion_config(minion_conf)
+        self.functions = salt.loader.minion_mods(self.opts)
+        self.returners = salt.loader.returners(self.opts)
+        self.states = salt.loader.states(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions)
+        self.matcher = Matcher(self.opts, self.functions)
+
+
 class Matcher(object):
     '''
     Use to return the value for matching calls from the master
