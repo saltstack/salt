@@ -1,6 +1,6 @@
 # Maintainer: Thomas S Hatch <thatch45 at gmail dot com>
 pkgname=salt-git
-pkgver=20110624
+pkgver=20110727
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
@@ -15,12 +15,15 @@ depends=('python2'
 makedepends=('git')
 provides=()
 backup=('etc/salt/master' 
-        'etc/salt/minion')
+        'etc/salt/minion'
+        'etc/salt/monitor')
 options=()
 source=("salt-master"
-        "salt-minion")
+        "salt-minion"
+        "salt-monitor")
 md5sums=('1594591acb0a266854186a694da21103'
-         '21ab2eac231e9f61bf002ba5f16f8a3d')
+         '21ab2eac231e9f61bf002ba5f16f8a3d'
+         'c435daa3b553a6425b48a8abed11b863')
 
 _gitroot="git://github.com/thatch45/salt.git"
 _gitname="salt"
