@@ -178,7 +178,7 @@ class Monitor(object):
         parser.add_option('-c',
                 '--config',
                 dest='config',
-                default='/etc/salt/minion',
+                default='/etc/salt/monitor',
                 help='Pass in an alternative configuration file')
         parser.add_option('-l',
                 '--log-level',
