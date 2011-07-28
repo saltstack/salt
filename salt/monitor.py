@@ -4,7 +4,7 @@
 The salt monitor daemon.
 
 The monitor reads configuration from the 'monitor' entry in
-/etc/salt/minion and loops forever running the configured commands at
+/etc/salt/monitor and loops forever running the configured commands at
 a user specified interval.
 
 An example configuration is:
@@ -76,7 +76,7 @@ The configuration is expressed in YAML and must conform to this syntax:
 where:
     cmd-id = the command identifier used in error and log messages;
              defaults to 'monitor-#' where # is the command's position in
-             /etc/salt/minion
+             /etc/salt/monitor
     salt-command = a shell-like commands line of the command and arguments
     salt-commands = salt commands on separate lines and prefixed with '-'
     number = a integer or floating point number
@@ -177,7 +177,7 @@ class Monitor(salt.minion.SMinion):
         if 'monitor' in self.opts:
             self.commands = Loader(self.opts, self.functions).load()
         else:
-            log.warning('monitor not configured in /etc/salt/minion')
+            log.warning('monitor not configured in /etc/salt/monitor')
             self.commands = []
 
     def start(self):
@@ -192,7 +192,7 @@ class Monitor(salt.minion.SMinion):
 
 class Loader(object):
     '''
-    Load the monitor commands from /etc/salt/minion.
+    Load the monitor commands from /etc/salt/monitor.
     '''
     TOKEN_PATTERN = re.compile(
                 r'''(  (?:\\\\)           # match escaped backslash
