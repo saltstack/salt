@@ -158,14 +158,15 @@ class MonitorCommand(object):
 
     def run(self):
         log.trace('start thread for %s', self.cmdid)
-        if self.sleeper is None:
+        while True:
             exec self.code in self.context
-        else:
-            while True:
-                exec self.code in self.context
-                duration = self.sleeper.next()
-                log.trace('%s: sleep %s seconds', self.cmdid, duration)
-                time.sleep(duration)
+            ret = self.context['cmd_results']
+            log.error('XXX SEND %s', ret)
+            if self.sleeper is None:
+                break
+            duration = self.sleeper.next()
+            log.trace('%s: sleep %s seconds', self.cmdid, duration)
+            time.sleep(duration)
 
 class Monitor(salt.minion.SMinion):
     '''
@@ -173,7 +174,6 @@ class Monitor(salt.minion.SMinion):
     '''
     def __init__(self, opts):
         salt.minion.SMinion.__init__(self, opts)
-
         if 'monitor' in self.opts:
             self.commands = Loader(self.opts, self.functions).load()
         else:
@@ -318,7 +318,7 @@ class Loader(object):
         cmdname, cmdargs = cmd[0], cmd[1:]
         if cmdname not in self.functions:
             raise ValueError('no such function: ' + cmdname)
-        result = 'functions[\'{}\']({})'.format(cmdname, ', '.join(cmdargs))
+        result = '_run({!r}, [{}])'.format(cmdname, ", ".join(cmdargs))
         return result
 
     def _expand_conditional(self, condition, actions):
@@ -391,10 +391,20 @@ class Loader(object):
         Translate one command/response dict into an array of python lines.
         '''
         raw_cmd = cmd_dict['run']
-        cmd = self._expand_call(raw_cmd)
-        result = ['log.trace("{}: run: {}")'.format(cmdid, raw_cmd),
-                  'result = ' + cmd,
-                  'log.trace("{}: result: %s",result)'.format(cmdid)]
+        call = self._expand_call(raw_cmd)
+        result = [
+'''
+def _run(cmd, args):
+    global cmd_results
+    log.trace("{cmdid}: run: %s %s", cmd, args)
+    ret = functions[cmd](*args)
+    cmd_results.append(([cmd] + args, ret))
+    log.trace("{cmdid}: result: %s", ret)
+    return ret
+cmd_results = []
+result = {call}
+'''.format(cmdid=cmdid, call=call).strip()]
+
         for key, value in cmd_dict.iteritems():
             key = key.strip().replace('\t', ' ')
             if key.startswith('foreach '):
