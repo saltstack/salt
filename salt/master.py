@@ -392,6 +392,9 @@ class AESFuncs(object):
                 or not clear_load.has_key('tok')\
                 or not clear_load.has_key('id'):
             return {}
+        # If the command will make a recursive publish don't run
+        if re.match('publish.*', clear_load['fun']):
+            return {}
         # Check the permisions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is! 
