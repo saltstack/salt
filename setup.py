@@ -128,7 +128,7 @@ setup(name=NAME,
                     ['salt/modules/cytest.pyx',
                     ]),
                 (doc_path,
-                    ['LICENCE'
+                    ['LICENSE'
                     ]),
                 (template_path,
                     ['doc/example/templates/yaml-jinja.yml',
