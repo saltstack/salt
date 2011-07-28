@@ -284,13 +284,13 @@ class Crypticle(object):
         return pickler.loads(data[len(self.PICKLE_PAD):])
 
 
-class SAuth(object):
+class SAuth(Auth):
     '''
     Set up an object to maintain the standalone authentication session with
     the salt master
     '''
     def __init__(self, opts):
-        self.opts = opts
+        super(SAuth, self).__init__(opts)
         self.crypticle = self.__authenticate()
 
     def __authenticate(self):
@@ -300,10 +300,16 @@ class SAuth(object):
         signing in can occur as often as needed to keep up with the revolving
         master aes key.
         '''
-        auth = Auth(self.opts)
-        creds = auth.sign_in()
+        creds = self.sign_in()
         if creds == 'retry':
             print 'Failed to authenticate with the master, verify that this'\
                 + ' minion\'s public key has been accepted on the salt master'
             sys.exit(2)
         return Crypticle(creds['aes'])
+
+    def gen_token(clear_tok):
+        '''
+        Encrypt a string with the minion private key to verify identity with
+        the master.
+        '''
+        return get_priv_key().private_encrypt(clear_tok, 4)
