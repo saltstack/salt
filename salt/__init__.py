@@ -161,7 +161,7 @@ class Monitor(object):
     '''
     def __init__(self):
         self.cli = self.__parse_cli()
-        self.opts = salt.config.minion_config(self.cli['config'])
+        self.opts = salt.config.monitor_config(self.cli['config'])
 
     def __parse_cli(self):
         '''

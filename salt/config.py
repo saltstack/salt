@@ -34,12 +34,11 @@ def load_config(opts, path, env_var):
     else:
         print 'Missing configuration file: {0}'.format(path)
 
-def prepend_root_dir(opts):
+def prepend_root_dir(opts, path_options):
     '''
     Prepends the options that represent filesystem paths with value of the
     'root_dir' option.
     '''
-    path_options = ('pki_dir', 'cachedir', 'log_file')
     for path_option in path_options:
         opts[path_option] = os.path.normpath(
                 os.sep.join([opts['root_dir'], opts[path_option]]))
@@ -89,7 +88,32 @@ def minion_config(path):
     opts['grains'] = salt.loader.grains(opts)
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts)
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
+
+    return opts
+
+def monitor_config(path):
+    '''
+    Reads the minion configuration file and overrides with values from the monitor configuration.
+    '''
+    # Load minion config from (1) a file specified by $SALT_MINION_CONFIG or
+    # (2) a file named 'minion' in the same directory as the monitor config file.
+    minion_config_file = os.environ.get('SALT_MINION_CONFIG')
+    if not minion_config_file:
+        monitor_config_file = os.environ.get('SALT_MONITOR_CONFIG')
+        if monitor_config_file:
+            basedir = os.path.dirname(monitor_config_file)
+        else
+            basedir = os.path.dirname(path)
+        minion_config_file = os.path.join(basedir, 'minion')
+    opts = minion_config(minion_config_file)
+
+    # Overwrite minion options with monitor defaults
+    opts.update({'log_file' : '/var/log/salt/monitor'})
+
+    # Overlay monitor config on minion config
+    load_config(opts, path, 'SALT_MONITOR_CONFIG')
+    prepend_root_dir(opts, ['log_file'])
 
     return opts
 
