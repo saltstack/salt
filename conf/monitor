@@ -5,6 +5,20 @@
 ###########################################
 # The location of the monitor log file
 #log_file: /var/log/salt/monitor
+# The level of messages to send to the log file.
+# One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+# Default: 'warning'
+#log_level: warning
+#
+# Logger levels can be used to tweak specific loggers logging levels.
+# Imagine you want to have the salt library at the 'warning' level, but, you
+# still wish to have 'salt.modules' at the 'debug' level:
+#   log_granular_levels: {
+#     'salt': 'warning',
+#     'salt.modules': 'debug'
+#   }
+#
+#log_granular_levels: {}
 
 
 ######     Monitor configuration      #####
