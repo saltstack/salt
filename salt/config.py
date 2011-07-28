@@ -103,7 +103,7 @@ def monitor_config(path):
         monitor_config_file = os.environ.get('SALT_MONITOR_CONFIG')
         if monitor_config_file:
             basedir = os.path.dirname(monitor_config_file)
-        else
+        else:
             basedir = os.path.dirname(path)
         minion_config_file = os.path.join(basedir, 'minion')
     opts = minion_config(minion_config_file)
