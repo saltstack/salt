@@ -153,7 +153,7 @@ def master_config(path):
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts)
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!
