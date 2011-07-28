@@ -307,9 +307,9 @@ class SAuth(Auth):
             sys.exit(2)
         return Crypticle(creds['aes'])
 
-    def gen_token(clear_tok):
+    def gen_token(self, clear_tok):
         '''
         Encrypt a string with the minion private key to verify identity with
         the master.
         '''
-        return get_priv_key().private_encrypt(clear_tok, 4)
+        return self.get_priv_key().private_encrypt(clear_tok, 5)

@@ -34,13 +34,14 @@ def publish(tgt, fun, arg, expr_form='glob', returner=''):
     tok = auth.gen_token('salt')
     payload = {'enc': 'aes'}
     load = {
+            'cmd': 'minion_publish',
             'fun': fun,
             'arg': arg,
             'tgt': tgt,
             'ret': returner,
             'tok': tok,
             'id': __opts__['id']}
-    payload['load'] = self.auth.crypticle.dumps(load)
-    socket = __get_socket()
+    payload['load'] = auth.crypticle.dumps(load)
+    socket = _get_socket()
     socket.send_pyobj(payload)
-    return auth.crypticle.loads(self.socket.recv_pyobj())
+    return auth.crypticle.loads(socket.recv_pyobj())
