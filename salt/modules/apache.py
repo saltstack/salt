@@ -14,6 +14,8 @@ def __detect_os():
         return 'apachectl'
     elif apache2.count(__grains__['os']):
         return 'apache2ctl'
+    else:
+        return 'apachectl'
 
 def version():
     '''
@@ -22,7 +24,7 @@ def version():
     CLI Example:
     salt '*' apache.version
     '''
-    cmd = "apachectl -v"
+    cmd = __detect_os() + ' -v'
     out = subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('\n')
@@ -36,7 +38,7 @@ def fullversion():
     CLI Example:
     salt '*' apache.fullversion
     '''
-    cmd = "apachectl -V"
+    cmd = __detect_os() + ' -V'
     ret = {}
     ret['compiled_with'] = []
     out = subprocess.Popen(cmd,
@@ -60,7 +62,7 @@ def modules():
     CLI Example:
     salt '*' apache.modules
     '''
-    cmd = "apachectl -M"
+    cmd = __detect_os() + ' -M'
     ret = {}
     ret['static'] = []
     ret['shared'] = []
@@ -84,7 +86,7 @@ def servermods():
     CLI Example:
     salt '*' apache.servermods
     '''
-    cmd = "apachectl -l"
+    cmd = __detect_os() + ' -l'
     ret = []
     out = subprocess.Popen(cmd,
             shell=True,
@@ -104,7 +106,7 @@ def directives():
     CLI Example:
     salt '*' apache.directives
     '''
-    cmd = "apachectl -L"
+    cmd = __detect_os() + ' -L'
     ret = {}
     out = subprocess.Popen(cmd,
             shell=True,
@@ -128,7 +130,7 @@ def vhosts():
     CLI Example:
     salt -t 10 '*' apache.vhosts
     '''
-    cmd = "apachectl -S"
+    cmd = __detect_os() + ' -S'
     ret = {}
     namevhost = ''
     out = __salt__['cmd.run'](cmd)
@@ -150,3 +152,16 @@ def vhosts():
                 ret[namevhost][comps[3]]['conf'] = comps[4].replace('(', '').replace(')', '')
                 ret[namevhost][comps[3]]['port'] = comps[1]
     return ret
+
+def signal(signal = None):
+    '''
+    Signals httpd to start, restart, or stop.
+
+    CLI Example:
+    salt '*' apache.signal restart
+    '''
+    valid_signals = 'start stop restart graceful graceful-stop'
+    if not valid_signals.count(signal):
+        return
+    cmd = __detect_os() + ' -k %s' % signal
+    out = __salt__['cmd.run'](cmd)
