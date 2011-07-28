@@ -2,6 +2,7 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
+import fnmatch
 import os
 import re
 import subprocess
@@ -192,30 +193,30 @@ def diskusage( *args ):
     '''
     selected = set()
     fstypes = set()
-    if args is None:
+    if not args:
         # select all filesystems
-        fstypes.append( "*" )
+        fstypes.add('*')
     else:
         for arg in args:
-            if arg.startswith( "/" ):
+            if arg.startswith('/'):
                 # select path
-                selected.add( arg )
+                selected.add(arg)
             else:
                 # select fstype
-                fstypes.add( arg )
+                fstypes.add(arg)
 
-    if len( fstypes ) > 0:
+    if len(fstypes) > 0:
         # determine which mount points host the specifed fstypes
-        p = re.compile( "|".join( fstype.format( "(%s)" )
-                            for fstype in fstypes ) )
+        p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
+                            for fstype in fstypes))
         with open('/proc/mounts', 'r') as fp:
             for line in fp:
                 comps = line.split()
-                if len( comps ) >= 3:
+                if len(comps) >= 3:
                     mntpt  = comps[ 1 ]
                     fstype = comps[ 2 ]
-                    if p.match( fstype ):
-                        selected.add( mntpt )
+                    if p.match(fstype):
+                        selected.add(mntpt)
 
     # query the filesystems disk usage
     ret = {}
