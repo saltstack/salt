@@ -62,7 +62,7 @@ def minion_config(path):
             'states_dirs': [],
             'render_dirs': [],
             'open_mode': False,
-            'multiprocessing': False,
+            'multiprocessing': True,
             'log_file': '/var/log/salt/minion',
             'log_level': 'warning',
             'log_granular_levels': {},
