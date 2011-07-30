@@ -435,7 +435,7 @@ class AESFuncs(object):
                 'ret': clear_load['ret'],
                }
         expr_form = 'glob'
-        timeout = 5
+        timeout = 0
         if clear_load.has_key('tgt_type'):
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
@@ -447,11 +447,11 @@ class AESFuncs(object):
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
         pub_sock.connect(
-                'tcp://127.0.0.1:{0}publish_pull_port]'.format(self.opts)
+                'tcp://127.0.0.1:{0[publish_pull_port]}'.format(self.opts)
                 )
         pub_sock.send(salt.payload.package(payload))
         # Run the client get_returns method
-        return self.local._get_returns(
+        return self.local.get_returns(
                 jid,
                 self.local.check_minions(
                     clear_load['tgt'],
