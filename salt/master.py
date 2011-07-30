@@ -379,6 +379,18 @@ class AESFuncs(object):
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
         enabled in the config.
+        The configuration on the master allows minions to be matched to
+        salt functions, so the minions can only publish allowed salt functions
+        The config will look like this:
+        peer:
+            .*:
+                - .*
+        This configuration will enable all minions to execute all commands.
+        peer:
+            foo.example.com:
+                - test.*
+        This configuration will only allow the minion foo.example.com to
+        execute commands from the test module
         '''
         # Verify that the load is valid
         if not self.opts.has_key('peer'):
