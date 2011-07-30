@@ -23,6 +23,7 @@ import salt.utils
 import salt.modules
 import salt.returners
 import salt.loader
+import salt.client
 
 log = logging.getLogger(__name__)
 

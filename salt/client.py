@@ -231,7 +231,7 @@ class LocalClient(object):
                 'exsel': self._check_grain_minions,
                 }[expr_form](expr)
 
-    def pub(self, tgt, fun, arg=(), expr_form='glob', ret=''):
+    def pub(self, tgt, fun, arg=(), expr_form='glob', ret='', jid=''):
         '''
         Take the required arguments and publish the given command.
         Arguments:
@@ -272,6 +272,8 @@ class LocalClient(object):
                 key=self.key,
                 tgt_type=expr_form,
                 ret=ret)
+        if jid:
+            package['jid'] = jid
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
@@ -280,4 +282,3 @@ class LocalClient(object):
         payload = salt.payload.unpackage(socket.recv())
         return {'jid': payload['load']['jid'],
                 'minions': minions}
-
