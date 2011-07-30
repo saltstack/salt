@@ -169,9 +169,12 @@ class Syndic(object):
         Generate the opts used by the syndic
         '''
         opts = salt.config.master_config(self.cli['master_config'])
+        opts['_minion_config_path'] = opts['conf_file']
         opts.update(salt.config.minion_config(self.cli['minion_conifg']))
         if opts.has_key('syndic_master'):
             opts['master'] = opts['syndic_master']
+            opts['_master_config_path'] = opts['conf_file']
+            opts.pop('conf_file')
             return opts
         err = 'The syndic_master needs to be configured in the salt master'\
             + ' config, EXITING!\n'
