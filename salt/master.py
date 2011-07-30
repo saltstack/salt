@@ -614,7 +614,10 @@ class ClearFuncs(object):
         '''
         if not clear_load.pop('key') == self.key:
             return ''
-        jid = prep_jid(self.opts['cachedir'], clear_load)
+        if clear_load.has_key('jid'):
+            jid = clear_load['jid']
+        else:
+            jid = prep_jid(self.opts['cachedir'], clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
