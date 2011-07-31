@@ -264,18 +264,28 @@ class LocalClient(object):
         if not minions:
             return {'jid': '',
                     'minions': minions}
-        package = salt.payload.format_payload('clear',
-                cmd='publish',
-                tgt=tgt,
-                fun=fun,
-                arg=arg,
-                key=self.key,
-                tgt_type=expr_form,
-                ret=ret)
-        if jid:
-            package['jid'] = jid
         if self.opts['order_masters']:
-            package['to'] = timeout
+            package = salt.payload.format_payload(
+                    'clear',
+                    cmd='publish',
+                    tgt=tgt,
+                    fun=fun,
+                    arg=arg,
+                    key=self.key,
+                    tgt_type=expr_form,
+                    ret=ret,
+                    jid=jid,
+                    to=timeout)
+        else:
+            package = salt.payload.format_payload(
+                    'clear',
+                    cmd='publish',
+                    tgt=tgt,
+                    fun=fun,
+                    arg=arg,
+                    key=self.key,
+                    tgt_type=expr_form,
+                    ret=ret)
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
