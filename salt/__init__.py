@@ -4,6 +4,7 @@ Make me some salt!
 # Import python libs
 import optparse
 import os
+import sys
 # Import salt libs
 import salt.config
 
@@ -162,7 +163,7 @@ class Syndic(object):
     '''
     def __init__(self):
         self.cli = self.__parse_cli()
-        self.opts = self.__parse_opts()
+        self.opts = self.__prep_opts()
 
     def __prep_opts(self):
         '''
@@ -170,7 +171,7 @@ class Syndic(object):
         '''
         opts = salt.config.master_config(self.cli['master_config'])
         opts['_minion_conf_file'] = opts['conf_file']
-        opts.update(salt.config.minion_config(self.cli['minion_conifg']))
+        opts.update(salt.config.minion_config(self.cli['minion_config']))
         if opts.has_key('syndic_master'):
             opts['master'] = opts['syndic_master']
             opts['_master_conf_file'] = opts['conf_file']
@@ -215,7 +216,9 @@ class Syndic(object):
         salt.log.setup_console_logger(options.log_level)
 
         cli = {'daemon': options.daemon,
-               'config': options.config}
+               'minion_config': options.minion_config,
+               'master_config': options.master_config,
+               }
 
         return cli
 
