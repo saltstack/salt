@@ -236,8 +236,8 @@ class Syndic(object):
         import logging
 
         # Late import so logging works correctly
-        import salt.syndic
-        syndic = salt.syndic.Syndic(self.opts)
+        import salt.minion
+        syndic = salt.minion.Syndic(self.opts)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
