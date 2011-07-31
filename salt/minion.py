@@ -292,14 +292,14 @@ class Minion(object):
             self._handle_payload(payload)
 
 
-class Syndic(salt.client.LocalClient, salt.minion.Minion):
+class Syndic(salt.client.LocalClient, Minion):
     '''
     Make a Syndic minion, this minion wil use the minion keys on the master to
     authenticate with a higher level master.
     '''
     def __init__(self, opts):
         salt.client.LocalClient.__init__(opts['_master_conf_file'])
-        salt.minion.Minion.__init__(opts)
+        Minion.__init__(opts)
 
     def _handle_aes(self, load):
         '''
