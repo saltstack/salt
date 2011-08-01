@@ -25,10 +25,22 @@
 ###########################################
 # When the 'monitor' value is set salt will run the commands at the specified
 # interval or at the default interval.
-#
+
 #monitor.default_interval:
+#  minute: 0
 #  second: 10
-#
+
+# Where monitor output should be returned to.  If you don't set this value
+# monitor data is silently discarded.
+#monitor.returner: mongo_return
+
+# You can override the mongo/redis/etc returner parameters here.
+#mongo.host: salt
+#mongo.port: 27017
+#mongo.user: myuser
+#mongo.password: mypassword
+
+# The monitor command(s) to run.
 #monitor:
 #  - id: low-disk
 #    run: status.diskusage / /var
