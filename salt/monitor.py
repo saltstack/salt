@@ -117,6 +117,7 @@ any salt argument or any expression.
 '''
 
 # Import python modules
+import datetime
 import logging
 import os
 import re
@@ -132,6 +133,8 @@ import salt.minion
 log = logging.getLogger(__name__)
 
 DEFAULT_INTERVAL_SECONDS = 10
+PRIMARY_RESULT_VARIABLE = "result"
+ALL_RESULTS_VARIABLE = "cmd_results"
 
 def _indent(lines, num_spaces=4):
     '''
@@ -158,10 +161,19 @@ class MonitorCommand(object):
 
     def run(self):
         log.trace('start thread for %s', self.cmdid)
+        id = self.context.get('id')
+        returner = self.context.get('returner')
         while True:
             exec self.code in self.context
-            ret = self.context['cmd_results']
-            log.error('XXX SEND %s', ret)
+            if returner:
+                jid = datetime.datetime.strftime(
+                             datetime.datetime.now(), 'M%Y%m%d%H%M%S%f')
+                try:
+                    returner({'id' : id,
+                              'jid' : jid,
+                              'return' : self.context[ALL_RESULTS_VARIABLE]})
+                except Exception, ex:
+                    log.error('monitor error: %s', self.cmdid, exc_info=ex)
             if self.sleeper is None:
                 break
             duration = self.sleeper.next()
@@ -175,7 +187,7 @@ class Monitor(salt.minion.SMinion):
     def __init__(self, opts):
         salt.minion.SMinion.__init__(self, opts)
         if 'monitor' in self.opts:
-            self.commands = Loader(self.opts, self.functions).load()
+            self.commands = Loader(self).load()
         else:
             log.warning('monitor not configured in /etc/salt/monitor')
             self.commands = []
@@ -203,20 +215,26 @@ class Loader(object):
                     )''',
                 re.VERBOSE)
 
-    def __init__(self, config, functions):
-        self.config    = config
-        self.functions = functions
-        self.context   = globals().copy()
-        self.context['functions'] = self.functions
+    def __init__(self, monitor):
+        self.monitor          = monitor
+        self.context          = None
+        self.cron_parser      = None
+        self.default_interval = None
 
     def load(self):
         '''
         Load the monitor configuration.
         '''
-        monitorcfg = self.config.get('monitor')
-        self.functions = self.functions
+        self.context = globals().copy()
+        self.context['id'] = self.monitor.opts.get('id')
+        self.context['functions'] = self.monitor.functions
+        returner_name  = self.monitor.opts.get('monitor.returner')
+        if returner_name:
+            self.context['returner'] = self.monitor.returners.get(returner_name)
+
+        monitorcfg = self.monitor.opts.get('monitor')
         self.cron_parser = salt.cron.CronParser()
-        self.default_interval = self.config.get('monitor.default_interval',
+        self.default_interval = self.monitor.opts.get('monitor.default_interval',
                                            {'seconds' : DEFAULT_INTERVAL_SECONDS})
         results = []
         for cmdnum, cmdconfig in enumerate(monitorcfg, 1):
@@ -316,7 +334,7 @@ class Loader(object):
         if len(cmd) == 0:
             raise ValueError('missing salt command, line: ' + line)
         cmdname, cmdargs = cmd[0], cmd[1:]
-        if cmdname not in self.functions:
+        if cmdname not in self.monitor.functions:
             raise ValueError('no such function: ' + cmdname)
         result = '_run({!r}, [{}])'.format(cmdname, ", ".join(cmdargs))
         return result
@@ -358,26 +376,27 @@ class Loader(object):
         elif len(names) == 1:
             # foreach over a list or set
             result += [
-                'if isinstance(result, set):',
-                '    result = sorted(result)',
-                'for {} in result:'.format(*names),
-                ]
+'''if isinstance({primary_result}, set):
+    {primary_result} = sorted({primary_result})
+for {} in {primary_result}:'''.format(*names,
+                                      primary_result=PRIMARY_RESULT_VARIABLE)]
         elif len(names) == 2:
             # foreach over a dict
             result += [
-                'class AttrDict(dict):',
-                '    __getattr__ = dict.__getitem__',
-                'if not isinstance(result, dict):',
-                '    raise ValueError(\'result is not a dict\')',
-                'result = AttrDict(result)',
-                'for {}, {} in sorted(result.iteritems()):'.format(*names),
-                ]
+'''class AttrDict(dict):
+    __getattr__ = dict.__getitem__
+if not isinstance({primary_result}, dict):
+    raise ValueError('{primary_result} is not a dict')
+{primary_result} = AttrDict({primary_result})
+for {}, {} in sorted({primary_result}.iteritems()):''' \
+.format(*names, primary_result=PRIMARY_RESULT_VARIABLE)]
         else:
             raise ValueError('foreach has too many paramters: {}'.format(
                                ', '.join(names)))
         vname = names[-1]
-        result += ['    if isinstance({}, dict):'.format(vname),
-                   '        {0} = AttrDict({0})'.format(vname)]
+        result += [
+'''    if isinstance({0}, dict):
+        {0} = AttrDict({0})'''.format(vname)]
         for statement in value:
             if isinstance(statement, basestring):
                 result.append('    ' + self._expand_call(statement))
@@ -395,15 +414,18 @@ class Loader(object):
         result = [
 '''
 def _run(cmd, args):
-    global cmd_results
+    global {all_results}
     log.trace("{cmdid}: run: %s %s", cmd, args)
     ret = functions[cmd](*args)
-    cmd_results.append(([cmd] + args, ret))
+    {all_results}.append([[cmd] + args, ret])
     log.trace("{cmdid}: result: %s", ret)
     return ret
-cmd_results = []
-result = {call}
-'''.format(cmdid=cmdid, call=call).strip()]
+{all_results} = []
+{primary_result} = {call}
+'''.format(primary_result=PRIMARY_RESULT_VARIABLE,
+           all_results=ALL_RESULTS_VARIABLE,
+           cmdid=cmdid,
+           call=call).strip()]
 
         for key, value in cmd_dict.iteritems():
             key = key.strip().replace('\t', ' ')

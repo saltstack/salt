@@ -11,15 +11,18 @@ import salt.log
 def dummy(*args, **kwargs):
     pass
 
+class MockMonitor(object):
+    def __init__(self):
+        self.opts = {}
+        self.functions = {'test.echo' : dummy}
+
+
 class TestMonitor(unittest.TestCase):
 
     def setUp(self):
-        opts = {}
-        functions = {'test.echo' : dummy}
-
         # Late import so logging works correctly
         import salt.monitor
-        self.loader = salt.monitor.Loader(opts, functions)
+        self.loader = salt.monitor.Loader(MockMonitor())
 
     def _test_expand(self, intext, expected):
         self.assertEqual(self.loader._expand_references(intext), expected)
@@ -102,12 +105,12 @@ class TestMonitor(unittest.TestCase):
 
     def test_expand_call(self):
         self._test_call("test.echo",
-                        "functions['test.echo']()")
+                        "_run('test.echo', [])")
         self._test_call("test.echo 'hello, world'",
-                        "functions['test.echo']('hello, world')")
+                        "_run('test.echo', ['hello, world'])")
         self._test_call("test.echo '${value[\"available\"]/(1024*1024)} MB ${value[\"available\"]*100/value[\"total\"]}%'",
-                        "functions['test.echo']('{} MB {}%'.format(value[\"available\"]/(1024*1024), "\
-                                    "value[\"available\"]*100/value[\"total\"]))")
+                        "_run('test.echo', ['{} MB {}%'.format(value[\"available\"]/(1024*1024), "\
+                                    "value[\"available\"]*100/value[\"total\"])])")
 
     def test_expand_conditional(self):
         self._test_conditional("${value['available']} > 100", [],
@@ -117,7 +120,7 @@ class TestMonitor(unittest.TestCase):
         self._test_conditional("${value['available']} > 100 and ${value['total']} < 1000",
                                [ "test.echo \"${value['available']} too low\"" ],
                                [ "if value['available'] > 100 and value['total'] < 1000:",
-                                 "    functions['test.echo']('{} too low'.format(value['available']))" ])
+                                 "    _run('test.echo', ['{} too low'.format(value['available'])])" ])
 
 def test_suite():
     salt.log.setup_console_logger("none")
