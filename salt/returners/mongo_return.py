@@ -13,6 +13,8 @@ __opts__ = {
             'mongo.host': 'salt',
             'mongo.port': 27017,
             'mongo.db': 'salt',
+            'mongo.user': '',
+            'mongo.password': '',
            }
 
 def returner(ret):
@@ -24,6 +26,12 @@ def returner(ret):
             __opts__['mongo.port'],
             )
     db = conn[__opts__['mongo.db']]
+
+    user = __opts__.get('mongo.user')
+    password = __opts__.get('mongo.password')
+    if user and password:
+        db.authenticate(user, password)
+
     col = db[ret['id']]
     back = {}
     if type(ret['return']) == type(dict()):
