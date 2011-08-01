@@ -23,6 +23,7 @@ import salt.utils
 import salt.modules
 import salt.returners
 import salt.loader
+import salt.client
 
 log = logging.getLogger(__name__)
 
@@ -290,6 +291,72 @@ class Minion(object):
             payload = socket.recv_pyobj()
             self._handle_payload(payload)
 
+
+class Syndic(salt.client.LocalClient, Minion):
+    '''
+    Make a Syndic minion, this minion wil use the minion keys on the master to
+    authenticate with a higher level master.
+    '''
+    def __init__(self, opts):
+        salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
+        Minion.__init__(self, opts)
+
+    def _handle_aes(self, load):
+        '''
+        Takes the aes encrypted load, decrypts is and runs the encapsulated
+        instructions
+        '''
+        data = None
+        # If the AES authentication has changed, re-authenticate
+        try:
+            data = self.crypticle.loads(load)
+        except AuthenticationError:
+            self.authenticate()
+            data = self.crypticle.loads(load)
+        # Verify that the publication is valid
+        if not data.has_key('tgt')\
+                or not data.has_key('jid')\
+                or not data.has_key('fun')\
+                or not data.has_key('to')\
+                or not data.has_key('expr_form')\
+                or not data.has_key('arg'):
+            return
+        self._handle_decoded_payload(data)
+
+    def _handle_decoded_payload(self, data):
+        '''
+        Override this method if you wish to handle the decoded data differently.
+        '''
+        if self.opts['multiprocessing']:
+            multiprocessing.Process(
+                target=lambda: self.syndic_cmd(data)
+            ).start()
+        else:
+            threading.Thread(
+                target=lambda: self.syndic_cmd(data)
+            ).start()
+
+    def syndic_cmd(self, data):
+        '''
+        Take the now clear load and forward it on to the client cmd
+        '''
+        # Send out the publication
+        pub_data = self.pub(
+                data['tgt'],
+                data['fun'],
+                data['arg'],
+                data['expr_form']
+                )
+        # Gather the return data
+        ret = self.get_returns(
+                pub_data['jid'],
+                pub_data['minions'],
+                data['to']
+                )
+        ret['jid'] = data['jid']
+        ret['fun'] = data['fun']
+        # Return the publication data up the pipe
+        self._return_pub(ret)
 
 class Matcher(object):
     '''

@@ -90,6 +90,30 @@
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576
 
+#####      Peer Publish settings     #####
+##########################################
+# Salt minions can send commands to other minions, but only if the minion is
+# allowed to. By default "Peer Publication" is disabled, and when enabled it
+# is enabled for specific minions and specific commands. This allows secure
+# compartmentalization of commands based on individual minions.
+#
+# The configuration uses regular expressions to match minions and then a list
+# of regular expressions to match functions, the following will allow the
+# minion authenticated as foo.example.com to execute functions from the test
+# and pkg modules
+# peer:
+#   foo.example.com:
+#       - test.*
+#       - pkg.*
+#
+# This will allow all minions to execute all commands:
+# peer:
+#   .*:
+#       - .*
+# This is not recomanded, since it would allow anyone who gets root on any
+# single minion to instantly have root on all of the minions!
+#
+
 #####         Cluster settings       #####
 ##########################################
 # Salt supports automatic clustering, salt creates a single ip address which

@@ -112,7 +112,7 @@ class LocalClient(object):
         '''
         Execute a salt command and return 
         '''
-        pub_data = self.pub(tgt, fun, arg, expr_form, ret)
+        pub_data = self.pub(tgt, fun, arg, expr_form, ret, timeout)
         return self.get_full_returns(pub_data['jid'], pub_data['minions'], timeout)
 
     def get_returns(self, jid, minions, timeout=5):
@@ -231,7 +231,7 @@ class LocalClient(object):
                 'exsel': self._check_grain_minions,
                 }[expr_form](expr)
 
-    def pub(self, tgt, fun, arg=(), expr_form='glob', ret=''):
+    def pub(self, tgt, fun, arg=(), expr_form='glob', ret='', jid='', timeout=5):
         '''
         Take the required arguments and publish the given command.
         Arguments:
@@ -264,14 +264,28 @@ class LocalClient(object):
         if not minions:
             return {'jid': '',
                     'minions': minions}
-        package = salt.payload.format_payload('clear',
-                cmd='publish',
-                tgt=tgt,
-                fun=fun,
-                arg=arg,
-                key=self.key,
-                tgt_type=expr_form,
-                ret=ret)
+        if self.opts['order_masters']:
+            package = salt.payload.format_payload(
+                    'clear',
+                    cmd='publish',
+                    tgt=tgt,
+                    fun=fun,
+                    arg=arg,
+                    key=self.key,
+                    tgt_type=expr_form,
+                    ret=ret,
+                    jid=jid,
+                    to=timeout)
+        else:
+            package = salt.payload.format_payload(
+                    'clear',
+                    cmd='publish',
+                    tgt=tgt,
+                    fun=fun,
+                    arg=arg,
+                    key=self.key,
+                    tgt_type=expr_form,
+                    ret=ret)
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
@@ -280,4 +294,3 @@ class LocalClient(object):
         payload = salt.payload.unpackage(socket.recv())
         return {'jid': payload['load']['jid'],
                 'minions': minions}
-

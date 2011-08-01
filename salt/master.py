@@ -379,6 +379,18 @@ class AESFuncs(object):
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
         enabled in the config.
+        The configuration on the master allows minions to be matched to
+        salt functions, so the minions can only publish allowed salt functions
+        The config will look like this:
+        peer:
+            .*:
+                - .*
+        This configuration will enable all minions to execute all commands.
+        peer:
+            foo.example.com:
+                - test.*
+        This configuration will only allow the minion foo.example.com to
+        execute commands from the test module
         '''
         # Verify that the load is valid
         if not self.opts.has_key('peer'):
@@ -423,7 +435,7 @@ class AESFuncs(object):
                 'ret': clear_load['ret'],
                }
         expr_form = 'glob'
-        timeout = 5
+        timeout = 0
         if clear_load.has_key('tgt_type'):
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
@@ -435,11 +447,11 @@ class AESFuncs(object):
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
         pub_sock.connect(
-                'tcp://127.0.0.1:{0}publish_pull_port]'.format(self.opts)
+                'tcp://127.0.0.1:{0[publish_pull_port]}'.format(self.opts)
                 )
         pub_sock.send(salt.payload.package(payload))
         # Run the client get_returns method
-        return self.local._get_returns(
+        return self.local.get_returns(
                 jid,
                 self.local.check_minions(
                     clear_load['tgt'],
@@ -602,7 +614,10 @@ class ClearFuncs(object):
         '''
         if not clear_load.pop('key') == self.key:
             return ''
-        jid = prep_jid(self.opts['cachedir'], clear_load)
+        if clear_load.has_key('jid'):
+            jid = clear_load['jid']
+        else:
+            jid = prep_jid(self.opts['cachedir'], clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
