@@ -9,6 +9,21 @@ import subprocess
 
 __opts__ = {}
 
+def _number(text):
+    '''
+    Convert a string to a number.
+    Returns an integer if the string represents an integer, a floating
+    point number if the string is a real number, or the string unchanged
+    otherwise.
+    '''
+    try:
+        return int(text)
+    except ValueError:
+        try:
+            return float(text)
+        except ValueError:
+            return text
+
 def custom():
     '''
     Return a custom composite of status data and info for this minon,
@@ -63,9 +78,9 @@ def loadavg():
     comps = open('/proc/loadavg', 'r').read().strip()
     load_avg = comps.split()
     return {
-        '1-min':  load_avg[0],
-        '5-min':  load_avg[1],
-        '15-min': load_avg[2],
+        '1-min':  _number(load_avg[0]),
+        '5-min':  _number(load_avg[1]),
+        '15-min': _number(load_avg[2]),
     }
 
 def cpustats():
@@ -83,27 +98,27 @@ def cpustats():
         comps = line.split()
         if comps[0] == 'cpu':
             ret[comps[0]] = {
-                'user':    comps[1],
-                'nice':    comps[2],
-                'system':  comps[3],
-                'idle':    comps[4],
-                'iowait':  comps[5],
-                'irq':     comps[6],
-                'softirq': comps[7],
-                'steal':   comps[8],
+                'user':    _number(comps[1]),
+                'nice':    _number(comps[2]),
+                'system':  _number(comps[3]),
+                'idle':    _number(comps[4]),
+                'iowait':  _number(comps[5]),
+                'irq':     _number(comps[6]),
+                'softirq': _number(comps[7]),
+                'steal':   _number(comps[8]),
             }
         elif comps[0] == 'intr':
             ret[comps[0]] = {
-                'total': comps[1],
-                'irqs' : comps[2:],
+                'total': _number(comps[1]),
+                'irqs' : [_number(x) for x in comps[2:]],
             }
         elif comps[0] == 'softirq':
             ret[comps[0]] = {
-                'total':    comps[1],
-                'softirqs': comps[2:],
+                'total':    _number(comps[1]),
+                'softirqs': [_number(x) for x in comps[2:]],
             }
         else:
-            ret[comps[0]] = comps[1]
+            ret[comps[0]] = _number(comps[1])
     return ret
 
 def meminfo():
@@ -161,20 +176,20 @@ def diskstats():
             continue
         comps = line.split()
         ret[comps[2]] = {
-            'major':                   comps[0],
-            'minor':                   comps[1],
-            'device':                  comps[2],
-            'reads_issued':            comps[3],
-            'reads_merged':            comps[4],
-            'sectors_read':            comps[5],
-            'ms_spent_reading':        comps[6],
-            'writes_completed':        comps[7],
-            'writes_merged':           comps[8],
-            'sectors_written':         comps[9],
-            'ms_spent_writing':        comps[10],
-            'io_in_progress':          comps[11],
-            'ms_spent_in_io':          comps[12],
-            'weighted_ms_spent_in_io': comps[13],
+            'major':                   _number(comps[0]),
+            'minor':                   _number(comps[1]),
+            'device':                  _number(comps[2]),
+            'reads_issued':            _number(comps[3]),
+            'reads_merged':            _number(comps[4]),
+            'sectors_read':            _number(comps[5]),
+            'ms_spent_reading':        _number(comps[6]),
+            'writes_completed':        _number(comps[7]),
+            'writes_merged':           _number(comps[8]),
+            'sectors_written':         _number(comps[9]),
+            'ms_spent_writing':        _number(comps[10]),
+            'io_in_progress':          _number(comps[11]),
+            'ms_spent_in_io':          _number(comps[12]),
+            'weighted_ms_spent_in_io': _number(comps[13]),
         }
     return ret
 
@@ -242,7 +257,7 @@ def vmstats():
         if not line.count(' '):
             continue
         comps = line.split()
-        ret[comps[0]] = comps[1]
+        ret[comps[0]] = _number(comps[1])
     return ret
 
 def netstats():
@@ -266,7 +281,7 @@ def netstats():
                 if field < 1:
                     continue
                 else:
-                    row[headers[field]] = comps[field]
+                    row[headers[field]] = _number(comps[field])
             rowname = headers[0].replace(':', '')
             ret[rowname] = row
         else:
@@ -290,22 +305,22 @@ def netdev():
         comps = line.split()
         ret[comps[0]] = {
             'iface':         comps[0],
-            'rx_bytes':      comps[1],
-            'rx_packets':    comps[2],
-            'rx_errs':       comps[3],
-            'rx_drop':       comps[4],
-            'rx_fifo':       comps[5],
-            'rx_frame':      comps[6],
-            'rx_compressed': comps[7],
-            'rx_multicast':  comps[8],
-            'tx_bytes':      comps[9],
-            'tx_packets':    comps[10],
-            'tx_errs':       comps[11],
-            'tx_drop':       comps[12],
-            'tx_fifo':       comps[13],
-            'tx_colls':      comps[14],
-            'tx_carrier':    comps[15],
-            'tx_compressed': comps[16],
+            'rx_bytes':      _number(comps[1]),
+            'rx_packets':    _number(comps[2]),
+            'rx_errs':       _number(comps[3]),
+            'rx_drop':       _number(comps[4]),
+            'rx_fifo':       _number(comps[5]),
+            'rx_frame':      _number(comps[6]),
+            'rx_compressed': _number(comps[7]),
+            'rx_multicast':  _number(comps[8]),
+            'tx_bytes':      _number(comps[9]),
+            'tx_packets':    _number(comps[10]),
+            'tx_errs':       _number(comps[11]),
+            'tx_drop':       _number(comps[12]),
+            'tx_fifo':       _number(comps[13]),
+            'tx_colls':      _number(comps[14]),
+            'tx_carrier':    _number(comps[15]),
+            'tx_compressed': _number(comps[16]),
         }
     return ret
 
