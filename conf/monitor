@@ -48,8 +48,8 @@
 #      minute: 0
 #      second: 10
 #    foreach mntpt, usage:
-#      - if ${usage.available} * 100 / ${usage.total} < 90:
-#        - test.echo 'free disk space running low on $mntpt, ${usage.available/2.0**30} GB free'
+#      - if ${usage.available} * 100 / ${usage.total} < 10:
+#        - 'alert.warning "free disk space running low on $mntpt: {:0.1f} GB free" ${usage.available/2.0**30}'
 #
 #  - id: high-load
 #    run: status.loadavg
@@ -57,7 +57,7 @@
 #      minute: 0
 #      second: 30
 #    foreach interval, loadavg:
-#      - if interval == '10-min' and loadavg > 20:
-#        - test.echo 'WARNING 10 minute load average is $loadavg'
-#      - elif interval == '10-min' and loadavg > 10:
-#        - test.echo 'NOTICE 10 minute load average is $loadavg'
+#      - if interval == '5-min' and loadavg > 20:
+#        - alert.warning '5 minute load average is $loadavg'
+#      - elif interval == '5-min' and loadavg > 10:
+#        - alert.notice '5 minute load average is $loadavg'
