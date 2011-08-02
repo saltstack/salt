@@ -1,0 +1,3 @@
+build
+*.pyc
+pkg/arch/*.tar.xz
