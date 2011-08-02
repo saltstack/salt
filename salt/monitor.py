@@ -112,8 +112,9 @@ For example, ${(v.stuff/10)+100}.
 Salt command arguments can be enclosed in single or double quotes
 to preserve spaces.  For instance, saltcmd 'hi, world' "bob's stuff".
 
-Caveat: since the config is expressed in YAML you cannot use ':' in
-any salt argument or any expression.
+Caveat: since the config is expressed in YAML you must enclose commands
+and expressions containing ':' with single quotes.  For example,
+    'test.echo "a list: 1, 2, 3"'
 '''
 
 # Import python modules
