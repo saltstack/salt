@@ -179,6 +179,7 @@ class MonitorCommand(object):
             duration = self.sleeper.next()
             log.trace('%s: sleep %s seconds', self.cmdid, duration)
             time.sleep(duration)
+        log.debug('thread exit: %s', self.cmdid)
 
 class Monitor(salt.minion.SMinion):
     '''
@@ -279,9 +280,11 @@ class Loader(object):
         fmt = ''
         refs = []
         if len(text) > 1 and text[0] in '\'"' and text[0] == text[-1]:
+            quoted = True
             is_string = True
             text = text[1:-1]
         else:
+            quoted = False
             is_string = expand_to_string
         for matched in self.TOKEN_PATTERN.split(text):
             if len(matched) == 0:
@@ -302,7 +305,7 @@ class Loader(object):
                               .replace('}', '\2')
 
         if fmt == '{}' and len(refs) == 1:
-            result = 'str({})'.format(refs[0]) if is_string else refs[0]
+            result = 'str({})'.format(refs[0]) if quoted else refs[0]
         elif len(refs) == 0:
             fmt = fmt.replace('\1', '{').replace('\2', '}')
             result = repr(fmt) if is_string else fmt
@@ -417,7 +420,7 @@ def _run(cmd, args):
     global {all_results}
     log.trace("{cmdid}: run: %s %s", cmd, args)
     ret = functions[cmd](*args)
-    {all_results}.append([[cmd] + args, ret])
+    {all_results}.append({{'cmd' : [cmd] + args, 'return' : ret}})
     log.trace("{cmdid}: result: %s", ret)
     return ret
 {all_results} = []
