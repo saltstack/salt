@@ -11,6 +11,8 @@ import os
 import grp
 import pwd
 
+import salt.utils.find
+
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
@@ -187,3 +189,34 @@ def get_sum(path, form='md5'):
         return getattr(hashlib, form)(open(path, 'rb')).hexdigest()
     except:
         return 'Hash ' + form + ' not supported'
+
+def find(path, *criteria):
+    '''
+    Simulate the Unix find(1) command and return a list of paths that
+    meet the specified critera.
+
+    The critera arg is a list of name=value strings:
+        name  = filename-glob
+        iname = case-insensitive-filename-glob
+        type  = b|c|d|p|f|l|s
+        user  = user-name
+        group = group-name
+        size  = number[b|c|w|k|m|g]
+        mmin  = [+-]minutes
+        mtime = [+-]days
+
+    CLI Example:
+    salt '*' / type=f name=\*.bak mtime=+30d size=+10m
+    '''
+    criteria_dict = {}
+    for arg in criteria:
+        key, value = arg.split('=')
+        criteria_dict[key] = value
+    try:
+        f = salt.utils.find.Finder(criteria_dict)
+    except ValueError, ex:
+        return 'error: {}'.format(ex)
+
+    ret = [p for p in f.find(path)]
+    ret.sort()
+    return ret
