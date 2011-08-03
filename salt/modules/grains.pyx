@@ -1,6 +1,8 @@
 '''
 Control aspects of the grains data
 '''
+# Seed the grains dict so cython will build
+__grains__ = {}
 
 def items():
     '''
