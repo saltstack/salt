@@ -10,6 +10,7 @@ from distutils.cmd import Command
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.sysconfig import get_python_lib, PREFIX
+from Cython.Distutils import build_ext
 
 NAME = 'salt'
 VER = '0.8.9'
@@ -68,9 +69,15 @@ class UnitTest(Command):
             if sys.path[0] == dirname:
                 del sys.path[0]
 
-setup(name=NAME,
+
+setup(
+      name=NAME,
       version=VER,
-      cmdclass={"test":UnitTest},
+      ext_modules=[Extension('salt.modules.grains', ['salt/modules/grains.pyx'])],
+      cmdclass={
+          'test':UnitTest,
+          'build_ext': build_ext,
+          },
       description=DESC,
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
