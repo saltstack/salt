@@ -73,7 +73,10 @@ class UnitTest(Command):
 setup(
       name=NAME,
       version=VER,
-      ext_modules=[Extension('salt.modules.grains', ['salt/modules/grains.pyx'])],
+      ext_modules=[
+          Extension('salt.modules.grains', ['salt/modules/grains.pyx']),
+          Extension('salt.modules.cytest', ['salt/modules/cytest.pyx']),
+          ],
       cmdclass={
           'test':UnitTest,
           'build_ext': build_ext,
