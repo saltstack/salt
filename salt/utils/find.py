@@ -13,6 +13,7 @@ The options include match criteria:
     group   = groups                    # match any listed group
     size    = [+-]number[size-unit]     # default unit = byte
     mtime   = interval                  # modified since date
+    grep    = regex                     # search file contents
 and/or actions:
     delete [= file-types]               # default type = 'f'
     exec    = command [arg ...]         # where {} is replaced by pathname
@@ -66,7 +67,6 @@ interval:
         s: second
 
 print-opts: a comma and/or space separated list of one or more of the following:
-    attrs: file attributes, see lsattr(1)
     group: group name
     md5:   MD5 digest of file contents
     mode:  file permissions (as integer)
@@ -74,7 +74,6 @@ print-opts: a comma and/or space separated list of one or more of the following:
     name:  file basename
     path:  file absolute path
     size:  file size in bytes
-    title: add a title to the top of the listing
     type:  file type
     user:  user name
 '''
@@ -91,6 +90,10 @@ import time
 
 # Set up logger
 log = logging.getLogger(__name__)
+
+_REQUIRES_PATH = 1
+_REQUIRES_STAT = 2
+_REQUIRES_CONTENTS = 4
 
 _FILE_TYPES = {'b' : stat.S_IFBLK,
                'c' : stat.S_IFCHR,
@@ -188,7 +191,14 @@ def _parse_size(value):
 
     return min_size, max_size
 
-class NameOption(object):
+class Option(object):
+    '''
+    Abstract base class for all find options.
+    '''
+    def requires(self):
+        return _REQUIRES_PATH
+
+class NameOption(Option):
     '''
     Match files with a case-sensitive glob filename pattern.
     Note: this is the 'basename' portion of a pathname.
@@ -199,13 +209,10 @@ class NameOption(object):
                                   .replace('?', '.?')
                                   .replace('*', '.*') + '$')
 
-    def stat_required(self):
-        return False
-
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
 
-class InameOption(object):
+class InameOption(Option):
     '''
     Match files with a case-insensitive glob filename pattern.
     Note: this is the 'basename' portion of a pathname.
@@ -217,41 +224,38 @@ class InameOption(object):
                                   .replace('*', '.*') + '$',
                              re.IGNORECASE)
 
-    def stat_required(self):
-        return False
-
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
 
-class RegexOption(object):
+class RegexOption(Option):
     '''Match files with a case-sensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'regex', e.g. {'regex' : '.*\.txt'}.
     '''
     def __init__(self, key, value):
-        self.re = re.compile(value)
-
-    def stat_required(self):
-        return False
+        try:
+            self.re = re.compile(value)
+        except re.error:
+            raise ValueError('invalid regular expression: "{}"'.format(value))
 
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
 
-class IregexOption(object):
+class IregexOption(Option):
     '''Match files with a case-insensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'iregex', e.g. {'iregex' : '.*\.txt'}.
     '''
     def __init__(self, key, value):
-        self.re = re.compile(value, re.IGNORECASE)
-
-    def stat_required(self):
-        return False
+        try:
+            self.re = re.compile(value, re.IGNORECASE)
+        except re.error:
+            raise ValueError('invalid regular expression: "{}"'.format(value))
 
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
 
-class TypeOption(object):
+class TypeOption(Option):
     '''
     Match files by their file type(s).
     The file type(s) are specified as an optionally comma and/or space
@@ -275,13 +279,13 @@ class TypeOption(object):
             except KeyError:
                 raise ValueError('invalid file type "{}"'.format(ch))
 
-    def stat_required(self):
-        return True
+    def requires(self):
+        return _REQUIRES_STAT
 
     def match(self, dirname, filename, fstat):
         return stat.S_IFMT(fstat[stat.ST_MODE]) in self.ftypes
 
-class OwnerOption(object):
+class OwnerOption(Option):
     '''
     Match files by their owner name(s) and/or uid(s), e.g. 'root'.
     The names are a space and/or comma separated list of names and/or integers.
@@ -299,13 +303,13 @@ class OwnerOption(object):
                 except KeyError:
                     raise ValueError('no such user "{}"'.format(name))
 
-    def stat_required(self):
-        return True
+    def requires(self):
+        return _REQUIRES_STAT
 
     def match(self, dirname, filename, fstat):
         return fstat[stat.ST_UID] in self.uids
 
-class GroupOption(object):
+class GroupOption(Option):
     '''
     Match files by their group name(s) and/or uid(s), e.g. 'admin'.
     The names are a space and/or comma separated list of names and/or integers.
@@ -323,13 +327,13 @@ class GroupOption(object):
                 except KeyError:
                     raise ValueError('no such group "{}"'.format(name))
 
-    def stat_required(self):
-        return True
+    def requires(self):
+        return _REQUIRES_STAT
 
     def match(self, dirname, filename, fstat):
         return fstat[stat.ST_GID] in self.gids
 
-class SizeOption(object):
+class SizeOption(Option):
     '''
     Match files by their size.
     Prefix the size with '-' to find files the specified size and smaller.
@@ -346,13 +350,13 @@ class SizeOption(object):
     def __init__(self, key, value):
         self.min_size, self.max_size = _parse_size(value)
 
-    def stat_required(self):
-        return True
+    def requires(self):
+        return _REQUIRES_STAT
 
     def match(self, dirname, filename, fstat):
         return self.min_size <= fstat[stat.ST_SIZE] <= self.max_size
 
-class MtimeOption(object):
+class MtimeOption(Option):
     '''
     Match files modified since the specified time.
     The option name is 'mtime', e.g. {'mtime' : '3d'}.
@@ -369,13 +373,35 @@ class MtimeOption(object):
         secs, resolution = _parse_interval(value)
         self.min_time = time.time() - int(secs / resolution) * resolution
 
-    def stat_required(self):
-        return True
+    def requires(self):
+        return _REQUIRES_STAT
 
     def match(self, dirname, filename, fstat):
         return fstat[stat.ST_MTIME] >= self.min_time
 
-class PrintOption(object):
+class GrepOption(Option):
+    '''Match files when a pattern occurs within the file.
+    The option name is 'grep', e.g. {'grep' : '(foo)|(bar}'}.
+    '''
+    def __init__(self, key, value):
+        try:
+            self.re = re.compile(value)
+        except re.error:
+            raise ValueError('invalid regular expression: "{}"'.format(value))
+
+    def requires(self):
+        return _REQUIRES_CONTENTS | _REQUIRES_STAT
+
+    def match(self, dirname, filename, fstat):
+        if not stat.S_ISREG(fstat[stat.ST_MODE]):
+            return None
+        with open(os.path.join(dirname, filename), 'rb') as f:
+            for line in f:
+                if self.re.search(line):
+                    return os.path.join(dirname, filename)
+        return None
+
+class PrintOption(Option):
     '''
     Return information about a matched file.
     Print options are specified as a comma and/or space separated list of
@@ -401,8 +427,8 @@ class PrintOption(object):
         if len(self.fmt) == 0:
             self.fmt.append('path')
 
-    def stat_required(self):
-        return self.need_stat
+    def requires(self):
+        return _REQUIRES_STAT if self.need_stat else _REQUIRES_PATH
 
     def execute(self, fullpath, fstat):
         result = []
@@ -449,11 +475,12 @@ class PrintOption(object):
             return result
 
 class Finder(object):
-    def __init__(self, criteria):
+    def __init__(self, options):
         self.actions  = []
-        name_criteria = []
-        stat_criteria = []
-        for key, value in criteria.iteritems():
+        criteria = {_REQUIRES_PATH : list(),
+                    _REQUIRES_STAT : list(),
+                    _REQUIRES_CONTENTS : list()}
+        for key, value in options.iteritems():
             if value is None or len(value) == 0:
                 raise ValueError('missing value for "{}" option'.format(key))
             try:
@@ -461,15 +488,21 @@ class Finder(object):
             except KeyError:
                 raise ValueError('invalid option "{}"'.format(key))
             if hasattr(obj, 'match'):
-                if obj.stat_required():
-                    stat_criteria.append(obj)
+                requires = obj.requires()
+                if requires & _REQUIRES_CONTENTS:
+                    criteria[_REQUIRES_CONTENTS].append(obj)
+                elif requires & _REQUIRES_STAT:
+                    criteria[_REQUIRES_STAT].append(obj)
                 else:
-                    name_criteria.append(obj)
+                    criteria[_REQUIRES_PATH].append(obj)
             if hasattr(obj, 'execute'):
                 self.actions.append(obj)
-        self.criteria = name_criteria + stat_criteria
         if len(self.actions) == 0:
             self.actions.append(PrintOption('print',''))
+        # order criteria so that least expensive checks are done first
+        self.criteria = criteria[_REQUIRES_PATH] + \
+                        criteria[_REQUIRES_STAT] + \
+                        criteria[_REQUIRES_CONTENTS]
 
     def find(self, path):
         '''
@@ -484,7 +517,7 @@ class Finder(object):
                 matches = True
                 fullpath = None
                 for criterion in self.criteria:
-                    if fstat is None and criterion.stat_required():
+                    if fstat is None and criterion.requires() & _REQUIRES_STAT:
                         fullpath = os.path.join(dirpath, name)
                         fstat = os.stat(fullpath)
                     if not criterion.match(dirpath, name, fstat):
@@ -494,7 +527,7 @@ class Finder(object):
                     if fullpath is None:
                         fullpath = os.path.join(dirpath, name)
                     for action in self.actions:
-                        if fstat is None and action.stat_required():
+                        if fstat is None and action.requires() & _REQUIRES_STAT:
                             fstat = os.stat(fullpath)
                         result = action.execute(fullpath, fstat)
                         if result is not None:

@@ -196,15 +196,16 @@ def find(path, *opts):
     meet the specified critera.
 
     The options include match criteria:
-        name    = file-glob                 # case sensitive
-        iname   = file-glob                 # case insensitive
-        regex   = file-regex                # case sensitive
-        iregex  = file-regex                # case insensitive
+        name    = path-glob                 # case sensitive
+        iname   = path-glob                 # case insensitive
+        regex   = path-regex                # case sensitive
+        iregex  = path-regex                # case insensitive
         type    = file-types                # match any listed type
         user    = users                     # match any listed user
         group   = groups                    # match any listed group
         size    = [+-]number[size-unit]     # default unit = byte
-        mtime   = [+-]number[time-unit]     # default unit = day
+        mtime   = interval                  # modified since date
+        grep    = regex                     # search file contents
     and/or actions:
         delete [= file-types]               # default type = 'f'
         exec    = command [arg ...]         # where {} is replaced by pathname
@@ -221,8 +222,8 @@ def find(path, *opts):
         [!x-y] or [^x-y] = match anything except chars x through y
         {a,b,c}          = match a or b or c
 
-    file-regex:
-        a Python re (regular expression) pattern
+    path-regex:
+        a Python re (regular expression) pattern to match pathnames
 
     file-types: a string of one or more of the following:
         a: all file types
@@ -247,15 +248,17 @@ def find(path, *opts):
         g: gigabytes
         t: terabytes
 
-    time-unit:
-        w: week
-        d: day
-        h: hour
-        m: minute
-        s: second
+    interval:
+        [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
+
+        where:
+            w: week
+            d: day
+            h: hour
+            m: minute
+            s: second
 
     print-opts: a comma and/or space separated list of one or more of the following:
-        attrs: file attributes, see lsattr(1)
         group: group name
         md5:   MD5 digest of file contents
         mode:  file permissions (as integer)
@@ -263,7 +266,6 @@ def find(path, *opts):
         name:  file basename
         path:  file absolute path
         size:  file size in bytes
-        title: add a title to the top of the listing
         type:  file type
         user:  user name
 
