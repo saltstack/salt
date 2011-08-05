@@ -399,11 +399,17 @@ class SaltKey(object):
                 default='',
                 help='Set a name to generate a keypair for use with salt')
 
+        parser.add_option('--gen-keys-dir',
+                dest='gen_keys_dir',
+                default='.',
+                help='Set the direcotry to save the generated keypair, only'
+                     'works with "gen_keys_dir" option; default=.')
+
         parser.add_option('--keysize',
                 dest='keysize',
                 default=256,
                 help='Set the keysize for the generated key, only works with'
-                     'the \'--gen-keys\' option; default=256')
+                     'the "--gen-keys" option; default=256')
 
         parser.add_option('-c',
                 '--config',
@@ -423,6 +429,7 @@ class SaltKey(object):
         opts['print_all'] = options.print_all
         opts['delete'] = options.delete
         opts['gen_keys'] = options.gen_keys
+        opts['gen_keys_dir'] = options.gen_keys_dir
         opts['keysize'] = options.keysize
 
         opts.update(salt.config.master_config(options.config))
