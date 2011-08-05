@@ -394,6 +394,17 @@ class SaltKey(object):
                 default='',
                 help='Delete the named key')
 
+        parser.add_option('--gen-keys',
+                dest='gen_keys',
+                default='',
+                help='Set a name to generate a keypair for use with salt')
+
+        parser.add_option('--keysize',
+                dest='keysize',
+                default=256,
+                help='Set the keysize for the generated key, only works with'
+                     'the \'--gen-keys\' option; default=256')
+
         parser.add_option('-c',
                 '--config',
                 dest='config',
@@ -411,6 +422,8 @@ class SaltKey(object):
         opts['print'] = options.print_
         opts['print_all'] = options.print_all
         opts['delete'] = options.delete
+        opts['gen_keys'] = options.gen_keys
+        opts['keysize'] = options.keysize
 
         opts.update(salt.config.master_config(options.config))
 
