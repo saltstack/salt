@@ -32,6 +32,19 @@ def foo_pass(self, data=''):
     '''
     return 'foo'
 
+def gen_keys(keydir, keyname, keysize):
+    '''
+    Generate a keypair for use with salt
+    '''
+    base = os.path.join(keydir, keyname)
+    priv = '{}.pem'.format(base)
+    pub = '{}.pub'.format(base)
+    gen = RSA.gen_key(keysize, 1)
+    gen.save_key(priv, callback=foo_pass)
+    gen.save_pub_key(pub)
+    key = RSA.load_key(priv, callback=foo_pass)
+    os.chmod(priv, 256)
+    return key
 
 class MasterKeys(dict):
     '''
@@ -56,11 +69,7 @@ class MasterKeys(dict):
             log.debug('Loaded master key: %s', self.rsa_path)
         except:
             log.info('Generating master key: %s', self.rsa_path)
-            gen = RSA.gen_key(2048, 1)
-            gen.save_key(self.rsa_path, callback=foo_pass)
-            gen.save_pub_key(self.pub_path)
-            key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            os.chmod(self.rsa_path, 256)
+            key = gen_keys(self.opts['pkidir'], 'master', 256)
         return key
 
     def __get_pub_str(self):
@@ -97,12 +106,7 @@ class Auth(object):
             log.debug('Loaded minion key: %s', self.rsa_path)
         except:
             log.info('Generating minion key: %s', self.rsa_path)
-            gen = RSA.gen_key(2048, 1)
-            gen.save_key(self.rsa_path, callback=foo_pass)
-            pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
-            gen.save_pub_key(pub_path)
-            key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            os.chmod(self.rsa_path, 256)
+            key = gen_keys(self.opts['pkidir'], 'minion', 256)
         return key
 
     def minion_sign_in_payload(self):
