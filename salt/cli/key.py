@@ -158,6 +158,12 @@ class Key(object):
         '''
         Run the logic for saltkey
         '''
+        if self.opts['gen_keys']:
+            crypt.gen_keys(
+                    self.opts['gen_keys_dir'],
+                    self.opts['gen_keys'],
+                    self.opts['keysize'])
+            return
         if self.opts['list']:
             self._list_pre()
         elif self.opts['list_all']:
