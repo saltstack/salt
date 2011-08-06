@@ -190,30 +190,96 @@ def get_sum(path, form='md5'):
     except:
         return 'Hash ' + form + ' not supported'
 
-def find(path, *criteria):
+def find(path, *opts):
     '''
-    Simulate the Unix find(1) command and return a list of paths that
+    Approximate the Unix find(1) command and return a list of paths that
     meet the specified critera.
 
-    The critera arg is a list of name=value strings:
-        name  = filename-glob
-        iname = case-insensitive-filename-glob
-        type  = b|c|d|p|f|l|s
-        user  = user-name
-        group = group-name
-        size  = number[b|c|w|k|m|g]
-        mmin  = [+-]minutes
-        mtime = [+-]days
+    The options include match criteria:
+        name    = path-glob                 # case sensitive
+        iname   = path-glob                 # case insensitive
+        regex   = path-regex                # case sensitive
+        iregex  = path-regex                # case insensitive
+        type    = file-types                # match any listed type
+        user    = users                     # match any listed user
+        group   = groups                    # match any listed group
+        size    = [+-]number[size-unit]     # default unit = byte
+        mtime   = interval                  # modified since date
+        grep    = regex                     # search file contents
+    and/or actions:
+        delete [= file-types]               # default type = 'f'
+        exec    = command [arg ...]         # where {} is replaced by pathname
+        print  [= print-opts]
 
-    CLI Example:
-    salt '*' / type=f name=\*.bak mtime=+30d size=+10m
+    The default action is 'print=path'.
+
+    file-glob:
+        *                = match zero or more chars
+        ?                = match any char
+        [abc]            = match a, b, or c
+        [!abc] or [^abc] = match anything except a, b, and c
+        [x-y]            = match chars x through y
+        [!x-y] or [^x-y] = match anything except chars x through y
+        {a,b,c}          = match a or b or c
+
+    path-regex:
+        a Python re (regular expression) pattern to match pathnames
+
+    file-types: a string of one or more of the following:
+        a: all file types
+        b: block device
+        c: character device
+        d: directory
+        p: FIFO (named pipe)
+        f: plain file
+        l: symlink
+        s: socket
+
+    users:
+        a space and/or comma separated list of user names and/or uids
+
+    groups:
+        a space and/or comma separated list of group names and/or gids
+
+    size-unit:
+        b: bytes
+        k: kilobytes
+        m: megabytes
+        g: gigabytes
+        t: terabytes
+
+    interval:
+        [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
+
+        where:
+            w: week
+            d: day
+            h: hour
+            m: minute
+            s: second
+
+    print-opts: a comma and/or space separated list of one or more of the following:
+        group: group name
+        md5:   MD5 digest of file contents
+        mode:  file permissions (as integer)
+        mtime: last modification time (as time_t)
+        name:  file basename
+        path:  file absolute path
+        size:  file size in bytes
+        type:  file type
+        user:  user name
+
+    CLI Examples:
+    salt '*' / type=f name=\*.bak size=+10m
+    salt '*' /var mtime=+30d size=+10m print=path,size,mtime
+    salt '*' /var/log name=\*.[0-9] mtime=+30d size=+10m delete
     '''
-    criteria_dict = {}
-    for arg in criteria:
-        key, value = arg.split('=')
-        criteria_dict[key] = value
+    opts_dict = {}
+    for opt in opts:
+        key, value = opt.split('=', 1)
+        opts_dict[key] = value
     try:
-        f = salt.utils.find.Finder(criteria_dict)
+        f = salt.utils.find.Finder(opts_dict)
     except ValueError, ex:
         return 'error: {}'.format(ex)
 
