@@ -7,6 +7,7 @@ import sys
 import shutil
 # Import salt modules
 import salt.utils as utils
+import salt.crypt
 
 class Key(object):
     '''
@@ -159,7 +160,7 @@ class Key(object):
         Run the logic for saltkey
         '''
         if self.opts['gen_keys']:
-            crypt.gen_keys(
+            salt.crypt.gen_keys(
                     self.opts['gen_keys_dir'],
                     self.opts['gen_keys'],
                     self.opts['keysize'])
