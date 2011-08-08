@@ -29,6 +29,7 @@ The configuration is expressed in YAML and must conform to this syntax:
 
     - run: <salt-command>
 
+      # optional id
       id: <cmd-id>
 
       # execute command on an interval
@@ -95,7 +96,7 @@ where:
                abbreviation (mon); names are automatically lowercased.
                Use whitespace and/or commas to separate items.
 
-The 'foreach' statement automatically sorts dicts and sets results.
+The 'foreach' statement automatically sorts dict and set results.
 If the <value> variable is a dict, foreach automatically wraps <value>
 with an AttrDict that allows you to reference the dict contents as
 object attributes.  For example, a wrapped value={'foo':1} allows you
@@ -108,6 +109,14 @@ write '- mysaltcmd $v'.  If you're trying to pass an element of the
 reference, you need to enclose everything in {}s, e.g. use ${v['stuff']}
 or ${v.stuff}.  You can also include a python expression in the {}.
 For example, ${(v.stuff/10)+100}.
+
+You can format variables and expressions by using ':format' with ${}
+references.  For example, ${value:03d} will display 'value' as a three
+digit integer, zero padded on the left.  ${value/2.0**30:0.1f} will
+divide 'value' by 1 GB and display the result as a floating point
+number with one digit after the decimal point and the decimal point
+will always be preceeded by at least one digit.  See Python's
+string.format() for the format syntax.
 
 Salt command arguments can be enclosed in single or double quotes
 to preserve spaces.  For instance, saltcmd 'hi, world' "bob's stuff".
@@ -293,7 +302,11 @@ class Loader(object):
             elif len(matched) > 1 and matched.startswith('$'):
                 if matched.startswith('${') and matched.endswith('}'):
                     # handle ${var} reference
-                    refs.append(matched[2:-1])
+                    ref = matched[2:-1]
+                    if ':' in ref:
+                        parts = ref.split(':', 1)
+                        ref = "'{{:{1}}}'.format({0})".format(*parts)
+                    refs.append(ref)
                 else:
                     # handle $var reference
                     refs.append(matched[1:])
