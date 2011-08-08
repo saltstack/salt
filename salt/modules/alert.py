@@ -1,57 +1,48 @@
 '''
 Module for issuing alerts from the monitor service.
+The arguments are arbitrary and only interpreted by the alert receiver.
 Examples:
-    alert.notice 'things are going great'
-    alert.warning 'the {} is wobbling' turboencabulator
-    alert.error 'the {1} is {0:.1f} mm from failure' 12.34 'wain shaft'
+    alert.notice  'things are going great'
+    alert.warning email 'the ${value} is wobbling'
+    alert.error   netops pager 'the ${key} is {value:.1f} mm from failure'
 '''
 
 __opts__ = {}
 
-def _alert(level, msg, *args, **kwargs):
-    return "{}: {}".format(level, msg.format(*args, **kwargs))
+def _alert(level, args):
+    return [level] + list(args)
 
-def notice(msg, *args, **kwargs):
+def notice(*args):
     '''
     Send a 'notice' alert.
-    msg = a message optionally containing string.format() '{}' references
-    args = positional args passed to string.format()
-    kwargs = keyword args passed to string.format()
+    args = the alert message or array
     '''
-    return _alert("NOTICE", msg, *args, **kwargs)
+    return _alert("NOTICE", args)
 
-def warning(msg, *args, **kwargs):
+def warning(*args):
     '''
     Send a 'warning' alert.
-    msg = a message optionally containing string.format() '{}' references
-    args = positional args passed to string.format()
-    kwargs = keyword args passed to string.format()
+    args = the alert message or array
     '''
-    return _alert("WARNING", msg, *args, **kwargs)
+    return _alert("WARNING", args)
 
-def error(msg, *args, **kwargs):
+def error(*args):
     '''
     Send an 'error' alert.
-    msg = a message optionally containing string.format() '{}' references
-    args = positional args passed to string.format()
-    kwargs = keyword args passed to string.format()
+    args = the alert message or array
     '''
-    return _alert("ERROR", msg, *args, **kwargs)
+    return _alert("ERROR", args)
 
-def critical(msg, *args, **kwargs):
+def critical(*args):
     '''
     Send a 'critical' alert.
-    msg = a message optionally containing string.format() '{}' references
-    args = positional args passed to string.format()
-    kwargs = keyword args passed to string.format()
+    args = the alert message or array
     '''
-    return _alert("FATAL", msg, *args, **kwargs)
+    return _alert("FATAL", args)
 
-def fatal(msg, *args, **kwargs):
+def fatal(*args):
     '''
     Send a 'fatal' alert.
-    msg = a message optionally containing string.format() '{}' references
-    args = positional args passed to string.format()
-    kwargs = keyword args passed to string.format()
+    args = the alert message or array
     '''
-    return _alert("FATAL", msg, *args, **kwargs)
+    return _alert("FATAL", args)
