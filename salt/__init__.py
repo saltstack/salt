@@ -173,9 +173,16 @@ class Syndic(object):
         opts['_minion_conf_file'] = opts['conf_file']
         opts.update(salt.config.minion_config(self.cli['minion_config']))
         if opts.has_key('syndic_master'):
+            # Some of the opts need to be changed to match the needed opts
+            # in the minion class.
             opts['master'] = opts['syndic_master']
+            opts['master_ip'] = salt.config.dns_check(opts['master'])
+
+            opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
+                               + str(opts['master_port'])
             opts['_master_conf_file'] = opts['conf_file']
             opts.pop('conf_file')
+            print opts
             return opts
         err = 'The syndic_master needs to be configured in the salt master'\
             + ' config, EXITING!\n'
