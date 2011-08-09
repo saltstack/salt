@@ -228,7 +228,7 @@ class Minion(object):
         else:
             self._return_pub(ret)
 
-    def _return_pub(self, ret):
+    def _return_pub(self, ret, ret_cmd='_return'):
         '''
         Return the data from the executed command to the master server
         '''
@@ -238,7 +238,7 @@ class Minion(object):
         socket.connect(self.opts['master_uri'])
         payload = {'enc': 'aes'}
         load = {'return': ret['return'],
-                'cmd': '_return',
+                'cmd': ret_cmd,
                 'jid': ret['jid'],
                 'id': self.opts['id']}
         if hasattr(self.functions[ret['fun']], '__outputter__'):
@@ -294,7 +294,7 @@ class Minion(object):
 
 class Syndic(salt.client.LocalClient, Minion):
     '''
-    Make a Syndic minion, this minion wil use the minion keys on the master to
+    Make a Syndic minion, this minion will use the minion keys on the master to
     authenticate with a higher level master.
     '''
     def __init__(self, opts):
@@ -356,7 +356,7 @@ class Syndic(salt.client.LocalClient, Minion):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         # Return the publication data up the pipe
-        self._return_pub(ret)
+        self._return_pub(ret, '_return_syndic')
 
 class Matcher(object):
     '''
