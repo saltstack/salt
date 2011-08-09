@@ -174,7 +174,11 @@ class MonitorCommand(object):
         id = self.context.get('id')
         returner = self.context.get('returner')
         while True:
-            exec self.code in self.context
+            try:
+                exec self.code in self.context
+            except Exception, ex:
+                log.error("can't execute %s: %s", self.cmdid, ex,
+                            exc_info=ex)
             if returner:
                 jid = datetime.datetime.strftime(
                              datetime.datetime.now(), 'M%Y%m%d%H%M%S%f')
