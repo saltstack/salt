@@ -374,6 +374,14 @@ class AESFuncs(object):
             pickle.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
+    def _syndic_return(self, load):
+        '''
+        Recieve a syndic minion return and format it to look like returns from
+        individual minions.
+        '''
+        for key in load:
+            self._return(load['key'])
+
     def minion_publish(self, clear_load):
         '''
         Publish a command initiated from a minion, this method executes minion
