@@ -49,8 +49,7 @@
 #      second: 10
 #    foreach mntpt, usage:
 #      - if ${usage.available} * 100 / ${usage.total} < 10:
-#        - 'alert.warning page admins "free disk space running low on $mntpt: ${usage.available/2.0**30:0.1f} GB free"'
-#        - 'alert.warning email users "free disk space running low on $mntpt: ${usage.available/2.0**30:0.1f} GB free"'
+#        - 'alert.warning disk.full "free disk space running low on $mntpt: ${usage.available/2.0**30:0.1f} GB free"'
 #
 #  - id: high-load
 #    run: status.loadavg
@@ -59,6 +58,6 @@
 #      second: 30
 #    foreach interval, loadavg:
 #      - if interval == '5-min' and loadavg > 20:
-#        - alert.warning page admins '5 minute load average is $loadavg'
+#        - alert.warning loadavg '5 minute load average is $loadavg'
 #      - elif interval == '5-min' and loadavg > 10:
-#        - alert.notice email admins '5 minute load average is $loadavg'
+#        - alert.notice loadavg '5 minute load average is $loadavg'
