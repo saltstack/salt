@@ -96,6 +96,10 @@ class Auth(object):
     def __init__(self, opts):
         self.opts = opts
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+        if self.opts.has_key('syndic_master'):
+            self.mpub = 'syndic_master.pub'
+        else:
+            self.mpub = 'minion_master.pub'
 
     def get_priv_key(self):
         '''
@@ -150,7 +154,7 @@ class Auth(object):
         '''
         tmp_pub = tempfile.mktemp()
         open(tmp_pub, 'w+').write(master_pub)
-        m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
+        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         pub = RSA.load_pub_key(tmp_pub)
         os.remove(tmp_pub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
@@ -201,7 +205,7 @@ class Auth(object):
                     )
                     return 'retry'
         if not self.verify_master(payload['pub_key'], payload['token']):
-            m_pub_fn = os.path.join(self.opts['pki_dir'], 'master.pub')
+            m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
                 'If you are confident that you are connecting to a valid Salt '
