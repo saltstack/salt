@@ -1,48 +1,55 @@
 '''
-Module for issuing alerts from the monitor service.
-The arguments are arbitrary and only interpreted by the alert receiver.
+Module for issuing alerts.
 Examples:
-    alert.notice  'things are going great'
-    alert.warning email 'the ${value} is wobbling'
-    alert.error   netops pager 'the ${key} is {value:.1f} mm from failure'
+    alert.notice  sys.everython 'things are going great'
+    alert.warning disk.hardware 'the VAX drive ${value} is wobbling'
+    alert.error   turboencabular.wanshaft '${key} is {value:.1f} mm from failure'
 '''
 
 __opts__ = {}
 
-def _alert(level, args):
-    return [level] + list(args)
+def _alert(level, category, msg):
+    '''
+    Send the alert to the alert service.
+    '''
+    return [level, category, msg]
 
-def notice(*args):
+def notice(category, msg):
     '''
     Send a 'notice' alert.
-    args = the alert message or array
+    category = arbitrary alert category string, e.g. 'disk.sata.error'.
+    msg = the alert message string, e.g. '/dev/sdb23 spindle is on fire'
     '''
-    return _alert("NOTICE", args)
+    return _alert("NOTICE", category, msg)
 
-def warning(*args):
+def warning(category, msg):
     '''
     Send a 'warning' alert.
-    args = the alert message or array
+    category = arbitrary alert category string, e.g. 'disk.sata.error'.
+    msg = the alert message string, e.g. '/dev/sdb23 spindle is on fire'
     '''
-    return _alert("WARNING", args)
+    return _alert("WARNING", category, msg)
 
-def error(*args):
+def error(category, msg):
     '''
     Send an 'error' alert.
-    args = the alert message or array
+    category = arbitrary alert category string, e.g. 'disk.sata.error'.
+    msg = the alert message string, e.g. '/dev/sdb23 spindle is on fire'
     '''
-    return _alert("ERROR", args)
+    return _alert("ERROR", category, msg)
 
-def critical(*args):
+def critical(category, msg):
     '''
     Send a 'critical' alert.
-    args = the alert message or array
+    category = arbitrary alert category string, e.g. 'disk.sata.error'.
+    msg = the alert message string, e.g. '/dev/sdb23 spindle is on fire'
     '''
-    return _alert("FATAL", args)
+    return _alert("FATAL", category, msg)
 
-def fatal(*args):
+def fatal(category, msg):
     '''
     Send a 'fatal' alert.
-    args = the alert message or array
+    category = arbitrary alert category string, e.g. 'disk.sata.error'.
+    msg = the alert message string, e.g. '/dev/sdb23 spindle is on fire'
     '''
-    return _alert("FATAL", args)
+    return _alert("FATAL", category, msg)
