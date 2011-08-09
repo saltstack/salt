@@ -69,7 +69,7 @@ class MasterKeys(dict):
             log.debug('Loaded master key: %s', self.rsa_path)
         except:
             log.info('Generating master key: %s', self.rsa_path)
-            key = gen_keys(self.opts['pkidir'], 'master', 256)
+            key = gen_keys(self.opts['pki_dir'], 'master', 256)
         return key
 
     def __get_pub_str(self):
@@ -107,7 +107,7 @@ class Auth(object):
             log.debug('Loaded minion key: %s', self.rsa_path)
         except:
             log.info('Generating minion key: %s', self.rsa_path)
-            key = gen_keys(self.opts['pkidir'], 'minion', 256)
+            key = gen_keys(self.opts['pki_dir'], 'minion', 256)
         return key
 
     def minion_sign_in_payload(self):
