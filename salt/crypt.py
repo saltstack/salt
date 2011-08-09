@@ -77,6 +77,7 @@ class MasterKeys(dict):
         Returns the string contents of the public key
         '''
         if not os.path.isfile(self.pub_path):
+            key = self.__get_priv_key()
             key.save_pub_key(self.pub_path)
         return open(self.pub_path, 'r').read()
 
