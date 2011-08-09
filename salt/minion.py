@@ -321,6 +321,7 @@ class Syndic(salt.client.LocalClient, Minion):
                 or not data.has_key('expr_form')\
                 or not data.has_key('arg'):
             return
+        data['to'] = int(data['to']) - 1
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
