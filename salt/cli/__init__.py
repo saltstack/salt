@@ -151,15 +151,15 @@ class SaltCMD(object):
                 sys.exit('2')
             opts['cmd'] = args[0]
         else:
-            if opts['list']:
-                opts['tgt'] = args[0].split(',')
-            else:
-                opts['tgt'] = args[0]
-
             # Catch invalid invocations of salt such as: salt run
             if len(args) <= 1:
                 parser.print_help()
                 parser.exit()
+
+            if opts['list']:
+                opts['tgt'] = args[0].split(',')
+            else:
+                opts['tgt'] = args[0]
 
             if args[1].count(','):
                 opts['fun'] = args[1].split(',')
