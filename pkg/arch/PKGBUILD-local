@@ -17,8 +17,7 @@ depends=('python2'
 makedepends=('git')
 provides=()
 backup=('etc/salt/master' 
-        'etc/salt/minion'
-        'etc/salt/monitor')
+        'etc/salt/minion')
 options=()
 srcdir="$PWD/../.."
 

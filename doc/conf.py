@@ -210,7 +210,6 @@ man_pages = [
     ('index', 'salt', u'Salt Documentation', authors, 7),
     ('ref/cli/salt-master', 'salt-master', u'salt-master Documentation', authors, 1),
     ('ref/cli/salt-minion', 'salt-minion', u'salt-minion Documentation', authors, 1),
-    ('ref/cli/salt-monitor', 'salt-monitor', u'salt-monitor Documentation', authors, 1),
     ('ref/cli/salt-key', 'salt-key', u'salt-key Documentation', authors, 1),
     ('ref/cli/salt-cp', 'salt-cp', u'salt-cp Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', u'salt-run Documentation', authors, 1),

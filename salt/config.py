@@ -92,31 +92,6 @@ def minion_config(path):
 
     return opts
 
-def monitor_config(path):
-    '''
-    Reads the minion configuration file and overrides with values from the monitor configuration.
-    '''
-    # Load minion config from (1) a file specified by $SALT_MINION_CONFIG or
-    # (2) a file named 'minion' in the same directory as the monitor config file.
-    minion_config_file = os.environ.get('SALT_MINION_CONFIG')
-    if not minion_config_file:
-        monitor_config_file = os.environ.get('SALT_MONITOR_CONFIG')
-        if monitor_config_file:
-            basedir = os.path.dirname(monitor_config_file)
-        else:
-            basedir = os.path.dirname(path)
-        minion_config_file = os.path.join(basedir, 'minion')
-    opts = minion_config(minion_config_file)
-
-    # Overwrite minion options with monitor defaults
-    opts.update({'log_file' : '/var/log/salt/monitor'})
-
-    # Overlay monitor config on minion config
-    load_config(opts, path, 'SALT_MONITOR_CONFIG')
-    prepend_root_dir(opts, ['log_file'])
-
-    return opts
-
 def master_config(path):
     '''
     Reads in the master configuration file and sets up default options
