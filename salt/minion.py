@@ -233,7 +233,6 @@ class Minion(object):
         '''
         Return the data from the executed command to the master server
         '''
-        print ret_cmd
         log.info('Returning information for job: %(jid)s', ret)
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
