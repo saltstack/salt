@@ -127,6 +127,7 @@ class Minion(object):
         # predictable exception
         #if not self.functions.has_key(data['fun']):
         #    return
+        log.debug('Executing command {0[fun]} with jid {0[jid]}')
         self._handle_decoded_payload(data)
 
     def _handle_pub(self, load):
@@ -322,6 +323,7 @@ class Syndic(salt.client.LocalClient, Minion):
                 or not data.has_key('arg'):
             return
         data['to'] = int(data['to']) - 1
+        log.debug('Executing syndic command {0[fun]} with jid {0[jid]}')
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
