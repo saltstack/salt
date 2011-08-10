@@ -127,7 +127,7 @@ class Minion(object):
         # predictable exception
         #if not self.functions.has_key(data['fun']):
         #    return
-        log.debug('Executing command {0[fun]} with jid {0[jid]}')
+        log.debug('Executing command {0[fun]} with jid {0[jid]}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_pub(self, load):
@@ -233,15 +233,25 @@ class Minion(object):
         '''
         Return the data from the executed command to the master server
         '''
+        print ret_cmd
         log.info('Returning information for job: %(jid)s', ret)
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
         payload = {'enc': 'aes'}
-        load = {'return': ret['return'],
-                'cmd': ret_cmd,
-                'jid': ret['jid'],
-                'id': self.opts['id']}
+        if ret_cmd == '_syndic_return':
+            load = {'cmd': ret_cmd,
+                    'jid': ret['jid']}
+            load['return'] = {}
+            for key, value in ret.items():
+                if key == 'jid' or key == 'fun':
+                    continue
+                load['return'][key] = value
+        else:
+            load = {'return': ret['return'],
+                    'cmd': ret_cmd,
+                    'jid': ret['jid'],
+                    'id': self.opts['id']}
         if hasattr(self.functions[ret['fun']], '__outputter__'):
             oput = self.functions[ret['fun']].__outputter__
             if isinstance(oput, str):
@@ -319,11 +329,10 @@ class Syndic(salt.client.LocalClient, Minion):
                 or not data.has_key('jid')\
                 or not data.has_key('fun')\
                 or not data.has_key('to')\
-                or not data.has_key('expr_form')\
                 or not data.has_key('arg'):
             return
         data['to'] = int(data['to']) - 1
-        log.debug('Executing syndic command {0[fun]} with jid {0[jid]}')
+        log.debug('Executing syndic command {0[fun]} with jid {0[jid]}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
@@ -343,6 +352,9 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         Take the now clear load and forward it on to the client cmd
         '''
+        # Set up default expr_form
+        if not data.has_key('expr_form'):
+            data['expr_form'] = 'glob'
         # Send out the publication
         pub_data = self.pub(
                 data['tgt'],
@@ -359,7 +371,7 @@ class Syndic(salt.client.LocalClient, Minion):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         # Return the publication data up the pipe
-        self._return_pub(ret, '_return_syndic')
+        self._return_pub(ret, '_syndic_return')
 
 class Matcher(object):
     '''
