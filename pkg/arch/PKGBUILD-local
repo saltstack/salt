@@ -1,7 +1,7 @@
 # Maintainer: Thomas S Hatch <thatch45 at gmail dot com>
 # Build the salt package from local files.
 # Use this to test Arch installation before committing changes.
-pkgname=salt-local
+pkgname=salt
 pkgver=$(date +%Y%m%d)
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
@@ -28,6 +28,7 @@ package() {
   python2 setup.py install --root=$pkgdir/ --optimize=1
   
   mkdir -p $pkgdir/etc/rc.d/
-  cp $srcdir/pkg/arch/salt-m* $pkgdir/etc/rc.d/
+  cp $srcdir/pkg/arch/salt-master $pkgdir/etc/rc.d/
+  cp $srcdir/pkg/arch/salt-minion $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
 } 

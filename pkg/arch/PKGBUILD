@@ -13,18 +13,15 @@ depends=('python2'
          'python2-yaml'
          'pycrypto')
 backup=('etc/salt/master' 
-        'etc/salt/minion'
-        'etc/salt/monitor')
+        'etc/salt/minion')
 makedepends=()
 optdepends=()
 options=()
 source=("https://github.com/downloads/thatch45/salt/$pkgname-$pkgver.tar.gz"
         "salt-master"
-        "salt-minion"
-        "salt-monitor")
+        "salt-minion")
 md5sums=('26456860e89f53deaf75193da50b449a'
-         '4baf45d1610d771b742de2cbd8951b9f'
-         '11bc2e9042a5764e029fefbe49dddcc7')
+         '4baf45d1610d771b742de2cbd8951b9f')
 
 package() {
   cd $srcdir/$pkgname-$pkgver
@@ -32,6 +29,7 @@ package() {
   python2 setup.py install --root=$pkgdir/ --optimize=1
 
   mkdir -p $pkgdir/etc/rc.d/
-  cp $srcdir/salt-m* $pkgdir/etc/rc.d/
+  cp $srcdir/pkg/arch/salt-master $pkgdir/etc/rc.d/
+  cp $srcdir/pkg/arch/salt-minion $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
 }
