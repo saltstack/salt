@@ -29,6 +29,7 @@ import os
 import re
 import glob
 import time
+import datetime
 import cPickle as pickle
 
 # Import zmq modules
@@ -38,6 +39,22 @@ import zmq
 import salt.config
 import salt.payload
 
+
+def prep_jid(cachedir):
+    '''
+    Parses the job return directory, generates a job id and sets up the
+    job id directory.
+    '''
+    jid_root = os.path.join(cachedir, 'jobs')
+    jid = datetime.datetime.strftime(
+        datetime.datetime.now(), '%Y%m%d%H%M%S%f'
+    )
+    jid_dir = os.path.join(jid_root, jid)
+    if not os.path.isdir(jid_dir):
+        os.makedirs(jid_dir)
+    else:
+        return prep_jid(load)
+    return jid
 
 class SaltClientError(Exception): pass
 
@@ -101,18 +118,48 @@ class LocalClient(object):
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
 
-    def cmd(self, tgt, fun, arg=(), timeout=5, expr_form='glob', ret=''):
+    def cmd(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=5,
+        expr_form='glob',
+        ret=''):
         '''
         Execute a salt command and return.
         '''
-        pub_data = self.pub(tgt, fun, arg, expr_form, ret)
+        jid = prep_jid(self.opts['cachedir'])
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout)
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
 
-    def cmd_full_return(self, tgt, fun, arg=(), timeout=5, expr_form='glob', ret=''):
+    def cmd_full_return(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=5,
+        expr_form='glob',
+        ret=''):
         '''
         Execute a salt command and return 
         '''
-        pub_data = self.pub(tgt, fun, arg, expr_form, ret, timeout)
+        jid = prep_jid(self.opts['cachedir'])
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout)
         return self.get_full_returns(pub_data['jid'], pub_data['minions'], timeout)
 
     def get_returns(self, jid, minions, timeout=5):
@@ -285,6 +332,7 @@ class LocalClient(object):
                     arg=arg,
                     key=self.key,
                     tgt_type=expr_form,
+                    jid=jid,
                     ret=ret)
         # Prep zmq
         context = zmq.Context()
