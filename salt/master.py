@@ -433,13 +433,17 @@ class AESFuncs(object):
         if not good:
             return {}
         # Set up the publication payload
-        jid = prep_jid(self.opts['cachedir'], clear_load)
+        jid_dir = os.path.join(
+            self.opts['cachedir'],
+            'jobs',
+            clear_load['jid'])
+        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'tgt': clear_load['tgt'],
-                'jid': jid,
+                'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
                }
         expr_form = 'glob'
@@ -460,7 +464,7 @@ class AESFuncs(object):
         pub_sock.send(salt.payload.package(payload))
         # Run the client get_returns method
         return self.local.get_returns(
-                jid,
+                clear_load['jid'],
                 self.local.check_minions(
                     clear_load['tgt'],
                     expr_form
@@ -622,24 +626,24 @@ class ClearFuncs(object):
         '''
         if not clear_load.pop('key') == self.key:
             return ''
-        if clear_load.has_key('jid'):
-            jid = clear_load['jid']
-        else:
-            jid = prep_jid(self.opts['cachedir'], clear_load)
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', clear_load['jid'])
+        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'tgt': clear_load['tgt'],
-                'jid': jid,
+                'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
                }
         if clear_load.has_key('tgt_type'):
             load['tgt_type'] = clear_load['tgt_type']
+        if clear_load.has_key('to'):
+            load['to'] = clear_load['to']
         payload['load'] = self.crypticle.dumps(load)
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
         pub_sock.connect('tcp://127.0.0.1:%(publish_pull_port)s' % self.opts)
         pub_sock.send(salt.payload.package(payload))
         return {'enc': 'clear',
-                'load': {'jid': jid}}
+                'load': {'jid': clear_load['jid']}}
