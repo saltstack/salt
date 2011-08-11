@@ -11,6 +11,7 @@
 """
 
 import logging
+import logging.handlers
 
 LOG_LEVELS = {
     "none": logging.NOTSET,
@@ -26,7 +27,6 @@ LOG_LEVELS = {
 
 LoggingLoggerClass = logging.getLoggerClass()
 
-
 class Logging(LoggingLoggerClass):
     def garbage(self, msg, *args, **kwargs):
         return LoggingLoggerClass.log(self, 1, msg, *args, **kwargs)
@@ -34,12 +34,15 @@ class Logging(LoggingLoggerClass):
     def trace(self, msg, *args, **kwargs):
         return LoggingLoggerClass.log(self, 5, msg, *args, **kwargs)
 
+def getLogger(name):
+    init()
+    return logging.getLogger(name)
 
-def setup_console_logger(log_level):
-    """
-    Setup the console logger
-    """
-    import logging
+def init():
+    '''
+    Replace the default system logger with a version that includes trace()
+    and garbage() methods.
+    '''
     if logging.getLoggerClass() is not Logging:
         logging.setLoggerClass(Logging)
         logging.addLevelName(5, 'TRACE')
@@ -47,6 +50,11 @@ def setup_console_logger(log_level):
         # Set the root logger at the lowest level possible
         logging.getLogger().setLevel(1)
 
+def setup_console_logger(log_level):
+    """
+    Setup the console logger
+    """
+    init()
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
     rootLogger = logging.getLogger()
@@ -66,19 +74,10 @@ def setup_logfile_logger(log_path, log_level):
     """
     Setup the logfile logger
     """
-    import logging
-    if logging.getLoggerClass() is not Logging:
-        logging.setLoggerClass(Logging)
-        logging.addLevelName(5, 'TRACE')
-        logging.addLevelName(1, 'GARBAGE')
-        # Set the root logger at the lowest level possible
-        logging.getLogger().setLevel(1)
-
-
+    init()
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
     rootLogger = logging.getLogger()
-    import logging.handlers
     handler = getattr(
         logging.handlers, 'WatchedFileHandler', logging.FileHandler)(
             log_path, 'a', 'utf-8', delay=0
@@ -96,7 +95,7 @@ def set_logger_level(logger_name, log_level):
     """
     Tweak a specific logger's logging level
     """
-    import logging
+    init()
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
     )
