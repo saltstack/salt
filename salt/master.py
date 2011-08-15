@@ -76,6 +76,7 @@ class Master(object):
         log.info('Starting the Salt Master')
         multiprocessing.Process(target=self._clear_old_jobs).start()
         reqserv = ReqServer(self.opts)
+        reqserv.start_publisher()
         reqserv.run()
 
 
@@ -121,9 +122,6 @@ class ReqServer():
         self.clients = self.context.socket(zmq.XREP)
         self.workers = self.context.socket(zmq.XREQ)
         self.w_uri = 'inproc://workers'
-        # Start the publisher
-        self.publisher = Publisher(opts)
-        self.publisher.start()
         # Prepare the aes key
         self.key = self.__prep_key()
         self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
@@ -179,6 +177,14 @@ class ReqServer():
             time.sleep(0.1)
 
         zmq.device(zmq.QUEUE, self.clients, self.workers)
+
+    def start_publisher(self):
+        '''
+        Start the salt publisher interface
+        '''
+        # Start the publisher
+        self.publisher = Publisher(self.opts)
+        self.publisher.start()
 
     def run(self):
         '''
