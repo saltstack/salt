@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 '''
-This script is used to kick off a 
+This script is used to kick off a salt minion daemon
 '''
 import salt
 import os
