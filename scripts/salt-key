@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 '''
-Manage the authentication keys with saltkey
+Manage the authentication keys with salt-key
 '''
 import salt.cli
 
