@@ -43,7 +43,42 @@ def prep_jid(cachedir, load):
         return prep_jid(load)
     return jid
 
-class Master(object):
+
+class SMaster(object):
+    '''
+    Create a simple salt-master, this will generate the top level master
+    '''
+    def __init__(self, opts):
+        '''
+        Create a salt master server instance
+        '''
+        self.opts = opts
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.key = self.__prep_key()
+        self.crypticle = self.__prep_crypticle()
+
+    def __prep_crypticle(self):
+        '''
+        Return the crypticle used for AES
+        '''
+        return salt.crypt.Crypticle(self.opts['aes'])
+
+    def __prep_key(self):
+        '''
+        A key needs to be placed in the filesystem with permissions 0400 so
+        clients are required to run as root.
+        '''
+        log.info('Preparing the root key for local communication')
+        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
+        key = salt.crypt.Crypticle.generate_key_string()
+        if os.path.isfile(keyfile):
+            return open(keyfile, 'r').read()
+        open(keyfile, 'w+').write(key)
+        os.chmod(keyfile, 256)
+        return key
+
+
+class Master(SMaster):
     '''
     The salt master server
     '''
@@ -51,7 +86,7 @@ class Master(object):
         '''
         Create a salt master server instance
         '''
-        self.opts = opts
+        SMaster.__init__(self, opts)
 
     def _clear_old_jobs(self):
         '''
@@ -65,7 +100,7 @@ class Master(object):
                 return
             jid_root = os.path.join(self.opts['cachedir'], 'jobs')
             for jid in os.listdir(jid_root):
-              if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
                     shutil.rmtree(os.path.join(jid_root, jid))
             time.sleep(60)
 
@@ -75,7 +110,19 @@ class Master(object):
         '''
         log.info('Starting the Salt Master')
         multiprocessing.Process(target=self._clear_old_jobs).start()
-        reqserv = ReqServer(self.opts)
+        aes_funcs = AESFuncs(self.opts, self.crypticle)
+        clear_funcs = ClearFuncs(
+                self.opts,
+                self.key,
+                self.master_key,
+                self.crypticle)
+        reqserv = ReqServer(
+                self.opts,
+                self.crypticle,
+                self.key,
+                self.master_key,
+                aes_funcs,
+                clear_funcs)
         reqserv.start_publisher()
         reqserv.run()
 
@@ -108,14 +155,16 @@ class Publisher(multiprocessing.Process):
             pub_sock.send(package)
 
 
-class ReqServer():
+class ReqServer(object):
     '''
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, crypticle, key, mkey, aes_funcs, clear_funcs):
         self.opts = opts
-        self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.aes_funcs = aes_funcs
+        self.clear_funcs = clear_funcs
+        self.master_key = mkey
         self.context = zmq.Context(1)
         # Prepare the zeromq sockets
         self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
@@ -123,22 +172,8 @@ class ReqServer():
         self.workers = self.context.socket(zmq.XREQ)
         self.w_uri = 'inproc://workers'
         # Prepare the aes key
-        self.key = self.__prep_key()
-        self.crypticle = salt.crypt.Crypticle(self.opts['aes'])
-
-    def __prep_key(self):
-        '''
-        A key needs to be placed in the filesystem with permissions 0400 so
-        clients are required to run as root.
-        '''
-        log.info('Preparing the root key for local communication')
-        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-        key = salt.crypt.Crypticle.generate_key_string()
-        if os.path.isfile(keyfile):
-            os.chmod(keyfile, 384)
-        open(keyfile, 'w+').write(key)
-        os.chmod(keyfile, 256)
-        return key
+        self.key = key
+        self.crypticle = crypticle
 
     def __worker(self, ind):
         '''
@@ -150,7 +185,9 @@ class ReqServer():
                 ind,
                 self.master_key,
                 self.key,
-                self.crypticle)
+                self.crypticle,
+                self.aes_funcs,
+                self.clear_funcs)
         work_port = m_worker.port
         m_worker.start()
 
@@ -198,17 +235,20 @@ class MWorker(multiprocessing.Process):
     The worker multiprocess instance to manage the backend operations for the
     salt master.
     '''
-    def __init__(self, opts, ind, mkey, key, crypticle):
+    def __init__(self,
+            opts,
+            ind,
+            mkey,
+            key,
+            crypticle,
+            aes_funcs,
+            clear_funcs):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.crypticle = crypticle
         self.port = str(ind + int(self.opts['worker_start_port']))
-        self.aes_funcs = AESFuncs(opts, crypticle)
-        self.clear_funcs = ClearFuncs(
-                opts,
-                key,
-                mkey,
-                crypticle)
+        self.aes_funcs = aes_funcs
+        self.clear_funcs = clear_funcs
 
     def __bind(self):
         '''
