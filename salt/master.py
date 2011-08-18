@@ -426,7 +426,7 @@ class AESFuncs(object):
         individual minions.
         '''
         for key in load:
-            self._return(load['key'])
+            self._return(load[key])
 
     def minion_publish(self, clear_load):
         '''
