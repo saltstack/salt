@@ -351,6 +351,7 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         Take the now clear load and forward it on to the client cmd
         '''
+        #{'tgt_type': 'glob', 'jid': '20110817205225753516', 'tgt': '*', 'ret': '', 'to': 4, 'arg': [], 'fun': 'test.ping'}
         # Set up default expr_form
         if not data.has_key('expr_form'):
             data['expr_form'] = 'glob'
@@ -359,7 +360,10 @@ class Syndic(salt.client.LocalClient, Minion):
                 data['tgt'],
                 data['fun'],
                 data['arg'],
-                data['expr_form']
+                data['expr_form'],
+                data['ret'],
+                data['jid'],
+                data['to']
                 )
         # Gather the return data
         ret = self.get_returns(
