@@ -425,8 +425,16 @@ class AESFuncs(object):
         Recieve a syndic minion return and format it to look like returns from
         individual minions.
         '''
-        for key in load:
-            self._return(load[key])
+        # Verify the load
+        if not load.has_key('return') \
+                or not load.has_key('jid'):
+            return None
+        # Format individual return loads
+        for key, item in load['return'].items():
+            ret = {'jid': load['jid'],
+                   'id': key,
+                   'return': item}
+            self._return(ret)
 
     def minion_publish(self, clear_load):
         '''
