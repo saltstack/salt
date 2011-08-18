@@ -18,7 +18,7 @@ Mixed masters:
 .. image:: syndic_charts/mixedm.png
 
 Hyper Layers:
-.. image:: syndic_charts/mixedm.png
+.. image:: syndic_charts/hlay.png
 
 
 The intent for supporting many layouts is not presented with the intent of
