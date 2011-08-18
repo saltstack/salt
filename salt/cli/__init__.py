@@ -408,6 +408,7 @@ class SaltKey(object):
         parser.add_option('--keysize',
                 dest='keysize',
                 default=256,
+                type=int,
                 help='Set the keysize for the generated key, only works with'
                      'the "--gen-keys" option; default=256')
 
