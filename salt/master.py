@@ -678,10 +678,16 @@ class ClearFuncs(object):
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         '''
+        # Verify that the caller has root on master
         if not clear_load.pop('key') == self.key:
             return ''
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', clear_load['jid'])
+        # Verify the jid dir
+        if not os.path.isdir(jid_dir):
+            os.makedirs(jid_dir)
+        # Save the invocation information
         pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        # Set up the payload
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
@@ -695,6 +701,7 @@ class ClearFuncs(object):
         if clear_load.has_key('to'):
             load['to'] = clear_load['to']
         payload['load'] = self.crypticle.dumps(load)
+        # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
         pub_sock.connect('tcp://127.0.0.1:%(publish_pull_port)s' % self.opts)
