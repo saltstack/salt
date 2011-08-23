@@ -11,7 +11,8 @@ depends=('python2'
          'python2-pyzmq'
          'python-m2crypto'
          'python2-yaml'
-         'pycrypto')
+         'pycrypto'
+         'python2-psutil')
 backup=('etc/salt/master' 
         'etc/salt/minion')
 makedepends=()
