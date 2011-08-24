@@ -116,6 +116,18 @@ Writing your own customizations on top of Salt
 * **File Server:**
   :doc:`File Server <ref/file_server/index>`
 
+Salt Network Topology
+=====================
+
+Salt can be extended beyond a simple master commanding minions, for more
+information read up on the peer and syndic interfaces.
+
+.. toctree::
+    :maxdepth: 1
+
+    ref/syndic
+    ref/peer
+
 Getting Involved
 ================
 
