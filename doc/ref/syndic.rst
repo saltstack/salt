@@ -9,18 +9,6 @@ minion, it is run on a master and connects to another master, then the master
 that the Syndic minion is listening to can control the minions attatched to
 the master running the syndic.
 
-These charts better decribes the posibilities
-
-Master of masters:
-.. image:: syndic_charts/mofm.png
-
-Mixed masters:
-.. image:: syndic_charts/mixedm.png
-
-Hyper Layers:
-.. image:: syndic_charts/hlay.png
-
-
 The intent for supporting many layouts is not presented with the intent of
 supposing the use of any single topology, but to allow a more flexible method
 of controlling many systems.
