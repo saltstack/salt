@@ -38,6 +38,6 @@ The Syndic is a seperate daemon that needs to be started on the master that is
 controlled by a higher master. Starting the Syndic daemon is the same as
 starting the other Salt daemons.
 
-.. code_block:: bash
+.. code-block:: bash
 
     # salt-syndic
