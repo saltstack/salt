@@ -13,6 +13,9 @@
 import logging
 import logging.handlers
 
+TRACE = 5
+GARBAGE = 1
+
 LOG_LEVELS = {
     "none": logging.NOTSET,
     "info": logging.INFO,
@@ -21,8 +24,8 @@ LOG_LEVELS = {
     "error": logging.ERROR,
     "none": logging.CRITICAL,
     "debug": logging.DEBUG,
-    "trace": 5,
-    "garbage": 1
+    "trace": TRACE,
+    "garbage": GARBAGE
 }
 
 LoggingLoggerClass = logging.getLoggerClass()
