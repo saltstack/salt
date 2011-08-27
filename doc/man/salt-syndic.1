@@ -1,6 +1,6 @@
-.TH "SALT-MASTER" "1" "August 27, 2011" "0.9.0" "Salt"
+.TH "SALT-SYNDIC" "1" "August 27, 2011" "0.9.0" "Salt"
 .SH NAME
-salt-master \- salt-master Documentation
+salt-syndic \- salt-syndic Documentation
 .
 .nr rst2man-indent-level 0
 .
@@ -31,13 +31,15 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" Man page generated from reStructeredText.
 .
 .sp
-The salt master daemon, used to control the salt minions
+The salt syndic daemon, a special minion that passes through commands from a
+higher master
 .SH SYNOPSIS
 .sp
-salt\-master [ options ]
+salt\-syndic [ options ]
 .SH DESCRIPTION
 .sp
-The master daemon controls the salt minions
+The salt syndic daemon, a special minion that passes through commands from a
+higher master.
 .SH OPTIONS
 .INDENT 0.0
 .TP
@@ -47,12 +49,17 @@ Print a usage message briefly summarizing these command\-line options.
 .INDENT 0.0
 .TP
 .B \-d, \-\-daemon
-Run the salt master as a daemon
+Run the salt syndic as a daemon
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-c CONFIG, \-\-config=CONFIG
+.B \-\-master\-config=MASTER_CONFIG
 The master configuration file to use, the default is /etc/salt/master
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-minion\-config=MINION_CONFIG
+The minion configuration file to use, the default is /etc/salt/minion
 .UNINDENT
 .SH AUTHOR
 Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file

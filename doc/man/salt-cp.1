@@ -1,4 +1,4 @@
-.TH "SALT-CP" "1" "July 09, 2011" "0.8.9" "Salt"
+.TH "SALT-CP" "1" "August 27, 2011" "0.9.0" "Salt"
 .SH NAME
 salt-cp \- salt-cp Documentation
 .
@@ -51,33 +51,28 @@ given target.
 .INDENT 0.0
 .TP
 .B \-h, \-\-help
-.sp
 Print a usage message briefly summarizing these command\-line options
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-t TIMEOUT, \-\-timeout=TIMEOUT
-.sp
 The timeout in seconds to wait for replies from the salt minions.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-E, \-\-pcre
-.sp
 The target expresion will be interpereted as a pcre regular expression
 rather than a shell glob.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-L, \-\-list
-.sp
 The target expression will be interpereted as a comma delimited list,
 example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-G, \-\-grain
-.sp
 The target expression matches values returned by the salt grains system on
 the minions. The target expresion is in the format of \(aq<grain value>:<pcre
 regular expresion>\(aq; example: \(aqos:Arch.*\(aq
@@ -85,14 +80,12 @@ regular expresion>\(aq; example: \(aqos:Arch.*\(aq
 .INDENT 0.0
 .TP
 .B \-Q, \-\-query
-.sp
 Execute a salt command query, this can be used to find the results os a
 previous function call: \-Q test.echo\(aq)
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-c CONFIG, \-\-config=CONFIG
-.sp
 The location of the salt master configuration file, the salt master
 settings are required to know where the connections are;
 default=/etc/salt/master

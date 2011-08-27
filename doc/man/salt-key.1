@@ -1,4 +1,4 @@
-.TH "SALT-KEY" "1" "July 09, 2011" "0.8.9" "Salt"
+.TH "SALT-KEY" "1" "August 27, 2011" "0.9.0" "Salt"
 .SH NAME
 salt-key \- salt-key Documentation
 .
@@ -41,38 +41,32 @@ authentication.
 .INDENT 0.0
 .TP
 .B \-h, \-\-help
-.sp
 Print a usage message briefly summarizing these command\-line options.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-l, \-\-list
-.sp
 List the unaccepted minion public keys.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-L, \-\-list\-all
-.sp
 List all public keys on this salt master, both accepted and pending
 acceptance.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-a ACCEPT, \-\-accept=ACCEPT
-.sp
 Accept the named minion public key for command execution.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-A, \-\-accept\-all
-.sp
 Accepts all pending public keys.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-c CONFIG, \-\-config=CONFIG
-.sp
 The master configuration file needs to be read to determine where the salt
 keys are stored via the pki_dir configuration value;
 default=/etc/salt/master
