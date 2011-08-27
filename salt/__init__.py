@@ -183,7 +183,6 @@ class Syndic(object):
                                + str(opts['master_port'])
             opts['_master_conf_file'] = opts['conf_file']
             opts.pop('conf_file')
-            print opts
             return opts
         err = 'The syndic_master needs to be configured in the salt master'\
             + ' config, EXITING!\n'
