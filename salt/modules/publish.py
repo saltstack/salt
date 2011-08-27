@@ -25,7 +25,7 @@ def publish(tgt, fun, arg, expr_form='glob', returner=''):
     to command another minion as that would create an infinate command loop.
 
     CLI Example:
-    salt '*' publish.publish
+    salt '*' publish.publish '*' cmd.run 'ls -la /tmp'
     '''
     if fun == 'publish.publish':
         # Need to log something here
