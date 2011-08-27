@@ -80,6 +80,8 @@ setup(
                      'doc/man/salt-key.1',
                      'doc/man/salt.1',
                      'doc/man/salt-cp.1',
+                     'doc/man/salt-call.1',
+                     'doc/man/salt-syndic.1',
                      'doc/man/salt-run.1',
                      'doc/man/salt-minion.1',
                     ]),
