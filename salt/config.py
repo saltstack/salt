@@ -98,7 +98,6 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
-            'publish_pull_port': '45055',
             'worker_threads': 5,
             'sock_dir': '/tmp/.salt-unix',
             'ret_port': '4506',

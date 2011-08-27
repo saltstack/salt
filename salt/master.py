@@ -142,8 +142,10 @@ class Publisher(multiprocessing.Process):
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         pull_sock = context.socket(zmq.PULL)
-        pub_uri = 'tcp://%(interface)s:%(publish_port)s' % self.opts
-        pull_uri = 'tcp://127.0.0.1:%(publish_pull_port)s' % self.opts
+        pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
+        pull_uri = 'ipc://{}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
         log.info('Starting the Salt Publisher on %s', pub_uri)
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
@@ -495,9 +497,10 @@ class AESFuncs(object):
         # Connect to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
-        pub_sock.connect(
-                'tcp://127.0.0.1:{0[publish_pull_port]}'.format(self.opts)
-                )
+        pull_uri = 'ipc://{}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
+        pub_sock.connect(pull_uri)
         pub_sock.send(salt.payload.package(payload))
         # Run the client get_returns method
         return self.local.get_returns(
@@ -687,7 +690,10 @@ class ClearFuncs(object):
         # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
-        pub_sock.connect('tcp://127.0.0.1:%(publish_pull_port)s' % self.opts)
+        pull_uri = 'ipc://{}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
+        pub_sock.connect(pull_uri)
         pub_sock.send(salt.payload.package(payload))
         return {'enc': 'clear',
                 'load': {'jid': clear_load['jid']}}
