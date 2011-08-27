@@ -1,7 +1,7 @@
 # Maintainer: Thomas S Hatch <thatch45@gmail.com>
 
 pkgname=salt
-pkgver=0.8.7
+pkgver=0.9.0
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=(any)
@@ -20,6 +20,7 @@ optdepends=()
 options=()
 source=("https://github.com/downloads/thatch45/salt/$pkgname-$pkgver.tar.gz"
         "salt-master"
+        "salt-syndic"
         "salt-minion")
 md5sums=('26456860e89f53deaf75193da50b449a'
          '4baf45d1610d771b742de2cbd8951b9f')
@@ -32,5 +33,6 @@ package() {
   mkdir -p $pkgdir/etc/rc.d/
   cp $srcdir/pkg/arch/salt-master $pkgdir/etc/rc.d/
   cp $srcdir/pkg/arch/salt-minion $pkgdir/etc/rc.d/
+  cp $srcdir/pkg/arch/salt-syndic $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
 }

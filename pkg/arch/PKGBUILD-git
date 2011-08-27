@@ -19,9 +19,11 @@ backup=('etc/salt/master'
         'etc/salt/minion')
 options=()
 source=("salt-master"
-        "salt-minion")
+        "salt-minion"
+        "salt-syndic")
 md5sums=('1594591acb0a266854186a694da21103'
-         '21ab2eac231e9f61bf002ba5f16f8a3d')
+         '21ab2eac231e9f61bf002ba5f16f8a3d'
+         '09683ef4966e401761f7d2db6ad4b692')
 
 _gitroot="git://github.com/thatch45/salt.git"
 _gitname="salt"
@@ -53,5 +55,6 @@ package() {
   mkdir -p $pkgdir/etc/rc.d/
   cp $srcdir/salt-master $pkgdir/etc/rc.d/
   cp $srcdir/salt-minion $pkgdir/etc/rc.d/
+  cp $srcdir/salt-syndic $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
 } 
