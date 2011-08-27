@@ -169,7 +169,9 @@ class ReqServer(object):
         self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
         self.clients = self.context.socket(zmq.XREP)
         self.workers = self.context.socket(zmq.XREQ)
-        self.w_uri = 'ipc:///tmp/.salt.ipc'
+        self.w_uri = 'ipc://{}'.format(
+            os.path.join(self.opts['sock_dir'], 'workers.ipc')
+            )
         # Prepare the aes key
         self.key = key
         self.crypticle = crypticle
@@ -233,8 +235,11 @@ class MWorker(multiprocessing.Process):
         '''
         context = zmq.Context(1)
         socket = context.socket(zmq.REP)
-        log.info('Worker binding to socket /tmp/.salt.ipc')
-        socket.connect('ipc:///tmp/.salt.ipc')
+        w_uri = 'ipc://{}'.format(
+            os.path.join(self.opts['sock_dir'], 'workers.ipc')
+            )
+        log.info('Worker binding to socket {}'.format(w_uri))
+        socket.connect(w_uri)
 
         while True:
             package = socket.recv()

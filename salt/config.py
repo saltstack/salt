@@ -100,7 +100,7 @@ def master_config(path):
             'publish_port': '4505',
             'publish_pull_port': '45055',
             'worker_threads': 5,
-            'worker_start_port': '45056',
+            'sock_dir': '/tmp/.salt-unix',
             'ret_port': '4506',
             'keep_jobs': 24,
             'root_dir': '/',

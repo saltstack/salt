@@ -72,6 +72,7 @@ class Master(object):
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.opts['cachedir'], 'jobs'),
                     os.path.dirname(self.opts['log_file']),
+                    self.opts['sock_dir'],
                     ])
         import salt.log
         salt.log.setup_logfile_logger(
