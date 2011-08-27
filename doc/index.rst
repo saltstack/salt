@@ -17,21 +17,21 @@ backbone of cloud and data center management.
 News
 ----
 
-0.8.9 released!
+0.9.0 released!
 
 Release announcement:
 
 .. toctree::
     :maxdepth: 1
 
-    topics/releases/0.8.9
+    topics/releases/0.9.0
 
 Download
 --------
 
-The latest Salt is 0.8.9:
+The latest Salt is 0.9.0:
 
-https://github.com/downloads/thatch45/salt/salt-0.8.9.tar.gz
+https://github.com/downloads/thatch45/salt/salt-0.9.0.tar.gz
 
 Additional packages can be downloaded from the download page:
 
