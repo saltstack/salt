@@ -1,0 +1,63 @@
+#!/bin/bash
+
+daemon_name='salt-syndic'
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+[ -f /etc/conf.d/$daemon_name ] && . /etc/conf.d/$daemon_name
+
+get_pid() {
+	ps aux | grep -v grep | grep '/usr/bin/python2 /usr/bin/salt-syndic' | awk '{print $2}'
+}
+
+case "$1" in
+  start)
+    stat_busy "Starting Salt Syndic"
+
+    PID=$(get_pid)
+    if [ -z "$PID" ]; then
+      [ -f /var/run/$daemon_name.pid ] && rm -f /var/run/$daemon_name.pid
+      # RUN
+      /usr/bin/$daemon_name -d
+      #
+      if [ $? -gt 0 ]; then
+        stat_fail
+        exit 1
+      else
+        echo $(get_pid) > /var/run/$daemon_name.pid
+        add_daemon $daemon_name
+        stat_done
+      fi
+    else
+      stat_fail
+      exit 1
+    fi
+    ;;
+
+  stop)
+    stat_busy "Stopping Salt Syndic"
+    PID=$(get_pid)
+    # KILL
+    [ ! -z "$PID" ] && kill $PID &> /dev/null
+    #
+    if [ $? -gt 0 ]; then
+      stat_fail
+      exit 1
+    else
+      rm -f /var/run/$daemon_name.pid &> /dev/null
+      rm_daemon $daemon_name
+      stat_done
+    fi
+    ;;
+
+  restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+
+  *)
+    echo "usage: $0 {start|stop|restart|status}"
+esac
+
+exit 0
