@@ -85,6 +85,24 @@
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576
 
+#####          Syndic settings       #####
+##########################################
+# The Salt syndic is used to pass commands through a master from a higher
+# master. Using the syndic is simple, if this is a master that will have
+# syndic servers(s) below it set the "order_masters" setting to True, if this
+# is a master that will be running a syndic daemon for passthrough the
+# "syndic_master" setting needs to be set to the location of the master server
+# to recieve commands from
+#
+# Set the order_masters setting to True if this master will command lower
+# masters' syndic interfaces
+#order_masters: False
+#
+# If this master will be running a salt syndic daemon, then the syndic needs
+# to know where the master it is recieving commands from is, set it with the
+# syndic_master value
+#syndic_master: masterofmaster
+
 #####      Peer Publish settings     #####
 ##########################################
 # Salt minions can send commands to other minions, but only if the minion is
