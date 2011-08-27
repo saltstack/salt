@@ -212,5 +212,6 @@ man_pages = [
     ('ref/cli/salt-minion', 'salt-minion', u'salt-minion Documentation', authors, 1),
     ('ref/cli/salt-key', 'salt-key', u'salt-key Documentation', authors, 1),
     ('ref/cli/salt-cp', 'salt-cp', u'salt-cp Documentation', authors, 1),
+    ('ref/cli/salt-syndic', 'salt-syndic', u'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', u'salt-run Documentation', authors, 1),
 ]
