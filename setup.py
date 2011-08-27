@@ -42,7 +42,7 @@ setup(
           'Programming Language :: Python',
           'Programming Language :: Cython',
           'Programming Language :: Python :: 2.5',
-          'Development Status :: 4 - Beta',
+          'Development Status :: 5 - Production/Stable',
           'Environment :: Console',
           'Intended Audience :: Developers',
           'Intended Audience :: Information Technology',
