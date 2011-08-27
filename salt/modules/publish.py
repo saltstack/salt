@@ -24,8 +24,14 @@ def publish(tgt, fun, arg, expr_form='glob', returner=''):
     publication loop, this means that a minion cannot command another minion
     to command another minion as that would create an infinate command loop.
 
+    The arguments sent to the minion publish function are seperated with
+    commas. This means that a minion who is executing a command with multiple
+    args it will look like this:
+
+    salt system.example.com publish.publish '*' user.add 'foo,1020,1020'
+
     CLI Example:
-    salt '*' publish.publish '*' cmd.run 'ls -la /tmp'
+    salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
     if fun == 'publish.publish':
         # Need to log something here
@@ -36,7 +42,7 @@ def publish(tgt, fun, arg, expr_form='glob', returner=''):
     load = {
             'cmd': 'minion_publish',
             'fun': fun,
-            'arg': arg,
+            'arg': arg.split(','),
             'tgt': tgt,
             'ret': returner,
             'tok': tok,
