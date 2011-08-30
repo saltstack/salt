@@ -29,9 +29,9 @@ Release announcement:
 Download
 --------
 
-The latest Salt is 0.9.0:
+The latest Salt is 0.9.1:
 
-https://github.com/downloads/thatch45/salt/salt-0.9.0.tar.gz
+https://github.com/downloads/thatch45/salt/salt-0.9.1.tar.gz
 
 Additional packages can be downloaded from the download page:
 
