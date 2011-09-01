@@ -195,6 +195,8 @@ class State(object):
         Take the path to a template and return the high data structure derived
         from the template.
         '''
+        if not isinstance(template, str):
+            return {}
         if not os.path.isfile(template):
             return {}
         return self.rend[self.opts['renderer']](template)
@@ -443,6 +445,7 @@ class HighState(object):
         fn_ = self.client.get_state(sls, env)
         state = self.state.compile_template(fn_)
         mods.add(sls)
+        nstate = None
         if state:
             if state.has_key('include'):
                 for sub_sls in state.pop('include'):
