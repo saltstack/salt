@@ -34,10 +34,10 @@ class Caller(object):
         Pick up the documentation for all of the modules and print it out.
         '''
         docs = {}
-        for name in self.minion.functions:
+        for name, func in self.minion.functions.items():
             if not docs.has_key(name):
-                if ret[name].__doc__:
-                    docs[name] = ret[name].__doc__
+                if func.__doc__:
+                    docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts['fun']):
                 print name + ':'
