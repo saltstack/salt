@@ -60,7 +60,7 @@ class Caller(object):
         '''
         if self.opts['doc']:
             self.print_docs()
-        elif self.opts['grains']:
+        elif self.opts['grains_run']:
             self.print_grains()
         else:
             print self.call()

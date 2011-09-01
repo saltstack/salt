@@ -481,7 +481,7 @@ class SaltCall(object):
 
         opts = {}
 
-        opts['grains'] = options.grains
+        opts['grains_run'] = options.grains
         opts['module_dirs'] = options.module_dirs.split(',')
         opts['doc'] = options.doc
         if len(args) >= 1:
