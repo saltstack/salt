@@ -95,13 +95,13 @@ def managed(name,
     if os.path.isfile(name):
         # Check sums
         source_sum = __salt__['cp.hash_file'](source)
-        name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
-            'rb').read()).hexdigest()
         if not source_sum:
             return {'name': name,
                     'changes': changes,
                     'result': False,
                     'comment': 'Source file ' + source + ' not found'}
+        name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
+            'rb').read()).hexdigest()
         # Check if file needs to be replaced
         if source_sum['hsum'] != name_sum:
             sfn = __salt__['cp.cache_file'](source)

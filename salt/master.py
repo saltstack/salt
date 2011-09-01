@@ -366,7 +366,7 @@ class AESFuncs(object):
             return ''
         path = self.__find_file(load['path'], load['env'])['path']
         if not path:
-            return ''
+            return {}
         ret = {}
         ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
                 open(path, 'rb').read()).hexdigest()
