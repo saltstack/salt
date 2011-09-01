@@ -7,6 +7,7 @@ import os
 import distutils.sysconfig
 # Import salt libs
 import salt.loader
+import salt
 
 
 class Caller(object):
@@ -19,9 +20,9 @@ class Caller(object):
         '''
         self.opts = opts
         module_dirs = [
-            os.path.join(distutils.sysconfig.get_python_lib(), 'salt/modules'),
+            os.path.join(os.path.dirname(salt.__file__), 'salt/modules'),
             ] + opts['module_dirs']
-        self.loader = salt.loader.Loader(module_dirs)
+        self.loader = salt.loader.Loader(module_dirs, opts)
 
     def call(self):
         '''
