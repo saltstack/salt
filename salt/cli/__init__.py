@@ -469,6 +469,11 @@ class SaltCall(object):
                 default='',
                 help='Specify an additional directories to pull modules from,'\
                     + ' multiple directories can be delimited by commas')
+        parser.add_option('-c',
+                '--config',
+                dest='config',
+                default='/etc/salt/minion',
+                help='Pass in an alternative configuration file')
         parser.add_option('-d',
                 '--doc',
                 dest='doc',
@@ -484,6 +489,7 @@ class SaltCall(object):
         opts['grains_run'] = options.grains
         opts['module_dirs'] = options.module_dirs.split(',')
         opts['doc'] = options.doc
+        opts.update(salt.config.minion_config(options.config))
         if len(args) >= 1:
             opts['fun'] = args[0]
             opts['arg'] = args[1:]
