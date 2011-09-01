@@ -7,6 +7,7 @@ import os
 import pprint
 # Import salt libs
 import salt.loader
+import salt.minion
 import salt
 
 
@@ -19,24 +20,21 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
-        module_dirs = [
-            os.path.join(os.path.dirname(salt.__file__), 'salt/modules'),
-            ] + opts['module_dirs']
-        self.loader = salt.loader.Loader(module_dirs, opts)
+        opts['grains'] = salt.loader.grains(opts)
+        self.minion = salt.minion.SMinion(opts)
 
     def call(self):
         '''
         Call the module
         '''
-        return self.loader.call(self.opts['fun'], self.opts['arg'])
+        return self.minion.functions[self.opts['fun']](*self.opts['arg'])
 
     def print_docs(self):
         '''
         Pick up the documentation for all of the modules and print it out.
         '''
-        ret = self.loader.apply_introspection(self.loader.gen_functions())
         docs = {}
-        for name in ret:
+        for name in self.minion.functions:
             if not docs.has_key(name):
                 if ret[name].__doc__:
                     docs[name] = ret[name].__doc__
