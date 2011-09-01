@@ -19,9 +19,12 @@ def minion_mods(opts):
     '''
     Returns the minion modules
     '''
+    extra_dirs = []
+    if opts.has_key('module_dirs'):
+        extra_dirs = opts['module_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
-        ] + opts['module_dirs']
+        ] + extra_dirs
     load = Loader(module_dirs, opts)
     return load.apply_introspection(load.gen_functions())
 
@@ -29,9 +32,12 @@ def returners(opts):
     '''
     Returns the returner modules
     '''
+    extra_dirs = []
+    if opts.has_key('returner_dirs'):
+        extra_dirs = opts['returner_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'returners'),
-        ] + opts['returner_dirs']
+        ] + extra_dirs
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
 
@@ -39,9 +45,12 @@ def states(opts, functions):
     '''
     Returns the returner modules
     '''
+    extra_dirs = []
+    if opts.has_key('states_dirs'):
+        extra_dirs = opts['states_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'states'),
-        ] + opts['states_dirs']
+        ] + extra_dirs
     load = Loader(module_dirs, opts)
     pack = {'name': '__salt__',
             'value': functions}
@@ -51,9 +60,12 @@ def render(opts, functions):
     '''
     Returns the render modules
     '''
+    extra_dirs = []
+    if opts.has_key('render_dirs'):
+        extra_dirs = opts['render_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'renderers'),
-        ] + opts['render_dirs']
+        ] + extra_dirs
     load = Loader(module_dirs, opts)
     pack = {'name': '__salt__',
             'value': functions}
