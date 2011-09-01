@@ -4,7 +4,7 @@ minion modules.
 '''
 # Import python modules
 import os
-import distutils.sysconfig
+import pprint
 # Import salt libs
 import salt.loader
 import salt
@@ -51,8 +51,7 @@ class Caller(object):
         Print out the grains
         '''
         grains = salt.loader.grains(self.opts)
-        for grain in sorted(grains):
-            print grain + ': ' + grains[grain]
+        pprint.pprint(grains)
 
     def run(self):
         '''
