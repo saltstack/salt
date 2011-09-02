@@ -387,8 +387,7 @@ class Matcher(object):
         else:
             self.functions = functions
 
-
-    def confirm_top(self, data):            
+    def confirm_top(self, match, data):            
         '''
         Takes the data passed to a top file environment and determines if the
         data matches this minion
@@ -399,7 +398,7 @@ class Matcher(object):
                 if item.has_key('match'):
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
-            return getattr(self, matcher + '_match')
+            return getattr(self, matcher + '_match')(match)
         else:
             log.error('Attempting to match with unknown matcher: %s', matcher)
             return False

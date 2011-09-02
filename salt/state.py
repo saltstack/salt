@@ -418,12 +418,13 @@ class HighState(object):
         matches = {}
         for env, body in top.items():
             for match, data in body.items():
-                if self.matcher.confirm_top(data):
+                if self.matcher.confirm_top(match, data):
                     if not matches.has_key(env):
                         matches[env] = []
                     for item in data:
                         if type(item) == type(str()):
                             matches[env].append(item)
+        print matches
         return matches
 
     def gather_states(self, matches):
