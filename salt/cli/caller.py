@@ -60,6 +60,6 @@ class Caller(object):
         elif self.opts['grains_run']:
             self.print_grains()
         else:
-            print self.call()
+            pprint.pprint(self.call())
 
 
