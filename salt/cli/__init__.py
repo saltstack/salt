@@ -479,8 +479,8 @@ class SaltCall(object):
                 dest='doc',
                 default=False,
                 action='store_true',
-                help="Return the documentation for the specified module of'\
-                    + ' for all modules if none are specified")
+                help='Return the documentation for the specified module of'\
+                    + ' for all modules if none are specified')
         parser.add_option('--raw-out',
                 default=False,
                 action='store_true',
