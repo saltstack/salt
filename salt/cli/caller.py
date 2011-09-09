@@ -27,7 +27,12 @@ class Caller(object):
         '''
         Call the module
         '''
-        return self.minion.functions[self.opts['fun']](*self.opts['arg'])
+        ret['return'] = self.minion.functions[self.opts['fun']](*self.opts['arg'])
+        if hasattr(self.functions[self.opts['fun']], '__outputter__'):
+            oput = self.functions[self.opts['fun']].__outputter__
+            if isinstance(oput, str):
+                ret['out'] = oput
+        return ret
 
     def print_docs(self):
         '''
@@ -60,6 +65,24 @@ class Caller(object):
         elif self.opts['grains_run']:
             self.print_grains()
         else:
-            pprint.pprint(self.call())
+            ret = self.call()
+            if isinstance(ret['return'], list)\
+                or isinstance(ret['return'], dict):
+                # Determine the proper output method and run it
+                get_outputter = salt.output.get_outputter
+                if self.opts['raw_out']:
+                    printout = get_outputter('raw')
+                elif self.opts['json_out']:
+                    printout = get_outputter('json')
+                elif self.opts['txt_out']:
+                    printout = get_outputter('txt')
+                elif self.opts['yaml_out']:
+                    printout = get_outputter('yaml')
+                elif ret.has_key('out'):
+                    printout = get_outputter(ret['out'])
+                else:
+                    printout = get_outputter(None)
+
+                printout(ret['return'])
 
 
