@@ -80,6 +80,6 @@ class Caller(object):
             else:
                 printout = get_outputter(None)
 
-            printout({'local': ret['return']}, self.opts['color'])
+            printout({'local': ret['return']}, color=self.opts['color'])
 
 
