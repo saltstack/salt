@@ -27,9 +27,10 @@ class Caller(object):
         '''
         Call the module
         '''
+        ret = {}
         ret['return'] = self.minion.functions[self.opts['fun']](*self.opts['arg'])
-        if hasattr(self.functions[self.opts['fun']], '__outputter__'):
-            oput = self.functions[self.opts['fun']].__outputter__
+        if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
+            oput = self.minion.functions[self.opts['fun']].__outputter__
             if isinstance(oput, str):
                 ret['out'] = oput
         return ret
@@ -45,9 +46,7 @@ class Caller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts['fun']):
-                print name + ':'
-                print docs[name]
-                print ''
+                print '{0}:\n{1}\n'.format(name, docs[name])
 
     def print_grains(self):
         '''
@@ -66,23 +65,21 @@ class Caller(object):
             self.print_grains()
         else:
             ret = self.call()
-            if isinstance(ret['return'], list)\
-                or isinstance(ret['return'], dict):
-                # Determine the proper output method and run it
-                get_outputter = salt.output.get_outputter
-                if self.opts['raw_out']:
-                    printout = get_outputter('raw')
-                elif self.opts['json_out']:
-                    printout = get_outputter('json')
-                elif self.opts['txt_out']:
-                    printout = get_outputter('txt')
-                elif self.opts['yaml_out']:
-                    printout = get_outputter('yaml')
-                elif ret.has_key('out'):
-                    printout = get_outputter(ret['out'])
-                else:
-                    printout = get_outputter(None)
+            # Determine the proper output method and run it
+            get_outputter = salt.output.get_outputter
+            if self.opts['raw_out']:
+                printout = get_outputter('raw')
+            elif self.opts['json_out']:
+                printout = get_outputter('json')
+            elif self.opts['txt_out']:
+                printout = get_outputter('txt')
+            elif self.opts['yaml_out']:
+                printout = get_outputter('yaml')
+            elif ret.has_key('out'):
+                printout = get_outputter(ret['out'])
+            else:
+                printout = get_outputter(None)
 
-                printout(ret['return'])
+            printout({'local': ret['return']})
 
 
