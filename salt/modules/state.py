@@ -5,6 +5,9 @@ Control the state system on the minion
 # Import salt modules
 import salt.state
 
+__outputter__ = {
+                 'highstate': 'highstate'
+                 }
 def low(data):
     '''
     Execute a single low data call
