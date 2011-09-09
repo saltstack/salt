@@ -1,6 +1,7 @@
 '''
 A simple way of setting the output format for data from modules
 '''
+# Import Python libs
 import yaml
 import pprint
 
@@ -11,7 +12,15 @@ try:
 except ImportError:
     JSON = False
 
+# Import Salt libs
+import salt.utils
+
 __all__ = ('get_outputter',)
+
+def remove_colors():
+    '''
+    Acces all of the utility colors and change them to empy strings
+    '''
 
 class Outputter(object):
     '''
@@ -28,6 +37,65 @@ class Outputter(object):
 
     def __call__(self, data, **kwargs):
         pprint.pprint(data)
+
+class HighStateOutputter(Outputter):
+    '''
+    Not a command line option, the HighStateOutputter is only meant to be used
+    with the state.highstate function, or a function that returns highstate
+    return data
+    '''
+    supports = 'highstate'
+    def __call__(self. data, **kwargs):
+        colors = self.utils.get_colors(kwargs.get(color))
+        for host in data:
+            hcolor = colors['GREEN']
+            hstrs = []
+            for tname, ret in data['host']:
+                tcolor = colors['GREEN']
+                if not ret['result']:
+                    hcolor = colors['RED']
+                    tcolor = colors['RED']
+                comps = tname.split('.')
+                state = comps[0]
+                name = comps[1]
+                func = comps[2]
+                hstrs.append(  '{0}State:     {1}{2[ENDC]}\n'.format(
+                    tcolor,
+                    comps[0],
+                    colors
+                    ))
+                hstrs.append('  {0}Name:      {1}{2[ENDC]}\n'.format(
+                    tcolor,
+                    comps[1],
+                    colors
+                    ))
+                hstrs.append('  {0}Function:  {1}{2[ENDC]}\n'.format(
+                    tcolor,
+                    comps[2],
+                    colors
+                    ))
+                hstrs.append('    {0}Result:    {1}{2[ENDC]}\n'.format(
+                    tcolor,
+                    str(ret['result']),
+                    colors
+                    ))
+                hstrs.append('    {0}Comment:   {1}{2[ENDC]}\n'.format(
+                    tcolor,
+                    ret['comment'],
+                    colors
+                    ))
+                hstrs.append('    {0}Changes:   {1}{2[ENDC]}\n'.format(
+                    tcolor,
+                    pprint.pprint(ret['changes']),
+                    colors
+                    ))
+            print '{0}{1}:{2[ENDC]}'.format(
+                hcolor,
+                host,
+                colors)
+            for hstr in hstrs:
+                print hstr
+            
 
 class RawOutputter(Outputter):
     '''
