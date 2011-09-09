@@ -424,7 +424,6 @@ class HighState(object):
                     for item in data:
                         if type(item) == type(str()):
                             matches[env].append(item)
-        print matches
         return matches
 
     def gather_states(self, matches):
