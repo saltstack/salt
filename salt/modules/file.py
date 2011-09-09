@@ -10,6 +10,7 @@ data
 import os
 import grp
 import pwd
+import hashlib
 
 import salt.utils.find
 
@@ -186,9 +187,15 @@ def get_sum(path, form='md5'):
     if not os.path.isfile(path):
         return 'File not found'
     try:
-        return getattr(hashlib, form)(open(path, 'rb')).hexdigest()
-    except:
+        return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
+    except (IOError, OSError), e:
+        return 'File Error: %s' % (str(e))
+    except AttributeError, e:
         return 'Hash ' + form + ' not supported'
+    except NameError, e:
+        return 'Hashlib unavailable - please fix your python install'
+    except Exception, e:
+        return str(e)
 
 def find(path, *opts):
     '''
