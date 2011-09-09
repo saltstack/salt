@@ -481,6 +481,30 @@ class SaltCall(object):
                 action='store_true',
                 help="Return the documentation for the specified module of'\
                     + ' for all modules if none are specified")
+        parser.add_option('--raw-out',
+                default=False,
+                action='store_true',
+                dest='raw_out',
+                help='Print the output from the salt command in raw python'\
+                   + ' form, this is suitable for re-reading the output into'\
+                   + ' an executing python script with eval.')
+        parser.add_option('--text-out',
+                default=False,
+                action='store_true',
+                dest='txt_out',
+                help='Print the output from the salt command in the same form '\
+                   + 'the shell would.')
+        parser.add_option('--yaml-out',
+                default=False,
+                action='store_true',
+                dest='yaml_out',
+                help='Print the output from the salt command in yaml.')
+        if JSON:
+            parser.add_option('--json-out',
+                    default=False,
+                    action='store_true',
+                    dest='json_out',
+                    help='Print the output from the salt command in json.')
 
         options, args = parser.parse_args()
 
@@ -489,6 +513,13 @@ class SaltCall(object):
         opts['grains_run'] = options.grains
         opts['module_dirs'] = options.module_dirs.split(',')
         opts['doc'] = options.doc
+        opts['raw_out'] = options.raw_out
+        opts['txt_out'] = options.txt_out
+        opts['yaml_out'] = options.yaml_out
+        if JSON:
+            opts['json_out'] = options.json_out
+        else:
+            opts['json_out'] = False
         opts.update(salt.config.minion_config(options.config))
         if len(args) >= 1:
             opts['fun'] = args[0]
