@@ -505,6 +505,11 @@ class SaltCall(object):
                     action='store_true',
                     dest='json_out',
                     help='Print the output from the salt command in json.')
+        parser.add_option('--no-color',
+                default=False,
+                dest='no_color',
+                action='store_true',
+                help='Disable all colored output')
 
         options, args = parser.parse_args()
 
@@ -516,6 +521,7 @@ class SaltCall(object):
         opts['raw_out'] = options.raw_out
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
+        opts['color'] = not options.no_color
         if JSON:
             opts['json_out'] = options.json_out
         else:
