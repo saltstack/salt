@@ -143,7 +143,7 @@ class Publisher(multiprocessing.Process):
         pub_sock = context.socket(zmq.PUB)
         pull_sock = context.socket(zmq.PULL)
         pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
-        pull_uri = 'ipc://{}'.format(
+        pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         log.info('Starting the Salt Publisher on %s', pub_uri)
@@ -171,7 +171,7 @@ class ReqServer(object):
         self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
         self.clients = self.context.socket(zmq.XREP)
         self.workers = self.context.socket(zmq.XREQ)
-        self.w_uri = 'ipc://{}'.format(
+        self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
             )
         # Prepare the aes key
@@ -186,7 +186,7 @@ class ReqServer(object):
         self.clients.bind(self.uri)
 
         for ind in range(int(self.opts['worker_threads'])):
-            log.info('Starting Salt worker process {}'.format(ind))
+            log.info('Starting Salt worker process {0}'.format(ind))
             MWorker(self.opts,
                     self.master_key,
                     self.key,
@@ -237,10 +237,10 @@ class MWorker(multiprocessing.Process):
         '''
         context = zmq.Context(1)
         socket = context.socket(zmq.REP)
-        w_uri = 'ipc://{}'.format(
+        w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
             )
-        log.info('Worker binding to socket {}'.format(w_uri))
+        log.info('Worker binding to socket {0}'.format(w_uri))
         socket.connect(w_uri)
 
         while True:
@@ -497,7 +497,7 @@ class AESFuncs(object):
         # Connect to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{}'.format(
+        pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
@@ -690,7 +690,7 @@ class ClearFuncs(object):
         # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{}'.format(
+        pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)

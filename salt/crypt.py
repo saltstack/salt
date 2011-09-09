@@ -37,8 +37,8 @@ def gen_keys(keydir, keyname, keysize):
     Generate a keypair for use with salt
     '''
     base = os.path.join(keydir, keyname)
-    priv = '{}.pem'.format(base)
-    pub = '{}.pub'.format(base)
+    priv = '{0}.pem'.format(base)
+    pub = '{0}.pub'.format(base)
     gen = RSA.gen_key(keysize, 1)
     gen.save_key(priv, callback=foo_pass)
     gen.save_pub_key(pub)
