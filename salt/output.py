@@ -46,42 +46,42 @@ class HighStateOutputter(Outputter):
     '''
     supports = 'highstate'
     def __call__(self, data, **kwargs):
-        colors = salt.utils.get_colors(kwargs.get(color))
+        colors = salt.utils.get_colors(kwargs.get('color'))
         for host in data:
             hcolor = colors['GREEN']
             hstrs = []
-            for tname, ret in data['host']:
+            for tname, ret in data[host].items():
                 tcolor = colors['GREEN']
                 if not ret['result']:
                     hcolor = colors['RED']
                     tcolor = colors['RED']
                 comps = tname.split('.')
-                hstrs.append(  '{0}State:     {1}{2[ENDC]}\n'.format(
+                hstrs.append(  '{0}State:     {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[0],
                     colors
                     ))
-                hstrs.append('  {0}Name:      {1}{2[ENDC]}\n'.format(
+                hstrs.append('  {0}Name:      {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[1],
                     colors
                     ))
-                hstrs.append('  {0}Function:  {1}{2[ENDC]}\n'.format(
+                hstrs.append('  {0}Function:  {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[2],
                     colors
                     ))
-                hstrs.append('    {0}Result:    {1}{2[ENDC]}\n'.format(
+                hstrs.append('    {0}Result:    {1}{2[ENDC]}'.format(
                     tcolor,
                     str(ret['result']),
                     colors
                     ))
-                hstrs.append('    {0}Comment:   {1}{2[ENDC]}\n'.format(
+                hstrs.append('    {0}Comment:   {1}{2[ENDC]}'.format(
                     tcolor,
                     ret['comment'],
                     colors
                     ))
-                hstrs.append('    {0}Changes:   {1}{2[ENDC]}\n'.format(
+                hstrs.append('    {0}Changes:   {1}{2[ENDC]}'.format(
                     tcolor,
                     pprint.pprint(ret['changes']),
                     colors
