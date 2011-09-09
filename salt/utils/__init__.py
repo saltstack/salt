@@ -5,7 +5,8 @@ Some of the utils used by salt
 import os
 import sys
 
-# Set up the bash output colors
+# Do not use these color declarations, use get_colors()
+# These color declarations will be removed in the future
 BLACK = '\033[0;30m'
 DARK_GRAY = '\033[1;30m'
 LIGHT_GRAY = '\033[0;37m'
@@ -25,6 +26,37 @@ WHITE = '\033[1;37m'
 DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
+
+def get_colors(use=True):
+    '''
+    Return the colors as an easy to use dict, pass False to return the colors
+    as empty strings so that they will not be applied
+    '''
+    colors = {
+            'BLACK': '\033[0;30m',
+            'DARK_GRAY': '\033[1;30m'
+            'LIGHT_GRAY': '\033[0;37m'
+            'BLUE': '\033[0;34m'
+            'LIGHT_BLUE': '\033[1;34m'
+            'GREEN': '\033[0;32m'
+            'LIGHT_GREEN': '\033[1;32m'
+            'CYAN': '\033[0;36m'
+            'LIGHT_CYAN': '\033[1;36m'
+            'RED': '\033[0;31m'
+            'LIGHT_RED': '\033[1;31m'
+            'PURPLE': '\033[0;35m'
+            'LIGHT_PURPLE': '\033[1;35m'
+            'BROWN': '\033[0;33m'
+            'YELLOW': '\033[1;33m'
+            'WHITE': '\033[1;37m'
+            'DEFAULT_COLOR': '\033[00m'
+            'RED_BOLD': '\033[01;31m'
+            'ENDC': '\033[0m'
+            }
+    if not use:
+        for color in colors:
+            colors[color] = ''
+    return colors
 
 def daemonize():
     '''
