@@ -45,8 +45,8 @@ class HighStateOutputter(Outputter):
     return data
     '''
     supports = 'highstate'
-    def __call__(self. data, **kwargs):
-        colors = self.utils.get_colors(kwargs.get(color))
+    def __call__(self, data, **kwargs):
+        colors = salt.utils.get_colors(kwargs.get(color))
         for host in data:
             hcolor = colors['GREEN']
             hstrs = []
@@ -56,9 +56,6 @@ class HighStateOutputter(Outputter):
                     hcolor = colors['RED']
                     tcolor = colors['RED']
                 comps = tname.split('.')
-                state = comps[0]
-                name = comps[1]
-                func = comps[2]
                 hstrs.append(  '{0}State:     {1}{2[ENDC]}\n'.format(
                     tcolor,
                     comps[0],
