@@ -83,7 +83,7 @@ class HighStateOutputter(Outputter):
                     ))
                 hstrs.append('    {0}Changes:   {1}{2[ENDC]}'.format(
                     tcolor,
-                    pprint.pprint(ret['changes']),
+                    pprint.pformat(ret['changes']),
                     colors
                     ))
             print '{0}{1}:{2[ENDC]}'.format(
