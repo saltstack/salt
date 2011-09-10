@@ -56,32 +56,32 @@ class HighStateOutputter(Outputter):
                     hcolor = colors['RED']
                     tcolor = colors['RED']
                 comps = tname.split('.')
-                hstrs.append(  '{0}State:     {1}{2[ENDC]}'.format(
+                hstrs.append('    {0}State: - {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[0],
                     colors
                     ))
-                hstrs.append('  {0}Name:      {1}{2[ENDC]}'.format(
+                hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[1],
                     colors
                     ))
-                hstrs.append('  {0}Function:  {1}{2[ENDC]}'.format(
+                hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
                     tcolor,
                     comps[2],
                     colors
                     ))
-                hstrs.append('    {0}Result:    {1}{2[ENDC]}'.format(
+                hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
                     tcolor,
                     str(ret['result']),
                     colors
                     ))
-                hstrs.append('    {0}Comment:   {1}{2[ENDC]}'.format(
+                hstrs.append('        {0}Comment:   {1}{2[ENDC]}'.format(
                     tcolor,
                     ret['comment'],
                     colors
                     ))
-                hstrs.append('    {0}Changes:   {1}{2[ENDC]}'.format(
+                hstrs.append('        {0}Changes:   {1}{2[ENDC]}'.format(
                     tcolor,
                     pprint.pformat(ret['changes']),
                     colors
