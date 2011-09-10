@@ -169,12 +169,12 @@ def managed(name,
             ret['changes']['group'] = group
 
         if not ret['comment']:
-            ret['comment'] = 'File ' + name + ' updated'
+            ret['comment'] = 'File {0} updated'.format(name)
 
         if __opts__['test']:
-            ret['comment'] = 'File ' + name + ' not updated'
+            ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes']:
-            ret['comment'] = 'File ' + name + ' is in the correct state'
+            ret['comment'] = 'File {0} is in the correct state'.format(name)
         return ret
     else:
         # The file is not currently present, throw it down, log all changes
