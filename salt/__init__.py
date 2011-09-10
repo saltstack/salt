@@ -150,11 +150,11 @@ class Minion(object):
 
         # Late import so logging works correctly
         import salt.minion
-        minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
             salt.utils.daemonize()
+        minion = salt.minion.Minion(self.opts)
         minion.tune_in()
 
 
