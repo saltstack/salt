@@ -86,7 +86,7 @@ class HighStateOutputter(Outputter):
                     pprint.pformat(ret['changes']),
                     colors
                     ))
-            print '{0}{1}:{2[ENDC]}'.format(
+            print '{0}----------\n{1}:{2[ENDC]}'.format(
                 hcolor,
                 host,
                 colors)
