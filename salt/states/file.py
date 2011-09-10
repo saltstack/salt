@@ -149,8 +149,8 @@ def managed(name,
             if not __opts__['test']:
                 __salt__['file.chown'](
                         name,
-                        perms['cuser'],
-                        perms['cgroup']
+                        user,
+                        group
                         )
         if mode:
             if mode != perms['lmode']:
@@ -164,13 +164,13 @@ def managed(name,
         if user:
             if user != __salt__['file.get_user'](name):
                 ret['result'] = False
-                ret['comment'] = 'User not changed '
+                ret['comment'] = 'Failed to change user to {0} '.format(user)
             elif perms.has_key('cuser'):
                 ret['changes']['user'] = user
         if group:
             if group != __salt__['file.get_group'](name):
                 ret['result'] = False
-                ret['comment'] += 'Group not changed '
+                ret['comment'] += 'Failed to change group to {0} '.format(group)
             elif perms.has_key('cgroup'):
                 ret['changes']['group'] = group
 
@@ -179,7 +179,7 @@ def managed(name,
 
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
-        elif not ret['changes']:
+        elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
         return ret
     else:
@@ -223,8 +223,8 @@ def managed(name,
             if not __opts__['test']:
                 __salt__['file.chown'](
                         name,
-                        perms['cuser'],
-                        perms['cgroup']
+                        user,
+                        group
                         )
         if mode:
             if mode != perms['lmode']:
@@ -253,7 +253,7 @@ def managed(name,
 
         if __opts__['test']:
             ret['comment'] = 'File ' + name + ' not updated'
-        elif not ret['changes']:
+        elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File ' + name + ' is in the correct state'
         return ret
 
