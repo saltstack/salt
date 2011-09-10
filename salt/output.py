@@ -50,43 +50,49 @@ class HighStateOutputter(Outputter):
         for host in data:
             hcolor = colors['GREEN']
             hstrs = []
-            for tname, ret in data[host].items():
-                tcolor = colors['GREEN']
-                if not ret['result']:
-                    hcolor = colors['RED']
-                    tcolor = colors['RED']
-                comps = tname.split('.')
-                hstrs.append('{0}----------\n    State: - {1}{2[ENDC]}'.format(
-                    tcolor,
-                    comps[0],
-                    colors
-                    ))
-                hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
-                    tcolor,
-                    comps[1],
-                    colors
-                    ))
-                hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
-                    tcolor,
-                    comps[2],
-                    colors
-                    ))
-                hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
-                    tcolor,
-                    str(ret['result']),
-                    colors
-                    ))
-                hstrs.append('        {0}Comment:   {1}{2[ENDC]}'.format(
-                    tcolor,
-                    ret['comment'],
-                    colors
-                    ))
-                hstrs.append('        {0}Changes:   {1}{2[ENDC]}'.format(
-                    tcolor,
-                    pprint.pformat(ret['changes']),
-                    colors
-                    ))
-            print '{0}----------\n{1}:{2[ENDC]}'.format(
+            if isinstance(data[host], list):
+                hcolor = colors['RED_BOLD']
+                hstrs.append('    {0}Data failed to compile:{1[ENDC]}'.format(hcolor, colors))
+                for err in data[host]:
+                    hstrs.append('    {0}{1}{2[ENDC]}'.format(hcolor, err, colors))
+            if isinstance(data[host], dict):
+                for tname, ret in data[host].items():
+                    tcolor = colors['GREEN']
+                    if not ret['result']:
+                        hcolor = colors['RED']
+                        tcolor = colors['RED']
+                    comps = tname.split('.')
+                    hstrs.append('{0}----------\n    State: - {1}{2[ENDC]}'.format(
+                        tcolor,
+                        comps[0],
+                        colors
+                        ))
+                    hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
+                        tcolor,
+                        comps[1],
+                        colors
+                        ))
+                    hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
+                        tcolor,
+                        comps[2],
+                        colors
+                        ))
+                    hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
+                        tcolor,
+                        str(ret['result']),
+                        colors
+                        ))
+                    hstrs.append('        {0}Comment:   {1}{2[ENDC]}'.format(
+                        tcolor,
+                        ret['comment'],
+                        colors
+                        ))
+                    hstrs.append('        {0}Changes:   {1}{2[ENDC]}'.format(
+                        tcolor,
+                        pprint.pformat(ret['changes']),
+                        colors
+                        ))
+            print '{0}{1}:{2[ENDC]}'.format(
                 hcolor,
                 host,
                 colors)
