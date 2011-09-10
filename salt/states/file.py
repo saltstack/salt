@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import difflib
 import hashlib
+import traceback
 
 def _makedirs(path):
     '''
@@ -90,26 +91,27 @@ def managed(name,
     '''
     if mode:
         mode = str(mode)
-    changes = {}
+    ret =  {'name': name,
+            'changes': {},
+            'result': True,
+            'comment': ''}
     # Check changes if the target file exists
     if os.path.isfile(name):
         # Check sums
         source_sum = __salt__['cp.hash_file'](source)
         if not source_sum:
-            return {'name': name,
-                    'changes': changes,
-                    'result': False,
-                    'comment': 'Source file ' + source + ' not found'}
+            ret['result'] = False
+            ret['comment'] = 'Source file {0} not found'.format(source)
+            return ret
         name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
             'rb').read()).hexdigest()
         # Check if file needs to be replaced
         if source_sum['hsum'] != name_sum:
             sfn = __salt__['cp.cache_file'](source)
             if not sfn:
-                return {'name': name,
-                        'changes': changes,
-                        'result': False,
-                        'comment': 'Source file ' + source + ' not found'}
+                ret['result'] = False
+                ret['comment'] = 'Source file {0} not found'.format(source)
+                return ret
             # If the source file is a template render it accordingly
             if template:
                 t_key = '_' + template
@@ -118,58 +120,69 @@ def managed(name,
                 if data['result']:
                     sfn = data['data']
                 else:
-                    return {'name': name,
-                            'changes': changes,
-                            'result': False,
-                            'comment': data['data']}
+                    ret['result'] = False
+                    ret['comment'] = data['data']
+                    return ret
             # Check to see if the files are bins
             if _is_bin(sfn) or _is_bin(name):
-                changes['diff'] = 'Replace binary file'
+                ret['changes']['diff'] = 'Replace binary file'
             else:
                 slines = open(sfn, 'rb').readlines()
                 nlines = open(name, 'rb').readlines()
-                changes['diff'] = '\n'.join(difflib.unified_diff(slines, nlines))
+                ret['changes']['diff'] = '\n'.join(difflib.unified_diff(slines, nlines))
             # Pre requs are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copy(sfn, name)
         # Check permissions
-        luser = __salt__['file.get_user'](name)
-        lgroup = __salt__['file.get_group'](name)
-        lmode = __salt__['file.get_mode'](name)
+        perms = {}
+        perms['luser'] = __salt__['file.get_user'](name)
+        perms['lgroup'] = __salt__['file.get_group'](name)
+        perms['lmode'] = __salt__['file.get_mode'](name)
         # Run through the perms and detect and apply the needed changes
         if user:
-            if user != luser:
-                changes['user'] = user
-                luser = user
+            if user != perms['luser']:
+                perms['cuser'] = user
         if group:
-            if group != lgroup:
-                changes['group'] = group
-                lgroup = group
-        if changes.has_key('user') or changes.has_key('group'):
+            if group != perms['lgroup']:
+                perms['cgroup'] = group
+        if perms.has_key('cuser') or perms.has_key('cgroup'):
             if not __opts__['test']:
-                __salt__['file.chown'](name, luser, lgroup)
+                __salt__['file.chown'](
+                        name,
+                        perms['cuser'],
+                        perms['cgroup']
+                        )
         if mode:
-            if mode != lmode:
-                changes['mode'] = mode
+            if mode != perms['lmode']:
                 if not __opts__['test']:
                     __salt__['file.set_mode'](name, mode)
-        comment = 'File ' + name + ' updated'
+
+        if user != __salt__['file.get_user'](name):
+            ret['result'] = False
+            ret['comment'] = 'User not changed '
+        elif perms.has_key('cuser'):
+            ret['changes']['user'] = user
+        if group != __salt__['file.get_group'](name):
+            ret['result'] = False
+            ret['comment'] += 'Group not changed '
+        elif perms.has_key('cgroup'):
+            ret['changes']['group'] = group
+
+        if not ret['comment']:
+            ret['comment'] = 'File ' + name + ' updated'
+
         if __opts__['test']:
-            comment = 'File ' + name + ' not updated'
-        elif not changes:
-            comment = 'File ' + name + ' is in the correct state'
-        return {'name': name,
-                'changes': changes,
-                'result': True,
-                'comment': comment}
+            ret['comment'] = 'File ' + name + ' not updated'
+        elif not ret['changes']:
+            ret['comment'] = 'File ' + name + ' is in the correct state'
+        return ret
     else:
         # The file is not currently present, throw it down, log all changes
         sfn = __salt__['cp.cache_file'](source)
         if not sfn:
-            return {'name': name,
-                    'changes': changes,
-                    'result': False,
-                    'comment': 'Source file ' + source + ' not found'}
+            ret['result'] = False
+            ret['comment'] = 'Source file {0} not found'.format(source)
+            return ret
         # Handle any template management that is needed
         if template:
             t_key = '_' + template
@@ -178,41 +191,57 @@ def managed(name,
             if data['result']:
                 sfn = data['data']
             else:
-                return {'name': name,
-                        'changes': changes,
-                        'result': False,
-                        'comment': data['data']}
+                ret['result'] = False
+                return ret
         # It is a new file, set the diff accordingly
-        changes['diff'] = 'New file'
+        ret['changes']['diff'] = 'New file'
         # Apply the new file
         if not __opts__['test']:
             if makedirs:
                 _makedirs(name)
             shutil.copy(sfn, name)
-        # Get the data about the file
-        luser = __salt__['file.get_user'](name)
-        lgroup = __salt__['file.get_group'](name)
-        lmode = __salt__['file.get_mode'](name)
-        # Set up user, group and mode for the file
+        # Check permissions
+        perms = {}
+        perms['luser'] = __salt__['file.get_user'](name)
+        perms['lgroup'] = __salt__['file.get_group'](name)
+        perms['lmode'] = __salt__['file.get_mode'](name)
+        # Run through the perms and detect and apply the needed changes to
+        # permissions
         if user:
-            changes['user'] = user
-            luser = user
+            if user != perms['luser']:
+                perms['cuser'] = user
         if group:
-            changes['group'] = group
-            lgroup = group
-        if changes.has_key('user') or changes.has_key('group'):
+            if group != perms['lgroup']:
+                perms['cgroup'] = group
+        if perms.has_key('cuser') or perms.has_key('cgroup'):
             if not __opts__['test']:
-                __salt__['file.chown'](name, luser, lgroup)
+                __salt__['file.chown'](
+                        name,
+                        perms['cuser'],
+                        perms['cgroup']
+                        )
         if mode:
-            changes['mode'] = mode
-            if not __opts__['test']:
-                __salt__['file.set_mode'](name, mode)
-        # All done, apply the comment and get out of here
-        comment = 'File ' + name + ' not updated'
-        if not __opts__['test']:
-            comment = 'File ' + name + ' updated'
-        return {'name': name,
-                'changes': changes,
-                'result': True,
-                'comment': comment}
+            if mode != perms['lmode']:
+                if not __opts__['test']:
+                    __salt__['file.set_mode'](name, mode)
+
+        if user != __salt__['file.get_user'](name):
+            ret['result'] = False
+            ret['comment'] = 'User not changed '
+        elif perms.has_key('cuser'):
+            ret['changes']['user'] = user
+        if group != __salt__['file.get_group'](name):
+            ret['result'] = False
+            ret['comment'] += 'Group not changed '
+        elif perms.has_key('cgroup'):
+            ret['changes']['group'] = group
+
+        if not ret['comment']:
+            ret['comment'] = 'File ' + name + ' updated'
+
+        if __opts__['test']:
+            ret['comment'] = 'File ' + name + ' not updated'
+        elif not ret['changes']:
+            ret['comment'] = 'File ' + name + ' is in the correct state'
+        return ret
 
