@@ -156,17 +156,23 @@ def managed(name,
             if mode != perms['lmode']:
                 if not __opts__['test']:
                     __salt__['file.set_mode'](name, mode)
-
-        if user != __salt__['file.get_user'](name):
-            ret['result'] = False
-            ret['comment'] = 'User not changed '
-        elif perms.has_key('cuser'):
-            ret['changes']['user'] = user
-        if group != __salt__['file.get_group'](name):
-            ret['result'] = False
-            ret['comment'] += 'Group not changed '
-        elif perms.has_key('cgroup'):
-            ret['changes']['group'] = group
+                if mode != __salt__['file.get_mode'](name):
+                    ret['result'] = False
+                    ret['comment'] += 'Mode not changed '
+                else:
+                    ret['changes']['mode'] = mode
+        if user:
+            if user != __salt__['file.get_user'](name):
+                ret['result'] = False
+                ret['comment'] = 'User not changed '
+            elif perms.has_key('cuser'):
+                ret['changes']['user'] = user
+        if group:
+            if group != __salt__['file.get_group'](name):
+                ret['result'] = False
+                ret['comment'] += 'Group not changed '
+            elif perms.has_key('cgroup'):
+                ret['changes']['group'] = group
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -224,17 +230,23 @@ def managed(name,
             if mode != perms['lmode']:
                 if not __opts__['test']:
                     __salt__['file.set_mode'](name, mode)
-
-        if user != __salt__['file.get_user'](name):
-            ret['result'] = False
-            ret['comment'] = 'User not changed '
-        elif perms.has_key('cuser'):
-            ret['changes']['user'] = user
-        if group != __salt__['file.get_group'](name):
-            ret['result'] = False
-            ret['comment'] += 'Group not changed '
-        elif perms.has_key('cgroup'):
-            ret['changes']['group'] = group
+                if mode != __salt__['file.get_mode'](name):
+                    ret['result'] = False
+                    ret['comment'] += 'Mode not changed '
+                else:
+                    ret['changes']['mode'] = mode
+        if user:
+            if user != __salt__['file.get_user'](name):
+                ret['result'] = False
+                ret['comment'] += 'User not changed '
+            elif perms.has_key('cuser'):
+                ret['changes']['user'] = user
+        if group:
+            if group != __salt__['file.get_group'](name):
+                ret['result'] = False
+                ret['comment'] += 'Group not changed '
+            elif perms.has_key('cgroup'):
+                ret['changes']['group'] = group
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
