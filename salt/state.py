@@ -89,7 +89,15 @@ class State(object):
             return errors
         full = data['state'] + '.' + data['fun']
         if not self.states.has_key(full):
-            errors.append('Specified state ' + full + ' is unavailable.')
+            if data.has_key('__sls__'):
+                errors.append(
+                    'State {0} found in sls {1} is unavailable'.format(
+                        full,
+                        data['__sls__']
+                        )
+                    )
+            else:
+                errors.append('Specified state ' + full + ' is unavailable.')
         else:
             aspec = inspect.getargspec(self.states[full])
             arglen = 0
