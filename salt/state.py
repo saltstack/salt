@@ -160,8 +160,12 @@ class State(object):
         chunks = []
         for name, body in high.items():
             for state, run in body.items():
+                if state.startswith('__'):
+                    continue
                 chunk = {'state': state,
                          'name': name}
+                if body.has_key('__sls__'):
+                    chunk['__sls__'] = body['__sls__']
                 funcs = set()
                 names = set()
                 for arg in run:
@@ -453,6 +457,9 @@ class HighState(object):
                         nstate, mods = self.render_state(sub_sls, env, mods)
                     if nstate:
                         state.update(nstate)
+            for name in state:
+                if not state[name].has_key('__sls__'):
+                    state[name]['__sls__'] = sls
         return state, mods
 
     def render_highstate(self, matches):
