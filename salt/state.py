@@ -112,6 +112,17 @@ class State(object):
                                 + ' for state ' + full)
         return errors
 
+    def verify_high(self, high):
+        '''
+        Verify that the high data is viable and follows the data structure
+        '''
+        errors = []
+
+        for name, body in high.items():
+            for state, run in body.items():
+                pass
+        return errors
+
     def verify_chunks(self, chunks):
         '''
         Verify the chunks in a list of low data structures
@@ -354,8 +365,9 @@ class State(object):
         '''
         err = []
         rets = []
+        errors = self.verify_high(high)
         chunks = self.compile_high_data(high)
-        errors = self.verify_chunks(chunks)
+        errors += self.verify_chunks(chunks)
         if errors:
             return errors
         return self.call_chunks(chunks)
