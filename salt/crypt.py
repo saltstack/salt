@@ -98,6 +98,8 @@ class Auth(object):
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
         if self.opts.has_key('syndic_master'):
             self.mpub = 'syndic_master.pub'
+        elif self.opts.has_key('alert_master'):
+            self.mpub = 'monitor_master.pub'
         else:
             self.mpub = 'minion_master.pub'
 
