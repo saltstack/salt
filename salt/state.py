@@ -122,6 +122,8 @@ class State(object):
         for name, body in high.items():
             if not isinstance(body, dict):
                 err = 'The type {0} is not formated as a dictonary'.format(name)
+                errors.append(err)
+                continue
             for state, run in body.items():
                 pass
         return errors
@@ -369,6 +371,8 @@ class State(object):
         err = []
         rets = []
         errors = self.verify_high(high)
+        if errors:
+            return errors
         chunks = self.compile_high_data(high)
         errors += self.verify_chunks(chunks)
         if errors:
@@ -469,21 +473,30 @@ class HighState(object):
         '''
         Render a state file and retrive all of the include states
         '''
+        errors = []
         fn_ = self.client.get_state(sls, env)
         state = self.state.compile_template(fn_)
         mods.add(sls)
         nstate = None
         if state:
-            if state.has_key('include'):
-                for sub_sls in state.pop('include'):
-                    if not list(mods).count(sub_sls):
-                        nstate, mods = self.render_state(sub_sls, env, mods)
-                    if nstate:
-                        state.update(nstate)
-            for name in state:
-                if not state[name].has_key('__sls__'):
-                    state[name]['__sls__'] = sls
-        return state, mods
+            if not isinstance(state, dict):
+                errors.append('SLS {0} does not render to a dictonary'.format(sls))
+            else:
+                if state.has_key('include'):
+                    for sub_sls in state.pop('include'):
+                        if not list(mods).count(sub_sls):
+                            nstate, mods, err = self.render_state(sub_sls, env, mods)
+                        if nstate:
+                            state.update(nstate)
+                        if err:
+                            errors += err
+                for name in state:
+                    if not isinstance(state[name], dict):
+                        errors.append('Name {0} in sls {1} is not a dictonary'.format(name, sls))
+                        continue
+                    if not state[name].has_key('__sls__'):
+                        state[name]['__sls__'] = sls
+        return state, mods, errors
 
     def render_highstate(self, matches):
         '''
@@ -491,13 +504,16 @@ class HighState(object):
         data structure. 
         '''
         highstate = {}
+        errors = []
         for env, states in matches.items():
             mods = set()
             for sls in states:
-                state, mods = self.render_state(sls, env, mods)
+                state, mods, err = self.render_state(sls, env, mods)
                 if state:
                     highstate.update(state)
-        return highstate
+                if err:
+                    errors += err
+        return highstate, errors
 
     def call_highstate(self):
         '''
@@ -505,5 +521,7 @@ class HighState(object):
         '''
         top = self.get_top()
         matches = self.top_matches(top)
-        high = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches)
+        if errors:
+            return errors
         return self.state.call_high(high)
