@@ -134,7 +134,7 @@ def _parse_interval(value):
     '''
     m = _INTERVAL_REGEX.match(value)
     if m is None:
-        raise ValueError('invalid time interval: "{}"'.format(value))
+        raise ValueError('invalid time interval: "{0}"'.format(value))
 
     result = 0
     resolution = None
@@ -177,7 +177,7 @@ def _parse_size(value):
         try:
             num = int(float(scalar) * multiplier)
         except ValueError:
-            raise ValueError('invalid size: "{}"'.format(value))
+            raise ValueError('invalid size: "{0}"'.format(value))
 
     if style == '-':
         min_size = 0
@@ -236,7 +236,7 @@ class RegexOption(Option):
         try:
             self.re = re.compile(value)
         except re.error:
-            raise ValueError('invalid regular expression: "{}"'.format(value))
+            raise ValueError('invalid regular expression: "{0}"'.format(value))
 
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
@@ -250,7 +250,7 @@ class IregexOption(Option):
         try:
             self.re = re.compile(value, re.IGNORECASE)
         except re.error:
-            raise ValueError('invalid regular expression: "{}"'.format(value))
+            raise ValueError('invalid regular expression: "{0}"'.format(value))
 
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
@@ -277,7 +277,7 @@ class TypeOption(Option):
             try:
                 self.ftypes.add(_FILE_TYPES[ch])
             except KeyError:
-                raise ValueError('invalid file type "{}"'.format(ch))
+                raise ValueError('invalid file type "{0}"'.format(ch))
 
     def requires(self):
         return _REQUIRES_STAT
@@ -301,7 +301,7 @@ class OwnerOption(Option):
                 try:
                     self.uid = pwd.getpwnam(value).pw_uid
                 except KeyError:
-                    raise ValueError('no such user "{}"'.format(name))
+                    raise ValueError('no such user "{0}"'.format(name))
 
     def requires(self):
         return _REQUIRES_STAT
@@ -325,7 +325,7 @@ class GroupOption(Option):
                 try:
                     self.gids.add(grp.getgrnam(value).gr_gid)
                 except KeyError:
-                    raise ValueError('no such group "{}"'.format(name))
+                    raise ValueError('no such group "{0}"'.format(name))
 
     def requires(self):
         return _REQUIRES_STAT
@@ -387,7 +387,7 @@ class GrepOption(Option):
         try:
             self.re = re.compile(value)
         except re.error:
-            raise ValueError('invalid regular expression: "{}"'.format(value))
+            raise ValueError('invalid regular expression: "{0}"'.format(value))
 
     def requires(self):
         return _REQUIRES_CONTENTS | _REQUIRES_STAT
@@ -482,11 +482,11 @@ class Finder(object):
                     _REQUIRES_CONTENTS : list()}
         for key, value in options.iteritems():
             if value is None or len(value) == 0:
-                raise ValueError('missing value for "{}" option'.format(key))
+                raise ValueError('missing value for "{0}" option'.format(key))
             try:
                 obj = globals()[key.title() + "Option"](key, value)
             except KeyError:
-                raise ValueError('invalid option "{}"'.format(key))
+                raise ValueError('invalid option "{0}"'.format(key))
             if hasattr(obj, 'match'):
                 requires = obj.requires()
                 if requires & _REQUIRES_CONTENTS:
@@ -542,7 +542,7 @@ def find(path, options):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print >> sys.stderr, "usage: {} path [options]".format(sys.argv[0])
+        print >> sys.stderr, "usage: {0} path [options]".format(sys.argv[0])
         sys.exit(1)
     path = sys.argv[1]
     criteria = {}
@@ -552,7 +552,7 @@ if __name__ == '__main__':
     try:
         f = Finder(criteria)
     except ValueError, ex:
-        print >> sys.stderr, 'error: {}'.format(ex)
+        print >> sys.stderr, 'error: {0}'.format(ex)
         sys.exit(1)
 
     for result in f.find(path):

@@ -288,7 +288,7 @@ def find(path, *opts):
     try:
         f = salt.utils.find.Finder(opts_dict)
     except ValueError, ex:
-        return 'error: {}'.format(ex)
+        return 'error: {0}'.format(ex)
 
     ret = [p for p in f.find(path)]
     ret.sort()
