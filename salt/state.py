@@ -120,6 +120,8 @@ class State(object):
         if not isinstance(high, dict):
             errors.append('High data is not a dictonary and is invalid')
         for name, body in high.items():
+            if not isinstance(body, dict):
+                err = 'The type {0} is not formated as a dictonary'.format(name)
             for state, run in body.items():
                 pass
         return errors
