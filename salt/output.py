@@ -87,9 +87,14 @@ class HighStateOutputter(Outputter):
                         ret['comment'],
                         colors
                         ))
-                    changes = '        Changes:    '
+                    changes = '        Changes:   '
                     for key in ret['changes']:
-                        changes += key + ': ' + ret['changes'][key]
+                        if isinstance(ret['changes'][key], str):
+                            changes += key + ': ' + ret['changes'][key] + '\n                   '
+                        elif isinstance(ret['changes'][key], dict):
+                            changes += key + ': ' + pprint.pformat(ret['changes'][key]) + '\n                   '
+                        else:
+                            changes += key + ': ' + pprint.pformat(ret['changes'][key]) + '\n                   '
                     hstrs.append('{0}{1}{2[ENDC]}'.format(
                         tcolor,
                         changes,
