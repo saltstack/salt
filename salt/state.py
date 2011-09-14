@@ -117,7 +117,8 @@ class State(object):
         Verify that the high data is viable and follows the data structure
         '''
         errors = []
-
+        if not isinstance(high, dict):
+            errors.append('High data is not a dictonary and is invalid')
         for name, body in high.items():
             for state, run in body.items():
                 pass
