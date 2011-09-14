@@ -67,7 +67,7 @@ def minion_config(path):
             'log_level': 'warning',
             'log_granular_levels': {},
             'test': False,
-            'cython_enable': True,
+            'cython_enable': False,
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')

@@ -38,8 +38,8 @@
 #returner_dirs: []
 #states_dirs: []
 #render_dirs: []
-# Enable Cython modules searching and loading. (Default: True)
-#cython_enable: true
+# Enable Cython modules searching and loading. (Default: False)
+#cython_enable: False
 
 #####    State Management Settings    #####
 ###########################################
