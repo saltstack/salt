@@ -16,7 +16,6 @@ import copy
 import inspect
 import tempfile
 import logging
-import traceback
 # Import Salt modules
 import salt.loader
 import salt.minion
@@ -475,11 +474,11 @@ class HighState(object):
         '''
         errors = []
         fn_ = self.client.get_state(sls, env)
+        state = None
         try:
             state = self.state.compile_template(fn_)
         except Exception as exc:
-            trb = traceback.format_exc()
-            errors.append('Rendering SLS {0} failed, render error:\n{1}'.format(sls, trb))
+            errors.append('Rendering SLS {0} failed, render error:\n{1}'.format(sls, exc))
         mods.add(sls)
         nstate = None
         if state:
