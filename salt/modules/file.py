@@ -150,7 +150,7 @@ def chown(path, user, group):
     err = ''
     if uid == '':
         err += 'User does not exist\n'
-    if gid = '':
+    if gid == '':
         err += 'Group does not exist\n'
     if not os.path.isfile(path):
         err += 'File not found'
