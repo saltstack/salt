@@ -51,11 +51,13 @@ class HighStateOutputter(Outputter):
             hcolor = colors['GREEN']
             hstrs = []
             if isinstance(data[host], list):
+                # Errors have been detected, list them in RED!
                 hcolor = colors['RED_BOLD']
                 hstrs.append('    {0}Data failed to compile:{1[ENDC]}'.format(hcolor, colors))
                 for err in data[host]:
-                    hstrs.append('    {0}{1}{2[ENDC]}'.format(hcolor, err, colors))
+                    hstrs.append('{0}----------\n    {1}{2[ENDC]}'.format(hcolor, err, colors))
             if isinstance(data[host], dict):
+                # Everything rendered as it should display the output
                 for tname, ret in data[host].items():
                     tcolor = colors['GREEN']
                     if not ret['result']:
