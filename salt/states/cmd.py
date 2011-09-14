@@ -5,7 +5,6 @@ Manage command executions cron a state perspective
 import os
 import pwd
 import grp
-import subprocess
 
 def run(name,
         onlyif=None,
