@@ -12,11 +12,12 @@ def present(name, ip):
            'comment': ''}
     if __salt__['hosts.has_pair'](ip, name):
         ret['result'] = True
+        ret['comment'] = 'Host {0} already present'.format(name)
         return ret
     if __salt__['hosts.add_host'](ip, name):
         ret['changes'] = {'host': name}
         ret['result'] = True
-        ret['comment'] = 'Added host ' + name
+        ret['comment'] = 'Added host {0}'.format(name)
         return ret
     else:
         ret['result'] = False
@@ -33,11 +34,12 @@ def absent(name, ip):
            'comment': ''}
     if not __salt__['hosts.has_pair'](ip, name):
         ret['result'] = True
+        ret['comment'] = 'Host {0} already absent'.format(name)
         return ret
     if __salt__['hosts.rm_host'](ip, name):
         ret['changes'] = {'host': name}
         ret['result'] = True
-        ret['comment'] = 'Removed host ' + name
+        ret['comment'] = 'Removed host {0}'.format(name)
         return ret
     else:
         ret['result'] = False
