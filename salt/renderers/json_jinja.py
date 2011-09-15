@@ -17,8 +17,8 @@ def render(template):
     if not os.path.isfile(template):
         return {}
     passthrough = {}
-    passthrough.update(__salt__)
-    passthrough.update(__grains__)
+    passthrough['salt'] = __salt__
+    passthrough['grains'] = __grains__
     template = Template(open(template, 'r').read())
     json_data = template.render(**passthrough)
     return json.loads(json_data)
