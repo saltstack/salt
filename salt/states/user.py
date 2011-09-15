@@ -16,7 +16,7 @@ def present(
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'User {0} is present and up to date'}
+           'comment': 'User {0} is present and up to date'.format(name)}
     for lusr in __salt__['user.getent']():
         # Scan over the users
         if lusr['name'] == name:
