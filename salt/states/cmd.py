@@ -62,7 +62,7 @@ def run(name,
     cmd_all = __salt__['cmd.run_all'](name, cwd)
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = 'Command ' + name + ' run'
+    ret['comment'] = 'Command "' + name + '" run'
     os.seteuid(puid)
     os.setegid(pgid)
     return ret
