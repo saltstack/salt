@@ -11,7 +11,6 @@ def present(name, ip):
            'result': False,
            'comment': ''}
     if __salt__['hosts.has_pair'](ip, name):
-        ret['changes'] = 'Already Present'
         ret['result'] = True
         return ret
     if __salt__['hosts.add_host'](ip, name):
@@ -33,7 +32,6 @@ def absent(name, ip):
            'result': False,
            'comment': ''}
     if not __salt__['hosts.has_pair'](ip, name):
-        ret['changes'] = 'Already Absent'
         ret['result'] = True
         return ret
     if __salt__['hosts.rm_host'](ip, name):
