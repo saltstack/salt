@@ -17,15 +17,15 @@ TRACE = 5
 GARBAGE = 1
 
 LOG_LEVELS = {
-    "none": logging.NOTSET,
-    "info": logging.INFO,
-    "warn": logging.WARNING,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "none": logging.CRITICAL,
-    "debug": logging.DEBUG,
-    "trace": TRACE,
-    "garbage": GARBAGE
+    'none': logging.NOTSET,
+    'info': logging.INFO,
+    'warn': logging.WARNING,
+    'warning': logging.WARNING,
+    'error': logging.ERROR,
+    'none': logging.CRITICAL,
+    'debug': logging.DEBUG,
+    'trace': TRACE,
+    'garbage': GARBAGE
 }
 
 LoggingLoggerClass = logging.getLoggerClass()
@@ -54,9 +54,9 @@ def init():
         logging.getLogger().setLevel(1)
 
 def setup_console_logger(log_level):
-    """
+    '''
     Setup the console logger
-    """
+    '''
     init()
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
@@ -74,9 +74,9 @@ def setup_console_logger(log_level):
 
 
 def setup_logfile_logger(log_path, log_level):
-    """
+    '''
     Setup the logfile logger
-    """
+    '''
     init()
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
@@ -95,9 +95,9 @@ def setup_logfile_logger(log_path, log_level):
     rootLogger.addHandler(handler)
 
 def set_logger_level(logger_name, log_level):
-    """
+    '''
     Tweak a specific logger's logging level
-    """
+    '''
     init()
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
