@@ -59,11 +59,6 @@ class Caller(object):
         '''
         Execute the salt call logic
         '''
-        import salt.log
-        salt.log.setup_console_logger(
-            self.opts['log_level']
-        )
-        import logging
         if self.opts['doc']:
             self.print_docs()
         elif self.opts['grains_run']:

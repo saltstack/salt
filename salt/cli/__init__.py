@@ -546,6 +546,11 @@ class SaltCall(object):
         '''
         Execute the salt call!
         '''
+        import salt.log
+        salt.log.setup_console_logger(
+            self.opts['log_level']
+        )
+        import logging
         caller = salt.cli.caller.Caller(self.opts)
         caller.run()
 
