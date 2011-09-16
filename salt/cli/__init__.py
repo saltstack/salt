@@ -481,6 +481,11 @@ class SaltCall(object):
                 action='store_true',
                 help='Return the documentation for the specified module of'\
                     + ' for all modules if none are specified')
+        parser.add_option('-l',
+                '--log-level',
+                default='info',
+                dest='log_level',
+                help='Set the output level for salt-call')
         parser.add_option('--raw-out',
                 default=False,
                 action='store_true',
@@ -518,6 +523,7 @@ class SaltCall(object):
         opts['grains_run'] = options.grains
         opts['module_dirs'] = options.module_dirs.split(',')
         opts['doc'] = options.doc
+        opts['log_level'] = options.log_level
         opts['raw_out'] = options.raw_out
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
