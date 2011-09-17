@@ -35,7 +35,7 @@ def run(cmd, cwd=DEFAULT_CWD):
     CLI Example:
     salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
-    log.debug('Executing command {0} in directory {1}'.format(cmd, cwd))
+    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     out = subprocess.Popen(cmd,
             shell=True,
             cwd=cwd,
@@ -51,7 +51,7 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
     CLI Example:
     salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
-    log.debug('Executing command {0} in directory {1}'.format(cmd, cwd))
+    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stdout = subprocess.Popen(cmd,
             shell=True,
             cwd=cwd,
@@ -66,7 +66,7 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
     CLI Example:
     salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
-    log.debug('Executing command {0} in directory {1}'.format(cmd, cwd))
+    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stderr = subprocess.Popen(cmd,
             shell=True,
             cwd=cwd,
@@ -81,7 +81,7 @@ def run_all(cmd, cwd=DEFAULT_CWD):
     CLI Example:
     salt '*' cmd.run_all "ls -l | grep foo | awk '{print $2}'"
     '''
-    log.debug('Executing command {0} in directory {1}'.format(cmd, cwd))
+    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     ret = {}
     proc =  subprocess.Popen(cmd,
             shell=True,
@@ -98,8 +98,8 @@ def run_all(cmd, cwd=DEFAULT_CWD):
         log.error('stdout: {0}'.format(ret['stdout']))
         log.error('stderr: {0}'.format(ret['stderr']))
     else:
-        log.debug('stdout: {0}'.format(ret['stdout']))
-        log.debug('stderr: {0}'.format(ret['stderr']))
+        log.info('stdout: {0}'.format(ret['stdout']))
+        log.info('stderr: {0}'.format(ret['stderr']))
     return ret
 
 def retcode(cmd, cwd=DEFAULT_CWD):
@@ -109,7 +109,7 @@ def retcode(cmd, cwd=DEFAULT_CWD):
     CLI Example:
     salt '*' cmd.retcode "file /bin/bash"
     '''
-    log.debug('Executing command {0} in directory {1}'.format(cmd, cwd))
+    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     return subprocess.call(cmd, shell=True, cwd=cwd)
 
 def has_exec(cmd):
