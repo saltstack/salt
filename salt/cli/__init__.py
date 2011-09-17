@@ -523,7 +523,6 @@ class SaltCall(object):
         opts['grains_run'] = options.grains
         opts['module_dirs'] = options.module_dirs.split(',')
         opts['doc'] = options.doc
-        opts['log_level'] = options.log_level
         opts['raw_out'] = options.raw_out
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
@@ -533,6 +532,7 @@ class SaltCall(object):
         else:
             opts['json_out'] = False
         opts.update(salt.config.minion_config(options.config))
+        opts['log_level'] = options.log_level
         if len(args) >= 1:
             opts['fun'] = args[0]
             opts['arg'] = args[1:]
