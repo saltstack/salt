@@ -145,6 +145,8 @@ class JSONOutputter(Outputter):
     def __call__(self, data, **kwargs):
         try:
             # A good kwarg might be: indent=4
+            if kwargs.has_key('color'):
+                kwargs.pop('color')
             ret = json.dumps(data, **kwargs)
         except TypeError:
             # Return valid json for unserializable objects
@@ -158,6 +160,8 @@ class YamlOutputter(Outputter):
     supports = "yaml"
 
     def __call__(self, data,  **kwargs):
+        if kwargs.has_key('color'):
+            kwargs.pop('color')
         print yaml.dump(data, **kwargs)
 
 def get_outputter(name=None):
