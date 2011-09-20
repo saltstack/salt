@@ -31,18 +31,31 @@ repositories.
 Fedora rpms
 ```````````
 
-Salt noarch rpm for Fedora 15:
+Salt is currently being built for Fedora, the latest koji build pages can be
+found here:
 
-https://github.com/downloads/thatch45/salt/salt-0.8.9-1.fc15.noarch.rpm
+Fedora 14:
+
+https://koji.fedoraproject.org/koji/taskinfo?taskID=3358221
+
+Fedora 15:
+
+https://koji.fedoraproject.org/koji/taskinfo?taskID=3358223
+
+Fedora Rawhide:
+
+https://koji.fedoraproject.org/koji/taskinfo?taskID=3358219
+
 
 Red Hat Enterprise Linux 6 rpms
 ```````````````````````````````
 
-The EPEL repository is required for Salt as well as updated ZeroMQ packages.
+Salt is being built for EPEL6, the latest builds can be found here:
 
-The Salt rpm can be downloaded here:
+https://koji.fedoraproject.org/koji/taskinfo?taskID=3358215
 
-https://github.com/downloads/thatch45/salt/salt-0.8.9-1.el6.noarch.rpm
+The ZeroMQ packages in EPEL6 have been tested with this package, but if you
+still have issues, these backports may help
 
 ZeroMQ backport:
 
@@ -58,6 +71,8 @@ http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm
 
 Red Hat Enterprise Linux 5 rpms
 ```````````````````````````````
+
+Salt is being built for RHEL5, updates will be available soon!
 
 Red Hat Enterprise Linux 5 requires more backports and the use of the
 python 2.6 stack provided in the EPEL repository. All of the listed packages
