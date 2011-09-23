@@ -66,6 +66,32 @@ def _replace_auth_key(
             lines.append(line)
     open(full, 'w+').writelines(lines)
 
+def host_keys(keydir=None):
+    '''
+    Return the minion's host keys
+
+    CLI Example:
+    salt '*' ssh.host_keys
+    '''
+    # Set up the default keydir - needs to support sshd_config parsing in the
+    # future
+    if not keydir:
+        if __grains__['Linux']:
+            keydir = '/etc/ssh'
+    keys = {}
+    for fn_ in os.listdir(keydir):
+        if fn_.startswith('ssh_host_'):
+            top = fn_.split('.')
+            comps = fn_.split('_')
+            kname = comps[2]
+            if len(top) > 1:
+                kname += '.{0}'.format(top[1])
+            try:
+                keys[kname] = open(os.path.join(keydir, fn_), 'r').read()
+            except:
+                keys[kname] = ''
+    return keys
+
 def auth_keys(user, config='.ssh/authorized_keys'):
     '''
     Return the authorized keys for the specified user
