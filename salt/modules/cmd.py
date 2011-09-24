@@ -127,7 +127,7 @@ def has_exec(cmd):
             return True
     return False
 
-def exec_code(lang, code):
+def exec_code(lang, code, cwd=DEFAULT_CWD):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
@@ -136,7 +136,7 @@ def exec_code(lang, code):
     CLI Example:
     salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    cfn = tempfile.mkstemp()
+    fd, cfn = tempfile.mkstemp()
     open(cfn, 'w+').write(code)
     return subprocess.Popen(lang + ' ' + cfn,
             shell=True,
