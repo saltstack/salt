@@ -34,4 +34,18 @@ def present(
         ret['comment'] = 'The authorized host key {0} for user {1} was added'.format(name, user)
     return ret
 
-
+def absent(name, user, config='.ssh/authorized_keys'):
+    '''
+    Verifies that the specified ssh key is absent
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    ret['comment'] = __salt__['ssh.rm_auth_key'](user, name, config)
+    if ret['comment'] == 'User authorized keys file not present':
+        ret['result'] = False
+        return ret
+    elif ret['comment'] == 'Key removed':
+        ret['changes'][name] = 'Removed'
+    return ret
