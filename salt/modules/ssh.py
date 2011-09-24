@@ -131,6 +131,48 @@ def auth_keys(user, config='.ssh/authorized_keys'):
 
     return ret
 
+def rm_auth_key(user, key, config='.ssh/authorized_keys'):
+    '''
+    Remove an authorized key from the specified user's authorized key file
+
+    CLI Example:
+    salt '*' ssh.rm_auth_key <user> <key>
+    '''
+    current = auth_keys(user, config)
+    if current.has_key(key):
+        # Remove the key
+        uinfo = __salt__['user.info'](user)
+        full = os.path.join(uinfo['home'], config)
+        if not os.path.isfile(full):
+            return 'User authorized keys file not present'
+        lines = []
+        for line in open(full, 'r').readlines():
+            if line.startswith('#'):
+                # Commented Line
+                lines.append(line)
+                continue
+            comps = line.split()
+            if len(comps) < 2:
+                # Not a valid line
+                lines.append(line)
+                continue
+            if not comps[0].startswith('ssh-'):
+                # It has options, grab them
+                options = comps[0].split(',')
+            else:
+                options = []
+            if not options:
+                pkey = comps[1]
+            else:
+                pkey = comps[2]
+            if pkey == key:
+                continue
+            else:
+                lines.append(line)
+        open(full, 'w+').writelines(lines)
+        return 'Key removed'
+    return 'Key not present'
+
 def set_auth_key(
         user,
         key,
