@@ -29,7 +29,7 @@ Release announcement:
 Download
 --------
 
-The latest Salt is 0.9.2:
+The latest Salt is |version|:
 
 |latest|
 
