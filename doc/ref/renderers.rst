@@ -32,7 +32,7 @@ Examples
 The best place to find examples of renderers is in the Salt source code. The
 renderers included with Salt can be found here:
 
-https://github.com/thatch45/salt/blob/master/salt/renderers
+:blob:`salt/renderers`
 
 Here is a simple jinja + yaml example:
 

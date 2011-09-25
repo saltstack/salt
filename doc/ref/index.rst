@@ -35,7 +35,7 @@ Minion Execution Modules
 The minion execution modules or just ``modules`` are the core to what salt is
 and does. These modules are found in:
 
-https://github.com/thatch45/salt/tree/master/salt/modules
+:blob:`salt/modules`
 
 These modules are what is called by the salt command line and the salt client
 api. Adding modules is done by simply adding additional python modules to the
@@ -54,7 +54,7 @@ of execution modules and types to specific salt minions.
 
 The code used to generate the Salt grains can be found here:
 
-https://github.com/thatch45/salt/tree/master/salt/grains
+:blob:`salt/grains`
 
 States
 ``````
@@ -64,7 +64,7 @@ solution for system configuration management.
 
 States can be easily added to Salt by dropping a new state module in:
 
-https://github.com/thatch45/salt/tree/master/salt/states
+:blob:`salt/states`
 
 Renderers
 `````````
@@ -77,7 +77,7 @@ it.
 
 The existing renderers can be found here:
 
-https://github.com/thatch45/salt/tree/master/salt/renderers
+:blob:`salt/renderers`
 
 Returners
 `````````
@@ -89,7 +89,7 @@ from an SQL or NOSQL database, to a custom application made to use Salt.
 
 The existing returners can be found here:
 
-https://github.com/thatch45/salt/tree/master/salt/returners
+:blob:`salt/returners`
 
 Runners
 ```````
@@ -101,4 +101,4 @@ act as a generic interface for encapsulating master side executions.
 
 Existing Salt runners are located here:
 
-https://github.com/thatch45/salt/tree/master/salt/runners
+:blob:`salt/runners`

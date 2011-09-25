@@ -70,7 +70,7 @@ this is the best way to install Salt on Debian and Ubuntu systems:
 
     .. parsed-literal::
 
-        easy_install --install-layout=deb \https://github.com/downloads/thatch45/salt/salt-|version|.tar.gz
+        easy_install --install-layout=deb |latest|
 
     Please take note of the ``--install-layout=deb`` flag. This is important
     for a functioning installation of Salt.
