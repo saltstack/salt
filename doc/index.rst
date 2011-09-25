@@ -31,7 +31,7 @@ Download
 
 The latest Salt is 0.9.2:
 
-https://github.com/downloads/thatch45/salt/salt-0.9.2.tar.gz
+|latest|
 
 Additional packages can be downloaded from the download page:
 

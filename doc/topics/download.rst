@@ -16,7 +16,7 @@ The Salt source can be downloaded and installed directly from git:
 
 The latest source tarball can be downloaded as well:
 
-https://github.com/downloads/thatch45/salt/salt-0.9.1.tar.gz
+|latest|
 
 Salt should run on any Unix like platform so long as the dependencies are met.
 
