@@ -16,7 +16,7 @@ sys.path.extend([
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['saltdocs', 'sphinx.ext.autodoc']
+extensions = ['saltdocs', 'sphinx.ext.autodoc', 'sphinx.ext.extlinks']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -82,6 +82,12 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
+# A shortcut for linking to tickets on the GitHub issue tracker
+extlinks = {
+    'blob': ('https://github.com/thatch45/salt/blob/v%s/%%s' % __version__, None),
+    'download': ('https://github.com/downloads/thatch45/salt/%s', None),
+    'issue': ('https://github.com/thatch45/salt/issues/%s', 'issue '),
+}
 
 # -- Options for HTML output ---------------------------------------------------
 

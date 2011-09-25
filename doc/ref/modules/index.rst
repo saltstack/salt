@@ -147,9 +147,9 @@ regardless of what the actual module is named.
 
 The package manager modules are the best example of using the ``__virtual__``
 function:
-https://github.com/thatch45/salt/blob/master/salt/modules/pacman.py
-https://github.com/thatch45/salt/blob/master/salt/modules/yum.py
-https://github.com/thatch45/salt/blob/master/salt/modules/apt.py
+:blob:`salt/modules/pacman.py`
+:blob:`salt/modules/yum.py`
+:blob:`salt/modules/apt.py`
 
 Documentation
 =============
@@ -227,7 +227,7 @@ functions for salt, but to stand as examples for building out more Salt
 modules.
 
 The existing modules can be found here:
-https://github.com/thatch45/salt/tree/master/salt/modules
+:blob:`salt/modules`
 
 The most simple module is the test module, it contains the simplest salt
 function, test.ping:

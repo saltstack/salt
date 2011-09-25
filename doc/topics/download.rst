@@ -59,11 +59,11 @@ still have issues, these backports may help
 
 ZeroMQ backport:
 
-https://github.com/downloads/thatch45/salt/zeromq-2.1.7-1.el6.x86_64.rpm
+:download:`zeromq-2.1.7-1.el6.x86_64.rpm`
 
 PyZMQ bindings backport:
 
-https://github.com/downloads/thatch45/salt/python-zmq-2.1.7-1.el6.src.rpm
+:download:`python-zmq-2.1.7-1.el6.src.rpm`
 
 Package to set up EPEL repository (provided by the EPEL project):
 
@@ -81,19 +81,19 @@ dependencies:
 
 Salt rpm:
 
-https://github.com/downloads/thatch45/salt/salt-0.8.9-1.el5.noarch.rpm
+:download:`salt-0.8.9-1.el5.noarch.rpm`
 
 YAML bindings for python 2.6:
 
-https://github.com/downloads/thatch45/salt/python26-PyYAML-3.08-4.el5.x86_64.rpm
+:download:`python26-PyYAML-3.08-4.el5.x86_64.rpm`
 
 ZeroMQ backport:
 
-https://github.com/downloads/thatch45/salt/zeromq-2.1.7-1.el5.x86_64.rpm
+:download:`zeromq-2.1.7-1.el5.x86_64.rpm`
 
 PyZMQ bindings backport:
 
-https://github.com/downloads/thatch45/salt/python26-zmq-2.1.7-1.el5.x86_64.rpm
+:download:`python26-zmq-2.1.7-1.el5.x86_64.rpm`
 
 Salt for Arch Linux
 -------------------
