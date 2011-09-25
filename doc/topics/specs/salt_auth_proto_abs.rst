@@ -77,9 +77,9 @@ Source Files Implimenting Components
 ====================================
 
 The pubkey authentication is managed via the salt.master module:
-https://github.com/thatch45/salt/blob/master/salt/master.py
+:blob:`salt/master.py`
 The regular minion authentication is managed via the salt.crypt module:
-https://github.com/thatch45/salt/blob/master/salt/crypt.py
+:blob:`salt/crypt.py`
 The salt.crypt module contains a class "SAuth" that can be used for
 standalone authentication with the Salt master, this is most likely the best
 place to start when looking into how the authentication mechanism works

@@ -58,4 +58,4 @@ Examples
 --------
 
 The collection of builtin salt returners can be found here:
-https://github.com/thatch45/salt/tree/master/salt/returners
+:blob:`salt/returners`

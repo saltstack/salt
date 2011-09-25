@@ -30,7 +30,7 @@ Examples
 
 The best examples of runners can be found in the Salt source:
 
-https://github.com/thatch45/salt/blob/master/salt/runners
+:blob:`salt/runners`
 
 A simple runner that returns a well formated list of the minons that are
 responding to salt calls would look like this:
