@@ -29,9 +29,9 @@ Release announcement:
 Download
 --------
 
-The latest Salt is 0.9.2:
+The latest Salt is |version|:
 
-https://github.com/downloads/thatch45/salt/salt-0.9.2.tar.gz
+|latest|
 
 Additional packages can be downloaded from the download page:
 
@@ -71,7 +71,7 @@ Presentation at SLLUG in May 2011
 `video`_ | `slides`_ (PDF)
 
 .. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
-.. _`slides`: https://github.com/downloads/thatch45/salt/Salt.pdf
+.. _`slides`: :download:`Salt.pdf`
 
 Configuration and CLI Usage
 ---------------------------

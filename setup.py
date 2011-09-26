@@ -11,8 +11,10 @@ from distutils.extension import Extension
 from distutils.sysconfig import get_python_lib, PREFIX
 from Cython.Distutils import build_ext
 
+from salt import __version__
+
 NAME = 'salt'
-VER = '0.9.2'
+VER = __version__
 DESC = 'Portable, distrubuted, remote execution and configuration management system'
 
 mod_path = os.path.join(get_python_lib(), 'salt/modules/')

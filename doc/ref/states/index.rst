@@ -158,7 +158,7 @@ files.
 The available renderers can be found in the renderers directory in the Salt
 source code:
 
-https://github.com/thatch45/salt/tree/master/salt/renderers
+:blob:`salt/renderers`
 
 By default sls files are rendered using jinja as a templating engine, and yaml
 as the serialization format. Since the rendering system can be extended simply
