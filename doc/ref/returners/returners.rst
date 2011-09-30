@@ -12,8 +12,14 @@ Full list of builtin returners
 .. automodule:: salt.returners.local
     :members:
 
-:mod:`salt.returners.redis`
-===========================
+:mod:`salt.returners.redis_return`
+==================================
 
-.. automodule:: salt.returners.redis
+.. automodule:: salt.returners.redis_return
+    :members:
+
+:mod:`salt.returners.mongo_return`
+==================================
+
+.. automodule:: salt.returners.mongo_return
     :members:
