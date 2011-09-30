@@ -49,7 +49,7 @@ this is the best way to install Salt on Debian and Ubuntu systems:
 
 1.  Install the prerequisite packages::
 
-        aptitude install python-setuptools python-yaml python-crypto python-m2crypto cython libzmq-dev
+        aptitude install python-dev python-setuptools python-yaml python-crypto python-m2crypto cython libzmq-dev
 
     .. note:: Installing on Ubuntu Lucid (10.04 LTS)
 
@@ -59,6 +59,7 @@ this is the best way to install Salt on Debian and Ubuntu systems:
 
             aptitude install python-software-properties
             add-apt-repository ppa:chris-lea/zeromq
+            add-apt-repository ppa:chris-lea/libpgm
             aptitude update
             aptitude install libzmq-dev
 
@@ -70,10 +71,12 @@ this is the best way to install Salt on Debian and Ubuntu systems:
 
     .. parsed-literal::
 
-        easy_install --install-layout=deb |latest|
+        easy_install -U --install-layout=deb |latest|
 
     Please take note of the ``--install-layout=deb`` flag. This is important
-    for a functioning installation of Salt.
+    for a functioning installation of Salt. If you have an older version of
+    ZeroMQ installed (say from an earlier installation of Salt) purge it first:
+    ``aptitude -y purge libzmq0``.
 
 .. _`ZeroMQ PPA`: https://launchpad.net/~chris-lea/+archive/zeromq
 
