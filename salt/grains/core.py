@@ -36,9 +36,9 @@ def _kernel():
         grains['kernel'] = 'Unknown'
     return grains
 
-def _cpudata():
+def _linux_cpudata():
     '''
-    Return the cpu architecture
+    Return the cpu information for Linux systems architecture
     '''
     # Provides:
     #   cpuarch
@@ -73,6 +73,54 @@ def _cpudata():
         grains['cpu_flags'] = []
     return grains
 
+def _freebsd_cpudata():
+    '''
+    Return cpu information for FreeBSD systems
+    '''
+    grains = {}
+    grains['cpuarch'] = subprocess.Popen(
+            '/sbin/sysctl hw.machine',
+            shell=True,
+            stdout=subprocess.PIPE
+            ).communicate()[0].split(':')[1].strip()
+    grains['num_cpus'] = subprocess.Popen(
+            '/sbin/sysctl hw.ncpu',
+            shell=True,
+            stdout=subprocess.PIPE
+            ).communicate()[0].split(':')[1].strip()
+    grains['cpu_model'] = subprocess.Popen(
+            '/sbin/sysctl hw.model',
+            shell=True,
+            stdout=subprocess.PIPE
+            ).communicate()[0].split(':')[1].strip()
+    grains['cpu_flags'] = []
+    return grains
+
+def _memdata(osdata):
+    '''
+    Gather information about the system memory
+    '''
+    # Provides:
+    #   mem_total
+    grains = {'mem_total': 0}
+    if osdata['kernel'] == 'Linux':
+        meminfo = '/proc/meminfo'
+        if os.path.isfile(meminfo):
+            for line in open(meminfo, 'r').readlines():
+                comps = line.split(':')
+                if not len(comps) > 1:
+                    continue
+                if comps[0].strip() == 'MemTotal':
+                    grains['mem_total'] = int(comps[1].split()[0])/1024
+    elif osdata['kernel'] == 'FreeBSD':
+        mem = subprocess.Popen(
+                '/sbin/sysctl hw.physmem',
+                shell=True,
+                stdout=subprocess.PIPE
+                ).communicate()[0].split(':')[1].strip()
+        grains['mem_total'] = str(int(mem)/1024/1024)
+    return grains
+
 def _virtual(osdata):
     '''
     Returns what type of virtual hardware is under the hood, kvm or physical
@@ -82,7 +130,7 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    if 'Linux FreeBSD OpenBSD SunOS HP-UX GNU/kFreeBSD'.count(osdata['kernel']):
+    if 'Linux OpenBSD SunOS HP-UX'.count(osdata['kernel']):
         if os.path.isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
@@ -93,6 +141,14 @@ def _virtual(osdata):
         if os.path.isfile('/proc/cpuinfo'):
             if open('/proc/cpuinfo', 'r').read().count('QEMU Virtual CPU'):
                 grains['virtual'] = 'kvm'
+    elif osdata['kernel'] == 'FreeBSD':
+        model = subprocess.Popen(
+                '/sbin/sysctl hw.model',
+                shell=True,
+                stdout=subprocess.PIPE
+                ).communicate()[0].split(':')[1].strip()
+        if model.count('QEMU Virtual CPU'):
+            grains['virtual'] = 'kvm'
     return grains
 
 def _ps(osdata):
@@ -110,7 +166,6 @@ def os_data():
     '''
     grains = {}
     grains.update(_kernel())
-    grains.update(_cpudata())
     if grains['kernel'] == 'Linux':
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
@@ -166,6 +221,13 @@ def os_data():
     else:
         grains['os'] = grains['kernel']
 
+    if grains['kernel'] == 'Linux':
+        grains.update(_linux_cpudata())
+    elif grains['kernel'] == 'FreeBSD':
+        grains.update(_freebsd_cpudata())
+
+    grains.update(_memdata(grains))
+
     # Load the virtual machine info
 
     grains.update(_virtual(grains))
@@ -199,20 +261,4 @@ def path():
     #   path
     return {'path': os.environ['PATH'].strip()}
 
-def memdata():
-    '''
-    Gather information about the system memory
-    '''
-    # Provides:
-    #   mem_total
-    grains = {'mem_total': 0}
-    meminfo = '/proc/meminfo'
-    if os.path.isfile(meminfo):
-        for line in open(meminfo, 'r').readlines():
-            comps = line.split(':')
-            if not len(comps) > 1:
-                continue
-            if comps[0].strip() == 'MemTotal':
-                grains['mem_total'] = int(comps[1].split()[0])/1024
-    return grains
 
