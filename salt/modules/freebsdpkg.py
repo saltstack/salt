@@ -2,7 +2,7 @@
 Package support for FreeBSD
 '''
 
-import subprocess
+import os
 
 def __virtual__():
     '''
@@ -51,7 +51,7 @@ def list_pkgs():
     salt '*' pkg.list_pkgs
     '''
     ret = {}
-    for line in __salt__['cmd.run']('pkg_info').split('/n'):
+    for line in __salt__['cmd.run']('pkg_info').split('\n'):
         if not line:
             continue
         comps = line.split(' ')[0].split('-')
@@ -60,12 +60,17 @@ def list_pkgs():
 
 def refresh_db():
     '''
-    Update the ports tree with portsnap
+    Update the ports tree with portsnap. If the ports tre does not exist it
+    will be downloaded and set up.
 
     CLI Example:
     salt '*' pkg.refresh_db
     '''
-    pass
+    __salt__['cmd.run']('portsnap fetch')
+    if not os.path.isdir('/usr/ports'):
+        __salt__['cmd.run']('portsnap extract')
+    else:
+        __salt__['cmd.run']('portsnap update')
 
 def install(name):
     '''
