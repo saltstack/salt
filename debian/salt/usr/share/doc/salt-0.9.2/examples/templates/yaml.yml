@@ -1,0 +1,27 @@
+vim:
+  pkg:
+    - installed
+emacs:
+  pkg:
+    - installed
+nano:
+  pkg:
+    - latest
+salt:
+  pkg: 
+    - installed
+  service: 
+    - running
+    - require: 
+      - pkg: vim
+      - pkg: salt
+      - service: cron
+    - names: 
+      - salt-master
+      - salt-minion
+cron:
+  pkg:
+    - installed
+  service:
+    - running
+    - name: cronie

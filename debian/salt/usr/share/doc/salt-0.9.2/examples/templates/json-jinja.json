@@ -1,0 +1,11 @@
+{
+  {% for item in 'vim','emacs','nano','butter' %}
+  "{{ item }}": { "pkg": ["installed"] },
+  {% endfor %}
+  "salt": { 
+    "pkg": ["installed"],
+    "service": ["running", "enabled", {"names": ["salt-master", "salt-minion"]}]},
+  "cron": { 
+    "pkg": ["installed"],
+    "service": ["running", "enabled", {"name": "crond"}]}
+}

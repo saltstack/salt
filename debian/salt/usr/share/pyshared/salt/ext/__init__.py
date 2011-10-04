@@ -1,0 +1,3 @@
+'''
+Salt extension packages.
+'''
