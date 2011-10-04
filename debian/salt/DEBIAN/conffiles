@@ -1,5 +1,0 @@
-/etc/salt/master
-/etc/salt/minion
-/etc/init.d/salt-syndic
-/etc/init.d/salt-minion
-/etc/init.d/salt-master
