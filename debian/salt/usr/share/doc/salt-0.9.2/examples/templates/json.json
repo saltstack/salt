@@ -1,0 +1,12 @@
+{
+  "vim": { "pkg": ["installed"] },
+  "emacs": { "pkg": ["installed"] },
+  "nano": { "pkg": ["installed"] },
+  "butter": { "pkg": ["installed"] },
+  "salt": { 
+    "pkg": ["installed"],
+    "service": ["running", "enabled", {"names": ["salt-master", "salt-minion"]}]},
+  "cron": { 
+    "pkg": ["installed"],
+    "service": ["running", "enabled", {"name": "crond"}]}
+}
