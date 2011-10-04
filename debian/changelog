@@ -1,0 +1,12 @@
+salt (0.9.2-2) unstable; urgency=low
+
+  * Fixed many lintian(1) warnings and errors
+
+ -- Aaron Toponce <aaron.toponce@gmail.com>  Mon, 03 Oct 2011 21:34:25 -0600
+
+salt (0.9.2-1) unstable; urgency=low
+
+  * Initial release. (Closes: #643789)
+  * First Debian package
+
+ -- Aaron Toponce <aaron.toponce@gmail.com>  Wed, 28 Sep 2011 01:21:48 -0600

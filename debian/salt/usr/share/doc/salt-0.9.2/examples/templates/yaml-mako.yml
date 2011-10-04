@@ -1,0 +1,23 @@
+% for item in 'vim', 'emacs', 'nano':
+${item}:
+  pkg:
+    - installed
+% endfor
+salt:
+  pkg: 
+    - installed
+  service: 
+    - running
+    - require:
+      - pkg: salt
+    - names: 
+      - salt-master
+      - salt-minion
+cronie:
+  pkg:
+    - installed
+  service:
+    - running
+    - require:
+      - pkg: cronie
+    - name: crond

@@ -1,0 +1,699 @@
+'''
+This module contains all fo the routines needed to set up a master server, this
+involves preparing the three listeners and the workers needed by the master.
+'''
+# Import python modules
+import os
+import re
+import shutil
+import hashlib
+import logging
+import tempfile
+import multiprocessing
+import time
+import datetime
+import cPickle as pickle
+# Import zeromq
+import zmq
+# Import salt modules
+import salt.utils
+import salt.crypt
+import salt.payload
+import salt.client
+# Import cryptography modules
+from M2Crypto import RSA
+
+log = logging.getLogger(__name__)
+
+def prep_jid(cachedir, load):
+    '''
+    Parses the job return directory, generates a job id and sets up the
+    job id directory.
+    '''
+    jid_root = os.path.join(cachedir, 'jobs')
+    jid = datetime.datetime.strftime(
+        datetime.datetime.now(), '%Y%m%d%H%M%S%f'
+    )
+    jid_dir = os.path.join(jid_root, jid)
+    if not os.path.isdir(jid_dir):
+        os.makedirs(jid_dir)
+        pickle.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+    else:
+        return prep_jid(load)
+    return jid
+
+
+class SMaster(object):
+    '''
+    Create a simple salt-master, this will generate the top level master
+    '''
+    def __init__(self, opts):
+        '''
+        Create a salt master server instance
+        '''
+        self.opts = opts
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.key = self.__prep_key()
+        self.crypticle = self.__prep_crypticle()
+
+    def __prep_crypticle(self):
+        '''
+        Return the crypticle used for AES
+        '''
+        return salt.crypt.Crypticle(self.opts['aes'])
+
+    def __prep_key(self):
+        '''
+        A key needs to be placed in the filesystem with permissions 0400 so
+        clients are required to run as root.
+        '''
+        log.info('Preparing the root key for local communication')
+        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
+        key = salt.crypt.Crypticle.generate_key_string()
+        if os.path.isfile(keyfile):
+            return open(keyfile, 'r').read()
+        open(keyfile, 'w+').write(key)
+        os.chmod(keyfile, 256)
+        return key
+
+
+class Master(SMaster):
+    '''
+    The salt master server
+    '''
+    def __init__(self, opts):
+        '''
+        Create a salt master server instance
+        '''
+        SMaster.__init__(self, opts)
+
+    def _clear_old_jobs(self):
+        '''
+        Clean out the old jobs
+        '''
+        while True:
+            cur = datetime.datetime.strftime(
+                datetime.datetime.now(), '%Y%m%d%H'
+            )
+            if self.opts['keep_jobs'] == 0:
+                return
+            jid_root = os.path.join(self.opts['cachedir'], 'jobs')
+            for jid in os.listdir(jid_root):
+                if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                    shutil.rmtree(os.path.join(jid_root, jid))
+            time.sleep(60)
+
+    def start(self):
+        '''
+        Turn on the master server components
+        '''
+        log.info('Starting the Salt Master')
+        multiprocessing.Process(target=self._clear_old_jobs).start()
+        aes_funcs = AESFuncs(self.opts, self.crypticle)
+        clear_funcs = ClearFuncs(
+                self.opts,
+                self.key,
+                self.master_key,
+                self.crypticle)
+        reqserv = ReqServer(
+                self.opts,
+                self.crypticle,
+                self.key,
+                self.master_key,
+                aes_funcs,
+                clear_funcs)
+        reqserv.start_publisher()
+        reqserv.run()
+
+
+class Publisher(multiprocessing.Process):
+    '''
+    The publishing interface, a simple zeromq publisher that sends out the
+    commands.
+    '''
+    def __init__(self, opts):
+        multiprocessing.Process.__init__(self)
+        self.opts = opts
+
+    def run(self):
+        '''
+        Bind to the interface specified in the configuration file
+        '''
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUB)
+        pull_sock = context.socket(zmq.PULL)
+        pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
+        pull_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
+        log.info('Starting the Salt Publisher on %s', pub_uri)
+        pub_sock.bind(pub_uri)
+        pull_sock.bind(pull_uri)
+
+        while True:
+            package = pull_sock.recv()
+            log.info('Publishing command')
+            pub_sock.send(package)
+
+
+class ReqServer(object):
+    '''
+    Starts up the master request server, minions send results to this
+    interface.
+    '''
+    def __init__(self, opts, crypticle, key, mkey, aes_funcs, clear_funcs):
+        self.opts = opts
+        self.aes_funcs = aes_funcs
+        self.clear_funcs = clear_funcs
+        self.master_key = mkey
+        self.context = zmq.Context(self.opts['worker_threads'])
+        # Prepare the zeromq sockets
+        self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
+        self.clients = self.context.socket(zmq.XREP)
+        self.workers = self.context.socket(zmq.XREQ)
+        self.w_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'workers.ipc')
+            )
+        # Prepare the aes key
+        self.key = key
+        self.crypticle = crypticle
+
+    def __bind(self):
+        '''
+        Binds the reply server
+        '''
+        log.info('Setting up the master communication server')
+        self.clients.bind(self.uri)
+
+        for ind in range(int(self.opts['worker_threads'])):
+            log.info('Starting Salt worker process {0}'.format(ind))
+            MWorker(self.opts,
+                    self.master_key,
+                    self.key,
+                    self.crypticle,
+                    self.aes_funcs,
+                    self.clear_funcs).start()
+
+        self.workers.bind(self.w_uri)
+        
+        zmq.device(zmq.QUEUE, self.clients, self.workers)
+
+    def start_publisher(self):
+        '''
+        Start the salt publisher interface
+        '''
+        # Start the publisher
+        self.publisher = Publisher(self.opts)
+        self.publisher.start()
+
+    def run(self):
+        '''
+        Start up the ReqServer
+        '''
+        self.__bind()
+
+
+class MWorker(multiprocessing.Process):
+    '''
+    The worker multiprocess instance to manage the backend operations for the
+    salt master.
+    '''
+    def __init__(self,
+            opts,
+            mkey,
+            key,
+            crypticle,
+            aes_funcs,
+            clear_funcs):
+        multiprocessing.Process.__init__(self)
+        self.opts = opts
+        self.crypticle = crypticle
+        self.aes_funcs = aes_funcs
+        self.clear_funcs = clear_funcs
+
+    def __bind(self):
+        '''
+        Bind to the local port
+        '''
+        context = zmq.Context(1)
+        socket = context.socket(zmq.REP)
+        w_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'workers.ipc')
+            )
+        log.info('Worker binding to socket {0}'.format(w_uri))
+        socket.connect(w_uri)
+
+        while True:
+            package = socket.recv()
+            payload = salt.payload.unpackage(package)
+            ret = salt.payload.package(self._handle_payload(payload))
+            socket.send(ret)
+
+    def _handle_payload(self, payload):
+        '''
+        The _handle_payload method is the key method used to figure out what
+        needs to be done with communication to the server
+        '''
+        return {'aes': self._handle_aes,
+                'pub': self._handle_pub,
+                'clear': self._handle_clear}[payload['enc']](payload['load'])
+
+    def _handle_clear(self, load):
+        '''
+        Take care of a cleartext command
+        '''
+        log.info('Clear payload received with command %(cmd)s', load)
+        return getattr(self.clear_funcs, load['cmd'])(load)
+
+    def _handle_pub(self, load):
+        '''
+        Handle a command sent via a public key pair
+        '''
+        log.info('Pubkey payload received with command %(cmd)s', load)
+
+    def _handle_aes(self, load):
+        '''
+        Handle a command sent via an aes key
+        '''
+        data = self.crypticle.loads(load)
+        log.info('AES payload received with command %(cmd)s', data)
+        return self.aes_funcs.run_func(data['cmd'], data)
+
+    def run(self):
+        '''
+        Start a Master Worker
+        '''
+        self.__bind()
+
+
+class AESFuncs(object):
+    '''
+    Set up functions that are available when the load is encrypted with AES
+    '''
+    # The AES Functions:
+    #
+    def __init__(self, opts, crypticle):
+        self.opts = opts
+        self.crypticle = crypticle
+        # Make a client
+        self.local = salt.client.LocalClient(self.opts['conf_file'])
+
+    def __find_file(self, path, env='base'):
+        '''
+        Search the environment for the relative path
+        '''
+        fnd = {'path': '',
+               'rel': ''}
+        if not self.opts['file_roots'].has_key(env):
+            return fnd
+        for root in self.opts['file_roots'][env]:
+            full = os.path.join(root, path)
+            if os.path.isfile(full):
+                fnd['path'] = full
+                fnd['rel'] = path
+                return fnd
+        return fnd
+
+    def __verify_minion(self, id_, token):
+        '''
+        Take a minion id and a string encrypted with the minion private key
+        The string needs to decrypt as 'salt' with the minion public key
+        '''
+        minion_pub = open(
+                os.path.join(
+                    self.opts['pki_dir'],
+                    'minions',
+                    id_
+                    ),
+                'r'
+                ).read()
+        tmp_pub = tempfile.mktemp()
+        open(tmp_pub, 'w+').write(minion_pub)
+        pub = RSA.load_pub_key(tmp_pub)
+        os.remove(tmp_pub)
+        if pub.public_decrypt(token, 5) == 'salt':
+            return True
+        log.error('Salt minion claiming to be {0} has attempted to'
+                  'communicate with the master and could not be verified'
+                  .format(id_))
+        return False
+
+    def _serve_file(self, load):
+        '''
+        Return a chunk from a file based on the data received
+        '''
+        ret = {'data': '',
+               'dest': ''}
+        if not load.has_key('path')\
+                or not load.has_key('loc')\
+                or not load.has_key('env'):
+            return ret
+        fnd = self.__find_file(load['path'], load['env'])
+        if not fnd['path']:
+            return ret
+        ret['dest'] = fnd['rel']
+        fn_ = open(fnd['path'], 'rb')
+        fn_.seek(load['loc'])
+        ret['data'] = fn_.read(self.opts['file_buffer_size'])
+        return ret
+
+    def _file_hash(self, load):
+        '''
+        Return a file hash, the hash type is set in the master config file
+        '''
+        if not load.has_key('path')\
+                or not load.has_key('env'):
+            return ''
+        path = self.__find_file(load['path'], load['env'])['path']
+        if not path:
+            return {}
+        ret = {}
+        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
+                open(path, 'rb').read()).hexdigest()
+        ret['hash_type'] = self.opts['hash_type']
+        return ret
+
+    def _master_opts(self, load):
+        '''
+        Return the master options to the minion
+        '''
+        return self.opts
+
+    def _return(self, load):
+        '''
+        Handle the return data sent from the minions
+        '''
+        # If the return data is invalid, just ignore it
+        if not load.has_key('return')\
+                or not load.has_key('jid')\
+                or not load.has_key('id'):
+            return False
+        log.info('Got return from %(id)s for job %(jid)s', load)
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        if not os.path.isdir(jid_dir):
+            log.error(
+                'An inconsistency occurred, a job was received with a job id '
+                'that is not present on the master: %(jid)s', load
+            )
+            return False
+        hn_dir = os.path.join(jid_dir, load['id'])
+        if not os.path.isdir(hn_dir):
+            os.makedirs(hn_dir)
+        pickle.dump(load['return'],
+                open(os.path.join(hn_dir, 'return.p'), 'w+'))
+        if load.has_key('out'):
+            pickle.dump(load['out'],
+                    open(os.path.join(hn_dir, 'out.p'), 'w+'))
+
+    def _syndic_return(self, load):
+        '''
+        Recieve a syndic minion return and format it to look like returns from
+        individual minions.
+        '''
+        # Verify the load
+        if not load.has_key('return') \
+                or not load.has_key('jid'):
+            return None
+        # Format individual return loads
+        for key, item in load['return'].items():
+            ret = {'jid': load['jid'],
+                   'id': key,
+                   'return': item}
+            self._return(ret)
+
+    def minion_publish(self, clear_load):
+        '''
+        Publish a command initiated from a minion, this method executes minion
+        restrictions so that the minion publication will only work if it is
+        enabled in the config.
+        The configuration on the master allows minions to be matched to
+        salt functions, so the minions can only publish allowed salt functions
+        The config will look like this:
+        peer:
+            .*:
+                - .*
+        This configuration will enable all minions to execute all commands.
+        peer:
+            foo.example.com:
+                - test.*
+        This configuration will only allow the minion foo.example.com to
+        execute commands from the test module
+        '''
+        # Verify that the load is valid
+        if not self.opts.has_key('peer'):
+            return {}
+        if not isinstance(self.opts['peer'], dict):
+            return {}
+        if not clear_load.has_key('fun')\
+                or not clear_load.has_key('arg')\
+                or not clear_load.has_key('tgt')\
+                or not clear_load.has_key('ret')\
+                or not clear_load.has_key('tok')\
+                or not clear_load.has_key('id'):
+            return {}
+        # If the command will make a recursive publish don't run
+        if re.match('publish.*', clear_load['fun']):
+            return {}
+        # Check the permisions for this minion
+        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
+            # The minion is not who it says it is! 
+            # We don't want to listen to it!
+            return {}
+        perms = set()
+        for match in self.opts['peer']:
+            if re.match(match, clear_load['id']):
+                # This is the list of funcs/modules!
+                if isinstance(self.opts['peer'][match], list):
+                    perms.update(self.opts['peer'][match])
+        good = False
+        for perm in perms:
+            if re.match(perm, clear_load['fun']):
+                good = True
+        if not good:
+            return {}
+        # Set up the publication payload
+        jid_dir = os.path.join(
+            self.opts['cachedir'],
+            'jobs',
+            clear_load['jid'])
+        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        payload = {'enc': 'aes'}
+        load = {
+                'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'tgt': clear_load['tgt'],
+                'jid': clear_load['jid'],
+                'ret': clear_load['ret'],
+               }
+        expr_form = 'glob'
+        timeout = 0
+        if clear_load.has_key('tgt_type'):
+            load['tgt_type'] = clear_load['tgt_type']
+            expr_form = load['tgt_type']
+        if clear_load.has_key('timeout'):
+            timeout = clear_load('timeout')
+        # Encrypt!
+        payload['load'] = self.crypticle.dumps(load)
+        # Connect to the publisher
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUSH)
+        pull_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
+        pub_sock.connect(pull_uri)
+        pub_sock.send(salt.payload.package(payload))
+        # Run the client get_returns method
+        return self.local.get_returns(
+                clear_load['jid'],
+                self.local.check_minions(
+                    clear_load['tgt'],
+                    expr_form
+                    ),
+                timeout
+                )
+
+    def run_func(self, func, load):
+        '''
+        Wrapper for running functions executed with AES encryption
+        '''
+        # Don't honor private functions
+        if func.startswith('__'):
+            return self.crypticle.dumps({})
+        # Run the func
+        ret = getattr(self, func)(load)
+        # Don't encrypt the return value for the _return func
+        # (we don't care about the return value, so why encrypt it?)
+        if func == '_return':
+            return ret
+        # AES Encrypt the return
+        return self.crypticle.dumps(ret)
+
+class ClearFuncs(object):
+    '''
+    Set up functions that are safe to execute when commands sent to the master
+    without encryption and authentication
+    '''
+    # The ClearFuncs object encasulates the functions that can be executed in
+    # the clear:
+    # publish (The publish from the LocalClient)
+    # _auth
+    def __init__(self, opts, key, master_key, crypticle):
+        self.opts = opts
+        self.key = key
+        self.master_key = master_key
+        self.crypticle = crypticle
+        # Make a client
+        self.local = salt.client.LocalClient(self.opts['conf_file'])
+
+    def _send_cluster(self):
+        '''
+        Send the cluster data out
+        '''
+        log.debug('Sending out cluster data')
+        ret = self.local.cmd(self.opts['cluster_masters'],
+                'cluster.distrib',
+                self._cluster_load(),
+                0,
+                'list'
+                )
+        log.debug('Cluster distributed: %s', ret)
+
+    def _cluster_load(self):
+        '''
+        Generates the data sent to the cluster nodes.
+        '''
+        minions = {}
+        master_pem = ''
+        master_conf = open(self.opts['conf_file'], 'r').read()
+        minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
+        for host in os.listdir(minion_dir):
+            pub = os.path.join(minion_dir, host)
+            minions[host] = open(pub, 'r').read()
+        if self.opts['cluster_mode'] == 'full':
+            master_pem = open(os.path.join(self.opts['pki_dir'],
+                'master.pem')).read()
+        return [minions,
+                master_conf,
+                master_pem,
+                self.opts['conf_file']]
+
+    def _auth(self, load):
+        '''
+        Authenticate the client, use the sent public key to encrypt the aes key
+        which was generated at start up
+        '''
+        # 1. Verify that the key we are receiving matches the stored key
+        # 2. Store the key if it is not there
+        # 3. make an rsa key with the pub key
+        # 4. encrypt the aes key as an encrypted pickle
+        # 5. package the return and return it
+        log.info('Authentication request from %(id)s', load)
+        pubfn = os.path.join(self.opts['pki_dir'],
+                'minions',
+                load['id'])
+        pubfn_pend = os.path.join(self.opts['pki_dir'],
+                'minions_pre',
+                load['id'])
+        if self.opts['open_mode']:
+            # open mode is turned on, nuts to checks and overwrite whatever
+            # is there
+            pass
+        elif os.path.isfile(pubfn):
+            # The key has been accepted check it
+            if not open(pubfn, 'r').read() == load['pub']:
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys did not match. This may be an attempt to compromise '
+                    'the Salt cluster.', load
+                )
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
+                return ret
+        elif not os.path.isfile(pubfn_pend)\
+                and not self.opts['auto_accept']:
+            # This is a new key, stick it in pre
+            log.info('New public key placed in pending for %(id)s', load)
+            open(pubfn_pend, 'w+').write(load['pub'])
+            ret = {'enc': 'clear',
+                   'load': {'ret': True}}
+            return ret
+        elif os.path.isfile(pubfn_pend)\
+                and not self.opts['auto_accept']:
+            # This key is in pending, if it is the same key ret True, else
+            # ret False
+            if not open(pubfn_pend, 'r').read() == load['pub']:
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys in pending did not match. This may be an attempt to '
+                    'compromise the Salt cluster.', load
+                )
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+            else:
+                log.info(
+                    'Authentication failed from host %(id)s, the key is in '
+                    'pending and needs to be accepted with saltkey -a %(id)s',
+                    load
+                )
+                return {'enc': 'clear',
+                        'load': {'ret': True}}
+        elif not os.path.isfile(pubfn_pend)\
+                and self.opts['auto_accept']:
+            # This is a new key and auto_accept is turned on
+            pass
+        else:
+            # Something happened that I have not accounted for, FAIL!
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
+
+        log.info('Authentication accepted from %(id)s', load)
+        open(pubfn, 'w+').write(load['pub'])
+        key = RSA.load_pub_key(pubfn)
+        ret = {'enc': 'pub',
+               'pub_key': self.master_key.pub_str,
+               'token': self.master_key.token,
+               'publish_port': self.opts['publish_port'],
+              }
+        ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
+        if self.opts['cluster_masters']:
+            self._send_cluster()
+        return ret
+
+    def publish(self, clear_load):
+        '''
+        This method sends out publications to the minions, it can only be used
+        by the LocalClient.
+        '''
+        # Verify that the caller has root on master
+        if not clear_load.pop('key') == self.key:
+            return ''
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', clear_load['jid'])
+        # Verify the jid dir
+        if not os.path.isdir(jid_dir):
+            os.makedirs(jid_dir)
+        # Save the invocation information
+        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        # Set up the payload
+        payload = {'enc': 'aes'}
+        load = {
+                'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'tgt': clear_load['tgt'],
+                'jid': clear_load['jid'],
+                'ret': clear_load['ret'],
+               }
+        if clear_load.has_key('tgt_type'):
+            load['tgt_type'] = clear_load['tgt_type']
+        if clear_load.has_key('to'):
+            load['to'] = clear_load['to']
+        payload['load'] = self.crypticle.dumps(load)
+        # Send 0MQ to the publisher
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUSH)
+        pull_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
+        pub_sock.connect(pull_uri)
+        pub_sock.send(salt.payload.package(payload))
+        return {'enc': 'clear',
+                'load': {'jid': clear_load['jid']}}
