@@ -373,6 +373,27 @@ class AESFuncs(object):
         ret['hash_type'] = self.opts['hash_type']
         return ret
 
+    def _file_list(self, load):
+        '''
+        Return a list of all files on the file server in a specified
+        environment
+        '''
+        ret = []
+        if not self.opts['file_roots'].has_key(env):
+            return ret
+        for root, dirs, files in os.walk(self.opts['file_roots']['env']):
+            for fn in files:
+                ret.append(
+                    os.path.relpath(
+                        os.path.join(
+                            root,
+                            fn
+                            ),
+                        self.opts['file_roots']['env']
+                        )
+                    )
+        return ret
+
     def _master_opts(self, load):
         '''
         Return the master options to the minion
