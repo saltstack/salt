@@ -11,8 +11,8 @@ def running(name, sig=None):
                 'changes': {},
                 'result': True,
                 'comment': 'The service is already running'}
-    changes = __salt__['service.start'](name)
-    if not changes:
+    changes = {name: __salt__['service.start'](name)}
+    if not changes[name]:
         return {'name': name,
                 'changes': changes,
                 'result': False,
@@ -31,8 +31,8 @@ def dead(name, sig=None):
                 'changes': {},
                 'result': True,
                 'comment': 'Service ' + name + ' is already dead'}
-    changes = __salt__['service.stop'](name)
-    if not changes:
+    changes = {name: __salt__['service.stop'](name)}
+    if not changes[name]:
         return {'name': name,
                 'changes': changes,
                 'result': False,
