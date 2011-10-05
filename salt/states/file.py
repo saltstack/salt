@@ -279,7 +279,7 @@ def directory(name,
         return ret
     if not os.path.isdir(name):
         # The dir does not exist, make it
-        if not os.path.isdir(os.dirname(name)):
+        if not os.path.isdir(os.path.dirname(name)):
             if makedirs:
                 _makedirs(name)
             else:
@@ -288,6 +288,7 @@ def directory(name,
                 return ret
     if not os.path.isdir(name):
         _makedirs(name)
+        os.makedirs(name)
     if not os.path.isdir(name):
         ret['result'] = False
         ret['comment'] = 'Failed to create directory {0}'.format(name)
