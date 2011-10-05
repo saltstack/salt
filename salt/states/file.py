@@ -68,12 +68,12 @@ def _jinja(sfn):
     try:
         tgt = tempfile.mkstemp()[1]
         passthrough = {}
-        passthrough.update(__salt__)
-        passthrough.update(__grains__)
+        passthrough['salt'] = __salt__
+        passthrough['grains'] = __grains__
         template = Template(open(sfn, 'r').read())
         open(tgt, 'w+').write(template.render(**passthrough))
         return {'result': True,
-                'data': tgt}
+        	    'data': tgt}
     except:
         trb = traceback.format_exc()
         return {'result': False,
@@ -116,8 +116,8 @@ def managed(name,
             # If the source file is a template render it accordingly
             if template:
                 t_key = '_' + template
-                if locals().has_key(t_key):
-                    data = locals()[t_key](sfn)
+                if globals().has_key(t_key):
+                    data = globals()[t_key](sfn)
                 if data['result']:
                     sfn = data['data']
                 else:
@@ -194,8 +194,8 @@ def managed(name,
         if template:
             data = {}
             t_key = '_' + template
-            if locals().has_key(t_key):
-                data = locals()[t_key](sfn)
+            if globals().has_key(t_key):
+                data = globals()[t_key](sfn)
             if data.get('result'):
                 sfn = data['data']
             else:
