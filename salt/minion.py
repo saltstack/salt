@@ -548,6 +548,17 @@ class FileClient(object):
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(self.socket.recv_pyobj())
 
+    def list_env(path, env='base'):
+        '''
+        Return a list of the files in the file server's specified environment
+        '''
+        payload = {'enc': 'aes'}
+        load = {'env': env,
+                'cmd': '_file_list'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send_pyobj(payload)
+        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+
     def get_state(self, sls, env):
         '''
         Get a state file from the master and store it in the local minion cache
