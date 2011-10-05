@@ -85,7 +85,8 @@ def managed(name,
         group=None,
         mode=None,
         template=None,
-        makedirs=False):
+        makedirs=False,
+        __env__='base'):
     '''
     Manage a given file
     '''
@@ -98,7 +99,7 @@ def managed(name,
     # Check changes if the target file exists
     if os.path.isfile(name):
         # Check sums
-        source_sum = __salt__['cp.hash_file'](source)
+        source_sum = __salt__['cp.hash_file'](source, __env__)
         if not source_sum:
             ret['result'] = False
             ret['comment'] = 'Source file {0} not found'.format(source)
@@ -107,7 +108,7 @@ def managed(name,
             'rb').read()).hexdigest()
         # Check if file needs to be replaced
         if source_sum['hsum'] != name_sum:
-            sfn = __salt__['cp.cache_file'](source)
+            sfn = __salt__['cp.cache_file'](source, __env__)
             if not sfn:
                 ret['result'] = False
                 ret['comment'] = 'Source file {0} not found'.format(source)
@@ -184,7 +185,7 @@ def managed(name,
         return ret
     else:
         # The file is not currently present, throw it down, log all changes
-        sfn = __salt__['cp.cache_file'](source)
+        sfn = __salt__['cp.cache_file'](source, __env__)
         if not sfn:
             ret['result'] = False
             ret['comment'] = 'Source file {0} not found'.format(source)
