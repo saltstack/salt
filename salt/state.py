@@ -189,6 +189,8 @@ class State(object):
                          'name': name}
                 if body.has_key('__sls__'):
                     chunk['__sls__'] = body['__sls__']
+                if body.has_key('__env__'):
+                    chunk['__env__'] = body['__env__']
                 funcs = set()
                 names = set()
                 for arg in run:
@@ -500,6 +502,8 @@ class HighState(object):
                         continue
                     if not state[name].has_key('__sls__'):
                         state[name]['__sls__'] = sls
+                    if not state[name].has_key('__env__'):
+                        state[name]['__env__'] = env
         return state, mods, errors
 
     def render_highstate(self, matches):
