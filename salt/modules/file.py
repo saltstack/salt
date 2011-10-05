@@ -45,7 +45,7 @@ def get_gid(path):
     CLI Example:
     salt '*' file.get_gid /etc/passwd
     '''
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         return -1
     return os.stat(path).st_gid
 
@@ -92,7 +92,7 @@ def get_uid(path):
     CLI Example:
     salt '*' file.get_uid /etc/passwd
     '''
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         return False
     return os.stat(path).st_uid
 
@@ -115,7 +115,7 @@ def get_mode(path):
     CLI Example:
     salt '*' file.get_mode /etc/passwd
     '''
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         return -1
     mode = str(oct(os.stat(path).st_mode)[-4:])
     if mode.startswith('0'):
@@ -130,7 +130,7 @@ def set_mode(path, mode):
     salt '*' file.set_mode /etc/passwd 0644
     '''
     mode = str(mode)
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
@@ -152,7 +152,7 @@ def chown(path, user, group):
         err += 'User does not exist\n'
     if gid == '':
         err += 'Group does not exist\n'
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         err += 'File not found'
     if err:
         return err
@@ -169,7 +169,7 @@ def chgrp(path, group):
     err = ''
     if gid == '':
         err += 'Group does not exist\n'
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         err += 'File not found'
     if err:
         return err
