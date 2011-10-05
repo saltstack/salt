@@ -257,3 +257,86 @@ def managed(name,
             ret['comment'] = 'File ' + name + ' is in the correct state'
         return ret
 
+def directory(name,
+        user=None,
+        group=None
+        mode=None,
+        makedirs=False):
+    '''
+    Ensure that a named directory is present and has the right perms
+    '''
+    if mode:
+        mode = str(mode)
+    ret =  {'name': name,
+            'changes': {},
+            'result': True,
+            'comment': ''}
+    if os.path.isfile(name):
+        ret['result'] = False
+        ret['comment'] = 'Specifed location {0} exists and is a file'.format(name)
+        return ret
+    if not os.path.isdir(name):
+        # The dir does not exist, make it
+        if not os.path.isdir(os.dirname(name)):
+            if makedirs:
+                _makedirs(name)
+            else:
+                ret['result'] = False
+                ret['comment'] = 'No directory to create {0} in'.format(name)
+                return ret
+    if not os.path.isdir(name):
+        _makedirs(name)
+    if not os.path.isdir(name):
+        ret['result'] = False
+        ret['comment'] = 'Failed to create directory {0}'.format(name)
+        return ret
+
+    # Check permissions
+    perms = {}
+    perms['luser'] = __salt__['file.get_user'](name)
+    perms['lgroup'] = __salt__['file.get_group'](name)
+    perms['lmode'] = __salt__['file.get_mode'](name)
+    # Run through the perms and detect and apply the needed changes
+    if user:
+        if user != perms['luser']:
+            perms['cuser'] = user
+    if group:
+        if group != perms['lgroup']:
+            perms['cgroup'] = group
+    if perms.has_key('cuser') or perms.has_key('cgroup'):
+        if not __opts__['test']:
+            __salt__['file.chown'](
+                    name,
+                    user,
+                    group
+                    )
+    if mode:
+        if mode != perms['lmode']:
+            if not __opts__['test']:
+                __salt__['file.set_mode'](name, mode)
+            if mode != __salt__['file.get_mode'](name):
+                ret['result'] = False
+                ret['comment'] += 'Mode not changed '
+            else:
+                ret['changes']['mode'] = mode
+    if user:
+        if user != __salt__['file.get_user'](name):
+            ret['result'] = False
+            ret['comment'] = 'Failed to change user to {0} '.format(user)
+        elif perms.has_key('cuser'):
+            ret['changes']['user'] = user
+    if group:
+        if group != __salt__['file.get_group'](name):
+            ret['result'] = False
+            ret['comment'] += 'Failed to change group to {0} '.format(group)
+        elif perms.has_key('cgroup'):
+            ret['changes']['group'] = group
+
+    if not ret['comment']:
+        ret['comment'] = 'Directory {0} updated'.format(name)
+
+    if __opts__['test']:
+        ret['comment'] = 'Directory {0} not updated'.format(name)
+    elif not ret['changes'] and ret['result']:
+        ret['comment'] = 'Directory {0} is in the correct state'.format(name)
+    return ret
