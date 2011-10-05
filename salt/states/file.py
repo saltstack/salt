@@ -192,10 +192,11 @@ def managed(name,
             return ret
         # Handle any template management that is needed
         if template:
+            data = {}
             t_key = '_' + template
             if locals().has_key(t_key):
                 data = locals()[t_key](sfn)
-            if data['result']:
+            if data.get('result'):
                 sfn = data['data']
             else:
                 ret['result'] = False
@@ -260,7 +261,7 @@ def managed(name,
 
 def directory(name,
         user=None,
-        group=None
+        group=None,
         mode=None,
         makedirs=False):
     '''
