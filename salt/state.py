@@ -472,6 +472,7 @@ class HighState(object):
         '''
         Render a state file and retrive all of the include states
         '''
+        err = ''
         errors = []
         fn_ = self.client.get_state(sls, env)
         state = None
