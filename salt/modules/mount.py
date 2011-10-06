@@ -196,7 +196,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     if fstype:
         cmd += ' -t {0}'.format(fstype)
     out = __salt__['cmd.run_all'](cmd)
-    if not out['retcode']:
+    if out['retcode']:
         return out['stderr']
     return True
 

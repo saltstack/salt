@@ -54,7 +54,6 @@ def mounted(
                 # Failed to remount, the state has failed!
                 ret['comment'] = out
                 ret['result'] = False
-                return ret
             elif out == True:
                 # Remount worked!
                 ret['changes']['mount'] = True
@@ -83,5 +82,5 @@ def mounted(
             ret['result'] = False
             ret['comment'] += ' but the fstab was not found'
             return ret
-
+    return ret
 
