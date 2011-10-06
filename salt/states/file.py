@@ -79,6 +79,83 @@ def _jinja(sfn):
         return {'result': False,
                 'data': trb}
 
+def symlink(name, target, force=False, makedirs=False):
+    '''
+    Create a symlink
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    if not os.path.isdir(os.path.dirname(name)):
+        if makedirs:
+            _makedirs(name)
+        ret['result'] = False
+        ret['comment'] = 'Directory {0} for symlink is not present'.format(os.path.dirname(name))
+        return ret
+    if os.path.islink(name):
+        # The link exists, verify that it matches the target
+        if not os.readlink(name) == target:
+            # The target is wrong, delete the link
+            os.remove(name)
+        else:
+            # The link looks good!
+            ret['comment'] = 'The symlink {0} is present'.format(name)
+            return ret
+    elif os.path.isfile(name):
+        # Since it is not a link, and is a file, error out
+        if force:
+            os.remove(name)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'File exists where the symlink {0} should be'.format(name)
+            return ret
+    elif os.path.isdir(name):
+        # It is not a link or a file, it is a dir, error out
+        if force:
+            shutil.rmtree(name)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Direcotry exists where the symlink {0} should be'.format(name)
+            return ret
+    if not os.path.exists(name):
+        # The link is not present, make it
+        os.symlink(target, name)
+        ret['comment'] = 'Created new symlink {0}'.format(name)
+        ret['changes']['new'] = name
+        return ret
+
+def absent(name):
+    '''
+    Verify that the named file or directory is absent
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    if os.path.isfile(name) or os.path.islink(name):
+        try:
+            os.remove(name)
+            ret['comment'] = 'Removed file {0}'.format(name)
+            ret['changes']['removed'] = name
+            return ret
+        except:
+            ret['result'] = False
+            ret['comment'] = 'Failed to remove file {0}'.format(name)
+            return ret
+    elif os.path.isdir(name):
+        try:
+            shutil.rmtree(name)
+            ret['comment'] = 'Removed directory {0}'.format(name)
+            ret['changes']['removed'] = name
+            return ret
+        except:
+            ret['result'] = False
+            ret['comment'] = 'Failed to remove directory {0}'.format(name)
+            return ret
+    ret['comment'] = 'File {0} is not present'.format(name)
+    return ret
+
 def managed(name,
         source,
         user=None,
