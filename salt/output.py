@@ -76,7 +76,7 @@ class HighStateOutputter(Outputter):
                         ))
                     hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(
                         tcolor,
-                        comps[2],
+                        comps[-1],
                         colors
                         ))
                     hstrs.append('        {0}Result:    {1}{2[ENDC]}'.format(
