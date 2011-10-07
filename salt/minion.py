@@ -507,6 +507,7 @@ class FileClient(object):
                 dest = os.path.join(
                     self.opts['cachedir'],
                     'files',
+                    env,
                     data['dest']
                     )
                 destdir = os.path.dirname(dest)
