@@ -68,6 +68,13 @@ def cache_master(env='base'):
     client = salt.minion.FileClient(__opts__)
     return client.cache_master(env)
 
+def list_master(env='base'):
+    '''
+    Retrieve all of the files on the master and cache them locally
+    '''
+    client = salt.minion.FileClient(__opts__)
+    return client.file_list(env)
+
 def hash_file(path, env='base'):
     '''
     Return the hash of a file, to get the hash of a file on the
