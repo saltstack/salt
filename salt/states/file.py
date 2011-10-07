@@ -420,3 +420,49 @@ def directory(name,
     elif not ret['changes'] and ret['result']:
         ret['comment'] = 'Directory {0} is in the correct state'.format(name)
     return ret
+
+def recurse(name,
+        source,
+        __env__='base'):
+    '''
+    Recurse through a subdirectory on the master and copy said subdirecory
+    over to the specified path
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    # Verify the target directory
+    if not os.path.isdir(name):
+        if os.path.exists(name):
+            # it is not a dir, but it exists - fail out
+            ret['result'] = False
+            ret['comment'] = 'The path {0} exists and is not a directory'.format(name)
+            return ret
+        os.makedirs(name)
+    for fn_ in __salt__['file.cache_dir'](source, __env__):
+        dest = os.path.join(name,
+                os.path.relpath(
+                    fn_,
+                    os.path.join(
+                        __opts__['cachedir'],
+                        'files',
+                        __env__
+                        )
+                    )
+                )
+        if not os.path.isdir(os.path.dirname(dest)):
+            _makedirs(dest)
+        if os.path.isfile(dest):
+            # The file is present, if the sum differes replace it
+            srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
+            dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
+            if srch != dsth:
+                # The downloaded file differes, replace!
+                shutil.copy(fn_, dest)
+                ret['changes'][dest] = 'updated'
+        else:
+            # The destination file is not present, make it
+            shutil.copy(fn_, dest)
+            ret['changes'][dest] = 'new'
+    return ret
