@@ -15,6 +15,8 @@ log = logging.getLogger(__name__)
 
 salt_base_path = os.path.dirname(salt.__file__)
 
+class LoaderError(Exception): pass
+
 def minion_mods(opts):
     '''
     Returns the minion modules
@@ -69,7 +71,11 @@ def render(opts, functions):
     load = Loader(module_dirs, opts)
     pack = {'name': '__salt__',
             'value': functions}
-    return load.filter_func('render', pack)
+    rend = load.filter_func('render', pack)
+    if not rend.has_key(self.opts['renderer']):
+        err = 'The renderer {0} is unavailable, this error is often because the needed software is unavailabe'.format(self.opts['renderer'])
+        log.critical(err)
+        raise LoaderError(err)
 
 def grains(opts):
     '''
