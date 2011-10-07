@@ -379,9 +379,9 @@ class AESFuncs(object):
         environment
         '''
         ret = []
-        if not self.opts['file_roots'].has_key(env):
+        if not self.opts['file_roots'].has_key('env'):
             return ret
-        for root, dirs, files in os.walk(self.opts['file_roots']['env']):
+        for root, dirs, files in os.walk(self.opts['file_roots'][load[env]]):
             for fn in files:
                 ret.append(
                     os.path.relpath(
@@ -389,7 +389,7 @@ class AESFuncs(object):
                             root,
                             fn
                             ),
-                        self.opts['file_roots']['env']
+                        self.opts['file_roots'][load['env']]
                         )
                     )
         return ret
