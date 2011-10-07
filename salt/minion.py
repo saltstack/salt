@@ -533,6 +533,27 @@ class FileClient(object):
             ret.append(self.cache_file(path, env))
         return ret
 
+    def file_list(self, env='base'):
+        '''
+        List the files on the master
+        '''
+        path = self._check_proto(path)
+        payload = {'enc': 'aes'}
+        load = {'env': env,
+                'cmd': '_file_list'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send_pyobj(payload)
+        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+
+    def cache_master(self, env='base'):
+        '''
+        Download and cache all files on a master in a specified environment
+        '''
+        ret = []
+        for path in self.file_list(env):
+            ret.append(self.cache_file('salt://{0}'.format(path), env))
+        return ret
+
     def hash_file(self, path, env='base'):
         '''
         Return the hash of a file, to get the hash of a file on the
