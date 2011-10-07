@@ -551,7 +551,7 @@ class FileClient(object):
         path = self._check_proto(path)
         for fn_ in self.file_list(env):
             if fn_.startswith(path):
-                ret.append(self.cache_file('salt://{0}'.format(path)), env)
+                ret.append(self.cache_file('salt://{0}'.format(fn_), env))
         return ret
 
     def file_list(self, env='base'):
