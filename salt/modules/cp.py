@@ -45,6 +45,13 @@ def get_file(path, dest, env='base'):
     client = salt.minion.FileClient(__opts__)
     return client.get_file(path, dest, False, env)
 
+def cache_file(path, env='base'):
+    '''
+    Used to cache a single file in the local salt-master file cache.
+    '''
+    client = salt.minion.FileClient(__opts__)
+    return client.cache_file(path, env)
+
 def cache_files(paths, env='base'):
     '''
     Used to gather many files from the master, the gathered files will be
@@ -54,12 +61,12 @@ def cache_files(paths, env='base'):
     client = salt.minion.FileClient(__opts__)
     return client.cache_files(paths, env)
 
-def cache_file(path, env='base'):
+def cache_dir(path, env='base'):
     '''
-    Used to cache a single file in the local salt-master file cache.
+    Download and cache everything under a directory from the master
     '''
     client = salt.minion.FileClient(__opts__)
-    return client.cache_file(path, env)
+    return client.cache_dir(path, env)
 
 def cache_master(env='base'):
     '''

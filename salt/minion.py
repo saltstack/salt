@@ -534,6 +534,26 @@ class FileClient(object):
             ret.append(self.cache_file(path, env))
         return ret
 
+    def cache_master(self, env='base'):
+        '''
+        Download and cache all files on a master in a specified environment
+        '''
+        ret = []
+        for path in self.file_list(env):
+            ret.append(self.cache_file('salt://{0}'.format(path), env))
+        return ret
+
+    def cache_dir(self, path, env='base'):
+        '''
+        Download all of the files in a subdir of the master
+        '''
+        ret = []
+        path = self._check_proto(path)
+        for fn_ in self.file_list(env):
+            if fn_.startswith(path):
+                ret.append(self.cache_file('salt://{0}'.format(path)), env)
+        return ret
+
     def file_list(self, env='base'):
         '''
         List the files on the master
@@ -544,15 +564,6 @@ class FileClient(object):
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(self.socket.recv_pyobj())
-
-    def cache_master(self, env='base'):
-        '''
-        Download and cache all files on a master in a specified environment
-        '''
-        ret = []
-        for path in self.file_list(env):
-            ret.append(self.cache_file('salt://{0}'.format(path), env))
-        return ret
 
     def hash_file(self, path, env='base'):
         '''
