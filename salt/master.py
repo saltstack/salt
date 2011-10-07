@@ -379,19 +379,20 @@ class AESFuncs(object):
         environment
         '''
         ret = []
-        if not self.opts['file_roots'].has_key('env'):
+        if not self.opts['file_roots'].has_key(load['env']):
             return ret
-        for root, dirs, files in os.walk(self.opts['file_roots'][load[env]]):
-            for fn in files:
-                ret.append(
-                    os.path.relpath(
-                        os.path.join(
-                            root,
-                            fn
-                            ),
-                        self.opts['file_roots'][load['env']]
+        for path in self.opts['file_roots'][load['env']]:
+            for root, dirs, files in os.walk(path):
+                for fn in files:
+                    ret.append(
+                        os.path.relpath(
+                            os.path.join(
+                                root,
+                                fn
+                                ),
+                            path
+                            )
                         )
-                    )
         return ret
 
     def _master_opts(self, load):

@@ -537,7 +537,6 @@ class FileClient(object):
         '''
         List the files on the master
         '''
-        path = self._check_proto(path)
         payload = {'enc': 'aes'}
         load = {'env': env,
                 'cmd': '_file_list'}
