@@ -72,10 +72,11 @@ def render(opts, functions):
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)
-    if not rend.has_key(self.opts['renderer']):
-        err = 'The renderer {0} is unavailable, this error is often because the needed software is unavailabe'.format(self.opts['renderer'])
+    if not rend.has_key(opts['renderer']):
+        err = 'The renderer {0} is unavailable, this error is often because the needed software is unavailabe'.format(opts['renderer'])
         log.critical(err)
         raise LoaderError(err)
+    return rend
 
 def grains(opts):
     '''
