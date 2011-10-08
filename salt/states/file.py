@@ -440,7 +440,7 @@ def recurse(name,
             ret['comment'] = 'The path {0} exists and is not a directory'.format(name)
             return ret
         os.makedirs(name)
-    for fn_ in __salt__['file.cache_dir'](source, __env__):
+    for fn_ in __salt__['cp.cache_dir'](source, __env__):
         dest = os.path.join(name,
                 os.path.relpath(
                     fn_,
