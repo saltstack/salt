@@ -140,3 +140,51 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'
+
+def set_job(user, minute, hour, dom, month, dow, cmd):
+    '''
+    Sets a cron job up for a specified user.
+    '''
+    lst = list_tab(user)
+    for cron in lst['crons']:
+        if minute == cron['min'] and \
+            hour == cron['hour'] and \
+            dom == cron['daymonth'] and \
+            month == cron['month'] and \
+            dow == cron['dayweek'] and \
+            cmd == cron['cmd']:
+            return 'present'
+    cron = {'min': minute,
+            'hour': hour,
+            'daymonth': dom,
+            'month': month,
+            'dayweek': dow,
+            'cmd': cmd}
+    lst['crons'].append(cron)
+    comdat = _write_cron(user, _render_tab(lst))
+    if not comdat['retcode']:
+        # Failed to commit, return the error
+        return comdat['stderr']
+    return 'new'
+
+def rm_job(user, minute, hour, dom, month, dow, cmd):
+    '''
+    Remove a cron job up for a specified user.
+    '''
+    lst = list_tab(user)
+    rm_ = None
+    for ind in range(lst['crons']:
+        if minute == lst['crons'][ind]['min'] and \
+            hour == lst['crons'][ind]['hour'] and \
+            dom == lst['crons'][ind]['daymonth'] and \
+            month == lst['crons'][ind]['month'] and \
+            dow == lst['crons'][ind]['dayweek'] and \
+            cmd == lst['crons'][ind]['cmd']:
+            rm_ = ind
+    if rm_ != None:
+        lst['crons'].pop(rm_)
+    comdat = _write_cron(user, _render_tab(lst))
+    if not comdat['retcode']:
+        # Failed to commit, return the error
+        return comdat['stderr']
+    return 'new'
