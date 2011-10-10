@@ -1,9 +1,6 @@
 '''
 Specialized routines used by the butter cloud component
 '''
-# Import salt modules
-import virt
-
 # Import python modules
 import os
 import shutil
@@ -135,7 +132,7 @@ def full_butter_data(local_path):
     CLI Example:
     salt '*' buttervm.full_butter_data <image_path>
     '''
-    info = virt.full_info()
+    info = __salt__['virt.full_info']()
     info['local_images'] = local_images(local_path)
     return info
 
@@ -163,4 +160,4 @@ def create(instance, vda, image, pin):
         _place_image(image, vda)
         _gen_pin_drives(pin)
         _apply_overlay(vda, instance)
-    virt.create_xml_path(os.path.join(instance, 'config.xml'))
+    __salt__['virt.create_xml_path'](os.path.join(instance, 'config.xml'))
