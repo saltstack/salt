@@ -15,16 +15,12 @@ Between the remote execution system, and state management Salt addresses the
 backbone of cloud and data center management.
 
 News
-----
+====
 
-0.9.2 released!
+0.9.2 released! :doc:`Read the release announcement <topics/releases/0.9.2>`.
 
-Release announcement:
-
-.. toctree::
-    :maxdepth: 1
-
-    topics/releases/0.9.2
+Getting Started
+===============
 
 Download
 --------
@@ -33,22 +29,13 @@ The latest Salt is |version|:
 
 |latest|
 
-Additional packages can be downloaded from the download page:
+Additional packages can be downloaded from the :ref:`download page
+<topics/download>`.
 
-.. toctree::
-    :maxdepth: 1
+Tutorials
+---------
 
-    topics/download
-
-Getting Started
-===============
-
-A number of resources are available to get going with Salt.
-
-Quick Start
------------
-
-If you want to get set up quickly and try out Salt, follow the tutorial.
+Quick, five-minute introductions to the various parts of Salt.
 
 .. toctree::
     :maxdepth: 1
@@ -67,7 +54,7 @@ more out of Salt.
 Screencasts and Presentations
 -----------------------------
 
-Presentation at SLLUG in May 2011
+Presentation at the Salt Lake Linux User Group (SLLUG) in May 2011
 `video`_ | `slides`_ (PDF)
 
 .. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
