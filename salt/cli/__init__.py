@@ -21,6 +21,8 @@ import salt.cli.cp
 import salt.cli.caller
 import salt.output
 
+from salt import __version__ as VERSION
+
 class SaltCMD(object):
     '''
     The execution of a salt command happens here
@@ -35,7 +37,7 @@ class SaltCMD(object):
         '''
         Parse the command line
         '''
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-t',
                 '--timeout',
@@ -269,7 +271,7 @@ class SaltCP(object):
         '''
         Parse the command line
         '''
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-t',
                 '--timeout',
@@ -346,7 +348,7 @@ class SaltKey(object):
         '''
         Parse the command line options for the salt key
         '''
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-l',
                 '--list',
@@ -455,7 +457,7 @@ class SaltCall(object):
         '''
         Parse the command line arguments
         '''
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-g',
                 '--grains',
@@ -565,7 +567,7 @@ class SaltRun(object):
         '''
         Parse the command line arguments
         '''
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-c',
                 '--config',
