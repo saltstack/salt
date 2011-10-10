@@ -277,6 +277,8 @@ class State(object):
                     if chunk['state'] == req.keys()[0]:
                         reqs.append(chunk)
         fun_stats = []
+        if not reqs:
+            return 'fail'
         for req in reqs:
             tag = req['state'] + '.' + req['name'] + '.' + req['fun']
             if not running.has_key(tag):
