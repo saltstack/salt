@@ -192,11 +192,11 @@ def set_auth_key(
     uinfo = __salt__['user.info'](user)
     current = auth_keys(user, config)
     if current.has_key(key):
-        if not set(current['options']) == set(options):
+        if not set(current[key]['options']) == set(options):
             replace = True
-        if not current['enc'] == enc:
+        if not current[key]['enc'] == enc:
             replace = True
-        if not current['comment'] == comment:
+        if not current[key]['comment'] == comment:
             if comment:
                 replace = True
         if replace:
