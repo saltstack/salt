@@ -37,7 +37,7 @@ class Master(object):
         Parse the cli for options passed to a master daemon
         '''
         import salt.log
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
                 '--daemon',
                 dest='daemon',
@@ -107,7 +107,7 @@ class Minion(object):
         Parse the cli input
         '''
         import salt.log
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
                 '--daemon',
                 dest='daemon',
@@ -197,7 +197,7 @@ class Syndic(object):
         Parse the cli for options passed to a master daemon
         '''
         import salt.log
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
                 '--daemon',
                 dest='daemon',
