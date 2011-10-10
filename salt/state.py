@@ -191,6 +191,7 @@ class State(object):
                     chunk['__sls__'] = body['__sls__']
                 if body.has_key('__env__'):
                     chunk['__env__'] = body['__env__']
+                chunk['__id__'] = name
                 funcs = set()
                 names = set()
                 for arg in run:
@@ -273,12 +274,10 @@ class State(object):
         status = 'unmet'
         for req in low['require']:
             for chunk in chunks:
-                if chunk['name'] == req[req.keys()[0]]:
+                if chunk['__id__'] == req[req.keys()[0]]:
                     if chunk['state'] == req.keys()[0]:
                         reqs.append(chunk)
         fun_stats = []
-        if not reqs:
-            return 'fail'
         for req in reqs:
             tag = req['state'] + '.' + req['name'] + '.' + req['fun']
             if not running.has_key(tag):
