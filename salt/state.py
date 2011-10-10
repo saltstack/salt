@@ -274,7 +274,8 @@ class State(object):
         status = 'unmet'
         for req in low['require']:
             for chunk in chunks:
-                if chunk['__id__'] == req[req.keys()[0]]:
+                if chunk['__id__'] == req[req.keys()[0]] or \
+                        chunk['name'] == req[req.keys()[0]]:
                     if chunk['state'] == req.keys()[0]:
                         reqs.append(chunk)
         fun_stats = []
@@ -301,7 +302,8 @@ class State(object):
         status = 'unmet'
         for req in low['watch']:
             for chunk in chunks:
-                if chunk['name'] == req[req.keys()[0]]:
+                if chunk['__id__'] == req[req.keys()[0]] or \
+                        chunk['name'] == req[req.keys()[0]]:
                     if chunk['state'] == req.keys()[0]:
                         reqs.append(chunk)
         fun_stats = []
