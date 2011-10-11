@@ -25,7 +25,7 @@ version = __version__
 # The full version, including alpha/beta/rc tags.
 release = version
 
-master_doc = 'index'
+master_doc = 'contents'
 templates_path = ['_templates']
 exclude_patterns = ['_build']
 
@@ -38,6 +38,7 @@ rst_prolog = """\
 .. |latest| replace:: https://github.com/downloads/thatch45/salt/salt-%s.tar.gz
 """ % __version__
 
+
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/thatch45/salt/blob/v%s/%%s' % __version__, None),
@@ -47,20 +48,26 @@ extlinks = {
 
 
 ### HTML options
-html_theme = 'agogo'
+html_theme = 'default'
 html_title = None
 html_short_title = 'Salt'
 
+html_static_path = ['_static']
 html_logo = 'salt.png'
 html_favicon = 'salt.ico'
-html_static_path = ['_static']
-
-html_sidebars = {'index': ['indexsidebar.html']}
-
-html_last_updated_fmt = '%b %d, %Y'
+html_style = ['base-salt.css']
+html_use_smartypants = False
 
 html_additional_pages = {'index': 'index.html'}
+html_sidebars = {'index': ['indexsidebar.html']}
+html_context = {
+    'github_base': 'https://github.com/thatch45/salt',
+    'github_issues': 'https://github.com/thatch45/salt/issues',
+    'github_downloads': 'https://github.com/thatch45/salt/downloads',
+}
 
+html_use_index = False
+html_last_updated_fmt = '%b %d, %Y'
 html_show_sourcelink = False
 html_show_sphinx = True
 html_show_copyright = True
