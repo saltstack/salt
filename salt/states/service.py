@@ -47,7 +47,7 @@ def watcher(name, sig=None):
     The service watcher, called to invoke the watch command. 
     '''
     if __salt__['service.status'](name, sig):
-        changes = __salt__['service.restart'](name)
+        changes = {name: __salt__['service.restart'](name)}
         return {'name': name,
                 'changes': changes,
                 'result': True,
