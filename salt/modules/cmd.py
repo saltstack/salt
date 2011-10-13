@@ -26,7 +26,7 @@ def _is_exec(path):
     '''
     Return true if the passed path exists and is execuatable
     '''
-    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+    return os.path.exists(path) and os.access(path, os.X_OK)
 
 def run(cmd, cwd=DEFAULT_CWD):
     '''

@@ -185,13 +185,6 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
-    flag = True
-    if os.path.exists(device):
-        if not stat.S_ISBLK(os.stat(device).st_mode) \
-                and not is_fuse_exec(device):
-            return False
-    elif not is_fuse_exec(device):
-        return False
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
     lopts = ','.join(opts)
@@ -223,7 +216,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
             cmd += ' -t {0}'.format(fstype)
         out = __salt__['cmd.run_all'](cmd)
         if out['retcode']:
-            return opt['stderr']
+            return out['stderr']
         return True
     else:
         return mount(name, device, mkmnt, fstype, opts)
