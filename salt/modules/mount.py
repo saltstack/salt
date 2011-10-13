@@ -224,3 +224,21 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
         return True
     else:
         return mount(name, device, mkmnt, fstype, opts)
+
+def is_fuse_exec(cmd):
+    '''
+    Returns true if the command passed is a fuse mountable application.
+
+    CLI Example:
+    salt '*' mount.is_fuse_exec sshfs
+    '''
+    if not __salt__['cmd.has_exec'](cmd):
+        return False
+    for path in os.environ['PATH'].split(os.pathsep):
+        if not __salt__['cmd.has_exec'](path):
+            continue
+        out = __salt__['cmd.run']('ldd {0}'.format(path))
+        for line in out.split('\n'):
+            if line.count('libfuse'):
+                return True
+    return False
