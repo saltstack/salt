@@ -185,9 +185,12 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
-    if not os.path.exists(device):
-        return False
-    if not stat.S_ISBLK(os.stat(device).st_mode):
+    flag = True
+    if os.path.exists(device):
+        if not stat.S_ISBLK(os.stat(device).st_mode) \
+                and not is_fuse_exec(device):
+            return False
+    elif not is_fuse_exec(device):
         return False
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
