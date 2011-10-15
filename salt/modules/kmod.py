@@ -11,6 +11,32 @@ def __virtual__():
     '''
     return 'kmod' if __grains__['kernel'] == 'Linux' else False
 
+def _new_mods(pre_mods, post_mods):
+    '''
+    Return a list of the new modules, pass an lsmod dict before running
+    modprobe and one after modprobe has run
+    '''
+    pre = set()
+    post = set()
+    for mod in pre_mods:
+        pre.add(pre_mods['module'])
+    for mod in post_mods:
+        pre.add(pre_mods['module'])
+    return list(post.difference(pre))
+
+def _rm_mods(pre_mods, post_mods):
+    '''
+    Return a list of the new modules, pass an lsmod dict before running
+    modprobe and one after modprobe has run
+    '''
+    pre = set()
+    post = set()
+    for mod in pre_mods:
+        pre.add(pre_mods['module'])
+    for mod in post_mods:
+        pre.add(pre_mods['module'])
+    return list(pre.difference(post))
+
 def available():
     '''
     Return a list of all available kernel modules
@@ -62,11 +88,10 @@ def load(mod):
     CLI Example:
     salt '*' kmod.load kvm
     '''
+    pre_mods = lsmod()
     data = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
-    if data['retcode']:
-        # Failed to load, return False
-        return False
-    return True
+    post_mods = lsmod()
+    return _new_mods(pre_mods, post_mods)
 
 def remove(mod):
     '''
@@ -75,8 +100,7 @@ def remove(mod):
     CLI Example:
     salt '*' kmod.remove kvm
     '''
+    pre_mods = lsmod()
     data = __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))
-    if data['retcode']:
-        # Failed to load, return False
-        return False
-    return True
+    post_mods = lsmod()
+    return _rm_mods(pre_mods, post_mods)
