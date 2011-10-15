@@ -1,5 +1,59 @@
 '''
-Manage file states
+File Management
+===============
+
+Salt States can agresively manipulate files on a system. There are a number of
+ways in which files can be managed.
+
+Regular files can be enforced with the ``managed`` function. This function
+downloads files from the salt master and places them on the target system.
+The downloaded files can be rendered as a jinja or mako template adding
+a dynamic component to file management. An example of ``file.managed`` which
+makes use of the jinja templating system would look like this:
+
+.. code-block:: yaml
+    /etc/http/conf/http.conf:
+      file:
+        - managed
+        - source: salt://apache/http.conf
+        - user: root
+        - group: root
+        - mode: 644
+        - template: jinja
+
+Directories can be managed via the ``directory`` function. This function can
+create and enforce the premissions on a directory. A directory statement will
+look like this:
+
+.. code-block:: yaml
+    /srv/stuff/substuf:
+      file:
+        - directory
+        - user: fred
+        - group: users
+        - mode: 755
+        - makedirs: True
+
+Symlinks can be easily created, the symlink function is very simple and only
+takes a few arguments
+
+.. code-block:: yaml
+    /etc/grub.conf:
+      file:
+        - symlink
+        - target: /boot/grub/grub.conf
+
+Recursive directory management can also be set via the ``recurse``
+function. Recursive directory management allows for a directory on the salt
+master to be recursively coppied down to the minion. This is a great tool for
+deploying large code and configuration systems. A recuse state would look
+something like this:
+
+.. code-block:: yaml
+    /opt/code/flask:
+      file:
+        - recurse
+        - source: salt://code/flask
 '''
 
 import os
