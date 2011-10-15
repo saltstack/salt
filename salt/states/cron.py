@@ -12,7 +12,7 @@ By default the timing arguments are all ``*`` and the user is root. When making
 changes to an existing cron job the name declaraion is the uniqe factor, so if
 and existing cron that looks like this:
 
-code-block.. yaml:
+.. code-block:: yaml
     date > /tmp/crontest:
       cron:
         - present
@@ -21,7 +21,7 @@ code-block.. yaml:
 
 Is changed to this:
 
-code-block.. yaml:
+.. code-block:: yaml
     date > /tmp/crontest:
       cron:
         - present

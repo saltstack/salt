@@ -16,14 +16,14 @@ run
 Execute a command given certian conditions
 
 A simple exampe:
-code-block.. yaml:
+.. code-block:: yaml
     date > /tmp/salt-run:
       cmd:
         - run
 
 Only run if another execution returns sucessfully, in this case truncate
 syslog if there is no disk space:
-code-block.. yaml:
+.. code-block:: yaml
     > /var/log/messages:
       cmd:
         - run
