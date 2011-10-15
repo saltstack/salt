@@ -19,9 +19,9 @@ def _new_mods(pre_mods, post_mods):
     pre = set()
     post = set()
     for mod in pre_mods:
-        pre.add(pre_mods['module'])
+        pre.add(mod['module'])
     for mod in post_mods:
-        pre.add(pre_mods['module'])
+        post.add(mod['module'])
     return list(post.difference(pre))
 
 def _rm_mods(pre_mods, post_mods):
@@ -32,9 +32,9 @@ def _rm_mods(pre_mods, post_mods):
     pre = set()
     post = set()
     for mod in pre_mods:
-        pre.add(pre_mods['module'])
+        pre.add(mod['module'])
     for mod in post_mods:
-        pre.add(pre_mods['module'])
+        post.add(mod['module'])
     return list(pre.difference(post))
 
 def available():
@@ -72,13 +72,22 @@ def lsmod():
     CLI Example:
     salt '*' kmod.lsmod
     '''
-    ret = {}
+    ret = []
     for line in __salt__['cmd.run']('lsmod').split('\n'):
         comps = line.split()
-        ret['module'] = comps[0]
-        ret['size'] = comps[1]
-        ret['depcount'] = comps[2]
-        ret['deps'] = comps[3].split(',')
+        if not len(comps) > 2:
+            continue
+        if comps[0] == 'Module':
+            continue
+        mdat = {}
+        mdat['module'] = comps[0]
+        mdat['size'] = comps[1]
+        mdat['depcount'] = comps[2]
+        if len(comps) > 3:
+            mdat['deps'] = comps[3].split(',')
+        else:
+            mdat['deps'] = []
+        ret.append(mdat)
     return ret
 
 def load(mod):
