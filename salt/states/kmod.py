@@ -2,7 +2,7 @@
 State to manage Linux kernel modules
 '''
 
-def loaded(name):
+def present(name):
     '''
     Ensure that the specified kernel module is loaded
     '''
@@ -16,11 +16,12 @@ def loaded(name):
             ret['comment'] = 'Kernel module {0} is already present'.format(name)
             return ret
     # Module is not loaded, verify availability
-    if not __salt__['kmod.available'].count(name):
+    if not __salt__['kmod.available']().count(name):
         ret['comment'] = 'Kernel module {0} is unavailable'.format(name)
         ret['result'] = False
         return ret
-    ret['changes'] = __salt__['kmod.load'](name)
+    for mod in __salt__['kmod.load'](name):
+        ret['changes'][mod] = 'loaded'
     if not ret['changes']:
         ret['result'] = False
         ret['comment'] = 'Failed to load kernel module {0}'.format(name)
@@ -40,9 +41,10 @@ def absent(name):
     for mod in mods:
         if mod['module'] == name:
             # Found the module, unload it!
-            ret['changes'] = __salt__['kmod.remove'](name)
-            if ret['changes']:
-                if ret['changes'].count(name):
+            for mod in __salt__['kmod.load'](name):
+                ret['changes'][mod] = 'removed'
+            for change in ret['changes']:
+                if change.has_key(name):
                     ret['comment'] = 'Removed kernel module {0}'.format(name)
                     return ret
             ret['result'] = False
