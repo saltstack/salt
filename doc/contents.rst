@@ -1,54 +1,9 @@
-.. _index:
+.. _contents:
 
-Salt is a powerful remote execution manager that can be used to administer
-servers in a fast and efficient way.
+Tutorials
+=========
 
-Salt allows commands to be executed across large groups of servers. This means
-systems can be easily managed, but data can also be easily gathered. Quick
-introspection into running systems becomes a reality.
-
-Remote execution is usually used to set up a certain state on a remote system.
-Salt addresses this problem as well, the salt state system uses salt state
-files to define the state a server needs to be in.
-
-Between the remote execution system, and state management Salt addresses the
-backbone of cloud and data center management.
-
-News
-----
-
-0.9.2 released!
-
-Release announcement:
-
-.. toctree::
-    :maxdepth: 1
-
-    topics/releases/0.9.2
-
-Download
---------
-
-The latest Salt is |version|:
-
-|latest|
-
-Additional packages can be downloaded from the download page:
-
-.. toctree::
-    :maxdepth: 1
-
-    topics/download
-
-Getting Started
-===============
-
-A number of resources are available to get going with Salt.
-
-Quick Start
------------
-
-If you want to get set up quickly and try out Salt, follow the tutorial.
+Introduce yourself to the various parts of Salt in five minute increments.
 
 .. toctree::
     :maxdepth: 1
@@ -67,7 +22,7 @@ more out of Salt.
 Screencasts and Presentations
 -----------------------------
 
-Presentation at SLLUG in May 2011
+Presentation at the Salt Lake Linux User Group (SLLUG) in May 2011
 `video`_ | `slides`_ (PDF)
 
 .. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
