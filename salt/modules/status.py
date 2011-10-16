@@ -31,7 +31,7 @@ def custom():
 
     status.cpustats.custom: [ 'cpu', 'ctxt', 'btime', 'processes' ]
 
-    ...where status refers to status.py, cpustats is the function
+    where status refers to status.py, cpustats is the function
     where we get our data, and custom is this function It is followed
     by a list of keys that we want returned.
 
