@@ -44,11 +44,7 @@ body {
 .header {
     border-bottom: 3px solid #2e3436; }
 
-.header h1 {
-    margin: 0; line-height: 123px; text-indent: 170px; }
-
-.header h1 a {
-    display: block; }
+.header h1 { margin: 0; }
 
 .footer {
     padding-top: 2em; text-align: right;

@@ -135,8 +135,9 @@
         {% block header %}
         {%- if logo %}
         <div class="header">
-            <h1 class="logo" style="background: url({{ pathto('_static/' + logo, 1) }}) no-repeat">
-                <a href="{{ pathto('index') }}">Salt</a></h1>
+            <h1 class="logo"><a href="{{ pathto('index') }}">
+                <img src="{{ pathto('_static/' + logo, 1) }}" alt="Salt Stack">
+            </a></h1>
         </div>
         {%- endif %}
         {% endblock %}

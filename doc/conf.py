@@ -54,7 +54,7 @@ html_short_title = 'Salt'
 
 html_static_path = ['_static']
 html_logo = 'salt.png'
-html_favicon = 'salt.ico'
+html_favicon = 'favicon.ico'
 html_style = ['base-salt.css']
 html_use_smartypants = False
 
