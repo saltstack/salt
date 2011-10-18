@@ -1,5 +1,21 @@
 '''
-Manage users
+User Management
+===============
+The user module is used to create and manage user settings, users can be set
+as either absent or present
+
+.. code-block:: yaml
+    fred:
+      user:
+        - present
+        - shell: /bin/zsh
+        - home: /home/fred
+        - uid: 4000
+        - gid: 4000
+        - groups:
+          - wheel
+          - storage
+          - games
 '''
 
 def present(
@@ -12,6 +28,31 @@ def present(
         ):
     '''
     Ensure that the named user is present with the specified properties
+
+    name
+    ~~~~
+    The name of the user to manage
+
+    uid
+    ~~~~
+    The user id to assign, if left empty then the next available user id will
+    be assigned
+
+    gid
+    ~~~~
+    The default group id
+
+    groups
+    ~~~~~~
+    A list of groups to assign the user to, pass a list object
+
+    home
+    ~~~~
+    The location of the home directory to manage
+
+    shell
+    ~~~~~
+    The login shell, defaults to /bin/bash
     '''
     ret = {'name': name,
            'changes': {},
@@ -62,6 +103,19 @@ def present(
 def absent(name, purge=False, force=False):
     '''
     Ensure that the named user is absent
+
+    name
+    ~~~~
+    The name of the user to remove
+
+    purge
+    ~~~~~
+    Set purge to delete all of the user's file as well as the user
+
+    force
+    ~~~~~
+    If the user is logged in the absent state will fail, set the force option
+    to True to remove the user even if they are logged in
     '''
     ret = {'name': name,
            'changes': {},

@@ -185,10 +185,6 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
-    if not os.path.exists(device):
-        return False
-    if not stat.S_ISBLK(os.stat(device).st_mode):
-        return False
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
     lopts = ','.join(opts)
@@ -220,7 +216,25 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
             cmd += ' -t {0}'.format(fstype)
         out = __salt__['cmd.run_all'](cmd)
         if out['retcode']:
-            return opt['stderr']
+            return out['stderr']
         return True
     else:
         return mount(name, device, mkmnt, fstype, opts)
+
+def is_fuse_exec(cmd):
+    '''
+    Returns true if the command passed is a fuse mountable application.
+
+    CLI Example:
+    salt '*' mount.is_fuse_exec sshfs
+    '''
+    if not __salt__['cmd.has_exec'](cmd):
+        return False
+    for path in os.environ['PATH'].split(os.pathsep):
+        if not __salt__['cmd.has_exec'](path):
+            continue
+        out = __salt__['cmd.run']('ldd {0}'.format(path))
+        for line in out.split('\n'):
+            if line.count('libfuse'):
+                return True
+    return False

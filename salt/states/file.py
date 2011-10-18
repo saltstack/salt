@@ -1,5 +1,59 @@
 '''
-Manage file states
+File Management
+===============
+
+Salt States can agresively manipulate files on a system. There are a number of
+ways in which files can be managed.
+
+Regular files can be enforced with the ``managed`` function. This function
+downloads files from the salt master and places them on the target system.
+The downloaded files can be rendered as a jinja or mako template adding
+a dynamic component to file management. An example of ``file.managed`` which
+makes use of the jinja templating system would look like this:
+
+.. code-block:: yaml
+    /etc/http/conf/http.conf:
+      file:
+        - managed
+        - source: salt://apache/http.conf
+        - user: root
+        - group: root
+        - mode: 644
+        - template: jinja
+
+Directories can be managed via the ``directory`` function. This function can
+create and enforce the premissions on a directory. A directory statement will
+look like this:
+
+.. code-block:: yaml
+    /srv/stuff/substuf:
+      file:
+        - directory
+        - user: fred
+        - group: users
+        - mode: 755
+        - makedirs: True
+
+Symlinks can be easily created, the symlink function is very simple and only
+takes a few arguments
+
+.. code-block:: yaml
+    /etc/grub.conf:
+      file:
+        - symlink
+        - target: /boot/grub/grub.conf
+
+Recursive directory management can also be set via the ``recurse``
+function. Recursive directory management allows for a directory on the salt
+master to be recursively coppied down to the minion. This is a great tool for
+deploying large code and configuration systems. A recuse state would look
+something like this:
+
+.. code-block:: yaml
+    /opt/code/flask:
+      file:
+        - recurse
+        - source: salt://code/flask
 '''
 
 import os
@@ -82,6 +136,26 @@ def _jinja(sfn):
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
+
+    name
+    ~~~~
+    The location of the symlink to create
+
+    target
+    ~~~~~~
+    The location that the symlink points to
+
+    force
+    ~~~~~
+    If the location of the symlink exists and is not a symlink then the state
+    will fail, set force to True and any file or directory in the way of the
+    symlink file will be deleted to make room for the symlink
+
+    makedirs
+    ~~~~~~~~
+    If the location of the symlink does not already have a parent directory
+    then the state will fail, setting makedirs to True will allow Salt to
+    create the parent directory
     '''
     ret = {'name': name,
            'changes': {},
@@ -127,7 +201,12 @@ def symlink(name, target, force=False, makedirs=False):
 
 def absent(name):
     '''
-    Verify that the named file or directory is absent
+    Verify that the named file or directory is absent, this will work to
+    reverse any of the functions in the file state module.
+
+    name
+    ~~~~
+    The path which should be deleted
     '''
     ret = {'name': name,
            'changes': {},
@@ -165,7 +244,44 @@ def managed(name,
         makedirs=False,
         __env__='base'):
     '''
-    Manage a given file
+    Manage a given file, this function allows for a file to be downloaded from
+    the salt master and potentially run through a templating system.
+
+    name
+    ~~~~
+    The location of the file to manage
+
+    source
+    ~~~~~~
+    The source file, this file is located on the salt master file server and is
+    specified with the salt:// protocol. If the file is located on the master in
+    the directory named spam, and is called eggs, the source string is
+    salt://spam/eggs
+
+    user
+    ~~~~
+    The user to own the file, this defaults to the user salt is running as on
+    the minion
+
+    group
+    ~~~~~
+    The group ownership set for the file, this defaults to the group salt is
+    running as on the minion
+
+    mode
+    ~~~~
+    The permissions to set on this file, aka 644, 0775, 4664
+    
+    template
+    ~~~~~~~~
+    If this setting is applied then the named templating engine will be used
+    to render the downloaded file, currently jinja and mako are supported
+
+    makedirs
+    ~~~~~~~~
+    If the file is located in a path without a parent directory, then the the
+    state will fail. If makedirs is set to True, then the parent directories
+    will be created to facilitate the creation of the named file.
     '''
     if mode:
         mode = str(mode)
@@ -343,6 +459,30 @@ def directory(name,
         makedirs=False):
     '''
     Ensure that a named directory is present and has the right perms
+
+    name
+    ~~~~
+    The location to create or manage a directory
+
+    user
+    ~~~~
+    The user to own the directory, this defaults to the user salt is running
+    as on the minion
+
+    group
+    ~~~~~
+    The group ownership set for the directory, this defaults to the group
+    salt is running as on the minion
+
+    mode
+    ~~~~
+    The permissions to set on this directory, aka 755
+    
+    makedirs
+    ~~~~~~~~
+    If the directory is located in a path without a parent directory, then the
+    the state will fail. If makedirs is set to True, then the parent
+    directories will be created to facilitate the creation of the named file.
     '''
     if mode:
         mode = str(mode)
@@ -426,7 +566,18 @@ def recurse(name,
         __env__='base'):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
-    over to the specified path
+    over to the specified path.
+
+    name
+    ~~~~
+    The directory to set the recursion in
+
+    source
+    ~~~~~~
+    The source directory, this directory is located on the salt master file
+    server and is specified with the salt:// protocol. If the directory is
+    located on the master in the directory named spam, and is called eggs,
+    the source string is salt://spam/eggs
     '''
     ret = {'name': name,
            'changes': {},

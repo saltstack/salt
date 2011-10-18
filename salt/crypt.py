@@ -141,7 +141,7 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        log.info('Decrypting the current master AES key')
+        log.debug('Decrypting the current master AES key')
         key = self.get_priv_key()
         return key.private_decrypt(aes, 4)
 

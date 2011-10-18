@@ -4,6 +4,9 @@ Some of the utils used by salt
 # Import python libs
 import os
 import sys
+import logging
+
+log = logging.getLogger(__name__)
 
 # Do not use these color declarations, use get_colors()
 # These color declarations will be removed in the future
@@ -101,4 +104,23 @@ def check_root():
                'in a privileged environment to do what it does.\n'
                'http://xkcd.com/838/')
         sys.exit(1)
+
+def profile_func(filename=None):
+    '''
+    Decorator for adding profiling to a nested function in Salt
+    '''
+    def proffunc(fun):
+        def profiled_func(*args, **kwargs):
+            import cProfile
+            logging.info('Profiling function {0}'.format(fun.__name__))
+            try:
+                profiler = cProfile.Profile()
+                retval = profiler.runcall(fun, *args, **kwargs)
+                profiler.dump_stats(filename or '{0}_func.profile'.format(fun.__name__))
+            except IOError:
+                logging.exception('Could not open profile file {0}'.format(filename))
+
+            return retval
+        return profiled_func
+    return proffunc
 

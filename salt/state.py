@@ -368,19 +368,97 @@ class State(object):
             running[tag] = self.call(low)
         return running
 
+    def comp_ext_conflict(self, aext, bext):
+        '''
+        Takes two conflicting extend components and compromises them
+        '''
+        errors = []
+        ret = aext
+        for acomp in aext:
+            if isinstance(acomp, dict):
+                # It is a dict, look it up in bext
+                err = False
+                for bcomp in bext:
+                    if isinstance(bcomp, dict):
+                        if acomp.keys()[0] == bcomp.keys()[0]:
+                            err = True
+                            errors.append(bcomp.keys()[0])
+                if not err:
+                    # No conflicts, append the bcomp to the ret
+                    ret.append(bcomp)
+                    # Reset the error flag
+                    err = False
+            elif isinstance(acomp, str):
+                # It is a string, should be easy
+                for bcomp in bext:
+                    if isinstance(bcomp, str):
+                        if bcomp == acomp:
+                            # function already declared
+                            continue
+                        ret.append(bcomp)
+        return ret, errors
+
+    def process_extensions(self, pre_chunks):
+        '''
+        Run through the chunks and process the extension data. The extension
+        data allows components to be placed into ajacent low data chunks before
+        execution.
+        '''
+        extend = {}
+        errors = []
+        for chunk in pre_chunks:
+            # Check for extension keywords in low data chunks
+            if chunk.has_key('extend'):
+                for key in chunk['extend']:
+                    if extend.has_key(key):
+                        # The extension is being applied elsewhere, verify
+                        # there are no conflicts
+                        fresh = False
+                        for ekey in extend[key]:
+                            if chunk['extend'][key].has_key(ekey):
+                                # We have 2 matching type defs in the tree
+                                # if these type defs confilct log an error,
+                                # else they should compliment each other
+                                # chunk['extend'][key][ekey] == extend[key][ekey]
+                                edat, err = self.comp_ext_conflict(
+                                        chunk['extend'][key][ekey],
+                                        extend[key][ekey])
+                                if err:
+                                    errors.append(
+                                        'SLS {0} has a conflicting extend statement {1}'.format(
+                                            chunk['__sls__'],
+                                            err
+                                            )
+                                        )
+                                else:
+                                    extend[key][ekey] = edat
+                        if fresh:
+                            # it is a new extension, tack it on
+                            extend[key] = chunk['extend'][key]
+                    else:
+                        extend[key] = chunk['extend'][key]
+        return extend, errors
+
     def call_high(self, high):
         '''
         Process a high data call and ensure the defined states.
         '''
         err = []
         rets = []
+        # Verify that the high data is structurally sound
         errors = self.verify_high(high)
         if errors:
             return errors
-        chunks = self.compile_high_data(high)
-        errors += self.verify_chunks(chunks)
+        # Compile and verify the raw chunks
+        pre_chunks = self.compile_high_data(high)
+        errors += self.verify_chunks(pre_chunks)
+        # Look for extend arguments in chunks
+        extend, exterr = self.process_extensions(pre_chunks)
+        errors += exterr
         if errors:
             return errors
+        # Place method to apply extend args here:
+        chunks = pre_chunks
         return self.call_chunks(chunks)
 
     def call_template(self, template):
