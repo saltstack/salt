@@ -119,6 +119,8 @@ class State(object):
         if not isinstance(high, dict):
             errors.append('High data is not a dictonary and is invalid')
         for name, body in high.items():
+            if name.startswith('__'):
+                continue
             if not isinstance(body, dict):
                 err = 'The type {0} is not formated as a dictonary'.format(name)
                 errors.append(err)
@@ -182,6 +184,8 @@ class State(object):
         '''
         chunks = []
         for name, body in high.items():
+            if name.startswith('__'):
+                continue
             for state, run in body.items():
                 if state.startswith('__'):
                     continue
@@ -219,6 +223,67 @@ class State(object):
                         chunks.append(live)
 
         return sorted(chunks, key=lambda k: k['state'] + k['name'] + k['fun'])
+
+    def reconcile_extend(self, high):
+        '''
+        Pull the extend data and add it to the respective high data
+        '''
+        errors = []
+        if not high.has_key('__extend__'):
+            return high
+        ext = high.pop('__extend__')
+        for ext_chunk in ext:
+            for name, body in ext_chunk.items():
+                if not high.has_key(name):
+                    errors.append(
+                        'Extension {0} is nto part of the high state'.format(
+                            name
+                            )
+                        )
+                for state, run in body.items():
+                    if state.startswith('__'):
+                        continue
+                    if not high[name].has_key(state):
+                        high[name][state] = run
+                        continue
+                    # high[name][state] is extended by run, both are lists
+                    for arg in run:
+                        update = False
+                        for hind in range(len(high[name][state])):
+                            if isinstance(arg, str) and \
+                                    isinstance(high[name][state][hind], str):
+                                # It is replacing the function, replace the index
+                                print name
+                                print state
+                                print high[name][state]
+                                high[name][state].pop(hind)
+                                high[name][state].insert(hind, arg)
+                                update = True
+                                continue
+                            if isinstance(arg, dict) and \
+                                    isinstance(high[name][state][hind], dict):
+                                # It is an option, make sure the options match
+                                if arg.keys()[0] == high[name][state][hind].keys()[0]:
+                                    # They match, check if the option is a
+                                    # watch or require, append, otherwise
+                                    # replace
+                                    if arg.keys()[0] == 'require' or 'watch':
+                                        # Extend the list
+                                        high[name][state][hind] = list(set(
+                                            [arg.keys()[0]]
+                                            ).union(
+                                                    set(
+                                                        arg[arg.keys()[0]]
+                                                        )
+                                                    ))
+                                        update = True
+                                    else:
+                                        # Replace the value
+                                        high[name][state][hind] = arg
+                                        update = True
+                        if not update:
+                            high[name][state].append(arg)
+        return high, errors
 
     def compile_template(self, template):
         '''
@@ -368,77 +433,6 @@ class State(object):
             running[tag] = self.call(low)
         return running
 
-    def comp_ext_conflict(self, aext, bext):
-        '''
-        Takes two conflicting extend components and compromises them
-        '''
-        errors = []
-        ret = aext
-        for acomp in aext:
-            if isinstance(acomp, dict):
-                # It is a dict, look it up in bext
-                err = False
-                for bcomp in bext:
-                    if isinstance(bcomp, dict):
-                        if acomp.keys()[0] == bcomp.keys()[0]:
-                            err = True
-                            errors.append(bcomp.keys()[0])
-                if not err:
-                    # No conflicts, append the bcomp to the ret
-                    ret.append(bcomp)
-                    # Reset the error flag
-                    err = False
-            elif isinstance(acomp, str):
-                # It is a string, should be easy
-                for bcomp in bext:
-                    if isinstance(bcomp, str):
-                        if bcomp == acomp:
-                            # function already declared
-                            continue
-                        ret.append(bcomp)
-        return ret, errors
-
-    def process_extensions(self, pre_chunks):
-        '''
-        Run through the chunks and process the extension data. The extension
-        data allows components to be placed into ajacent low data chunks before
-        execution.
-        '''
-        extend = {}
-        errors = []
-        for chunk in pre_chunks:
-            # Check for extension keywords in low data chunks
-            if chunk.has_key('extend'):
-                for key in chunk['extend']:
-                    if extend.has_key(key):
-                        # The extension is being applied elsewhere, verify
-                        # there are no conflicts
-                        fresh = False
-                        for ekey in extend[key]:
-                            if chunk['extend'][key].has_key(ekey):
-                                # We have 2 matching type defs in the tree
-                                # if these type defs confilct log an error,
-                                # else they should compliment each other
-                                # chunk['extend'][key][ekey] == extend[key][ekey]
-                                edat, err = self.comp_ext_conflict(
-                                        chunk['extend'][key][ekey],
-                                        extend[key][ekey])
-                                if err:
-                                    errors.append(
-                                        'SLS {0} has a conflicting extend statement {1}'.format(
-                                            chunk['__sls__'],
-                                            err
-                                            )
-                                        )
-                                else:
-                                    extend[key][ekey] = edat
-                        if fresh:
-                            # it is a new extension, tack it on
-                            extend[key] = chunk['extend'][key]
-                    else:
-                        extend[key] = chunk['extend'][key]
-        return extend, errors
-
     def call_high(self, high):
         '''
         Process a high data call and ensure the defined states.
@@ -449,16 +443,16 @@ class State(object):
         errors = self.verify_high(high)
         if errors:
             return errors
+        # If there is extension data reconcile it
+        high, ext_errors = self.reconcile_extend(high)
+        errors += ext_errors
         # Compile and verify the raw chunks
-        pre_chunks = self.compile_high_data(high)
-        errors += self.verify_chunks(pre_chunks)
-        # Look for extend arguments in chunks
-        extend, exterr = self.process_extensions(pre_chunks)
-        errors += exterr
+        chunks = self.compile_high_data(high)
+        errors += self.verify_chunks(chunks)
+        # If there are extensions in the highstate, process them and update
+        # the low data chunks
         if errors:
             return errors
-        # Place method to apply extend args here:
-        chunks = pre_chunks
         return self.call_chunks(chunks)
 
     def call_template(self, template):
@@ -577,8 +571,24 @@ class HighState(object):
                             state.update(nstate)
                         if err:
                             errors += err
+                if state.has_key('extend'):
+                    ext = state.pop('extend')
+                    for name in ext:
+                        if not isinstance(ext[name], dict):
+                            errors.append('Extention name {0} in sls {1} is not a dictonary'.format(name, sls))
+                            continue
+                        if not ext[name].has_key('__sls__'):
+                            ext[name]['__sls__'] = sls
+                        if not ext[name].has_key('__env__'):
+                            ext[name]['__env__'] = env
+                        if not state.has_key('__extend__'):
+                            state['__extend__'] = [ext]
+                        else:
+                            state['__extend__'].append(ext)
                 for name in state:
                     if not isinstance(state[name], dict):
+                        if name == '__extend__':
+                            continue
                         errors.append('Name {0} in sls {1} is not a dictonary'.format(name, sls))
                         continue
                     if not state[name].has_key('__sls__'):
