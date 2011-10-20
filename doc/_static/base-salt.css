@@ -81,9 +81,6 @@ dt:hover > .headerlink { visibility: visible; }
 img {
     border: 0; }
 
-.admonition {
-    border-left: 0.2em solid black; }
-
 dt:target, .highlighted {
     background-color: #fbe54e; }
 
@@ -156,6 +153,27 @@ blockquote {
 
 .footer, .footer a {
   color: #888a85; }
+
+div.admonition {
+    font-size: 0.9em;
+    margin: 1em 0 1em 0;
+    padding: 0.5em 1em 0.5em 1em;
+    border: 1px solid #ddd; }
+
+div.admonition p.admonition-title {
+    font-weight: bold; color: #3465a4; }
+
+div.warning {
+    border-color: #940000; }
+
+div.warning p.admonition-title {
+    color: #940000; }
+
+div.viewcode-block:target {
+    background-color: #f4debf;
+    border-top: 1px solid #ac9;
+    border-bottom: 1px solid #ac9;
+}
 
 /* Styles copied from basic theme */
 
