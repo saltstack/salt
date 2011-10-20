@@ -230,7 +230,7 @@ class State(object):
         '''
         errors = []
         if not high.has_key('__extend__'):
-            return high
+            return high, errors
         ext = high.pop('__extend__')
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
