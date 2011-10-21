@@ -209,7 +209,8 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     mnts = active()
     if mnts.has_key(name):
         # The mount point is mounted, attempt to remount it with the given data
-        opts.append('remount')
+        if not opts.count('remount'):
+            opts.append('remount')
         lopts = ','.join(opts)
         cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
         if fstype:
