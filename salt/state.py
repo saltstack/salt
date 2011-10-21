@@ -126,7 +126,20 @@ class State(object):
                 errors.append(err)
                 continue
             for state, run in body.items():
-                pass
+                if state.startswith('__'):
+                    continue
+                if not isinstance(body[state], list):
+                    err = 'The state {0} is not formed as a list'.format(
+                            state
+                            )
+                    errors.append(err)
+                else:
+                    fun = 0
+                    for arg in body[state]:
+                        if isinstance(arg, str):
+                            fun += 1
+                        elif isinstance(arg, dict):
+                            pass
         return errors
 
     def verify_chunks(self, chunks):
