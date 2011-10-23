@@ -308,6 +308,7 @@ class Minion(object):
             except:
                 pass
             time.sleep(0.05)
+            multiprocessing.active_children()
 
 
 class Syndic(salt.client.LocalClient, Minion):
