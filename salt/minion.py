@@ -298,8 +298,13 @@ class Minion(object):
         socket.connect(master_pub)
         socket.setsockopt(zmq.SUBSCRIBE, '')
         while True:
-            payload = socket.recv_pyobj()
-            self._handle_payload(payload)
+            payload = None
+            try:
+                payload = socket.recv_pyobj(1)
+                self._handle_payload(payload)
+            except:
+                pass
+            time.sleep(0.05)
 
 
 class Syndic(salt.client.LocalClient, Minion):
