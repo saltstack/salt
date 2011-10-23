@@ -251,10 +251,13 @@ class Minion(object):
                     'cmd': ret_cmd,
                     'jid': ret['jid'],
                     'id': self.opts['id']}
-        if hasattr(self.functions[ret['fun']], '__outputter__'):
-            oput = self.functions[ret['fun']].__outputter__
-            if isinstance(oput, str):
-                load['out'] = oput
+        try:
+            if hasattr(self.functions[ret['fun']], '__outputter__'):
+                oput = self.functions[ret['fun']].__outputter__
+                if isinstance(oput, str):
+                    load['out'] = oput
+        except KeyError:
+            pass
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
         return socket.recv()
