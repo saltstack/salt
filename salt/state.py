@@ -122,15 +122,19 @@ class State(object):
             if name.startswith('__'):
                 continue
             if not isinstance(body, dict):
-                err = 'The type {0} is not formated as a dictonary'.format(name)
+                err = 'The type {0} in {1} is not formated as a dictonary'.format(
+                        name,
+                        body['__sls__']
+                        )
                 errors.append(err)
                 continue
             for state, run in body.items():
                 if state.startswith('__'):
                     continue
                 if not isinstance(body[state], list):
-                    err = 'The state {0} is not formed as a list'.format(
-                            state
+                    err = 'The state {0} in sls {1} is not formed as a list'.format(
+                            name,
+                            body['__sls__']
                             )
                     errors.append(err)
                 else:
@@ -139,7 +143,15 @@ class State(object):
                         if isinstance(arg, str):
                             fun += 1
                         elif isinstance(arg, dict):
-                            pass
+                            # The arg is a dict, if the arg is require or
+                            # watch, it must be a list. 
+                            if arg.keys()[0] == 'require' \
+                                    or arg.keys()[0] == 'watch':
+                                if not isinstance(arg[arg.keys()[0]], list):
+                                    errors.append('The require or watch statement in state {0} in sls {1} needs to be formed as a list'.format(name, body['__sls__']))
+                            # Make sure that there is only one key in the dict
+                            if len(arg.keys()) != 1:
+                                errors.append('Multiple dictonaries defined in argument of state {0} in sls {1}'.format(name, body['__sls__']))
         return errors
 
     def verify_chunks(self, chunks):
