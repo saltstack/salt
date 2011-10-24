@@ -17,8 +17,8 @@ NAME = 'salt'
 VER = __version__
 DESC = 'Portable, distrubuted, remote execution and configuration management system'
 
-mod_path = os.path.join(get_python_lib(), 'salt/modules/')
-doc_path = os.path.join(PREFIX, 'share/doc/', NAME + '-' + VER)
+mod_path = os.path.join(get_python_lib(), 'salt/modules')
+doc_path = os.path.join(PREFIX, 'share/doc', NAME + '-' + VER)
 example_path = os.path.join(doc_path, 'examples')
 template_path = os.path.join(example_path, 'templates')
 if os.environ.has_key('SYSCONFDIR'):
