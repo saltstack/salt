@@ -3,8 +3,6 @@ A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
 
-import subprocess
-
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
@@ -53,9 +51,7 @@ def list_pkgs():
     '''
     cmd = 'pacman -Q'
     ret = {}
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         if not line.count(' '):
             continue
@@ -73,9 +69,7 @@ def refresh_db():
     '''
     cmd = 'pacman -Sy'
     ret = {}
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         if line.strip().startswith('::'):
             continue
@@ -103,7 +97,7 @@ def install(name, refresh=False):
     cmd = 'pacman -S --noprogressbar --noconfirm ' + name
     if refresh:
         cmd = 'pacman -Syu --noprogressbar --noconfirm ' + name
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -134,7 +128,7 @@ def upgrade():
     '''
     old = list_pkgs()
     cmd = 'pacman -Syu --noprogressbar --noconfirm '
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -163,7 +157,7 @@ def remove(name):
     '''
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
 
@@ -180,6 +174,6 @@ def purge(name):
     '''
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name
-    subprocess.call(cmd, shell=True)
+    __salt__['cmd.run'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
