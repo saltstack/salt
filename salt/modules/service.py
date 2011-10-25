@@ -2,7 +2,6 @@
 Top level package command wrapper, used to translate the os detected by the
 grains to the correct service manager
 '''
-import subprocess
 import os
 
 grainmap = {
@@ -22,7 +21,7 @@ def start(name):
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' start')
-    return not subprocess.call(cmd, shell=True)
+    return not __salt__['cmd.retcode'](cmd)
 
 def stop(name):
     '''
@@ -33,7 +32,7 @@ def stop(name):
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' stop')
-    return not subprocess.call(cmd, shell=True)
+    return not __salt__['cmd.retcode'](cmd)
 
 def restart(name):
     '''
@@ -44,7 +43,7 @@ def restart(name):
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' restart')
-    return not subprocess.call(cmd, shell=True)
+    return not __salt__['cmd.retcode'](cmd)
 
 def status(name, sig=None):
     '''
@@ -58,6 +57,4 @@ def status(name, sig=None):
     sig = name if not sig else sig
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
             __grains__, sig)
-    return subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].strip()
+    return __salt__['cmd.run'](cmd).strip()
