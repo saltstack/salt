@@ -63,7 +63,7 @@ def minion_config(path):
             'render_dirs': [],
             'open_mode': False,
             'multiprocessing': True,
-            'wan_mode': 0,
+            'sub_timeout': 60,
             'log_file': '/var/log/salt/minion',
             'log_level': 'warning',
             'log_granular_levels': {},

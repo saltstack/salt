@@ -298,9 +298,9 @@ class Minion(object):
                    + str(self.publish_port)
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
-        socket.connect(master_pub)
         socket.setsockopt(zmq.SUBSCRIBE, '')
-        if self.opts['wan_mode']:
+        socket.connect(master_pub)
+        if self.opts['sub_timeout']:
             last = time.time()
             while True:
                 payload = None
@@ -310,11 +310,14 @@ class Minion(object):
                     last = time.time()
                 except:
                     pass
-                if time.time() - last > self.opts['wan_mode']:
+                if time.time() - last > self.opts['sub_timeout']:
                     # It has been a while since the last command, make sure
                     # the connection is fresh by reconnecting
                     socket.close()
+                    socket = context.socket(zmq.SUB)
+                    socket.setsockopt(zmq.SUBSCRIBE, '')
                     socket.connect(master_pub)
+                    last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
         while True:
