@@ -28,7 +28,11 @@ class Caller(object):
         Call the module
         '''
         ret = {}
-        ret['return'] = self.minion.functions[self.opts['fun']](*self.opts['arg'])
+        if not self.minion.functions.has_key(self.opts['fun']):
+            print 'Function {0} is not available'.format(self.opts['fun'])
+        ret['return'] = self.minion.functions[self.opts['fun']](
+                *self.opts['arg']
+                )
         if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
             oput = self.minion.functions[self.opts['fun']].__outputter__
             if isinstance(oput, str):
