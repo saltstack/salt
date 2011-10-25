@@ -300,6 +300,23 @@ class Minion(object):
         socket = context.socket(zmq.SUB)
         socket.connect(master_pub)
         socket.setsockopt(zmq.SUBSCRIBE, '')
+        if self.opts['wan_mode']:
+            last = time.time()
+            while True:
+                payload = None
+                try:
+                    payload = socket.recv_pyobj(1)
+                    self._handle_payload(payload)
+                    last = time.time()
+                except:
+                    pass
+                if time.time() - last > self.opts['wan_mode']:
+                    # It has been a while since the last command, make sure
+                    # the connection is fresh by reconnecting
+                    socket.close()
+                    socket.connect(master_pub)
+                time.sleep(0.05)
+                multiprocessing.active_children()
         while True:
             payload = None
             try:
