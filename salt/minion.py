@@ -173,7 +173,14 @@ class Minion(object):
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
-                data['arg'][ind] = eval(data['arg'][ind])
+                arg = eval(data['arg'][ind])
+                if isinstance(arg, str) \
+                        or isinstance(arg, list) \
+                        or isinstance(arg, int) \
+                        or isinstance(arg, dict):
+                    data['arg'][ind] = arg
+                else:
+                    data['arg'][ind] = str(data['arg'][ind])
             except:
                 pass
 
