@@ -215,7 +215,14 @@ class Minion(object):
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
                 try:
-                    data['arg'][ind][index] = eval(data['arg'][ind][index])
+                    arg = eval(data['arg'][ind][index])
+                    if isinstance(arg, str) \
+                            or isinstance(arg, list) \
+                            or isinstance(arg, int) \
+                            or isinstance(arg, dict):
+                        data['arg'][ind][index] = arg
+                    else:
+                        data['arg'][ind][index] = str(data['arg'][ind][index])
                 except:
                     pass
 
