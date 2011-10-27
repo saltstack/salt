@@ -272,7 +272,9 @@ class Crypticle(object):
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
         if hmac.new(hmac_key, data, hashlib.sha256).digest() != sig:
-            raise AuthenticationError('message authentication failed')
+            log.warning('Failed to authenticate message')
+            return {}
+            #raise AuthenticationError('message authentication failed')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
         cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
@@ -291,7 +293,8 @@ class Crypticle(object):
         '''
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
-        assert data.startswith(self.PICKLE_PAD), 'unexpected header'
+        if data.startswith(self.PICKLE_PAD):
+            return {}
         return pickler.loads(data[len(self.PICKLE_PAD):])
 
 
