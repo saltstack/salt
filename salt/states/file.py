@@ -398,8 +398,13 @@ def managed(name,
         ret['changes']['diff'] = 'New file'
         # Apply the new file
         if not __opts__['test']:
-            if makedirs:
-                _makedirs(name)
+            if not os.path.isdir(os.path.dirname(name)):
+                if makedirs:
+                    _makedirs(name)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Parent directory not present'
+                    return ret
             shutil.copy(sfn, name)
         # Check permissions
         perms = {}
