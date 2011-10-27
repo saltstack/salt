@@ -10,7 +10,7 @@ import json
 # Import Third Party libs
 from jinja2 import Template
 
-def render(template):
+def render(template, env='', sls=''):
     '''
     Render the data passing the functions and grains into the rendering system
     '''
@@ -19,6 +19,8 @@ def render(template):
     passthrough = {}
     passthrough['salt'] = __salt__
     passthrough['grains'] = __grains__
+    passthrough['env'] = env
+    passthrough['sls'] = sls
     template = Template(open(template, 'r').read())
     json_data = template.render(**passthrough)
     return json.loads(json_data)

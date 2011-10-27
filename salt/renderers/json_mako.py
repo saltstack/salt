@@ -19,6 +19,8 @@ def render(template):
     passthrough = {}
     passthrough['salt'] = __salt__
     passthrough['grains'] = __grains__
+    passthrough['env'] = env
+    passthrough['sls'] = sls
     template = Template(open(template, 'r').read())
     json_data = template.render(**passthrough)
     return json.loads(json_data)

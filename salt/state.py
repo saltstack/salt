@@ -310,7 +310,7 @@ class State(object):
                             high[name][state].append(arg)
         return high, errors
 
-    def compile_template(self, template):
+    def compile_template(self, template, env='', sls=''):
         '''
         Take the path to a template and return the high data structure derived
         from the template.
@@ -319,7 +319,7 @@ class State(object):
             return {}
         if not os.path.isfile(template):
             return {}
-        return self.rend[self.opts['renderer']](template)
+        return self.rend[self.opts['renderer']](template, env, sls)
 
     def compile_template_str(self, template):
         '''
@@ -579,7 +579,7 @@ class HighState(object):
         fn_ = self.client.get_state(sls, env)
         state = None
         try:
-            state = self.state.compile_template(fn_)
+            state = self.state.compile_template(fn_, env, sls)
         except Exception as exc:
             errors.append('Rendering SLS {0} failed, render error:\n{1}'.format(sls, exc))
         mods.add(sls)
