@@ -38,7 +38,25 @@ string defining the ``function`` and any number of ``function_arg``
 dictonaries.
 The State Declaration can also, optionaly, contain a number of additional
 components, like the name override components - ``name`` and ``names``.
-``State Declarations`` can also comtain ``Requisite Declarations``
+``State Declarations`` can also comtain ``Requisite Declarations``.
+
+Requisite Declaration
+=====================
+The ``Requisite Declaration`` is used to build the action dependency tree.
+While Salt states are made to execute in a deterministic order, this order
+is managed by requireing and watching other salt states. The
+``Requisite Declaration`` can be found as a list component under a
+``State Declaration`` or as a key under an ``ID Declaration``.
+
+``Requisite Declarations`` are always a list containing 
+``Requisite References``.
+
+Requisite Reference
+===================
+A ``Requisite Reference`` is a single key dictonary which occupies a single
+index in a ``Requisite Declaration`` list. The dictonary key is the name
+of the referenced ``State Declaration``, and the value is the ID of the
+referenced ``ID Declaration``.
 
 Function
 ========
@@ -78,5 +96,60 @@ Example:
           - python-crypto
           - python-yaml
 
+Large Example
+=============
+Here is the layout in yaml using the names of the highdata structure
+components.
 
-      
+.. code-block:: yaml
+    <Include Declaration>:
+      - <Module Reference>
+      - <Module Reference>
+    <Extend Declaration>:
+      <ID Declaration>:
+        <State Declaration>:
+          - <Function>
+          - <Function Arg>
+          - <Function Arg>
+          - <Function Arg>
+          - <Name>: <name>
+          - <Requisite Declaration>:
+            - <Requisite Reference>
+            - <Requisite Reference>
+      <ID Declaration>:
+        <State Declaration>:
+          - <Function>
+          - <Function Arg>
+          - <Function Arg>
+          - <Function Arg>
+          - <Names>:
+            - <name>
+            - <name>
+            - <name>
+          - <Requisite Declaration>:
+            - <Requisite Reference>
+            - <Requisite Reference>
+    <ID Declaration>:
+      <State Declaration>:
+        - <Function>
+        - <Function Arg>
+        - <Function Arg>
+        - <Function Arg>
+        - <Name>
+        - <Requisite Declaration>:
+          - <Requisite Reference>
+          - <Requisite Reference>
+    <ID Declaration>:
+      <State Declaration>:
+        - <Function>
+        - <Function Arg>
+        - <Function Arg>
+        - <Function Arg>
+        - <Names>:
+          - <name>
+          - <name>
+          - <name>
+        - <Requisite Declaration>:
+          - <Requisite Reference>
+          - <Requisite Reference>
+
