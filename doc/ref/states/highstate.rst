@@ -5,13 +5,19 @@ Highstate Data Structure Definitions
 Include Declaration
 ===================
 The include declaration is always in the top level of the highstate structure
-and defines a list of ``module reference`` strings to include in this sls.
+and defines a list of ``Module Reference`` strings to include in this sls.
 
 Example:
 .. code-block:: yaml
     include:
       - edit.vim
       - http.server
+
+Module Reference
+================
+The name of a SLS module defined by a seperate SLS file and residing on the
+Salt Master. A module named ``edit.vim`` is a reference to the sls file
+salt://edit/vim.sls.
 
 ID Declaration
 ================
