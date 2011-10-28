@@ -26,7 +26,7 @@ def installed(name):
                 'changes': {},
                 'result': True,
                 'comment': 'Package ' + name + ' is already installed'}
-    changes = __salt__['pkg.install'](name)
+    changes = __salt__['pkg.install'](name, True)
     if not changes:
         return {'name': name,
                 'changes': changes,
