@@ -72,7 +72,7 @@ def refresh_db():
     else:
         __salt__['cmd.run']('portsnap update')
 
-def install(name):
+def install(name, refresh=False):
     '''
     Install the passed package
 
@@ -84,7 +84,7 @@ def install(name):
     salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
-    __salt__['cmd.run']('pkg_add -r {0}'.format(name))
+    __salt__['cmd.retcode']('pkg_add -r {0}'.format(name))
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -114,7 +114,7 @@ def upgrade():
     salt '*' pkg.upgrade
     '''
     old = list_pkgs()
-    __salt__['cmd.run']('freebsd-update fetch install')
+    __salt__['cmd.retcode']('freebsd-update fetch install')
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -144,7 +144,7 @@ def remove(name):
     old = list_pkgs()
     if old.has_key(name):
         name = '{0}-{1}'.format(name, old[name])
-        __salt__['cmd.run']('pkg_delete {0}'.format(name))
+        __salt__['cmd.retcode']('pkg_delete {0}'.format(name))
     new = list_pkgs()
     return _list_removed(old, new)
 
