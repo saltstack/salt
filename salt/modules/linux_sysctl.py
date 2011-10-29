@@ -85,7 +85,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
             if str(comps[1]) == str(value):
                 # It is correct in the config, check if it is correct in /proc
                 if running.has_key(name):
-                    if not running[name] == value:
+                    if not running[name] == str(value):
                         assign(name, value)
                         return 'Updated'
                 return 'Already set'
