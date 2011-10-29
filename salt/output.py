@@ -64,7 +64,7 @@ class HighStateOutputter(Outputter):
                         hcolor = colors['RED']
                         tcolor = colors['RED']
                     if ret['changes']:
-                        tcolor = colors['LIGHT_BLUE']
+                        tcolor = colors['CYAN']
                     comps = tname.split('.')
                     hstrs.append('{0}----------\n    State: - {1}{2[ENDC]}'.format(
                         tcolor,
