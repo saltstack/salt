@@ -278,9 +278,6 @@ class State(object):
                             if isinstance(arg, str) and \
                                     isinstance(high[name][state][hind], str):
                                 # It is replacing the function, replace the index
-                                print name
-                                print state
-                                print high[name][state]
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
                                 update = True
@@ -422,7 +419,8 @@ class State(object):
                 reqs = []
                 for req in low['require']:
                     for chunk in chunks:
-                        if chunk['name'] == req[req.keys()[0]]:
+                        if chunk['name'] == req[req.keys()[0]] \
+                                or chunk['__id__'] == req[req.keys()[0]]:
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                 for chunk in reqs:
@@ -440,7 +438,8 @@ class State(object):
                 reqs = []
                 for req in low['watch']:
                     for chunk in chunks:
-                        if chunk['name'] == req[req.keys()[0]]:
+                        if chunk['name'] == req[req.keys()[0]] \
+                                or chunk['__id__'] == req[req.keys()[0]]:
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                 for chunk in reqs:
