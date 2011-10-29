@@ -97,7 +97,7 @@ def install(name, refresh=False):
     cmd = 'pacman -S --noprogressbar --noconfirm ' + name
     if refresh:
         cmd = 'pacman -Syu --noprogressbar --noconfirm ' + name
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -128,7 +128,7 @@ def upgrade():
     '''
     old = list_pkgs()
     cmd = 'pacman -Syu --noprogressbar --noconfirm '
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -157,7 +157,7 @@ def remove(name):
     '''
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
 
@@ -174,6 +174,6 @@ def purge(name):
     '''
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
