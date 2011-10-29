@@ -32,7 +32,7 @@ def add(name,
         cmd += '-G {0} '.format(groups)
     if home:
         cmd += '-m -b {0} '.format(os.dirname(home))
-    cmd += name 
+    cmd += '-n {0}'.format(name)
     ret = __salt__['cmd.run_all'](cmd)
 
     return not ret['retcode']
