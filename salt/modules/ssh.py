@@ -216,7 +216,8 @@ def set_auth_key(
                     enc,
                     comment,
                     options)
-        open(
-            os.path.join(uinfo['home'], config), 'a+').write(
-                    '\n{0}'.format(auth_line))
+        fconfig = os.path.join(uinfo['home'], config)
+        if not os.path.isdir(os.path.dirname(fconfig)):
+            os.makedirs(os.path.dirname(fconfig))
+        open(fconfig, 'a+').write('\n{0}'.format(auth_line))
         return 'new'
