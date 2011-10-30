@@ -5,9 +5,6 @@ States tutorial, part 2
 This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`. It is
 recommended that you begin there.
 
-Our goal
-========
-
 In the last Salt States tutorial we ran everything locally and did not take
 advantage of Salt's tremendous ability to run on multiple hosts. In this
 tutorial, we will modify ``webserver.sls`` to run from the :term:`Salt master

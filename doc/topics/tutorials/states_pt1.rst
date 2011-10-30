@@ -6,21 +6,10 @@ The purpose of this tutorial is to demonstrate how quickly you can configure a
 system to be managed by Salt States. For detailed information about the state
 system please refer to the full :doc:`states reference </ref/states/index>`.
 
-**Before continuing** make sure you have a working Salt installation by
-following the :doc:`installation </topics/installation>` and the
-:doc:`configuration </topics/configuration>` instructions.
-
-.. admonition:: Stuck?
-
-    If you get stuck at any point, there are many ways to :doc:`get help from
-    the Salt community </topics/community>` including our mailing list and our
-    IRC channel.
-
-Our goal
-========
-
 This tutorial will walk you through using Salt to configure a single system to
 run the Apache HTTP server and to ensure the server is running.
+
+.. include:: requisite_incl.rst
 
 Create an ``sls`` file
 ======================
