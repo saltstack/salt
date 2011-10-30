@@ -16,14 +16,18 @@ run
 Execute a command given certian conditions
 
 A simple exampe:
+
 .. code-block:: yaml
+
     date > /tmp/salt-run:
       cmd:
         - run
 
 Only run if another execution returns sucessfully, in this case truncate
 syslog if there is no disk space:
+
 .. code-block:: yaml
+
     > /var/log/messages:
       cmd:
         - run
@@ -45,31 +49,26 @@ def run(name,
     Run a command if certian circumstances are met
 
     name
-    ~~~~
-    The command to execute, remember that the command will execute with the
-    path and permissions of the salt-minion.
+        The command to execute, remember that the command will execute with the
+        path and permissions of the salt-minion.
 
     onlyif
-    ~~~~~~
-    A command to run as a check, run the named command only if the command
-    passed to the ``onlyif`` option returns true
+        A command to run as a check, run the named command only if the command
+        passed to the ``onlyif`` option returns true
 
     unless
-    ~~~~~~
-    A command to run as a check, only run the named command if the command
-    passed to the ``unless`` option returns false
+        A command to run as a check, only run the named command if the command
+        passed to the ``unless`` option returns false
 
     cwd
-    ~~~
-    The current working directory to execute the command in, defaults to /root
+        The current working directory to execute the command in, defaults to
+        /root
 
     user
-    ~~~~
-    The user name to run the command as
+        The user name to run the command as
 
     group
-    ~~~~~
-    The group context to run the command as
+        The group context to run the command as
     '''
     ret = {'name': name,
            'changes': {},

@@ -6,6 +6,7 @@ set up to be installed, latest, removed and purged. Package management
 declarations are typically rather simple:
 
 .. code-block:: yaml
+
     vim:
       pkg:
         - installed
@@ -18,8 +19,7 @@ def installed(name):
     installed
 
     name
-    ~~~~
-    The name of the package to install
+        The name of the package to install
     '''
     if __salt__['pkg.version'](name):
         return {'name': name,
@@ -46,8 +46,7 @@ def latest(name):
     package is available
 
     name
-    ~~~~
-    The name of the package to maintain at the latest available version
+        The name of the package to maintain at the latest available version
     '''
     changes = {}
     version = __salt__['pkg.version'](name)
@@ -70,8 +69,7 @@ def removed(name):
     the remove function in the salt pkg module for the platform.
 
     name
-    ~~~~
-    The name of the package to be removed
+        The name of the package to be removed
     '''
     if not __salt__['pkg.version'](name):
         return {'name': name,
@@ -96,8 +94,7 @@ def purged(name):
     salt pkg module for the platform.
 
     name
-    ~~~~
-    The name of the package to be purged
+        The name of the package to be purged
     '''
     if not __salt__['pkg.version'](name):
         return {'name': name,

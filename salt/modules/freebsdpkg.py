@@ -76,8 +76,9 @@ def install(name, refresh=False):
     '''
     Install the passed package
 
-    Return a dict containing the new package names and versions:
-    {'<package>': {'old': '<old-version>',
+    Return a dict containing the new package names and versions::
+
+        {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
     CLI Example:
@@ -106,8 +107,9 @@ def upgrade():
     '''
     Run a full system upgrade, a "freebsd-update fetch install"
 
-    Return a dict containing the new package names and versions:
-    {'<package>': {'old': '<old-version>',
+    Return a dict containing the new package names and versions::
+
+        {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
     CLI Example:

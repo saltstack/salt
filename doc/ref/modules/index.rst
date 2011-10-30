@@ -4,12 +4,6 @@ Modules
 
 Salt modules are the functions called by the :command:`salt` command.
 
-.. toctree::
-    :hidden:
-    :glob:
-
-    *
-
 .. seealso:: :doc:`Full list of builtin modules <modules>`
 
     Salt ships with many modules that cover a wide variety of tasks.

@@ -12,6 +12,7 @@ a dynamic component to file management. An example of ``file.managed`` which
 makes use of the jinja templating system would look like this:
 
 .. code-block:: yaml
+
     /etc/http/conf/http.conf:
       file:
         - managed
@@ -26,6 +27,7 @@ create and enforce the premissions on a directory. A directory statement will
 look like this:
 
 .. code-block:: yaml
+
     /srv/stuff/substuf:
       file:
         - directory
@@ -38,6 +40,7 @@ Symlinks can be easily created, the symlink function is very simple and only
 takes a few arguments
 
 .. code-block:: yaml
+
     /etc/grub.conf:
       file:
         - symlink
@@ -50,6 +53,7 @@ deploying large code and configuration systems. A recuse state would look
 something like this:
 
 .. code-block:: yaml
+
     /opt/code/flask:
       file:
         - recurse
@@ -138,24 +142,20 @@ def symlink(name, target, force=False, makedirs=False):
     Create a symlink
 
     name
-    ~~~~
-    The location of the symlink to create
+        The location of the symlink to create
 
     target
-    ~~~~~~
-    The location that the symlink points to
+        The location that the symlink points to
 
     force
-    ~~~~~
-    If the location of the symlink exists and is not a symlink then the state
-    will fail, set force to True and any file or directory in the way of the
-    symlink file will be deleted to make room for the symlink
+        If the location of the symlink exists and is not a symlink then the
+        state will fail, set force to True and any file or directory in the way
+        of the symlink file will be deleted to make room for the symlink
 
     makedirs
-    ~~~~~~~~
-    If the location of the symlink does not already have a parent directory
-    then the state will fail, setting makedirs to True will allow Salt to
-    create the parent directory
+        If the location of the symlink does not already have a parent directory
+        then the state will fail, setting makedirs to True will allow Salt to
+        create the parent directory
     '''
     ret = {'name': name,
            'changes': {},
@@ -205,8 +205,7 @@ def absent(name):
     reverse any of the functions in the file state module.
 
     name
-    ~~~~
-    The path which should be deleted
+        The path which should be deleted
     '''
     ret = {'name': name,
            'changes': {},
@@ -248,40 +247,35 @@ def managed(name,
     the salt master and potentially run through a templating system.
 
     name
-    ~~~~
-    The location of the file to manage
+        The location of the file to manage
 
     source
-    ~~~~~~
-    The source file, this file is located on the salt master file server and is
-    specified with the salt:// protocol. If the file is located on the master in
-    the directory named spam, and is called eggs, the source string is
-    salt://spam/eggs
+        The source file, this file is located on the salt master file server
+        and is specified with the salt:// protocol. If the file is located on
+        the master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs
 
     user
-    ~~~~
-    The user to own the file, this defaults to the user salt is running as on
-    the minion
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
 
     group
-    ~~~~~
-    The group ownership set for the file, this defaults to the group salt is
-    running as on the minion
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion
 
     mode
-    ~~~~
-    The permissions to set on this file, aka 644, 0775, 4664
+        The permissions to set on this file, aka 644, 0775, 4664
     
     template
-    ~~~~~~~~
-    If this setting is applied then the named templating engine will be used
-    to render the downloaded file, currently jinja and mako are supported
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file, currently jinja and mako are
+        supported
 
     makedirs
-    ~~~~~~~~
-    If the file is located in a path without a parent directory, then the the
-    state will fail. If makedirs is set to True, then the parent directories
-    will be created to facilitate the creation of the named file.
+        If the file is located in a path without a parent directory, then the
+        the state will fail. If makedirs is set to True, then the parent
+        directories will be created to facilitate the creation of the named
+        file.
     '''
     if mode:
         mode = str(mode)
@@ -466,28 +460,24 @@ def directory(name,
     Ensure that a named directory is present and has the right perms
 
     name
-    ~~~~
-    The location to create or manage a directory
+        The location to create or manage a directory
 
     user
-    ~~~~
-    The user to own the directory, this defaults to the user salt is running
-    as on the minion
+        The user to own the directory, this defaults to the user salt is
+        running as on the minion
 
     group
-    ~~~~~
-    The group ownership set for the directory, this defaults to the group
-    salt is running as on the minion
+        The group ownership set for the directory, this defaults to the group
+        salt is running as on the minion
 
     mode
-    ~~~~
-    The permissions to set on this directory, aka 755
+        The permissions to set on this directory, aka 755
     
     makedirs
-    ~~~~~~~~
-    If the directory is located in a path without a parent directory, then the
-    the state will fail. If makedirs is set to True, then the parent
-    directories will be created to facilitate the creation of the named file.
+        If the directory is located in a path without a parent directory, then
+        the the state will fail. If makedirs is set to True, then the parent
+        directories will be created to facilitate the creation of the named
+        file.
     '''
     if mode:
         mode = str(mode)
@@ -574,15 +564,13 @@ def recurse(name,
     over to the specified path.
 
     name
-    ~~~~
-    The directory to set the recursion in
+        The directory to set the recursion in
 
     source
-    ~~~~~~
-    The source directory, this directory is located on the salt master file
-    server and is specified with the salt:// protocol. If the directory is
-    located on the master in the directory named spam, and is called eggs,
-    the source string is salt://spam/eggs
+        The source directory, this directory is located on the salt master file
+        server and is specified with the salt:// protocol. If the directory is
+        located on the master in the directory named spam, and is called eggs,
+        the source string is salt://spam/eggs
     '''
     ret = {'name': name,
            'changes': {},

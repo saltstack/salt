@@ -4,6 +4,7 @@ Hosts File Management
 The hosts file can be managed to contain definitions for specific hosts:
 
 .. code-block:: yaml
+
     salt-master:
       host:
         - present
@@ -15,12 +16,10 @@ def present(name, ip):
     Ensures that the named host is present with the given ip
 
     name
-    ~~~~
-    The host to assign an ip to
+        The host to assign an ip to
 
     ip
-    ~~~~
-    The ip addr to apply to the host
+        The ip addr to apply to the host
     '''
     ret = {'name': name,
            'changes': {},
@@ -45,12 +44,10 @@ def absent(name, ip):
     Ensure that the the named host is absent
 
     name
-    ~~~~
-    The host to remove
+        The host to remove
 
     ip
-    ~~~~
-    The ip addr of the host to remove
+        The ip addr of the host to remove
     '''
     ret = {'name': name,
            'changes': {},
