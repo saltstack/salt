@@ -26,7 +26,7 @@ environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
 
 .. seealso::
 
-    :doc:`../configuration/index`
+    :doc:`/topics/configuration`
 
 Using the Salt Command
 ======================
