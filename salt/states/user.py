@@ -5,6 +5,7 @@ The user module is used to create and manage user settings, users can be set
 as either absent or present
 
 .. code-block:: yaml
+
     fred:
       user:
         - present
@@ -30,29 +31,23 @@ def present(
     Ensure that the named user is present with the specified properties
 
     name
-    ~~~~
-    The name of the user to manage
+        The name of the user to manage
 
     uid
-    ~~~~
-    The user id to assign, if left empty then the next available user id will
-    be assigned
+        The user id to assign, if left empty then the next available user id
+        will be assigned
 
     gid
-    ~~~~
-    The default group id
+        The default group id
 
     groups
-    ~~~~~~
-    A list of groups to assign the user to, pass a list object
+        A list of groups to assign the user to, pass a list object
 
     home
-    ~~~~
-    The location of the home directory to manage
+        The location of the home directory to manage
 
     shell
-    ~~~~~
-    The login shell, defaults to /bin/bash
+        The login shell, defaults to /bin/bash
     '''
     ret = {'name': name,
            'changes': {},
@@ -105,17 +100,14 @@ def absent(name, purge=False, force=False):
     Ensure that the named user is absent
 
     name
-    ~~~~
-    The name of the user to remove
+        The name of the user to remove
 
     purge
-    ~~~~~
-    Set purge to delete all of the user's file as well as the user
+        Set purge to delete all of the user's file as well as the user
 
     force
-    ~~~~~
-    If the user is logged in the absent state will fail, set the force option
-    to True to remove the user even if they are logged in
+        If the user is logged in the absent state will fail, set the force
+        option to True to remove the user even if they are logged in
     '''
     ret = {'name': name,
            'changes': {},

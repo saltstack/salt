@@ -4,7 +4,9 @@ Group Management
 
 The group module is used to create and manage unix group settings, groups
 can be either present or absent:
+
 .. code-block:: yaml
+
     cheese:
       group:
         - present
@@ -16,13 +18,11 @@ def present(name, gid=None):
     Ensure that a group is present
 
     name
-    ~~~~
-    The name of the group to manage
+        The name of the group to manage
 
     gid
-    ~~~
-    The group id to assign to the named group, if left empty then the next
-    available group id will be assigned
+        The group id to assign to the named group, if left empty then the next
+        available group id will be assigned
     '''
     ret = {'name': name,
            'changes': {},
@@ -68,8 +68,7 @@ def absent(name):
     Ensure that the named group is absent
 
     name
-    ~~~~
-    The name of the group to remove
+        The name of the group to remove
     '''
     ret = {'name': name,
            'changes': {},

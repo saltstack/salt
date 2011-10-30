@@ -75,13 +75,15 @@ def refresh_db():
 def install(pkg, refresh=False):
     '''
     Install the passed package
-    
-    Return a dict containing the new package names and versions:
-    {'<package>': {'old': '<old-version>',
-                   'new': '<new-version>']}
-    
-    CLI Example:
-    salt '*' pkg.install <package name>
+
+    Return a dict containing the new package names and versions::
+
+        {'<package>': {'old': '<old-version>',
+                'new': '<new-version>']}
+
+    CLI Example::
+
+        salt '*' pkg.install <package name>
     '''
     if(refresh):
         refresh_db()
@@ -160,17 +162,20 @@ def purge(pkg):
 def upgrade(refresh=True):
     '''
     Upgrades all packages via apt-get dist-upgrade
-    
-    Returns a list of dicts containing the package names, and the new and old versions:
-    [
-        {'<package>':  {'old': '<old-version>',
-                      'new': '<new-version>']
-        }',
-        ...
-    ]
-    
-    CLI Example:
-    salt '*' pkg.upgrade
+
+    Returns a list of dicts containing the package names, and the new and old
+    versions::
+
+        [
+            {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>']
+            }',
+            ...
+        ]
+
+    CLI Example::
+
+        salt '*' pkg.upgrade
     '''
     
     if(update_repos):
