@@ -2,12 +2,6 @@
 Returners
 =========
 
-.. toctree::
-    :hidden:
-    :glob:
-
-    *
-
 By default the return values of the commands sent to the salt minions are
 returned to the salt-master. But since the commands executed on the salt
 minions are detatched from the call on the salt master, there is no need for

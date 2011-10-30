@@ -16,4 +16,3 @@ Full list of builtin renderers
 
 .. automodule:: salt.renderers.yaml_mako
     :members:
-

@@ -2,16 +2,6 @@
 Command Line Reference
 ======================
 
-.. toctree::
-    :maxdepth: 1
-
-    salt
-    salt-master
-    salt-minion
-    salt-key
-    salt-cp
-    salt-call
-
 Salt can be controlled by a command line client by the root user on the Salt 
 master. The Salt command line client uses the Salt client API to communicate
 with the Salt master server. The Salt client is straightforward and simple 

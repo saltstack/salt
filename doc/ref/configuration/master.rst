@@ -7,11 +7,6 @@ of the Salt system each have a respective configuration file. The
 :command:`salt-master` is configured via the master configuration file, and the
 :command:`salt-minion` is configured via the minion configuration file.
 
-.. toctree::
-    :hidden:
-
-    examples
-
 .. seealso:: 
     :ref:`example master configuration file <configuration-examples-master>` 
 

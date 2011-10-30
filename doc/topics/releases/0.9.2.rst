@@ -23,12 +23,8 @@ Or from PiPy:
 
 http://pypi.python.org/packages/source/s/salt/salt-0.9.2.tar.gz
 
-For instructions on how to set up Salt please see the tutorial
-
-.. toctree::
-    :maxdepth: 1
-
-    ../tutorial
+For instructions on how to set up Salt please see the :doc:`installation
+instructions </topics/installation>`.
 
 New Features
 ------------
