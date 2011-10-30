@@ -2,8 +2,11 @@
 Highstate data structure definitions
 ====================================
 
-Include declaration
+The Salt State Tree
 ===================
+
+Include declaration
+-------------------
 
 .. glossary::
 
@@ -22,7 +25,7 @@ Include declaration
               - http.server
 
 Module reference
-================
+----------------
 
 .. glossary::
 
@@ -32,7 +35,7 @@ Module reference
         file ``salt://edit/vim.sls``.
 
 ID declaration
-==============
+--------------
 
 .. glossary::
 
@@ -45,7 +48,7 @@ ID declaration
         Occurs on the top level or under the :term:`extend declaration`.
 
 Extend declaration
-==================
+------------------
 
 .. glossary::
 
@@ -58,7 +61,7 @@ Extend declaration
         Occurs only in the top level and defines a dictionary.
 
 State declaration
-=================
+-----------------
 
 .. glossary::
 
@@ -73,7 +76,7 @@ State declaration
         Occurs under an :term:`ID declaration`.
 
 Requisite declaration
-=====================
+---------------------
 
 .. glossary::
 
@@ -88,7 +91,7 @@ Requisite declaration
         key under an :term:`ID declaration`.
 
 Requisite reference
-===================
+-------------------
 
 .. glossary::
 
@@ -100,7 +103,7 @@ Requisite reference
         Occurs as a single index in a :term:`requisite declaration` list.
 
 Function declaration
-====================
+--------------------
 
 .. glossary::
 
@@ -111,7 +114,7 @@ Function declaration
         Occurs as the only index in the :term:`state declaration` list.
 
 Function arg declaration
-========================
+------------------------
 
 .. glossary::
 
@@ -123,7 +126,7 @@ Function arg declaration
         Occurs under a :term:`function`.
 
 Name declaration
-================
+----------------
 
 .. glossary::
 
@@ -134,7 +137,7 @@ Name declaration
         key dictionary referencing a string.
 
 Names declaration
-=================
+-----------------
 
 .. glossary::
 
