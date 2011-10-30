@@ -65,3 +65,8 @@ Salt quick reference
   | :ref:`genindex`
   | :doc:`Full table of contents </toc>`
 * :ref:`search`
+
+.. toctree::
+    :hidden:
+
+    toc
