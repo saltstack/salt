@@ -13,6 +13,7 @@ changes to an existing cron job the name declaraion is the uniqe factor, so if
 and existing cron that looks like this:
 
 .. code-block:: yaml
+
     date > /tmp/crontest:
       cron:
         - present
@@ -22,6 +23,7 @@ and existing cron that looks like this:
 Is changed to this:
 
 .. code-block:: yaml
+
     date > /tmp/crontest:
       cron:
         - present
@@ -49,34 +51,29 @@ def present(name,
     ``man 5 crontab``.
 
     name
-    ~~~~
-    The command that should be executed by the cron job.
+        The command that should be executed by the cron job.
 
     user
-    ~~~~
-    The name of the user who's crontab needs to be modified, defaults to the
-    root user
+        The name of the user who's crontab needs to be modified, defaults to
+        the root user
 
     minute
-    ~~~~~~
-    The information to be set into the minute section, this can be any string
-    supported by your cron system's the minute field. Default is ``*``
+        The information to be set into the minute section, this can be any
+        string supported by your cron system's the minute field. Default is
+        ``*``
 
     hour
-    ~~~~
-    The information to be set in the hour section. Default is ``*``
+        The information to be set in the hour section. Default is ``*``
 
     daymonth
-    ~~~~~~~~
-    The information to be set in the day of month section. Default is ``*``
+        The information to be set in the day of month section. Default is ``*``
 
     month
-    ~~~~~
-    The information to be set in the month section. Default is ``*``
+        The information to be set in the month section. Default is ``*``
 
     dayweek
-    ~~~~~~~
-    The information to be set in the day of day of week section. Default is ``*``
+        The information to be set in the day of day of week section. Default is
+        ``*``
     '''
     ret = {'name': name,
            'result': True,
@@ -123,34 +120,29 @@ def absent(name,
     the name is matched when removing a cron job.
 
     name
-    ~~~~
-    The command that should be absent in the user crontab.
+        The command that should be absent in the user crontab.
 
     user
-    ~~~~
-    The name of the user who's crontab needs to be modified, defaults to the
-    root user
+        The name of the user who's crontab needs to be modified, defaults to
+        the root user
 
     minute
-    ~~~~~~
-    The information to be set into the minute section, this can be any string
-    supported by your cron system's the minute field. Default is ``*``
+        The information to be set into the minute section, this can be any
+        string supported by your cron system's the minute field. Default is
+        ``*``
 
     hour
-    ~~~~
-    The information to be set in the hour section. Default is ``*``
+        The information to be set in the hour section. Default is ``*``
 
     daymonth
-    ~~~~~~~~
-    The information to be set in the day of month section. Default is ``*``
+        The information to be set in the day of month section. Default is ``*``
 
     month
-    ~~~~~
-    The information to be set in the month section. Default is ``*``
+        The information to be set in the month section. Default is ``*``
 
     dayweek
-    ~~~~~~~
-    The information to be set in the day of day of week section. Default is ``*``
+        The information to be set in the day of day of week section. Default is
+        ``*``
     '''
     ret = {'name': name,
            'result': True,

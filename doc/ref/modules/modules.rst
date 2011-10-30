@@ -138,12 +138,6 @@ Full list of builtin modules
 .. automodule:: salt.modules.ps
     :members:
 
-:mod:`salt.modules.ps`
-======================
-
-.. automodule:: salt.modules.ps
-    :members:
-
 :mod:`salt.modules.publish`
 ===========================
 
