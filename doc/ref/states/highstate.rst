@@ -99,46 +99,46 @@ Requisite reference
 
         Occurs as a single index in a :term:`requisite declaration` list.
 
-Function
-========
+Function declaration
+====================
 
 .. glossary::
 
-    Function
+    Function declaration
         The name of the function to call within the state. Any given state
         declaration can only have a single function.
 
         Occurs as the only index in the :term:`state declaration` list.
 
-Function arg
-============
+Function arg declaration
+========================
 
 .. glossary::
 
-    Function arg
+    Function arg declaration
         A single key dictionary referencing a Python type which is to be passed
         to the named :term:`function` as a parameter. The type must be the data
         type expected by the function.
 
         Occurs under a :term:`function`.
 
-Name
-====
+Name declaration
+================
 
 .. glossary::
 
-    Name
+    Name declaration
         Used to override the name argument relative the :term:`state
         declaration`. If the name is not specified then the :term:`ID
         declaration` satisfies the name argument. The name is always a single
         key dictionary referencing a string.
 
-Names
-=====
+Names declaration
+=================
 
 .. glossary::
 
-    Names
+    Names declaration
         Used to apply the contents of the :term:`state declaration` to multiple
         states, each with its own name.
 
