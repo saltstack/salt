@@ -307,6 +307,21 @@ class State(object):
                             high[name][state].append(arg)
         return high, errors
 
+    def template_shebang(self, template):
+        '''
+        Check the template shebang line and return the renderer
+        '''
+        # Open up the first line of the sls template
+        line = open(template, 'r').readline()
+        # Check if it starts with a shebang
+        if line.startswith('#!'):
+            # pull out the shebang data
+            trend = line.strip()[2:]
+            # If the specified renderer exists, use it, or fallback
+            if self.rend.has_key(trend):
+                return trend
+        return self.opts['renderer']
+
     def compile_template(self, template, env='', sls=''):
         '''
         Take the path to a template and return the high data structure derived
@@ -316,7 +331,7 @@ class State(object):
             return {}
         if not os.path.isfile(template):
             return {}
-        return self.rend[self.opts['renderer']](template, env, sls)
+        return self.rend[self.template_shebang(template)](template, env, sls)
 
     def compile_template_str(self, template):
         '''
@@ -325,7 +340,7 @@ class State(object):
         '''
         fn_ = tempfile.mkstemp()[1]
         open(fn_, 'w+').write(template)
-        high = self.rend[self.opts['renderer']](fn_)
+        high = self.rend[self.template_shebang(fn_)](fn_)
         os.remove(fn_)
         return high
 
