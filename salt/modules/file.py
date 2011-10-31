@@ -202,7 +202,8 @@ def find(path, *opts):
     Approximate the Unix find(1) command and return a list of paths that
     meet the specified critera.
 
-    The options include match criteria:
+    The options include match criteria::
+
         name    = path-glob                 # case sensitive
         iname   = path-glob                 # case insensitive
         regex   = path-regex                # case sensitive
@@ -213,14 +214,17 @@ def find(path, *opts):
         size    = [+-]number[size-unit]     # default unit = byte
         mtime   = interval                  # modified since date
         grep    = regex                     # search file contents
-    and/or actions:
+
+    and/or actions::
+
         delete [= file-types]               # default type = 'f'
         exec    = command [arg ...]         # where {} is replaced by pathname
         print  [= print-opts]
 
     The default action is 'print=path'.
 
-    file-glob:
+    file-glob::
+
         *                = match zero or more chars
         ?                = match any char
         [abc]            = match a, b, or c
@@ -232,7 +236,8 @@ def find(path, *opts):
     path-regex:
         a Python re (regular expression) pattern to match pathnames
 
-    file-types: a string of one or more of the following:
+    file-types: a string of one or more of the following::
+
         a: all file types
         b: block device
         c: character device
@@ -248,14 +253,16 @@ def find(path, *opts):
     groups:
         a space and/or comma separated list of group names and/or gids
 
-    size-unit:
+    size-unit::
+
         b: bytes
         k: kilobytes
         m: megabytes
         g: gigabytes
         t: terabytes
 
-    interval:
+    interval::
+
         [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
 
         where:
@@ -265,7 +272,9 @@ def find(path, *opts):
             m: minute
             s: second
 
-    print-opts: a comma and/or space separated list of one or more of the following:
+    print-opts: a comma and/or space separated list of one or more of the
+    following::
+
         group: group name
         md5:   MD5 digest of file contents
         mode:  file permissions (as integer)
@@ -276,10 +285,11 @@ def find(path, *opts):
         type:  file type
         user:  user name
 
-    CLI Examples:
-    salt '*' / type=f name=\*.bak size=+10m
-    salt '*' /var mtime=+30d size=+10m print=path,size,mtime
-    salt '*' /var/log name=\*.[0-9] mtime=+30d size=+10m delete
+    CLI Examples::
+
+        salt '*' / type=f name=\*.bak size=+10m
+        salt '*' /var mtime=+30d size=+10m print=path,size,mtime
+        salt '*' /var/log name=\*.[0-9] mtime=+30d size=+10m delete
     '''
     opts_dict = {}
     for opt in opts:

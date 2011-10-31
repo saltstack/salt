@@ -86,8 +86,9 @@ def install(name, refresh=False):
     '''
     Install the passed package, add refresh=True to install with an -Sy
 
-    Return a dict containing the new package names and versions:
-    {'<package>': {'old': '<old-version>',
+    Return a dict containing the new package names and versions::
+
+        {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
     CLI Example:
@@ -119,8 +120,9 @@ def upgrade():
     '''
     Run a full system upgrade, a pacman -Syu
 
-    Return a dict containing the new package names and versions:
-    {'<package>': {'old': '<old-version>',
+    Return a dict containing the new package names and versions::
+
+        {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
     CLI Example:

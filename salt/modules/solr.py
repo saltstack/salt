@@ -175,6 +175,7 @@ def lucene_version(core_name=None):
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example: 
@@ -211,6 +212,7 @@ def version(core_name=None):
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example:
@@ -250,6 +252,7 @@ def optimize(core_name=None):
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return:  dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
     
     CLI Example:
@@ -288,6 +291,7 @@ def ping(core_name=None):
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example:
@@ -320,6 +324,7 @@ def is_replication_enabled(core_name=None):
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example:
@@ -382,6 +387,7 @@ def match_index_versions(core_name=None):
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example:
@@ -442,6 +448,7 @@ def replication_details(core_name=None):
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example:
@@ -516,9 +523,11 @@ def set_is_polling(polling, core_name=None):
     Prevent the slaves from polling the master for updates.
     
     Param: bool polling: True will enable polling. False will disable it.
+
     Param: str core_name (None): The name of the solr core if using cores. 
                                  Leave this blank if you are not using cores or
                                  if you want to check all cores.
+
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
     
     CLI Example:

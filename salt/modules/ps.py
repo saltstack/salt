@@ -53,9 +53,13 @@ def get_pid_list():
 def cpu_percent(interval=0.1, per_cpu=False):
     '''
     Return the percent of time the CPU is busy.
-    interval = the number of seconds to sample CPU usage over
-    per_cpu = if True return an array of CPU percent busy for each CPU,
-              otherwise aggregate all precents into one number
+
+    interval
+        the number of seconds to sample CPU usage over
+
+    per_cpu
+        if True return an array of CPU percent busy for each CPU, otherwise
+        aggregate all precents into one number
     '''
     if per_cpu:
         result = []
@@ -69,8 +73,10 @@ def cpu_times(per_cpu=False):
     '''
     Return the percent of time the CPU spends in each state,
     e.g. user, system, idle, nice, iowait, irq, softirq.
-    per_cpu = if True return an array of percents for each CPU,
-              otherwise aggregate all precents into one number
+
+    per_cpu
+        if True return an array of percents for each CPU, otherwise aggregate
+        all precents into one number
     '''
     if per_cpu:
         result = []
@@ -108,8 +114,10 @@ def phymem_buffers():
 def disk_partitions(all=False):
     '''
     Return a list of disk partitions and their device, mount point, and filesystem type.
-    all = if set to False, only return local, physical partitions (hard disk, USB,
-          CD/DVD partitions).  If True, return all filesystems.
+
+    all
+        if set to False, only return local, physical partitions (hard disk,
+        USB, CD/DVD partitions).  If True, return all filesystems.
     '''
     result = []
     for partition in psutil.disk_partitions(all):

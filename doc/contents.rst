@@ -1,103 +1,73 @@
 .. _contents:
 
-Tutorials
-=========
+Salt at a glance
+================
 
-Introduce yourself to the various parts of Salt in five minute increments.
+Learn about the various parts of Salt in five minute increments (or less).
 
-.. toctree::
-    :maxdepth: 1
+* **What is Salt?:**
+  :doc:`Overview <topics/index>`
+  | :doc:`Community </topics/community>`
+* **The basics:**
+  :doc:`Installation <topics/installation>`
+  | :doc:`Configuration <topics/configuration>`
+* **Remote execution:**
+  :doc:`Modules <topics/tutorials/modules>`
+* **State management:**
+  :doc:`Part 1 <topics/tutorials/states_pt1>`
+  | :doc:`Part 2 <topics/tutorials/states_pt2>`
+  | :doc:`Part 3 <topics/tutorials/states_pt3>`
 
-    topics/tutorial
-
-Salt in Depth
+Salt in depth
 =============
 
-While using and setting up Salt is a simple task, the capabilities of Salt
-run much deeper.
+While using and setting up Salt is a simple task, the capabilities of Salt run
+much deeper. Gaining a better understanding of how Salt works will allow you to
+get much more out of Salt.
 
-Gaining a better understanding of how Salt works will allow you to get much
-more out of Salt.
-
-Screencasts and Presentations
------------------------------
-
-Presentation at the Salt Lake Linux User Group (SLLUG) in May 2011
-`video`_ | `slides`_ (PDF)
-
-.. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
-.. _`slides`: :download:`Salt.pdf`
-
-Configuration and CLI Usage
----------------------------
-
-.. toctree::
-    :maxdepth: 1
-
-    ref/configuration/index
-    ref/cli/index
-
-Extending Salt
-==============
-
-Writing your own customizations on top of Salt
-
-.. toctree::
-    :hidden:
-
-    ref/index
-    ref/modules/index
-    ref/grains
-    ref/returners/index
-    ref/states/index
-    ref/runners
-    ref/renderers
-    ref/python-api
-    ref/file_server/index
-
-* **Modules:**
+* **Remote execution:**
   :doc:`Writing modules <ref/modules/index>`
   | :doc:`full list of modules <ref/modules/modules>`
-* **Grains:**
+* **System info & detection:**
   :doc:`Grains <ref/grains>` 
-* **Returners:**
+* **Displaying or storing responses:**
   :doc:`Writing returners <ref/returners/index>`
   | :doc:`full list of returners <ref/returners/returners>`
 * **State enforcement:**
   :doc:`States <ref/states/index>`
-  | :doc:`Renderers <ref/renderers>`
-* **Python API:**
-  :doc:`Python API <ref/python-api>`
-* **File Server:**
+  | :doc:`Renderers <ref/renderers/index>`
+  | :doc:`Highstate data structure <ref/states/highstate>`
+* **Transfering & syncing files:**
   :doc:`File Server <ref/file_server/index>`
+* **Network topology:**
+  :doc:`ref/syndic`
+  | :doc:`ref/peer`
+* **Configuration:**
+  :doc:`Full list of minion settings <ref/configuration/minion>`
+  | :doc:`Full list of master settings <ref/configuration/master>`
+* **Using Salt:**
+  :doc:`From the command-line <ref/cli/index>`
+  | :doc:`Through the Python API <ref/python-api>`
 
-Salt Network Topology
-=====================
+.. admonition:: Screencasts and presentations
 
-Salt can be extended beyond a simple master commanding minions, for more
-information read up on the peer and syndic interfaces.
+    * Presentation at the Salt Lake Linux User Group (SLLUG) in May 2011
+      `video`_ | `slides`_ (PDF)
 
-.. toctree::
-    :maxdepth: 1
+.. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
+.. _`slides`: :download:`Salt.pdf`
 
-    ref/syndic
-    ref/peer
+Salt quick reference
+====================
 
-Getting Involved
-================
-
-There are many ways to interact with the Salt community.
-
-.. toctree::
-    :maxdepth: 1
-
-    topics/community
-    topics/releases/index
-
-
-Indices, glossary and tables
-============================
-
-* :ref:`genindex`
+* :doc:`Release notes </topics/releases/index>`
+  | :doc:`Roadmap </topics/roadmap/index>`
 * :ref:`modindex`
+  | :ref:`genindex`
+  | :doc:`Full table of contents </toc>`
 * :ref:`search`
+
+.. toctree::
+    :hidden:
+
+    toc
