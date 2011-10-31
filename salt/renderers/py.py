@@ -22,6 +22,6 @@ def render(template, env='', sls=''):
         mod.grains = __grains__
         mod.env = env
         mod.sls = sls
-        return mod.sls()
+        return mod.run()
     except:
         return {}
