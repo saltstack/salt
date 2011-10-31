@@ -13,15 +13,12 @@ def render(template, env='', sls=''):
     '''
     if not os.path.isfile(template):
         return {}
-    try:
-        mod = imp.load_source(
-                os.path.basename(template).split('.')[0],
-                template
-                )
-        mod.salt = __salt__
-        mod.grains = __grains__
-        mod.env = env
-        mod.sls = sls
-        return mod.run()
-    except:
-        return {}
+    mod = imp.load_source(
+            os.path.basename(template).split('.')[0],
+            template
+            )
+    mod.salt = __salt__
+    mod.grains = __grains__
+    mod.env = env
+    mod.sls = sls
+    return mod.run()
