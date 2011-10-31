@@ -6,21 +6,10 @@ The purpose of this tutorial is to demonstrate how quickly you can configure a
 system to be managed by Salt States. For detailed information about the state
 system please refer to the full :doc:`states reference </ref/states/index>`.
 
-**Before continuing** make sure you have a working Salt installation by
-following the :doc:`installation </topics/installation>` and the
-:doc:`configuration </topics/configuration>` instructions.
-
-.. admonition:: Stuck?
-
-    If you get stuck at any point, there are many ways to :doc:`get help from
-    the Salt community </topics/community>` including our mailing list and our
-    IRC channel.
-
-Our goal
-========
-
 This tutorial will walk you through using Salt to configure a single system to
 run the Apache HTTP server and to ensure the server is running.
+
+.. include:: requisite_incl.rst
 
 Create an ``sls`` file
 ======================
@@ -29,6 +18,7 @@ Start by creating an empty :term:`sls file` named ``webserver.sls``. Type the
 following and save the file:
 
 .. code-block:: yaml
+    :linenos:
 
     apache2:                # ID declaration
       pkg:                  # state declaration
@@ -54,7 +44,7 @@ The third line, called the :term:`function` defines which function in the
 
     In this tutorial we will be using yaml in Jinja2 templates which is the
     default format. You can change the default by changing
-    :conf_master:`renderer` in the master configuraiton file.
+    :conf_master:`renderer` in the master configuration file.
 
 Install the package
 ===================
@@ -77,6 +67,8 @@ Ensure a service is running
 Let's make a quick modification to also start Apache if it is not running:
 
 .. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 4,5
 
     apache2:
         pkg:
