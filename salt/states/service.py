@@ -29,13 +29,13 @@ def running(name, sig=None):
     changes = {name: __salt__['service.start'](name)}
     if not changes[name]:
         return {'name': name,
-                'changes': changes,
+                'changes': {},
                 'result': False,
-                'comment': 'Service ' + name + ' failed to start'}
+                'comment': 'Service {0} failed to start'.format(name)}
     return {'name': name,
             'changes': changes,
             'result': True,
-            'comment': 'Service ' + name + ' installed'}
+            'comment': 'Service {0} started'.format(name)}
 
 def dead(name, sig=None):
     '''
@@ -51,17 +51,17 @@ def dead(name, sig=None):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Service ' + name + ' is already dead'}
+                'comment': 'Service {0} is already dead'.format(name)}
     changes = {name: __salt__['service.stop'](name)}
     if not changes[name]:
         return {'name': name,
-                'changes': changes,
+                'changes': {},
                 'result': False,
-                'comment': 'Service ' + name + ' failed to stop'}
+                'comment': 'Service {0} failed to stop'.format(name)}
     return {'name': name,
             'changes': changes,
             'result': True,
-            'comment': 'Service ' + name + ' killed'}
+            'comment': 'Service {0} killed'.format(name)}
 
 def watcher(name, sig=None):
     '''
@@ -82,5 +82,5 @@ def watcher(name, sig=None):
     return {'name': name,
             'changes': {},
             'result': True,
-            'comment': 'Service ' + name + ' installed'}
+            'comment': 'Service {0} started'.format(name)}
 
