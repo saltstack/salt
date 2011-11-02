@@ -291,13 +291,7 @@ class State(object):
                                     # replace
                                     if arg.keys()[0] == 'require' or 'watch':
                                         # Extend the list
-                                        high[name][state][hind] = list(set(
-                                            [arg.keys()[0]]
-                                            ).union(
-                                                    set(
-                                                        arg[arg.keys()[0]]
-                                                        )
-                                                    ))
+                                        high[name][state][hind][arg.keys()[0]].extend(arg[arg.keys()[0]])
                                         update = True
                                     else:
                                         # Replace the value
