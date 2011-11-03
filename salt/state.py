@@ -149,6 +149,13 @@ class State(object):
                                     or arg.keys()[0] == 'watch':
                                 if not isinstance(arg[arg.keys()[0]], list):
                                     errors.append('The require or watch statement in state {0} in sls {1} needs to be formed as a list'.format(name, body['__sls__']))
+                                # It is a list, verify that the members of the
+                                # list are all single key dicts. 
+                                else:
+                                    for req in arg[arg.keys()[0]]:
+                                        if not isinstance(req, dict):
+                                            err = 'Requisite declaration {0} in SLS {1} is not formed as a single key dictonary'.format(req, sls)
+                                            errors.append(err)
                             # Make sure that there is only one key in the dict
                             if len(arg.keys()) != 1:
                                 errors.append('Multiple dictonaries defined in argument of state {0} in sls {1}'.format(name, body['__sls__']))
