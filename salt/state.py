@@ -154,7 +154,7 @@ class State(object):
                                 else:
                                     for req in arg[arg.keys()[0]]:
                                         if not isinstance(req, dict):
-                                            err = 'Requisite declaration {0} in SLS {1} is not formed as a single key dictonary'.format(req, sls)
+                                            err = 'Requisite declaration {0} in SLS {1} is not formed as a single key dictonary'.format(req, body['__sls__'])
                                             errors.append(err)
                             # Make sure that there is only one key in the dict
                             if len(arg.keys()) != 1:
