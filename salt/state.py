@@ -289,7 +289,8 @@ class State(object):
                                     # They match, check if the option is a
                                     # watch or require, append, otherwise
                                     # replace
-                                    if arg.keys()[0] == 'require' or 'watch':
+                                    if arg.keys()[0] == 'require' or \
+                                            arg.keys()[0] == 'watch':
                                         # Extend the list
                                         high[name][state][hind][arg.keys()[0]].extend(arg[arg.keys()[0]])
                                         update = True
