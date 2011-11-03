@@ -268,10 +268,11 @@ class State(object):
             for name, body in ext_chunk.items():
                 if not high.has_key(name):
                     errors.append(
-                        'Extension {0} is nto part of the high state'.format(
+                        'Extension {0} is not part of the high state'.format(
                             name
                             )
                         )
+                    continue
                 for state, run in body.items():
                     if state.startswith('__'):
                         continue
