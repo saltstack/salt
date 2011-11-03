@@ -597,6 +597,10 @@ class HighState(object):
                 errors.append('SLS {0} does not render to a dictonary'.format(sls))
             else:
                 if state.has_key('include'):
+                    if not isinstance(state['include'], list):
+                        err = 'Include Declaration in SLS {0} is not formed as a list'.format(sls)
+                        errors.append(err)
+                        break
                     for sub_sls in state.pop('include'):
                         if not list(mods).count(sub_sls):
                             nstate, mods, err = self.render_state(sub_sls, env, mods)
