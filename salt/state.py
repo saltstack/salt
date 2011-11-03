@@ -480,13 +480,14 @@ class State(object):
         Process a high data call and ensure the defined states.
         '''
         err = []
-        # Verify that the high data is structurally sound
-        errors = self.verify_high(high)
-        if errors:
-            return errors
+        errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
         errors += ext_errors
+        # Verify that the high data is structurally sound
+        errors += self.verify_high(high)
+        if errors:
+            return errors
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high)
         errors += self.verify_chunks(chunks)
@@ -679,11 +680,11 @@ class HighState(object):
         top = self.get_top()
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
-        # Verify that the high data is structurally sound
-        errors = self.state.verify_high(high)
         # If there is extension data reconcile it
         high, ext_errors = self.state.reconcile_extend(high)
         errors += ext_errors
+        # Verify that the high data is structurally sound
+        errors += self.state.verify_high(high)
         # Compile and verify the raw chunks
         chunks = self.state.compile_high_data(high)
         errors += self.state.verify_chunks(chunks)
