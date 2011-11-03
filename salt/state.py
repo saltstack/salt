@@ -607,14 +607,14 @@ class HighState(object):
                     if not isinstance(state['include'], list):
                         err = 'Include Declaration in SLS {0} is not formed as a list'.format(sls)
                         errors.append(err)
-                        break
-                    for sub_sls in state.pop('include'):
-                        if not list(mods).count(sub_sls):
-                            nstate, mods, err = self.render_state(sub_sls, env, mods)
-                        if nstate:
-                            state.update(nstate)
-                        if err:
-                            errors += err
+                    else:
+                        for sub_sls in state.pop('include'):
+                            if not list(mods).count(sub_sls):
+                                nstate, mods, err = self.render_state(sub_sls, env, mods)
+                            if nstate:
+                                state.update(nstate)
+                            if err:
+                                errors += err
                 if state.has_key('extend'):
                     ext = state.pop('extend')
                     for name in ext:
