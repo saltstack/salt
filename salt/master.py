@@ -276,7 +276,10 @@ class MWorker(multiprocessing.Process):
         Handle a command sent via an aes key
         '''
         data = self.crypticle.loads(load)
-        log.info('AES payload received with command %(cmd)s', data)
+        if not data.has_key('cmd'):
+            log.error('Recieved malformed command {0}'.format(data))
+            return {}
+        log.info('AES payload received with command {0}'.format(data['cmd']))
         return self.aes_funcs.run_func(data['cmd'], data)
 
     def run(self):
