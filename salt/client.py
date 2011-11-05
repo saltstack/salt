@@ -26,6 +26,7 @@ The data structure needs to be:
 # This means that the primary client to build is, the LocalClient
 
 import os
+import sys
 import re
 import glob
 import time
@@ -82,7 +83,12 @@ class LocalClient(object):
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        try:
+            os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        except OSError:
+            err = 'The Salt Master has not been set up on this system, a salt-master needs to be running to use the salt command'
+            sys.stderr.write(err)
+            sys.exit(2)
         ret = set(glob.glob(expr))
         os.chdir(cwd)
         return ret
