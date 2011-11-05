@@ -104,7 +104,7 @@ def load(mod):
 
 def remove(mod):
     '''
-    Load the specified kernel module
+    Remove the specified kernel module
 
     CLI Example:
     salt '*' kmod.remove kvm
