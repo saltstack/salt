@@ -366,7 +366,8 @@ class State(object):
         '''
         running = {}
         for low in chunks:
-            running = self.call_chunk(low, running, chunks)
+            if not running.has_key(low['state'] + '.' + low['name'] + '.' + low['fun']):
+                running = self.call_chunk(low, running, chunks)
         return running
 
     def check_requires(self, low, running, chunks):
@@ -442,7 +443,10 @@ class State(object):
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                 for chunk in reqs:
-                    running = self.call_chunk(chunk, running, chunks)
+                    # Check to see if the chunk has been run, only run it if
+                    # it has not been run already
+                    if not running.has_key(chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun']):
+                        running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'met':
                 running[tag] = self.call(low)
@@ -461,7 +465,10 @@ class State(object):
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                 for chunk in reqs:
-                    running = self.call_chunk(chunk, running, chunks)
+                    # Check to see if the chunk has been run, only run it if
+                    # it has not been run already
+                    if not running.has_key(chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun']):
+                        running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'nochange':
                 running[tag] = self.call(low)

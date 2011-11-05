@@ -283,34 +283,47 @@ def managed(name,
             'changes': {},
             'result': True,
             'comment': ''}
-    # Check changes if the target file exists
-    if os.path.isfile(name):
-        # Check sums
+    # Gather the source file from the server
+    sfn = ''
+    source_sum = {}
+    if template:
+        sfn = __salt__['cp.cache_file'](source, __env__)
+        t_key = '_{0}'.format(template)
+        if globals().has_key(t_key):
+            data = globals()[t_key](sfn)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Specified template format {0} is not supported'.format(template)
+            return ret
+        if data['result']:
+            sfn = data['data']
+            hsum = hashlib.md5(open(sfn, 'r').read()).hexdigest()
+            source_sum = {'hash_type': 'md5',
+                          'hsum': hsum}
+        else:
+            ret['result'] = False
+            ret['comment'] = data['data']
+            return ret
+    else:
         source_sum = __salt__['cp.hash_file'](source, __env__)
         if not source_sum:
             ret['result'] = False
             ret['comment'] = 'Source file {0} not found'.format(source)
             return ret
+    # If the source file is a template render it accordingly
+
+    # Check changes if the target file exists
+    if os.path.isfile(name):
         name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
             'rb').read()).hexdigest()
         # Check if file needs to be replaced
         if source_sum['hsum'] != name_sum:
-            sfn = __salt__['cp.cache_file'](source, __env__)
+            if not sfn:
+                sfn = __salt__['cp.cache_file'](source, __env__)
             if not sfn:
                 ret['result'] = False
                 ret['comment'] = 'Source file {0} not found'.format(source)
                 return ret
-            # If the source file is a template render it accordingly
-            if template:
-                t_key = '_' + template
-                if globals().has_key(t_key):
-                    data = globals()[t_key](sfn)
-                if data['result']:
-                    sfn = data['data']
-                else:
-                    ret['result'] = False
-                    ret['comment'] = data['data']
-                    return ret
             # Check to see if the files are bins
             if _is_bin(sfn) or _is_bin(name):
                 ret['changes']['diff'] = 'Replace binary file'
@@ -371,23 +384,6 @@ def managed(name,
             ret['comment'] = 'File {0} is in the correct state'.format(name)
         return ret
     else:
-        # The file is not currently present, throw it down, log all changes
-        sfn = __salt__['cp.cache_file'](source, __env__)
-        if not sfn:
-            ret['result'] = False
-            ret['comment'] = 'Source file {0} not found'.format(source)
-            return ret
-        # Handle any template management that is needed
-        if template:
-            data = {}
-            t_key = '_' + template
-            if globals().has_key(t_key):
-                data = globals()[t_key](sfn)
-            if data.get('result'):
-                sfn = data['data']
-            else:
-                ret['result'] = False
-                return ret
         # It is a new file, set the diff accordingly
         ret['changes']['diff'] = 'New file'
         # Apply the new file
