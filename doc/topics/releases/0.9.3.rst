@@ -1,0 +1,207 @@
+========================
+Salt 0.9.3 Release Notes
+========================
+
+Salt 0.9.3 is finally arrived. This is another big step forward for Salt, new
+features range from propper FreeBSD support to fixing issues seen when
+attaching a minion to a master over the Internet.
+
+The biggest improvments in 0.9.3 though can be found in the state system, it
+has progressed from something ready for early testers to a system ready to
+compete with platforms such as Puppet and Chef. The backbone of the state
+system has been greatly refined and many new features are available.
+
+Download!
+---------
+
+The Salt source can be downloaded from the salt github site:
+
+https://github.com/downloads/thatch45/salt/salt-0.9.3.tar.gz
+
+Or from PiPy:
+
+http://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz
+
+For instructions on how to set up Salt please see the :doc:`installation
+instructions </topics/installation>`.
+
+New Features
+------------
+
+WAN Support
+```````````
+
+Recently more people have been testing Salt minions connecting to Salt Masters
+over the Internet. It was found that Minions would commonly loose thier
+connection to the master when working over the internet. The minions can now
+detect if the connection has been lost and reconnect to the master, making
+WAN connections much more reliable.
+
+State System Fixes
+```````````````````
+
+Substantial testing has gone into the state system and it is ready for real
+world usage. A great deal has been added to the documentation for states and
+the modules and functions available to states have been cleanly documented.
+
+A number of State System bugs have also been founds and repaired, the output
+from the state system has also been refined to be extreamly clear and concise.
+
+Error reporting has also been introduced, issues found in sls files will now
+be clearly reported when executing Salt States.
+
+Extend Declaration
+``````````````````
+
+The Salt States have also gained the ``extend`` declaration. This declaration
+allows for states to be cleanly modified in a post environment. Simply said,
+if there is an apache.sls file that declares the apache service, then another
+sls can include apache and then extend it:
+
+.. code-block:: yaml
+    include:
+      - apache
+
+    extend:
+      apache:
+        service:
+          - require:
+            - pkg: mod_python
+
+    mod_python:
+      pkg:
+        - installed
+
+The notable behavior with the extend functionality is that it literally extends
+or overwrites a declaration set up in another sls module. This means that Salt
+will behave as though the modifications were made directly to the apache sls.
+This ensures that the apache service in this example is directly tied to all
+requirements.
+
+Highstate Structure Specefication
+`````````````````````````````````
+
+This release comes with a clear specefication of the Highstate data structure
+that is used to declare Salt States. This specefication explains everything
+that can be declared in the Salt SLS modules.
+
+The specification is extreamly simple, and illistrates how Salt has been able
+to fulfill the requirements of a central configuration manager within a simple
+and easy to understand format and specefication.
+
+SheBang Renderer Switch
+```````````````````````
+
+It came to our attention that having many renderers means that there may be a
+situation where more than one State Renderer should be available within a
+single State Tree.
+
+The method chosen to accomplish this was something already familiar to
+developers and systems administrators, a SheBang. The Python State Renderer
+displays this new capability.
+
+Python State Renderer
+`````````````````````
+
+Until now Salt States could only be declared in yaml or json using jinja or
+mako. A new, very powerful, renderer has been added, making it possible to
+write Salt States in pure python:
+
+.. code-block:: python
+    #!py
+
+    def run():
+        '''
+        Install the python-mako package
+        '''
+        return {'include': ['python'],
+                'python-mako': {'pkg': ['installed']}}
+
+This renderer is used by making a run function that returns the Highstate data
+structure. Any capabilities of python can be used in pure python sls modules.
+
+This example of a pure python sls module is the same as this example in yaml:
+
+.. code-block:: yaml
+    include:
+      - python
+
+    python-mako:
+      pkg:
+        - installed
+                      
+
+
+Module and State Additions
+--------------------------
+
+Cron Support
+````````````
+
+Support for managing the system crontab has been added, declaring a cron state
+can be done easily:
+
+.. code-block:: yaml
+    date > /tmp/datestamp:
+      cron:
+        - present
+        - user: fred
+        - minute: 5
+        - hour: 3
+
+Sysctl Module and State
+```````````````````````
+
+The sysctl module and state allows for sysctl components in the kernel to be
+managed easily. the sysctl module contains the following functions:
+
+sysctl.show
+Return a list of sysctl parameters for this minion
+
+sysctl.get
+Return a single sysctl parameter for this minion
+
+sysctl.assign
+Assign a single sysctl parameter for this minion
+
+sysctl.persist
+Assign and persist a simple sysctl paramater for this minion
+
+
+The sysctl state allows for sysctl paramaters to be assigned:
+
+.. code-block:: yaml
+    vm.swappiness:
+      sysctl:
+        - present
+        - value: 20
+
+Kernel Module Management
+````````````````````````
+
+A module for managing Linux kernel modules has been added. The new functions
+are as follows:
+
+kmod.available
+Return a list of all available kernel modules
+
+kmod.check_available
+Check to see if the speciified kernel module is available
+
+kmod.lsmod
+Return a dict containing information about currently loaded modules
+
+kmod.load
+Load the specified kernel module
+
+kmod.remove
+Unload the specified kernel module
+
+The kmod state can enforce systems fo be either present or absent:
+
+.. code-block:: yaml
+    kvm_intel:
+      kmod:
+        - present
+
+
