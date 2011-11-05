@@ -73,30 +73,7 @@ def mounted(
         opts = opts.split(',')
     # Get the active data
     active = __salt__['mount.active']()
-    if active.has_key(name):
-        # The mount point is mounted!
-        # Check to see if it is the right setup
-        remnt = False
-        if not active[name]['device'] == device\
-                or not active[name]['fstype'] == fstype:
-            remnt = True
-        # check the mount options, don't care if the desired behavior is
-        # defaults
-        if not opts == ['defaults']:
-            if not set(active[name]['opts']) == set(opts):
-                remnt = True
-        if remnt:
-            # The fstype has a remount opt, try it!
-            out = __salt__['mount.remount'](name, device, mkmnt, fstype, opts)
-            if type(out) == type(str()):
-                # Failed to remount, the state has failed!
-                ret['comment'] = out
-                ret['result'] = False
-                return ret
-            elif out == True:
-                # Remount worked!
-                ret['changes']['mount'] = True
-    else:
+    if not active.has_key(name):
         # The mount is not present! Mount it
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
             if type(out) == type(str()):
