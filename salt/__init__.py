@@ -1,7 +1,7 @@
 '''
 Make me some salt!
 '''
-__version_info__ = (0, 9, 3, 'pre')
+__version_info__ = (0, 9, 3)
 __version__ = '.'.join(map(str, __version_info__))
 
 # Import python libs
