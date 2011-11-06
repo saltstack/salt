@@ -1,5 +1,9 @@
 .. _contents:
 
+.. |vid| image:: /_static/film_link.png
+
+.. _docs-tutorials:
+
 Salt at a glance
 ================
 
@@ -11,12 +15,17 @@ Learn about the various parts of Salt in five minute increments (or less).
 * **The basics:**
   :doc:`Installation <topics/installation>`
   | :doc:`Configuration <topics/configuration>`
+  | |vid| `Watch the screencast <http://blip.tv/nathaniel-whiteinge/salt-installation-configuration-and-remote-execution-5702765>`_
 * **Remote execution:**
   :doc:`Modules <topics/tutorials/modules>`
 * **State management:**
   :doc:`Part 1 <topics/tutorials/states_pt1>`
   | :doc:`Part 2 <topics/tutorials/states_pt2>`
   | :doc:`Part 3 <topics/tutorials/states_pt3>`
+
+
+
+.. _docs-reference:
 
 Salt in depth
 =============

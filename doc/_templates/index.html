@@ -22,49 +22,62 @@
         addresses the backbone of cloud and data center management.</p>
 
         <h2>The Salt stack</h2>
-        <dl class="doc-link">
+        <dl class="feat-link">
             <dt>Remote execution</dt>
             <dd>Remote execution is the core of modern cloud and infrastructure
             solutions, and Salt offers the fastest and easiest remote execution
             system available today</dd>
         </dl>
 
-        <dl class="doc-link">
+        <dl class="feat-link">
             <dt>Configuration management</dt>
             <dd>Salt offers the world simplest, yet most powerful, flexible and
             scalable configuration management system</dd>
         </dl>
 
-        <dl class="doc-link">
+        <dl class="feat-link">
             <dt>Highly scalable</dt>
             <dd>Easily manage tens or hundreds or even tens of thousands of
             nodes with a multi-tiered management infrastructure.</dd>
         </dl>
 
-        <dl class="doc-link">
+        <dl class="feat-link">
             <dt>Highly configurable</dt>
             <dd>Receive responses where, how, and when you want.</dd>
         </dl>
-
     </div>
 
     <div class="documentation">
         <h2>Documentation</h2>
 
         <dl class="doc-link">
-            <dt>Tutorials</dt>
-            <dd>Get started with Salt in five minutes or less.</dd>
+            <dt class="doc-tutorials"><a href="{{ pathto("contents") }}#docs-tutorials">Tutorials</a></dt>
+            <dd>Get started with each Salt component in five minutes or less</dd>
         </dl>
 
         <dl class="doc-link">
-            <dt>Documentation</dt>
-            <dd>Comprehensive and in-depth documentation</dd>
+            <dt class="doc-fulldocs"><a href="{{ pathto("contents") }}#docs-reference">Documentation</a></dt>
+            <dd>Comprehensive and in-depth explanations and reference;
+                <br>Offline?
+                <a href="{{ github_downloads }}" class="doc-pdf">
+                    <img src="{{ pathto('_static/page_white_acrobat.png', 1) }}">
+                    PDF</a>
+                | <a href="{{ github_downloads }}" class="doc-epub">
+                    <img src="{{ pathto('_static/book_open.png', 1) }}">
+                    ePUB</a>
+            </dd>
         </dl>
 
         <dl class="doc-link">
-            <dt>Offline?</dt>
-            <dd>Download the documentation as a PDF or epub.</dd>
+            <dt class="doc-offline"><a href="{{ pathto("contents") }}">Contents</a></dt>
+            <dd>An exhaustive (and exhausting) overview of all the Salt documentation</dd>
         </dl>
+
+        <dl class="doc-link">
+            <dt class="doc-fulldocs"><a href="{{ pathto("py-modindex") }}">Module index</a></dt>
+            <dd>Quickly jump to the reference for individual modules, states, and more</dd>
+        </dl>
+
     </div>
 
 {% endblock %}
