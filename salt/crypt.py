@@ -273,8 +273,7 @@ class Crypticle(object):
         data = data[:-self.SIG_SIZE]
         if hmac.new(hmac_key, data, hashlib.sha256).digest() != sig:
             log.warning('Failed to authenticate message')
-            return ''
-            #raise AuthenticationError('message authentication failed')
+            raise AuthenticationError('message authentication failed')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
         cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
