@@ -59,6 +59,7 @@ if there is an apache.sls file that declares the apache service, then another
 sls can include apache and then extend it:
 
 .. code-block:: yaml
+
     include:
       - apache
 
@@ -108,6 +109,7 @@ mako. A new, very powerful, renderer has been added, making it possible to
 write Salt States in pure python:
 
 .. code-block:: python
+
     #!py
 
     def run():
@@ -123,6 +125,7 @@ structure. Any capabilities of python can be used in pure python sls modules.
 This example of a pure python sls module is the same as this example in yaml:
 
 .. code-block:: yaml
+
     include:
       - python
 
@@ -153,6 +156,7 @@ Support for managing the system crontab has been added, declaring a cron state
 can be done easily:
 
 .. code-block:: yaml
+
     date > /tmp/datestamp:
       cron:
         - present
@@ -167,46 +171,50 @@ The file state has been given a number of new features, primarily the
 directory, recurse, symlink and absent functions.
 
 file.directory
-Make sure that a directory exists and has the right permissions.
+    Make sure that a directory exists and has the right permissions.
 
-.. code-block:: yaml
-    /srv/foo:
-      file:
-        - directory
-        - user: root
-        - group: root
-        - mode: 1755
+    .. code-block:: yaml
+    
+        /srv/foo:
+          file:
+            - directory
+            - user: root
+            - group: root
+            - mode: 1755
 
 file.symlink
-Make a symlink.
+    Make a symlink.
 
-.. code-block:: yaml
-    /var/lib/www:
-      file:
-        - symlink
-        - target: /srv/www
-        - force: True
+    .. code-block:: yaml
+    
+        /var/lib/www:
+          file:
+            - symlink
+            - target: /srv/www
+            - force: True
 
 file.recurse
-The recurse state function will recursively download a directory on the master
-file server and place it on the minion. Any change in the files on the master
-will be pushed to the minion. The recuse function is very powerful and has been
-tested by pushing out the full Linux kernel source.
+    The recurse state function will recursively download a directory on the
+    master file server and place it on the minion. Any change in the files on
+    the master will be pushed to the minion. The recuse function is very
+    powerful and has been tested by pushing out the full Linux kernel source.
 
-.. code-block:: yaml
-    /opt/code:
-      file:
-        - recurse
-        - source: salt://linux
+    .. code-block:: yaml
+    
+        /opt/code:
+          file:
+            - recurse
+            - source: salt://linux
 
 file.absent
-Make sure that the file is not on the system, recursively delets directories,
-files and symlinks.
+    Make sure that the file is not on the system, recursively delets
+    directories, files and symlinks.
 
-.. code-block:: yaml
-    /etc/httpd/conf.d/somebogusfile.conf:
-      file:
-        - absent
+    .. code-block:: yaml
+    
+        /etc/httpd/conf.d/somebogusfile.conf:
+          file:
+            - absent
 
 Sysctl Module and State
 ```````````````````````
@@ -215,20 +223,21 @@ The sysctl module and state allows for sysctl components in the kernel to be
 managed easily. the sysctl module contains the following functions:
 
 sysctl.show
-Return a list of sysctl parameters for this minion
+    Return a list of sysctl parameters for this minion
 
 sysctl.get
-Return a single sysctl parameter for this minion
+    Return a single sysctl parameter for this minion
 
 sysctl.assign
-Assign a single sysctl parameter for this minion
+    Assign a single sysctl parameter for this minion
 
 sysctl.persist
-Assign and persist a simple sysctl parameter for this minion
+    Assign and persist a simple sysctl parameter for this minion
 
 The sysctl state allows for sysctl parameters to be assigned:
 
 .. code-block:: yaml
+
     vm.swappiness:
       sysctl:
         - present
@@ -241,23 +250,24 @@ A module for managing Linux kernel modules has been added. The new functions
 are as follows:
 
 kmod.available
-Return a list of all available kernel modules
+    Return a list of all available kernel modules
 
 kmod.check_available
-Check to see if the specified kernel module is available
+    Check to see if the specified kernel module is available
 
 kmod.lsmod
-Return a dict containing information about currently loaded modules
+    Return a dict containing information about currently loaded modules
 
 kmod.load
-Load the specified kernel module
+    Load the specified kernel module
 
 kmod.remove
-Unload the specified kernel module
+    Unload the specified kernel module
 
 The kmod state can enforce modules be either present or absent:
 
 .. code-block:: yaml
+
     kvm_intel:
       kmod:
         - present
@@ -268,6 +278,7 @@ The ssh_auth state can distribute ssh authorized keys out to minions. Ssh
 authorized keys can be present or absent.
 
 .. code-block:: yaml
+
     AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyYvlRBsJdDOo49CNfhlWHWXQRqul6rwL4KIuPrhY7hBw0tV7UNC7J9IZRNO4iGod9C+OYutuWGJ2x5YNf7P4uGhH9AhBQGQ4LKOLxhDyT1OrDKXVFw3wgY3rHiJYAbd1PXNuclJHOKL27QZCRFjWSEaSrUOoczvAAAAFQD9d4jp2dCJSIseSkk4Lez3LqFcqQAAAIAmovHIVSrbLbXAXQE8eyPoL9x5C+x2GRpEcA7AeMH6bGx/xw6NtnQZVMcmZIre5Elrw3OKgxcDNomjYFNHuOYaQLBBMosyO++tJe1KTAr3A2zGj2xbWO9JhEzu8xvSdF8jRu0N5SRXPpzSyU4o1WGIPLVZSeSq1VFTHRT4lXB7PQAAAIBXUz6ZO0bregF5xtJRuxUN583HlfQkXvxLqHAGY8WSEVlTnuG/x75wolBDbVzeTlxWxgxhafj7P6Ncdv25Wz9wvc6ko/puww0b3rcLNqK+XCNJlsM/7lB8Q26iK5mRZzNsGeGwGTyzNIMBekGYQ5MRdIcPv5dBIP/1M6fQDEsAXQ==:
       ssh_auth:
         - present

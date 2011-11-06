@@ -48,11 +48,12 @@ Full list of builtin modules
 .. automodule:: salt.modules.cron
     :members:
 
-:mod:`salt.modules.cytest`
-==========================
-
-.. automodule:: salt.modules.cytest
-    :members:
+..
+    :mod:`salt.modules.cytest`
+    ==========================
+..
+    .. automodule:: salt.modules.cytest
+        :members:
 
 :mod:`salt.modules.disk`
 ========================
@@ -202,12 +203,6 @@ Full list of builtin modules
 ==========================
 
 .. automodule:: salt.modules.status
-    :members:
-
-:mod:`salt.modules.sysctl`
-==========================
-
-.. automodule:: salt.modules.sysctl
     :members:
 
 :mod:`salt.modules.test`

@@ -37,7 +37,7 @@ get much more out of Salt.
   :doc:`States <ref/states/index>`
   | :doc:`Renderers <ref/renderers/index>`
   | :doc:`Highstate data structure <ref/states/highstate>`
-* **Transfering & syncing files:**
+* **Transferring & syncing files:**
   :doc:`File Server <ref/file_server/index>`
 * **Network topology:**
   :doc:`ref/syndic`
