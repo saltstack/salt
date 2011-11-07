@@ -15,7 +15,7 @@ Learn about the various parts of Salt in five minute increments (or less).
 * **The basics:**
   :doc:`Installation <topics/installation>`
   | :doc:`Configuration <topics/configuration>`
-  | |vid| `Watch the screencast <http://blip.tv/nathaniel-whiteinge/salt-installation-configuration-and-remote-execution-5702765>`_
+  | |vid| `Watch the screencast <http://blip.tv/saltstack/salt-installation-configuration-and-remote-execution-5713423>`_
 * **Remote execution:**
   :doc:`Modules <topics/tutorials/modules>`
 * **State management:**
