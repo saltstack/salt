@@ -101,3 +101,15 @@ man_pages = [
     ('ref/cli/salt-syndic', 'salt-syndic', u'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', u'salt-run Documentation', authors, 1),
 ]
+
+
+### epub options
+epub_title = u'Salt Documentation'
+epub_author = u'Thomas S. Hatch'
+epub_publisher = epub_author
+epub_copyright = u'2011, Thomas S. Hatch'
+
+epub_scheme = 'URL'
+epub_identifier = 'http://saltstack.org/'
+
+#epub_tocdepth = 3
