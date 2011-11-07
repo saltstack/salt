@@ -107,6 +107,20 @@ dt:target, .highlighted {
  *
  */
 
+.doc-link,
+.feat-link {
+    margin-left: 0; text-align: left; }
+
+.doc-link dd,
+.feat-link dd {
+    margin-left: 0; font-style: italic; }
+
+.feat-link dt {
+    color: #3465a4; font-weight: bold; }
+
+.doc-link {
+    width: 44%; height: 6em; float: left;
+    margin-right: 2em; }
 
 /*
  *

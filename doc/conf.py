@@ -76,7 +76,7 @@ html_show_copyright = True
 
 ### Latex options
 latex_documents = [
-  ('index', 'Salt.tex', u'Salt Documentation',
+  ('contents', 'Salt.tex', u'Salt Documentation',
    u'Thomas Hatch', 'manual'),
 ]
 
@@ -92,7 +92,7 @@ authors = [
 
 man_pages = [
     ('ref/cli/salt', 'salt', u'salt', authors, 1),
-    ('index', 'salt', u'Salt Documentation', authors, 7),
+    ('contents', 'salt', u'Salt Documentation', authors, 7),
     ('ref/cli/salt-master', 'salt-master', u'salt-master Documentation', authors, 1),
     ('ref/cli/salt-minion', 'salt-minion', u'salt-minion Documentation', authors, 1),
     ('ref/cli/salt-key', 'salt-key', u'salt-key Documentation', authors, 1),
@@ -101,3 +101,15 @@ man_pages = [
     ('ref/cli/salt-syndic', 'salt-syndic', u'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', u'salt-run Documentation', authors, 1),
 ]
+
+
+### epub options
+epub_title = u'Salt Documentation'
+epub_author = u'Thomas S. Hatch'
+epub_publisher = epub_author
+epub_copyright = u'2011, Thomas S. Hatch'
+
+epub_scheme = 'URL'
+epub_identifier = 'http://saltstack.org/'
+
+#epub_tocdepth = 3
