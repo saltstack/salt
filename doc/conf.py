@@ -29,9 +29,11 @@ master_doc = 'contents'
 templates_path = ['_templates']
 exclude_patterns = ['_build']
 
-extensions = ['saltdocs', 'sphinx.ext.autodoc', 'sphinx.ext.extlinks']
+extensions = ['saltdocs', 'sphinx.ext.autodoc', 'sphinx.ext.extlinks', 'sphinx.ext.autosummary']
 
 modindex_common_prefix = ['salt.']
+
+autosummary_generate = True
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\

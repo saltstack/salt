@@ -17,10 +17,14 @@ Full Table of Contents
 
     ref/index
     ref/modules/*
+    ref/modules/all/*
     ref/grains
     ref/returners/*
+    ref/returners/all/*
     ref/states/*
+    ref/states/all/*
     ref/renderers/*
+    ref/renderers/all/*
     ref/runners
     ref/peer
     ref/syndic
