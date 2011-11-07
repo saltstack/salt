@@ -76,7 +76,7 @@ html_show_copyright = True
 
 ### Latex options
 latex_documents = [
-  ('index', 'Salt.tex', u'Salt Documentation',
+  ('contents', 'Salt.tex', u'Salt Documentation',
    u'Thomas Hatch', 'manual'),
 ]
 
@@ -92,7 +92,7 @@ authors = [
 
 man_pages = [
     ('ref/cli/salt', 'salt', u'salt', authors, 1),
-    ('index', 'salt', u'Salt Documentation', authors, 7),
+    ('contents', 'salt', u'Salt Documentation', authors, 7),
     ('ref/cli/salt-master', 'salt-master', u'salt-master Documentation', authors, 1),
     ('ref/cli/salt-minion', 'salt-minion', u'salt-minion Documentation', authors, 1),
     ('ref/cli/salt-key', 'salt-key', u'salt-key Documentation', authors, 1),
