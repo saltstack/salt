@@ -387,6 +387,12 @@ def managed(name,
         # It is a new file, set the diff accordingly
         ret['changes']['diff'] = 'New file'
         # Apply the new file
+        if not sfn:
+            sfn = __salt__['cp.cache_file'](source, __env__)
+        if not sfn:
+            ret['result'] = False
+            ret['comment'] = 'Source file {0} not found'.format(source)
+            return ret
         if not __opts__['test']:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
