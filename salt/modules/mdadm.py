@@ -19,7 +19,7 @@ def list():
     List the RAID devices.
 
     CLI Example:
-    salt '*' mdadm.list
+    salt '*' raid.list
     '''
     ret = {}
     for line in __salt__['cmd.run_stdout']('mdadm --detail --scan').split('\n'):
@@ -42,7 +42,7 @@ def detail(device='/dev/md0'):
     Show detail for a specified RAID device
 
     CLI Example:
-    salt '*' mdadm.detail '/dev/md0'
+    salt '*' raid.detail '/dev/md0'
     '''
     ret = {}
     ret['members'] = {}
