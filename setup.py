@@ -15,8 +15,8 @@ from salt import __version__
 
 NAME = 'salt'
 VER = __version__
-DESC = 'Portable, distributed, remote execution and configuration management system'
-
+DESC = ('Portable, distributed, remote execution and '
+        'configuration management system')
 mod_path = os.path.join(get_python_lib(), 'salt/modules')
 doc_path = os.path.join(PREFIX, 'share/doc', NAME + '-' + VER)
 example_path = os.path.join(doc_path, 'examples')
@@ -45,6 +45,7 @@ setup(
           'Programming Language :: Python',
           'Programming Language :: Cython',
           'Programming Language :: Python :: 2.6',
+          'Programming Language :: Python :: 2.7',
           'Development Status :: 5 - Production/Stable',
           'Environment :: Console',
           'Intended Audience :: Developers',
