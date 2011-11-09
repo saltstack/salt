@@ -2,8 +2,6 @@
 Support for Apache
 '''
 
-import subprocess
-
 def __detect_os():
     '''
     Apache commands and paths differ depending on packaging
@@ -25,9 +23,7 @@ def version():
     salt '*' apache.version
     '''
     cmd = __detect_os() + ' -v'
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
     return ret[1]
 
@@ -41,9 +37,7 @@ def fullversion():
     cmd = __detect_os() + ' -V'
     ret = {}
     ret['compiled_with'] = []
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         if not line.count(' '):
             continue
@@ -66,9 +60,7 @@ def modules():
     ret = {}
     ret['static'] = []
     ret['shared'] = []
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         if not line.count(' '):
             continue
@@ -88,9 +80,7 @@ def servermods():
     '''
     cmd = __detect_os() + ' -l'
     ret = []
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         if not line.count(' '):
             continue
@@ -108,9 +98,7 @@ def directives():
     '''
     cmd = __detect_os() + ' -L'
     ret = {}
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
+    out = __salt__['cmd.run'](cmd)
     out = out.replace('\n\t', '\t')
     for line in out.split('\n'):
         if not line.count(' '):
