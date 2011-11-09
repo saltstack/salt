@@ -579,15 +579,16 @@ class SaltRun(object):
                 default='/etc/salt/master',
                 help='Change the location of the master configuration;'\
                     + ' default=/etc/salt/master')
-        
+
         parser.add_option('-d',
                 '--doc',
                 '--documentation',
                 dest='doc',
                 default=False,
                 action='store_true',
-                help='Display documentation for runners, pass a module or a '\
-                    + ' runner to see documentation on only that module/runner')
+                help='Display documentation for runners, pass a module or ' +\
+                     'a runner to see documentation on only that ' +\
+                     'module/runner')
 
         options, args = parser.parse_args()
 
