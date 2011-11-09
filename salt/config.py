@@ -23,7 +23,7 @@ def load_config(opts, path, env_var):
 
     if os.path.isfile(path):
         try:
-            conf_opts = yaml.load(open(path, 'r'))
+            conf_opts = yaml.safe_load(open(path, 'r'))
             if conf_opts == None:
                 # The config file is empty and the yaml.load returned None
                 conf_opts = {}
