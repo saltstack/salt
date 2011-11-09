@@ -112,3 +112,4 @@ def run(name,
     os.setegid(pgid)
     return ret
 
+watcher = run
