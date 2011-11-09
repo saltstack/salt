@@ -169,7 +169,7 @@ def get_disks(vm_):
             disks[target.getAttribute('dev')] =\
                     {'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.load(subprocess.Popen('qemu-img info '\
+        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '\
             + disks[dev]['file'],
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]))
@@ -355,7 +355,7 @@ def seed_non_shared_migrate(disks, force=False):
         size = data['virtual size'].split()[1][1:]
         if os.path.isfile(fn_) and not force:
             # the target exists, check to see if is is compatible
-            pre = yaml.load(subprocess.Popen('qemu-img info arch',
+            pre = yaml.safe_load(subprocess.Popen('qemu-img info arch',
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0])
             if not pre['file format'] == data['file format']\

@@ -23,5 +23,4 @@ def render(template, env='', sls=''):
     passthrough['sls'] = sls
     template = Template(open(template, 'r').read())
     yaml_data = template.render(**passthrough)
-    return yaml.load(yaml_data)
-
+    return yaml.safe_load(yaml_data)
