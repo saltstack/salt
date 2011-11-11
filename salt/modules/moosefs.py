@@ -6,8 +6,9 @@ def dirinfo(path, opts=None):
     '''
     Return information on a directory located on the Moose
 
-    CLI Example:
-    salt '*' moosefs.dirinfo /path/to/dir/ [-[n][h|H]]
+    CLI Example::
+
+        salt '*' moosefs.dirinfo /path/to/dir/ [-[n][h|H]]
     '''
     cmd = 'mfsdirinfo'
     ret = {}
@@ -28,8 +29,9 @@ def fileinfo(path):
     '''
     Return information on a file located on the Moose
 
-    CLI Example:
-    salt '*' moosefs.fileinfo /path/to/dir/
+    CLI Example::
+
+        salt '*' moosefs.fileinfo /path/to/dir/
     '''
     cmd = 'mfsfileinfo ' + path
     ret = {}
@@ -70,8 +72,9 @@ def mounts():
     '''
     Return a list of current MooseFS mounts
 
-    CLI Example:
-    salt '*' moosefs.mounts
+    CLI Example::
+
+        salt '*' moosefs.mounts
     '''
     cmd = 'mount'
     ret = {}
@@ -100,9 +103,10 @@ def getgoal(path, opts=None):
     '''
     Return goal(s) for a file or directory
 
-    CLI Example:
-    salt '*' moosefs.getgoal /path/to/file [-[n][h|H]]
-    salt '*' moosefs.getgoal /path/to/dir/ [-[n][h|H][r]]
+    CLI Example::
+
+        salt '*' moosefs.getgoal /path/to/file [-[n][h|H]]
+        salt '*' moosefs.getgoal /path/to/dir/ [-[n][h|H][r]]
     '''
     cmd = 'mfsgetgoal'
     ret = {}

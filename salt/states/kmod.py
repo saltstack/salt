@@ -5,9 +5,13 @@ The Kernel modules on a system can be managed cleanly with the kmod state
 module:
 
 .. code-block:: yaml
+
   kvm_amd:
     kmod:
       - present
+  pcspkr:
+    kmod:
+      - absent
 '''
 
 def present(name):
@@ -15,8 +19,7 @@ def present(name):
     Ensure that the specified kernel module is loaded
 
     name
-    ~~~~
-    The name of the kernel module to verify is loaded
+        The name of the kernel module to verify is loaded
     '''
     ret = {'name': name,
            'result': True,
@@ -46,8 +49,7 @@ def absent(name):
     Verify that the named kernel module is not loaded
 
     name
-    ~~~~
-    The name of the kernel module to verify is not loaded
+        The name of the kernel module to verify is not loaded
     '''
     ret = {'name': name,
            'result': True,
