@@ -87,7 +87,8 @@ def _mako(sfn):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
-    Returns:
+    Returns::
+
         {'result': bool,
          'data': <Error data or rendered file path>}
     '''
@@ -114,7 +115,8 @@ def _jinja(sfn):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
-    Returns:
+    Returns::
+
         {'result': bool,
          'data': <Error data or rendered file path>}
     '''

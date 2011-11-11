@@ -70,8 +70,9 @@ def host_keys(keydir=None):
     '''
     Return the minion's host keys
 
-    CLI Example:
-    salt '*' ssh.host_keys
+    CLI Example::
+
+        salt '*' ssh.host_keys
     '''
     # Set up the default keydir - needs to support sshd_config parsing in the
     # future
@@ -96,8 +97,9 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     '''
     Return the authorized keys for the specified user
 
-    CLI Example:
-    salt '*' ssh.auth_keys root
+    CLI Example::
+
+        salt '*' ssh.auth_keys root
     '''
     ret = {}
     uinfo = __salt__['user.info'](user)
@@ -135,8 +137,9 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     '''
     Remove an authorized key from the specified user's authorized key file
 
-    CLI Example:
-    salt '*' ssh.rm_auth_key <user> <key>
+    CLI Example::
+
+        salt '*' ssh.rm_auth_key <user> <key>
     '''
     current = auth_keys(user, config)
     if key in current:
@@ -183,8 +186,9 @@ def set_auth_key(
     '''
     Add a key to the authorized_keys file
 
-    CLI Example:
-    salt '*' ssh.set_auth_key <user> <key> dsa '[]' .ssh/authorized_keys
+    CLI Example::
+
+        salt '*' ssh.set_auth_key <user> <key> dsa '[]' .ssh/authorized_keys
     '''
     enc = _refine_enc(enc)
     ret = ''

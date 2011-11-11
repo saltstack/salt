@@ -1,9 +1,11 @@
 '''
 Kernel Sysctl Management
 ========================
+
 Control the kernel sysctl system
 
 .. code-block:: yaml
+
   vm.swappines:
     sysctl:
       - present
@@ -15,16 +17,13 @@ def present(name, value, config='/etc/sysctl.conf'):
     Ensure that the named sysctl value is set
 
     name
-    ~~~~
-    The name of the sysctl value to edit
+        The name of the sysctl value to edit
 
     value
-    ~~~~~
-    The sysctl value to apply
+        The sysctl value to apply
 
     config
-    ~~~~~~
-    The location of the sysctl configuration file
+        The location of the sysctl configuration file
     '''
     ret = {'name': name,
            'result': True,

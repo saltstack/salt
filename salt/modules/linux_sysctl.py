@@ -13,8 +13,9 @@ def show():
     '''
     Return a list of sysctl parameters for this minion
 
-    CLI Example:
-    salt '*' sysctl.show
+    CLI Example::
+
+        salt '*' sysctl.show
     '''
     cmd = 'sysctl -a'
     ret = {}
@@ -32,8 +33,9 @@ def get(name):
     '''
     Return a single sysctl parameter for this minion
 
-    CLI Example:
-    salt '*' sysctl.get net.ipv4.ip_forward
+    CLI Example::
+
+        salt '*' sysctl.get net.ipv4.ip_forward
     '''
     cmd = 'sysctl -n {0}'.format(name)
     out = __salt__['cmd.run'](cmd).strip()
@@ -57,8 +59,9 @@ def persist(name, value, config='/etc/sysctl.conf'):
     '''
     Assign and persist a simple sysctl paramater for this minion
 
-    CLI Example:
-    salt '*' sysctl.persist net.ipv4.ip_forward 1
+    CLI Example::
+
+        salt '*' sysctl.persist net.ipv4.ip_forward 1
     '''
     running = show()
     edited = False

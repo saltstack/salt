@@ -19,8 +19,9 @@ def getenforce():
     '''
     Return the mode selinux is running in
 
-    CLE Example:
-    salt '*' selinux.getenforce
+    CLE Example::
+
+        salt '*' selinux.getenforce
     '''
     if open('/selinux/enforce', 'r').read() == '0':
         return 'Permissive'

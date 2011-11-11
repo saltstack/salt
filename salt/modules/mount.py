@@ -13,8 +13,9 @@ def active():
     '''
     List the active mounts.
 
-    CLI Example:
-    salt '*' mount.active
+    CLI Example::
+
+        salt '*' mount.active
     '''
     ret = {}
     for line in __salt__['cmd.run_stdout']('mount').split('\n'):
@@ -31,8 +32,9 @@ def fstab(config='/etc/fstab'):
     '''
     List the contents of the fstab
 
-    CLI Example:
-    salt '*' mount.fstab
+    CLI Example::
+
+        salt '*' mount.fstab
     '''
     ret = {}
     if not os.path.isfile(config):
@@ -59,8 +61,9 @@ def rm_fstab(name, config='/etc/fstab'):
     '''
     Remove the mount point from the fstab
 
-    CLI Example:
-    salt '*' /mnt/foo
+    CLI Example::
+
+        salt '*' /mnt/foo
     '''
     contents = fstab(config)
     if name not in contents:
@@ -101,8 +104,9 @@ def set_fstab(
     Verify that this mount is represented in the fstab, chage the mount point
     to match the data passed, or add the mount if it is not present.
 
-    CLI Example:
-    salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
+    CLI Example::
+
+        salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
     # Fix the opts type if it is a list
     if type(opts) == type(list()):
@@ -180,8 +184,9 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     Mount a device
 
-    CLI Example:
-    salt '*' mount.mount /mnt/foo /dev/sdz1 True
+    CLI Example::
+
+        salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
@@ -201,8 +206,9 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     Attempt to remount a device, if the device is not already mounted, mount
     is called
 
-    CLI Example:
-    salt '*' mount.remount /mnt/foo /dev/sdz1 True
+    CLI Example::
+
+        salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
@@ -226,8 +232,9 @@ def is_fuse_exec(cmd):
     '''
     Returns true if the command passed is a fuse mountable application.
 
-    CLI Example:
-    salt '*' mount.is_fuse_exec sshfs
+    CLI Example::
+
+        salt '*' mount.is_fuse_exec sshfs
     '''
     if not __salt__['cmd.has_exec'](cmd):
         return False
