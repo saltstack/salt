@@ -2,28 +2,32 @@
 This module contains all fo the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
+
 # Import python modules
+import cPickle as pickle
+import datetime
+import hashlib
+import logging
+import multiprocessing
 import os
 import re
 import shutil
-import hashlib
-import logging
 import tempfile
-import multiprocessing
 import time
-import datetime
-import cPickle as pickle
+
 # Import zeromq
+from M2Crypto import RSA
 import zmq
+
 # Import salt modules
-import salt.utils
+import salt.client
 import salt.crypt
 import salt.payload
-import salt.client
-# Import cryptography modules
-from M2Crypto import RSA
+import salt.utils
+
 
 log = logging.getLogger(__name__)
+
 
 def prep_jid(cachedir, load):
     '''
@@ -31,9 +35,8 @@ def prep_jid(cachedir, load):
     job id directory.
     '''
     jid_root = os.path.join(cachedir, 'jobs')
-    jid = datetime.datetime.strftime(
-        datetime.datetime.now(), '%Y%m%d%H%M%S%f'
-    )
+    jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+
     jid_dir = os.path.join(jid_root, jid)
     if not os.path.isdir(jid_dir):
         os.makedirs(jid_dir)
@@ -92,9 +95,8 @@ class Master(SMaster):
         Clean out the old jobs
         '''
         while True:
-            cur = datetime.datetime.strftime(
-                datetime.datetime.now(), '%Y%m%d%H'
-            )
+            cur = "{:%Y%m%d%H}".format(datetime.datetime.now())
+
             if self.opts['keep_jobs'] == 0:
                 return
             jid_root = os.path.join(self.opts['cachedir'], 'jobs')
@@ -551,6 +553,7 @@ class AESFuncs(object):
         # AES Encrypt the return
         return self.crypticle.dumps(ret)
 
+
 class ClearFuncs(object):
     '''
     Set up functions that are safe to execute when commands sent to the master
@@ -690,7 +693,8 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         if not clear_load.pop('key') == self.key:
             return ''
-        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', clear_load['jid'])
+        jid_dir = (os.path.join(self.opts['cachedir'],
+                   'jobs', clear_load['jid']))
         # Verify the jid dir
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
