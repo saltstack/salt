@@ -8,12 +8,15 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
+
 # This needs some refactoring, I made it "as fast as I could" and could be a
 # lot clearer, so far it is spaghetti code
 # Import python modules
+
 import os
 import socket
 import subprocess
+
 
 def _kernel():
     '''
@@ -35,6 +38,7 @@ def _kernel():
     if not grains['kernel']:
         grains['kernel'] = 'Unknown'
     return grains
+
 
 def _linux_cpudata():
     '''
@@ -73,6 +77,7 @@ def _linux_cpudata():
         grains['cpu_flags'] = []
     return grains
 
+
 def _freebsd_cpudata():
     '''
     Return cpu information for FreeBSD systems
@@ -96,6 +101,7 @@ def _freebsd_cpudata():
     grains['cpu_flags'] = []
     return grains
 
+
 def _memdata(osdata):
     '''
     Gather information about the system memory
@@ -111,15 +117,16 @@ def _memdata(osdata):
                 if not len(comps) > 1:
                     continue
                 if comps[0].strip() == 'MemTotal':
-                    grains['mem_total'] = int(comps[1].split()[0])/1024
+                    grains['mem_total'] = int(comps[1].split()[0]) / 1024
     elif osdata['kernel'] == 'FreeBSD':
         mem = subprocess.Popen(
                 '/sbin/sysctl hw.physmem',
                 shell=True,
                 stdout=subprocess.PIPE
                 ).communicate()[0].split(':')[1].strip()
-        grains['mem_total'] = str(int(mem)/1024/1024)
+        grains['mem_total'] = str(int(mem) / 1024 / 1024)
     return grains
+
 
 def _virtual(osdata):
     '''
@@ -151,6 +158,7 @@ def _virtual(osdata):
             grains['virtual'] = 'kvm'
     return grains
 
+
 def _ps(osdata):
     '''
     Return the ps grain
@@ -159,6 +167,7 @@ def _ps(osdata):
     grains['ps'] = 'ps auxwww' if\
             'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -ef'
     return grains
+
 
 def os_data():
     '''
@@ -176,7 +185,7 @@ def os_data():
         elif os.path.isfile('/etc/fedora-version'):
             grains['os'] = 'Fedora'
         elif os.path.isfile('/etc/mandriva-version'):
-            grains['os'] =  'Mandriva'
+            grains['os'] = 'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
             grains['os'] = 'Mandrake'
         elif os.path.isfile('/etc/meego-version'):
@@ -234,6 +243,7 @@ def os_data():
     grains.update(_ps(grains))
     return grains
 
+
 def hostname():
     '''
     Return fqdn, hostname, domainname
@@ -253,6 +263,7 @@ def hostname():
         grains['domain'] = ''
     return grains
 
+
 def path():
     '''
     Return the path
@@ -260,5 +271,3 @@ def path():
     # Provides:
     #   path
     return {'path': os.environ['PATH'].strip()}
-
-
