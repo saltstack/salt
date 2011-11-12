@@ -1,21 +1,28 @@
 '''
 Routines to set up a minion
 '''
-# This module still needs package support, so that the functions dict returned
-# can send back functions like: foo.bar.baz
+
+# This module still needs package support, so that the functions dict
+# returned can send back functions like: foo.bar.baz
+
 
 # Import python libs
-import os
-import sys
 import imp
 import logging
+import os
 import salt
 
 log = logging.getLogger(__name__)
-
 salt_base_path = os.path.dirname(salt.__file__)
 
-class LoaderError(Exception): pass
+
+class LoaderError(Exception):
+    '''
+    Custom exception class.
+    '''
+
+    pass
+
 
 def minion_mods(opts):
     '''
@@ -30,6 +37,7 @@ def minion_mods(opts):
     load = Loader(module_dirs, opts)
     return load.apply_introspection(load.gen_functions())
 
+
 def returners(opts):
     '''
     Returns the returner modules
@@ -42,6 +50,7 @@ def returners(opts):
         ] + extra_dirs
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
+
 
 def states(opts, functions):
     '''
@@ -58,6 +67,7 @@ def states(opts, functions):
             'value': functions}
     return load.gen_functions(pack)
 
+
 def render(opts, functions):
     '''
     Returns the render modules
@@ -73,10 +83,12 @@ def render(opts, functions):
             'value': functions}
     rend = load.filter_func('render', pack)
     if opts['renderer'] not in rend:
-        err = 'The renderer {0} is unavailable, this error is often because the needed software is unavailabe'.format(opts['renderer'])
+        err = ('The renderer {0} is unavailable, this error is often because '
+               'the needed software is unavailabe'.format(opts['renderer']))
         log.critical(err)
         raise LoaderError(err)
     return rend
+
 
 def grains(opts):
     '''
@@ -92,6 +104,9 @@ def grains(opts):
         grains.update(opts['grains'])
     return grains
 
+
+# FIXME: mutable types as default parameter values, NO!
+# http://goo.gl/ToU2z
 def call(fun, args=[], dirs=[]):
     '''
     Directly call a function inside a loader directory
@@ -101,6 +116,7 @@ def call(fun, args=[], dirs=[]):
         ] + dirs
     load = Loader(module_dirs)
     return load.call(fun, args)
+
 
 def runner(opts):
     '''
@@ -193,8 +209,8 @@ class Loader(object):
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
-                log.info("Cython is enabled in options though it's not present "
-                         "in the system path. Skipping Cython modules.")
+                log.info('Cython is enabled in options put not present '
+                         'on the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not mod_dir.startswith('/'):
                 continue
@@ -342,4 +358,3 @@ class Loader(object):
                 continue
             grains.update(ret)
         return grains
-
