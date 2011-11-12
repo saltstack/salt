@@ -1,6 +1,7 @@
 '''
 The management of salt command line utilities are stored in here
 '''
+
 # Import python libs
 import optparse
 import os
@@ -22,6 +23,7 @@ import salt.cli.caller
 import salt.output
 
 from salt import __version__ as VERSION
+
 
 class SaltCMD(object):
     '''
@@ -107,8 +109,8 @@ class SaltCMD(object):
                 default=False,
                 action='store_true',
                 dest='txt_out',
-                help='Print the output from the salt command in the same form '\
-                   + 'the shell would.')
+                help=('Print the output from the salt command in the same '
+                      ' form the shell would.'))
         parser.add_option('--yaml-out',
                 default=False,
                 action='store_true',
@@ -278,7 +280,8 @@ class SaltCP(object):
                 default=5,
                 type=int,
                 dest='timeout',
-                help='Set the return timeout for batch jobs; default=5 seconds')
+                help=('Set the return timeout for batch jobs; '
+                      'default=5 seconds'))
         parser.add_option('-E',
                 '--pcre',
                 default=False,
@@ -446,6 +449,7 @@ class SaltKey(object):
         key = salt.cli.key.Key(self.opts)
         key.run()
 
+
 class SaltCall(object):
     '''
     Used to locally execute a salt command
@@ -499,8 +503,8 @@ class SaltCall(object):
                 default=False,
                 action='store_true',
                 dest='txt_out',
-                help='Print the output from the salt command in the same form '\
-                   + 'the shell would.')
+                help=('Print the output from the salt command in the same '
+                      'form the shell would.'))
         parser.add_option('--yaml-out',
                 default=False,
                 action='store_true',
@@ -560,6 +564,7 @@ class SaltCall(object):
         caller = salt.cli.caller.Caller(self.opts)
         caller.run()
 
+
 class SaltRun(object):
     '''
     Used to execute salt convenience functions
@@ -577,8 +582,8 @@ class SaltRun(object):
                 '--config',
                 dest='config',
                 default='/etc/salt/master',
-                help='Change the location of the master configuration;'\
-                    + ' default=/etc/salt/master')
+                help=('Change the location of the master configuration; '
+                      'default=/etc/salt/master'))
 
         parser.add_option('-d',
                 '--doc',
