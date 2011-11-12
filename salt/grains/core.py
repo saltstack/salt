@@ -30,7 +30,7 @@ def _kernel():
     else:
         grains['kernelrelease'] = subprocess.Popen(['uname', '-r'],
             stdout=subprocess.PIPE).communicate()[0].strip()
-    if not grains.has_key('kernel'):
+    if 'kernel' not in grains:
         grains['kernel'] = 'Unknown'
     if not grains['kernel']:
         grains['kernel'] = 'Unknown'
@@ -65,11 +65,11 @@ def _linux_cpudata():
                 grains['cpu_model'] = comps[1].strip()
             elif comps[0].strip() == 'flags':
                 grains['cpu_flags'] = comps[1].split()
-    if not grains.has_key('num_cpus'):
+    if 'num_cpus' not in grains:
         grains['num_cpus'] = 0
-    if not grains.has_key('cpu_model'):
+    if 'cpu_model' not in grains:
         grains['cpu_model'] = 'Unknown'
-    if not grains.has_key('cpu_flags'):
+    if 'cpu_flags' not in grains:
         grains['cpu_flags'] = []
     return grains
 

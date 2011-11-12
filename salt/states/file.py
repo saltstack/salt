@@ -131,7 +131,7 @@ def _jinja(sfn):
         template = Template(open(sfn, 'r').read())
         open(tgt, 'w+').write(template.render(**passthrough))
         return {'result': True,
-        	    'data': tgt}
+                    'data': tgt}
     except:
         trb = traceback.format_exc()
         return {'result': False,
@@ -265,7 +265,7 @@ def managed(name,
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664
-    
+
     template
         If this setting is applied then the named templating engine will be
         used to render the downloaded file, currently jinja and mako are
@@ -289,7 +289,7 @@ def managed(name,
     if template:
         sfn = __salt__['cp.cache_file'](source, __env__)
         t_key = '_{0}'.format(template)
-        if globals().has_key(t_key):
+        if t_key in globals():
             data = globals()[t_key](sfn)
         else:
             ret['result'] = False
@@ -346,7 +346,7 @@ def managed(name,
         if group:
             if group != perms['lgroup']:
                 perms['cgroup'] = group
-        if perms.has_key('cuser') or perms.has_key('cgroup'):
+        if 'cuser' in perms or 'cgroup' in perms:
             if not __opts__['test']:
                 __salt__['file.chown'](
                         name,
@@ -366,13 +366,13 @@ def managed(name,
             if user != __salt__['file.get_user'](name):
                 ret['result'] = False
                 ret['comment'] = 'Failed to change user to {0} '.format(user)
-            elif perms.has_key('cuser'):
+            elif 'cuser' in perms:
                 ret['changes']['user'] = user
         if group:
             if group != __salt__['file.get_group'](name):
                 ret['result'] = False
                 ret['comment'] += 'Failed to change group to {0} '.format(group)
-            elif perms.has_key('cgroup'):
+            elif 'cgroup' in perms:
                 ret['changes']['group'] = group
 
         if not ret['comment']:
@@ -415,7 +415,7 @@ def managed(name,
         if group:
             if group != perms['lgroup']:
                 perms['cgroup'] = group
-        if perms.has_key('cuser') or perms.has_key('cgroup'):
+        if 'cuser' in perms or 'cgroup' in perms:
             if not __opts__['test']:
                 __salt__['file.chown'](
                         name,
@@ -435,13 +435,13 @@ def managed(name,
             if user != __salt__['file.get_user'](name):
                 ret['result'] = False
                 ret['comment'] += 'User not changed '
-            elif perms.has_key('cuser'):
+            elif 'cuser' in perms:
                 ret['changes']['user'] = user
         if group:
             if group != __salt__['file.get_group'](name):
                 ret['result'] = False
                 ret['comment'] += 'Group not changed '
-            elif perms.has_key('cgroup'):
+            elif 'cgroup' in perms:
                 ret['changes']['group'] = group
 
         if not ret['comment']:
@@ -474,7 +474,7 @@ def directory(name,
 
     mode
         The permissions to set on this directory, aka 755
-    
+
     makedirs
         If the directory is located in a path without a parent directory, then
         the the state will fail. If makedirs is set to True, then the parent
@@ -520,7 +520,7 @@ def directory(name,
     if group:
         if group != perms['lgroup']:
             perms['cgroup'] = group
-    if perms.has_key('cuser') or perms.has_key('cgroup'):
+    if 'cuser' in perms or 'cgroup' in perms:
         if not __opts__['test']:
             __salt__['file.chown'](
                     name,
@@ -540,13 +540,13 @@ def directory(name,
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
             ret['comment'] = 'Failed to change user to {0} '.format(user)
-        elif perms.has_key('cuser'):
+        elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
         if group != __salt__['file.get_group'](name):
             ret['result'] = False
             ret['comment'] += 'Failed to change group to {0} '.format(group)
-        elif perms.has_key('cgroup'):
+        elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
     if not ret['comment']:

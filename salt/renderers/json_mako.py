@@ -24,4 +24,3 @@ def render(template):
     template = Template(open(template, 'r').read())
     json_data = template.render(**passthrough)
     return json.loads(json_data)
-

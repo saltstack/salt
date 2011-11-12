@@ -60,7 +60,7 @@ def absent(name):
             for mod in __salt__['kmod.load'](name):
                 ret['changes'][mod] = 'removed'
             for change in ret['changes']:
-                if change.has_key(name):
+                if name in change:
                     ret['comment'] = 'Removed kernel module {0}'.format(name)
                     return ret
             ret['result'] = False

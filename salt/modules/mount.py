@@ -63,7 +63,7 @@ def rm_fstab(name, config='/etc/fstab'):
     salt '*' /mnt/foo
     '''
     contents = fstab(config)
-    if not contents.has_key(name):
+    if name not in contents:
         return True
     # The entry is present, get rid of it
     lines = []
@@ -207,7 +207,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     if type(opts) == type(str()):
         opts = opts.split(',')
     mnts = active()
-    if mnts.has_key(name):
+    if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
         if not opts.count('remount'):
             opts.append('remount')
