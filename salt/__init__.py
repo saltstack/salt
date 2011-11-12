@@ -1,6 +1,7 @@
 '''
 Make me some salt!
 '''
+
 __version_info__ = (0, 9, 4, 'pre')
 __version__ = '.'.join(map(str, __version_info__))
 
@@ -8,6 +9,7 @@ __version__ = '.'.join(map(str, __version_info__))
 import optparse
 import os
 import sys
+
 # Import salt libs
 import salt.config
 
@@ -23,6 +25,7 @@ def verify_env(dirs):
                 os.makedirs(dir_)
             except OSError, e:
                 print 'Failed to create directory path "%s" - %s' % (dir_, e)
+
 
 class Master(object):
     '''
@@ -182,13 +185,13 @@ class Syndic(object):
             opts['master'] = opts['syndic_master']
             opts['master_ip'] = salt.config.dns_check(opts['master'])
 
-            opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
-                               + str(opts['master_port'])
+            opts['master_uri'] = ('tcp://' + opts['master_ip'] +
+                                  ':' + str(opts['master_port']))
             opts['_master_conf_file'] = opts['conf_file']
             opts.pop('conf_file')
             return opts
-        err = 'The syndic_master needs to be configured in the salt master'\
-            + ' config, EXITING!\n'
+        err = ('The syndic_master needs to be configured in the salt master '
+               'config, EXITING!\n')
         sys.stderr.write(err)
         sys.exit(2)
 
@@ -217,10 +220,10 @@ class Syndic(object):
                 dest='log_level',
                 default='warning',
                 choices=salt.log.LOG_LEVELS.keys(),
-                help='Console log level. One of %s. For the logfile settings '
-                     'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
-                )
+                help=('Console log level. One of %s. For the logfile settings '
+                      'see the config file. Default: \'%%default\'.' %
+                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
+                     )
 
         options, args = parser.parse_args()
         salt.log.setup_console_logger(options.log_level)
