@@ -15,12 +15,12 @@ except:
     pass
 
 # Import salt components
-import salt.client
-import salt.runner
-import salt.cli.key
-import salt.cli.cp
 import salt.cli.caller
+import salt.cli.cp
+import salt.cli.key
+import salt.client
 import salt.output
+import salt.runner
 
 from salt import __version__ as VERSION
 
@@ -46,71 +46,72 @@ class SaltCMD(object):
                 default=5,
                 type=int,
                 dest='timeout',
-                help='Set the return timeout for batch jobs; default=5 seconds')
+                help=('Set the return timeout for batch jobs; '
+                      'default=5 seconds'))
         parser.add_option('-E',
                 '--pcre',
                 default=False,
                 dest='pcre',
                 action='store_true',
-                help='Instead of using shell globs to evaluate the target'\
-                   + ' servers, use pcre regular expressions')
+                help=('Instead of using shell globs to evaluate the target '
+                      'servers, use pcre regular expressions'))
         parser.add_option('-L',
                 '--list',
                 default=False,
                 dest='list_',
                 action='store_true',
-                help='Instead of using shell globs to evaluate the target'\
-                   + ' servers, take a comma delimited list of servers.')
+                help=('Instead of using shell globs to evaluate the target '
+                      'servers, take a comma delimited list of servers.'))
         parser.add_option('-G',
                 '--grain',
                 default=False,
                 dest='grain',
                 action='store_true',
-                help='Instead of using shell globs to evaluate the target'\
-                   + ' use a grain value to identify targets, the syntax'\
-                   + ' for the target is the grain key followed by a pcre'\
-                   + ' regular expression:\n"os:Arch.*"')
+                help=('Instead of using shell globs to evaluate the target '
+                      'use a grain value to identify targets, the syntax '
+                      'for the target is the grain key followed by a pcre '
+                      'regular expression:\n"os:Arch.*"'))
         parser.add_option('-X',
                 '--exsel',
                 default=False,
                 dest='exsel',
                 action='store_true',
-                help='Instead of using shell globs use the return code'\
-                   + ' of a function.')
+                help=('Instead of using shell globs use the return code '
+                      'of a function.'))
         parser.add_option('--return',
                 default='',
                 dest='return_',
-                help='Set an alternative return method. By default salt will'\
-                    + ' send the return data from the command back to the'\
-                    + ' master, but the return data can be redirected into'\
-                    + ' any number of systems, databases or applications.')
+                help=('Set an alternative return method. By default salt will '
+                      'send the return data from the command back to the '
+                      'master, but the return data can be redirected into '
+                      'any number of systems, databases or applications.'))
         parser.add_option('-Q',
                 '--query',
                 dest='query',
                 default=False,
                 action='store_true',
-                help='Execute a salt command query, this can be used to find'\
-                    + ' the results os a previous function call: -Q test.echo')
+                help=('Execute a salt command query, this can be used to find '
+                      'the results os a previous function call: -Q test.echo'))
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
                 dest='conf_file',
-                help='The location of the salt master configuration file,'\
-                    + ' the salt master settings are required to know where'\
-                    + ' the connections are; default=/etc/salt/master')
+                help=('The location of the salt master configuration file, '
+                      'the salt master settings are required to know where '
+                      'the connections are; default=/etc/salt/master'))
         parser.add_option('--raw-out',
                 default=False,
                 action='store_true',
                 dest='raw_out',
-                help='Print the output from the salt command in raw python'\
-                   + ' form, this is suitable for re-reading the output into'\
-                   + ' an executing python script with eval.')
+                help=('Print the output from the salt command in raw python '
+                      'form, this is suitable for re-reading the output into '
+                      'an executing python script with eval.'))
         parser.add_option('--text-out',
                 default=False,
                 action='store_true',
                 dest='txt_out',
                 help=('Print the output from the salt command in the same '
-                      ' form the shell would.'))
+                      'form the shell would.'))
         parser.add_option('--yaml-out',
                 default=False,
                 action='store_true',
@@ -149,8 +150,8 @@ class SaltCMD(object):
         if options.query:
             opts['query'] = options.query
             if len(args) < 1:
-                err = 'Please pass in a command to query the old salt calls'\
-                    + ' for.'
+                err = ('Please pass in a command to query the old salt '
+                       'calls for.')
                 sys.stderr.write(err, + '\n')
                 sys.exit('2')
             opts['cmd'] = args[0]
@@ -171,8 +172,8 @@ class SaltCMD(object):
                 for comp in ' '.join(args[2:]).split(','):
                     opts['arg'].append(comp.split())
                 if len(opts['fun']) != len(opts['arg']):
-                    err = 'Cannot execute compound command without defining'\
-                        + ' all arguments.'
+                    err = ('Cannot execute compound command without defining '
+                           'all arguments.')
                     sys.stderr.write(err + '\n')
                     sys.exit(42)
             else:
@@ -287,31 +288,31 @@ class SaltCP(object):
                 default=False,
                 dest='pcre',
                 action='store_true',
-                help='Instead of using shell globs to evaluate the target'\
-                   + ' servers, use pcre regular expressions')
+                help=('Instead of using shell globs to evaluate the target '
+                      'servers, use pcre regular expressions'))
         parser.add_option('-L',
                 '--list',
                 default=False,
                 dest='list_',
                 action='store_true',
-                help='Instead of using shell globs to evaluate the target'\
-                   + ' servers, take a comma delimited list of servers.')
+                help=('Instead of using shell globs to evaluate the target '
+                      'servers, take a comma delimited list of servers.'))
         parser.add_option('-G',
                 '--grain',
                 default=False,
                 dest='grain',
                 action='store_true',
-                help='Instead of using shell globs to evaluate the target'\
-                   + ' use a grain value to identify targets, the syntax'\
-                   + ' for the target is the grains key followed by a pcre'\
-                   + ' regular expression:\n"os:Arch.*"')
+                help=('Instead of using shell globs to evaluate the target '
+                      'use a grain value to identify targets, the syntax '
+                      'for the target is the grains key followed by a pcre '
+                      'regular expression:\n"os:Arch.*"'))
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
                 dest='conf_file',
-                help='The location of the salt master configuration file,'\
-                    + ' the salt master settings are required to know where'\
-                    + ' the connections are; default=/etc/salt/master')
+                help=('The location of the salt master configuration file, '
+                      'the salt master settings are required to know where '
+                      'the connections are; default=/etc/salt/master'))
 
         options, args = parser.parse_args()
 
@@ -407,15 +408,15 @@ class SaltKey(object):
         parser.add_option('--gen-keys-dir',
                 dest='gen_keys_dir',
                 default='.',
-                help='Set the direcotry to save the generated keypair, only'
-                     'works with "gen_keys_dir" option; default=.')
+                help=('Set the direcotry to save the generated keypair, '
+                      'only works with "gen_keys_dir" option; default=.'))
 
         parser.add_option('--keysize',
                 dest='keysize',
                 default=2048,
                 type=int,
-                help='Set the keysize for the generated key, only works with'
-                     'the "--gen-keys" option; default=2048')
+                help=('Set the keysize for the generated key, only works with '
+                      'the "--gen-keys" option; default=2048'))
 
         parser.add_option('-c',
                 '--config',
@@ -473,8 +474,8 @@ class SaltCall(object):
                 '--module-dirs',
                 dest='module_dirs',
                 default='',
-                help='Specify an additional directories to pull modules from,'\
-                    + ' multiple directories can be delimited by commas')
+                help=('Specify an additional directories to pull modules '
+                      'from, multiple directories can be delimited by commas'))
         parser.add_option('-c',
                 '--config',
                 dest='config',
@@ -485,8 +486,8 @@ class SaltCall(object):
                 dest='doc',
                 default=False,
                 action='store_true',
-                help='Return the documentation for the specified module of'\
-                    + ' for all modules if none are specified')
+                help=('Return the documentation for the specified module of '
+                      'for all modules if none are specified'))
         parser.add_option('-l',
                 '--log-level',
                 default='info',
@@ -496,9 +497,9 @@ class SaltCall(object):
                 default=False,
                 action='store_true',
                 dest='raw_out',
-                help='Print the output from the salt command in raw python'\
-                   + ' form, this is suitable for re-reading the output into'\
-                   + ' an executing python script with eval.')
+                help=('Print the output from the salt command in raw python '
+                      'form, this is suitable for re-reading the output into '
+                      'an executing python script with eval.'))
         parser.add_option('--text-out',
                 default=False,
                 action='store_true',
