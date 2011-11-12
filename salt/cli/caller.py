@@ -2,8 +2,8 @@
 The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 '''
+
 # Import python modules
-import os
 import pprint
 # Import salt libs
 import salt.loader
@@ -79,11 +79,9 @@ class Caller(object):
                 printout = get_outputter('txt')
             elif self.opts['yaml_out']:
                 printout = get_outputter('yaml')
-           elif 'out' in ret:
+            elif 'out' in ret:
                 printout = get_outputter(ret['out'])
             else:
                 printout = get_outputter(None)
 
             printout({'local': ret['return']}, color=self.opts['color'])
-
-

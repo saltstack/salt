@@ -4,6 +4,7 @@ line application, salt-cp is NOT intended to broadcast large files, it is
 intended to handle text files.
 Salt-cp can be used to distribute configuration files
 '''
+
 # Import python modules
 import os
 import sys
@@ -11,6 +12,7 @@ import sys
 import yaml
 # Import salt modules
 import salt.client
+
 
 class SaltCP(object):
     '''
@@ -54,7 +56,6 @@ class SaltCP(object):
                 print fn_ + ' is a directory, only files are supported.'
                 #files.update(self._recurse_dir(fn_))
         return files
-
 
     def run(self):
         '''
