@@ -678,6 +678,17 @@ class HighState(object):
             return errors
         return self.state.call_high(high)
 
+    def compile_highstate(self):
+        '''
+        Return just the highstate or the errors
+        '''
+        top = self.get_top()
+        matches = self.top_matches(top)
+        high, errors = self.render_highstate(matches)
+        if errors:
+            return errors
+        return high
+
     def compile_low_chunks(self):
         '''
         Compile the highstate but don't run it, return the low chunks to see

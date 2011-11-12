@@ -63,6 +63,16 @@ def highstate():
     st_ = salt.state.HighState(__opts__)
     return st_.call_highstate()
 
+def show_highstate():
+    '''
+    Retrive the highstate data from the salt master and display it
+
+    CLI Example:
+    salt '*' state.show_highstate
+    '''
+    st_ = salt.state.HighState(__opts__)
+    return st_.compile_highstate()
+
 def show_lowstate():
     '''
     List out the low data that will be applied to this minion
