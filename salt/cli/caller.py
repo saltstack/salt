@@ -5,10 +5,11 @@ minion modules.
 
 # Import python modules
 import pprint
+
 # Import salt libs
+import salt
 import salt.loader
 import salt.minion
-import salt
 
 
 class Caller(object):

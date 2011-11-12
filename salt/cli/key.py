@@ -4,11 +4,12 @@ The actual saltkey functional code
 
 # Import python modules
 import os
-import sys
 import shutil
+import sys
+
 # Import salt modules
-import salt.utils as utils
 import salt.crypt
+import salt.utils as utils
 
 
 class Key(object):
@@ -20,9 +21,8 @@ class Key(object):
 
     def _keys(self, key_type, full_path=False):
         '''
-        Safely return the names of the unaccepted keys, pass True to return the
-        full key paths
-        Returns a set
+        Safely return the names of the unaccepted keys, pass True to return
+        the full key paths. Returns a set.
         '''
         ret = set()
         subdir = ''
@@ -32,8 +32,8 @@ class Key(object):
             subdir = 'minions'
         dir_ = os.path.join(self.opts['pki_dir'], subdir)
         if not os.path.isdir(dir_):
-            err = 'The ' + subdir + ' directory is not present, ensure that'\
-                + ' the master server has been started'
+            err = ('The ' + subdir + ' directory is not present, ensure that '
+                   'the master server has been started')
             sys.stderr.write(err + '\n')
             sys.exit(42)
         keys = os.listdir(dir_)
@@ -96,19 +96,19 @@ class Key(object):
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions = os.path.join(self.opts['pki_dir'], 'minions')
         if not os.path.isdir(minions):
-            err = 'The minions directory is not present, ensure that the'\
-                + ' master server has been started'
+            err = ('The minions directory is not present, ensure that the '
+                   'master server has been started')
             sys.stderr.write(err + '\n')
             sys.exit(42)
         if not os.path.isdir(pre_dir):
-            err = 'The minions_pre directory is not present, ensure that the'\
-                + ' master server has been started'
+            err = ('The minions_pre directory is not present, ensure '
+                   'that the master server has been started')
             sys.stderr.write(err + '\n')
             sys.exit(42)
         pre = os.listdir(pre_dir)
         if not pre.count(key):
-            err = 'The named host is unavailable, please accept an available'\
-                + ' key'
+            err = ('The named host is unavailable, please accept an '
+                   'available key')
             sys.stderr.write(err + '\n')
             sys.exit(43)
         shutil.move(os.path.join(pre_dir, key), os.path.join(minions, key))
@@ -120,13 +120,13 @@ class Key(object):
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions = os.path.join(self.opts['pki_dir'], 'minions')
         if not os.path.isdir(minions):
-            err = 'The minions directory is not present, ensure that the'\
-                + ' master server has been started'
+            err = ('The minions directory is not present, ensure that the '
+                   'master server has been started')
             sys.stderr.write(err + '\n')
             sys.exit(42)
         if not os.path.isdir(pre_dir):
-            err = 'The minions_pre directory is not present, ensure that the'\
-                + ' master server has been started'
+            err = ('The minions_pre directory is not present, ensure that the '
+                   'master server has been started')
             sys.stderr.write(err + '\n')
             sys.exit(42)
         for key in os.listdir(pre_dir):
@@ -139,13 +139,13 @@ class Key(object):
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions = os.path.join(self.opts['pki_dir'], 'minions')
         if not os.path.isdir(minions):
-            err = 'The minions directory is not present, ensure that the'\
-                + ' master server has been started'
+            err = ('The minions directory is not present, ensure that the '
+                   'master server has been started')
             sys.stderr.write(err + '\n')
             sys.exit(42)
         if not os.path.isdir(pre_dir):
-            err = 'The minions_pre directory is not present, ensure that the'\
-                + ' master server has been started'
+            err = ('The minions_pre directory is not present, ensure that the '
+                   'master server has been started')
             sys.stderr.write(err + '\n')
             sys.exit(42)
         pre = os.path.join(pre_dir, self.opts['delete'])

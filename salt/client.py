@@ -61,7 +61,7 @@ def prep_jid(cachedir):
 
 class SaltClientError(Exception):
     '''
-    Custom exception.
+    Custom exception class.
     '''
     pass
 
