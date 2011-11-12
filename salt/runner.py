@@ -24,7 +24,7 @@ class Runner(object):
             err = 'Must pass a runner function'
             sys.stderr.write('%s\n' % err)
             sys.exit(1)
-        if not self.functions.has_key(self.opts['fun']):
+        if self.opts['fun'] not in self.functions:
             err = 'Passed function is unavailable'
             sys.stderr.write('%s\n' % err)
             sys.exit(1)

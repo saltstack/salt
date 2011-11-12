@@ -155,7 +155,7 @@ class LocalClient(object):
         expr_form='glob',
         ret=''):
         '''
-        Execute a salt command and return 
+        Execute a salt command and return
         '''
         jid = prep_jid(self.opts['cachedir'])
         pub_data = self.pub(
@@ -182,11 +182,11 @@ class LocalClient(object):
             for fn_ in os.listdir(jid_dir):
                 if fn_.startswith('.'):
                     continue
-                if not ret.has_key(fn_):
+                if fn_ not in ret:
                     retp = os.path.join(jid_dir, fn_, 'return.p')
                     if not os.path.isfile(retp):
                         continue
-                    while not ret.has_key(fn_):
+                    while fn_ not in ret:
                         try:
                             ret[fn_] = pickle.load(open(retp, 'r'))
                         except:
@@ -217,12 +217,12 @@ class LocalClient(object):
             for fn_ in os.listdir(jid_dir):
                 if fn_.startswith('.'):
                     continue
-                if not ret.has_key(fn_):
+                if fn_ not in ret:
                     retp = os.path.join(jid_dir, fn_, 'return.p')
                     outp = os.path.join(jid_dir, fn_, 'out.p')
                     if not os.path.isfile(retp):
                         continue
-                    while not ret.has_key(fn_):
+                    while fn_ not in ret:
                         try:
                             ret_data = pickle.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}

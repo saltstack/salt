@@ -15,7 +15,7 @@ def _list_removed(old, new):
     '''
     pkgs = []
     for pkg in old:
-        if not new.has_key(pkg):
+        if pkg not in new:
             pkgs.append(pkg)
     return pkgs
 
@@ -36,7 +36,7 @@ def version(name):
     salt '*' pkg.version <package name>
     '''
     pkgs = list_pkgs()
-    if pkgs.has_key(name):
+    if name in pkgs:
         return pkgs[name]
     else:
         return ''
@@ -102,7 +102,7 @@ def install(name, refresh=False):
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
-        if old.has_key(npkg):
+        if npkg in old:
             if old[npkg] == new[npkg]:
                 # no change in the package
                 continue
@@ -134,7 +134,7 @@ def upgrade():
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
-        if old.has_key(npkg):
+        if npkg in old:
             if old[npkg] == new[npkg]:
                 # no change in the package
                 continue

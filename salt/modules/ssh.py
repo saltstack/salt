@@ -139,7 +139,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     salt '*' ssh.rm_auth_key <user> <key>
     '''
     current = auth_keys(user, config)
-    if current.has_key(key):
+    if key in current:
         # Remove the key
         uinfo = __salt__['user.info'](user)
         full = os.path.join(uinfo['home'], config)
@@ -191,7 +191,7 @@ def set_auth_key(
     replace = False
     uinfo = __salt__['user.info'](user)
     current = auth_keys(user, config)
-    if current.has_key(key):
+    if key in current:
         if not set(current[key]['options']) == set(options):
             replace = True
         if not current[key]['enc'] == enc:

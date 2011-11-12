@@ -73,7 +73,7 @@ def mounted(
         opts = opts.split(',')
     # Get the active data
     active = __salt__['mount.active']()
-    if not active.has_key(name):
+    if name not in active:
         # The mount is not present! Mount it
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
             if type(out) == type(str()):

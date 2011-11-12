@@ -110,7 +110,7 @@ class HighStateOutputter(Outputter):
                 colors)
             for hstr in hstrs:
                 print hstr
-            
+
 
 class RawOutputter(Outputter):
     '''
@@ -147,7 +147,7 @@ class JSONOutputter(Outputter):
     def __call__(self, data, **kwargs):
         try:
             # A good kwarg might be: indent=4
-            if kwargs.has_key('color'):
+            if 'color' in kwargs:
                 kwargs.pop('color')
             ret = json.dumps(data, **kwargs)
         except TypeError:
@@ -162,7 +162,7 @@ class YamlOutputter(Outputter):
     supports = "yaml"
 
     def __call__(self, data,  **kwargs):
-        if kwargs.has_key('color'):
+        if 'color' in kwargs:
             kwargs.pop('color')
         print yaml.dump(data, **kwargs)
 

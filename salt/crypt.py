@@ -96,9 +96,9 @@ class Auth(object):
     def __init__(self, opts):
         self.opts = opts
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
-        if self.opts.has_key('syndic_master'):
+        if 'syndic_master' in self.opts:
             self.mpub = 'syndic_master.pub'
-        elif self.opts.has_key('alert_master'):
+        elif 'alert_master' in self.opts:
             self.mpub = 'monitor_master.pub'
         else:
             self.mpub = 'minion_master.pub'
@@ -188,8 +188,8 @@ class Auth(object):
         payload = salt.payload.package(self.minion_sign_in_payload())
         socket.send(payload)
         payload = salt.payload.unpackage(socket.recv())
-        if payload.has_key('load'):
-            if payload['load'].has_key('ret'):
+        if 'load' in payload:
+            if 'ret' in payload['load']:
                 if not payload['load']['ret']:
                     log.critical(
                         'The Salt Master has rejected this minion\'s public '

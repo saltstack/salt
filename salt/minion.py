@@ -110,13 +110,11 @@ class Minion(object):
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
-        if not data.has_key('tgt')\
-                or not data.has_key('jid')\
-                or not data.has_key('fun')\
-                or not data.has_key('arg'):
+        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
+           or 'arg' not in data:
             return
         # Verify that the publication applies to this minion
-        if data.has_key('tgt_type'):
+        if 'tgt_type' in data:
             if not getattr(self.matcher, data['tgt_type'] + '_match')(data['tgt']):
                 return
         else:
@@ -125,7 +123,7 @@ class Minion(object):
         # If the minion does not have the function, don't execute, this prevents
         # minions that could not load a minion module from returning a
         # predictable exception
-        #if not self.functions.has_key(data['fun']):
+        #if data['fun'] not in self.functions:
         #    return
         log.debug('Executing command {0[fun]} with jid {0[jid]}'.format(data))
         self._handle_decoded_payload(data)
@@ -367,11 +365,8 @@ class Syndic(salt.client.LocalClient, Minion):
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
-        if not data.has_key('tgt')\
-                or not data.has_key('jid')\
-                or not data.has_key('fun')\
-                or not data.has_key('to')\
-                or not data.has_key('arg'):
+        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
+           or 'to' not in data or 'arg' not in data:
             return
         data['to'] = int(data['to']) - 1
         log.debug('Executing syndic command {0[fun]} with jid {0[jid]}'.format(data))
@@ -395,7 +390,7 @@ class Syndic(salt.client.LocalClient, Minion):
         Take the now clear load and forward it on to the client cmd
         '''
         # Set up default expr_form
-        if not data.has_key('expr_form'):
+        if 'expr_form' not in data:
             data['expr_form'] = 'glob'
         # Send out the publication
         pub_data = self.pub(
@@ -429,7 +424,7 @@ class Matcher(object):
         else:
             self.functions = functions
 
-    def confirm_top(self, match, data):            
+    def confirm_top(self, match, data):
         '''
         Takes the data passed to a top file environment and determines if the
         data matches this minion
@@ -437,7 +432,7 @@ class Matcher(object):
         matcher = 'glob'
         for item in data:
             if type(item) == type(dict()):
-                if item.has_key('match'):
+                if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
             return getattr(self, matcher + '_match')(match)
@@ -478,7 +473,7 @@ class Matcher(object):
         if len(comps) < 2:
             log.error('Got insufficient arguments for grains from master')
             return False
-        if not self.opts['grains'].has_key(comps[0]):
+        if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: %s', comps[0])
             return False
         return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
@@ -487,7 +482,7 @@ class Matcher(object):
         '''
         Runs a function and return the exit code
         '''
-        if not self.functions.has_key(tgt):
+        if tgt not in self.functions:
             return False
         return(self.functions[tgt]())
 
@@ -517,7 +512,7 @@ class FileClient(object):
         if not path.startswith('salt://'):
             raise MinionError('Unsupported path')
         return path[7:]
-        
+
     def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
         Get a single file from the salt-master
@@ -642,7 +637,7 @@ class FileClient(object):
         if sls.count('.'):
             sls = sls.replace('.', '/')
         for path in [
-                'salt://' + sls + '.sls', 
+                'salt://' + sls + '.sls',
                 os.path.join('salt://', sls, 'init.sls')
                 ]:
             dest = self.cache_file(path, env)
@@ -652,7 +647,7 @@ class FileClient(object):
 
     def master_opts(self):
         '''
-        Return the master opts data 
+        Return the master opts data
         '''
         payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}

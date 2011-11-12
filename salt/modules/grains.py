@@ -20,6 +20,6 @@ def item(key):
     CLI Example:
     salt '*' grains.item os
     '''
-    if __grains__.has_key(key):
+    if key in __grains__:
         return __grains__[key]
     return ''

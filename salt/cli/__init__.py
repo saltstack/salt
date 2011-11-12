@@ -184,7 +184,7 @@ class SaltCMD(object):
         Execute the salt command line
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
-        if self.opts.has_key('query'):
+        if 'query' in self.opts:
             print local.find_cmd(self.opts['cmd'])
         else:
             args = [self.opts['tgt'],
@@ -238,7 +238,7 @@ class SaltCMD(object):
         out = ''
         for key, data in full_ret.items():
             ret[key] = data['ret']
-            if data.has_key('out'):
+            if 'out' in data:
                 out = data['out']
         return ret, out
 
@@ -251,7 +251,7 @@ class SaltCMD(object):
             sys.stderr.write('No minions found to gather docs from\n')
         for host in ret:
             for fun in ret[host]:
-                if not docs.has_key(fun):
+                if fun not in docs:
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
