@@ -54,7 +54,7 @@ def prep_jid(cachedir):
     if not os.path.isdir(jid_dir):
         os.makedirs(jid_dir)
     else:
-        return prep_jid(load)
+        return prep_jid(cachedir)
     return jid
 
 class SaltClientError(Exception): pass
