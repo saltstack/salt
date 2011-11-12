@@ -5,32 +5,34 @@ authenticating peers
 '''
 
 # Import python libs
-import os
-import sys
+import cPickle as pickle
+import hashlib
 import hmac
 import logging
+import os
+import sys
 import tempfile
-import random
-import hashlib
-import time
-import string
-import cPickle as pickle
+
 # Import Cryptography libs
-from M2Crypto import RSA
 from Crypto.Cipher import AES
+from M2Crypto import RSA
+
 # Import zeromq libs
 import zmq
+
 # Import salt utils
-import salt.utils
 import salt.payload
+import salt.utils
 
 log = logging.getLogger(__name__)
+
 
 def foo_pass(self, data=''):
     '''
     used as a workaround for the no-passphrase issue in M2Crypto.RSA
     '''
     return 'foo'
+
 
 def gen_keys(keydir, keyname, keysize):
     '''
@@ -45,6 +47,7 @@ def gen_keys(keydir, keyname, keysize):
     key = RSA.load_key(priv, callback=foo_pass)
     os.chmod(priv, 256)
     return key
+
 
 class MasterKeys(dict):
     '''
@@ -193,8 +196,8 @@ class Auth(object):
                 if not payload['load']['ret']:
                     log.critical(
                         'The Salt Master has rejected this minion\'s public '
-                        'key!\nTo repair this issue, delete the public key for '
-                        'this minion on the Salt Master and restart this '
+                        'key!\nTo repair this issue, delete the public key '
+                        'for this minion on the Salt Master and restart this '
                         'minion.\nOr restart the Salt Master in open mode to '
                         'clean out the keys. The Salt Minion will now exit.'
                     )
@@ -221,7 +224,12 @@ class Auth(object):
         return auth
 
 
-class AuthenticationError(Exception): pass
+class AuthenticationError(Exception):
+    '''
+    Custom exception class.
+    '''
+
+    pass
 
 
 class Crypticle(object):
