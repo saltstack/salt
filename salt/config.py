@@ -1,16 +1,18 @@
 '''
 All salt configuration loading and defaults should be in this module
 '''
+
 # Import python modules
 import os
 import socket
 import sys
-# Import third party libs
+# import third party libs
 import yaml
 # Import salt libs
 import salt.crypt
 import salt.loader
 import salt.utils
+
 
 def load_config(opts, path, env_var):
     '''
@@ -34,6 +36,7 @@ def load_config(opts, path, env_var):
     else:
         print 'Missing configuration file: {0}'.format(path)
 
+
 def prepend_root_dir(opts, path_options):
     '''
     Prepends the options that represent filesystem paths with value of the
@@ -42,6 +45,7 @@ def prepend_root_dir(opts, path_options):
     for path_option in path_options:
         opts[path_option] = os.path.normpath(
                 os.sep.join([opts['root_dir'], opts[path_option]]))
+
 
 def minion_config(path):
     '''
@@ -92,6 +96,7 @@ def minion_config(path):
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
 
     return opts
+
 
 def master_config(path):
     '''
@@ -144,6 +149,7 @@ def master_config(path):
         else:
             opts['auto_accept'] = False
     return opts
+
 
 def dns_check(addr):
     '''
