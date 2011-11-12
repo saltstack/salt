@@ -109,6 +109,23 @@ class State(object):
                 if aspec[0][ind] not in data:
                     errors.append('Missing paramater ' + aspec[0][ind]\
                                 + ' for state ' + full)
+        # If this chunk has a recursive require, then it will cause a
+        # recursive loop when executing, check for it
+        reqdec = ''
+        if 'require' in data:
+            reqdec = 'require'
+        if 'watch' in data:
+            reqdec = 'watch'
+        if reqdec:
+            for req in data[reqdec]:
+                if data['state'] == req.keys()[0]:
+                    if data['name'] == req[req.keys()[0]]:
+                        err = ('Recursive require detected in SLS {0} for'
+                               ' require {1} in ID {2}').format(
+                                   data['__sls__'],
+                                   req,
+                                   data['__id__'])
+                        errors.append(err)
         return errors
 
     def verify_high(self, high):
