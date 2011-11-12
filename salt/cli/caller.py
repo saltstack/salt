@@ -28,7 +28,7 @@ class Caller(object):
         Call the module
         '''
         ret = {}
-        if not self.minion.functions.has_key(self.opts['fun']):
+        if self.opts['fun'] not in self.minion.functions:
             print 'Function {0} is not available'.format(self.opts['fun'])
         ret['return'] = self.minion.functions[self.opts['fun']](
                 *self.opts['arg']
@@ -45,7 +45,7 @@ class Caller(object):
         '''
         docs = {}
         for name, func in self.minion.functions.items():
-            if not docs.has_key(name):
+            if name not in docs:
                 if func.__doc__:
                     docs[name] = func.__doc__
         for name in sorted(docs):
@@ -79,7 +79,7 @@ class Caller(object):
                 printout = get_outputter('txt')
             elif self.opts['yaml_out']:
                 printout = get_outputter('yaml')
-            elif ret.has_key('out'):
+           elif 'out' in ret:
                 printout = get_outputter(ret['out'])
             else:
                 printout = get_outputter(None)

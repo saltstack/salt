@@ -29,18 +29,18 @@ def format_log(ret):
     msg = ''
     if type(ret) == type(dict()):
         # Looks like the ret may be a valid state return
-        if ret.has_key('changes'):
+        if 'changes' in ret:
             # Yep, looks like a valid state return
             chg = ret['changes']
             if not chg:
                 msg = 'No changes made for {0[name]}'.format(ret)
             elif type(chg) == type(dict()):
-                if chg.has_key('diff'):
+                if 'diff' in chg:
                     if type(chg['diff']) == type(str()):
                         msg = 'File changed:\n{0}'.format(
                                 chg['diff'])
                 if type(chg[chg.keys()[0]]) == type(dict()):
-                    if chg[chg.keys()[0]].has_key('new'):
+                    if 'new' in chg[chg.keys()[0]]:
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -66,7 +66,7 @@ class State(object):
     Class used to execute salt states
     '''
     def __init__(self, opts):
-        if not opts.has_key('grains'):
+        if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.functions = salt.loader.minion_mods(self.opts)
@@ -78,17 +78,17 @@ class State(object):
         Verify the data, return an error statement if something is wrong
         '''
         errors = []
-        if not data.has_key('state'):
+        if 'state' not in data:
             errors.append('Missing "state" data')
-        if not data.has_key('fun'):
+        if 'fun' not in data:
             errors.append('Missing "fun" data')
-        if not data.has_key('name'):
+        if 'name' not in data:
             errors.append('Missing "name" data')
         if errors:
             return errors
         full = data['state'] + '.' + data['fun']
-        if not self.states.has_key(full):
-            if data.has_key('__sls__'):
+        if full not in self.states:
+            if '__sls__' in data:
                 errors.append(
                     'State {0} found in sls {1} is unavailable'.format(
                         full,
@@ -106,7 +106,7 @@ class State(object):
             if type(aspec[3]) == type(tuple()):
                 deflen = len(aspec[3])
             for ind in range(arglen - deflen):
-                if not data.has_key(aspec[0][ind]):
+                if aspec[0][ind] not in data:
                     errors.append('Missing paramater ' + aspec[0][ind]\
                                 + ' for state ' + full)
         return errors
@@ -144,13 +144,13 @@ class State(object):
                             fun += 1
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
-                            # watch, it must be a list. 
+                            # watch, it must be a list.
                             if arg.keys()[0] == 'require' \
                                     or arg.keys()[0] == 'watch':
                                 if not isinstance(arg[arg.keys()[0]], list):
                                     errors.append('The require or watch statement in state {0} in sls {1} needs to be formed as a list'.format(name, body['__sls__']))
                                 # It is a list, verify that the members of the
-                                # list are all single key dicts. 
+                                # list are all single key dicts.
                                 else:
                                     for req in arg[arg.keys()[0]]:
                                         if not isinstance(req, dict):
@@ -200,10 +200,10 @@ class State(object):
             if deflen - minus > -1:
                 kwargs[aspec[0][ind]] = aspec[3][-minus]
         for arg in kwargs:
-            if data.has_key(arg):
+            if arg in data:
                 kwargs[arg] = data[arg]
         for arg in aspec[0]:
-            if kwargs.has_key(arg):
+            if arg in kwargs:
                 ret['args'].append(kwargs[arg])
             else:
                 ret['args'].append(data[arg])
@@ -223,9 +223,9 @@ class State(object):
                     continue
                 chunk = {'state': state,
                          'name': name}
-                if body.has_key('__sls__'):
+                if '__sls__' in body:
                     chunk['__sls__'] = body['__sls__']
-                if body.has_key('__env__'):
+                if '__env__' in body:
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
                 funcs = set()
@@ -261,12 +261,12 @@ class State(object):
         Pull the extend data and add it to the respective high data
         '''
         errors = []
-        if not high.has_key('__extend__'):
+        if '__extend__' not in high:
             return high, errors
         ext = high.pop('__extend__')
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
-                if not high.has_key(name):
+                if name not in high:
                     errors.append(
                         'Extension {0} is not part of the high state'.format(
                             name
@@ -276,7 +276,7 @@ class State(object):
                 for state, run in body.items():
                     if state.startswith('__'):
                         continue
-                    if not high[name].has_key(state):
+                    if state not in high[name]:
                         high[name][state] = run
                         continue
                     # high[name][state] is extended by run, both are lists
@@ -321,7 +321,7 @@ class State(object):
             # pull out the shebang data
             trend = line.strip()[2:]
             # If the specified renderer exists, use it, or fallback
-            if self.rend.has_key(trend):
+            if trend in self.rend:
                 return trend
         return self.opts['renderer']
 
@@ -366,7 +366,7 @@ class State(object):
         '''
         running = {}
         for low in chunks:
-            if not running.has_key(low['state'] + '.' + low['name'] + '.' + low['fun']):
+            if low['state'] + '.' + low['name'] + '.' + low['fun'] not in running:
                 running = self.call_chunk(low, running, chunks)
         return running
 
@@ -374,7 +374,7 @@ class State(object):
         '''
         Look into the running data to see if the requirement has been met
         '''
-        if not low.has_key('require'):
+        if 'require' not in low:
             return 'met'
         reqs = []
         status = 'unmet'
@@ -387,7 +387,7 @@ class State(object):
         fun_stats = []
         for req in reqs:
             tag = req['state'] + '.' + req['name'] + '.' + req['fun']
-            if not running.has_key(tag):
+            if tag not in running:
                 fun_stats.append('unmet')
             else:
                 fun_stats.append('met' if running[tag]['result'] else 'fail')
@@ -402,7 +402,7 @@ class State(object):
         '''
         Look into the running data to see if the watched states have been run
         '''
-        if not low.has_key('watch'):
+        if 'watch' not in low:
             return 'nochange'
         reqs = []
         status = 'unmet'
@@ -415,7 +415,7 @@ class State(object):
         fun_stats = []
         for req in reqs:
             tag = req['state'] + '.' + req['name'] + '.' + req['fun']
-            if not running.has_key(tag):
+            if tag not in running:
                 fun_stats.append('unmet')
             else:
                 fun_stats.append('change' if running[tag]['changes'] else 'nochange')
@@ -432,7 +432,7 @@ class State(object):
         chunk
         '''
         tag = low['state'] + '.' + low['name'] + '.' + low['fun']
-        if low.has_key('require'):
+        if 'require' in low:
             status = self.check_requires(low, running, chunks)
             if status == 'unmet':
                 reqs = []
@@ -445,7 +445,7 @@ class State(object):
                 for chunk in reqs:
                     # Check to see if the chunk has been run, only run it if
                     # it has not been run already
-                    if not running.has_key(chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun']):
+                    if chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun'] not in running:
                         running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'met':
@@ -454,7 +454,7 @@ class State(object):
                 running[tag] = {'changes': {},
                                 'result': False,
                                 'comment': 'One or more require failed'}
-        elif low.has_key('watch'):
+        elif 'watch' in low:
             status = self.check_watchers(low, running, chunks)
             if status == 'unmet':
                 reqs = []
@@ -467,7 +467,7 @@ class State(object):
                 for chunk in reqs:
                     # Check to see if the chunk has been run, only run it if
                     # it has not been run already
-                    if not running.has_key(chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun']):
+                    if chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun'] not in running:
                         running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'nochange':
@@ -543,7 +543,7 @@ class HighState(object):
         # If the state is intended to be applied locally, then the local opts
         # should have all of the needed data, otherwise overwrite the local
         # data items with data from the master
-        if opts.has_key('local_state'):
+        if 'local_state' in opts:
             if opts['local_state']:
                 return opts
         mopts = self.client.master_opts()
@@ -566,7 +566,7 @@ class HighState(object):
     def top_matches(self, top):
         '''
         Search through the top high data for matches and return the states that
-        this minion needs to execute. 
+        this minion needs to execute.
 
         Returns:
         {'env': ['state1', 'state2', ...]}
@@ -575,7 +575,7 @@ class HighState(object):
         for env, body in top.items():
             for match, data in body.items():
                 if self.matcher.confirm_top(match, data):
-                    if not matches.has_key(env):
+                    if env not in matches:
                         matches[env] = []
                     for item in data:
                         if type(item) == type(str()):
@@ -612,7 +612,7 @@ class HighState(object):
             if not isinstance(state, dict):
                 errors.append('SLS {0} does not render to a dictonary'.format(sls))
             else:
-                if state.has_key('include'):
+                if 'include' in state:
                     if not isinstance(state['include'], list):
                         err = 'Include Declaration in SLS {0} is not formed as a list'.format(sls)
                         errors.append(err)
@@ -624,17 +624,17 @@ class HighState(object):
                                 state.update(nstate)
                             if err:
                                 errors += err
-                if state.has_key('extend'):
+                if 'extend' in state:
                     ext = state.pop('extend')
                     for name in ext:
                         if not isinstance(ext[name], dict):
                             errors.append('Extention name {0} in sls {1} is not a dictonary'.format(name, sls))
                             continue
-                        if not ext[name].has_key('__sls__'):
+                        if '__sls__' not in ext[name]:
                             ext[name]['__sls__'] = sls
-                        if not ext[name].has_key('__env__'):
+                        if '__env__' not in ext[name]:
                             ext[name]['__env__'] = env
-                        if not state.has_key('__extend__'):
+                        if '__extend__' not in state:
                             state['__extend__'] = [ext]
                         else:
                             state['__extend__'].append(ext)
@@ -644,16 +644,16 @@ class HighState(object):
                             continue
                         errors.append('Name {0} in sls {1} is not a dictonary'.format(name, sls))
                         continue
-                    if not state[name].has_key('__sls__'):
+                    if '__sls__' not in state[name]:
                         state[name]['__sls__'] = sls
-                    if not state[name].has_key('__env__'):
+                    if '__env__' not in state[name]:
                         state[name]['__env__'] = env
         return state, mods, errors
 
     def render_highstate(self, matches):
         '''
         Gather the state files and render them into a single unified salt high
-        data structure. 
+        data structure.
         '''
         highstate = {}
         errors = []

@@ -195,7 +195,7 @@ class ReqServer(object):
                     self.clear_funcs).start()
 
         self.workers.bind(self.w_uri)
-        
+
         zmq.device(zmq.QUEUE, self.clients, self.workers)
 
     def start_publisher(self):
@@ -279,7 +279,7 @@ class MWorker(multiprocessing.Process):
             data = self.crypticle.loads(load)
         except:
             return ''
-        if not data.has_key('cmd'):
+        if 'cmd' not in data:
             log.error('Recieved malformed command {0}'.format(data))
             return {}
         log.info('AES payload received with command {0}'.format(data['cmd']))
@@ -310,7 +310,7 @@ class AESFuncs(object):
         '''
         fnd = {'path': '',
                'rel': ''}
-        if not self.opts['file_roots'].has_key(env):
+        if env not in self.opts['file_roots']:
             return fnd
         for root in self.opts['file_roots'][env]:
             full = os.path.join(root, path)
@@ -350,9 +350,7 @@ class AESFuncs(object):
         '''
         ret = {'data': '',
                'dest': ''}
-        if not load.has_key('path')\
-                or not load.has_key('loc')\
-                or not load.has_key('env'):
+        if 'path' not in load or 'loc' not in load or 'env' not in load:
             return ret
         fnd = self.__find_file(load['path'], load['env'])
         if not fnd['path']:
@@ -367,8 +365,7 @@ class AESFuncs(object):
         '''
         Return a file hash, the hash type is set in the master config file
         '''
-        if not load.has_key('path')\
-                or not load.has_key('env'):
+        if 'path' not in load or 'env' not in load:
             return ''
         path = self.__find_file(load['path'], load['env'])['path']
         if not path:
@@ -385,7 +382,7 @@ class AESFuncs(object):
         environment
         '''
         ret = []
-        if not self.opts['file_roots'].has_key(load['env']):
+        if load['env'] not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][load['env']]:
             for root, dirs, files in os.walk(path):
@@ -412,9 +409,7 @@ class AESFuncs(object):
         Handle the return data sent from the minions
         '''
         # If the return data is invalid, just ignore it
-        if not load.has_key('return')\
-                or not load.has_key('jid')\
-                or not load.has_key('id'):
+        if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
         log.info('Got return from %(id)s for job %(jid)s', load)
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
@@ -429,7 +424,7 @@ class AESFuncs(object):
             os.makedirs(hn_dir)
         pickle.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
-        if load.has_key('out'):
+        if 'out' in load:
             pickle.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
@@ -439,8 +434,7 @@ class AESFuncs(object):
         individual minions.
         '''
         # Verify the load
-        if not load.has_key('return') \
-                or not load.has_key('jid'):
+        if 'return' not in load or 'jid' not in load:
             return None
         # Format individual return loads
         for key, item in load['return'].items():
@@ -468,23 +462,24 @@ class AESFuncs(object):
         execute commands from the test module
         '''
         # Verify that the load is valid
-        if not self.opts.has_key('peer'):
+        if 'peer' not in self.opts:
             return {}
         if not isinstance(self.opts['peer'], dict):
             return {}
-        if not clear_load.has_key('fun')\
-                or not clear_load.has_key('arg')\
-                or not clear_load.has_key('tgt')\
-                or not clear_load.has_key('ret')\
-                or not clear_load.has_key('tok')\
-                or not clear_load.has_key('id'):
+        # FIXME: rewrite this ugly monster using eg any()
+        if 'fun' not in clear_load\
+                or 'arg' not in clear_load\
+                or 'tgt' not in clear_load\
+                or 'ret' not in clear_load\
+                or 'tok' not in clear_load\
+                or 'id' not in clear_load:
             return {}
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
             return {}
         # Check the permisions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
-            # The minion is not who it says it is! 
+            # The minion is not who it says it is!
             # We don't want to listen to it!
             return {}
         perms = set()
@@ -515,10 +510,10 @@ class AESFuncs(object):
                }
         expr_form = 'glob'
         timeout = 0
-        if clear_load.has_key('tgt_type'):
+        if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
-        if clear_load.has_key('timeout'):
+        if 'timeout' in clear_load:
             timeout = clear_load('timeout')
         # Encrypt!
         payload['load'] = self.crypticle.dumps(load)
@@ -710,9 +705,9 @@ class ClearFuncs(object):
                 'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
                }
-        if clear_load.has_key('tgt_type'):
+        if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
-        if clear_load.has_key('to'):
+        if 'to' in clear_load:
             load['to'] = clear_load['to']
         payload['load'] = self.crypticle.dumps(load)
         # Send 0MQ to the publisher

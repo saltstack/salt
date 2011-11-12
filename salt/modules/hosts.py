@@ -51,7 +51,7 @@ def get_alias(ip):
     salt '*' hosts.get_alias <ip addr>
     '''
     hosts = list_hosts()
-    if hosts.has_key(ip):
+    if ip in hosts:
         return hosts[ip]
     return []
 
@@ -63,7 +63,7 @@ def has_pair(ip, alias):
     salt '*' hosts.has_pair <ip> <alias>
     '''
     hosts = list_hosts()
-    if not hosts.has_key(ip):
+    if ip not in hosts:
         return False
     if hosts[ip].count(alias):
         return True

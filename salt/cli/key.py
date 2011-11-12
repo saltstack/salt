@@ -181,5 +181,3 @@ class Key(object):
             self._delete_key()
         else:
             self._list_all()
-
-

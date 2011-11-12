@@ -22,7 +22,7 @@ def minion_mods(opts):
     Returns the minion modules
     '''
     extra_dirs = []
-    if opts.has_key('module_dirs'):
+    if 'module_dirs' in opts:
         extra_dirs = opts['module_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
@@ -35,7 +35,7 @@ def returners(opts):
     Returns the returner modules
     '''
     extra_dirs = []
-    if opts.has_key('returner_dirs'):
+    if 'returner_dirs' in opts:
         extra_dirs = opts['returner_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'returners'),
@@ -48,7 +48,7 @@ def states(opts, functions):
     Returns the returner modules
     '''
     extra_dirs = []
-    if opts.has_key('states_dirs'):
+    if 'states_dirs' in opts:
         extra_dirs = opts['states_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'states'),
@@ -63,7 +63,7 @@ def render(opts, functions):
     Returns the render modules
     '''
     extra_dirs = []
-    if opts.has_key('render_dirs'):
+    if 'render_dirs' in opts:
         extra_dirs = opts['render_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'renderers'),
@@ -72,7 +72,7 @@ def render(opts, functions):
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)
-    if not rend.has_key(opts['renderer']):
+    if opts['renderer'] not in rend:
         err = 'The renderer {0} is unavailable, this error is often because the needed software is unavailabe'.format(opts['renderer'])
         log.critical(err)
         raise LoaderError(err)
@@ -88,7 +88,7 @@ def grains(opts):
         ]
     load = Loader(module_dirs, opts)
     grains = load.gen_grains()
-    if opts.has_key('grains'):
+    if 'grains' in opts:
         grains.update(opts['grains'])
     return grains
 
@@ -121,7 +121,7 @@ class Loader(object):
     '''
     def __init__(self, module_dirs, opts={}):
         self.module_dirs = module_dirs
-        if opts.has_key('grains'):
+        if 'grains' in opts:
             self.grains = opts['grains']
         else:
             self.grains = {}
@@ -266,7 +266,7 @@ class Loader(object):
         '''
         if hasattr(mod, '__outputter__'):
             outp = mod.__outputter__
-            if outp.has_key(func.__name__):
+            if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
 
     def apply_introspection(self, funcs):

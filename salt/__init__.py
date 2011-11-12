@@ -176,7 +176,7 @@ class Syndic(object):
         opts = salt.config.master_config(self.cli['master_config'])
         opts['_minion_conf_file'] = opts['conf_file']
         opts.update(salt.config.minion_config(self.cli['minion_config']))
-        if opts.has_key('syndic_master'):
+        if 'syndic_master' in opts:
             # Some of the opts need to be changed to match the needed opts
             # in the minion class.
             opts['master'] = opts['syndic_master']
