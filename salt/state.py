@@ -118,7 +118,6 @@ class State(object):
             reqdec = 'watch'
         if reqdec:
             for req in data[reqdec]:
-                print req.keys()
                 if data['state'] == req.keys()[0]:
                     if data['name'] == req[req.keys()[0]]:
                         err = ('Recursive require detected in SLS {0} for'
