@@ -35,7 +35,7 @@ def fileinfo(path):
     ret = {}
     chunknum = ''
     out = __salt__['cmd.run_all'](cmd)
-                    
+
     output = out['stdout'].split('\n')
     for line in output:
         if not line.count(' '):
@@ -46,28 +46,28 @@ def fileinfo(path):
             chunknum = comps[0].strip().split(':')
             meta     = comps[1].strip().split(' ')
 
-            chunk = chunknum[0].replace('chunk ', '') 
+            chunk = chunknum[0].replace('chunk ', '')
             loc   = chunknum[1].strip()
-            id_    = meta[0].replace('(id:', '') 
-            ver   = meta[1].replace(')', '').replace('ver:', '') 
+            id_    = meta[0].replace('(id:', '')
+            ver   = meta[1].replace(')', '').replace('ver:', '')
 
-            ret[chunknum[0]] = { 
+            ret[chunknum[0]] = {
                 'chunk': chunk,
                 'loc':   loc,
-                'id':    id_, 
+                'id':    id_,
                 'ver':   ver,
-            }   
+            }
         if 'copy' in line:
             copyinfo = line.strip().split(':')
-            ret[chunknum[0]][copyinfo[0]] = { 
+            ret[chunknum[0]][copyinfo[0]] = {
                 'copy': copyinfo[0].replace('copy ', ''),
                 'ip':   copyinfo[1].strip(),
                 'port': copyinfo[2],
-            }   
+            }
     return ret
 
 def mounts():
-    ''' 
+    '''
     Return a list of current MooseFS mounts
 
     CLI Example:
@@ -85,19 +85,19 @@ def mounts():
             comps = line.split(' ')
             info1 = comps[0].split(':')
             info2 = info1[1].split('/')
-            ret[comps[2]] = { 
+            ret[comps[2]] = {
                 'remote': {
                     'master'   : info1[0],
                     'port'     : info2[0],
                     'subfolder': '/' + info2[1],
-                },  
+                },
                 'local':   comps[2],
                 'options': comps[5].replace('(','').replace(')','').split(','),
-            }   
+            }
     return ret
 
 def getgoal(path, opts=None):
-    ''' 
+    '''
     Return goal(s) for a file or directory
 
     CLI Example:
@@ -116,9 +116,9 @@ def getgoal(path, opts=None):
     output = out['stdout'].split('\n')
     if not 'r' in opts:
         goal = output[0].split(': ')
-        ret = { 
+        ret = {
             'goal': goal[1],
-        }   
+        }
     else:
         for line in output:
             if not line.count(' '):
@@ -127,8 +127,7 @@ def getgoal(path, opts=None):
                 continue
             comps = line.split()
             keytext = comps[0] + ' with goal'
-            if not ret.has_key(keytext):
+            if keytext not in ret:
                 ret[keytext] = {}
             ret[keytext][comps[3]] = comps[5]
     return ret
-
