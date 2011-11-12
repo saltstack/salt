@@ -1,6 +1,7 @@
 '''
 The actual saltkey functional code
 '''
+
 # Import python modules
 import os
 import sys
@@ -8,6 +9,7 @@ import shutil
 # Import salt modules
 import salt.utils as utils
 import salt.crypt
+
 
 class Key(object):
     '''

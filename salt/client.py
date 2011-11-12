@@ -7,6 +7,7 @@ The data structure needs to be:
               'tgt': '<glob or id>',
               'key': '<read in the key file>'}
 '''
+
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
 # option.
@@ -25,13 +26,13 @@ The data structure needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
-import os
-import sys
-import re
-import glob
-import time
-import datetime
 import cPickle as pickle
+import datetime
+import glob
+import os
+import re
+import sys
+import time
 
 # Import zmq modules
 import zmq
@@ -57,7 +58,13 @@ def prep_jid(cachedir):
         return prep_jid(load)
     return jid
 
-class SaltClientError(Exception): pass
+
+class SaltClientError(Exception):
+    '''
+    Custom exception.
+    '''
+    pass
+
 
 class LocalClient(object):
     '''
@@ -86,7 +93,8 @@ class LocalClient(object):
         try:
             os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
         except OSError:
-            err = 'The Salt Master has not been set up on this system, a salt-master needs to be running to use the salt command'
+            err = ('The Salt Master has not been set up on this system, '
+                   'a salt-master needs to be running to use the salt command')
             sys.stderr.write(err)
             sys.exit(2)
         ret = set(glob.glob(expr))
@@ -166,7 +174,8 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        return self.get_full_returns(pub_data['jid'], pub_data['minions'], timeout)
+        return (self.get_full_returns(pub_data['jid'],
+                pub_data['minions'], timeout))
 
     def get_returns(self, jid, minions, timeout=5):
         '''
@@ -284,7 +293,8 @@ class LocalClient(object):
                 'exsel': self._check_grain_minions,
                 }[expr_form](expr)
 
-    def pub(self, tgt, fun, arg=(), expr_form='glob', ret='', jid='', timeout=5):
+    def pub(self, tgt, fun, arg=(), expr_form='glob',
+            ret='', jid='', timeout=5):
         '''
         Take the required arguments and publish the given command.
         Arguments:
