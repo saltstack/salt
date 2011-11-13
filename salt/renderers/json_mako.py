@@ -1,6 +1,8 @@
 '''
-The default rendering engine, yaml_jinja, this renderer will take a yaml file
-with the jinja template and render it to a high data format for salt states.
+Process json with the Mako templating engine
+
+This renderer will take a json file with the Mako template and render it to a
+high data format for salt states.
 '''
 
 # Import python libs
