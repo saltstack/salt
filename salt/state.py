@@ -96,14 +96,19 @@ class State(object):
                         )
                     )
             else:
-                errors.append('Specified state ' + full + ' is unavailable.')
+                errors.append(
+                        'Specified state {0} is unavailable.'.format(
+                            full
+                            )
+                        )
         else:
+            # First verify that the paramaters are met
             aspec = inspect.getargspec(self.states[full])
             arglen = 0
             deflen = 0
-            if type(aspec[0]) == type(list()):
+            if isinstance(aspec[0], list):
                 arglen = len(aspec[0])
-            if type(aspec[3]) == type(tuple()):
+            if isinstance(aspec[3], tuple):
                 deflen = len(aspec[3])
             for ind in range(arglen - deflen):
                 if aspec[0][ind] not in data:
@@ -165,17 +170,29 @@ class State(object):
                             if arg.keys()[0] == 'require' \
                                     or arg.keys()[0] == 'watch':
                                 if not isinstance(arg[arg.keys()[0]], list):
-                                    errors.append('The require or watch statement in state {0} in sls {1} needs to be formed as a list'.format(name, body['__sls__']))
+                                    errors.append(('The require or watch'
+                                    ' statement in state {0} in sls {1} needs'
+                                    ' to be formed as a list').format(
+                                        name,
+                                        body['__sls__']
+                                        ))
                                 # It is a list, verify that the members of the
                                 # list are all single key dicts.
                                 else:
                                     for req in arg[arg.keys()[0]]:
                                         if not isinstance(req, dict):
-                                            err = 'Requisite declaration {0} in SLS {1} is not formed as a single key dictonary'.format(req, body['__sls__'])
+                                            err = ('Requisite declaration {0}'
+                                            ' in SLS {1} is not formed as a'
+                                            ' single key dictonary').format(
+                                                req,
+                                                body['__sls__'])
                                             errors.append(err)
                             # Make sure that there is only one key in the dict
                             if len(arg.keys()) != 1:
-                                errors.append('Multiple dictonaries defined in argument of state {0} in sls {1}'.format(name, body['__sls__']))
+                                errors.append(('Multiple dictonaries defined'
+                                ' in argument of state {0} in sls {1}').format(
+                                    name,
+                                    body['__sls__']))
         return errors
 
     def verify_chunks(self, chunks):
@@ -202,7 +219,7 @@ class State(object):
         verify_data
         '''
         ret = {}
-        ret['full'] = data['state'] + '.' + data['fun']
+        ret['full'] = '{0[state]}.{0[fun]}'.format(data)
         ret['args'] = []
         aspec = inspect.getargspec(self.states[ret['full']])
         arglen = 0
@@ -370,7 +387,9 @@ class State(object):
         processing.
         '''
         log.info(
-                'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(data)
+                'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
+                    data
+                    )
                 )
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
