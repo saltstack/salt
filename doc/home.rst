@@ -36,19 +36,19 @@ get much more out of Salt.
 
 * **Remote execution:**
   :doc:`Writing modules <ref/modules/index>`
-  | :doc:`full list of modules <ref/modules/modules>`
+  | :doc:`full list of modules <ref/modules/all/index>`
 * **System info & detection:**
   :doc:`Grains <ref/grains>` 
 * **Displaying or storing responses:**
   :doc:`Writing returners <ref/returners/index>`
-  | :doc:`full list of returners <ref/returners/returners>`
+  | :doc:`full list of returners <ref/returners/all/index>`
 * **State enforcement:**
   :doc:`States <ref/states/index>`
   | :doc:`Highstate data structure <ref/states/highstate>`
-  | :doc:`full list of states <ref/states/states>`
+  | :doc:`full list of states <ref/states/all/index>`
 * **Renderers:**
   :doc:`Renderers <ref/renderers/index>`
-  | :doc:`full list of renderers <ref/renderers/renderers>`
+  | :doc:`full list of renderers <ref/renderers/all/index>`
 * **Transferring & syncing files:**
   :doc:`File Server <ref/file_server/index>`
 * **Network topology:**

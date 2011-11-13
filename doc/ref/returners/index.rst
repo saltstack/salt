@@ -14,7 +14,7 @@ The returner interface allows the return data to be sent to any system that
 can receive data. This means that return data can be sent to a Redis server,
 a MongoDB server, a MySQL server, or any system!
 
-.. seealso:: :doc:`Full list of builtin returners <returners>`
+.. seealso:: :ref:`Full list of builtin returners <all-salt.returners>`
 
 Writing a Returner
 ==================

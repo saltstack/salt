@@ -1,6 +1,8 @@
 '''
-yaml_mako, this renderer will take a yaml file
-within a mako template and render it to a high data format for salt states.
+Process yaml with the Mako templating engine
+
+This renderer will take a yaml file within a mako template and render it to a
+high data format for salt states.
 '''
 
 # Import python libs

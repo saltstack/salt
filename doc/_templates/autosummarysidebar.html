@@ -1,0 +1,8 @@
+{% if parents %}
+<h3>Parent topic</h3>
+<ul>
+    {% for p in parents %}
+    <li><a href="{{ p.link|e }}">{{ p.title }}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}
