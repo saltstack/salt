@@ -98,8 +98,17 @@ are clear and accurate.
 Proposal System
 ---------------
 
-I would like to have a proposal system in place for Salt, so that community
-members can submit proposals for feature development for review.
+I would like to have a proposal system in place for Salt, so that
+community members can submit proposals for feature development for
+review. Using Github's new issue system with support for tags
+(blocker, feature...) seems like a good choice.
+
+Workflow
+--------
+
+Gitflow not only makes for a good branching model everybody can
+understand and work with but also scales well and just works (tm).
+Let's start using it!
 
 2.0.0
 =====
