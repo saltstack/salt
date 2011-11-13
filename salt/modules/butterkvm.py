@@ -95,8 +95,9 @@ def libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
 
-    CLI Example:
-    salt '*' butterkvm.libvirt_creds
+    CLI Example::
+
+        salt '*' butterkvm.libvirt_creds
     '''
     g_cmd = 'grep group /etc/libvirt/qemu.conf'
     u_cmd = 'grep user /etc/libvirt/qemu.conf'
@@ -111,12 +112,13 @@ def libvirt_creds():
 def local_images(local_path):
     '''
     return the virtual machine names for all of the images located in the
-    butter cloud's local_path in a list:
+    butter cloud's local_path in a list::
 
-    ['vm1.boo.com', 'vm2.foo.com']
+        ['vm1.boo.com', 'vm2.foo.com']
 
-    CLI Example:
-    salt '*' buttervm.local_images <image_path>
+    CLI Example::
+
+        salt '*' buttervm.local_images <image_path>
     '''
     if not os.path.isdir(local_path):
         return []
@@ -129,8 +131,9 @@ def full_butter_data(local_path):
     '''
     Return the full virt info, but add butter data!
 
-    CLI Example:
-    salt '*' buttervm.full_butter_data <image_path>
+    CLI Example::
+
+        salt '*' buttervm.full_butter_data <image_path>
     '''
     info = __salt__['virt.full_info']()
     info['local_images'] = local_images(local_path)
@@ -142,16 +145,19 @@ def create(instance, vda, image, pin):
     that the files prepared by butter are available via shared storage.
     AKA - don't call this from the command line!
 
-    Arguments:
-    instance - string, The path to the instance directory for the given vm on
-    shared storage
-    vda - The location where the virtual machine image needs to be placed
-    image - The image to move into place
-    pin - a "pin" data structure defining the myriad of possible vdb-vbz disk
-    images to generate.
+    instance : string
+        The path to the instance directory for the given vm on shared storage
+    vda
+        The location where the virtual machine image needs to be placed
+    image
+        The image to move into place
+    pin
+        A "pin" data structure defining the myriad of possible vdb-vbz disk
+        images to generate
 
-    CLI Example:
-    salt '*' butterkvm.create <instance dir> <root image location>\
+    CLI Example::
+
+        salt '*' butterkvm.create <instance dir> <root image location>\\
             <Destination> <pin data>
     '''
     if not os.path.isfile(vda):

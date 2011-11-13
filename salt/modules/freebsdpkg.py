@@ -24,8 +24,9 @@ def available_version(name):
     '''
     The available version of the package in the repository
 
-    CLI Example:
-    salt '*' pkg.available_version <package name>
+    CLI Example::
+
+        salt '*' pkg.available_version <package name>
     '''
     pass
 
@@ -33,8 +34,9 @@ def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example:
-    salt '*' pkg.version <package name>
+    CLI Example::
+
+        salt '*' pkg.version <package name>
     '''
     pkgs = list_pkgs()
     if name in pkgs:
@@ -44,11 +46,13 @@ def version(name):
 
 def list_pkgs():
     '''
-    List the packages currently installed in a dict:
-    {'<package_name>': '<version>'}
+    List the packages currently installed as a dict::
 
-    CLI Example:
-    salt '*' pkg.list_pkgs
+        {'<package_name>': '<version>'}
+
+    CLI Example::
+
+        salt '*' pkg.list_pkgs
     '''
     ret = {}
     for line in __salt__['cmd.run']('pkg_info').split('\n'):
@@ -63,8 +67,9 @@ def refresh_db():
     Update the ports tree with portsnap. If the ports tre does not exist it
     will be downloaded and set up.
 
-    CLI Example:
-    salt '*' pkg.refresh_db
+    CLI Example::
+
+        salt '*' pkg.refresh_db
     '''
     __salt__['cmd.run']('portsnap fetch')
     if not os.path.isdir('/usr/ports'):
@@ -81,8 +86,9 @@ def install(name, refresh=False):
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example:
-    salt '*' pkg.install <package name>
+    CLI Example::
+
+        salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
     __salt__['cmd.retcode']('pkg_add -r {0}'.format(name))
@@ -105,15 +111,16 @@ def install(name, refresh=False):
 
 def upgrade():
     '''
-    Run a full system upgrade, a "freebsd-update fetch install"
+    Run a full system upgrade, a ``freebsd-update fetch install``
 
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example:
-    salt '*' pkg.upgrade
+    CLI Example::
+
+        salt '*' pkg.upgrade
     '''
     old = list_pkgs()
     __salt__['cmd.retcode']('freebsd-update fetch install')
@@ -138,10 +145,11 @@ def remove(name):
     '''
     Remove a single package with pkg_delete
 
-    Return a list containing the removed packages:
+    Returns a list containing the removed packages.
 
-    CLI Example:
-    salt '*' pkg.remove <package name>
+    CLI Example::
+
+        salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
     if name in old:
@@ -154,10 +162,10 @@ def purge(name):
     '''
     Remove a single package with pkg_delete
 
-    Return a list containing the removed packages:
+    Returns a list containing the removed packages.
 
-    CLI Example:
-    salt '*' pkg.purge <package name>
+    CLI Example::
 
+        salt '*' pkg.purge <package name>
     '''
     return remove(name)

@@ -23,8 +23,9 @@ def available_version(name):
     '''
     The available version of the package in the repository
 
-    CLI Example:
-    salt '*' pkg.available_version <package name>
+    CLI Example::
+
+        salt '*' pkg.available_version <package name>
     '''
     return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
 
@@ -32,8 +33,9 @@ def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example:
-    salt '*' pkg.version <package name>
+    CLI Example::
+
+        salt '*' pkg.version <package name>
     '''
     pkgs = list_pkgs()
     if name in pkgs:
@@ -43,11 +45,13 @@ def version(name):
 
 def list_pkgs():
     '''
-    List the packages currently installed in a dict:
-    {'<package_name>': '<version>'}
+    List the packages currently installed as a dict::
 
-    CLI Example:
-    salt '*' pkg.list_pkgs
+        {'<package_name>': '<version>'}
+
+    CLI Example::
+
+        salt '*' pkg.list_pkgs
     '''
     cmd = 'pacman -Q'
     ret = {}
@@ -61,11 +65,13 @@ def list_pkgs():
 
 def refresh_db():
     '''
-    Just run a pacman -Sy, return a dict:
-    {'<database name>': Bool}
+    Just run a ``pacman -Sy``, return a dict::
 
-    CLI Example:
-    salt '*' pkg.refresh_db
+        {'<database name>': Bool}
+
+    CLI Example::
+
+        salt '*' pkg.refresh_db
     '''
     cmd = 'pacman -Sy'
     ret = {}
@@ -91,8 +97,9 @@ def install(name, refresh=False):
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example:
-    salt '*' pkg.install <package name>
+    CLI Example::
+
+        salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
     cmd = 'pacman -S --noprogressbar --noconfirm ' + name
@@ -125,8 +132,9 @@ def upgrade():
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example:
-    salt '*' pkg.upgrade
+    CLI Example::
+
+        salt '*' pkg.upgrade
     '''
     old = list_pkgs()
     cmd = 'pacman -Syu --noprogressbar --noconfirm '
@@ -150,12 +158,13 @@ def upgrade():
 
 def remove(name):
     '''
-    Remove a single package with pacman -R
+    Remove a single package with ``pacman -R``
 
-    Return a list containing the removed packages:
+    Return a list containing the removed packages.
 
-    CLI Example:
-    salt '*' pkg.remove <package name>
+    CLI Example::
+
+        salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name
@@ -166,13 +175,13 @@ def remove(name):
 def purge(name):
     '''
     Recursively remove a package and all dependencies which were installed
-    with it, this will call a pacman -Rsc
+    with it, this will call a ``pacman -Rsc``
 
-    Return a list containing the removed packages:
+    Return a list containing the removed packages.
 
-    CLI Example:
-    salt '*' pkg.purge <package name>
+    CLI Example::
 
+        salt '*' pkg.purge <package name>
     '''
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name

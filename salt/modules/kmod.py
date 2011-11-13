@@ -41,8 +41,9 @@ def available():
     '''
     Return a list of all available kernel modules
 
-    CLI Example:
-    salt '*' kmod.available
+    CLI Example::
+
+        salt '*' kmod.available
     '''
     ret = []
     for path in __salt__['cmd.run']('modprobe -l').split('\n'):
@@ -57,8 +58,9 @@ def check_available(mod):
     '''
     Check to see if the speciified kernel module is available
 
-    CLI Example:
-    salt '*' kmod.check_available kvm
+    CLI Example::
+
+        salt '*' kmod.check_available kvm
     '''
     if available().count(mod):
         # the module is available, return True
@@ -69,8 +71,9 @@ def lsmod():
     '''
     Return a dict containing information about currently loaded modules
 
-    CLI Example:
-    salt '*' kmod.lsmod
+    CLI Example::
+
+        salt '*' kmod.lsmod
     '''
     ret = []
     for line in __salt__['cmd.run']('lsmod').split('\n'):
@@ -94,8 +97,9 @@ def load(mod):
     '''
     Load the specified kernel module
 
-    CLI Example:
-    salt '*' kmod.load kvm
+    CLI Example::
+
+        salt '*' kmod.load kvm
     '''
     pre_mods = lsmod()
     data = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
@@ -106,8 +110,9 @@ def remove(mod):
     '''
     Remove the specified kernel module
 
-    CLI Example:
-    salt '*' kmod.remove kvm
+    CLI Example::
+
+        salt '*' kmod.remove kvm
     '''
     pre_mods = lsmod()
     data = __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))

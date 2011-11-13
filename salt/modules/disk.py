@@ -6,9 +6,10 @@ import subprocess
 def usage():
     '''
     Return usage information for volumes mounted on this minion
-    
-    CLI Example:
-    salt '*' disk.usage
+
+    CLI Example::
+
+        salt '*' disk.usage
     '''
     cmd = 'df -P'
     ret = {}
