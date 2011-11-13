@@ -32,8 +32,9 @@ def run(cmd, cwd=DEFAULT_CWD):
     '''
     Execute the passed command and return the output as a string
 
-    CLI Example:
-    salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+    CLI Example::
+
+        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     out = subprocess.Popen(cmd,
@@ -48,8 +49,9 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
     '''
     Execute a command, and only return the standard out 
 
-    CLI Example:
-    salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+    CLI Example::
+
+        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stdout = subprocess.Popen(cmd,
@@ -63,8 +65,9 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
     '''
     Execute a command and only return the standard error
 
-    CLI Example:
-    salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+    CLI Example::
+
+        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stderr = subprocess.Popen(cmd,
@@ -78,8 +81,9 @@ def run_all(cmd, cwd=DEFAULT_CWD):
     '''
     Execute the passed command and return a dict of return data
 
-    CLI Example:
-    salt '*' cmd.run_all "ls -l | grep foo | awk '{print $2}'"
+    CLI Example::
+
+        salt '*' cmd.run_all "ls -l | grep foo | awk '{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     ret = {}
@@ -106,8 +110,9 @@ def retcode(cmd, cwd=DEFAULT_CWD):
     '''
     Execute a shell command and return the command's return code.
 
-    CLI Example:
-    salt '*' cmd.retcode "file /bin/bash"
+    CLI Example::
+
+        salt '*' cmd.retcode "file /bin/bash"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     return subprocess.call(cmd, shell=True, cwd=cwd)
@@ -116,8 +121,9 @@ def has_exec(cmd):
     '''
     Returns true if the executable is available on the minion, false otherwise
 
-    CLI Example:
-    salt '*' cat
+    CLI Example::
+
+        salt '*' cat
     '''
     if cmd.startswith('/'):
         return _is_exec(cmd)
@@ -133,8 +139,9 @@ def exec_code(lang, code, cwd=DEFAULT_CWD):
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. The stdout and stderr will be returned
 
-    CLI Example:
-    salt '*' cmd.exec_code ruby 'puts "cheese"'
+    CLI Example::
+
+        salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
     fd, cfn = tempfile.mkstemp()
     open(cfn, 'w+').write(code)

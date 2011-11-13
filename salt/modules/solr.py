@@ -172,14 +172,17 @@ def lucene_version(core_name=None):
     setup you should specify a core name since all the cores run under the same
     servlet container, they will all have the same version.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    salt '*' solr.lucene_version
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.lucene_version
     '''
     ret = _get_return_dict()
     #do we want to check for all the cores?
@@ -209,14 +212,17 @@ def version(core_name=None):
     here as all the cores will run under the same servelet container and so
     will all have the same version.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    alt '*' solr.version
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        alt '*' solr.version
     '''
     ret = _get_return_dict()
     #do we want to check for all the cores?
@@ -249,14 +255,17 @@ def optimize(core_name=None):
     solr masters. It may take a LONG time to run and depending on timeout
     settings may time out the http request.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return:  dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    salt '*' solr.optimize music
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.optimize music
     '''
     ret = _get_return_dict()
 
@@ -288,14 +297,17 @@ def ping(core_name=None):
     '''
     Does a health check on solr, makes sure solr can talk to the indexes.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    salt '*' solr.ping music
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.ping music
     '''
     ret = _get_return_dict()
     if core_name is None and __check_for_cores__():
@@ -321,14 +333,17 @@ def is_replication_enabled(core_name=None):
     USED ONLY BY SLAVES
     Check for errors, and determine if a slave is replicating or not.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    salt '*' solr.is_replication_enabled music
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.is_replication_enabled music
     '''
     ret = _get_return_dict()
     success = True
@@ -384,14 +399,17 @@ def match_index_versions(core_name=None):
     Verifies that the master and the slave versions are in sync by
     comparing the index version.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    salt '*' solr.match_index_versions music
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.match_index_versions music
     '''
     #get the defualt return dict
     ret = _get_return_dict()
@@ -445,14 +463,17 @@ def replication_details(core_name=None):
     '''
     Get the full replication details.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    salt '*' solr.replication_details music
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.replication_details music
     '''
     ret = _get_return_dict()
     if core_name is None:
@@ -477,20 +498,23 @@ def backup_master(core_name=None, path=None):
     using cores it will backup all cores and append the name of the core to the
     backup path.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
-    Param: str path (/srv/media/solr/backup): The base backup path.
-                                              DO NOT INCLUDE THE CORE NAME!
-                                              if the core name is specified or
-                                              if you are using cores and leave
-                                              core_name blank the name of the
-                                              core will be appened to it.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    path : str (/srv/media/solr/backup)
+        The base backup path.
+        DO NOT INCLUDE THE CORE NAME!
+        If the core name is specified or if you are using cores and leave
+        core_name blank the name of the core will be appened to it.
 
-    CLI Example:
-    salt '*' solr.backup_master music
+    Return : dict::
+
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.backup_master music
     '''
     if path is None:
         path = "/srv/media/solr/backup{0}"
@@ -522,16 +546,20 @@ def set_is_polling(polling, core_name=None):
     SLAVE ONLY
     Prevent the slaves from polling the master for updates.
 
-    Param: bool polling: True will enable polling. False will disable it.
+    polling : bool
+        True will enable polling. False will disable it.
 
-    Param: str core_name (None): The name of the solr core if using cores.
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
 
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return : dict::
 
-    CLI Example:
-    salt '*' solr.set_is_polling False
+        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.set_is_polling False
     '''
 
     ret = _get_return_dict()
@@ -561,11 +589,13 @@ def signal(signal=None):
     going to work if the minion resides on the solr host. Additionally
     Solr doesn't ship with an init script so one must be created.
 
-    Param: str signal (None): The command to pass to the apache solr init
-                              valid values are 'start', 'stop', and 'restart'
+    signal : str (None)
+        The command to pass to the apache solr init valid values are 'start',
+        'stop', and 'restart'
 
-    CLI Example:
-    salt '*' solr.signal restart
+    CLI Example::
+
+        salt '*' solr.signal restart
     '''
 
     ret = _get_return_dict()

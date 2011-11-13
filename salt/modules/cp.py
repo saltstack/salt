@@ -87,8 +87,6 @@ def hash_file(path, env='base'):
     Return the hash of a file, to get the hash of a file on the
     salt master file server prepend the path with salt://<file on server>
     otherwise, prepend the file with / for a local file.
-
-    CLI Example:
     '''
     client = salt.minion.FileClient(__opts__)
     return client.hash_file(path, env)

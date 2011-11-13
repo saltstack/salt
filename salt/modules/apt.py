@@ -15,8 +15,9 @@ def available_version(name):
     '''
     The available version of the package in the repository
 
-    CLI Example:
-    salt '*' pkg.available_version <package name>
+    CLI Example::
+
+        salt '*' pkg.available_version <package name>
     '''
     version = ''
     cmd = 'apt-cache show ' + name + ' | grep Version'
@@ -36,8 +37,9 @@ def version(name):
     Returns a string representing the package version or an empty string if not
     installed
 
-    CLI Example:
-    salt '*' pkg.version <package name>
+    CLI Example::
+
+        salt '*' pkg.version <package name>
     '''
     pkgs = list_pkgs(name)
     if name in pkgs:
@@ -49,10 +51,13 @@ def refresh_db():
     '''
     Updates the apt database to latest packages based upon repositories
 
-    Returns a dict: {'<database name>': Bool}
+    Returns a dict::
 
-    CLI Example:
-    salt '*' pkg.refresh_db
+        {'<database name>': Bool}
+
+    CLI Example::
+
+        salt '*' pkg.refresh_db
     '''
     cmd = 'apt-get update'
     out = subprocess.Popen(cmd,
@@ -109,12 +114,13 @@ def install(pkg, refresh=False):
 
 def remove(pkg):
     '''
-    Remove a single package via apt-get remove
+    Remove a single package via ``apt-get remove``
 
-    Return a list containing the names of the removed packages:
+    Returns a list containing the names of the removed packages.
 
-    CLI Example:
-    salt '*' pkg.remove <package name>
+    CLI Example::
+
+        salt '*' pkg.remove <package name>
     '''
     ret_pkgs = []
     old_pkgs = list_pkgs()
@@ -136,8 +142,9 @@ def purge(pkg):
 
     Returns a list containing the names of the removed packages
 
-    CLI Example:
-    salt '*' pkg.purge <package name>
+    CLI Example::
+
+        salt '*' pkg.purge <package name>
     '''
     ret_pkgs = []
     old_pkgs = list_pkgs()
@@ -203,11 +210,13 @@ def upgrade(refresh=True):
 
 def list_pkgs(regex_string=""):
     '''
-    List the packages currently installed in a dict:
-    {'<package_name>': '<version>'}
+    List the packages currently installed in a dict::
 
-    CLI Example:
-    salt '*' pkg.list_pkgs
+        {'<package_name>': '<version>'}
+
+    CLI Example::
+
+        salt '*' pkg.list_pkgs
     '''
     ret = {}
     cmd = 'dpkg --list ' + regex_string

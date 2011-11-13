@@ -18,8 +18,9 @@ def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
 
-    CLI Example:
-    salt '*' file.gid_to_group 0
+    CLI Example::
+
+        salt '*' file.gid_to_group 0
     '''
     try:
         return grp.getgrgid(gid).gr_name
@@ -30,8 +31,9 @@ def group_to_gid(group):
     '''
     Convert the group to the gid on this system
 
-    CLI Example:
-    salt '*' file.group_to_gid root
+    CLI Example::
+
+        salt '*' file.group_to_gid root
     '''
     try:
         return grp.getgrnam(group).gr_gid
@@ -42,8 +44,9 @@ def get_gid(path):
     '''
     Return the user that owns a given file
 
-    CLI Example:
-    salt '*' file.get_gid /etc/passwd
+    CLI Example::
+
+        salt '*' file.get_gid /etc/passwd
     '''
     if not os.path.exists(path):
         return -1
@@ -53,8 +56,9 @@ def get_group(path):
     '''
     Return the user that owns a given file
 
-    CLI Example:
-    salt '*' file.get_group /etc/passwd
+    CLI Example::
+
+        salt '*' file.get_group /etc/passwd
     '''
     gid = get_gid(path)
     if gid == -1:
@@ -65,8 +69,9 @@ def uid_to_user(uid):
     '''
     Convert a uid to a user name
 
-    CLI Example:
-    salt '*' file.uid_to_user 0
+    CLI Example::
+
+        salt '*' file.uid_to_user 0
     '''
     try:
         return pwd.getpwuid(uid).pw_name
@@ -77,8 +82,9 @@ def user_to_uid(user):
     '''
     Convert user name to a gid
 
-    CLI Example:
-    salt '*' file.user_to_uid root
+    CLI Example::
+
+        salt '*' file.user_to_uid root
     '''
     try:
         return pwd.getpwnam(user).pw_uid
@@ -89,8 +95,9 @@ def get_uid(path):
     '''
     Return the user that owns a given file
 
-    CLI Example:
-    salt '*' file.get_uid /etc/passwd
+    CLI Example::
+
+        salt '*' file.get_uid /etc/passwd
     '''
     if not os.path.exists(path):
         return False
@@ -100,8 +107,9 @@ def get_user(path):
     '''
     Return the user that owns a given file
 
-    CLI Example:
-    salt '*' file.get_user /etc/passwd
+    CLI Example::
+
+        salt '*' file.get_user /etc/passwd
     '''
     uid = get_uid(path)
     if uid == -1:
@@ -112,8 +120,9 @@ def get_mode(path):
     '''
     Return the mode of a file
 
-    CLI Example:
-    salt '*' file.get_mode /etc/passwd
+    CLI Example::
+
+        salt '*' file.get_mode /etc/passwd
     '''
     if not os.path.exists(path):
         return -1
@@ -126,8 +135,9 @@ def set_mode(path, mode):
     '''
     Set the more of a file
 
-    CLI Example:
-    salt '*' file.set_mode /etc/passwd 0644
+    CLI Example::
+
+        salt '*' file.set_mode /etc/passwd 0644
     '''
     mode = str(mode)
     if not os.path.exists(path):
@@ -142,8 +152,9 @@ def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
 
-    CLI Example:
-    salt '*' file.chown /etc/passwd root root
+    CLI Example::
+
+        salt '*' file.chown /etc/passwd root root
     '''
     uid = user_to_uid(user)
     gid = group_to_gid(group)
@@ -162,8 +173,9 @@ def chgrp(path, group):
     '''
     Change the group of a file
 
-    CLI Example:
-    salt '*' file.chgrp /etc/passwd root
+    CLI Example::
+
+        salt '*' file.chgrp /etc/passwd root
     '''
     gid = group_to_gid(group)
     err = ''
@@ -181,8 +193,9 @@ def get_sum(path, form='md5'):
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
 
-    CLI Example:
-    salt '*' /etc/passwd sha512
+    CLI Example::
+
+        salt '*' /etc/passwd sha512
     '''
     if not os.path.isfile(path):
         return 'File not found'
@@ -233,8 +246,7 @@ def find(path, *opts):
         [!x-y] or [^x-y] = match anything except chars x through y
         {a,b,c}          = match a or b or c
 
-    path-regex:
-        a Python re (regular expression) pattern to match pathnames
+    path-regex: a Python re (regular expression) pattern to match pathnames
 
     file-types: a string of one or more of the following::
 
@@ -247,11 +259,9 @@ def find(path, *opts):
         l: symlink
         s: socket
 
-    users:
-        a space and/or comma separated list of user names and/or uids
+    users: a space and/or comma separated list of user names and/or uids
 
-    groups:
-        a space and/or comma separated list of group names and/or gids
+    groups: a space and/or comma separated list of group names and/or gids
 
     size-unit::
 

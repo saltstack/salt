@@ -19,8 +19,9 @@ def version():
     '''
     Return server version from apachectl -v
 
-    CLI Example:
-    salt '*' apache.version
+    CLI Example::
+
+        salt '*' apache.version
     '''
     cmd = __detect_os() + ' -v'
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -31,8 +32,9 @@ def fullversion():
     '''
     Return server version from apachectl -V
 
-    CLI Example:
-    salt '*' apache.fullversion
+    CLI Example::
+
+        salt '*' apache.fullversion
     '''
     cmd = __detect_os() + ' -V'
     ret = {}
@@ -53,8 +55,9 @@ def modules():
     '''
     Return list of static and shared modules from apachectl -M
 
-    CLI Example:
-    salt '*' apache.modules
+    CLI Example::
+
+        salt '*' apache.modules
     '''
     cmd = __detect_os() + ' -M'
     ret = {}
@@ -75,8 +78,9 @@ def servermods():
     '''
     Return list of modules compiled into the server (apachectl -l)
 
-    CLI Example:
-    salt '*' apache.servermods
+    CLI Example::
+
+        salt '*' apache.servermods
     '''
     cmd = __detect_os() + ' -l'
     ret = []
@@ -91,10 +95,11 @@ def servermods():
 def directives():
     '''
     Return list of directives together with expected arguments
-    and places where the directive is valid (apachectl -L)
+    and places where the directive is valid (``apachectl -L``)
 
-    CLI Example:
-    salt '*' apache.directives
+    CLI Example::
+
+        salt '*' apache.directives
     '''
     cmd = __detect_os() + ' -L'
     ret = {}
@@ -111,12 +116,13 @@ def directives():
 def vhosts():
     '''
     Show the settings as parsed from the config file (currently
-    only shows the virtualhost settings). (apachectl -S)
+    only shows the virtualhost settings). (``apachectl -S``)
     Because each additional virtual host adds to the execution
     time, this command may require a long timeout be specified.
 
-    CLI Example:
-    salt -t 10 '*' apache.vhosts
+    CLI Example::
+
+        salt -t 10 '*' apache.vhosts
     '''
     cmd = __detect_os() + ' -S'
     ret = {}
@@ -145,8 +151,9 @@ def signal(signal = None):
     '''
     Signals httpd to start, restart, or stop.
 
-    CLI Example:
-    salt '*' apache.signal restart
+    CLI Example::
+
+        salt '*' apache.signal restart
     '''
     valid_signals = 'start stop restart graceful graceful-stop'
     if not valid_signals.count(signal):
