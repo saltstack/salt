@@ -56,7 +56,6 @@ def cpu_percent(interval=0.1, per_cpu=False):
 
     interval
         the number of seconds to sample CPU usage over
-
     per_cpu
         if True return an array of CPU percent busy for each CPU, otherwise
         aggregate all precents into one number

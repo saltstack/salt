@@ -11,17 +11,15 @@ Available Functions
 The cmd state only has a single function, the ``run`` function
 
 run
-~~~
+    Execute a command given certian conditions
 
-Execute a command given certian conditions
+    A simple exampe:
 
-A simple exampe:
+    .. code-block:: yaml
 
-.. code-block:: yaml
-
-    date > /tmp/salt-run:
-      cmd:
-        - run
+        date > /tmp/salt-run:
+        cmd:
+            - run
 
 Only run if another execution returns sucessfully, in this case truncate
 syslog if there is no disk space:

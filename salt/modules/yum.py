@@ -24,8 +24,9 @@ def available_version(name):
     '''
     The available version of the package in the repository
 
-    CLI Example:
-    salt '*' pkg.available_version <package name>
+    CLI Example::
+
+        salt '*' pkg.available_version <package name>
     '''
     out = __salt__['cmd.run_stdout']('yum list {0} -q'.format(name))
     for line in out.split('\n'):
@@ -45,8 +46,9 @@ def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example:
-    salt '*' pkg.version <package name>
+    CLI Example::
+
+        salt '*' pkg.version <package name>
     '''
     pkgs = list_pkgs()
     if name in pkgs:
@@ -56,11 +58,13 @@ def version(name):
 
 def list_pkgs():
     '''
-    List the packages currently installed in a dict:
-    {'<package_name>': '<version>'}
+    List the packages currently installed in a dict::
 
-    CLI Example:
-    salt '*' pkg.list_pkgs
+        {'<package_name>': '<version>'}
+
+    CLI Example::
+
+        salt '*' pkg.list_pkgs
     '''
     cmd = "rpm -qa --qf '%{NAME}:%{VERSION}-%{RELEASE};'"
     ret = {}
@@ -77,8 +81,9 @@ def refresh_db():
     Since yum refreshes the database automatically, this runs a yum clean,
     so that the next yum operation will have a clean database
 
-    CLI Example:
-    salt '*' pkg.refresh_db
+    CLI Example::
+
+        salt '*' pkg.refresh_db
     '''
     cmd = 'yum clean dbcache'
     __salt__['cmd.retcode'](cmd)
@@ -94,8 +99,9 @@ def install(pkg, refresh=False):
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example:
-    salt '*' pkg.install <package name>
+    CLI Example::
+
+        salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
     cmd = 'yum -y install ' + pkg
@@ -128,8 +134,9 @@ def upgrade():
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example:
-    salt '*' pkg.upgrade
+    CLI Example::
+
+        salt '*' pkg.upgrade
     '''
     old = list_pkgs()
     cmd = 'yum -y upgrade'
@@ -157,8 +164,9 @@ def remove(pkg):
 
     Return a list containing the removed packages:
 
-    CLI Example:
-    salt '*' pkg.remove <package name>
+    CLI Example::
+
+        salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
     cmd = 'yum -y remove ' + pkg
@@ -172,8 +180,8 @@ def purge(pkg):
 
     Return a list containing the removed packages:
 
-    CLI Example:
-    salt '*' pkg.purge <package name>
+    CLI Example::
 
+        salt '*' pkg.purge <package name>
     '''
     return remove(pkg)

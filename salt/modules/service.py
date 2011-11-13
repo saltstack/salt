@@ -16,8 +16,9 @@ def start(name):
     '''
     Start the specified service
 
-    CLI Example:
-    salt '*' service.start <service name>
+    CLI Example::
+
+        salt '*' service.start <service name>
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' start')
@@ -27,8 +28,9 @@ def stop(name):
     '''
     Stop the specified service
 
-    CLI Example:
-    salt '*' service.stop <service name>
+    CLI Example::
+
+        salt '*' service.stop <service name>
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' stop')
@@ -37,9 +39,10 @@ def stop(name):
 def restart(name):
     '''
     Restart the named service
-    
-    CLI Example:
-    salt '*' service.restart <service name>
+
+    CLI Example::
+
+        salt '*' service.restart <service name>
     '''
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' restart')
@@ -51,8 +54,9 @@ def status(name, sig=None):
     service is running or not, pass a signature to use to find the service via
     ps
 
-    CLI Example:
-    salt '*' service.status <service name> [service signature]
+    CLI Example::
+
+        salt '*' service.status <service name> [service signature]
     '''
     sig = name if not sig else sig
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(

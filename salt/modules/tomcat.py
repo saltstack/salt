@@ -20,8 +20,9 @@ def version():
     '''
     Return server version from catalina.sh version
 
-    CLI Example:
-    salt '*' tomcat.version
+    CLI Example::
+
+        salt '*' tomcat.version
     '''
     cmd = __catalina_home() + '/bin/catalina.sh version'
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -37,8 +38,9 @@ def fullversion():
     '''
     Return all server information from catalina.sh version
 
-    CLI Example:
-    salt '*' full.fullversion
+    CLI Example::
+
+        salt '*' full.fullversion
     '''
     cmd = __catalina_home() + '/bin/catalina.sh version'
     ret = {}
@@ -55,8 +57,9 @@ def signal(signal = None):
     '''
     Signals catalina to start, stop, securestart, forcestop.
 
-    CLI Example:
-    salt '*' tomcat.signal start
+    CLI Example::
+
+        salt '*' tomcat.signal start
     '''
     valid_signals = {
         'start':       'start',

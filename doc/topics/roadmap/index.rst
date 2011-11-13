@@ -129,7 +129,7 @@ With 1.0.0 salt is a great option, with 2.0.0, using anything else is just plain
 dumb!
 
 Python 3 Support
----------------
+----------------
 
 The goal so far has been to write Salt with 3.0 in mind, but with 2.0
 we want it to be a reality. This will mostly require that the

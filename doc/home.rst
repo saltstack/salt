@@ -44,8 +44,11 @@ get much more out of Salt.
   | :doc:`full list of returners <ref/returners/returners>`
 * **State enforcement:**
   :doc:`States <ref/states/index>`
-  | :doc:`Renderers <ref/renderers/index>`
   | :doc:`Highstate data structure <ref/states/highstate>`
+  | :doc:`full list of states <ref/states/states>`
+* **Renderers:**
+  :doc:`Renderers <ref/renderers/index>`
+  | :doc:`full list of renderers <ref/renderers/renderers>`
 * **Transferring & syncing files:**
   :doc:`File Server <ref/file_server/index>`
 * **Network topology:**

@@ -3,13 +3,13 @@ Module to provide MySQL compatibility to salt.
 
 In order to connect to MySQL, certain configuration is required 
 in /etc/salt/minion on the relevant minions. Some sample configs
-might look like:
+might look like::
 
-mysql.host: 'localhost'
-mysql.port: 3306
-mysql.user: 'root'
-mysql.pass: ''
-mysql.db: 'mysql'
+    mysql.host: 'localhost'
+    mysql.port: 3306
+    mysql.user: 'root'
+    mysql.pass: ''
+    mysql.db: 'mysql'
 '''
 
 import MySQLdb
@@ -41,10 +41,11 @@ def connect():
 def status():
     '''
     Return the status of a MySQL server using the output
-    from the SHOW STATUS query.
+    from the ``SHOW STATUS`` query.
 
-    CLI Example:
-    salt '*' mysql.status
+    CLI Example::
+
+        salt '*' mysql.status
     '''
     ret = {}
     db = connect()
@@ -58,10 +59,11 @@ def status():
 def version():
     '''
     Return the version of a MySQL server using the output
-    from the SELECT VERSION() query.
+    from the ``SELECT VERSION()`` query.
 
-    CLI Example:
-    salt '*' mysql.version
+    CLI Example::
+
+        salt '*' mysql.version
     '''
     db = connect()
     cur = db.cursor()

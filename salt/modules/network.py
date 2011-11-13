@@ -14,8 +14,9 @@ def ping(host):
     '''
     Performs a ping to a host
 
-    CLI Example:
-    salt '*' network.ping archlinux.org -c 4
+    CLI Example::
+
+        salt '*' network.ping archlinux.org -c 4
     '''
     cmd = 'ping -c 4 %s' % _sanitize_host(host)
 
@@ -28,8 +29,9 @@ def netstat():
     '''
     Return information on open ports and states
 
-    CLI Example:
-    salt '*' network.netstat
+    CLI Example::
+
+        salt '*' network.netstat
     '''
     cmd = 'netstat -tulpnea'
     ret = []
@@ -69,8 +71,9 @@ def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
 
-    CLI Example:
-    salt '*' network.traceroute archlinux.org
+    CLI Example::
+
+        salt '*' network.traceroute archlinux.org
     '''
     cmd = 'traceroute %s' % _sanitize_host(host)
     ret = []
@@ -101,8 +104,9 @@ def dig(host):
     '''
     Performs a DNS lookup with dig
 
-    CLI Example:
-    salt '*' network.dig archlinux.org
+    CLI Example::
+
+        salt '*' network.dig archlinux.org
     '''
     cmd = 'dig %s' % _sanitize_host(host)
 
@@ -115,8 +119,9 @@ def isportopen(host, port):
     '''
     Return status of a port
 
-    CLI Example:
-    salt '*' network.isportopen 127.0.0.1 22
+    CLI Example::
+
+        salt '*' network.isportopen 127.0.0.1 22
     '''
 
     if not (1 <= int(port) <= 65535):

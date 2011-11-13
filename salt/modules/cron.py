@@ -56,8 +56,9 @@ def list_tab(user):
     '''
     Return the contents of the specified user's crontab
 
-    CLI Example:
-    salt '*' cron.list_tab root
+    CLI Example::
+
+        salt '*' cron.list_tab root
     '''
     data = raw_cron(user)
     ret = {'pre': [],
@@ -98,8 +99,9 @@ def set_special(user, special, cmd):
     '''
     Set up a special command in the crontab.
 
-    CLI Example:
-    salt '*' cron.set_special @hourly 'echo foobar'
+    CLI Example::
+
+        salt '*' cron.set_special @hourly 'echo foobar'
     '''
     lst = list_tab(user)
     for spec in lst['special']:
