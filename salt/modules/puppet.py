@@ -16,8 +16,9 @@ def run():
     Execute a puppet run and return a dict with the stderr,stdout,return code
     etc.
 
-    CLI Example:
-    salt '*' puppet.run
+    CLI Example::
+
+        salt '*' puppet.run
     '''
     if _check_puppet():
         return __salt__['cmd.run_all']('puppetd --test')
