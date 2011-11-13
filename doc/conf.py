@@ -61,8 +61,20 @@ html_style = ['base-salt.css']
 html_use_smartypants = False
 
 html_additional_pages = {'index': 'index.html'}
-html_sidebars = {'index': ['indexsidebar.html']}
+
+html_default_sidebars = [
+    'localtoc.html',
+    'relations.html',
+    'sourcelink.html',
+    'searchbox.html']
+
+html_sidebars = {
+    'ref/**/all/salt.*': ['autosummarysidebar.html'] + html_default_sidebars,
+    'index': ['indexsidebar.html', 'searchbox.html'],
+}
+
 html_context = {
+    'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/thatch45/salt',
     'github_issues': 'https://github.com/thatch45/salt/issues',
     'github_downloads': 'https://github.com/thatch45/salt/downloads',
