@@ -2,10 +2,6 @@
 Full list of builtin modules
 ============================
 
-.. contents:: Contents
-    :local:
-    :depth: 1
-
 :mod:`salt.modules.apache`
 ==========================
 
