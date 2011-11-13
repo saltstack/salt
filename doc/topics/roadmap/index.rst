@@ -31,7 +31,8 @@ complete. We mostly just need to clean things up for 1.0.0.
 Clean up code base
 ------------------
 
-Go through the code, clean up pep8 violations and python3 compatibilities
+Go through the code, clean up PEP 8 violations and make sure we have
+Python 3 compatible code.
 
 Module Cross Calls
 ``````````````````
@@ -104,9 +105,10 @@ members can submit proposals for feature development for review.
 =====
 
 2.0.0 will require a number of serious additions and overhauls. We wand to make
-the transport layer much cleaner and clean up the crypto deps. Figure out how
-to get more speed out of Salt and make it more memory efficient. The security
-system needs some additions to make it more secure.
+the transport layer much cleaner and clean up the crypto dependencies.
+Figure out how to get more speed out of Salt and make it more memory
+efficient. The security system needs some additions to make it more
+secure.
 
 There are also a number of features that should be pulled out of their classes
 and made to stand alone. Also we want to MASSIVELY improve platform support and
@@ -120,8 +122,9 @@ dumb!
 Python 3 Support
 ---------------
 
-The goal so far has been to write Salt with 3.0 in mind, but with 2.0 we want
-it to be a reality. This will mostly require that the reqs are met.
+The goal so far has been to write Salt with 3.0 in mind, but with 2.0
+we want it to be a reality. This will mostly require that the
+requirements are met.
 
 Refine Security
 ---------------
@@ -147,15 +150,17 @@ need to have a master private key signature somewhere.
 Change Network Serialization
 ````````````````````````````
 
-Right now it is pickle, this needs to be changed to something more standard
-like JSON. We also need to change how messages are formatted to speed up the
-serialization and lower network usage more. A new model will be proposed.
+Right now it is pickle, this needs to be changed to something more
+standard like JSON or maybe even something simpler/faster such as
+tnetstrings as used by Mongrel2. We also need to change how messages
+are formatted to speed up the serialization and lower network usage
+more. A new model will be proposed.
 
 State Generator
 ---------------
 
 Since the state system is based on data structures we can generate them from
-a uniform api, this needs to be available in renderer modules.
+a uniform API, this needs to be available in renderer modules.
 
 Separate out the File Server
 ----------------------------
@@ -185,7 +190,7 @@ AIX
 HPUX
 Windows
 
-Language Librairy Modules and States
+Language Library Modules and States
 ------------------------------------
 
 Modules and States that support installing programming language packages.
@@ -217,10 +222,11 @@ More Renderers!
 
 The renderer system needs to support more templating engines and language
 bindings. Adding support for XML, Cheetah, Tenjin etc. will be simple. But
-the main goal here is to allow sls files to be written in ruby, lua, perl or
+the main goal here is to allow sls files to be written in Ruby, Lua, Perl or
 basically anything.
 
 Unit Tests
 ----------
 
-Need unit tests in place for everything, we are planning on using unittest2
+Need unit tests in place for everything, we are planning on using
+Unittest2 and pytest.
