@@ -40,19 +40,9 @@
     <div class="sidebar">
         {%- block sidebarlogo %}{%- endblock %}
 
-        {%- if sidebars != None %}
-            {#- new style sidebar: explicitly include/exclude templates #}
-            {%- for sidebartemplate in sidebars %}
-                {%- include sidebartemplate %}
-            {%- endfor %}
-        {%- else %}
-            {#- old style sidebars: using blocks -- should be deprecated #}
-            {%- block sidebartoc %}{%- include "localtoc.html" %}{%- endblock %}
-            {%- block sidebarrel %}{%- include "relations.html" %}{%- endblock %}
-            {%- block sidebarsourcelink %}{%- include "sourcelink.html" %}{%- endblock %}
-            {%- if customsidebar %}{%- include customsidebar %}{%- endif %}
-            {%- block sidebarsearch %}{%- include "searchbox.html" %}{%- endblock %}
-        {%- endif %}
+        {%- for sidebartemplate in sidebars|default(html_default_sidebars, true) %}
+            {%- include sidebartemplate %}
+        {%- endfor %}
     </div>
     {%- endif %}
 {%- endmacro %}
