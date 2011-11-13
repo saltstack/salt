@@ -1,29 +1,30 @@
 '''
 Routines to set up a minion
 '''
+
 # Import python libs
-import os
-import distutils.sysconfig
 import glob
-import re
-import time
 import logging
-import tempfile
-import traceback
-import shutil
-import threading
 import multiprocessing
+import os
+import re
+import shutil
+import tempfile
+import threading
+import time
+import traceback
 
 # Import zeromq libs
 import zmq
+
 # Import salt libs
-import salt.crypt
 from salt.crypt import AuthenticationError
-import salt.utils
+import salt.client
+import salt.crypt
+import salt.loader
 import salt.modules
 import salt.returners
-import salt.loader
-import salt.client
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,12 @@ log = logging.getLogger(__name__)
 # 5. connect to the publisher
 # 6. handle publications
 
-class MinionError(Exception): pass
+
+class MinionError(Exception):
+    '''
+    Custom exception class.
+    '''
+    pass
 
 
 class SMinion(object):
@@ -115,14 +121,15 @@ class Minion(object):
             return
         # Verify that the publication applies to this minion
         if 'tgt_type' in data:
-            if not getattr(self.matcher, data['tgt_type'] + '_match')(data['tgt']):
+            if not getattr(self.matcher,
+                           data['tgt_type'] + '_match')(data['tgt']):
                 return
         else:
             if not self.matcher.glob_match(data['tgt']):
                 return
-        # If the minion does not have the function, don't execute, this prevents
-        # minions that could not load a minion module from returning a
-        # predictable exception
+        # If the minion does not have the function, don't execute,
+        # this prevents minions that could not load a minion module
+        # from returning a predictable exception
         #if data['fun'] not in self.functions:
         #    return
         log.debug('Executing command {0[fun]} with jid {0[jid]}'.format(data))
@@ -142,7 +149,8 @@ class Minion(object):
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded data differently.
+        Override this method if you wish to handle the decoded
+        data differently.
         '''
         if self.opts['multiprocessing']:
             if type(data['fun']) == type(list()):
@@ -214,6 +222,7 @@ class Minion(object):
             for index in range(0, len(data['arg'][ind])):
                 try:
                     arg = eval(data['arg'][ind][index])
+                    # FIXME: do away the ugly here...
                     if isinstance(arg, str) \
                             or isinstance(arg, list) \
                             or isinstance(arg, int) \
@@ -306,8 +315,8 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        master_pub = 'tcp://' + self.opts['master_ip'] + ':'\
-                   + str(self.publish_port)
+        master_pub = ('tcp://' + self.opts['master_ip'] +
+                      ':' + str(self.publish_port))
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -369,12 +378,14 @@ class Syndic(salt.client.LocalClient, Minion):
            or 'to' not in data or 'arg' not in data:
             return
         data['to'] = int(data['to']) - 1
-        log.debug('Executing syndic command {0[fun]} with jid {0[jid]}'.format(data))
+        log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
+                  .format(data)))
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded data differently.
+        Override this method if you wish to handle
+        the decoded data differently.
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
@@ -412,6 +423,7 @@ class Syndic(salt.client.LocalClient, Minion):
         ret['fun'] = data['fun']
         # Return the publication data up the pipe
         self._return_pub(ret, '_syndic_return')
+
 
 class Matcher(object):
     '''
@@ -564,8 +576,8 @@ class FileClient(object):
 
     def cache_files(self, paths, env='base'):
         '''
-        Download a list of files stored on the master and put them in the minion
-        file cache
+        Download a list of files stored on the master and put them
+        in the minion file cache
         '''
         ret = []
         for path in paths:
@@ -618,7 +630,7 @@ class FileClient(object):
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(self.socket.recv_pyobj())
 
-    def list_env(path, env='base'):
+    def list_env(self, path, env='base'):
         '''
         Return a list of the files in the file server's specified environment
         '''
@@ -636,10 +648,8 @@ class FileClient(object):
         '''
         if sls.count('.'):
             sls = sls.replace('.', '/')
-        for path in [
-                'salt://' + sls + '.sls',
-                os.path.join('salt://', sls, 'init.sls')
-                ]:
+        for path in ['salt://' + sls + '.sls',
+                     os.path.join('salt://', sls, 'init.sls')]:
             dest = self.cache_file(path, env)
             if dest:
                 return dest
@@ -654,4 +664,3 @@ class FileClient(object):
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(self.socket.recv_pyobj())
-
