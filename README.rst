@@ -59,16 +59,21 @@ a simple Python API, or from the command line, so that Salt can be used to
 execute one-off commands as well as operate as an integral part of a larger
 application.
 
-Fast, flexible, scalable
-========================
+Fast, flexible, scalable, secure
+================================
 
-The result is a system that can execute commands across groups of varying size,
-from very few to very many servers at considerably high speed. A system that is
-very fast, easy to set up and amazingly malleable, able to suit the needs of
-any number of servers working within the same system. Salt’s unique
-architecture brings together the best of the remote execution world, amplifies
-its capabilities and expands its range, resulting in this system that is as
-versatile as it is practical, able to suit any network.
+The result is a system that can execute commands across groups of
+varying size, from very few to very many servers at considerably high
+speed. A system that is very fast, easy to set up and amazingly
+malleable, able to suit the needs of any number of servers working
+within the same system. Salt’s unique architecture brings together the
+best of the remote execution world, amplifies its capabilities and
+expands its range, resulting in this system that is as versatile as it
+is practical, able to suit any network. Last but not least, security
+is an intrinsic part of salt and something not just influencing how
+source code is written and how tests are done, but also something that
+defines the overall architecture and has heavy influence on the core
+design of salt.
 
 Open
 ====
