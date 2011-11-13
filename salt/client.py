@@ -186,6 +186,9 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            return ret
         # Wait for the hosts to check in
         while True:
             for fn_ in os.listdir(jid_dir):
@@ -221,6 +224,9 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            return ret
         # Wait for the hosts to check in
         while True:
             for fn_ in os.listdir(jid_dir):
@@ -353,8 +359,25 @@ class LocalClient(object):
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
-        socket.connect('tcp://%(interface)s:%(ret_port)s' % self.opts)
+        socket.linger = 0
+        socket.connect(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(
+                    self.opts
+                    )
+                )
         socket.send(package)
-        payload = salt.payload.unpackage(socket.recv())
+        payload = None
+        for ind in range(100):
+            try:
+                payload = salt.payload.unpackage(
+                        socket.recv(
+                            zmq.NOBLOCK
+                            )
+                        )
+                break
+            except zmq.core.error.ZMQError:
+                time.sleep(0.01)
+        if not payload:
+            return {'jid': '0', 'minions': []}
         return {'jid': payload['load']['jid'],
                 'minions': minions}
