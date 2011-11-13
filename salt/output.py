@@ -1,9 +1,10 @@
 '''
 A simple way of setting the output format for data from modules
 '''
+
 # Import Python libs
-import yaml
 import pprint
+import yaml
 
 # Conditionally import the json module
 try:
@@ -17,10 +18,13 @@ import salt.utils
 
 __all__ = ('get_outputter',)
 
+
 def remove_colors():
     '''
     Acces all of the utility colors and change them to empy strings
     '''
+    pass
+
 
 class Outputter(object):
     '''
@@ -30,13 +34,14 @@ class Outputter(object):
 
     @classmethod
     def check(klass, name):
-       # Don't advertise Outputter classes for optional modules
-       if hasattr(klass, "enabled") and not klass.enabled:
-           return False
-       return klass.supports == name
+        # Don't advertise Outputter classes for optional modules
+        if hasattr(klass, "enabled") and not klass.enabled:
+            return False
+        return klass.supports == name
 
     def __call__(self, data, **kwargs):
         pprint.pprint(data)
+
 
 class HighStateOutputter(Outputter):
     '''
@@ -45,6 +50,7 @@ class HighStateOutputter(Outputter):
     return data
     '''
     supports = 'highstate'
+
     def __call__(self, data, **kwargs):
         colors = salt.utils.get_colors(kwargs.get('color'))
         for host in data:
@@ -53,9 +59,11 @@ class HighStateOutputter(Outputter):
             if isinstance(data[host], list):
                 # Errors have been detected, list them in RED!
                 hcolor = colors['RED_BOLD']
-                hstrs.append('    {0}Data failed to compile:{1[ENDC]}'.format(hcolor, colors))
+                hstrs.append(('    {0}Data failed to compile:{1[ENDC]}'
+                              .format(hcolor, colors)))
                 for err in data[host]:
-                    hstrs.append('{0}----------\n    {1}{2[ENDC]}'.format(hcolor, err, colors))
+                    hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
+                                  .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
                 # Everything rendered as it should display the output
                 for tname, ret in data[host].items():
@@ -66,11 +74,10 @@ class HighStateOutputter(Outputter):
                     if ret['changes']:
                         tcolor = colors['CYAN']
                     comps = tname.split('.')
-                    hstrs.append('{0}----------\n    State: - {1}{2[ENDC]}'.format(
-                        tcolor,
-                        comps[0],
-                        colors
-                        ))
+                    hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
+                                  .format(tcolor, comps[0], colors)))
+                    # FIXME: string formating below should match the
+                    # style above
                     hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
                         tcolor,
                         '.'.join(comps[1:-1]),
@@ -94,20 +101,19 @@ class HighStateOutputter(Outputter):
                     changes = '        Changes:   '
                     for key in ret['changes']:
                         if isinstance(ret['changes'][key], str):
-                            changes += key + ': ' + ret['changes'][key] + '\n                   '
+                            changes += (key + ': ' + ret['changes'][key] +
+                                        '\n                   ')
                         elif isinstance(ret['changes'][key], dict):
-                            changes += key + ': ' + pprint.pformat(ret['changes'][key]) + '\n                   '
+                            changes += (key + ': ' +
+                                        pprint.pformat(ret['changes'][key]) +
+                                        '\n                   ')
                         else:
-                            changes += key + ': ' + pprint.pformat(ret['changes'][key]) + '\n                   '
-                    hstrs.append('{0}{1}{2[ENDC]}'.format(
-                        tcolor,
-                        changes,
-                        colors
-                        ))
-            print '{0}{1}:{2[ENDC]}'.format(
-                hcolor,
-                host,
-                colors)
+                            changes += (key + ': ' +
+                                        pprint.pformat(ret['changes'][key]) +
+                                        '\n                   ')
+                    hstrs.append(('{0}{1}{2[ENDC]}'
+                                  .format(tcolor, changes, colors)))
+            print('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors))
             for hstr in hstrs:
                 print hstr
 
@@ -117,8 +123,10 @@ class RawOutputter(Outputter):
     Raw output. This calls repr() on the returned data.
     '''
     supports = "raw"
+
     def __call__(self, data, **kwargs):
         print data
+
 
 class TxtOutputter(Outputter):
     '''
@@ -127,6 +135,7 @@ class TxtOutputter(Outputter):
     on the shell when ran directly.
     '''
     supports = "txt"
+
     def __call__(self, data, **kwargs):
         if hasattr(data, "keys"):
             for key in data.keys():
@@ -137,12 +146,13 @@ class TxtOutputter(Outputter):
             # For non-dictionary data, just use print
             RawOutputter()(data)
 
+
 class JSONOutputter(Outputter):
     '''
     JSON output.
     '''
     supports = "json"
-    enabled  = JSON
+    enabled = JSON
 
     def __call__(self, data, **kwargs):
         try:
@@ -155,16 +165,18 @@ class JSONOutputter(Outputter):
             ret = json.dumps({})
         print ret
 
+
 class YamlOutputter(Outputter):
     '''
     Yaml output. All of the cool kids are doing it.
     '''
     supports = "yaml"
 
-    def __call__(self, data,  **kwargs):
+    def __call__(self, data, **kwargs):
         if 'color' in kwargs:
             kwargs.pop('color')
         print yaml.dump(data, **kwargs)
+
 
 def get_outputter(name=None):
     '''
