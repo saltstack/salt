@@ -13,21 +13,33 @@ def info(name):
 
         salt '*' shadow.user root
     '''
-    data = spwd.getspnam(name)
-    return {
-        'name': data.sp_nam,
-        'pwd': data.sp_pwd,
-        'lstchg': data.sp_lstchg,
-        'min': data.sp_min,
-        'max': data.sp_max,
-        'warn': data.sp_warn,
-        'inact': data.sp_inact,
-        'expire': data.sp_expire}
+    try:
+        data = spwd.getspnam(name)
+        ret = {
+            'name': data.sp_nam,
+            'pwd': data.sp_pwd,
+            'lstchg': data.sp_lstchg,
+            'min': data.sp_min,
+            'max': data.sp_max,
+            'warn': data.sp_warn,
+            'inact': data.sp_inact,
+            'expire': data.sp_expire}
+    except KeyError:
+        ret = {
+            'name': '',
+            'pwd': '',
+            'lstchg': '',
+            'min': '',
+            'max': '',
+            'warn': '',
+            'inact': '',
+            'expire': ''}
+    return ret
 
 def set_password(name, password):
     '''
-    Set the password for a named user. The password must be a properly defined
-    hash. The password hash can be generated with:
+    Set the password for a named user, the password must be a properly defined
+    hash, the password hash can be generated with this command:
     ``openssl passwd -1 <plaintext password>``
 
     CLI Example::
@@ -46,8 +58,9 @@ def set_password(name, password):
             continue
         comps[1] = password
         line = ':'.join(comps)
-        lines.append(line)
+        lines.append('{0}\n'.format(line))
     open(s_file, 'w+').writelines(lines)
+    print name
     uinfo = info(name)
     if uinfo['pwd'] == password:
         return True

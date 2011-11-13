@@ -25,6 +25,7 @@ def present(
         gid=None,
         groups=None,
         home=False,
+        password=None,
         shell='/bin/bash'
         ):
     '''
@@ -46,6 +47,9 @@ def present(
     home
         The location of the home directory to manage
 
+    password
+        A password hash to set for the user
+
     shell
         The login shell, defaults to /bin/bash
     '''
@@ -53,6 +57,8 @@ def present(
            'changes': {},
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
+    print password
+    lshad = __salt__['shadow.info'](name)
     for lusr in __salt__['user.getent']():
         # Scan over the users
         if lusr['name'] == name:
@@ -78,11 +84,19 @@ def present(
                 if lusr['shell'] != shell:
                     # Fix the shell
                     __salt__['user.chshell'](name, shell)
+            if password:
+                if lshad['pwd'] != password:
+                    # Set the new password
+                    __salt__['shadow.set_password'](name, password)
             post = __salt__['user.info'](name)
+            spost = __salt__['shadow.info'](name)
             # See if anything changed
             for key in post:
                 if post[key] != pre[key]:
                     ret['changes'][key] = post[key]
+            for key in spost:
+                if lshad[key] != spost[key]:
+                    ret['changes'][key] = spost[key]
             if ret['changes']:
                 ret['comment'] = 'Updated user {0}'.format(name)
             return ret
@@ -90,6 +104,14 @@ def present(
     if __salt__['user.add'](name, uid, gid, groups, home, shell):
         ret['comment'] = 'New user {0} created'.format(name)
         ret['changes'] = __salt__['user.info'](name)
+        if password:
+            __salt__['shadow.set_password'](name, password)
+            spost = __salt__['shadow.info'](name)
+            if spost['pwd'] != password:
+                ret['comment'] = ('User {0} created but failed to set'
+                ' password to {1}').format(name, password)
+                ret['result'] = False
+            ret['changes']['password'] = password
     else:
         ret['comment'] = 'Failed to create new user {0}'.format(name)
         ret['result'] = False
