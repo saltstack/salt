@@ -67,7 +67,6 @@ We are finding a number of bugs in the new state system as we get more testers
 there are a few bugs that been attention:
 
 #66
-#179
 
 We need to keep pushing through testing states on live systems and find as
 many bugs as possible before 1.0, we have found too many 0 day bugs.
