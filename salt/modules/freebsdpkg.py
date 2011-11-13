@@ -1,4 +1,4 @@
-f'''
+'''
 Package support for FreeBSD
 '''
 
