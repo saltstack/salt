@@ -1,13 +1,13 @@
-"""
+'''
     salt.log
     ~~~~~~~~
 
     This is were Salt's logging get's setup.
 
 
-    :copyright: © 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
     :license: Apache 2.0, see LICENSE for more details.
-"""
+'''
 
 import logging
 import logging.handlers
@@ -18,7 +18,7 @@ GARBAGE = 1
 LOG_LEVELS = {
     'debug': logging.DEBUG,
     'error': logging.ERROR,
-    'garbage': GARBAGE
+    'garbage': GARBAGE,
     'info': logging.INFO,
     'none': logging.NOTSET,
     'trace': TRACE,
