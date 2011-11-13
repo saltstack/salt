@@ -1,17 +1,21 @@
+"""
+Manage Apache Solr
+
+This module uses http requests to talk to the Apache Solr request handlers to
+gather information and report errors. Because of this the minion doesn't
+nescessarily need to reside on the actual slave.  However if you want to use
+the signal function the minion must reside on the physical Solr host.
+
+This module supports multi-core and standard setups.  Certain methods are
+master/slave specific.  Make sure you set the ``solr.type``. If you have
+questions or want a feature request please ask.
+
+"""
 ###############################################################################
 #                           APACHE SOLR SALT MODULE                           #
 # Author: Jed Glazner                                                         #
 # Version: 0.1                                                                #
 # Modified: 9/20/2011                                                         #
-#                                                                             #
-# This module uses http requests to talk to the apache solr request handlers  #
-# to gather information and report errors. Because of this the minion doesn't #
-# nescessarily need to reside on the actual slave.  However if you want to    #
-# use the signal function the minion must reside on the physical solr host.   #
-#                                                                             #
-# This module supports multi-core and standard setups.  Certain methods are   #
-# master/slave specific.  Make sure you set the solr.type. If you have        #
-# questions or want a feature request please ask.                             #
 #                                                                             #
 # #############################################################################
 

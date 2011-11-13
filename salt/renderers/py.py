@@ -1,6 +1,8 @@
 '''
-Pure python state renderer, the sls file should contain a function called sls
-which returns high state data
+Pure python state renderer
+
+The sls file should contain a function called ``sls`` which returns high state
+data
 '''
 
 # Import python libs
