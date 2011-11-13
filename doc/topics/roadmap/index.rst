@@ -94,6 +94,12 @@ Module Built in Docs
 Double check all of the module built in docs for consistency. Make sure things
 are clear and accurate.
 
+Proposal System
+---------------
+
+I would like to have a proposal system in place for Salt, so that community
+members can submit proposals for feature development for review.
+
 2.0.0
 =====
 
@@ -105,6 +111,8 @@ system needs some additions to make it more secure.
 There are also a number of features that should be pulled out of their classes
 and made to stand alone. Also we want to MASSIVELY improve platform support and
 module/state penetration.
+
+This is only a subset of what we can expect 2.0.0 to be!
 
 With 1.0.0 salt is a great option, with 2.0.0, using anything else is just plain
 dumb!
