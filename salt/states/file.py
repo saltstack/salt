@@ -60,12 +60,13 @@ something like this:
         - source: salt://code/flask
 '''
 
+import difflib
+import hashlib
 import os
 import shutil
 import tempfile
-import difflib
-import hashlib
 import traceback
+
 
 def _makedirs(path):
     '''
@@ -73,6 +74,7 @@ def _makedirs(path):
     '''
     if not os.path.isdir(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path))
+
 
 def _is_bin(path):
     '''
@@ -82,6 +84,7 @@ def _is_bin(path):
     if open(path, 'rb').read(2048).count('\0'):
         return True
     return False
+
 
 def _mako(sfn):
     '''
@@ -111,6 +114,7 @@ def _mako(sfn):
         return {'result': False,
                 'data': trb}
 
+
 def _jinja(sfn):
     '''
     Render a jinja2 template, returns the location of the rendered file,
@@ -138,6 +142,7 @@ def _jinja(sfn):
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
+
 
 def symlink(name, target, force=False, makedirs=False):
     '''
@@ -167,7 +172,8 @@ def symlink(name, target, force=False, makedirs=False):
         if makedirs:
             _makedirs(name)
         ret['result'] = False
-        ret['comment'] = 'Directory {0} for symlink is not present'.format(os.path.dirname(name))
+        ret['comment'] = ('Directory {0} for symlink is not present'
+                          .format(os.path.dirname(name)))
         return ret
     if os.path.islink(name):
         # The link exists, verify that it matches the target
@@ -184,7 +190,8 @@ def symlink(name, target, force=False, makedirs=False):
             os.remove(name)
         else:
             ret['result'] = False
-            ret['comment'] = 'File exists where the symlink {0} should be'.format(name)
+            ret['comment'] = ('File exists where the symlink {0} should be'
+                              .format(name))
             return ret
     elif os.path.isdir(name):
         # It is not a link or a file, it is a dir, error out
@@ -192,7 +199,8 @@ def symlink(name, target, force=False, makedirs=False):
             shutil.rmtree(name)
         else:
             ret['result'] = False
-            ret['comment'] = 'Direcotry exists where the symlink {0} should be'.format(name)
+            ret['comment'] = ('Direcotry exists where the symlink {0} '
+                              'should be'.format(name))
             return ret
     if not os.path.exists(name):
         # The link is not present, make it
@@ -200,6 +208,7 @@ def symlink(name, target, force=False, makedirs=False):
         ret['comment'] = 'Created new symlink {0}'.format(name)
         ret['changes']['new'] = name
         return ret
+
 
 def absent(name):
     '''
@@ -235,6 +244,7 @@ def absent(name):
             return ret
     ret['comment'] = 'File {0} is not present'.format(name)
     return ret
+
 
 def managed(name,
         source,
@@ -281,10 +291,10 @@ def managed(name,
     '''
     if mode:
         mode = str(mode)
-    ret =  {'name': name,
-            'changes': {},
-            'result': True,
-            'comment': ''}
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
@@ -295,7 +305,8 @@ def managed(name,
             data = globals()[t_key](sfn)
         else:
             ret['result'] = False
-            ret['comment'] = 'Specified template format {0} is not supported'.format(template)
+            ret['comment'] = ('Specified template format {0} is not supported'
+                              .format(template))
             return ret
         if data['result']:
             sfn = data['data']
@@ -332,7 +343,9 @@ def managed(name,
             else:
                 slines = open(sfn, 'rb').readlines()
                 nlines = open(name, 'rb').readlines()
-                ret['changes']['diff'] = '\n'.join(difflib.unified_diff(slines, nlines))
+                ret['changes']['diff'] = ('\n'.join(difflib
+                                                    .unified_diff(slines,
+                                                                  nlines)))
             # Pre requs are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copy(sfn, name)
@@ -373,7 +386,8 @@ def managed(name,
         if group:
             if group != __salt__['file.get_group'](name):
                 ret['result'] = False
-                ret['comment'] += 'Failed to change group to {0} '.format(group)
+                ret['comment'] += ('Failed to change group to {0} '
+                                   .format(group))
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
 
@@ -455,6 +469,7 @@ def managed(name,
             ret['comment'] = 'File ' + name + ' is in the correct state'
         return ret
 
+
 def directory(name,
         user=None,
         group=None,
@@ -485,13 +500,14 @@ def directory(name,
     '''
     if mode:
         mode = str(mode)
-    ret =  {'name': name,
-            'changes': {},
-            'result': True,
-            'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
     if os.path.isfile(name):
         ret['result'] = False
-        ret['comment'] = 'Specifed location {0} exists and is a file'.format(name)
+        ret['comment'] = ('Specifed location {0} exists and is a file'
+                          .format(name))
         return ret
     if not os.path.isdir(name):
         # The dir does not exist, make it
@@ -560,9 +576,8 @@ def directory(name,
         ret['comment'] = 'Directory {0} is in the correct state'.format(name)
     return ret
 
-def recurse(name,
-        source,
-        __env__='base'):
+
+def recurse(name, source, __env__='base'):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
     over to the specified path.
@@ -585,7 +600,8 @@ def recurse(name,
         if os.path.exists(name):
             # it is not a dir, but it exists - fail out
             ret['result'] = False
-            ret['comment'] = 'The path {0} exists and is not a directory'.format(name)
+            ret['comment'] = ('The path {0} exists and is not a directory'
+                              .format(name))
             return ret
         os.makedirs(name)
     for fn_ in __salt__['cp.cache_dir'](source, __env__):

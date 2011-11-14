@@ -5,12 +5,12 @@ This renderer will take a json file with the Mako template and render it to a
 high data format for salt states.
 '''
 
-# Import python libs
-import os
 import json
+import os
 
 # Import Third Party libs
 from mako.template import Template
+
 
 def render(template):
     '''
@@ -18,11 +18,14 @@ def render(template):
     '''
     if not os.path.isfile(template):
         return {}
+
     passthrough = {}
     passthrough['salt'] = __salt__
     passthrough['grains'] = __grains__
     passthrough['env'] = env
     passthrough['sls'] = sls
+
     template = Template(open(template, 'r').read())
     json_data = template.render(**passthrough)
+
     return json.loads(json_data)
