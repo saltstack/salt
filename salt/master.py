@@ -171,7 +171,7 @@ class ReqServer(object):
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
-        # FIXME: both, XREP and XREQ are deprecated in favor of BROKER
+        # FIXME: both, XREP and XREQ are deprecated in favor of ROUTER
         # and DEALER
         self.clients = self.context.socket(zmq.XREP)
         self.workers = self.context.socket(zmq.XREQ)
