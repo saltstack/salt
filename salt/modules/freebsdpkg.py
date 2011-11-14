@@ -4,11 +4,13 @@ Package support for FreeBSD
 
 import os
 
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
     return 'pkg' if __grains__['os'] == 'FreeBSD' else False
+
 
 def _list_removed(old, new):
     '''
@@ -20,6 +22,8 @@ def _list_removed(old, new):
             pkgs.append(pkg)
     return pkgs
 
+
+# FIXME: Unused argument 'name' (pylint is your friend)
 def available_version(name):
     '''
     The available version of the package in the repository
@@ -29,6 +33,7 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     pass
+
 
 def version(name):
     '''
@@ -43,6 +48,7 @@ def version(name):
         return pkgs[name]
     else:
         return ''
+
 
 def list_pkgs():
     '''
@@ -62,6 +68,7 @@ def list_pkgs():
         ret['-'.join(comps[0:-1])] = comps[-1]
     return ret
 
+
 def refresh_db():
     '''
     Update the ports tree with portsnap. If the ports tre does not exist it
@@ -77,6 +84,8 @@ def refresh_db():
     else:
         __salt__['cmd.run']('portsnap update')
 
+
+# FIXME: Unused argument 'refresh'
 def install(name, refresh=False):
     '''
     Install the passed package
@@ -108,6 +117,7 @@ def install(name, refresh=False):
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
     return pkgs
+
 
 def upgrade():
     '''
@@ -141,6 +151,7 @@ def upgrade():
                           'new': new[npkg]}
     return pkgs
 
+
 def remove(name):
     '''
     Remove a single package with pkg_delete
@@ -157,6 +168,7 @@ def remove(name):
         __salt__['cmd.retcode']('pkg_delete {0}'.format(name))
     new = list_pkgs()
     return _list_removed(old, new)
+
 
 def purge(name):
     '''

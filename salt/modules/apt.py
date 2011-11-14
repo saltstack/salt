@@ -1,8 +1,10 @@
 '''
-Support for apt
+Support for APT (Advanced Packaging Tool)
 '''
 
+# FIXME: we want module internal calls rather than using subprocess direclty
 import subprocess
+
 
 def __virtual__():
     '''
@@ -10,6 +12,7 @@ def __virtual__():
     '''
 
     return 'pkg' if __grains__['os'] == 'Debian' else False
+
 
 def available_version(name):
     '''
@@ -32,6 +35,7 @@ def available_version(name):
 
     return version
 
+
 def version(name):
     '''
     Returns a string representing the package version or an empty string if not
@@ -47,9 +51,10 @@ def version(name):
     else:
         return ''
 
+
 def refresh_db():
     '''
-    Updates the apt database to latest packages based upon repositories
+    Updates the APT database to latest packages based upon repositories
 
     Returns a dict::
 
@@ -59,7 +64,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'apt-get update'
+    cmd = 'aptitude update'
     out = subprocess.Popen(cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('\n')
@@ -73,9 +78,10 @@ def refresh_db():
         if cols[0].count('Get'):
             servers[ident] = True
         else:
-            servers[ident]  = False
+            servers[ident] = False
 
     return servers
+
 
 def install(pkg, refresh=False):
     '''
@@ -95,7 +101,7 @@ def install(pkg, refresh=False):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'apt-get -y install ' + pkg
+    cmd = 'aptitude -y install ' + pkg
     subprocess.call(cmd, shell=True)
     new_pkgs = list_pkgs()
 
@@ -112,9 +118,10 @@ def install(pkg, refresh=False):
 
     return ret_pkgs
 
+
 def remove(pkg):
     '''
-    Remove a single package via ``apt-get remove``
+    Remove a single package via ``aptitude remove``
 
     Returns a list containing the names of the removed packages.
 
@@ -125,7 +132,7 @@ def remove(pkg):
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
-    cmd = 'apt-get -y remove ' + pkg
+    cmd = 'aptitude -y remove ' + pkg
     subprocess.call(cmd, shell=True)
     new = list_pkgs()
 
@@ -135,10 +142,11 @@ def remove(pkg):
 
     return ret_pkgs
 
+
 def purge(pkg):
     '''
-    Remove a package via apt-get along with all configuration files and
-    unused dependencies as determined by apt-get autoremove
+    Remove a package via aptitude along with all configuration files and
+    unused dependencies.
 
     Returns a list containing the names of the removed packages
 
@@ -150,13 +158,8 @@ def purge(pkg):
     old_pkgs = list_pkgs()
 
     # Remove inital package
-    purge_cmd = 'apt-get -y purge ' + pkg
+    purge_cmd = 'aptitude -y purge ' + pkg
     subprocess.call(purge_cmd, shell=True)
-
-    # Remove any dependencies that are no longer needed
-    autoremove_cmd = 'apt-get -y autoremove'
-    subprocess.call(purge_cmd, shell=True)
-
     new = list_pkgs()
 
     for pkg in old_pkgs:
@@ -166,9 +169,10 @@ def purge(pkg):
     return ret_pkgs
 
 
+# FIXME: Unused argument 'refresh'? Undefined variable 'update_repos'?
 def upgrade(refresh=True):
     '''
-    Upgrades all packages via apt-get dist-upgrade
+    Upgrades all packages via aptitude full-upgrade
 
     Returns a list of dicts containing the package names, and the new and old
     versions::
@@ -190,7 +194,7 @@ def upgrade(refresh=True):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'apt-get -y dist-upgrade'
+    cmd = 'aptitude -y full-upgrade'
     subprocess.call(cmd, shell=True)
     new_pkgs = list_pkgs()
 

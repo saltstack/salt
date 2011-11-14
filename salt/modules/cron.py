@@ -1,9 +1,11 @@
 '''
 Work with cron
 '''
+
 import tempfile
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
+
 
 def _render_tab(lst):
     '''
@@ -36,6 +38,7 @@ def _render_tab(lst):
             )
     return ret
 
+
 def _write_cron(user, lines):
     '''
     Takes a list of lines to be commited to a user's crontab and writes it
@@ -45,12 +48,14 @@ def _write_cron(user, lines):
     cmd = 'crontab -u {0} {1}'.format(user, path)
     return __salt__['cmd.run_all'](cmd)
 
+
 def raw_cron(user):
     '''
     Return the contents of the user's crontab
     '''
     cmd = 'crontab -l -u {0}'.format(user)
     return __salt__['cmd.run_stdout'](cmd)
+
 
 def list_tab(user):
     '''
@@ -95,6 +100,7 @@ def list_tab(user):
             ret['pre'].append(line)
     return ret
 
+
 def set_special(user, special, cmd):
     '''
     Set up a special command in the crontab.
@@ -117,6 +123,8 @@ def set_special(user, special, cmd):
         return comdat['stderr']
     return 'new'
 
+
+# FIXME: Too many arguments; see pylint; use *args, **kwargs
 def set_job(user, minute, hour, dom, month, dow, cmd):
     '''
     Sets a cron job up for a specified user.
@@ -154,6 +162,7 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'
+
 
 def rm_job(user, minute, hour, dom, month, dow, cmd):
     '''
