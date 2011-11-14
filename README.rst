@@ -59,8 +59,8 @@ a simple Python API, or from the command line, so that Salt can be used to
 execute one-off commands as well as operate as an integral part of a larger
 application.
 
-Fast, flexible, scalable, secure
-================================
+Fast, flexible, scalable, pretty, secure
+========================================
 
 The result is a system that can execute commands across groups of
 varying size, from very few to very many servers at considerably high
@@ -69,18 +69,20 @@ malleable, able to suit the needs of any number of servers working
 within the same system. Salt’s unique architecture brings together the
 best of the remote execution world, amplifies its capabilities and
 expands its range, resulting in this system that is as versatile as it
-is practical, able to suit any network. Last but not least, security
-is an intrinsic part of salt and something not just influencing how
-source code is written and how tests are done, but also something that
-defines the overall architecture and has heavy influence on the core
-design of salt.
+is practical, able to suit any network. Our source code is pretty
+(*pep8*, *pylint*, *pychecker*) and well documented. Last but not
+least, security is an intrinsic part of salt and something not just
+influencing how source code is written and how tests are done, but
+also something that defines the overall architecture and has heavy
+influence on the core design of salt.
 
 Open
 ====
 
-Salt is developed under the `Apache 2.0 licence`_, and can be used for open and
-proprietary projects. Please submit your expansions back to the Salt project so
-that we can all benefit together as Salt grows.  So, please feel free to
-sprinkle some of this around your systems and let the deliciousness come forth.
+Salt is developed under the `Apache 2.0 licence`_, and can be used for
+open and proprietary projects. Please submit your expansions back to
+the Salt project so that we can all benefit together as Salt grows.
+So, please feel free to sprinkle some of this around your systems and
+let the deliciousness come forth.
 
 .. _`Apache 2.0 licence`: http://www.apache.org/licenses/LICENSE-2.0.html

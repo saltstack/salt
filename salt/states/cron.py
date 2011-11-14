@@ -35,6 +35,7 @@ Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 '''
 
+
 def present(name,
         user='root',
         minute='*',
@@ -75,37 +76,35 @@ def present(name,
         The information to be set in the day of day of week section. Default is
         ``*``
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
-    data = __salt__['cron.set_job'](
-            user,
-            minute,
-            hour,
-            daymonth,
-            month,
-            dayweek,
-            name,
-            )
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+    data = __salt__['cron.set_job'](daymonth,
+                                    dayweek,
+                                    hour,
+                                    minute,
+                                    month,
+                                    name,
+                                    user)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
+
     if data == 'new':
         ret['comment'] = 'Cron {0} added to {1}\'s crontab'.format(name, user)
         ret['changes'] = {user: name}
         return ret
+
     if data == 'updated':
         ret['comment'] = 'Cron {0} updated'.format(name, user)
         ret['changes'] = {user: name}
         return ret
-    ret['comment'] = 'Cron {0} for user {1} failed to commit with error \n{2}'.format(
-            name,
-            user,
-            data
-            )
+    ret['comment'] = ('Cron {0} for user {1} failed to commit with error \n{2}'
+                      .format(name, user, data))
     ret['result'] = False
     return ret
+
 
 def absent(name,
         user='root',
@@ -158,19 +157,14 @@ def absent(name,
             name,
             )
     if data == 'absent':
-        ret['comment'] = 'Cron {0} already absent'.format(name)
+        ret['comment'] = "Cron {0} already absent".format(name)
         return ret
     if data == 'removed':
-        ret['comment'] = 'Cron {0} removed from {1}\'s crontab'.format(
-                name,
-                user
-                )
+        ret['comment'] = ("Cron {0} removed from {1}'s crontab"
+                          .format(name, user))
         ret['changes'] = {user: name}
         return ret
-    ret['comment'] = 'Cron {0} for user {1} failed to commit with error \n{2}'.format(
-            name,
-            user,
-            data
-            )
+    ret['comment'] = ("Cron {0} for user {1} failed to commit with error {2}"
+                      .format(name, user, data))
     ret['result'] = False
     return ret

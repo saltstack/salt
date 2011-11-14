@@ -15,6 +15,7 @@ Mount any type of mountable filesystem with the mounted function:
           - defaults
 '''
 
+
 def mounted(
         name,
         device,
@@ -24,7 +25,7 @@ def mounted(
         dump=0,
         pass_num=0,
         config='/etc/fstab',
-        remount=True,
+        remount=True,             # FIXME: where is 'remount' used?
         persist=True,
         ):
     '''
@@ -67,10 +68,12 @@ def mounted(
            'changes': {},
            'result': True,
            'comment': ''}
+
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
     if type(opts) == type(str()):
         opts = opts.split(',')
+
     # Get the active data
     active = __salt__['mount.active']()
     if name not in active:
@@ -83,6 +86,7 @@ def mounted(
             elif out == True:
                 # Remount worked!
                 ret['changes']['mount'] = True
+
     if persist:
         # present, new, change, bad config
         # Make sure the entry is in the fstab
@@ -108,5 +112,5 @@ def mounted(
             ret['result'] = False
             ret['comment'] += ' but the fstab was not found'
             return ret
-    return ret
 
+    return ret

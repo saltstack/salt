@@ -13,6 +13,7 @@ can be either present or absent:
         - gid: 7648
 '''
 
+
 def present(name, gid=None):
     '''
     Ensure that a group is present
@@ -40,15 +41,13 @@ def present(name, gid=None):
                 else:
                     ret['result'] = __salt__['group.chgid'](name, gid)
                     if ret['result']:
-                        ret['comment'] = 'Changed gid to {0} for group {1}'.format(
-                                gid, name
-                                )
+                        ret['comment'] = ('Changed gid to {0} for group {1}'
+                                          .format(gid, name))
                         ret['changes'] = {name: gid}
                         return ret
                     else:
-                        ret['comment'] = 'Failed to change gid to {0} for group {1}'.format(
-                                gid, name
-                                )
+                        ret['comment'] = ('Failed to change gid to {0} for '
+                                          'group {1}'.format(gid, name))
                         return ret
             else:
                 ret['comment'] = 'Group {0} is already present'.format(name)
@@ -62,6 +61,7 @@ def present(name, gid=None):
     else:
         ret['comment'] = 'Failed to apply group {0}'.format(name)
         return ret
+
 
 def absent(name):
     '''
@@ -88,4 +88,3 @@ def absent(name):
                 return ret
     ret['comment'] = 'Group not present'
     return ret
-    

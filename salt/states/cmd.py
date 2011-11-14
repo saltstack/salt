@@ -33,9 +33,10 @@ syslog if there is no disk space:
 
 '''
 
+import grp
 import os
 import pwd
-import grp
+
 
 def run(name,
         onlyif=None,
@@ -72,21 +73,26 @@ def run(name,
            'changes': {},
            'result': False,
            'comment': ''}
+
     if onlyif:
         if __salt__['cmd.retcode'](onlyif) != 0:
             ret['comment'] = 'onlyif exec failed'
             ret['result'] = True
             return ret
+
     if unless:
         if __salt__['cmd.retcode'](unless) == 0:
             ret['comment'] = 'unless executed successfully'
             ret['result'] = True
             return ret
+
     if not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory is not available'
         return ret
+
     puid = os.geteuid()
     pgid = os.getegid()
+
     if group:
         try:
             egid = grp.getgrnam(group).gr_gid

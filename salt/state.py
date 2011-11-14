@@ -10,17 +10,19 @@ The data sent to the state calls is as follows:
       'argn': '<arbitrairy argument, can have many of these>'
       }
 '''
-# Import python modules
-import os
+
 import copy
 import inspect
-import tempfile
 import logging
-# Import Salt modules
+import os
+import tempfile
+
 import salt.loader
 import salt.minion
 
+
 log = logging.getLogger(__name__)
+
 
 def format_log(ret):
     '''
@@ -59,7 +61,14 @@ def format_log(ret):
         # catch unhandled data
         log.info(str(ret))
 
-class StateError(Exception): pass
+
+class StateError(Exception):
+    '''
+    Custom exception class.
+    '''
+
+    pass
+
 
 class State(object):
     '''
@@ -144,20 +153,16 @@ class State(object):
             if name.startswith('__'):
                 continue
             if not isinstance(body, dict):
-                err = 'The type {0} in {1} is not formated as a dictonary'.format(
-                        name,
-                        body['__sls__']
-                        )
+                err = ('The type {0} in {1} is not formated as a dictonary'
+                       .format(name, body['__sls__']))
                 errors.append(err)
                 continue
             for state, run in body.items():
                 if state.startswith('__'):
                     continue
                 if not isinstance(body[state], list):
-                    err = 'The state {0} in sls {1} is not formed as a list'.format(
-                            name,
-                            body['__sls__']
-                            )
+                    err = ('The state {0} in sls {1} is not formed as a list'
+                           .format(name, body['__sls__']))
                     errors.append(err)
                 else:
                     fun = 0
@@ -277,13 +282,13 @@ class State(object):
                                 chunk.update(arg)
                 if names:
                     for name in names:
-                        live  = copy.deepcopy(chunk)
+                        live = copy.deepcopy(chunk)
                         live['name'] = name
                         for fun in funcs:
                             live['fun'] = fun
                             chunks.append(live)
                 else:
-                    live  = copy.deepcopy(chunk)
+                    live = copy.deepcopy(chunk)
                     for fun in funcs:
                         live['fun'] = fun
                         chunks.append(live)
@@ -319,7 +324,7 @@ class State(object):
                         for hind in range(len(high[name][state])):
                             if isinstance(arg, str) and \
                                     isinstance(high[name][state][hind], str):
-                                # It is replacing the function, replace the index
+                                # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
                                 update = True
@@ -327,14 +332,16 @@ class State(object):
                             if isinstance(arg, dict) and \
                                     isinstance(high[name][state][hind], dict):
                                 # It is an option, make sure the options match
-                                if arg.keys()[0] == high[name][state][hind].keys()[0]:
+                                if (arg.keys()[0] ==
+                                    high[name][state][hind].keys()[0]):
                                     # They match, check if the option is a
                                     # watch or require, append, otherwise
                                     # replace
                                     if arg.keys()[0] == 'require' or \
                                             arg.keys()[0] == 'watch':
                                         # Extend the list
-                                        high[name][state][hind][arg.keys()[0]].extend(arg[arg.keys()[0]])
+                                        (high[name][state][hind][arg.keys()[0]]
+                                         .extend(arg[arg.keys()[0]]))
                                         update = True
                                     else:
                                         # Replace the value
@@ -402,7 +409,8 @@ class State(object):
         '''
         running = {}
         for low in chunks:
-            if low['state'] + '.' + low['name'] + '.' + low['fun'] not in running:
+            if (low['state'] + '.' + low['name'] +
+                '.' + low['fun'] not in running):
                 running = self.call_chunk(low, running, chunks)
         return running
 
@@ -454,7 +462,8 @@ class State(object):
             if tag not in running:
                 fun_stats.append('unmet')
             else:
-                fun_stats.append('change' if running[tag]['changes'] else 'nochange')
+                (fun_stats.append('change' if running[tag]['changes']
+                                           else 'nochange'))
         for stat in fun_stats:
             if stat == 'change':
                 return stat
@@ -481,7 +490,8 @@ class State(object):
                 for chunk in reqs:
                     # Check to see if the chunk has been run, only run it if
                     # it has not been run already
-                    if chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun'] not in running:
+                    if (chunk['state'] + '.' + chunk['name'] +
+                        '.' + chunk['fun'] not in running):
                         running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'met':
@@ -503,7 +513,8 @@ class State(object):
                 for chunk in reqs:
                     # Check to see if the chunk has been run, only run it if
                     # it has not been run already
-                    if chunk['state'] + '.' + chunk['name'] + '.' + chunk['fun'] not in running:
+                    if (chunk['state'] + '.' + chunk['name'] +
+                        '.' + chunk['fun'] not in running):
                         running = self.call_chunk(chunk, running, chunks)
                 running = self.call_chunk(low, running, chunks)
             elif status == 'nochange':
@@ -557,6 +568,7 @@ class State(object):
         if high:
             return self.call_high(high)
         return high
+
 
 class HighState(object):
     '''
@@ -641,16 +653,19 @@ class HighState(object):
         try:
             state = self.state.compile_template(fn_, env, sls)
         except Exception as exc:
-            errors.append('Rendering SLS {0} failed, render error:\n{1}'.format(sls, exc))
+            errors.append(('Rendering SLS {0} failed, render error:\n{1}'
+                           .format(sls, exc)))
         mods.add(sls)
         nstate = None
         if state:
             if not isinstance(state, dict):
-                errors.append('SLS {0} does not render to a dictonary'.format(sls))
+                errors.append(('SLS {0} does not render to a dictonary'
+                               .format(sls)))
             else:
                 if 'include' in state:
                     if not isinstance(state['include'], list):
-                        err = 'Include Declaration in SLS {0} is not formed as a list'.format(sls)
+                        err = ('Include Declaration in SLS {0} is not formed '
+                               'as a list'.format(sls))
                         errors.append(err)
                     else:
                         for sub_sls in state.pop('include'):
@@ -664,7 +679,9 @@ class HighState(object):
                     ext = state.pop('extend')
                     for name in ext:
                         if not isinstance(ext[name], dict):
-                            errors.append('Extention name {0} in sls {1} is not a dictonary'.format(name, sls))
+                            errors.append(('Extention name {0} in sls {1} is '
+                                           'not a dictonary'
+                                           .format(name, sls)))
                             continue
                         if '__sls__' not in ext[name]:
                             ext[name]['__sls__'] = sls
@@ -678,7 +695,8 @@ class HighState(object):
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
                             continue
-                        errors.append('Name {0} in sls {1} is not a dictonary'.format(name, sls))
+                        errors.append(('Name {0} in sls {1} is not a dictonary'
+                                       .format(name, sls)))
                         continue
                     if '__sls__' not in state[name]:
                         state[name]['__sls__'] = sls
@@ -721,8 +739,10 @@ class HighState(object):
         top = self.get_top()
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
+
         if errors:
             return errors
+
         return high
 
     def compile_low_chunks(self):
@@ -734,14 +754,18 @@ class HighState(object):
         top = self.get_top()
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
+
         # If there is extension data reconcile it
         high, ext_errors = self.state.reconcile_extend(high)
         errors += ext_errors
+
         # Verify that the high data is structurally sound
         errors += self.state.verify_high(high)
+
         # Compile and verify the raw chunks
         chunks = self.state.compile_high_data(high)
         errors += self.state.verify_chunks(chunks)
+
         if errors:
             return errors
         return chunks
