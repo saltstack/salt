@@ -4,6 +4,7 @@ Manage client ssh components
 
 import os
 
+
 def _refine_enc(enc):
     '''
     Return the properly formatted ssh value for the authorized encryption key
@@ -18,17 +19,24 @@ def _refine_enc(enc):
     else:
         return 'ssh-rsa'
 
+
 def _format_auth_line(
         key,
         enc,
         comment,
         options):
+    '''
+    Properly format user input.
+    '''
     line = ''
     if options:
         line += '{0} '.format(','.join(options))
     line += '{0} {1} {2}'.format(enc, key, comment)
     return line
 
+
+# FIXME: mutable types as default parameter values, NO!
+# http://goo.gl/ToU2z
 def _replace_auth_key(
         user,
         key,
@@ -66,6 +74,7 @@ def _replace_auth_key(
             lines.append(line)
     open(full, 'w+').writelines(lines)
 
+
 def host_keys(keydir=None):
     '''
     Return the minion's host keys
@@ -92,6 +101,7 @@ def host_keys(keydir=None):
             except:
                 keys[kname] = ''
     return keys
+
 
 def auth_keys(user, config='.ssh/authorized_keys'):
     '''
@@ -132,6 +142,7 @@ def auth_keys(user, config='.ssh/authorized_keys'):
                     'options': options}
 
     return ret
+
 
 def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     '''
@@ -176,6 +187,9 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         return 'Key removed'
     return 'Key not present'
 
+
+# FIXME: mutable types as default parameter values, NO!
+# http://goo.gl/ToU2z
 def set_auth_key(
         user,
         key,
@@ -191,7 +205,7 @@ def set_auth_key(
         salt '*' ssh.set_auth_key <user> <key> dsa '[]' .ssh/authorized_keys
     '''
     enc = _refine_enc(enc)
-    ret = ''
+    ret = ''           # FIXME: where is ret used?
     replace = False
     uinfo = __salt__['user.info'](user)
     current = auth_keys(user, config)
