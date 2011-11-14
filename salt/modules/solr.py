@@ -34,12 +34,8 @@ def __virtual__():
     TODO: currently __salt__ is not available to call in this method because
     all the salt modules have not been loaded yet. Use a grains module?
     '''
-    names = ['solr', 'apache-solr']
-    for name in names:
-        if __salt__['pkg.version'](name):
-            return 'solr'
-
-    return False
+    # FIXME: this module should only be available if it is installed
+    return 'solr'
 
 
 def __check_for_cores__():
