@@ -5,6 +5,7 @@ Execute a salt convenience routine
 
 import salt.cli
 
+
 def main():
     '''
     The main function

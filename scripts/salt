@@ -5,6 +5,7 @@ Publish commands to the salt system from the command line on the master.
 
 import salt.cli
 
+
 def main():
     '''
     The main function

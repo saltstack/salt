@@ -2,14 +2,15 @@
 '''
 The setup script for salt
 '''
-import os
-import sys
+
+from Cython.Distutils import build_ext
 from distutils import log
 from distutils.cmd import Command
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.sysconfig import get_python_lib, PREFIX
-from Cython.Distutils import build_ext
+import os
+import sys
 
 from salt import __version__
 
@@ -41,7 +42,7 @@ setup(
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
       url='https://github.com/thatch45/salt',
-      classifiers = [
+      classifiers=[
           'Programming Language :: Python',
           'Programming Language :: Cython',
           'Programming Language :: Python :: 2.6',
