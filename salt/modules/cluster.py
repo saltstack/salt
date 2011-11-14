@@ -2,10 +2,11 @@
 The cluster module is used to distribute and activate salt HA cluster
 components
 '''
-# Import Python Modules
+
 import os
-# Import Salt Modules
+
 import salt.config
+
 
 def distrib(minions,
             master_conf,
