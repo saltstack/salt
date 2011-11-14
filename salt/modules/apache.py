@@ -2,6 +2,9 @@
 Support for Apache
 '''
 
+from re import sub
+
+
 def __detect_os():
     '''
     Apache commands and paths differ depending on packaging
@@ -15,6 +18,7 @@ def __detect_os():
     else:
         return 'apachectl'
 
+
 def version():
     '''
     Return server version from apachectl -v
@@ -27,6 +31,7 @@ def version():
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
     return ret[1]
+
 
 def fullversion():
     '''
@@ -51,6 +56,7 @@ def fullversion():
             ret['compiled_with'].append(cw)
     return ret
 
+
 def modules():
     '''
     Return list of static and shared modules from apachectl -M
@@ -74,6 +80,7 @@ def modules():
             ret['shared'].append(comps[0])
     return ret
 
+
 def servermods():
     '''
     Return list of modules compiled into the server (apachectl -l)
@@ -91,6 +98,7 @@ def servermods():
         if '.c' in line:
             ret.append(line.strip())
     return ret
+
 
 def directives():
     '''
@@ -112,6 +120,7 @@ def directives():
         desc = '\n'.join(comps[1:])
         ret[comps[0]] = desc
     return ret
+
 
 def vhosts():
     '''
@@ -139,15 +148,16 @@ def vhosts():
             if comps[0] == 'default':
                 ret[namevhost]['default'] = {}
                 ret[namevhost]['default']['vhost'] = comps[2]
-                ret[namevhost]['default']['conf'] = comps[3].replace('(', '').replace(')', '')
+                ret[namevhost]['default']['conf'] = sub(r'\(|\)', '', comps[3])
             if comps[0] == 'port':
                 ret[namevhost][comps[3]] = {}
                 ret[namevhost][comps[3]]['vhost'] = comps[3]
-                ret[namevhost][comps[3]]['conf'] = comps[4].replace('(', '').replace(')', '')
+                ret[namevhost][comps[3]]['conf'] = sub(r'\(|\)', '', comps[4])
                 ret[namevhost][comps[3]]['port'] = comps[1]
     return ret
 
-def signal(signal = None):
+
+def signal(signal=None):
     '''
     Signals httpd to start, restart, or stop.
 
