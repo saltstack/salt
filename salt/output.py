@@ -9,8 +9,9 @@ import yaml
 
 import salt.utils
 
-
 __all__ = ('get_outputter',)
+
+JSON = True
 
 
 def remove_colors():
