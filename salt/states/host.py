@@ -11,6 +11,7 @@ The hosts file can be managed to contain definitions for specific hosts:
         - ip: 192.168.0.42
 '''
 
+
 def present(name, ip):
     '''
     Ensures that the named host is present with the given ip
@@ -39,6 +40,7 @@ def present(name, ip):
         ret['comment'] = 'Failed to set host'
         return ret
 
+
 def absent(name, ip):
     '''
     Ensure that the the named host is absent
@@ -66,4 +68,3 @@ def absent(name, ip):
         ret['result'] = False
         ret['comment'] = 'Failed to remove host'
         return ret
-

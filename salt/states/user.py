@@ -19,6 +19,7 @@ as either absent or present
           - games
 '''
 
+
 def present(
         name,
         uid=None,
@@ -57,8 +58,10 @@ def present(
            'changes': {},
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
+
     print password
     lshad = __salt__['shadow.info'](name)
+
     for lusr in __salt__['user.getent']():
         # Scan over the users
         if lusr['name'] == name:
@@ -100,6 +103,7 @@ def present(
             if ret['changes']:
                 ret['comment'] = 'Updated user {0}'.format(name)
             return ret
+
     # The user is not present, make it!
     if __salt__['user.add'](name, uid, gid, groups, home, shell):
         ret['comment'] = 'New user {0} created'.format(name)
@@ -115,7 +119,9 @@ def present(
     else:
         ret['comment'] = 'Failed to create new user {0}'.format(name)
         ret['result'] = False
+
     return ret
+
 
 def absent(name, purge=False, force=False):
     '''
@@ -135,6 +141,7 @@ def absent(name, purge=False, force=False):
            'changes': {},
            'result': True,
            'comment': ''}
+
     for lusr in __salt__['user.getent']():
         # Scan over the users
         if lusr['name'] == name:
@@ -147,6 +154,7 @@ def absent(name, purge=False, force=False):
                 ret['result'] = False
                 ret['comment'] = 'Failed to remove user {0}'.format(name)
             return ret
-    ret['comment'] = 'User {0} is not present'.format(name)
-    return ret
 
+    ret['comment'] = 'User {0} is not present'.format(name)
+
+    return ret

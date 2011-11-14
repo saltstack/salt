@@ -2,7 +2,9 @@
 '''
 Manage the authentication keys with salt-key
 '''
+
 import salt.cli
+
 
 def main():
     '''

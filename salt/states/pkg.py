@@ -12,6 +12,7 @@ declarations are typically rather simple:
         - installed
 '''
 
+
 def installed(name):
     '''
     Verify that the package is installed, and only that it is installed. This
@@ -36,6 +37,7 @@ def installed(name):
             'changes': changes,
             'result': True,
             'comment': 'Package ' + name + ' installed'}
+
 
 def latest(name):
     '''
@@ -63,6 +65,7 @@ def latest(name):
             'result': True,
             'comment': 'Package ' + name + ' installed'}
 
+
 def removed(name):
     '''
     Verify that the package is removed, this will remove the package via
@@ -83,10 +86,12 @@ def removed(name):
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to remove'}
+        # FIXME: this block will never be reached
         return {'name': name,
             'changes': changes,
             'result': True,
             'comment': 'Package ' + name + ' removed'}
+
 
 def purged(name):
     '''
@@ -103,11 +108,13 @@ def purged(name):
                 'comment': 'Package ' + name + ' is not installed'}
     else:
         changes = __salt__['pkg.purge'](name)
+
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to purge'}
+        # FIXME: this block will never be reached
         return {'name': name,
             'changes': changes,
             'result': True,

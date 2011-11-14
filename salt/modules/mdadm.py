@@ -1,18 +1,21 @@
 '''
 Salt module to manage RAID arrays with mdadm
 '''
-# Import python libs
-import os
+
 import logging
+import os
+
 
 # Set up logger
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
     mdadm provides raid functions for Linux
     '''
     return 'raid' if __grains__['kernel'] == 'Linux' else False
+
 
 def list():
     '''
@@ -23,20 +26,22 @@ def list():
         salt '*' raid.list
     '''
     ret = {}
-    for line in __salt__['cmd.run_stdout']('mdadm --detail --scan').split('\n'):
+    for line in (__salt__['cmd.run_stdout']
+                 ('mdadm --detail --scan').split('\n')):
         if not line.count(' '):
             continue
-        comps    = line.split()
+        comps = line.split()
         metadata = comps[2].split('=')
         raidname = comps[3].split('=')
         raiduuid = comps[4].split('=')
         ret[comps[1]] = {
-            'device':   comps[1],
+            'device': comps[1],
             'metadata': metadata[1],
-            'name':     raidname[1],
-            'uuid':     raiduuid[1],
+            'name': raidname[1],
+            'uuid': raiduuid[1],
         }
     return ret
+
 
 def detail(device='/dev/md0'):
     '''
@@ -59,12 +64,12 @@ def detail(device='/dev/md0'):
                 comps = line.split()
                 state = comps[4:-1]
                 ret['members'][comps[0]] = {
-                    'number':     comps[0],
-                    'major':      comps[1],
-                    'minor':      comps[2],
+                    'device': comps[-1],
+                    'major': comps[1],
+                    'minor': comps[2],
+                    'number': comps[0],
                     'raiddevice': comps[3],
-                    'state':      ' '.join(state),
-                    'device':     comps[-1],
+                    'state': ' '.join(state),
                 }
             continue
         comps = line.split(' : ')
