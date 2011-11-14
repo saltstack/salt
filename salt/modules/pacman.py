@@ -3,11 +3,13 @@ A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
 
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
     return 'pkg' if __grains__['os'] == 'Arch' else False
+
 
 def _list_removed(old, new):
     '''
@@ -19,6 +21,7 @@ def _list_removed(old, new):
             pkgs.append(pkg)
     return pkgs
 
+
 def available_version(name):
     '''
     The available version of the package in the repository
@@ -28,6 +31,7 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
+
 
 def version(name):
     '''
@@ -42,6 +46,7 @@ def version(name):
         return pkgs[name]
     else:
         return ''
+
 
 def list_pkgs():
     '''
@@ -62,6 +67,7 @@ def list_pkgs():
         comps = line.split()
         ret[comps[0]] = comps[1]
     return ret
+
 
 def refresh_db():
     '''
@@ -87,6 +93,7 @@ def refresh_db():
         elif line.count('downloading'):
             ret[key] = True
     return ret
+
 
 def install(name, refresh=False):
     '''
@@ -123,6 +130,7 @@ def install(name, refresh=False):
                           'new': new[npkg]}
     return pkgs
 
+
 def upgrade():
     '''
     Run a full system upgrade, a pacman -Syu
@@ -156,6 +164,7 @@ def upgrade():
                           'new': new[npkg]}
     return pkgs
 
+
 def remove(name):
     '''
     Remove a single package with ``pacman -R``
@@ -171,6 +180,7 @@ def remove(name):
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
+
 
 def purge(name):
     '''

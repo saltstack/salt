@@ -1,14 +1,16 @@
 '''
 Manage groups on Linux
 '''
-# Import python libs
+
 import grp
+
 
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
     return 'group' if __grains__['kernel'] == 'FreeBSD' else False
+
 
 def add(name, gid=None):
     '''
@@ -22,10 +24,10 @@ def add(name, gid=None):
     if gid:
         cmd += '-g {0} '.format(gid)
     cmd += name
-    
     ret = __salt__['cmd.run_all'](cmd)
 
     return not ret['retcode']
+
 
 def delete(name):
     '''
@@ -38,6 +40,7 @@ def delete(name):
     ret = __salt__['cmd.run_all']('pw groupdel {0}'.format(name))
 
     return not ret['retcode']
+
 
 def info(name):
     '''
@@ -53,6 +56,7 @@ def info(name):
             'gid': grinfo.gr_gid,
             'members': grinfo.gr_mem}
 
+
 def getent():
     '''
     Return info on all groups
@@ -65,6 +69,7 @@ def getent():
     for grinfo in grp.getgrall():
         ret.append(info(grinfo.gr_name))
     return ret
+
 
 def chgid(name, gid):
     '''
