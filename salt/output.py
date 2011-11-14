@@ -11,6 +11,7 @@ import salt.utils
 
 __all__ = ('get_outputter',)
 
+# FIXME: get rid of the JSON constant as it's acutally not needed anymore
 JSON = True
 
 
