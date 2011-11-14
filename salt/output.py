@@ -2,12 +2,8 @@
 A simple way of setting the output format for data from modules
 '''
 
+import json
 import pprint
-try:
-    import json
-    JSON = True
-except ImportError:
-    JSON = False
 
 import yaml
 
