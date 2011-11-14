@@ -2,19 +2,13 @@
 A simple way of setting the output format for data from modules
 '''
 
-# Import Python libs
+import json
 import pprint
+
 import yaml
 
-# Conditionally import the json module
-try:
-    import json
-    JSON = True
-except ImportError:
-    JSON = False
-
-# Import Salt libs
 import salt.utils
+
 
 __all__ = ('get_outputter',)
 
@@ -33,11 +27,11 @@ class Outputter(object):
     supports = None
 
     @classmethod
-    def check(klass, name):
+    def check(cls, name):
         # Don't advertise Outputter classes for optional modules
-        if hasattr(klass, "enabled") and not klass.enabled:
-            return False
-        return klass.supports == name
+        if hasattr(cls, "enabled") and not cls.enabled: # FIXME: class Outputter
+            return False                                # has no enabled member
+        return cls.supports == name
 
     def __call__(self, data, **kwargs):
         pprint.pprint(data)
@@ -187,7 +181,7 @@ def get_outputter(name=None):
         printout(ret)
     '''
     # Return an actual instance of the correct output class
-    for i in Outputter.__subclasses__():
-        if i.check(name):
+    for i in Outputter.__subclasses__():  # FIXME: class Outputter has no
+        if i.check(name):                 # __subclasses__ member
             return i()
     return Outputter()

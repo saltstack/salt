@@ -4,6 +4,7 @@ Module for running arbitrary tests
 
 import time
 
+
 def echo(text):
     '''
     Return a string - used for testing the connection
@@ -14,6 +15,7 @@ def echo(text):
     print 'Echo got called!'
     return text
 
+
 def ping():
     '''
     Just used to make sure the minion is up and responding
@@ -23,6 +25,7 @@ def ping():
     salt '*' test.ping
     '''
     return True
+
 
 def fib(long num):
     '''
@@ -41,6 +44,7 @@ def fib(long num):
         a, b = b, a + b
     cdef float end = time.time() - start
     return ret, end
+
 
 def collatz(long start):
     '''
@@ -61,4 +65,3 @@ def collatz(long start):
                 start = start * 3 + 1
     cdef float end = time.time() - begin
     return steps, end
-
