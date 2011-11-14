@@ -1,7 +1,7 @@
 '''
 Module to provide MySQL compatibility to salt.
 
-In order to connect to MySQL, certain configuration is required 
+In order to connect to MySQL, certain configuration is required
 in /etc/salt/minion on the relevant minions. Some sample configs
 might look like::
 
@@ -15,6 +15,7 @@ might look like::
 import MySQLdb
 
 __opts__ = {}
+
 
 def connect():
     '''
@@ -38,6 +39,7 @@ def connect():
     db.autocommit(True)
     return db
 
+
 def status():
     '''
     Return the status of a MySQL server using the output
@@ -56,6 +58,7 @@ def status():
         ret[row[0]] = row[1]
     return ret
 
+
 def version():
     '''
     Return the version of a MySQL server using the output
@@ -70,4 +73,3 @@ def version():
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
     return row
-

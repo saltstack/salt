@@ -2,14 +2,17 @@
 Manage users with the useradd command
 '''
 
-import pwd
 import grp
+import os
+import pwd
+
 
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
     return 'user' if __grains__['kernel'] == 'FreeBSD' else False
+
 
 def add(name,
         uid=None,
@@ -38,6 +41,7 @@ def add(name,
 
     return not ret['retcode']
 
+
 def delete(name, remove=False, force=False):
     '''
     Remove a user from the minion
@@ -55,6 +59,7 @@ def delete(name, remove=False, force=False):
 
     return not ret['retcode']
 
+
 def getent():
     '''
     Return the list of all info for all users
@@ -67,6 +72,7 @@ def getent():
     for data in pwd.getpwall():
         ret.append(info(data.pw_name))
     return ret
+
 
 def chuid(name, uid):
     '''
@@ -87,6 +93,7 @@ def chuid(name, uid):
             return True
     return False
 
+
 def chgid(name, gid):
     '''
     Change the default group of the user
@@ -106,6 +113,7 @@ def chgid(name, gid):
             return True
     return False
 
+
 def chshell(name, shell):
     '''
     Change the default shell of the user
@@ -124,6 +132,7 @@ def chshell(name, shell):
         if post_info['shell'] == shell:
             return True
     return False
+
 
 def chhome(name, home, persist=False):
     '''
@@ -148,6 +157,7 @@ def chhome(name, home, persist=False):
             return True
     return False
 
+
 def chgroups(name, groups, append=False):
     '''
     Change the groups this user belongs to, add append to append the specified
@@ -171,6 +181,7 @@ def chgroups(name, groups, append=False):
         return True
     return False
 
+
 def info(name):
     '''
     Return user information
@@ -189,6 +200,7 @@ def info(name):
     ret['shell'] = data.pw_shell
     ret['groups'] = list_groups(name)
     return ret
+
 
 def list_groups(name):
     '''
