@@ -12,6 +12,7 @@ Control the kernel sysctl system
       - value: 20
 '''
 
+
 def present(name, value, config='/etc/sysctl.conf'):
     '''
     Ensure that the named sysctl value is set
@@ -29,7 +30,9 @@ def present(name, value, config='/etc/sysctl.conf'):
            'result': True,
            'changes': {},
            'comment': ''}
+
     update = __salt__['sysctl.persist'](name, value, config)
+
     if update == 'Updated':
         ret['changes'] = {name: value}
         ret['comment'] = 'Updated sysctl value {0} = {1}'.format(name, value)
@@ -38,5 +41,5 @@ def present(name, value, config='/etc/sysctl.conf'):
                 name,
                 value
                 )
-    return ret
 
+    return ret

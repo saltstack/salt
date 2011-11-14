@@ -4,6 +4,7 @@ Module for running arbitrary tests
 
 import time
 
+
 # Load in default options for the module
 __opts__ = {
             'test.foo': 'foo'
@@ -12,6 +13,7 @@ __opts__ = {
 __outputter__ = {
                  'outputter': 'txt'
                  }
+
 
 def echo(text):
     '''
@@ -24,6 +26,7 @@ def echo(text):
     print 'Echo got called!'
     return text
 
+
 def ping():
     '''
     Just used to make sure the minion is up and responding
@@ -34,6 +37,7 @@ def ping():
         salt '*' test.ping
     '''
     return True
+
 
 def conf_test():
     '''
@@ -46,6 +50,7 @@ def conf_test():
     '''
     return __opts__['test.foo']
 
+
 def get_opts():
     '''
     Return the configuration options passed to this minion
@@ -56,6 +61,8 @@ def get_opts():
     '''
     return __opts__
 
+
+# FIXME: mutable types as default parameter values
 def cross_test(func, args=[]):
     '''
     Execute a minion function via the __salt__ object in the test module, used
@@ -66,6 +73,7 @@ def cross_test(func, args=[]):
         salt '*' test.cross_test file.gid_to_group 0
     '''
     return __salt__[func](*args)
+
 
 def fib(num):
     '''
@@ -83,6 +91,7 @@ def fib(num):
         ret.append(b)
         a, b = b, a + b
     return ret, time.time() - start
+
 
 def collatz(start):
     '''
@@ -104,6 +113,7 @@ def collatz(start):
                 start = start * 3 + 1
     return steps, time.time() - begin
 
+
 def outputter(data):
     '''
     Test the outputter, pass in data to return
@@ -113,4 +123,3 @@ def outputter(data):
         salt '*' test.outputter foobar
     '''
     return data
-

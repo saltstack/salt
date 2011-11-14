@@ -2,15 +2,17 @@
 Top level package command wrapper, used to translate the os detected by the
 grains to the correct service manager
 '''
+
 import os
 
 grainmap = {
            'Arch': '/etc/rc.d',
+           'Debian': '/etc/init.d',
            'Fedora': '/etc/init.d',
            'RedHat': '/etc/init.d',
-           'Debian': '/etc/init.d',
            'Ubuntu': '/etc/init.d',
           }
+
 
 def start(name):
     '''
@@ -24,6 +26,7 @@ def start(name):
             name + ' start')
     return not __salt__['cmd.retcode'](cmd)
 
+
 def stop(name):
     '''
     Stop the specified service
@@ -36,6 +39,7 @@ def stop(name):
             name + ' stop')
     return not __salt__['cmd.retcode'](cmd)
 
+
 def restart(name):
     '''
     Restart the named service
@@ -47,6 +51,7 @@ def restart(name):
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' restart')
     return not __salt__['cmd.retcode'](cmd)
+
 
 def status(name, sig=None):
     '''

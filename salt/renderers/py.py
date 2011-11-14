@@ -5,9 +5,9 @@ The sls file should contain a function called ``sls`` which returns high state
 data
 '''
 
-# Import python libs
 import imp
 import os
+
 
 def render(template, env='', sls=''):
     '''
@@ -15,6 +15,7 @@ def render(template, env='', sls=''):
     '''
     if not os.path.isfile(template):
         return {}
+
     mod = imp.load_source(
             os.path.basename(template).split('.')[0],
             template
@@ -23,4 +24,5 @@ def render(template, env='', sls=''):
     mod.grains = __grains__
     mod.env = env
     mod.sls = sls
+
     return mod.run()
