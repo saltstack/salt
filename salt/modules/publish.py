@@ -1,10 +1,11 @@
 '''
 Publish a command from a minion to a target
 '''
-# Import salt libs
-import salt.crypt
-# Import ZeroMQ
+
 import zmq
+
+import salt.crypt
+
 
 def _get_socket():
     '''

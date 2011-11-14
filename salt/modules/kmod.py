@@ -2,14 +2,15 @@
 Module to manage Linux kernel modules
 '''
 
-# Import python libs
 import os
+
 
 def __virtual__():
     '''
     Only runs on Linux systems
     '''
     return 'kmod' if __grains__['kernel'] == 'Linux' else False
+
 
 def _new_mods(pre_mods, post_mods):
     '''
@@ -24,6 +25,7 @@ def _new_mods(pre_mods, post_mods):
         post.add(mod['module'])
     return list(post.difference(pre))
 
+
 def _rm_mods(pre_mods, post_mods):
     '''
     Return a list of the new modules, pass an lsmod dict before running
@@ -36,6 +38,7 @@ def _rm_mods(pre_mods, post_mods):
     for mod in post_mods:
         post.add(mod['module'])
     return list(pre.difference(post))
+
 
 def available():
     '''
@@ -54,6 +57,7 @@ def available():
             ret.append('.'.join(comps[:comps.index('ko')]))
     return ret
 
+
 def check_available(mod):
     '''
     Check to see if the speciified kernel module is available
@@ -66,6 +70,7 @@ def check_available(mod):
         # the module is available, return True
         return True
     return False
+
 
 def lsmod():
     '''
@@ -93,6 +98,7 @@ def lsmod():
         ret.append(mdat)
     return ret
 
+
 def load(mod):
     '''
     Load the specified kernel module
@@ -105,6 +111,7 @@ def load(mod):
     data = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
     post_mods = lsmod()
     return _new_mods(pre_mods, post_mods)
+
 
 def remove(mod):
     '''

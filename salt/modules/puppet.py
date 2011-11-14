@@ -2,6 +2,7 @@
 Execute puppet routines
 '''
 
+
 def _check_puppet():
     '''
     Checks if puppet is installed
@@ -10,6 +11,7 @@ def _check_puppet():
     # would require the minion to restart if puppet was installed after the
     # minion was started, and that would be rubbish
     return __salt__['cmd.has_exec']('puppet')
+
 
 def run():
     '''
