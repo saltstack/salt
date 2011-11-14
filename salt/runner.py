@@ -2,11 +2,11 @@
 Execute salt convenience routines
 '''
 
-# Import python modules
 import sys
 
 # Import salt modules
 import salt.loader
+
 
 class Runner(object):
     '''

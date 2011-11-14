@@ -2,8 +2,10 @@
 '''
 This script is used to kick off a salt minion daemon
 '''
-import salt
+
 import os
+import salt
+
 
 def main():
     '''

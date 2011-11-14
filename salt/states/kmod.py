@@ -14,6 +14,7 @@ module:
       - absent
 '''
 
+
 def present(name):
     '''
     Ensure that the specified kernel module is loaded
@@ -28,7 +29,8 @@ def present(name):
     mods = __salt__['kmod.lsmod']()
     for mod in mods:
         if mod['module'] == name:
-            ret['comment'] = 'Kernel module {0} is already present'.format(name)
+            ret['comment'] = ('Kernel module {0} is already present'
+                              .format(name))
             return ret
     # Module is not loaded, verify availability
     if not __salt__['kmod.available']().count(name):
@@ -43,6 +45,7 @@ def present(name):
         return ret
     ret['comment'] = 'Loaded kernel module {0}'.format(name)
     return ret
+
 
 def absent(name):
     '''
@@ -66,8 +69,8 @@ def absent(name):
                     ret['comment'] = 'Removed kernel module {0}'.format(name)
                     return ret
             ret['result'] = False
-            ret['comment'] = 'Module {0} is present but failed to remove'.format(name)
+            ret['comment'] = ('Module {0} is present but failed to remove'
+                              .format(name))
             return ret
     ret['comment'] = 'Kernel module {0} is already absent'.format(name)
     return ret
-

@@ -88,6 +88,7 @@ import stat
 import sys
 import time
 
+
 # Set up logger
 log = logging.getLogger(__name__)
 
@@ -95,21 +96,20 @@ _REQUIRES_PATH = 1
 _REQUIRES_STAT = 2
 _REQUIRES_CONTENTS = 4
 
-_FILE_TYPES = {'b' : stat.S_IFBLK,
-               'c' : stat.S_IFCHR,
-               'd' : stat.S_IFDIR,
-               'f' : stat.S_IFREG,
-               'l' : stat.S_IFLNK,
-               'p' : stat.S_IFIFO,
-               's' : stat.S_IFSOCK,
-
-               stat.S_IFBLK  : 'b',
-               stat.S_IFCHR  : 'c',
-               stat.S_IFDIR  : 'd',
-               stat.S_IFREG  : 'f',
-               stat.S_IFLNK  : 'l',
-               stat.S_IFIFO  : 'p',
-               stat.S_IFSOCK : 's'}
+_FILE_TYPES = {'b': stat.S_IFBLK,
+               'c': stat.S_IFCHR,
+               'd': stat.S_IFDIR,
+               'f': stat.S_IFREG,
+               'l': stat.S_IFLNK,
+               'p': stat.S_IFIFO,
+               's': stat.S_IFSOCK,
+               stat.S_IFBLK: 'b',
+               stat.S_IFCHR: 'c',
+               stat.S_IFDIR: 'd',
+               stat.S_IFREG: 'f',
+               stat.S_IFLNK: 'l',
+               stat.S_IFIFO: 'p',
+               stat.S_IFSOCK: 's'}
 
 _INTERVAL_REGEX = re.compile(r'''
                             ^\s*
@@ -121,6 +121,7 @@ _INTERVAL_REGEX = re.compile(r'''
                             $
                             ''',
                             flags=re.VERBOSE)
+
 
 def _parse_interval(value):
     '''
@@ -150,20 +151,21 @@ def _parse_interval(value):
 
     return result, resolution
 
+
 def _parse_size(value):
     scalar = value.strip()
 
-    if scalar.startswith(('-','+')):
+    if scalar.startswith(('-', '+')):
         style = scalar[0]
         scalar = scalar[1:]
     else:
         style = '='
 
     if len(scalar) > 0:
-        multiplier = {'k' : 2**10,
-                      'm' : 2**20,
-                      'g' : 2**30,
-                      't' : 2**40}.get(scalar[-1])
+        multiplier = {'k': 2 ** 10,
+                      'm': 2 ** 20,
+                      'g': 2 ** 30,
+                      't': 2 ** 40}.get(scalar[-1])
         if multiplier:
             scalar = scalar[:-1].strip()
         else:
@@ -191,12 +193,14 @@ def _parse_size(value):
 
     return min_size, max_size
 
+
 class Option(object):
     '''
     Abstract base class for all find options.
     '''
     def requires(self):
         return _REQUIRES_PATH
+
 
 class NameOption(Option):
     '''
@@ -211,6 +215,7 @@ class NameOption(Option):
 
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
+
 
 class InameOption(Option):
     '''
@@ -227,6 +232,7 @@ class InameOption(Option):
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
 
+
 class RegexOption(Option):
     '''Match files with a case-sensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
@@ -241,6 +247,7 @@ class RegexOption(Option):
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
 
+
 class IregexOption(Option):
     '''Match files with a case-insensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
@@ -254,6 +261,7 @@ class IregexOption(Option):
 
     def match(self, dirname, filename, fstat):
         return self.re.match(filename)
+
 
 class TypeOption(Option):
     '''
@@ -285,6 +293,7 @@ class TypeOption(Option):
     def match(self, dirname, filename, fstat):
         return stat.S_IFMT(fstat[stat.ST_MODE]) in self.ftypes
 
+
 class OwnerOption(Option):
     '''
     Match files by their owner name(s) and/or uid(s), e.g. 'root'.
@@ -308,6 +317,7 @@ class OwnerOption(Option):
 
     def match(self, dirname, filename, fstat):
         return fstat[stat.ST_UID] in self.uids
+
 
 class GroupOption(Option):
     '''
@@ -333,6 +343,7 @@ class GroupOption(Option):
     def match(self, dirname, filename, fstat):
         return fstat[stat.ST_GID] in self.gids
 
+
 class SizeOption(Option):
     '''
     Match files by their size.
@@ -355,6 +366,7 @@ class SizeOption(Option):
 
     def match(self, dirname, filename, fstat):
         return self.min_size <= fstat[stat.ST_SIZE] <= self.max_size
+
 
 class MtimeOption(Option):
     '''
@@ -379,6 +391,7 @@ class MtimeOption(Option):
     def match(self, dirname, filename, fstat):
         return fstat[stat.ST_MTIME] >= self.min_time
 
+
 class GrepOption(Option):
     '''Match files when a pattern occurs within the file.
     The option name is 'grep', e.g. {'grep' : '(foo)|(bar}'}.
@@ -400,6 +413,7 @@ class GrepOption(Option):
                 if self.re.search(line):
                     return os.path.join(dirname, filename)
         return None
+
 
 class PrintOption(Option):
     '''
@@ -474,12 +488,13 @@ class PrintOption(Option):
         else:
             return result
 
+
 class Finder(object):
     def __init__(self, options):
-        self.actions  = []
-        criteria = {_REQUIRES_PATH : list(),
-                    _REQUIRES_STAT : list(),
-                    _REQUIRES_CONTENTS : list()}
+        self.actions = []
+        criteria = {_REQUIRES_PATH: list(),
+                    _REQUIRES_STAT: list(),
+                    _REQUIRES_CONTENTS: list()}
         for key, value in options.iteritems():
             if value is None or len(value) == 0:
                 raise ValueError('missing value for "{0}" option'.format(key))
@@ -498,7 +513,7 @@ class Finder(object):
             if hasattr(obj, 'execute'):
                 self.actions.append(obj)
         if len(self.actions) == 0:
-            self.actions.append(PrintOption('print',''))
+            self.actions.append(PrintOption('print', ''))
         # order criteria so that least expensive checks are done first
         self.criteria = criteria[_REQUIRES_PATH] + \
                         criteria[_REQUIRES_STAT] + \
@@ -527,14 +542,17 @@ class Finder(object):
                     if fullpath is None:
                         fullpath = os.path.join(dirpath, name)
                     for action in self.actions:
-                        if fstat is None and action.requires() & _REQUIRES_STAT:
+                        if (fstat is None and
+                            action.requires() & _REQUIRES_STAT):
                             fstat = os.stat(fullpath)
                         result = action.execute(fullpath, fstat)
                         if result is not None:
                             yield result
 
+
 def find(path, options):
     '''
+    WRITEME
     '''
     f = Finder(options)
     for path in f.find(path):
@@ -544,8 +562,10 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print >> sys.stderr, "usage: {0} path [options]".format(sys.argv[0])
         sys.exit(1)
+
     path = sys.argv[1]
     criteria = {}
+
     for arg in sys.argv[2:]:
         key, value = arg.split('=')
         criteria[key] = value
