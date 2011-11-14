@@ -4,6 +4,7 @@ Execute calls on selinux
 
 import os
 
+
 def __virtual__():
     '''
     Check if the os is Linux, and then if selinux is running in permissive or
@@ -14,6 +15,7 @@ def __virtual__():
             if os.path.isfile('/selinux/enforce'):
                 return 'selinux'
     return False
+
 
 def getenforce():
     '''
@@ -27,6 +29,7 @@ def getenforce():
         return 'Permissive'
     else:
         return 'Enforcing'
+
 
 def setenforce(mode):
     '''

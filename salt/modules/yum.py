@@ -2,13 +2,16 @@
 Support for YUM
 '''
 
+
 def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # We don't need to support pre-yum OSes because they don't support python 2.6
+    # We don't need to support pre-yum OSes because they don't support
+    # python <= 2.6
     dists = 'CentOS Scientific RedHat Fedora'
     return 'pkg' if dists.count(__grains__['os']) else False
+
 
 def _list_removed(old, new):
     '''
@@ -19,6 +22,7 @@ def _list_removed(old, new):
         if pkg not in new:
             pkgs.append(pkg)
     return pkgs
+
 
 def available_version(name):
     '''
@@ -42,6 +46,7 @@ def available_version(name):
     # Package not available
     return ''
 
+
 def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
@@ -55,6 +60,7 @@ def version(name):
         return pkgs[name]
     else:
         return ''
+
 
 def list_pkgs():
     '''
@@ -76,6 +82,7 @@ def list_pkgs():
         ret[comps[0]] = comps[1]
     return ret
 
+
 def refresh_db():
     '''
     Since yum refreshes the database automatically, this runs a yum clean,
@@ -88,6 +95,7 @@ def refresh_db():
     cmd = 'yum clean dbcache'
     __salt__['cmd.retcode'](cmd)
     return True
+
 
 def install(pkg, refresh=False):
     '''
@@ -125,6 +133,7 @@ def install(pkg, refresh=False):
                           'new': new[npkg]}
     return pkgs
 
+
 def upgrade():
     '''
     Run a full system upgrade, a yum upgrade
@@ -158,6 +167,7 @@ def upgrade():
                           'new': new[npkg]}
     return pkgs
 
+
 def remove(pkg):
     '''
     Remove a single package with yum remove
@@ -173,6 +183,7 @@ def remove(pkg):
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
+
 
 def purge(pkg):
     '''

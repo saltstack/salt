@@ -2,12 +2,14 @@
 Control the state system on the minion
 '''
 
-# Import salt modules
 import salt.state
 
+
 __outputter__ = {
-                 'highstate': 'highstate'
+                 'highstate': 'highstate',
                  }
+
+
 def low(data):
     '''
     Execute a single low data call
@@ -15,13 +17,14 @@ def low(data):
 
     CLI Example::
 
-        salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vim"}'
+        salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
         return err
     return st_.call(data)
+
 
 def high(data):
     '''
@@ -35,6 +38,7 @@ def high(data):
     st_ = salt.state.State(__opts__)
     return st_.call_high(data)
 
+
 def template(tem):
     '''
     Execute the information stored in a template file on the minion
@@ -45,6 +49,7 @@ def template(tem):
     '''
     st_ = salt.state.State(__opts__)
     return st_.call_template(tem)
+
 
 def template_str(tem):
     '''
@@ -57,6 +62,7 @@ def template_str(tem):
     st_ = salt.state.State(__opts__)
     return st_.call_template_str(tem)
 
+
 def highstate():
     '''
     Retrive the state data from the salt master for this minion and execute it
@@ -68,6 +74,7 @@ def highstate():
     st_ = salt.state.HighState(__opts__)
     return st_.call_highstate()
 
+
 def show_highstate():
     '''
     Retrive the highstate data from the salt master and display it
@@ -78,6 +85,7 @@ def show_highstate():
     '''
     st_ = salt.state.HighState(__opts__)
     return st_.compile_highstate()
+
 
 def show_lowstate():
     '''

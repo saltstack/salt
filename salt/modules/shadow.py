@@ -1,9 +1,10 @@
 '''
 Manage the shadow file
 '''
-# Import python libs
+
 import os
 import spwd
+
 
 def info(name):
     '''
@@ -36,6 +37,7 @@ def info(name):
             'expire': ''}
     return ret
 
+
 def set_password(name, password):
     '''
     Set the password for a named user, the password must be a properly defined
@@ -65,4 +67,3 @@ def set_password(name, password):
     if uinfo['pwd'] == password:
         return True
     return False
-
