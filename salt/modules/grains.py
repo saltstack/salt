@@ -1,8 +1,10 @@
 '''
 Control aspects of the grains data
 '''
+
 # Seed the grains dict so cython will build
 __grains__ = {}
+
 
 def items():
     '''
@@ -13,6 +15,7 @@ def items():
         salt '*' grains.items
     '''
     return __grains__
+
 
 def item(key):
     '''

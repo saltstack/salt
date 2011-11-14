@@ -2,12 +2,15 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
+
 import fnmatch
 import os
 import re
 import subprocess
 
+
 __opts__ = {}
+
 
 def _number(text):
     '''
@@ -23,6 +26,7 @@ def _number(text):
             return float(text)
         except ValueError:
             return text
+
 
 def custom():
     '''
@@ -58,6 +62,7 @@ def custom():
 
     return ret
 
+
 def uptime():
     '''
     Return the uptime for this minion
@@ -69,6 +74,7 @@ def uptime():
     return subprocess.Popen(['uptime'],
             stdout=subprocess.PIPE).communicate()[0].strip()
 
+
 def loadavg():
     '''
     Return the load averages for this minion
@@ -79,11 +85,10 @@ def loadavg():
     '''
     comps = open('/proc/loadavg', 'r').read().strip()
     load_avg = comps.split()
-    return {
-        '1-min':  _number(load_avg[0]),
-        '5-min':  _number(load_avg[1]),
-        '15-min': _number(load_avg[2]),
-    }
+    return {'1-min':  _number(load_avg[0]),
+            '5-min':  _number(load_avg[1]),
+            '15-min': _number(load_avg[2])}
+
 
 def cpustats():
     '''
@@ -100,29 +105,24 @@ def cpustats():
             continue
         comps = line.split()
         if comps[0] == 'cpu':
-            ret[comps[0]] = {
-                'user':    _number(comps[1]),
-                'nice':    _number(comps[2]),
-                'system':  _number(comps[3]),
-                'idle':    _number(comps[4]),
-                'iowait':  _number(comps[5]),
-                'irq':     _number(comps[6]),
-                'softirq': _number(comps[7]),
-                'steal':   _number(comps[8]),
-            }
+            ret[comps[0]] = {'idle': _number(comps[4]),
+                             'iowait': _number(comps[5]),
+                             'irq': _number(comps[6]),
+                             'nice': _number(comps[2]),
+                             'softirq': _number(comps[7]),
+                             'steal': _number(comps[8]),
+                             'system': _number(comps[3]),
+                             'user': _number(comps[1])}
         elif comps[0] == 'intr':
-            ret[comps[0]] = {
-                'total': _number(comps[1]),
-                'irqs' : [_number(x) for x in comps[2:]],
-            }
+            ret[comps[0]] = {'total': _number(comps[1]),
+                             'irqs': [_number(x) for x in comps[2:]]}
         elif comps[0] == 'softirq':
-            ret[comps[0]] = {
-                'total':    _number(comps[1]),
-                'softirqs': [_number(x) for x in comps[2:]],
-            }
+            ret[comps[0]] = {'total': _number(comps[1]),
+                             'softirqs': [_number(x) for x in comps[2:]]}
         else:
             ret[comps[0]] = _number(comps[1])
     return ret
+
 
 def meminfo():
     '''
@@ -146,6 +146,7 @@ def meminfo():
             ret[comps[0]]['unit'] = comps[2]
     return ret
 
+
 def cpuinfo():
     '''
     Return the CPU info for this minion
@@ -167,6 +168,7 @@ def cpuinfo():
             ret[comps[0]] = comps[1].strip()
     return ret
 
+
 def diskstats():
     '''
     Return the disk stats for this minion
@@ -181,25 +183,24 @@ def diskstats():
         if not line.count(' '):
             continue
         comps = line.split()
-        ret[comps[2]] = {
-            'major':                   _number(comps[0]),
-            'minor':                   _number(comps[1]),
-            'device':                  _number(comps[2]),
-            'reads_issued':            _number(comps[3]),
-            'reads_merged':            _number(comps[4]),
-            'sectors_read':            _number(comps[5]),
-            'ms_spent_reading':        _number(comps[6]),
-            'writes_completed':        _number(comps[7]),
-            'writes_merged':           _number(comps[8]),
-            'sectors_written':         _number(comps[9]),
-            'ms_spent_writing':        _number(comps[10]),
-            'io_in_progress':          _number(comps[11]),
-            'ms_spent_in_io':          _number(comps[12]),
-            'weighted_ms_spent_in_io': _number(comps[13]),
-        }
+        ret[comps[2]] = {'major': _number(comps[0]),
+                         'minor': _number(comps[1]),
+                         'device': _number(comps[2]),
+                         'reads_issued': _number(comps[3]),
+                         'reads_merged': _number(comps[4]),
+                         'sectors_read': _number(comps[5]),
+                         'ms_spent_reading': _number(comps[6]),
+                         'writes_completed': _number(comps[7]),
+                         'writes_merged': _number(comps[8]),
+                         'sectors_written': _number(comps[9]),
+                         'ms_spent_writing': _number(comps[10]),
+                         'io_in_progress': _number(comps[11]),
+                         'ms_spent_in_io': _number(comps[12]),
+                         'weighted_ms_spent_in_io': _number(comps[13])}
     return ret
 
-def diskusage( *args ):
+
+def diskusage(*args):
     '''
     Return the disk usage for this minion
 
@@ -211,7 +212,7 @@ def diskusage( *args ):
 
         salt '*' status.diskusage         # usage for all filesystems
         salt '*' status.diskusage / /tmp  # usage for / and /tmp
-        salt '*' status.diskusage ext?    # usage for ext2, ext3, & ext4 filesystems
+        salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
     '''
     selected = set()
@@ -236,21 +237,21 @@ def diskusage( *args ):
             for line in fp:
                 comps = line.split()
                 if len(comps) >= 3:
-                    mntpt  = comps[ 1 ]
-                    fstype = comps[ 2 ]
+                    mntpt = comps[1]
+                    fstype = comps[2]
                     if p.match(fstype):
                         selected.add(mntpt)
 
     # query the filesystems disk usage
     ret = {}
     for path in selected:
-        fsstats   = os.statvfs( path )
-        blksz     = fsstats.f_bsize
+        fsstats = os.statvfs(path)
+        blksz = fsstats.f_bsize
         available = fsstats.f_bavail * blksz
-        total     = fsstats.f_blocks * blksz
-        ret[ path ] = { "available" : available,
-                        "total" : total }
+        total = fsstats.f_blocks * blksz
+        ret[path] = {"available": available, "total": total}
     return ret
+
 
 def vmstats():
     '''
@@ -268,6 +269,7 @@ def vmstats():
         comps = line.split()
         ret[comps[0]] = _number(comps[1])
     return ret
+
 
 def netstats():
     '''
@@ -298,6 +300,7 @@ def netstats():
             headers = comps
     return ret
 
+
 def netdev():
     '''
     Return the network device stats for this minion
@@ -314,26 +317,25 @@ def netdev():
         if line.find(':') < 0:
             continue
         comps = line.split()
-        ret[comps[0]] = {
-            'iface':         comps[0],
-            'rx_bytes':      _number(comps[1]),
-            'rx_packets':    _number(comps[2]),
-            'rx_errs':       _number(comps[3]),
-            'rx_drop':       _number(comps[4]),
-            'rx_fifo':       _number(comps[5]),
-            'rx_frame':      _number(comps[6]),
-            'rx_compressed': _number(comps[7]),
-            'rx_multicast':  _number(comps[8]),
-            'tx_bytes':      _number(comps[9]),
-            'tx_packets':    _number(comps[10]),
-            'tx_errs':       _number(comps[11]),
-            'tx_drop':       _number(comps[12]),
-            'tx_fifo':       _number(comps[13]),
-            'tx_colls':      _number(comps[14]),
-            'tx_carrier':    _number(comps[15]),
-            'tx_compressed': _number(comps[16]),
-        }
+        ret[comps[0]] = {'iface': comps[0],
+                         'rx_bytes': _number(comps[1]),
+                         'rx_compressed': _number(comps[7]),
+                         'rx_drop': _number(comps[4]),
+                         'rx_errs': _number(comps[3]),
+                         'rx_fifo': _number(comps[5]),
+                         'rx_frame': _number(comps[6]),
+                         'rx_multicast': _number(comps[8]),
+                         'rx_packets': _number(comps[2]),
+                         'tx_bytes': _number(comps[9]),
+                         'tx_carrier': _number(comps[15]),
+                         'tx_colls': _number(comps[14]),
+                         'tx_compressed': _number(comps[16]),
+                         'tx_drop': _number(comps[12]),
+                         'tx_errs': _number(comps[11]),
+                         'tx_fifo': _number(comps[13]),
+                         'tx_packets': _number(comps[10])}
     return ret
+
 
 def w():
     '''
@@ -351,17 +353,16 @@ def w():
         if not row.count(' '):
             continue
         comps = row.split()
-        rec = {
-            'user':  comps[0],
-            'tty':   comps[1],
-            'login': comps[2],
-            'idle':  comps[3],
-            'jcpu':  comps[4],
-            'pcpu':  comps[5],
-            'what':  ' '.join(comps[6:]),
-        }
-        user_list.append( rec )
+        rec = {'idle': comps[3],
+               'jcpu': comps[4],
+               'login': comps[2],
+               'pcpu': comps[5],
+               'tty': comps[1],
+               'user': comps[0],
+               'what': ' '.join(comps[6:])}
+        user_list.append(rec)
     return user_list
+
 
 def all_status():
     '''
@@ -372,16 +373,13 @@ def all_status():
 
         salt '*' status.all_status
     '''
-    return {
-        'cpuinfo':   cpuinfo(),
-        'cpustats':  cpustats(),
-        'diskstats': diskstats(),
-        'loadavg':   loadavg(),
-        'meminfo':   meminfo(),
-        'netdev':    netdev(),
-        'netstats':  netstats(),
-        'uptime':    uptime(),
-        'vmstats':   vmstats(),
-        'w':         w(),
-    }
-
+    return {'cpuinfo': cpuinfo(),
+            'cpustats': cpustats(),
+            'diskstats': diskstats(),
+            'loadavg': loadavg(),
+            'meminfo': meminfo(),
+            'netdev': netdev(),
+            'netstats': netstats(),
+            'uptime': uptime(),
+            'vmstats': vmstats(),
+            'w': w()}

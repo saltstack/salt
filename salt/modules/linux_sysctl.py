@@ -1,13 +1,16 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+
 import os
+
 
 def __virtual__():
     '''
     Only run on Linux systems
     '''
     return 'sysctl' if __grains__['kernel'] == 'Linux' else False
+
 
 def show():
     '''
@@ -29,6 +32,7 @@ def show():
         ret[comps[0]] = comps[1]
     return ret
 
+
 def get(name):
     '''
     Return a single sysctl parameter for this minion
@@ -40,6 +44,7 @@ def get(name):
     cmd = 'sysctl -n {0}'.format(name)
     out = __salt__['cmd.run'](cmd).strip()
     return out
+
 
 def assign(name, value):
     '''
@@ -54,6 +59,7 @@ def assign(name, value):
     comps = out.split(' = ')
     ret[comps[0]] = comps[1]
     return ret
+
 
 def persist(name, value, config='/etc/sysctl.conf'):
     '''

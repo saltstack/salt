@@ -1,14 +1,20 @@
 '''
 Module for gathering and managing network information
 '''
-import subprocess
-import socket
+
 from string import ascii_letters, digits
+import socket
+import subprocess
+
 
 def _sanitize_host(host):
+    '''
+    Sanitize host string.
+    '''
     return "".join([
         c for c in host[0:255] if c in (ascii_letters + digits + '.')
     ])
+
 
 def ping(host):
     '''
@@ -24,6 +30,7 @@ def ping(host):
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
     return out
+
 
 def netstat():
     '''
@@ -43,29 +50,28 @@ def netstat():
             continue
         comps = line.split()
         if line.startswith('tcp'):
-            ret.append( {
-                'proto':          comps[0],
-                'recv-q':         comps[1],
-                'send-q':         comps[2],
-                'local-address':  comps[3],
+            ret.append({
+                'inode': comps[7],
+                'local-address': comps[3],
+                'program': comps[8],
+                'proto': comps[0],
+                'recv-q': comps[1],
                 'remote-address': comps[4],
-                'state':          comps[5],
-                'user':           comps[6],
-                'inode':          comps[7],
-                'program':        comps[8],
-            } )
+                'send-q': comps[2],
+                'state': comps[5],
+                'user': comps[6]})
         if line.startswith('udp'):
-            ret.append( {
-                'proto':          comps[0],
-                'recv-q':         comps[1],
-                'send-q':         comps[2],
-                'local-address':  comps[3],
+            ret.append({
+                'inode': comps[6],
+                'local-address': comps[3],
+                'program': comps[7],
+                'proto': comps[0],
+                'recv-q': comps[1],
                 'remote-address': comps[4],
-                'user':           comps[5],
-                'inode':          comps[6],
-                'program':        comps[7],
-            } )
+                'send-q': comps[2],
+                'user': comps[5]})
     return ret
+
 
 def traceroute(host):
     '''
@@ -87,18 +93,18 @@ def traceroute(host):
             continue
         comps = line.split()
         result = {
-            'count':    comps[0],
+            'count': comps[0],
             'hostname': comps[1],
-            'ip':       comps[2],
-            'ping1':    comps[3],
-            'ms1':      comps[4],
-            'ping2':    comps[5],
-            'ms2':      comps[6],
-            'ping3':    comps[7],
-            'ms3':      comps[8],
-        }
+            'ip': comps[2],
+            'ms1': comps[4],
+            'ms2': comps[6],
+            'ms3': comps[8],
+            'ping1': comps[3],
+            'ping2': comps[5],
+            'ping3': comps[7]}
         ret.append(result)
     return ret
+
 
 def dig(host):
     '''
@@ -114,6 +120,7 @@ def dig(host):
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]
     return out
+
 
 def isportopen(host, port):
     '''

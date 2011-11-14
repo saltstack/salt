@@ -2,9 +2,10 @@
 A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
 '''
-import time
 
+import time
 import psutil
+
 
 def top(num_processes=5, interval=3):
     '''
@@ -24,7 +25,7 @@ def top(num_processes=5, interval=3):
         user, sys = p.get_cpu_times()
         now = user + sys
         diff = now - start
-        usage.add((diff,p))
+        usage.add((diff, p))
 
     for i, (diff, p) in enumerate(reversed(sorted(usage))):
         if num_processes and i >= num_processes:
@@ -44,11 +45,13 @@ def top(num_processes=5, interval=3):
 
     return result
 
+
 def get_pid_list():
     '''
     Return a list of process ids (PIDs) for all running processes.
     '''
     return psutil.get_pid_list()
+
 
 def cpu_percent(interval=0.1, per_cpu=False):
     '''
@@ -68,6 +71,7 @@ def cpu_percent(interval=0.1, per_cpu=False):
         result = psutil.cpu_percent(interval)
     return result
 
+
 def cpu_times(per_cpu=False):
     '''
     Return the percent of time the CPU spends in each state,
@@ -85,11 +89,13 @@ def cpu_times(per_cpu=False):
         result = dict(psutil.cpu_times(per_cpu)._asdict())
     return result
 
+
 def phymem_usage():
     '''
     Return a dict that describes free and available physical memory.
     '''
     return dict(psutil.phymem_usage()._asdict())
+
 
 def virtmem_usage():
     '''
@@ -98,11 +104,13 @@ def virtmem_usage():
     '''
     return dict(psutil.virtmem_usage()._asdict())
 
+
 def cached_phymem():
     '''
     Return the amount cached memory.
     '''
     return psutil.cached_phymem()
+
 
 def phymem_buffers():
     '''
@@ -110,9 +118,11 @@ def phymem_buffers():
     '''
     return psutil.phymem_buffers()
 
+
 def disk_partitions(all=False):
     '''
-    Return a list of disk partitions and their device, mount point, and filesystem type.
+    Return a list of disk partitions and their device, mount point, and
+    filesystem type.
 
     all
         if set to False, only return local, physical partitions (hard disk,
@@ -123,12 +133,14 @@ def disk_partitions(all=False):
         result.append(dict(partition._asdict()))
     return result
 
+
 def disk_usage(path):
     '''
     Given a path, return a dict listing the total available space as well as
     the free space, and used space.
     '''
     return dict(psutil.disk_usage(path)._asdict())
+
 
 def disk_partition_usage(all=False):
     '''
@@ -140,17 +152,20 @@ def disk_partition_usage(all=False):
         partition.update(disk_usage(partition['mountpoint']))
     return result
 
+
 def TOTAL_PHYMEM():
     '''
     Return the total number of bytes of physical memory.
     '''
     return psutil.TOTAL_PHYMEM
 
+
 def NUM_CPUS():
     '''
     Return the number of CPUs.
     '''
     return psutil.NUM_CPUS
+
 
 def BOOT_TIME():
     '''
