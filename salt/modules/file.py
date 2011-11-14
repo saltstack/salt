@@ -3,16 +3,16 @@ Manage information about files on the minion, set/read user, group, and mode
 data
 '''
 
-# TODO
-# We should add the capability to do u+r type operations here some time in the
-# future
+# TODO: We should add the capability to do u+r type operations here
+# some time in the future
 
-import os
 import grp
-import pwd
 import hashlib
+import os
+import pwd
 
 import salt.utils.find
+
 
 def gid_to_group(gid):
     '''
@@ -27,6 +27,7 @@ def gid_to_group(gid):
     except KeyError:
         return ''
 
+
 def group_to_gid(group):
     '''
     Convert the group to the gid on this system
@@ -40,6 +41,7 @@ def group_to_gid(group):
     except KeyError:
         return ''
 
+
 def get_gid(path):
     '''
     Return the user that owns a given file
@@ -51,6 +53,7 @@ def get_gid(path):
     if not os.path.exists(path):
         return -1
     return os.stat(path).st_gid
+
 
 def get_group(path):
     '''
@@ -65,6 +68,7 @@ def get_group(path):
         return False
     return gid_to_group(gid)
 
+
 def uid_to_user(uid):
     '''
     Convert a uid to a user name
@@ -77,6 +81,7 @@ def uid_to_user(uid):
         return pwd.getpwuid(uid).pw_name
     except KeyError:
         return ''
+
 
 def user_to_uid(user):
     '''
@@ -91,6 +96,7 @@ def user_to_uid(user):
     except KeyError:
         return ''
 
+
 def get_uid(path):
     '''
     Return the user that owns a given file
@@ -102,6 +108,7 @@ def get_uid(path):
     if not os.path.exists(path):
         return False
     return os.stat(path).st_uid
+
 
 def get_user(path):
     '''
@@ -115,6 +122,7 @@ def get_user(path):
     if uid == -1:
         return False
     return uid_to_user(uid)
+
 
 def get_mode(path):
     '''
@@ -131,6 +139,7 @@ def get_mode(path):
         return mode[1:]
     return mode
 
+
 def set_mode(path, mode):
     '''
     Set the more of a file
@@ -144,9 +153,11 @@ def set_mode(path, mode):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
+    # FIXME: don't use a catch-all, be more specific...
     except:
         return 'Invalid Mode ' + mode
     return get_mode(path)
+
 
 def chown(path, user, group):
     '''
@@ -169,6 +180,7 @@ def chown(path, user, group):
         return err
     return os.chown(path, uid, gid)
 
+
 def chgrp(path, group):
     '''
     Change the group of a file
@@ -187,6 +199,7 @@ def chgrp(path, group):
         return err
     user = get_user(path)
     return chown(path, user, group)
+
 
 def get_sum(path, form='md5'):
     '''
@@ -209,6 +222,7 @@ def get_sum(path, form='md5'):
         return 'Hashlib unavailable - please fix your python install'
     except Exception, e:
         return str(e)
+
 
 def find(path, *opts):
     '''

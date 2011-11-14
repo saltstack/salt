@@ -1,7 +1,9 @@
 '''
 Manage the information in the hosts file
 '''
+
 import os
+
 
 def list_hosts():
     '''
@@ -27,6 +29,7 @@ def list_hosts():
         ret[comps[0]] = comps[1:]
     return ret
 
+
 def get_ip(host):
     '''
     Return the ip associated with the named host
@@ -44,6 +47,7 @@ def get_ip(host):
     # ip not found
     return ''
 
+
 def get_alias(ip):
     '''
     Return the list of aliases associated with an ip
@@ -55,6 +59,7 @@ def get_alias(ip):
     if ip in hosts:
         return hosts[ip]
     return []
+
 
 def has_pair(ip, alias):
     '''
@@ -69,6 +74,7 @@ def has_pair(ip, alias):
     if hosts[ip].count(alias):
         return True
     return False
+
 
 def set_host(ip, alias):
     '''
@@ -98,6 +104,7 @@ def set_host(ip, alias):
         lines.append(line)
     open(hfn, 'w+').writelines(lines)
     return True
+
 
 def rm_host(ip, alias):
     '''
@@ -129,6 +136,7 @@ def rm_host(ip, alias):
                 lines[ind] = newline
     open(hfn, 'w+').writelines(lines)
     return True
+
 
 def add_host(ip, alias):
     '''
