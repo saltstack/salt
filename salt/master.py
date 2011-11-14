@@ -171,12 +171,14 @@ class ReqServer(object):
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
+        # FIXME: both, XREP and XREQ are deprecated in favor of ROUTER
+        # and DEALER
         self.clients = self.context.socket(zmq.XREP)
         self.workers = self.context.socket(zmq.XREQ)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
             )
-        # Prepare the aes key
+        # Prepare the AES key
         self.key = key
         self.crypticle = crypticle
 
