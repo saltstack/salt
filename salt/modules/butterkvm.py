@@ -1,12 +1,13 @@
 '''
 Specialized routines used by the butter cloud component
 '''
-# Import python modules
+
+import copy
 import os
 import shutil
 import subprocess
-import copy
 import tempfile
+
 
 def _place_image(image, vda):
     '''
@@ -37,6 +38,7 @@ def _place_image(image, vda):
     ch_cmd = 'chown ' + creds['user'] + ':' + creds['group'] + ' '\
            + vda
     subprocess.call(ch_cmd, shell=True)
+
 
 def _gen_pin_drives(pins):
     '''
@@ -71,6 +73,7 @@ def _gen_pin_drives(pins):
         subprocess.call(ch_cmd, shell=True)
     return True
 
+
 def _apply_overlay(vda, instance):
     '''
     Use libguestfs to apply the overlay under the specified instance to the
@@ -91,6 +94,7 @@ def _apply_overlay(vda, instance):
     shutil.rmtree(tmp)
     return True
 
+
 def libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
@@ -108,6 +112,7 @@ def libvirt_creds():
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
     return {'user': user, 'group': group}
+
 
 def local_images(local_path):
     '''
@@ -138,6 +143,7 @@ def full_butter_data(local_path):
     info = __salt__['virt.full_info']()
     info['local_images'] = local_images(local_path)
     return info
+
 
 def create(instance, vda, image, pin):
     '''

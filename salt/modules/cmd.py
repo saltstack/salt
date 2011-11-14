@@ -4,11 +4,11 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
 '''
-# Import Python libs
+
+import logging
+import os
 import subprocess
 import tempfile
-import os
-import logging
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -22,11 +22,13 @@ __outputter__ = {
                  'run': 'txt'
                  }
 
+
 def _is_exec(path):
     '''
     Return true if the passed path exists and is execuatable
     '''
     return os.path.exists(path) and os.access(path, os.X_OK)
+
 
 def run(cmd, cwd=DEFAULT_CWD):
     '''
@@ -45,9 +47,10 @@ def run(cmd, cwd=DEFAULT_CWD):
     log.debug(out)
     return out
 
+
 def run_stdout(cmd, cwd=DEFAULT_CWD):
     '''
-    Execute a command, and only return the standard out 
+    Execute a command, and only return the standard out
 
     CLI Example::
 
@@ -60,6 +63,7 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
             stdout=subprocess.PIPE).communicate()[0]
     log.debug(stdout)
     return stdout
+
 
 def run_stderr(cmd, cwd=DEFAULT_CWD):
     '''
@@ -77,6 +81,7 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
     log.debug(stderr)
     return stderr
 
+
 def run_all(cmd, cwd=DEFAULT_CWD):
     '''
     Execute the passed command and return a dict of return data
@@ -87,7 +92,7 @@ def run_all(cmd, cwd=DEFAULT_CWD):
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     ret = {}
-    proc =  subprocess.Popen(cmd,
+    proc = subprocess.Popen(cmd,
             shell=True,
             cwd=cwd,
             stdout=subprocess.PIPE,
@@ -106,6 +111,7 @@ def run_all(cmd, cwd=DEFAULT_CWD):
         log.info('stderr: {0}'.format(ret['stderr']))
     return ret
 
+
 def retcode(cmd, cwd=DEFAULT_CWD):
     '''
     Execute a shell command and return the command's return code.
@@ -116,6 +122,7 @@ def retcode(cmd, cwd=DEFAULT_CWD):
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     return subprocess.call(cmd, shell=True, cwd=cwd)
+
 
 def has_exec(cmd):
     '''
@@ -132,6 +139,7 @@ def has_exec(cmd):
         if _is_exec(fn_):
             return True
     return False
+
 
 def exec_code(lang, code, cwd=DEFAULT_CWD):
     '''
