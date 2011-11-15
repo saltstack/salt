@@ -1,14 +1,14 @@
-'''
+"""
 Support for Tomcat
-'''
+"""
 
 import os
 
 
 def __catalina_home():
-    '''
+    """
     Tomcat paths differ depending on packaging
-    '''
+    """
     locations = ['/usr/share/tomcat6', '/opt/tomcat']
     for location in locations:
         if os.path.isdir(location):
@@ -16,13 +16,13 @@ def __catalina_home():
 
 
 def version():
-    '''
+    """
     Return server version from catalina.sh version
 
     CLI Example::
 
         salt '*' tomcat.version
-    '''
+    """
     cmd = __catalina_home() + '/bin/catalina.sh version'
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
@@ -35,13 +35,13 @@ def version():
 
 
 def fullversion():
-    '''
+    """
     Return all server information from catalina.sh version
 
     CLI Example::
 
         salt '*' full.fullversion
-    '''
+    """
     cmd = __catalina_home() + '/bin/catalina.sh version'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -55,13 +55,13 @@ def fullversion():
 
 
 def signal(signal=None):
-    '''
+    """
     Signals catalina to start, stop, securestart, forcestop.
 
     CLI Example::
 
         salt '*' tomcat.signal start
-    '''
+    """
     valid_signals = {'forcestop': 'stop -force',
                      'securestart': 'start -security',
                      'start': 'start',

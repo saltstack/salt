@@ -1,15 +1,15 @@
 #!/usr/bin/env python2
-'''
+"""
 Publish commands to the salt system from the command line on the master.
-'''
+"""
 
 import salt.cli
 
 
 def main():
-    '''
+    """
     The main function
-    '''
+    """
     cp_ = salt.cli.SaltCP()
     cp_.run()
 

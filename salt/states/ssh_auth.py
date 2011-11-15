@@ -1,4 +1,4 @@
-'''
+"""
 SSH Authorized Key Management
 =============================
 
@@ -12,7 +12,7 @@ controlled via the ssh_auth state:
         - present
         - user: root
         - enc: ssh-dss
-'''
+"""
 
 
 def present(
@@ -22,7 +22,7 @@ def present(
         comment='',
         options=[],       # FIXME: mutable type; http://goo.gl/ToU2z
         config='.ssh/authorized_keys'):
-    '''
+    """
     Verifies that the specified ssh key is present for the specified user
 
     name
@@ -43,7 +43,7 @@ def present(
     config
         The location of the authorized keys file relative to the user's home
         direcotory, defaults to ".ssh/authorized_keys"
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -74,7 +74,7 @@ def present(
 
 
 def absent(name, user, config='.ssh/authorized_keys'):
-    '''
+    """
     Verifies that the specified ssh key is absent
 
     name
@@ -86,7 +86,7 @@ def absent(name, user, config='.ssh/authorized_keys'):
     config
         The location of the authorized keys file relative to the user's home
         direcotory, defaults to ".ssh/authorized_keys"
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,

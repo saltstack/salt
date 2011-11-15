@@ -46,9 +46,9 @@ Here is a simple jinja + yaml example:
     from jinja2 import Template
 
     def render(template):
-        '''
+        """
         Render the data passing the functions and grains into the rendering system
-        '''
+        """
         if not os.path.isfile(template):
             return {}
         passthrough = {}

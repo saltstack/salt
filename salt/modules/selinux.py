@@ -1,15 +1,15 @@
-'''
+"""
 Execute calls on selinux
-'''
+"""
 
 import os
 
 
 def __virtual__():
-    '''
+    """
     Check if the os is Linux, and then if selinux is running in permissive or
     enforcing mode.
-    '''
+    """
     if __grains__['kernel'] == 'Linux':
         if os.path.isdir('/selinux'):
             if os.path.isfile('/selinux/enforce'):
@@ -18,13 +18,13 @@ def __virtual__():
 
 
 def getenforce():
-    '''
+    """
     Return the mode selinux is running in
 
     CLE Example::
 
         salt '*' selinux.getenforce
-    '''
+    """
     if open('/selinux/enforce', 'r').read() == '0':
         return 'Permissive'
     else:
@@ -32,9 +32,9 @@ def getenforce():
 
 
 def setenforce(mode):
-    '''
+    """
     Set the enforcing mode
-    '''
+    """
     if isinstance(mode, str):
         if mode.lower() == 'enforcing':
             mode = '1'

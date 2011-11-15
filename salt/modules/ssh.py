@@ -1,15 +1,15 @@
-'''
+"""
 Manage client ssh components
-'''
+"""
 
 import os
 
 
 def _refine_enc(enc):
-    '''
+    """
     Return the properly formatted ssh value for the authorized encryption key
     type. If the type is not found, return ssh-rsa, the ssh default.
-    '''
+    """
     rsa = ['r', 'rsa', 'ssh-rsa']
     dss = ['d', 'dsa', 'dss', 'ssh-dss']
     if rsa.count(enc):
@@ -25,9 +25,9 @@ def _format_auth_line(
         enc,
         comment,
         options):
-    '''
+    """
     Properly format user input.
-    '''
+    """
     line = ''
     if options:
         line += '{0} '.format(','.join(options))
@@ -44,9 +44,9 @@ def _replace_auth_key(
         comment='',
         options=[],
         config='.ssh/authorized_keys'):
-    '''
+    """
     Replace an existing key
-    '''
+    """
     auth_line = _format_auth_line(
                 key,
                 enc,
@@ -76,13 +76,13 @@ def _replace_auth_key(
 
 
 def host_keys(keydir=None):
-    '''
+    """
     Return the minion's host keys
 
     CLI Example::
 
         salt '*' ssh.host_keys
-    '''
+    """
     # Set up the default keydir - needs to support sshd_config parsing in the
     # future
     if not keydir:
@@ -104,13 +104,13 @@ def host_keys(keydir=None):
 
 
 def auth_keys(user, config='.ssh/authorized_keys'):
-    '''
+    """
     Return the authorized keys for the specified user
 
     CLI Example::
 
         salt '*' ssh.auth_keys root
-    '''
+    """
     ret = {}
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
@@ -145,13 +145,13 @@ def auth_keys(user, config='.ssh/authorized_keys'):
 
 
 def rm_auth_key(user, key, config='.ssh/authorized_keys'):
-    '''
+    """
     Remove an authorized key from the specified user's authorized key file
 
     CLI Example::
 
         salt '*' ssh.rm_auth_key <user> <key>
-    '''
+    """
     current = auth_keys(user, config)
     if key in current:
         # Remove the key
@@ -197,13 +197,13 @@ def set_auth_key(
         comment='',
         options=[],
         config='.ssh/authorized_keys'):
-    '''
+    """
     Add a key to the authorized_keys file
 
     CLI Example::
 
         salt '*' ssh.set_auth_key <user> <key> dsa '[]' .ssh/authorized_keys
-    '''
+    """
     enc = _refine_enc(enc)
     ret = ''           # FIXME: where is ret used?
     replace = False

@@ -1,6 +1,6 @@
-'''
+"""
 Routines to set up a minion
-'''
+"""
 
 # This module still needs package support, so that the functions dict
 # returned can send back functions like: foo.bar.baz
@@ -17,17 +17,17 @@ salt_base_path = os.path.dirname(salt.__file__)
 
 
 class LoaderError(Exception):
-    '''
+    """
     Custom exception class.
-    '''
+    """
 
     pass
 
 
 def minion_mods(opts):
-    '''
+    """
     Returns the minion modules
-    '''
+    """
     extra_dirs = []
     if 'module_dirs' in opts:
         extra_dirs = opts['module_dirs']
@@ -39,9 +39,9 @@ def minion_mods(opts):
 
 
 def returners(opts):
-    '''
+    """
     Returns the returner modules
-    '''
+    """
     extra_dirs = []
     if 'returner_dirs' in opts:
         extra_dirs = opts['returner_dirs']
@@ -53,9 +53,9 @@ def returners(opts):
 
 
 def states(opts, functions):
-    '''
+    """
     Returns the returner modules
-    '''
+    """
     extra_dirs = []
     if 'states_dirs' in opts:
         extra_dirs = opts['states_dirs']
@@ -69,9 +69,9 @@ def states(opts, functions):
 
 
 def render(opts, functions):
-    '''
+    """
     Returns the render modules
-    '''
+    """
     extra_dirs = []
     if 'render_dirs' in opts:
         extra_dirs = opts['render_dirs']
@@ -91,10 +91,10 @@ def render(opts, functions):
 
 
 def grains(opts):
-    '''
+    """
     Return the functions for the dynamic grains and the values for the static
     grains.
-    '''
+    """
     module_dirs = [
         os.path.join(salt_base_path, 'grains'),
         ]
@@ -108,9 +108,9 @@ def grains(opts):
 # FIXME: mutable types as default parameter values, NO!
 # http://goo.gl/ToU2z
 def call(fun, args=[], dirs=[]):
-    '''
+    """
     Directly call a function inside a loader directory
-    '''
+    """
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
         ] + dirs
@@ -119,9 +119,9 @@ def call(fun, args=[], dirs=[]):
 
 
 def runner(opts):
-    '''
+    """
     Directly call a function inside a loader directory
-    '''
+    """
     module_dirs = [
         os.path.join(salt_base_path, 'runners'),
         ]
@@ -130,11 +130,11 @@ def runner(opts):
 
 
 class Loader(object):
-    '''
+    """
     Used to load in arbitrary modules from a directory, the Loader can also be
     used to only load specific functions from a directory, or to call modules
     in an arbitrary directory directly.
-    '''
+    """
     def __init__(self, module_dirs, opts={}):
         self.module_dirs = module_dirs
         if 'grains' in opts:
@@ -144,9 +144,9 @@ class Loader(object):
         self.opts = self.__prep_mod_opts(opts)
 
     def __prep_mod_opts(self, opts):
-        '''
+        """
         Strip out of the opts any logger instance
-        '''
+        """
         mod_opts = {}
         for key, val in opts.items():
             if key in ('logger', 'grains'):
@@ -155,9 +155,9 @@ class Loader(object):
         return mod_opts
 
     def get_docs(self, funcs, module=''):
-        '''
+        """
         Return a dict containing all of the doc strings in the functions dict
-        '''
+        """
         docs = {}
         for fun in funcs:
             if fun.startswith(module):
@@ -165,9 +165,9 @@ class Loader(object):
         return docs
 
     def call(self, fun, arg=[]):
-        '''
+        """
         Call a function in the load path.
-        '''
+        """
         name = fun[:fun.rindex('.')]
         try:
             fn_, path, desc = imp.find_module(name, self.module_dirs)
@@ -195,9 +195,9 @@ class Loader(object):
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
     def gen_functions(self, pack=None):
-        '''
+        """
         Return a dict of functions found in the defined module_dirs
-        '''
+        """
         names = {}
         modules = []
         funcs = {}
@@ -277,34 +277,34 @@ class Loader(object):
         return funcs
 
     def _apply_outputter(self, func, mod):
-        '''
+        """
         Apply the __outputter__ variable to the functions
-        '''
+        """
         if hasattr(mod, '__outputter__'):
             outp = mod.__outputter__
             if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
 
     def apply_introspection(self, funcs):
-        '''
+        """
         Pass in a function object returned from get_functions to load in
         introspection functions.
-        '''
+        """
         funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
         funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
         return funcs
 
     def list_funcs(self, funcs):
-        '''
+        """
         List the functions
-        '''
+        """
         return funcs.keys()
 
     def list_modules(self, funcs):
-        '''
+        """
         List the modules
-        '''
+        """
         modules = set()
         for key in funcs:
             comps = key.split('.')
@@ -314,10 +314,10 @@ class Loader(object):
         return sorted(list(modules))
 
     def filter_func(self, name, pack=None):
-        '''
+        """
         Filter a specific function out of the functions, this is used to load
         the returners for the salt minion
-        '''
+        """
         funcs = {}
         gen = self.gen_functions(pack) if pack else self.gen_functions()
         for key, fun in gen.items():
@@ -326,21 +326,21 @@ class Loader(object):
         return funcs
 
     def chop_mods(self):
-        '''
+        """
         Chop off the module names so that the raw functions are exposed, used
         to generate the grains
-        '''
+        """
         funcs = {}
         for key, fun in self.gen_functions().items():
             funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
 
     def gen_grains(self):
-        '''
+        """
         Read the grains directory and execute all of the public callable
         members. then verify that the returns are python dict's and return a
         dict containing all of the returned values.
-        '''
+        """
         grains = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():

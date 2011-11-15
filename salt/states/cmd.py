@@ -1,4 +1,4 @@
-'''
+"""
 Command Executions
 ==================
 
@@ -31,7 +31,7 @@ syslog if there is no disk space:
         - run
         - unless: echo 'foo' > /tmp/.test
 
-'''
+"""
 
 import grp
 import os
@@ -44,7 +44,7 @@ def run(name,
         cwd='/root',
         user=None,
         group=None):
-    '''
+    """
     Run a command if certian circumstances are met
 
     name
@@ -68,7 +68,7 @@ def run(name,
 
     group
         The group context to run the command as
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': False,

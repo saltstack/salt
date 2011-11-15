@@ -1,4 +1,4 @@
-'''
+"""
 Kernel Module Management
 ========================
 The Kernel modules on a system can be managed cleanly with the kmod state
@@ -12,16 +12,16 @@ module:
   pcspkr:
     kmod:
       - absent
-'''
+"""
 
 
 def present(name):
-    '''
+    """
     Ensure that the specified kernel module is loaded
 
     name
         The name of the kernel module to verify is loaded
-    '''
+    """
     ret = {'name': name,
            'result': True,
            'changes': {},
@@ -48,12 +48,12 @@ def present(name):
 
 
 def absent(name):
-    '''
+    """
     Verify that the named kernel module is not loaded
 
     name
         The name of the kernel module to verify is not loaded
-    '''
+    """
     ret = {'name': name,
            'result': True,
            'changes': {},

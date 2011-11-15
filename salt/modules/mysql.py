@@ -1,4 +1,4 @@
-'''
+"""
 Module to provide MySQL compatibility to salt.
 
 In order to connect to MySQL, certain configuration is required
@@ -10,7 +10,7 @@ might look like::
     mysql.user: 'root'
     mysql.pass: ''
     mysql.db: 'mysql'
-'''
+"""
 
 import MySQLdb
 
@@ -18,9 +18,9 @@ __opts__ = {}
 
 
 def connect():
-    '''
+    """
     wrap authentication credentials here
-    '''
+    """
 
     hostname = __opts__['mysql.host']
     username = __opts__['mysql.user']
@@ -41,14 +41,14 @@ def connect():
 
 
 def status():
-    '''
+    """
     Return the status of a MySQL server using the output
     from the ``SHOW STATUS`` query.
 
     CLI Example::
 
         salt '*' mysql.status
-    '''
+    """
     ret = {}
     db = connect()
     cur = db.cursor()
@@ -60,14 +60,14 @@ def status():
 
 
 def version():
-    '''
+    """
     Return the version of a MySQL server using the output
     from the ``SELECT VERSION()`` query.
 
     CLI Example::
 
         salt '*' mysql.version
-    '''
+    """
     db = connect()
     cur = db.cursor()
     cur.execute('SELECT VERSION()')

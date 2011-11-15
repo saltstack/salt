@@ -1,6 +1,6 @@
-'''
+"""
 The actual saltkey functional code
-'''
+"""
 
 # Import python modules
 import os
@@ -13,17 +13,17 @@ import salt.utils as utils
 
 
 class Key(object):
-    '''
+    """
     The object that encapsulates saltkey actions
-    '''
+    """
     def __init__(self, opts):
         self.opts = opts
 
     def _keys(self, key_type, full_path=False):
-        '''
+        """
         Safely return the names of the unaccepted keys, pass True to return
         the full key paths. Returns a set.
-        '''
+        """
         ret = set()
         subdir = ''
         if key_type == 'pre':
@@ -45,41 +45,41 @@ class Key(object):
         return ret
 
     def _list_pre(self):
-        '''
+        """
         List the unaccepted keys
-        '''
+        """
         print utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC
         for key in sorted(self._keys('pre')):
             print utils.RED + key + utils.ENDC
 
     def _list_accepted(self):
-        '''
+        """
         List the accepted public keys
-        '''
+        """
         print utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC
         for key in sorted(self._keys('acc')):
             print utils.GREEN + key + utils.ENDC
 
     def _list_all(self):
-        '''
+        """
         List all keys
-        '''
+        """
         self._list_pre()
         self._list_accepted()
 
     def _print_key(self, name):
-        '''
+        """
         Print out the specified public key
-        '''
+        """
         keys = self._keys('pre', True).union(self._keys('acc', True))
         for key in sorted(keys):
             if key.endswith(name):
                 print open(key, 'r').read()
 
     def _print_all(self):
-        '''
+        """
         Print out the public keys, all of em'
-        '''
+        """
         print utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC
         for key in sorted(self._keys('pre', True)):
             print '  ' + utils.RED + os.path.basename(key) + utils.ENDC
@@ -90,9 +90,9 @@ class Key(object):
             print open(key, 'r').read()
 
     def _accept(self, key):
-        '''
+        """
         Accept a specified host's public key
-        '''
+        """
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions = os.path.join(self.opts['pki_dir'], 'minions')
         if not os.path.isdir(minions):
@@ -114,9 +114,9 @@ class Key(object):
         shutil.move(os.path.join(pre_dir, key), os.path.join(minions, key))
 
     def _accept_all(self):
-        '''
+        """
         Accept all keys in pre
-        '''
+        """
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions = os.path.join(self.opts['pki_dir'], 'minions')
         if not os.path.isdir(minions):
@@ -133,9 +133,9 @@ class Key(object):
             self._accept(key)
 
     def _delete_key(self):
-        '''
+        """
         Delete a key
-        '''
+        """
         pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions = os.path.join(self.opts['pki_dir'], 'minions')
         if not os.path.isdir(minions):
@@ -158,9 +158,9 @@ class Key(object):
             print 'Removed accepted key %s' % self.opts['delete']
 
     def run(self):
-        '''
+        """
         Run the logic for saltkey
-        '''
+        """
         if self.opts['gen_keys']:
             salt.crypt.gen_keys(
                     self.opts['gen_keys_dir'],

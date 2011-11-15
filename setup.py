@@ -1,7 +1,7 @@
 #!/usr/bin/python2
-'''
+"""
 The setup script for salt
-'''
+"""
 
 from Cython.Distutils import build_ext
 from distutils import log

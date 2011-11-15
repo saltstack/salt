@@ -1,4 +1,4 @@
-'''
+"""
 Hosts File Management
 =====================
 The hosts file can be managed to contain definitions for specific hosts:
@@ -9,11 +9,11 @@ The hosts file can be managed to contain definitions for specific hosts:
       host:
         - present
         - ip: 192.168.0.42
-'''
+"""
 
 
 def present(name, ip):
-    '''
+    """
     Ensures that the named host is present with the given ip
 
     name
@@ -21,7 +21,7 @@ def present(name, ip):
 
     ip
         The ip addr to apply to the host
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': False,
@@ -42,7 +42,7 @@ def present(name, ip):
 
 
 def absent(name, ip):
-    '''
+    """
     Ensure that the the named host is absent
 
     name
@@ -50,7 +50,7 @@ def absent(name, ip):
 
     ip
         The ip addr of the host to remove
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': False,

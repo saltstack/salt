@@ -1,19 +1,19 @@
-'''
+"""
 Module for gathering disk information
-'''
+"""
 
 # FIXME: we want module internal calls rather than using subprocess directly
 import subprocess
 
 
 def usage():
-    '''
+    """
     Return usage information for volumes mounted on this minion
 
     CLI Example::
 
         salt '*' disk.usage
-    '''
+    """
     cmd = 'df -P'
     ret = {}
     out = subprocess.Popen(cmd,

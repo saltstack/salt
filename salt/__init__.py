@@ -1,6 +1,6 @@
-'''
+"""
 Make me some salt!
-'''
+"""
 
 __version_info__ = (0, 9, 4, 'pre')
 __version__ = '.'.join(map(str, __version_info__))
@@ -15,10 +15,10 @@ import salt.config
 
 
 def verify_env(dirs):
-    '''
+    """
     Verify that the named directories are in place and that the environment
     can shake the salt
-    '''
+    """
     for dir_ in dirs:
         if not os.path.isdir(dir_):
             try:
@@ -28,17 +28,17 @@ def verify_env(dirs):
 
 
 class Master(object):
-    '''
+    """
     Creates a master server
-    '''
+    """
     def __init__(self):
         self.cli = self.__parse_cli()
         self.opts = salt.config.master_config(self.cli['config'])
 
     def __parse_cli(self):
-        '''
+        """
         Parse the cli for options passed to a master daemon
-        '''
+        """
         import salt.log
         parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
@@ -71,9 +71,9 @@ class Master(object):
         return cli
 
     def start(self):
-        '''
+        """
         Run the sequence to start a salt master server
-        '''
+        """
         verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.opts['cachedir'], 'jobs'),
@@ -98,17 +98,17 @@ class Master(object):
 
 
 class Minion(object):
-    '''
+    """
     Create a minion server
-    '''
+    """
     def __init__(self):
         self.cli = self.__parse_cli()
         self.opts = salt.config.minion_config(self.cli['config'])
 
     def __parse_cli(self):
-        '''
+        """
         Parse the cli input
-        '''
+        """
         import salt.log
         parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
@@ -139,9 +139,9 @@ class Minion(object):
         return cli
 
     def start(self):
-        '''
+        """
         Execute this method to start up a minion.
-        '''
+        """
         verify_env([self.opts['pki_dir'], self.opts['cachedir'],
                 os.path.dirname(self.opts['log_file']),
                 ])
@@ -165,17 +165,17 @@ class Minion(object):
 
 
 class Syndic(object):
-    '''
+    """
     Create a syndic server
-    '''
+    """
     def __init__(self):
         self.cli = self.__parse_cli()
         self.opts = self.__prep_opts()
 
     def __prep_opts(self):
-        '''
+        """
         Generate the opts used by the syndic
-        '''
+        """
         opts = salt.config.master_config(self.cli['master_config'])
         opts['_minion_conf_file'] = opts['conf_file']
         opts.update(salt.config.minion_config(self.cli['minion_config']))
@@ -196,9 +196,9 @@ class Syndic(object):
         sys.exit(2)
 
     def __parse_cli(self):
-        '''
+        """
         Parse the cli for options passed to a master daemon
-        '''
+        """
         import salt.log
         parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
@@ -236,9 +236,9 @@ class Syndic(object):
         return cli
 
     def start(self):
-        '''
+        """
         Execute this method to start up a syndic.
-        '''
+        """
         verify_env([self.opts['pki_dir'], self.opts['cachedir'],
                 os.path.dirname(self.opts['log_file']),
                 ])

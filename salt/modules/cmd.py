@@ -1,9 +1,9 @@
-'''
+"""
 A module for shelling out
 
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
-'''
+"""
 
 import logging
 import os
@@ -24,20 +24,20 @@ __outputter__ = {
 
 
 def _is_exec(path):
-    '''
+    """
     Return true if the passed path exists and is execuatable
-    '''
+    """
     return os.path.exists(path) and os.access(path, os.X_OK)
 
 
 def run(cmd, cwd=DEFAULT_CWD):
-    '''
+    """
     Execute the passed command and return the output as a string
 
     CLI Example::
 
         salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
-    '''
+    """
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     out = subprocess.Popen(cmd,
             shell=True,
@@ -49,13 +49,13 @@ def run(cmd, cwd=DEFAULT_CWD):
 
 
 def run_stdout(cmd, cwd=DEFAULT_CWD):
-    '''
+    """
     Execute a command, and only return the standard out
 
     CLI Example::
 
         salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
-    '''
+    """
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stdout = subprocess.Popen(cmd,
             shell=True,
@@ -66,13 +66,13 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
 
 
 def run_stderr(cmd, cwd=DEFAULT_CWD):
-    '''
+    """
     Execute a command and only return the standard error
 
     CLI Example::
 
         salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
-    '''
+    """
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stderr = subprocess.Popen(cmd,
             shell=True,
@@ -83,13 +83,13 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
 
 
 def run_all(cmd, cwd=DEFAULT_CWD):
-    '''
+    """
     Execute the passed command and return a dict of return data
 
     CLI Example::
 
         salt '*' cmd.run_all "ls -l | grep foo | awk '{print $2}'"
-    '''
+    """
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     ret = {}
     proc = subprocess.Popen(cmd,
@@ -113,25 +113,25 @@ def run_all(cmd, cwd=DEFAULT_CWD):
 
 
 def retcode(cmd, cwd=DEFAULT_CWD):
-    '''
+    """
     Execute a shell command and return the command's return code.
 
     CLI Example::
 
         salt '*' cmd.retcode "file /bin/bash"
-    '''
+    """
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     return subprocess.call(cmd, shell=True, cwd=cwd)
 
 
 def has_exec(cmd):
-    '''
+    """
     Returns true if the executable is available on the minion, false otherwise
 
     CLI Example::
 
         salt '*' cat
-    '''
+    """
     if cmd.startswith('/'):
         return _is_exec(cmd)
     for path in os.environ['PATH'].split(os.pathsep):
@@ -142,7 +142,7 @@ def has_exec(cmd):
 
 
 def exec_code(lang, code, cwd=DEFAULT_CWD):
-    '''
+    """
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. The stdout and stderr will be returned
@@ -150,7 +150,7 @@ def exec_code(lang, code, cwd=DEFAULT_CWD):
     CLI Example::
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
-    '''
+    """
     fd, cfn = tempfile.mkstemp()
     open(cfn, 'w+').write(code)
     return subprocess.Popen(lang + ' ' + cfn,

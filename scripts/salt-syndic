@@ -1,16 +1,16 @@
 #!/usr/bin/python2
-'''
+"""
 This script is used to kick off a salt syndic daemon
-'''
+"""
 
 import os
 import salt
 
 
 def main():
-    '''
+    """
     The main function
-    '''
+    """
     pid = os.getpid()
     try:
         syndic = salt.Syndic()

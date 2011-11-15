@@ -1,6 +1,6 @@
-'''
+"""
 All salt configuration loading and defaults should be in this module
-'''
+"""
 
 # Import python modules
 import os
@@ -17,10 +17,10 @@ import salt.utils
 
 
 def load_config(opts, path, env_var):
-    '''
+    """
     Attempts to update ``opts`` dict by parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
-    '''
+    """
 
     if not path or not os.path.isfile(path):
         path = os.environ.get(env_var, '')
@@ -40,19 +40,19 @@ def load_config(opts, path, env_var):
 
 
 def prepend_root_dir(opts, path_options):
-    '''
+    """
     Prepends the options that represent filesystem paths with value of the
     'root_dir' option.
-    '''
+    """
     for path_option in path_options:
         opts[path_option] = os.path.normpath(
                 os.sep.join([opts['root_dir'], opts[path_option]]))
 
 
 def minion_config(path):
-    '''
+    """
     Reads in the minion configuration file and sets up special options
-    '''
+    """
     opts = {'master': 'salt',
             'master_port': '4506',
             'root_dir': '/',
@@ -101,9 +101,9 @@ def minion_config(path):
 
 
 def master_config(path):
-    '''
+    """
     Reads in the master configuration file and sets up default options
-    '''
+    """
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
             'worker_threads': 5,
@@ -154,10 +154,10 @@ def master_config(path):
 
 
 def dns_check(addr):
-    '''
+    """
     Verify that the passed address is valid and return the ipv4 addr if it is
     a hostname
-    '''
+    """
     try:
         socket.inet_aton(addr)
         # is a valid ip addr

@@ -1,7 +1,7 @@
-'''
+"""
 This module contains all fo the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
-'''
+"""
 
 # Import python modules
 import cPickle as pickle
@@ -30,10 +30,10 @@ log = logging.getLogger(__name__)
 
 
 def prep_jid(cachedir, load):
-    '''
+    """
     Parses the job return directory, generates a job id and sets up the
     job id directory.
-    '''
+    """
     jid_root = os.path.join(cachedir, 'jobs')
     jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
@@ -47,29 +47,29 @@ def prep_jid(cachedir, load):
 
 
 class SMaster(object):
-    '''
+    """
     Create a simple salt-master, this will generate the top level master
-    '''
+    """
     def __init__(self, opts):
-        '''
+        """
         Create a salt master server instance
-        '''
+        """
         self.opts = opts
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
         self.crypticle = self.__prep_crypticle()
 
     def __prep_crypticle(self):
-        '''
+        """
         Return the crypticle used for AES
-        '''
+        """
         return salt.crypt.Crypticle(self.opts['aes'])
 
     def __prep_key(self):
-        '''
+        """
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
-        '''
+        """
         log.info('Preparing the root key for local communication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
         key = salt.crypt.Crypticle.generate_key_string()
@@ -81,19 +81,19 @@ class SMaster(object):
 
 
 class Master(SMaster):
-    '''
+    """
     The salt master server
-    '''
+    """
     def __init__(self, opts):
-        '''
+        """
         Create a salt master server instance
-        '''
+        """
         SMaster.__init__(self, opts)
 
     def _clear_old_jobs(self):
-        '''
+        """
         Clean out the old jobs
-        '''
+        """
         while True:
             cur = "{:%Y%m%d%H}".format(datetime.datetime.now())
 
@@ -106,9 +106,9 @@ class Master(SMaster):
             time.sleep(60)
 
     def start(self):
-        '''
+        """
         Turn on the master server components
-        '''
+        """
         log.info('Starting the Salt Master')
         multiprocessing.Process(target=self._clear_old_jobs).start()
         aes_funcs = AESFuncs(self.opts, self.crypticle)
@@ -129,18 +129,18 @@ class Master(SMaster):
 
 
 class Publisher(multiprocessing.Process):
-    '''
+    """
     The publishing interface, a simple zeromq publisher that sends out the
     commands.
-    '''
+    """
     def __init__(self, opts):
         multiprocessing.Process.__init__(self)
         self.opts = opts
 
     def run(self):
-        '''
+        """
         Bind to the interface specified in the configuration file
-        '''
+        """
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         pull_sock = context.socket(zmq.PULL)
@@ -159,10 +159,10 @@ class Publisher(multiprocessing.Process):
 
 
 class ReqServer(object):
-    '''
+    """
     Starts up the master request server, minions send results to this
     interface.
-    '''
+    """
     def __init__(self, opts, crypticle, key, mkey, aes_funcs, clear_funcs):
         self.opts = opts
         self.aes_funcs = aes_funcs
@@ -181,9 +181,9 @@ class ReqServer(object):
         self.crypticle = crypticle
 
     def __bind(self):
-        '''
+        """
         Binds the reply server
-        '''
+        """
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
 
@@ -201,25 +201,25 @@ class ReqServer(object):
         zmq.device(zmq.QUEUE, self.clients, self.workers)
 
     def start_publisher(self):
-        '''
+        """
         Start the salt publisher interface
-        '''
+        """
         # Start the publisher
         self.publisher = Publisher(self.opts)
         self.publisher.start()
 
     def run(self):
-        '''
+        """
         Start up the ReqServer
-        '''
+        """
         self.__bind()
 
 
 class MWorker(multiprocessing.Process):
-    '''
+    """
     The worker multiprocess instance to manage the backend operations for the
     salt master.
-    '''
+    """
     def __init__(self,
             opts,
             mkey,
@@ -234,9 +234,9 @@ class MWorker(multiprocessing.Process):
         self.clear_funcs = clear_funcs
 
     def __bind(self):
-        '''
+        """
         Bind to the local port
-        '''
+        """
         context = zmq.Context(1)
         socket = context.socket(zmq.REP)
         w_uri = 'ipc://{0}'.format(
@@ -252,31 +252,31 @@ class MWorker(multiprocessing.Process):
             socket.send(ret)
 
     def _handle_payload(self, payload):
-        '''
+        """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
-        '''
+        """
         return {'aes': self._handle_aes,
                 'pub': self._handle_pub,
                 'clear': self._handle_clear}[payload['enc']](payload['load'])
 
     def _handle_clear(self, load):
-        '''
+        """
         Take care of a cleartext command
-        '''
+        """
         log.info('Clear payload received with command %(cmd)s', load)
         return getattr(self.clear_funcs, load['cmd'])(load)
 
     def _handle_pub(self, load):
-        '''
+        """
         Handle a command sent via a public key pair
-        '''
+        """
         log.info('Pubkey payload received with command %(cmd)s', load)
 
     def _handle_aes(self, load):
-        '''
+        """
         Handle a command sent via an aes key
-        '''
+        """
         try:
             data = self.crypticle.loads(load)
         except:
@@ -288,16 +288,16 @@ class MWorker(multiprocessing.Process):
         return self.aes_funcs.run_func(data['cmd'], data)
 
     def run(self):
-        '''
+        """
         Start a Master Worker
-        '''
+        """
         self.__bind()
 
 
 class AESFuncs(object):
-    '''
+    """
     Set up functions that are available when the load is encrypted with AES
-    '''
+    """
     # The AES Functions:
     #
     def __init__(self, opts, crypticle):
@@ -307,9 +307,9 @@ class AESFuncs(object):
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
     def __find_file(self, path, env='base'):
-        '''
+        """
         Search the environment for the relative path
-        '''
+        """
         fnd = {'path': '',
                'rel': ''}
         if env not in self.opts['file_roots']:
@@ -323,10 +323,10 @@ class AESFuncs(object):
         return fnd
 
     def __verify_minion(self, id_, token):
-        '''
+        """
         Take a minion id and a string encrypted with the minion private key
         The string needs to decrypt as 'salt' with the minion public key
-        '''
+        """
         minion_pub = open(
                 os.path.join(
                     self.opts['pki_dir'],
@@ -347,9 +347,9 @@ class AESFuncs(object):
         return False
 
     def _serve_file(self, load):
-        '''
+        """
         Return a chunk from a file based on the data received
-        '''
+        """
         ret = {'data': '',
                'dest': ''}
         if 'path' not in load or 'loc' not in load or 'env' not in load:
@@ -364,9 +364,9 @@ class AESFuncs(object):
         return ret
 
     def _file_hash(self, load):
-        '''
+        """
         Return a file hash, the hash type is set in the master config file
-        '''
+        """
         if 'path' not in load or 'env' not in load:
             return ''
         path = self.__find_file(load['path'], load['env'])['path']
@@ -379,10 +379,10 @@ class AESFuncs(object):
         return ret
 
     def _file_list(self, load):
-        '''
+        """
         Return a list of all files on the file server in a specified
         environment
-        '''
+        """
         ret = []
         if load['env'] not in self.opts['file_roots']:
             return ret
@@ -401,15 +401,15 @@ class AESFuncs(object):
         return ret
 
     def _master_opts(self, load):
-        '''
+        """
         Return the master options to the minion
-        '''
+        """
         return self.opts
 
     def _return(self, load):
-        '''
+        """
         Handle the return data sent from the minions
-        '''
+        """
         # If the return data is invalid, just ignore it
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
@@ -431,10 +431,10 @@ class AESFuncs(object):
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
     def _syndic_return(self, load):
-        '''
+        """
         Recieve a syndic minion return and format it to look like returns from
         individual minions.
-        '''
+        """
         # Verify the load
         if 'return' not in load or 'jid' not in load:
             return None
@@ -446,7 +446,7 @@ class AESFuncs(object):
             self._return(ret)
 
     def minion_publish(self, clear_load):
-        '''
+        """
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
         enabled in the config.
@@ -462,7 +462,7 @@ class AESFuncs(object):
                 - test.*
         This configuration will only allow the minion foo.example.com to
         execute commands from the test module
-        '''
+        """
         # Verify that the load is valid
         if 'peer' not in self.opts:
             return {}
@@ -538,9 +538,9 @@ class AESFuncs(object):
                 )
 
     def run_func(self, func, load):
-        '''
+        """
         Wrapper for running functions executed with AES encryption
-        '''
+        """
         # Don't honor private functions
         if func.startswith('__'):
             return self.crypticle.dumps({})
@@ -555,10 +555,10 @@ class AESFuncs(object):
 
 
 class ClearFuncs(object):
-    '''
+    """
     Set up functions that are safe to execute when commands sent to the master
     without encryption and authentication
-    '''
+    """
     # The ClearFuncs object encasulates the functions that can be executed in
     # the clear:
     # publish (The publish from the LocalClient)
@@ -572,9 +572,9 @@ class ClearFuncs(object):
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
     def _send_cluster(self):
-        '''
+        """
         Send the cluster data out
-        '''
+        """
         log.debug('Sending out cluster data')
         ret = self.local.cmd(self.opts['cluster_masters'],
                 'cluster.distrib',
@@ -585,9 +585,9 @@ class ClearFuncs(object):
         log.debug('Cluster distributed: %s', ret)
 
     def _cluster_load(self):
-        '''
+        """
         Generates the data sent to the cluster nodes.
-        '''
+        """
         minions = {}
         master_pem = ''
         master_conf = open(self.opts['conf_file'], 'r').read()
@@ -604,10 +604,10 @@ class ClearFuncs(object):
                 self.opts['conf_file']]
 
     def _auth(self, load):
-        '''
+        """
         Authenticate the client, use the sent public key to encrypt the aes key
         which was generated at start up
-        '''
+        """
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
         # 3. make an rsa key with the pub key
@@ -686,10 +686,10 @@ class ClearFuncs(object):
         return ret
 
     def publish(self, clear_load):
-        '''
+        """
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
-        '''
+        """
         # Verify that the caller has root on master
         if not clear_load.pop('key') == self.key:
             return ''

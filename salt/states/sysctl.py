@@ -1,4 +1,4 @@
-'''
+"""
 Kernel Sysctl Management
 ========================
 
@@ -10,11 +10,11 @@ Control the kernel sysctl system
     sysctl:
       - present
       - value: 20
-'''
+"""
 
 
 def present(name, value, config='/etc/sysctl.conf'):
-    '''
+    """
     Ensure that the named sysctl value is set
 
     name
@@ -25,7 +25,7 @@ def present(name, value, config='/etc/sysctl.conf'):
 
     config
         The location of the sysctl configuration file
-    '''
+    """
     ret = {'name': name,
            'result': True,
            'changes': {},

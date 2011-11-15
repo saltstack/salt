@@ -1,4 +1,4 @@
-'''
+"""
 File Management
 ===============
 
@@ -58,7 +58,7 @@ something like this:
       file:
         - recurse
         - source: salt://code/flask
-'''
+"""
 
 import difflib
 import hashlib
@@ -69,32 +69,32 @@ import traceback
 
 
 def _makedirs(path):
-    '''
+    """
     Ensure that the directory containing this path is available.
-    '''
+    """
     if not os.path.isdir(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path))
 
 
 def _is_bin(path):
-    '''
+    """
     Return True if a file is a bin, just checks for NULL char, this should be
     expanded to reflect how git checks for bins
-    '''
+    """
     if open(path, 'rb').read(2048).count('\0'):
         return True
     return False
 
 
 def _mako(sfn):
-    '''
+    """
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
     Returns::
 
         {'result': bool,
          'data': <Error data or rendered file path>}
-    '''
+    """
     try:
         from mako.template import Template
     except ImportError:
@@ -116,14 +116,14 @@ def _mako(sfn):
 
 
 def _jinja(sfn):
-    '''
+    """
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
     Returns::
 
         {'result': bool,
          'data': <Error data or rendered file path>}
-    '''
+    """
     try:
         from jinja2 import Template
     except ImportError:
@@ -145,7 +145,7 @@ def _jinja(sfn):
 
 
 def symlink(name, target, force=False, makedirs=False):
-    '''
+    """
     Create a symlink
 
     name
@@ -163,7 +163,7 @@ def symlink(name, target, force=False, makedirs=False):
         If the location of the symlink does not already have a parent directory
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -211,13 +211,13 @@ def symlink(name, target, force=False, makedirs=False):
 
 
 def absent(name):
-    '''
+    """
     Verify that the named file or directory is absent, this will work to
     reverse any of the functions in the file state module.
 
     name
         The path which should be deleted
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -254,7 +254,7 @@ def managed(name,
         template=None,
         makedirs=False,
         __env__='base'):
-    '''
+    """
     Manage a given file, this function allows for a file to be downloaded from
     the salt master and potentially run through a templating system.
 
@@ -288,7 +288,7 @@ def managed(name,
         the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
-    '''
+    """
     if mode:
         mode = str(mode)
     ret = {'changes': {},
@@ -475,7 +475,7 @@ def directory(name,
         group=None,
         mode=None,
         makedirs=False):
-    '''
+    """
     Ensure that a named directory is present and has the right perms
 
     name
@@ -497,7 +497,7 @@ def directory(name,
         the the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
-    '''
+    """
     if mode:
         mode = str(mode)
     ret = {'name': name,
@@ -578,7 +578,7 @@ def directory(name,
 
 
 def recurse(name, source, __env__='base'):
-    '''
+    """
     Recurse through a subdirectory on the master and copy said subdirecory
     over to the specified path.
 
@@ -590,7 +590,7 @@ def recurse(name, source, __env__='base'):
         server and is specified with the salt:// protocol. If the directory is
         located on the master in the directory named spam, and is called eggs,
         the source string is salt://spam/eggs
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,

@@ -1,4 +1,4 @@
-'''
+"""
 The client module is used to create a client connection to the publisher
 The data structure needs to be:
     {'enc': 'clear',
@@ -6,7 +6,7 @@ The data structure needs to be:
               'arg':, ('arg1', 'arg2', ...),
               'tgt': '<glob or id>',
               'key': '<read in the key file>'}
-'''
+"""
 
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
@@ -43,10 +43,10 @@ import salt.payload
 
 
 def prep_jid(cachedir):
-    '''
+    """
     Parses the job return directory, generates a job id and sets up the
     job id directory.
-    '''
+    """
     jid_root = os.path.join(cachedir, 'jobs')
     jid = datetime.datetime.strftime(
         datetime.datetime.now(), '%Y%m%d%H%M%S%f'
@@ -60,24 +60,24 @@ def prep_jid(cachedir):
 
 
 class SaltClientError(Exception):
-    '''
+    """
     Custom exception class.
-    '''
+    """
     pass
 
 
 class LocalClient(object):
-    '''
+    """
     Connect to the salt master via the local server and via root
-    '''
+    """
     def __init__(self, c_path='/etc/salt/master'):
         self.opts = salt.config.master_config(c_path)
         self.key = self.__read_master_key()
 
     def __read_master_key(self):
-        '''
+        """
         Read in the rotating master authentication key
-        '''
+        """
         try:
             keyfile = os.path.join(self.opts['cachedir'], '.root_key')
             key = open(keyfile, 'r').read()
@@ -86,9 +86,9 @@ class LocalClient(object):
             raise SaltClientError('Failed to read in the salt root key')
 
     def _check_glob_minions(self, expr):
-        '''
+        """
         Return the minions found by looking via globs
-        '''
+        """
         cwd = os.getcwd()
         try:
             os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
@@ -102,9 +102,9 @@ class LocalClient(object):
         return ret
 
     def _check_list_minions(self, expr):
-        '''
+        """
         Return the minions found by looking via a list
-        '''
+        """
         ret = []
         for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
             if expr.count(fn_):
@@ -113,9 +113,9 @@ class LocalClient(object):
         return ret
 
     def _check_pcre_minions(self, expr):
-        '''
+        """
         Return the minions found by looking via regular expressions
-        '''
+        """
         ret = set()
         cwd = os.getcwd()
         os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
@@ -127,9 +127,9 @@ class LocalClient(object):
         return ret
 
     def _check_grain_minions(self, expr):
-        '''
+        """
         Return the minions found by looking via a list
-        '''
+        """
         return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
 
     def cmd(
@@ -140,9 +140,9 @@ class LocalClient(object):
         timeout=5,
         expr_form='glob',
         ret=''):
-        '''
+        """
         Execute a salt command and return.
-        '''
+        """
         jid = prep_jid(self.opts['cachedir'])
         pub_data = self.pub(
             tgt,
@@ -162,9 +162,9 @@ class LocalClient(object):
         timeout=5,
         expr_form='glob',
         ret=''):
-        '''
+        """
         Execute a salt command and return
-        '''
+        """
         jid = prep_jid(self.opts['cachedir'])
         pub_data = self.pub(
             tgt,
@@ -178,10 +178,10 @@ class LocalClient(object):
                 pub_data['minions'], timeout))
 
     def get_returns(self, jid, minions, timeout=5):
-        '''
+        """
         This method starts off a watcher looking at the return data for a
         specified jid
-        '''
+        """
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = 999999999999
         gstart = int(time.time())
@@ -216,10 +216,10 @@ class LocalClient(object):
             time.sleep(0.02)
 
     def get_full_returns(self, jid, minions, timeout=5):
-        '''
+        """
         This method starts off a watcher looking at the return data for a
         specified jid, it returns all of the information for the jid
-        '''
+        """
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = 999999999999
         gstart = int(time.time())
@@ -258,10 +258,10 @@ class LocalClient(object):
             time.sleep(0.02)
 
     def find_cmd(self, cmd):
-        '''
+        """
         Hunt through the old salt calls for when cmd was run, return a dict:
         {'<jid>': <return_obj>}
-        '''
+        """
         job_dir = os.path.join(self.opts['cachedir'], 'jobs')
         ret = {}
         for jid in os.listdir(job_dir):
@@ -286,12 +286,12 @@ class LocalClient(object):
         return ret
 
     def check_minions(self, expr, expr_form='glob'):
-        '''
+        """
         Check the passed regex against the available minions' public
         keys stored for authentication. This should return a set of ids
         which match the regex, this will then be used to parse the
         returns to make sure everyone has checked back in.
-        '''
+        """
         return {'glob': self._check_glob_minions,
                 'pcre': self._check_pcre_minions,
                 'list': self._check_list_minions,
@@ -301,7 +301,7 @@ class LocalClient(object):
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
             ret='', jid='', timeout=5):
-        '''
+        """
         Take the required arguments and publish the given command.
         Arguments:
             tgt:
@@ -321,7 +321,7 @@ class LocalClient(object):
                 this will inform the client where to get the job results
             minions:
                 A set, the targets that the tgt passed should match.
-        '''
+        """
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module

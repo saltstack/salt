@@ -1,4 +1,4 @@
-'''
+"""
     salt.log
     ~~~~~~~~
 
@@ -7,7 +7,7 @@
 
     :copyright: 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
     :license: Apache 2.0, see LICENSE for more details.
-'''
+"""
 
 import logging
 import logging.handlers
@@ -42,10 +42,10 @@ def getLogger(name):
 
 
 def init():
-    '''
+    """
     Replace the default system logger with a version that includes trace()
     and garbage() methods.
-    '''
+    """
     if logging.getLoggerClass() is not Logging:
         logging.setLoggerClass(Logging)
         logging.addLevelName(5, 'TRACE')
@@ -55,9 +55,9 @@ def init():
 
 
 def setup_console_logger(log_level):
-    '''
+    """
     Setup the console logger
-    '''
+    """
     init()
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
@@ -75,9 +75,9 @@ def setup_console_logger(log_level):
 
 
 def setup_logfile_logger(log_path, log_level):
-    '''
+    """
     Setup the logfile logger
-    '''
+    """
     init()
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
@@ -97,9 +97,9 @@ def setup_logfile_logger(log_path, log_level):
 
 
 def set_logger_level(logger_name, log_level):
-    '''
+    """
     Tweak a specific logger's logging level
-    '''
+    """
     init()
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
