@@ -7,8 +7,8 @@ of the Salt system each have a respective configuration file. The
 :command:`salt-master` is configured via the master configuration file, and the
 :command:`salt-minion` is configured via the minion configuration file.
 
-.. seealso:: 
-    :ref:`example minion configuration file <configuration-examples-minion>` 
+.. seealso::
+    :ref:`example minion configuration file <configuration-examples-minion>`
 
 The Salt Minion configuration is very simple, typically the only value that
 needs to be set is the master value so the minion can find its master.
@@ -102,7 +102,7 @@ and cannot be disabled.
 
 .. code-block:: yaml
 
-    disable_modules: [cmd,virt,test]
+    disable_modules: [cmd, virt, test]
 
 .. conf_minion:: open_mode
 
