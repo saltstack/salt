@@ -1,25 +1,25 @@
-'''
+"""
 Module for viewing and modifying sysctl parameters
-'''
+"""
 
 import os
 
 
 def __virtual__():
-    '''
+    """
     Only run on Linux systems
-    '''
+    """
     return 'sysctl' if __grains__['kernel'] == 'Linux' else False
 
 
 def show():
-    '''
+    """
     Return a list of sysctl parameters for this minion
 
     CLI Example::
 
         salt '*' sysctl.show
-    '''
+    """
     cmd = 'sysctl -a'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -34,25 +34,25 @@ def show():
 
 
 def get(name):
-    '''
+    """
     Return a single sysctl parameter for this minion
 
     CLI Example::
 
         salt '*' sysctl.get net.ipv4.ip_forward
-    '''
+    """
     cmd = 'sysctl -n {0}'.format(name)
     out = __salt__['cmd.run'](cmd).strip()
     return out
 
 
 def assign(name, value):
-    '''
+    """
     Assign a single sysctl parameter for this minion
 
     CLI Example:
     salt '*' sysctl.assign net.ipv4.ip_forward 1
-    '''
+    """
     cmd = 'sysctl -w {0}={1}'.format(name, value)
     ret = {}
     out = __salt__['cmd.run'](cmd).strip()
@@ -62,13 +62,13 @@ def assign(name, value):
 
 
 def persist(name, value, config='/etc/sysctl.conf'):
-    '''
+    """
     Assign and persist a simple sysctl paramater for this minion
 
     CLI Example::
 
         salt '*' sysctl.persist net.ipv4.ip_forward 1
-    '''
+    """
     running = show()
     edited = False
     # If the sysctl.conf is not present, add it

@@ -1,4 +1,4 @@
-'''
+"""
 Cron Management
 ===============
 
@@ -33,7 +33,7 @@ Is changed to this:
 
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
-'''
+"""
 
 
 def present(name,
@@ -44,7 +44,7 @@ def present(name,
         month='*',
         dayweek='*',
         ):
-    '''
+    """
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
     timing paramaters check your cron system's documentation. Most Unix-like
@@ -75,7 +75,7 @@ def present(name,
     dayweek
         The information to be set in the day of day of week section. Default is
         ``*``
-    '''
+    """
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -114,7 +114,7 @@ def absent(name,
         month='*',
         dayweek='*',
         ):
-    '''
+    """
     Verifies that the specified cron job is absent for the specified user, only
     the name is matched when removing a cron job.
 
@@ -142,7 +142,7 @@ def absent(name,
     dayweek
         The information to be set in the day of day of week section. Default is
         ``*``
-    '''
+    """
     ret = {'name': name,
            'result': True,
            'changes': {},

@@ -1,7 +1,7 @@
-'''
+"""
 The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
-'''
+"""
 
 # Import python modules
 import pprint
@@ -13,21 +13,21 @@ import salt.minion
 
 
 class Caller(object):
-    '''
+    """
     Object to wrap the calling of local salt modules for the salt-call command
-    '''
+    """
     def __init__(self, opts):
-        '''
+        """
         Pass in the command line options
-        '''
+        """
         self.opts = opts
         opts['grains'] = salt.loader.grains(opts)
         self.minion = salt.minion.SMinion(opts)
 
     def call(self):
-        '''
+        """
         Call the module
-        '''
+        """
         ret = {}
         if self.opts['fun'] not in self.minion.functions:
             print 'Function {0} is not available'.format(self.opts['fun'])
@@ -41,9 +41,9 @@ class Caller(object):
         return ret
 
     def print_docs(self):
-        '''
+        """
         Pick up the documentation for all of the modules and print it out.
-        '''
+        """
         docs = {}
         for name, func in self.minion.functions.items():
             if name not in docs:
@@ -54,16 +54,16 @@ class Caller(object):
                 print '{0}:\n{1}\n'.format(name, docs[name])
 
     def print_grains(self):
-        '''
+        """
         Print out the grains
-        '''
+        """
         grains = salt.loader.grains(self.opts)
         pprint.pprint(grains)
 
     def run(self):
-        '''
+        """
         Execute the salt call logic
-        '''
+        """
         if self.opts['doc']:
             self.print_docs()
         elif self.opts['grains_run']:

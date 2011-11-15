@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''
+"""
 Approximate the Unix find(1) command and return a list of paths that
 meet the specified critera.
 
@@ -76,7 +76,7 @@ print-opts: a comma and/or space separated list of one or more of the following:
     size:  file size in bytes
     type:  file type
     user:  user name
-'''
+"""
 
 import grp
 import hashlib
@@ -111,7 +111,7 @@ _FILE_TYPES = {'b': stat.S_IFBLK,
                stat.S_IFIFO: 'p',
                stat.S_IFSOCK: 's'}
 
-_INTERVAL_REGEX = re.compile(r'''
+_INTERVAL_REGEX = re.compile(r"""
                             ^\s*
                             (?: (?P<week>   \d+ (?:\.\d*)? ) \s* [wW]  )? \s*
                             (?: (?P<day>    \d+ (?:\.\d*)? ) \s* [dD]? )? \s*
@@ -119,12 +119,12 @@ _INTERVAL_REGEX = re.compile(r'''
                             (?: (?P<minute> \d+ (?:\.\d*)? ) \s* [mM]  )? \s*
                             (?: (?P<second> \d+ (?:\.\d*)? ) \s* [sS]  )? \s*
                             $
-                            ''',
+                            """,
                             flags=re.VERBOSE)
 
 
 def _parse_interval(value):
-    '''
+    """
     Convert an interval string like 1w3d6h into the number of seconds and the
     time resolution (1 unit of the smallest specified time unit).
         w = week
@@ -132,7 +132,7 @@ def _parse_interval(value):
         h = hour
         m = minute
         s = second
-    '''
+    """
     m = _INTERVAL_REGEX.match(value)
     if m is None:
         raise ValueError('invalid time interval: "{0}"'.format(value))
@@ -195,19 +195,19 @@ def _parse_size(value):
 
 
 class Option(object):
-    '''
+    """
     Abstract base class for all find options.
-    '''
+    """
     def requires(self):
         return _REQUIRES_PATH
 
 
 class NameOption(Option):
-    '''
+    """
     Match files with a case-sensitive glob filename pattern.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'name', e.g. {'name' : '*.txt'}.
-    '''
+    """
     def __init__(self, key, value):
         self.re = re.compile(value.replace('.', '\\.')
                                   .replace('?', '.?')
@@ -218,11 +218,11 @@ class NameOption(Option):
 
 
 class InameOption(Option):
-    '''
+    """
     Match files with a case-insensitive glob filename pattern.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'iname', e.g. {'iname' : '*.TXT'}.
-    '''
+    """
     def __init__(self, key, value):
         self.re = re.compile(value.replace('.', '\\.')
                                   .replace('?', '.?')
@@ -234,10 +234,10 @@ class InameOption(Option):
 
 
 class RegexOption(Option):
-    '''Match files with a case-sensitive regular expression.
+    """Match files with a case-sensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'regex', e.g. {'regex' : '.*\.txt'}.
-    '''
+    """
     def __init__(self, key, value):
         try:
             self.re = re.compile(value)
@@ -249,10 +249,10 @@ class RegexOption(Option):
 
 
 class IregexOption(Option):
-    '''Match files with a case-insensitive regular expression.
+    """Match files with a case-insensitive regular expression.
     Note: this is the 'basename' portion of a pathname.
     The option name is 'iregex', e.g. {'iregex' : '.*\.txt'}.
-    '''
+    """
     def __init__(self, key, value):
         try:
             self.re = re.compile(value, re.IGNORECASE)
@@ -264,7 +264,7 @@ class IregexOption(Option):
 
 
 class TypeOption(Option):
-    '''
+    """
     Match files by their file type(s).
     The file type(s) are specified as an optionally comma and/or space
     separated list of letters.
@@ -276,7 +276,7 @@ class TypeOption(Option):
         p = FIFO (named pipe)
         s = socket
     The option name is 'type', e.g. {'type' : 'd'} or {'type' : 'bc'}.
-    '''
+    """
     def __init__(self, key, value):
         # remove whitespace and commas
         value = "".join(value.strip().replace(',', '').split())
@@ -295,12 +295,12 @@ class TypeOption(Option):
 
 
 class OwnerOption(Option):
-    '''
+    """
     Match files by their owner name(s) and/or uid(s), e.g. 'root'.
     The names are a space and/or comma separated list of names and/or integers.
     A match occurs when the file's uid matches any user specified.
     The option name is 'owner', e.g. {'owner' : 'root'}.
-    '''
+    """
     def __init__(self, key, value):
         self.uids = set()
         for name in value.replace(',', ' ').split():
@@ -320,12 +320,12 @@ class OwnerOption(Option):
 
 
 class GroupOption(Option):
-    '''
+    """
     Match files by their group name(s) and/or uid(s), e.g. 'admin'.
     The names are a space and/or comma separated list of names and/or integers.
     A match occurs when the file's gid matches any group specified.
     The option name is 'group', e.g. {'group' : 'admin'}.
-    '''
+    """
     def __init__(self, key, value):
         self.gids = set()
         for name in value.replace(',', ' ').split():
@@ -345,7 +345,7 @@ class GroupOption(Option):
 
 
 class SizeOption(Option):
-    '''
+    """
     Match files by their size.
     Prefix the size with '-' to find files the specified size and smaller.
     Prefix the size with '+' to find files the specified size and larger.
@@ -357,7 +357,7 @@ class SizeOption(Option):
         g = gigabytes
         t = terabytes
     The option name is 'size', e.g. {'size' : '+1G'}.
-    '''
+    """
     def __init__(self, key, value):
         self.min_size, self.max_size = _parse_size(value)
 
@@ -369,7 +369,7 @@ class SizeOption(Option):
 
 
 class MtimeOption(Option):
-    '''
+    """
     Match files modified since the specified time.
     The option name is 'mtime', e.g. {'mtime' : '3d'}.
     The value format is [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
@@ -380,7 +380,7 @@ class MtimeOption(Option):
         m = minute
         s = second
     Whitespace is ignored in the value.
-    '''
+    """
     def __init__(self, key, value):
         secs, resolution = _parse_interval(value)
         self.min_time = time.time() - int(secs / resolution) * resolution
@@ -393,9 +393,9 @@ class MtimeOption(Option):
 
 
 class GrepOption(Option):
-    '''Match files when a pattern occurs within the file.
+    """Match files when a pattern occurs within the file.
     The option name is 'grep', e.g. {'grep' : '(foo)|(bar}'}.
-    '''
+    """
     def __init__(self, key, value):
         try:
             self.re = re.compile(value)
@@ -416,7 +416,7 @@ class GrepOption(Option):
 
 
 class PrintOption(Option):
-    '''
+    """
     Return information about a matched file.
     Print options are specified as a comma and/or space separated list of
     one or more of the following:
@@ -429,7 +429,7 @@ class PrintOption(Option):
         size   = file size in bytes
         type   = file type
         user   = user name
-    '''
+    """
     def __init__(self, key, value):
         self.need_stat = False
         self.print_title = False
@@ -520,12 +520,12 @@ class Finder(object):
                         criteria[_REQUIRES_CONTENTS]
 
     def find(self, path):
-        '''
+        """
         Generate filenames in path that satisfy criteria specified in
         the constructor.
         This method is a generator and should be repeatedly called
         until there are no more results.
-        '''
+        """
         for dirpath, dirs, files in os.walk(path):
             for name in dirs + files:
                 fstat = None
@@ -551,9 +551,9 @@ class Finder(object):
 
 
 def find(path, options):
-    '''
+    """
     WRITEME
-    '''
+    """
     f = Finder(options)
     for path in f.find(path):
         yield path

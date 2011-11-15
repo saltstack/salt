@@ -1,27 +1,27 @@
-'''
+"""
 Support for APT (Advanced Packaging Tool)
-'''
+"""
 
 # FIXME: we want module internal calls rather than using subprocess direclty
 import subprocess
 
 
 def __virtual__():
-    '''
+    """
     Confirm this module is on a Debian based system
-    '''
+    """
 
     return 'pkg' if __grains__['os'] == 'Debian' else False
 
 
 def available_version(name):
-    '''
+    """
     The available version of the package in the repository
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
-    '''
+    """
     version = ''
     cmd = 'apt-cache show ' + name + ' | grep Version'
 
@@ -37,14 +37,14 @@ def available_version(name):
 
 
 def version(name):
-    '''
+    """
     Returns a string representing the package version or an empty string if not
     installed
 
     CLI Example::
 
         salt '*' pkg.version <package name>
-    '''
+    """
     pkgs = list_pkgs(name)
     if name in pkgs:
         return pkgs[name]
@@ -53,7 +53,7 @@ def version(name):
 
 
 def refresh_db():
-    '''
+    """
     Updates the APT database to latest packages based upon repositories
 
     Returns a dict::
@@ -63,7 +63,7 @@ def refresh_db():
     CLI Example::
 
         salt '*' pkg.refresh_db
-    '''
+    """
     cmd = 'aptitude update'
     out = subprocess.Popen(cmd,
             shell=True,
@@ -84,7 +84,7 @@ def refresh_db():
 
 
 def install(pkg, refresh=False):
-    '''
+    """
     Install the passed package
 
     Return a dict containing the new package names and versions::
@@ -95,7 +95,7 @@ def install(pkg, refresh=False):
     CLI Example::
 
         salt '*' pkg.install <package name>
-    '''
+    """
     if(refresh):
         refresh_db()
 
@@ -120,7 +120,7 @@ def install(pkg, refresh=False):
 
 
 def remove(pkg):
-    '''
+    """
     Remove a single package via ``aptitude remove``
 
     Returns a list containing the names of the removed packages.
@@ -128,7 +128,7 @@ def remove(pkg):
     CLI Example::
 
         salt '*' pkg.remove <package name>
-    '''
+    """
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
@@ -144,7 +144,7 @@ def remove(pkg):
 
 
 def purge(pkg):
-    '''
+    """
     Remove a package via aptitude along with all configuration files and
     unused dependencies.
 
@@ -153,7 +153,7 @@ def purge(pkg):
     CLI Example::
 
         salt '*' pkg.purge <package name>
-    '''
+    """
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
@@ -171,7 +171,7 @@ def purge(pkg):
 
 # FIXME: Unused argument 'refresh'? Undefined variable 'update_repos'?
 def upgrade(refresh=True):
-    '''
+    """
     Upgrades all packages via aptitude full-upgrade
 
     Returns a list of dicts containing the package names, and the new and old
@@ -187,7 +187,7 @@ def upgrade(refresh=True):
     CLI Example::
 
         salt '*' pkg.upgrade
-    '''
+    """
 
     if(update_repos):
         refresh_db()
@@ -213,7 +213,7 @@ def upgrade(refresh=True):
 
 
 def list_pkgs(regex_string=""):
-    '''
+    """
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
@@ -221,7 +221,7 @@ def list_pkgs(regex_string=""):
     CLI Example::
 
         salt '*' pkg.list_pkgs
-    '''
+    """
     ret = {}
     cmd = 'dpkg --list ' + regex_string
 

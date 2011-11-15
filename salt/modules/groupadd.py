@@ -1,25 +1,25 @@
-'''
+"""
 Manage groups on Linux
-'''
+"""
 
 import grp
 
 
 def __virtual__():
-    '''
+    """
     Set the user module if the kernel is Linux
-    '''
+    """
     return 'group' if __grains__['kernel'] == 'Linux' else False
 
 
 def add(name, gid=None):
-    '''
+    """
     Add the specified group
 
     CLI Example::
 
         salt '*' group.add foo 3456
-    '''
+    """
     cmd = 'groupadd '
     if gid:
         cmd += '-g {0} '.format(gid)
@@ -31,26 +31,26 @@ def add(name, gid=None):
 
 
 def delete(name):
-    '''
+    """
     Remove the named group
 
     CLI Example::
 
         salt '*' group.delete foo
-    '''
+    """
     ret = __salt__['cmd.run_all']('groupdel {0}'.format(name))
 
     return not ret['retcode']
 
 
 def info(name):
-    '''
+    """
     Return information about a group
 
     CLI Example::
 
         salt '*' group.info foo
-    '''
+    """
     grinfo = grp.getgrnam(name)
     return {'name': grinfo.gr_name,
             'passwd': grinfo.gr_passwd,
@@ -59,13 +59,13 @@ def info(name):
 
 
 def getent():
-    '''
+    """
     Return info on all groups
 
     CLI Example::
 
         salt '*' group.getent
-    '''
+    """
     ret = []
     for grinfo in grp.getgrall():
         ret.append(info(grinfo.gr_name))
@@ -73,13 +73,13 @@ def getent():
 
 
 def chgid(name, gid):
-    '''
+    """
     Change the default shell of the user
 
     CLI Example::
 
         salt '*' user.chshell foo /bin/zsh
-    '''
+    """
     pre_gid = __salt__['file.group_to_gid'](name)
     if gid == pre_gid:
         return True

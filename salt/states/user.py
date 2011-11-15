@@ -1,4 +1,4 @@
-'''
+"""
 User Management
 ===============
 The user module is used to create and manage user settings, users can be set
@@ -17,7 +17,7 @@ as either absent or present
           - wheel
           - storage
           - games
-'''
+"""
 
 
 def present(
@@ -29,7 +29,7 @@ def present(
         password=None,
         shell='/bin/bash'
         ):
-    '''
+    """
     Ensure that the named user is present with the specified properties
 
     name
@@ -53,7 +53,7 @@ def present(
 
     shell
         The login shell, defaults to /bin/bash
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -124,7 +124,7 @@ def present(
 
 
 def absent(name, purge=False, force=False):
-    '''
+    """
     Ensure that the named user is absent
 
     name
@@ -136,7 +136,7 @@ def absent(name, purge=False, force=False):
     force
         If the user is logged in the absent state will fail, set the force
         option to True to remove the user even if they are logged in
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,

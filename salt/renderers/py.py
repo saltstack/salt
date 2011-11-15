@@ -1,18 +1,18 @@
-'''
+"""
 Pure python state renderer
 
 The sls file should contain a function called ``sls`` which returns high state
 data
-'''
+"""
 
 import imp
 import os
 
 
 def render(template, env='', sls=''):
-    '''
+    """
     Render the python module's components
-    '''
+    """
     if not os.path.isfile(template):
         return {}
 

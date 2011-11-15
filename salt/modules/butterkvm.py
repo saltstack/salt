@@ -1,6 +1,6 @@
-'''
+"""
 Specialized routines used by the butter cloud component
-'''
+"""
 
 import copy
 import os
@@ -10,9 +10,9 @@ import tempfile
 
 
 def _place_image(image, vda):
-    '''
+    """
     Moves the image file from the image pool into the final destination.
-    '''
+    """
     image_d = image + '.d'
     vda_dir = os.path.dirname(vda)
     if not os.path.isdir(vda_dir):
@@ -41,9 +41,9 @@ def _place_image(image, vda):
 
 
 def _gen_pin_drives(pins):
-    '''
+    """
     Generate the "pinned" vm image
-    '''
+    """
     creds = libvirt_creds()
     for pin in pins:
         dirname = os.path.dirname(pin['path'])
@@ -75,10 +75,10 @@ def _gen_pin_drives(pins):
 
 
 def _apply_overlay(vda, instance):
-    '''
+    """
     Use libguestfs to apply the overlay under the specified instance to the
     specified vda
-    '''
+    """
     overlay = os.path.join(instance, 'overlay')
     if not os.path.isdir(overlay):
         return False
@@ -96,13 +96,13 @@ def _apply_overlay(vda, instance):
 
 
 def libvirt_creds():
-    '''
+    """
     Returns the user and group that the disk images should be owned by
 
     CLI Example::
 
         salt '*' butterkvm.libvirt_creds
-    '''
+    """
     g_cmd = 'grep group /etc/libvirt/qemu.conf'
     u_cmd = 'grep user /etc/libvirt/qemu.conf'
     group = subprocess.Popen(g_cmd,
@@ -115,7 +115,7 @@ def libvirt_creds():
 
 
 def local_images(local_path):
-    '''
+    """
     return the virtual machine names for all of the images located in the
     butter cloud's local_path in a list::
 
@@ -124,7 +124,7 @@ def local_images(local_path):
     CLI Example::
 
         salt '*' buttervm.local_images <image_path>
-    '''
+    """
     if not os.path.isdir(local_path):
         return []
     images = os.listdir(local_path)
@@ -133,20 +133,20 @@ def local_images(local_path):
 
 
 def full_butter_data(local_path):
-    '''
+    """
     Return the full virt info, but add butter data!
 
     CLI Example::
 
         salt '*' buttervm.full_butter_data <image_path>
-    '''
+    """
     info = __salt__['virt.full_info']()
     info['local_images'] = local_images(local_path)
     return info
 
 
 def create(instance, vda, image, pin):
-    '''
+    """
     Create a virtual machine, this is part of the butter vm system and assumes
     that the files prepared by butter are available via shared storage.
     AKA - don't call this from the command line!
@@ -165,7 +165,7 @@ def create(instance, vda, image, pin):
 
         salt '*' butterkvm.create <instance dir> <root image location>\\
             <Destination> <pin data>
-    '''
+    """
     if not os.path.isfile(vda):
         # Check that this is a fresh vm image, if so, copy it into place any
         # apply the overlay, otherwise, just start the vm

@@ -1,4 +1,4 @@
-'''
+"""
 Mount Managment
 ===============
 Mount any type of mountable filesystem with the mounted function:
@@ -13,7 +13,7 @@ Mount any type of mountable filesystem with the mounted function:
         - mkmnt: True
         - opts:
           - defaults
-'''
+"""
 
 
 def mounted(
@@ -28,7 +28,7 @@ def mounted(
         remount=True,             # FIXME: where is 'remount' used?
         persist=True,
         ):
-    '''
+    """
     Verify that a device is mounted
 
     name
@@ -63,7 +63,7 @@ def mounted(
 
     persist
         Set if the mount should be saved in the fstab, default to True
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,

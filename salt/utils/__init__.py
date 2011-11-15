@@ -1,6 +1,6 @@
-'''
+"""
 Some of the utils used by salt
-'''
+"""
 
 import logging
 import os
@@ -32,10 +32,10 @@ ENDC = '\033[0m'
 
 
 def get_colors(use=True):
-    '''
+    """
     Return the colors as an easy to use dict, pass False to return the colors
     as empty strings so that they will not be applied
-    '''
+    """
     colors = {
             'BLACK': '\033[0;30m',
             'DARK_GRAY': '\033[1;30m',
@@ -66,9 +66,9 @@ def get_colors(use=True):
 
 
 def daemonize():
-    '''
+    """
     Daemonize a process
-    '''
+    """
     try:
         pid = os.fork()
         if pid > 0:
@@ -100,10 +100,10 @@ def daemonize():
 
 
 def check_root():
-    '''
+    """
     Most of the salt scripts need to run as root, this function will simply
     verify that root is the user before the application discovers it.
-    '''
+    """
     if os.getuid():
         print ('Sorry, the salt must run as root, it needs to operate '
                'in a privileged environment to do what it does.\n'
@@ -112,9 +112,9 @@ def check_root():
 
 
 def profile_func(filename=None):
-    '''
+    """
     Decorator for adding profiling to a nested function in Salt
-    '''
+    """
     def proffunc(fun):
         def profiled_func(*args, **kwargs):
             import cProfile

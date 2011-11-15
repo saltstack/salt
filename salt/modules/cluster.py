@@ -1,7 +1,7 @@
-'''
+"""
 The cluster module is used to distribute and activate salt HA cluster
 components
-'''
+"""
 
 import os
 
@@ -12,10 +12,10 @@ def distrib(minions,
             master_conf,
             master_pem,
             conf_file):
-    '''
+    """
     Set up this minion as a failover master - only intended for use by the
     cluster interface
-    '''
+    """
     # Write the master config file
     open(conf_file, 'w+').write(master_conf)
     # Get the distributed master config opts

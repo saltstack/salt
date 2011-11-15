@@ -1,6 +1,6 @@
-'''
+"""
 Salt module to manage RAID arrays with mdadm
-'''
+"""
 
 import logging
 import os
@@ -11,20 +11,20 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     mdadm provides raid functions for Linux
-    '''
+    """
     return 'raid' if __grains__['kernel'] == 'Linux' else False
 
 
 def list():
-    '''
+    """
     List the RAID devices.
 
     CLI Example::
 
         salt '*' raid.list
-    '''
+    """
     ret = {}
     for line in (__salt__['cmd.run_stdout']
                  ('mdadm --detail --scan').split('\n')):
@@ -44,13 +44,13 @@ def list():
 
 
 def detail(device='/dev/md0'):
-    '''
+    """
     Show detail for a specified RAID device
 
     CLI Example::
 
         salt '*' raid.detail '/dev/md0'
-    '''
+    """
     ret = {}
     ret['members'] = {}
     cmd = 'mdadm --detail %s' % device

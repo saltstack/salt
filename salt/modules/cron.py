@@ -1,6 +1,6 @@
-'''
+"""
 Work with cron
-'''
+"""
 
 import tempfile
 
@@ -8,10 +8,10 @@ TAG = '# Lines below here are managed by Salt, do not edit\n'
 
 
 def _render_tab(lst):
-    '''
+    """
     Takes a tab list structure and renders it to a list for applying it to
     a file
-    '''
+    """
     ret = []
     for pre in lst['pre']:
         ret.append('{0}\n'.format(pre))
@@ -40,9 +40,9 @@ def _render_tab(lst):
 
 
 def _write_cron(user, lines):
-    '''
+    """
     Takes a list of lines to be commited to a user's crontab and writes it
-    '''
+    """
     tmpd, path = tempfile.mkstemp()
     open(path, 'w+').writelines(lines)
     cmd = 'crontab -u {0} {1}'.format(user, path)
@@ -50,21 +50,21 @@ def _write_cron(user, lines):
 
 
 def raw_cron(user):
-    '''
+    """
     Return the contents of the user's crontab
-    '''
+    """
     cmd = 'crontab -l -u {0}'.format(user)
     return __salt__['cmd.run_stdout'](cmd)
 
 
 def list_tab(user):
-    '''
+    """
     Return the contents of the specified user's crontab
 
     CLI Example::
 
         salt '*' cron.list_tab root
-    '''
+    """
     data = raw_cron(user)
     ret = {'pre': [],
            'crons': [],
@@ -102,13 +102,13 @@ def list_tab(user):
 
 
 def set_special(user, special, cmd):
-    '''
+    """
     Set up a special command in the crontab.
 
     CLI Example::
 
         salt '*' cron.set_special @hourly 'echo foobar'
-    '''
+    """
     lst = list_tab(user)
     for spec in lst['special']:
         if special == cron['special'] and \
@@ -126,9 +126,9 @@ def set_special(user, special, cmd):
 
 # FIXME: Too many arguments; see pylint; use *args, **kwargs
 def set_job(user, minute, hour, dom, month, dow, cmd):
-    '''
+    """
     Sets a cron job up for a specified user.
-    '''
+    """
     # Scrub the types
     minute = str(minute)
     hour = str(hour)
@@ -165,9 +165,9 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
 
 
 def rm_job(user, minute, hour, dom, month, dow, cmd):
-    '''
+    """
     Remove a cron job up for a specified user.
-    '''
+    """
     # Scrub the types
     minute = str(minute)
     hour = str(hour)

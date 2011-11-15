@@ -1,9 +1,9 @@
-'''
+"""
 Process json with the Mako templating engine
 
 This renderer will take a json file with the Mako template and render it to a
 high data format for salt states.
-'''
+"""
 
 import json
 import os
@@ -13,9 +13,9 @@ from mako.template import Template
 
 
 def render(template):
-    '''
+    """
     Render the data passing the functions and grains into the rendering system
-    '''
+    """
     if not os.path.isfile(template):
         return {}
 

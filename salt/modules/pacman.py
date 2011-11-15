@@ -1,20 +1,20 @@
-'''
+"""
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
-'''
+"""
 
 
 def __virtual__():
-    '''
+    """
     Set the virtual pkg module if the os is Arch
-    '''
+    """
     return 'pkg' if __grains__['os'] == 'Arch' else False
 
 
 def _list_removed(old, new):
-    '''
+    """
     List the packages which have been removed between the two package objects
-    '''
+    """
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -23,24 +23,24 @@ def _list_removed(old, new):
 
 
 def available_version(name):
-    '''
+    """
     The available version of the package in the repository
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
-    '''
+    """
     return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
 
 
 def version(name):
-    '''
+    """
     Returns a version if the package is installed, else returns an empty string
 
     CLI Example::
 
         salt '*' pkg.version <package name>
-    '''
+    """
     pkgs = list_pkgs()
     if name in pkgs:
         return pkgs[name]
@@ -49,7 +49,7 @@ def version(name):
 
 
 def list_pkgs():
-    '''
+    """
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
@@ -57,7 +57,7 @@ def list_pkgs():
     CLI Example::
 
         salt '*' pkg.list_pkgs
-    '''
+    """
     cmd = 'pacman -Q'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -70,7 +70,7 @@ def list_pkgs():
 
 
 def refresh_db():
-    '''
+    """
     Just run a ``pacman -Sy``, return a dict::
 
         {'<database name>': Bool}
@@ -78,7 +78,7 @@ def refresh_db():
     CLI Example::
 
         salt '*' pkg.refresh_db
-    '''
+    """
     cmd = 'pacman -Sy'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -96,7 +96,7 @@ def refresh_db():
 
 
 def install(name, refresh=False):
-    '''
+    """
     Install the passed package, add refresh=True to install with an -Sy
 
     Return a dict containing the new package names and versions::
@@ -107,7 +107,7 @@ def install(name, refresh=False):
     CLI Example::
 
         salt '*' pkg.install <package name>
-    '''
+    """
     old = list_pkgs()
     cmd = 'pacman -S --noprogressbar --noconfirm ' + name
     if refresh:
@@ -132,7 +132,7 @@ def install(name, refresh=False):
 
 
 def upgrade():
-    '''
+    """
     Run a full system upgrade, a pacman -Syu
 
     Return a dict containing the new package names and versions::
@@ -143,7 +143,7 @@ def upgrade():
     CLI Example::
 
         salt '*' pkg.upgrade
-    '''
+    """
     old = list_pkgs()
     cmd = 'pacman -Syu --noprogressbar --noconfirm '
     __salt__['cmd.retcode'](cmd)
@@ -166,7 +166,7 @@ def upgrade():
 
 
 def remove(name):
-    '''
+    """
     Remove a single package with ``pacman -R``
 
     Return a list containing the removed packages.
@@ -174,7 +174,7 @@ def remove(name):
     CLI Example::
 
         salt '*' pkg.remove <package name>
-    '''
+    """
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name
     __salt__['cmd.retcode'](cmd)
@@ -183,7 +183,7 @@ def remove(name):
 
 
 def purge(name):
-    '''
+    """
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``pacman -Rsc``
 
@@ -192,7 +192,7 @@ def purge(name):
     CLI Example::
 
         salt '*' pkg.purge <package name>
-    '''
+    """
     old = list_pkgs()
     cmd = 'pacman -R --noprogressbar --noconfirm ' + name
     __salt__['cmd.retcode'](cmd)

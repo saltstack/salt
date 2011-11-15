@@ -172,12 +172,12 @@ Documenting Salt modules is easy! Just add a python docstring to the function.
 .. code-block:: python
 
     def spam(eggs):
-        '''
+        """
         A function to make some spam with eggs!
 
         CLI Example:
         salt '*' test.spam eggs
-        '''
+        """
         return eggs
 
 Now when the sys.doc call is executed the docstring will be cleanly returned
@@ -229,11 +229,11 @@ function, test.ping:
 .. code-block:: python
 
     def ping():
-        '''
+        """
         Just used to make sure the minion is up and responding
         Return True
 
         CLI Example:
         salt '*' test.ping
-        '''
+        """
         return True

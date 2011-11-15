@@ -1,12 +1,12 @@
-'''
+"""
 Support for YUM
-'''
+"""
 
 
 def __virtual__():
-    '''
+    """
     Confine this module to yum based systems
-    '''
+    """
     # We don't need to support pre-yum OSes because they don't support
     # python <= 2.6
     dists = 'CentOS Scientific RedHat Fedora'
@@ -14,9 +14,9 @@ def __virtual__():
 
 
 def _list_removed(old, new):
-    '''
+    """
     List the packages which have been removed between the two package objects
-    '''
+    """
     pkgs = []
     for pkg in old:
         if pkg not in new:
@@ -25,13 +25,13 @@ def _list_removed(old, new):
 
 
 def available_version(name):
-    '''
+    """
     The available version of the package in the repository
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
-    '''
+    """
     out = __salt__['cmd.run_stdout']('yum list {0} -q'.format(name))
     for line in out.split('\n'):
         if not line.strip():
@@ -48,13 +48,13 @@ def available_version(name):
 
 
 def version(name):
-    '''
+    """
     Returns a version if the package is installed, else returns an empty string
 
     CLI Example::
 
         salt '*' pkg.version <package name>
-    '''
+    """
     pkgs = list_pkgs()
     if name in pkgs:
         return pkgs[name]
@@ -63,7 +63,7 @@ def version(name):
 
 
 def list_pkgs():
-    '''
+    """
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
@@ -71,7 +71,7 @@ def list_pkgs():
     CLI Example::
 
         salt '*' pkg.list_pkgs
-    '''
+    """
     cmd = "rpm -qa --qf '%{NAME}:%{VERSION}-%{RELEASE};'"
     ret = {}
     out = __salt__['cmd.run_stdout'](cmd)
@@ -84,21 +84,21 @@ def list_pkgs():
 
 
 def refresh_db():
-    '''
+    """
     Since yum refreshes the database automatically, this runs a yum clean,
     so that the next yum operation will have a clean database
 
     CLI Example::
 
         salt '*' pkg.refresh_db
-    '''
+    """
     cmd = 'yum clean dbcache'
     __salt__['cmd.retcode'](cmd)
     return True
 
 
 def install(pkg, refresh=False):
-    '''
+    """
     Install the passed package, add refresh=True to clean out the yum database
     before executing
 
@@ -110,7 +110,7 @@ def install(pkg, refresh=False):
     CLI Example::
 
         salt '*' pkg.install <package name>
-    '''
+    """
     old = list_pkgs()
     cmd = 'yum -y install ' + pkg
     if refresh:
@@ -135,7 +135,7 @@ def install(pkg, refresh=False):
 
 
 def upgrade():
-    '''
+    """
     Run a full system upgrade, a yum upgrade
 
     Return a dict containing the new package names and versions::
@@ -146,7 +146,7 @@ def upgrade():
     CLI Example::
 
         salt '*' pkg.upgrade
-    '''
+    """
     old = list_pkgs()
     cmd = 'yum -y upgrade'
     __salt__['cmd.retcode'](cmd)
@@ -169,7 +169,7 @@ def upgrade():
 
 
 def remove(pkg):
-    '''
+    """
     Remove a single package with yum remove
 
     Return a list containing the removed packages:
@@ -177,7 +177,7 @@ def remove(pkg):
     CLI Example::
 
         salt '*' pkg.remove <package name>
-    '''
+    """
     old = list_pkgs()
     cmd = 'yum -y remove ' + pkg
     __salt__['cmd.retcode'](cmd)
@@ -186,7 +186,7 @@ def remove(pkg):
 
 
 def purge(pkg):
-    '''
+    """
     Yum does not have a purge, this function calls remove
 
     Return a list containing the removed packages:
@@ -194,5 +194,5 @@ def purge(pkg):
     CLI Example::
 
         salt '*' pkg.purge <package name>
-    '''
+    """
     return remove(pkg)

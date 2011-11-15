@@ -1,4 +1,4 @@
-'''
+"""
 The static grains, these are the core, or built in grains.
 
 When grains are loaded they are not loaded in the same way that modules are
@@ -7,7 +7,7 @@ return a dict which will be applied to the main grains dict. This module
 will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
-'''
+"""
 
 # This needs some refactoring, I made it "as fast as I could" and could be a
 # lot clearer, so far it is spaghetti code
@@ -19,9 +19,9 @@ import subprocess
 
 
 def _kernel():
-    '''
+    """
     Return the kernel type
-    '''
+    """
     # Provides:
     # kernel
     grains = {}
@@ -41,9 +41,9 @@ def _kernel():
 
 
 def _linux_cpudata():
-    '''
+    """
     Return the cpu information for Linux systems architecture
-    '''
+    """
     # Provides:
     #   cpuarch
     #   num_cpus
@@ -79,9 +79,9 @@ def _linux_cpudata():
 
 
 def _freebsd_cpudata():
-    '''
+    """
     Return cpu information for FreeBSD systems
-    '''
+    """
     grains = {}
     grains['cpuarch'] = subprocess.Popen(
             '/sbin/sysctl hw.machine',
@@ -103,9 +103,9 @@ def _freebsd_cpudata():
 
 
 def _memdata(osdata):
-    '''
+    """
     Gather information about the system memory
-    '''
+    """
     # Provides:
     #   mem_total
     grains = {'mem_total': 0}
@@ -129,9 +129,9 @@ def _memdata(osdata):
 
 
 def _virtual(osdata):
-    '''
+    """
     Returns what type of virtual hardware is under the hood, kvm or physical
-    '''
+    """
     # This is going to be a monster, if you are running a vm you can test this
     # grain with please submit patches!
     # Provides:
@@ -160,9 +160,9 @@ def _virtual(osdata):
 
 
 def _ps(osdata):
-    '''
+    """
     Return the ps grain
-    '''
+    """
     grains = {}
     grains['ps'] = 'ps auxwww' if\
             'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -ef'
@@ -170,9 +170,9 @@ def _ps(osdata):
 
 
 def os_data():
-    '''
+    """
     Return grains pertaining to the operating system
-    '''
+    """
     grains = {}
     grains.update(_kernel())
     if grains['kernel'] == 'Linux':
@@ -245,9 +245,9 @@ def os_data():
 
 
 def hostname():
-    '''
+    """
     Return fqdn, hostname, domainname
-    '''
+    """
     # This is going to need some work
     # Provides:
     #   fqdn
@@ -265,9 +265,9 @@ def hostname():
 
 
 def path():
-    '''
+    """
     Return the path
-    '''
+    """
     # Provides:
     #   path
     return {'path': os.environ['PATH'].strip()}

@@ -1,14 +1,14 @@
-'''
+"""
 Support for Apache
-'''
+"""
 
 from re import sub
 
 
 def __detect_os():
-    '''
+    """
     Apache commands and paths differ depending on packaging
-    '''
+    """
     httpd = 'CentOS Scientific RedHat Fedora'
     apache2 = 'Ubuntu'
     if httpd.count(__grains__['os']):
@@ -20,13 +20,13 @@ def __detect_os():
 
 
 def version():
-    '''
+    """
     Return server version from apachectl -v
 
     CLI Example::
 
         salt '*' apache.version
-    '''
+    """
     cmd = __detect_os() + ' -v'
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
@@ -34,13 +34,13 @@ def version():
 
 
 def fullversion():
-    '''
+    """
     Return server version from apachectl -V
 
     CLI Example::
 
         salt '*' apache.fullversion
-    '''
+    """
     cmd = __detect_os() + ' -V'
     ret = {}
     ret['compiled_with'] = []
@@ -58,13 +58,13 @@ def fullversion():
 
 
 def modules():
-    '''
+    """
     Return list of static and shared modules from apachectl -M
 
     CLI Example::
 
         salt '*' apache.modules
-    '''
+    """
     cmd = __detect_os() + ' -M'
     ret = {}
     ret['static'] = []
@@ -82,13 +82,13 @@ def modules():
 
 
 def servermods():
-    '''
+    """
     Return list of modules compiled into the server (apachectl -l)
 
     CLI Example::
 
         salt '*' apache.servermods
-    '''
+    """
     cmd = __detect_os() + ' -l'
     ret = []
     out = __salt__['cmd.run'](cmd).split('\n')
@@ -101,14 +101,14 @@ def servermods():
 
 
 def directives():
-    '''
+    """
     Return list of directives together with expected arguments
     and places where the directive is valid (``apachectl -L``)
 
     CLI Example::
 
         salt '*' apache.directives
-    '''
+    """
     cmd = __detect_os() + ' -L'
     ret = {}
     out = __salt__['cmd.run'](cmd)
@@ -123,7 +123,7 @@ def directives():
 
 
 def vhosts():
-    '''
+    """
     Show the settings as parsed from the config file (currently
     only shows the virtualhost settings). (``apachectl -S``)
     Because each additional virtual host adds to the execution
@@ -132,7 +132,7 @@ def vhosts():
     CLI Example::
 
         salt -t 10 '*' apache.vhosts
-    '''
+    """
     cmd = __detect_os() + ' -S'
     ret = {}
     namevhost = ''
@@ -158,13 +158,13 @@ def vhosts():
 
 
 def signal(signal=None):
-    '''
+    """
     Signals httpd to start, restart, or stop.
 
     CLI Example::
 
         salt '*' apache.signal restart
-    '''
+    """
     valid_signals = 'start stop restart graceful graceful-stop'
     if not valid_signals.count(signal):
         return

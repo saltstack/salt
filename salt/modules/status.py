@@ -1,7 +1,7 @@
-'''
+"""
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
-'''
+"""
 
 import fnmatch
 import os
@@ -13,12 +13,12 @@ __opts__ = {}
 
 
 def _number(text):
-    '''
+    """
     Convert a string to a number.
     Returns an integer if the string represents an integer, a floating
     point number if the string is a real number, or the string unchanged
     otherwise.
-    '''
+    """
     try:
         return int(text)
     except ValueError:
@@ -29,7 +29,7 @@ def _number(text):
 
 
 def custom():
-    '''
+    """
     Return a custom composite of status data and info for this minon,
     based on the minion config file. An example config like might be::
 
@@ -48,7 +48,7 @@ def custom():
     CLI Example::
 
         salt '*' status.custom
-    '''
+    """
     ret = {}
     for opt in __opts__:
         keys = opt.split('.')
@@ -64,25 +64,25 @@ def custom():
 
 
 def uptime():
-    '''
+    """
     Return the uptime for this minion
 
     CLI Example::
 
         salt '*' status.uptime
-    '''
+    """
     return subprocess.Popen(['uptime'],
             stdout=subprocess.PIPE).communicate()[0].strip()
 
 
 def loadavg():
-    '''
+    """
     Return the load averages for this minion
 
     CLI Example::
 
         salt '*' status.loadavg
-    '''
+    """
     comps = open('/proc/loadavg', 'r').read().strip()
     load_avg = comps.split()
     return {'1-min':  _number(load_avg[0]),
@@ -91,13 +91,13 @@ def loadavg():
 
 
 def cpustats():
-    '''
+    """
     Return the CPU stats for this minon
 
     CLI Example::
 
         salt '*' status.cpustats
-    '''
+    """
     stats = open('/proc/stat', 'r').read().split('\n')
     ret = {}
     for line in stats:
@@ -125,13 +125,13 @@ def cpustats():
 
 
 def meminfo():
-    '''
+    """
     Return the CPU stats for this minion
 
     CLI Example::
 
         salt '*' status.meminfo
-    '''
+    """
     stats = open('/proc/meminfo', 'r').read().split('\n')
     ret = {}
     for line in stats:
@@ -148,13 +148,13 @@ def meminfo():
 
 
 def cpuinfo():
-    '''
+    """
     Return the CPU info for this minion
 
     CLI Example::
 
         salt '*' status.cpuinfo
-    '''
+    """
     stats = open('/proc/cpuinfo', 'r').read().split('\n')
     ret = {}
     for line in stats:
@@ -170,13 +170,13 @@ def cpuinfo():
 
 
 def diskstats():
-    '''
+    """
     Return the disk stats for this minion
 
     CLI Example::
 
         salt '*' status.diskstats
-    '''
+    """
     stats = open('/proc/diskstats', 'r').read().split('\n')
     ret = {}
     for line in stats:
@@ -201,7 +201,7 @@ def diskstats():
 
 
 def diskusage(*args):
-    '''
+    """
     Return the disk usage for this minion
 
     Usage::
@@ -214,7 +214,7 @@ def diskusage(*args):
         salt '*' status.diskusage / /tmp  # usage for / and /tmp
         salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
-    '''
+    """
     selected = set()
     fstypes = set()
     if not args:
@@ -254,13 +254,13 @@ def diskusage(*args):
 
 
 def vmstats():
-    '''
+    """
     Return the virtual memory stats for this minion
 
     CLI Example::
 
         salt '*' status.vmstats
-    '''
+    """
     stats = open('/proc/vmstat', 'r').read().split('\n')
     ret = {}
     for line in stats:
@@ -272,13 +272,13 @@ def vmstats():
 
 
 def netstats():
-    '''
+    """
     Return the network stats for this minion
 
     CLI Example::
 
         salt '*' status.netstats
-    '''
+    """
     stats = open('/proc/net/netstat', 'r').read().split('\n')
     ret = {}
     headers = ['']
@@ -302,13 +302,13 @@ def netstats():
 
 
 def netdev():
-    '''
+    """
     Return the network device stats for this minion
 
     CLI Example::
 
         salt '*' status.netdev
-    '''
+    """
     stats = open('/proc/net/dev', 'r').read().split('\n')
     ret = {}
     for line in stats:
@@ -338,13 +338,13 @@ def netdev():
 
 
 def w():
-    '''
+    """
     Return a list of logged in users for this minion, using the w command
 
     CLI Example::
 
         salt '*' status.w
-    '''
+    """
     users = subprocess.Popen(['w -h'],
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('\n')
@@ -365,14 +365,14 @@ def w():
 
 
 def all_status():
-    '''
+    """
     Return a composite of all status data and info for this minoon.
     Warning: There is a LOT here!
 
     CLI Example::
 
         salt '*' status.all_status
-    '''
+    """
     return {'cpuinfo': cpuinfo(),
             'cpustats': cpustats(),
             'diskstats': diskstats(),

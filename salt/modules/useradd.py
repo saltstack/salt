@@ -1,15 +1,15 @@
-'''
+"""
 Manage users with the useradd command
-'''
+"""
 
 import grp
 import pwd
 
 
 def __virtual__():
-    '''
+    """
     Set the user module if the kernel is Linux
-    '''
+    """
     return 'user' if __grains__['kernel'] == 'Linux' else False
 
 
@@ -19,13 +19,13 @@ def add(name,
         groups=None,
         home=False,
         shell='/bin/false'):
-    '''
+    """
     Add a user to the minion
 
     CLI Example::
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
-    '''
+    """
     cmd = 'useradd -s {0} '.format(shell)
     if uid:
         cmd += '-u {0} '.format(uid)
@@ -42,13 +42,13 @@ def add(name,
 
 
 def delete(name, remove=False, force=False):
-    '''
+    """
     Remove a user from the minion
 
     CLI Example::
 
         salt '*' user.delete name True True
-    '''
+    """
     cmd = 'userdel '
     if remove:
         cmd += '-r '
@@ -62,13 +62,13 @@ def delete(name, remove=False, force=False):
 
 
 def getent():
-    '''
+    """
     Return the list of all info for all users
 
     CLI Example::
 
         salt '*' user.getent
-    '''
+    """
     ret = []
     for data in pwd.getpwall():
         ret.append(info(data.pw_name))
@@ -76,13 +76,13 @@ def getent():
 
 
 def chuid(name, uid):
-    '''
+    """
     Change the uid for a named user
 
     CLI Example::
 
         salt '*' user.chuid foo 4376
-    '''
+    """
     pre_info = info(name)
     if uid == pre_info['uid']:
         return True
@@ -96,13 +96,13 @@ def chuid(name, uid):
 
 
 def chgid(name, gid):
-    '''
+    """
     Change the default group of the user
 
     CLI Example::
 
         salt '*' user.chgid foo 4376
-    '''
+    """
     pre_info = info(name)
     if gid == pre_info['gid']:
         return True
@@ -116,13 +116,13 @@ def chgid(name, gid):
 
 
 def chshell(name, shell):
-    '''
+    """
     Change the default shell of the user
 
     CLI Example::
 
         salt '*' user.chshell foo /bin/zsh
-    '''
+    """
     pre_info = info(name)
     if shell == pre_info['shell']:
         return True
@@ -136,14 +136,14 @@ def chshell(name, shell):
 
 
 def chhome(name, home, persist=False):
-    '''
+    """
     Change the home directory of the user, pass true for persist to copy files
     to the new home dir
 
     CLI Example::
 
         salt '*' user.chhome foo /home/users/foo True
-    '''
+    """
     pre_info = info(name)
     if home == pre_info['home']:
         return True
@@ -160,14 +160,14 @@ def chhome(name, home, persist=False):
 
 
 def chgroups(name, groups, append=False):
-    '''
+    """
     Change the groups this user belongs to, add append to append the specified
     groups
 
     CLI Example::
 
         salt '*' user.chgroups foo wheel,root True
-    '''
+    """
     if type(groups) == type(str()):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
@@ -184,13 +184,13 @@ def chgroups(name, groups, append=False):
 
 
 def info(name):
-    '''
+    """
     Return user information
 
     CLI Example::
 
         salt '*' user.info root
-    '''
+    """
     ret = {}
     data = pwd.getpwnam(name)
     ret['gid'] = data.pw_gid
@@ -204,13 +204,13 @@ def info(name):
 
 
 def list_groups(name):
-    '''
+    """
     Return a list of groups the named user belings to
 
     CLI Example::
 
         salt '*' user.groups foo
-    '''
+    """
     ugrp = set()
 
     for group in grp.getgrall():

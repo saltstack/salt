@@ -1,6 +1,6 @@
-'''
+"""
 The management of salt command line utilities are stored in here
-'''
+"""
 
 # Import python libs
 import optparse
@@ -26,19 +26,19 @@ from salt import __version__ as VERSION
 
 
 class SaltCMD(object):
-    '''
+    """
     The execution of a salt command happens here
-    '''
+    """
     def __init__(self):
-        '''
+        """
         Create a SaltCMD object
-        '''
+        """
         self.opts = self.__parse()
 
     def __parse(self):
-        '''
+        """
         Parse the command line
-        '''
+        """
         parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-t',
@@ -183,9 +183,9 @@ class SaltCMD(object):
         return opts
 
     def run(self):
-        '''
+        """
         Execute the salt command line
-        '''
+        """
         local = salt.client.LocalClient(self.opts['conf_file'])
         if 'query' in self.opts:
             print local.find_cmd(self.opts['cmd'])
@@ -234,9 +234,9 @@ class SaltCMD(object):
                     printout(ret)
 
     def _format_ret(self, full_ret):
-        '''
+        """
         Take the full return data and format it to simple output
-        '''
+        """
         ret = {}
         out = ''
         for key, data in full_ret.items():
@@ -246,9 +246,9 @@ class SaltCMD(object):
         return ret, out
 
     def _print_docs(self, ret):
-        '''
+        """
         Print out the docstrings for all of the functions on the minions
-        '''
+        """
         docs = {}
         if not ret:
             sys.stderr.write('No minions found to gather docs from\n')
@@ -264,16 +264,16 @@ class SaltCMD(object):
 
 
 class SaltCP(object):
-    '''
+    """
     Run the salt-cp command line client
-    '''
+    """
     def __init__(self):
         self.opts = self.__parse()
 
     def __parse(self):
-        '''
+        """
         Parse the command line
-        '''
+        """
         parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-t',
@@ -334,24 +334,24 @@ class SaltCP(object):
         return opts
 
     def run(self):
-        '''
+        """
         Execute salt-cp
-        '''
+        """
         cp_ = salt.cli.cp.SaltCP(self.opts)
         cp_.run()
 
 
 class SaltKey(object):
-    '''
+    """
     Initialize the Salt key manager
-    '''
+    """
     def __init__(self):
         self.opts = self.__parse()
 
     def __parse(self):
-        '''
+        """
         Parse the command line options for the salt key
-        '''
+        """
         parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-l',
@@ -444,24 +444,24 @@ class SaltKey(object):
         return opts
 
     def run(self):
-        '''
+        """
         Execute saltkey
-        '''
+        """
         key = salt.cli.key.Key(self.opts)
         key.run()
 
 
 class SaltCall(object):
-    '''
+    """
     Used to locally execute a salt command
-    '''
+    """
     def __init__(self):
         self.opts = self.__parse()
 
     def __parse(self):
-        '''
+        """
         Parse the command line arguments
-        '''
+        """
         parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-g',
@@ -554,9 +554,9 @@ class SaltCall(object):
         return opts
 
     def run(self):
-        '''
+        """
         Execute the salt call!
-        '''
+        """
         import salt.log
         salt.log.setup_console_logger(
             self.opts['log_level']
@@ -567,16 +567,16 @@ class SaltCall(object):
 
 
 class SaltRun(object):
-    '''
+    """
     Used to execute salt convenience functions
-    '''
+    """
     def __init__(self):
         self.opts = self.__parse()
 
     def __parse(self):
-        '''
+        """
         Parse the command line arguments
-        '''
+        """
         parser = optparse.OptionParser(version="%%prog %s" % VERSION)
 
         parser.add_option('-c',
@@ -617,8 +617,8 @@ class SaltRun(object):
         return opts
 
     def run(self):
-        '''
+        """
         Execute the salt call!
-        '''
+        """
         runner = salt.runner.Runner(self.opts)
         runner.run()

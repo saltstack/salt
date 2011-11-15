@@ -1,4 +1,4 @@
-'''
+"""
 Group Management
 ================
 
@@ -11,11 +11,11 @@ can be either present or absent:
       group:
         - present
         - gid: 7648
-'''
+"""
 
 
 def present(name, gid=None):
-    '''
+    """
     Ensure that a group is present
 
     name
@@ -24,7 +24,7 @@ def present(name, gid=None):
     gid
         The group id to assign to the named group, if left empty then the next
         available group id will be assigned
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -64,12 +64,12 @@ def present(name, gid=None):
 
 
 def absent(name):
-    '''
+    """
     Ensure that the named group is absent
 
     name
         The name of the group to remove
-    '''
+    """
     ret = {'name': name,
            'changes': {},
            'result': True,

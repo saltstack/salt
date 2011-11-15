@@ -1,16 +1,16 @@
 #!/usr/bin/python2
-'''
+"""
 This script is used to kick off a salt minion daemon
-'''
+"""
 
 import os
 import salt
 
 
 def main():
-    '''
+    """
     The main function
-    '''
+    """
     pid = os.getpid()
     try:
         minion = salt.Minion()

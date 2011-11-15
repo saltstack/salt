@@ -1,12 +1,12 @@
-'''
+"""
 Manage the information in the hosts file
-'''
+"""
 
 import os
 
 
 def list_hosts():
-    '''
+    """
     Return the hosts found in the hosts file in this format::
 
         {'<ip addr>': ['alias1', 'alias2', ...]}
@@ -14,7 +14,7 @@ def list_hosts():
     CLI Example::
 
         salt '*' hosts.list_hosts
-    '''
+    """
     hfn = '/etc/hosts'
     ret = {}
     if not os.path.isfile(hfn):
@@ -31,12 +31,12 @@ def list_hosts():
 
 
 def get_ip(host):
-    '''
+    """
     Return the ip associated with the named host
 
     CLI Example::
         salt '*' hosts.get_ip <hostname>
-    '''
+    """
     hosts = list_hosts()
     if not hosts:
         return ''
@@ -49,12 +49,12 @@ def get_ip(host):
 
 
 def get_alias(ip):
-    '''
+    """
     Return the list of aliases associated with an ip
 
     CLI Example::
         salt '*' hosts.get_alias <ip addr>
-    '''
+    """
     hosts = list_hosts()
     if ip in hosts:
         return hosts[ip]
@@ -62,12 +62,12 @@ def get_alias(ip):
 
 
 def has_pair(ip, alias):
-    '''
+    """
     Return true if the alias is set
 
     CLI Example::
         salt '*' hosts.has_pair <ip> <alias>
-    '''
+    """
     hosts = list_hosts()
     if ip not in hosts:
         return False
@@ -77,13 +77,13 @@ def has_pair(ip, alias):
 
 
 def set_host(ip, alias):
-    '''
+    """
     Set the host entry in th hosts file for the given ip, this will overwrite
     any previous entry for the given ip
 
     CLI Example::
         salt '*' hosts.set_host <ip> <alias>
-    '''
+    """
     hfn = '/etc/hosts'
     ovr = False
     if not os.path.isfile(hfn):
@@ -107,12 +107,12 @@ def set_host(ip, alias):
 
 
 def rm_host(ip, alias):
-    '''
+    """
     Remove a host entry from the hosts file
 
     CLI Example::
         salt '*' hosts.rm_host <ip> <alias>
-    '''
+    """
     if not has_pair(ip, alias):
         return True
     hfn = '/etc/hosts'
@@ -139,13 +139,13 @@ def rm_host(ip, alias):
 
 
 def add_host(ip, alias):
-    '''
+    """
     Add a host to an existing entry, if the entry is not in place then create
     it with the given host
 
     CLI Example::
         salt '*' hosts.add_host <ip> <alias>
-    '''
+    """
     hfn = '/etc/hosts'
     ovr = False
     if not os.path.isfile(hfn):

@@ -1,4 +1,4 @@
-'''
+"""
 The module used to execute states in salt. A state is unlike a module execution
 in that instead of just executing a command it ensure that a certain state is
 present on the system.
@@ -9,7 +9,7 @@ The data sent to the state calls is as follows:
       'name': '<the name argument passed to all states>'
       'argn': '<arbitrairy argument, can have many of these>'
       }
-'''
+"""
 
 import copy
 import inspect
@@ -25,9 +25,9 @@ log = logging.getLogger(__name__)
 
 
 def format_log(ret):
-    '''
+    """
     Format the state into a log message
-    '''
+    """
     msg = ''
     if type(ret) == type(dict()):
         # Looks like the ret may be a valid state return
@@ -63,17 +63,17 @@ def format_log(ret):
 
 
 class StateError(Exception):
-    '''
+    """
     Custom exception class.
-    '''
+    """
 
     pass
 
 
 class State(object):
-    '''
+    """
     Class used to execute salt states
-    '''
+    """
     def __init__(self, opts):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
@@ -83,9 +83,9 @@ class State(object):
         self.rend = salt.loader.render(self.opts, self.functions)
 
     def verify_data(self, data):
-        '''
+        """
         Verify the data, return an error statement if something is wrong
-        '''
+        """
         errors = []
         if 'state' not in data:
             errors.append('Missing "state" data')
@@ -143,9 +143,9 @@ class State(object):
         return errors
 
     def verify_high(self, high):
-        '''
+        """
         Verify that the high data is viable and follows the data structure
-        '''
+        """
         errors = []
         if not isinstance(high, dict):
             errors.append('High data is not a dictonary and is invalid')
@@ -201,16 +201,16 @@ class State(object):
         return errors
 
     def verify_chunks(self, chunks):
-        '''
+        """
         Verify the chunks in a list of low data structures
-        '''
+        """
         err = []
         for chunk in chunks:
             err += self.verify_data(chunk)
         return err
 
     def format_call(self, data):
-        '''
+        """
         Formats low data into a list of dict's used to actually call the state,
         returns:
         {
@@ -222,7 +222,7 @@ class State(object):
 
         It is assumed that the passed data has already been verified with
         verify_data
-        '''
+        """
         ret = {}
         ret['full'] = '{0[state]}.{0[fun]}'.format(data)
         ret['args'] = []
@@ -249,10 +249,10 @@ class State(object):
         return ret
 
     def compile_high_data(self, high):
-        '''
+        """
         "Compile" the high data as it is retrieved from the cli or yaml into
         the individual state executor structures
-        '''
+        """
         chunks = []
         for name, body in high.items():
             if name.startswith('__'):
@@ -296,9 +296,9 @@ class State(object):
         return sorted(chunks, key=lambda k: k['state'] + k['name'] + k['fun'])
 
     def reconcile_extend(self, high):
-        '''
+        """
         Pull the extend data and add it to the respective high data
-        '''
+        """
         errors = []
         if '__extend__' not in high:
             return high, errors
@@ -352,9 +352,9 @@ class State(object):
         return high, errors
 
     def template_shebang(self, template):
-        '''
+        """
         Check the template shebang line and return the renderer
-        '''
+        """
         # Open up the first line of the sls template
         line = open(template, 'r').readline()
         # Check if it starts with a shebang
@@ -367,10 +367,10 @@ class State(object):
         return self.opts['renderer']
 
     def compile_template(self, template, env='', sls=''):
-        '''
+        """
         Take the path to a template and return the high data structure derived
         from the template.
-        '''
+        """
         if not isinstance(template, str):
             return {}
         if not os.path.isfile(template):
@@ -378,10 +378,10 @@ class State(object):
         return self.rend[self.template_shebang(template)](template, env, sls)
 
     def compile_template_str(self, template):
-        '''
+        """
         Take the path to a template and return the high data structure derived
         from the template.
-        '''
+        """
         fn_ = tempfile.mkstemp()[1]
         open(fn_, 'w+').write(template)
         high = self.rend[self.template_shebang(fn_)](fn_)
@@ -389,10 +389,10 @@ class State(object):
         return high
 
     def call(self, data):
-        '''
+        """
         Call a state directly with the low data structure, verify data before
         processing.
-        '''
+        """
         log.info(
                 'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
                     data
@@ -404,9 +404,9 @@ class State(object):
         return ret
 
     def call_chunks(self, chunks):
-        '''
+        """
         Iterate over a list of chunks and call them, checking for requires.
-        '''
+        """
         running = {}
         for low in chunks:
             if (low['state'] + '.' + low['name'] +
@@ -415,9 +415,9 @@ class State(object):
         return running
 
     def check_requires(self, low, running, chunks):
-        '''
+        """
         Look into the running data to see if the requirement has been met
-        '''
+        """
         if 'require' not in low:
             return 'met'
         reqs = []
@@ -443,9 +443,9 @@ class State(object):
         return 'met'
 
     def check_watchers(self, low, running, chunks):
-        '''
+        """
         Look into the running data to see if the watched states have been run
-        '''
+        """
         if 'watch' not in low:
             return 'nochange'
         reqs = []
@@ -472,10 +472,10 @@ class State(object):
         return 'nochange'
 
     def call_chunk(self, low, running, chunks):
-        '''
+        """
         Check if a chunk has any requires, execute the requires and then the
         chunk
-        '''
+        """
         tag = low['state'] + '.' + low['name'] + '.' + low['fun']
         if 'require' in low:
             status = self.check_requires(low, running, chunks)
@@ -530,9 +530,9 @@ class State(object):
         return running
 
     def call_high(self, high):
-        '''
+        """
         Process a high data call and ensure the defined states.
-        '''
+        """
         err = []
         errors = []
         # If there is extension data reconcile it
@@ -552,18 +552,18 @@ class State(object):
         return self.call_chunks(chunks)
 
     def call_template(self, template):
-        '''
+        """
         Enforce the states in a template
-        '''
+        """
         high = self.compile_template(template)
         if high:
             return self.call_high(high)
         return high
 
     def call_template_str(self, template):
-        '''
+        """
         Enforce the states in a template, pass the template as a string
-        '''
+        """
         high = self.compile_template_str(template)
         if high:
             return self.call_high(high)
@@ -571,11 +571,11 @@ class State(object):
 
 
 class HighState(object):
-    '''
+    """
     Generate and execute the salt "High State". The High State is the compound
     state derived from a group of template files stored on the salt master or
     in a the local cache.
-    '''
+    """
     def __init__(self, opts):
         self.client = salt.minion.FileClient(opts)
         self.opts = self.__gen_opts(opts)
@@ -583,11 +583,11 @@ class HighState(object):
         self.matcher = salt.minion.Matcher(self.opts)
 
     def __gen_opts(self, opts):
-        '''
+        """
         The options used by the High State object are derived from options on
         the minion and the master, or just the minion if the high state call is
         entirely local.
-        '''
+        """
         # If the state is intended to be applied locally, then the local opts
         # should have all of the needed data, otherwise overwrite the local
         # data items with data from the master
@@ -605,20 +605,20 @@ class HighState(object):
         return opts
 
     def get_top(self):
-        '''
+        """
         Returns the high data derived from the top file
-        '''
+        """
         top = self.client.cache_file(self.opts['state_top'], 'base')
         return self.state.compile_template(top)
 
     def top_matches(self, top):
-        '''
+        """
         Search through the top high data for matches and return the states that
         this minion needs to execute.
 
         Returns:
         {'env': ['state1', 'state2', ...]}
-        '''
+        """
         matches = {}
         for env, body in top.items():
             for match, data in body.items():
@@ -631,9 +631,9 @@ class HighState(object):
         return matches
 
     def gather_states(self, matches):
-        '''
+        """
         Gather the template files from the master
-        '''
+        """
         group = []
         for env, states in matches.items():
             for sls in states:
@@ -643,9 +643,9 @@ class HighState(object):
         return group
 
     def render_state(self, sls, env, mods):
-        '''
+        """
         Render a state file and retrive all of the include states
-        '''
+        """
         err = ''
         errors = []
         fn_ = self.client.get_state(sls, env)
@@ -705,10 +705,10 @@ class HighState(object):
         return state, mods, errors
 
     def render_highstate(self, matches):
-        '''
+        """
         Gather the state files and render them into a single unified salt high
         data structure.
-        '''
+        """
         highstate = {}
         errors = []
         for env, states in matches.items():
@@ -722,9 +722,9 @@ class HighState(object):
         return highstate, errors
 
     def call_highstate(self):
-        '''
+        """
         Run the sequence to execute the salt highstate for this minion
-        '''
+        """
         top = self.get_top()
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
@@ -733,9 +733,9 @@ class HighState(object):
         return self.state.call_high(high)
 
     def compile_highstate(self):
-        '''
+        """
         Return just the highstate or the errors
-        '''
+        """
         top = self.get_top()
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
@@ -746,10 +746,10 @@ class HighState(object):
         return high
 
     def compile_low_chunks(self):
-        '''
+        """
         Compile the highstate but don't run it, return the low chunks to see
         exactly what the highstate will execute
-        '''
+        """
         err = []
         top = self.get_top()
         matches = self.top_matches(top)

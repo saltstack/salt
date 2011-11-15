@@ -32,9 +32,9 @@ A simple returner is implimented here:
     import json
 
     def returner(ret):
-        '''
+        """
         Return information to a redis server
-        '''
+        """
         # Get a redis commection
         serv = redis.Redis(
                     host='redis-serv.example.com',

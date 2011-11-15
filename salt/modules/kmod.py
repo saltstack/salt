@@ -1,22 +1,22 @@
-'''
+"""
 Module to manage Linux kernel modules
-'''
+"""
 
 import os
 
 
 def __virtual__():
-    '''
+    """
     Only runs on Linux systems
-    '''
+    """
     return 'kmod' if __grains__['kernel'] == 'Linux' else False
 
 
 def _new_mods(pre_mods, post_mods):
-    '''
+    """
     Return a list of the new modules, pass an lsmod dict before running
     modprobe and one after modprobe has run
-    '''
+    """
     pre = set()
     post = set()
     for mod in pre_mods:
@@ -27,10 +27,10 @@ def _new_mods(pre_mods, post_mods):
 
 
 def _rm_mods(pre_mods, post_mods):
-    '''
+    """
     Return a list of the new modules, pass an lsmod dict before running
     modprobe and one after modprobe has run
-    '''
+    """
     pre = set()
     post = set()
     for mod in pre_mods:
@@ -41,13 +41,13 @@ def _rm_mods(pre_mods, post_mods):
 
 
 def available():
-    '''
+    """
     Return a list of all available kernel modules
 
     CLI Example::
 
         salt '*' kmod.available
-    '''
+    """
     ret = []
     for path in __salt__['cmd.run']('modprobe -l').split('\n'):
         bpath = os.path.basename(path)
@@ -59,13 +59,13 @@ def available():
 
 
 def check_available(mod):
-    '''
+    """
     Check to see if the speciified kernel module is available
 
     CLI Example::
 
         salt '*' kmod.check_available kvm
-    '''
+    """
     if available().count(mod):
         # the module is available, return True
         return True
@@ -73,13 +73,13 @@ def check_available(mod):
 
 
 def lsmod():
-    '''
+    """
     Return a dict containing information about currently loaded modules
 
     CLI Example::
 
         salt '*' kmod.lsmod
-    '''
+    """
     ret = []
     for line in __salt__['cmd.run']('lsmod').split('\n'):
         comps = line.split()
@@ -100,13 +100,13 @@ def lsmod():
 
 
 def load(mod):
-    '''
+    """
     Load the specified kernel module
 
     CLI Example::
 
         salt '*' kmod.load kvm
-    '''
+    """
     pre_mods = lsmod()
     data = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
     post_mods = lsmod()
@@ -114,13 +114,13 @@ def load(mod):
 
 
 def remove(mod):
-    '''
+    """
     Remove the specified kernel module
 
     CLI Example::
 
         salt '*' kmod.remove kvm
-    '''
+    """
     pre_mods = lsmod()
     data = __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))
     post_mods = lsmod()

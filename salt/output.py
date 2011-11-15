@@ -1,6 +1,6 @@
-'''
+"""
 A simple way of setting the output format for data from modules
-'''
+"""
 
 import json
 import pprint
@@ -16,16 +16,16 @@ JSON = True
 
 
 def remove_colors():
-    '''
+    """
     Acces all of the utility colors and change them to empy strings
-    '''
+    """
     pass
 
 
 class Outputter(object):
-    '''
+    """
     Class for outputting data to the screen.
-    '''
+    """
     supports = None
 
     @classmethod
@@ -40,11 +40,11 @@ class Outputter(object):
 
 
 class HighStateOutputter(Outputter):
-    '''
+    """
     Not a command line option, the HighStateOutputter is only meant to be used
     with the state.highstate function, or a function that returns highstate
     return data
-    '''
+    """
     supports = 'highstate'
 
     def __call__(self, data, **kwargs):
@@ -115,9 +115,9 @@ class HighStateOutputter(Outputter):
 
 
 class RawOutputter(Outputter):
-    '''
+    """
     Raw output. This calls repr() on the returned data.
-    '''
+    """
     supports = "raw"
 
     def __call__(self, data, **kwargs):
@@ -125,11 +125,11 @@ class RawOutputter(Outputter):
 
 
 class TxtOutputter(Outputter):
-    '''
+    """
     Plain text output. Primarily for returning output from
     shell commands in the exact same way they would output
     on the shell when ran directly.
-    '''
+    """
     supports = "txt"
 
     def __call__(self, data, **kwargs):
@@ -144,9 +144,9 @@ class TxtOutputter(Outputter):
 
 
 class JSONOutputter(Outputter):
-    '''
+    """
     JSON output.
-    '''
+    """
     supports = "json"
     enabled = JSON
 
@@ -163,9 +163,9 @@ class JSONOutputter(Outputter):
 
 
 class YamlOutputter(Outputter):
-    '''
+    """
     Yaml output. All of the cool kids are doing it.
-    '''
+    """
     supports = "yaml"
 
     def __call__(self, data, **kwargs):
@@ -175,13 +175,13 @@ class YamlOutputter(Outputter):
 
 
 def get_outputter(name=None):
-    '''
+    """
     Factory function for returning the right output class.
 
     Usage:
         printout = get_outputter("txt")
         printout(ret)
-    '''
+    """
     # Return an actual instance of the correct output class
     for i in Outputter.__subclasses__():  # FIXME: class Outputter has no
         if i.check(name):                 # __subclasses__ member

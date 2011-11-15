@@ -1,6 +1,6 @@
-'''
+"""
 Publish a command from a minion to a target
-'''
+"""
 
 import zmq
 
@@ -8,9 +8,9 @@ import salt.crypt
 
 
 def _get_socket():
-    '''
+    """
     Return the ZeroMQ socket to use
-    '''
+    """
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
     socket.connect(__opts__['master_uri'])
@@ -18,7 +18,7 @@ def _get_socket():
 
 
 def publish(tgt, fun, arg, expr_form='glob', returner=''):
-    '''
+    """
     Publish a command from the minion out to other minions, publications need
     to be enabled on the Salt master and the minion needs to have permission
     to publish the command. The Salt master will also prevent a recursive
@@ -34,7 +34,7 @@ def publish(tgt, fun, arg, expr_form='glob', returner=''):
     CLI Example::
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
-    '''
+    """
     if fun == 'publish.publish':
         # Need to log something here
         return {}
