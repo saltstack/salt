@@ -70,8 +70,10 @@ within the same system. Salt’s unique architecture brings together the
 best of the remote execution world, amplifies its capabilities and
 expands its range, resulting in this system that is as versatile as it
 is practical, able to suit any network. Our source code is pretty
-(*pep8*, *pylint*, *pychecker*) and well documented. Last but not
-least, security is an intrinsic part of salt and something not just
+(*pep8*, *pylint*, *pychecker*), well documented, and since we use a
+battle-tested branching model (*gitflow*), we are able to deliver
+stable software while keeping a fast pace. Last but not least,
+security is an intrinsic part of salt and something not just
 influencing how source code is written and how tests are done, but
 also something that defines the overall architecture and has heavy
 influence on the core design of salt.
