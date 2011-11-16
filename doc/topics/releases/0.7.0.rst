@@ -52,7 +52,7 @@ Salt can be downloaded from the following locations;
 
 Source Tarball:
 
-https://github.com/downloads/thatch45/salt/salt-0.7.0.tar.gz
+:download:`salt-0.7.0.tar.gz`
 
 Arch Linux Package:
 

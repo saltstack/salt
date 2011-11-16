@@ -37,15 +37,15 @@ autosummary_generate = True
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
-.. |latest| replace:: https://github.com/downloads/thatch45/salt/salt-%s.tar.gz
+.. |saltrepo| replace:: https://github.com/saltstack/salt
+.. |latest| replace:: https://github.com/downloads/saltstack/salt/salt-%s.tar.gz
 """ % __version__
-
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
-    'blob': ('https://github.com/thatch45/salt/blob/v%s/%%s' % __version__, None),
-    'download': ('https://github.com/downloads/thatch45/salt/%s', None),
-    'issue': ('https://github.com/thatch45/salt/issues/%s', 'issue '),
+    'blob': ('https://github.com/saltstack/salt/blob/v%s/%%s' % __version__, None),
+    'download': ('https://github.com/downloads/saltstack/salt/%s', None),
+    'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
 }
 
 
@@ -75,9 +75,9 @@ html_sidebars = {
 
 html_context = {
     'html_default_sidebars': html_default_sidebars,
-    'github_base': 'https://github.com/thatch45/salt',
-    'github_issues': 'https://github.com/thatch45/salt/issues',
-    'github_downloads': 'https://github.com/thatch45/salt/downloads',
+    'github_base': 'https://github.com/saltstack/salt',
+    'github_issues': 'https://github.com/saltstack/salt/issues',
+    'github_downloads': 'https://github.com/saltstack/salt/downloads',
 }
 
 html_use_index = False

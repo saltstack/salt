@@ -13,7 +13,7 @@ but the back end to support expansion is in place.
 
 I also recently gave a presentation to the Utah Python users group in Salt Lake
 City, the slides from this presentation are available here:
-https://github.com/downloads/thatch45/salt/Salt.pdf
+:download:`Salt.pdf`
 
 The video from this presentation will be available shortly.
 
@@ -43,7 +43,8 @@ state system will be documented in the near future.
 The system for loading salt modules has been pulled out of the minion class to
 be a standalone module, this has enabled more dynamic loading of Salt modules
 and enables many of the updates in 0.8.7 –
-https://github.com/thatch45/salt/blob/master/salt/loader.py
+
+:blob:`salt/loader.py`
 
 Salt Job ids are now microsecond precise, this was needed to repair a race
 condition unveiled by the speed improvements in the new ZeroMQ topology.
@@ -74,6 +75,6 @@ Salt is nearing the goal of 1.0, where the core feature set and capability is
 complete!
 
 Salt 0.8.7 can be downloaded from github here:
-https://github.com/downloads/thatch45/salt/salt-0.8.7.tar.gz
+:download:`salt-0.8.7.tar.gz`
 
 -Thomas S Hatch
