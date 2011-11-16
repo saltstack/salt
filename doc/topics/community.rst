@@ -43,7 +43,7 @@ Follow on Github
 The Salt code is developed via Github. Follow Salt for constant updates on what
 is happening in Salt development:
 
-https://github.com/thatch45/salt
+|saltrepo|
 
 .. _community-blog:
 

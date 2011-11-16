@@ -16,7 +16,7 @@ Download!
 
 The Salt source can be downloaded from the salt github site:
 
-https://github.com/downloads/thatch45/salt/salt-0.9.3.tar.gz
+:download:`salt-0.9.3.tar.gz`
 
 Or from PiPy:
 
