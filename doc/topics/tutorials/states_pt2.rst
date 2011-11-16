@@ -5,105 +5,85 @@ States tutorial, part 2
 This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`. It is
 recommended that you begin there.
 
-In the last Salt States tutorial we ran everything locally and did not take
-advantage of Salt's tremendous ability to run on multiple hosts. In this
-tutorial, we will modify ``webserver.sls`` to run from the :term:`Salt master
-<master>` and transfer configuration and files to the :term:`Salt minions
-<minion>`.
+In the last Salt States tutorial we covered the basics of installing a package.
+In this tutorial we will modify our ``webserver.sls`` file to be more
+complicated, have requirements, and use even more Salt States.
 
-Setting up the Salt State Tree
-==============================
-
-Groups of states are defined on the Salt master inside of the master's file
-server and are expressed in a :term:`State Tree`. To start using a central
-state system in Salt you must first set up the Salt File Server. Edit your
-master config file (``/etc/salt/master``) and uncomment the following lines:
-
-.. code-block:: yaml
-
-    file_roots:
-      base:
-        - /srv/salt
-
-Restart the Salt master in order to pick up this change:
-
-.. code-block:: bash
-
-    % pkill salt-master
-    % salt-master -d
-
-Preparing the Top File
-======================
-
-On the master in the directory you specified in the previous step, create a new
-file called :conf_master:`top.sls <state_top>` and add the following:
-
-.. code-block:: yaml
-
-    base:
-      '*':
-        - webserver
-
-The :term:`top file` is separated into environments (discussed later). The
-default environment is ``base``. Under the ``base`` environment a collection of
-minion matches is defined; for now simply specify all hosts (``*``).
-
-.. admonition:: Matching minions
-
-    The expressions can use any or the matching mechanisms used by Salt, so
-    minions can be matched by glob, pcre regular expression, or by grains. When
-    a minion executes a state call it will download the :term:`top file` and
-    attempt to match the expressions, when it does match an expression the
-    modules listed for it will be downloaded, compiled, and executed.
-
-Define an SLS module
+Call multiple States
 ====================
 
-Move your ``webserver.sls`` file into the same directory as ``top.sls``. This
-defines the "webserver sls module".
-
-SLS modules are appended with the file extension ``.sls`` and are referenced by
-name starting at the root of the state tree.
-
-.. admonition:: Directories and SLS modules
-
-    An SLS module can be also defined as a directory. If the directory
-    ``python`` exists, and a module named ``python`` is desired, than a file
-    called ``init.sls`` in the ``python`` directory can be used to define the
-    ``python`` module. For example::
-
-        |- top.sls
-        |- python
-        |  |- init.sls
-        |  `- django.sls
-        |- haproxy
-        |  `- init.sls
-        `- core.sls
-
-    In the example above the ``django.sls`` module would be referenced as
-    ``python.django``.
-
-Add a dependency
-================
-
-We now have a working installation of Apache so let's add an HTML file to
-customize our website. Include the following at the bottom of your
-``webserver.sls`` file:
+You can specify multiple :term:`state declarations` under an :term:`ID
+delcaration`. For example, a quick modification to our ``webserver.sls`` to
+also start Apache if it is not running:
 
 .. code-block:: yaml
     :linenos:
+    :emphasize-lines: 4,5
 
-    /var/www/index.html:                # ID declaration
-      file:                             # state declaration
-        - managed                       # function
-        - source: salt://index.html     # function arg
-        - require:                      # requisite declaration
-          - pkg: apache2                # requisite reference
+    apache:
+      pkg:
+        - installed
+      service:
+        - running
+
+Try stopping Apache before running ``state.highstate`` once again and observe
+the output.
+
+Expand the SLS module
+=====================
+
+As you have seen, sls modules are appended with the file extension ``.sls`` and
+are referenced by name starting at the root of the state tree. An SLS module
+can be also defined as a directory. Demonstrate that now by creating a
+directory named ``webserver`` and moving and renaming ``webserver.sls`` to
+``webserver/init.sls``. Your state directory should now resemble:
+
+::
+
+        |- top.sls
+        `- webserver/
+           `- init.sls
+
+.. admonition:: Organizing SLS modules
+
+    You can place additional ``.sls`` files in a state file directory. This
+    affords much cleaner organization of your state tree on the filesystem. For
+    example, if we created a ``webserver/django.sls`` file that module would be
+    referenced as ``webserver.django``.
+
+    In addition, States provide powerful includes and extending functionality
+    which we will cover in :doc:`Part 3 <states_pt3>`.
+
+Require other states
+====================
+
+We now have a working installation of Apache so let's add an HTML file to
+customize our website. It isn't exactly useful to have a website without a
+webserver so we don't want Salt to install our HTML file until Apache is
+installed and running. Include the following at the bottom of your
+``webserver/init.sls`` file:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 6,11
+
+    apache:
+      pkg:
+        - installed
+      service:
+        - running
+
+    /var/www/index.html:                        # ID declaration
+      file:                                     # state declaration
+        - managed                               # function
+        - source: salt://webserver/index.html   # function arg
+        - require:                              # requisite declaration
+          - pkg: apache                         # requisite reference
 
 Again in **line 1** is the :term:`ID declaration`. In this example it is the
-location we want to install our custom HTML file. (The default location that
-Apache serves may differ from the above on your OS or distro. ``/srv/www``
-could also be a likely place to look.)
+location we want to install our custom HTML file. (**Note:** the default
+location that Apache serves may differ from the above on your OS or distro.
+``/srv/www`` could also be a likely place to look.)
 
 **Line 2** the :term:`state declaration`. This example uses the Salt :mod:`file
 state <salt.states.file>`.
@@ -123,11 +103,8 @@ In this example, it is referring to the ``ID declaration`` from our example in
 :doc:`part 1 <states_pt1>`. This declaration tells Salt not to install the HTML
 file until Apache is installed.
 
-Call the highstate
-==================
-
-Create the ``index.html`` file and save it in the same directory as ``top.sls``
-and ``webserver.sls``:
+Next, create the ``index.html`` file and save it in the ``webserver``
+directory:
 
 .. code-block:: html
 
@@ -138,12 +115,38 @@ and ``webserver.sls``:
         </body>
     </html>
 
-Last, call :func:`state.highstate <salt.modules.state.highstate>` which
-instructs the minion to fetch and execute the highstate from the Salt master::
+Last, call :func:`state.highstate <salt.modules.state.highstate>` again and the
+minion will fetch and execute the highstate as well as our HTML file from the
+master using Salt's File Server::
 
     salt '*' salt.highstate
 
 Verify that Apache is now serving your custom HTML.
 
-In :doc:`part 3 <states_pt3>` we will discuss how to use templating in the
-``sls`` files.
+.. admonition:: ``require`` vs. ``watch``
+
+    There are two :term:`requisite declarations <requisite declaration>`,
+    “require” and “watch”. Not every state supports “watch”. In the :mod:`file
+    state <salt.states.file>`, for example, Salt will watch a file for changes
+    then take action if it does change.
+
+    For example, if you use Salt to install an Apache virtual host
+    configuration file and want to restart Apache when that file is changed you
+    could modify our Apache example from earlier as follows:
+
+    .. code-block:: yaml
+        :emphasize-lines: 6,7
+
+        apache:
+          pkg:
+            - installed
+          service:
+            - running
+          - watch:
+            - file: /etc/httpd/extra/httpd-vhosts.conf
+
+Next steps
+==========
+
+In :doc:`part 3 <states_pt3>` we will discuss how to use includes, extends and
+templating to make hugely complicated State Tree configurations dead-simple.
