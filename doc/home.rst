@@ -63,11 +63,11 @@ get much more out of Salt.
 
 .. admonition:: Screencasts and presentations
 
+    * Thomas S. Hatch was `interviewed on episode 191 of FLOSS Weekly
+      <http://twit.tv/show/floss-weekly/191>`_.
     * Presentation at the Salt Lake Linux User Group (SLLUG) in May 2011
-      `video`_ | `slides`_ (PDF)
-
-.. _`video`: http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182
-.. _`slides`: :download:`Salt.pdf`
+      `video <http://blip.tv/thomas-s-hatch/salt-0-8-7-presentation-5180182>`_
+      | :download:`slides <Salt.pdf>` (PDF)
 
 Salt quick reference
 ====================

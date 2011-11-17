@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% set title = 'Page not found' %}
+
+{% block body %}
+<h1>404: Page not found</h1>
+
+<p>The page you are requesting cannot be found. Please try one of the following
+pages instead:</p>
+
+<ul>
+    <li><a href="{{ pathto("index") }}">Home page</a></li>
+    <li><a href="{{ pathto("topics/community") }}">Community</a></li>
+    <li><a href="{{ pathto("search") }}">Search</a></li>
+    <li><a href="{{ pathto("py-modindex") }}">Salt module index</a></li>
+    <li><a href="{{ pathto("home") }}">Salt Documentation</a></li>
+</ul>
+{% endblock %}
