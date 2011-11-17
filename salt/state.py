@@ -604,12 +604,49 @@ class HighState(object):
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
         return opts
 
+    def _top_includes(self, include, top=None, done=None):
+        '''
+        Download all of the included 
+        '''
+        if not top:
+            top = {}
+        if not done:
+            done = {}
+        for env, sls in include.items():
+            ctop = self.state.compile_template(
+                    self.client.get_state(
+                        sls,
+                        env
+                        )
+                    )
+
+    def _get_envs(self):
+        '''
+        Pull the file server environments out of the master options
+        '''
+        envs = set(['base'])
+        if 'file_roots' in self.opts:
+            envs.update(self.opts['file_roots'].keys())
+        return envs
+
     def get_top(self):
         '''
         Returns the high data derived from the top file
         '''
-        top = self.client.cache_file(self.opts['state_top'], 'base')
-        return self.state.compile_template(top)
+        top = {}
+        includes = {}
+        for env in self._get_envs():
+            ctop = self.state.compile_template(
+                    self.client.cache_file(
+                        self.opts['state_top'],
+                        env
+                        ),
+                    env
+                    )
+            if 'include' in ctop:
+                includes[env] = ctop.pop('include')
+        top.update(self._top_includes(includes))
+        return top
 
     def top_matches(self, top):
         '''
