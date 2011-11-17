@@ -60,7 +60,10 @@ html_favicon = 'favicon.ico'
 html_style = ['base-salt.css']
 html_use_smartypants = False
 
-html_additional_pages = {'index': 'index.html'}
+html_additional_pages = {
+    'index': 'index.html',
+    '404': '404.html',
+}
 
 html_default_sidebars = [
     'localtoc.html',
