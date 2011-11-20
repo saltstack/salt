@@ -16,6 +16,7 @@ as those returned here
 import os
 import socket
 import subprocess
+import sys
 
 
 def _kernel():
@@ -274,3 +275,28 @@ def path():
     # Provides:
     #   path
     return {'path': os.environ['PATH'].strip()}
+
+def pythonversion():
+    '''
+    Return the Python version
+    '''
+    # Provides:
+    #   pythonversion
+    return {'pythonversion': list(sys.version_info)}
+
+def pythonpath():
+    '''
+    Return the Python path
+    '''
+    # Provides:
+    #   pythonpath
+    return {'pythonpath': sys.path}
+
+def saltpath():
+    '''
+    Return the path of the salt module
+    '''
+    # Provides:
+    #   saltpath
+    path = os.path.abspath(os.path.join(__file__, os.path.pardir))
+    return {'saltpath': os.path.dirname(path)}
