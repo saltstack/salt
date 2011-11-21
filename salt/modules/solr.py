@@ -29,7 +29,7 @@ def __virtual__():
     PRIVATE METHOD
     Solr needs to be installed to use this.
 
-    Return: str/bool Indicates weather solr is present or not
+    Return: str/bool Indicates whether solr is present or not
 
     TODO: currently __salt__ is not available to call in this method because
     all the salt modules have not been loaded yet. Use a grains module?
@@ -41,8 +41,9 @@ def __virtual__():
 def __check_for_cores__():
     '''
     PRIVATE METHOD
-    Checks to see if using_cores has been set or not. if it's been set
-    return it, otherwise figure it out and set it. Then return it
+    Checks to see if using_cores has been set or not.
+    If it has been set return it, otherwise figure it out and set it,
+    then return it.
 
     Return: bool True indicates that cores are used.
     '''
@@ -116,7 +117,7 @@ def _http_request(url):
     PRIVATE METHOD
     Uses json.load to fetch the json results from the solr api.
 
-    Param: str Url (A formatted url to and to urllib)
+    Param: str Url (A formatted url to send to urllib)
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
     TODO://Add a timeout param.
@@ -151,7 +152,7 @@ def _replication_request(replication_command, core_name=None, params=[]):
 def _get_admin_info(command, core_name=None):
     '''
     PRIVATE METHOD
-    Calls the _http_request method and passes the admin command to execute
+    Calls the _http_request method, passes the admin command to execute,
     and stores the data. This data is fairly static but should be refreshed
     periodically to make sure everying this ok. The data object will contain
     the json response.
@@ -211,8 +212,8 @@ def lucene_version(core_name=None):
 
 def version(core_name=None):
     '''
-    Gets the solr version for the core specified.  You should specify a core
-    here as all the cores will run under the same servelet container and so
+    Gets the solr version for the specified core.  You should specify a core
+    here as all the cores will run under the same servlet container and so
     will all have the same version.
 
     core_name : str (None)
@@ -360,7 +361,7 @@ def is_replication_enabled(core_name=None):
         errors = ['Only minions configured as solr slaves can run this']
         return ret.update({'success': False, 'errors': errors})
 
-    #define a convenience method so we dont duplicate code
+    #define a convenience method so we don't duplicate code
     def _checks(ret, success, resp, core):
         if response['success']:
             slave = resp['data']['details']['slave']
