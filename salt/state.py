@@ -606,19 +606,42 @@ class HighState(object):
 
     def _top_includes(self, include, top=None, done=None):
         '''
-        Download all of the included 
+        Download all of the included top files
         '''
         if not top:
             top = {}
         if not done:
             done = {}
         for env, sls in include.items():
+            if env in done:
+                if sls in done[env]:
+                    continue
             ctop = self.state.compile_template(
                     self.client.get_state(
                         sls,
                         env
                         )
                     )
+            done.add(sls)
+            if 'include' in ctop:
+                for env, sls in ctop['include'].items():
+                    if env in done:
+                        if sls in done[env]:
+                            ctop['include'][env].remove(sls)
+                for env in ctop['include']:
+                    if not ctop['include'][env]:
+                        ctop['include'].remove(env)
+                if ctop['include']:
+                    top.update(
+                            self._top_includes(
+                                ctop['include'],
+                                top,
+                                done
+                                )
+                            )
+            else:
+                top.update(ctop)
+        return top
 
     def _get_envs(self):
         '''
