@@ -55,14 +55,14 @@ def version(name):
 
         salt '*' pkg.version <package name>
     '''
-    pkgs = list_pkgs()
+    pkgs = list_pkgs(name)
     if name in pkgs:
         return pkgs[name]
     else:
         return ''
 
 
-def list_pkgs():
+def list_pkgs(*args):
     '''
     List the packages currently installed in a dict::
 
@@ -72,15 +72,18 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = "rpm -qa --qf '%{NAME}:%{VERSION}-%{RELEASE};'"
-    ret = {}
-    out = __salt__['cmd.run_stdout'](cmd)
-    for line in out.split(';'):
-        if not line.count(':'):
-            continue
-        comps = line.split(':')
-        ret[comps[0]] = comps[1]
-    return ret
+    import rpm
+    ts = rpm.TransactionSet()
+    pkgs = {}
+    
+    if len(args) == 0:
+        for h in ts.dbMatch():
+            pkgs[h['name']] = '-'.join([h['version'],h['release']])
+    else:
+        for h in ts.dbMatch('name', args[0]):
+            pkgs[h['name']] = '-'.join([h['version'],h['release']])
+    
+    return pkgs
 
 
 def refresh_db():
