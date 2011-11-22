@@ -324,10 +324,7 @@ def ping(core_name=None):
         return ret
     else:
         resp = _get_admin_info('ping', core_name=core_name)
-        if resp['success']:
-            return _get_return_dict(ret,True, resp['data'], resp['errors'])
-        else:
-            return resp
+        return resp
 
 def is_replication_enabled(core_name=None):
     '''
@@ -673,7 +670,27 @@ def core_status(core_name):
 
 ### DIH COMMANDS NEW IN 0.2 ###
 
-def _pre_indexing_check(handler, core_name, options):
+def _merge_options(options):
+    '''
+    PRIVATE METHOD
+    updates the default import options from __opts__['solr.dih.import_options']
+    with the dictionary passed in.  Also converts bools to strings 
+    to pass to solr.
+
+    Param: dict options {str:bool}: Dictionary that over rides default options
+    Return: dict {str:str}
+    '''
+
+
+    defaults = __opts__['solr.dih.import_options']
+    if type(options) == dict:
+        defaults.update(options)
+    for (k,v) in defaults.items():
+        if type(v) is bool:
+            defaults[k] = str(bool(v)).lower()
+    return defaults
+
+def _pre_indexing_check(handler, core_name):
     #make sure that it's a master minion
     if not __opts__['solr.type'] == 'master':
         errors = ['solr.full_import can only be accessed if the solr.type is "master"']
@@ -694,18 +711,8 @@ def _pre_indexing_check(handler, core_name, options):
     else:
         errors = ['Unable to determine the import status prior to pushing command']
         return _get_return_dict(False, data=resp['data'],errors=errors)
-    if not resp['success']:
-        return resp
-    #merge the options with the defaults
-    if type(options) is dict:
-         __opts__['solr.dih.import_options'].update(options)
-    #check to see if replication is enabled.
-    if 'clean' in __opts__['solr.dih.import_options'] and __opts__['solr.dih.import_options']['clean']:
-        resp = set_replication_enabled(False, core_name)
-        if not resp['success']:
-            errors = ['Failed to set the replication status on the master.']
-            return _get_return_dict(False, errors=errors)
-    return _get_return_dict()
+
+    return resp
 
 def reload_import_config(handler, core_name=None, verbose=False):
     '''
@@ -770,8 +777,14 @@ def full_import(handler, core_name=None, options={}, extra={}):
     resp = _pre_indexing_check(handler, core_name)
     if not resp['success']:
         return resp
+    options = _merge_options(options)
+    if options['clean']:
+        resp = set_replication_enabled(False, core_name)
+        if not resp['success']:
+            errors = ['Failed to set the replication status on the master.']
+            return _get_return_dict(False, errors=errors)
     params = ['command=full-import']
-    for (k,v) in __opts__['solr.dih.import_options']:
+    for (k,v) in options.items():
         params.append("{0}={1}".format(k,v))
     url = _format_url(handler,core_name=core_name,extra=params + extra)    
     return _http_request(url)
@@ -798,8 +811,14 @@ def delta_import(handler, core_name=None, options={}, extra={}):
     resp = _pre_indexing_check(handler, core_name)
     if not resp['success']:
         return resp
+    options = _merge_options(options)
+    if options['clean']:
+        resp = set_replication_enabled(False, core_name)
+        if not resp['success']:
+            errors = ['Failed to set the replication status on the master.']
+            return _get_return_dict(False, errors=errors)
     params = ['command=delta-import']
-    for (k,v) in __opts__['solr.dih.import_options']:
+    for (k,v) in options.items():
         params.append("{0}={1}".format(k,v))
     url = _format_url(handler, core_name=core_name, extra=params + extra)
     return _http_request(url)
