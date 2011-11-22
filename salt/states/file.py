@@ -86,7 +86,7 @@ def _is_bin(path):
     return False
 
 
-def _mako(sfn):
+def _mako(sfn, name, source, user, group. mode, env):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
@@ -115,7 +115,7 @@ def _mako(sfn):
                 'data': trb}
 
 
-def _jinja(sfn):
+def _jinja(sfn, name, source, user, group. mode, env):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
@@ -134,6 +134,12 @@ def _jinja(sfn):
         passthrough = {}
         passthrough['salt'] = __salt__
         passthrough['grains'] = __grains__
+        passthrough['name'] = name
+        passthrough['source'] = source
+        passthrough['user'] = user
+        passthrough['group'] = group
+        passthrough['mode'] = mode
+        passthrough['env'] = env
         template = Template(open(sfn, 'r').read())
         open(tgt, 'w+').write(template.render(**passthrough))
         return {'result': True,
