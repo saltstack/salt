@@ -32,18 +32,21 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    out = __salt__['cmd.run_stdout']('yum list {0} -q'.format(name))
-    for line in out.split('\n'):
-        if not line.strip():
-            continue
-        # Itterate through the output
-        comps = line.split()
-        if comps[0].split('.')[0] == name:
-            if len(comps) < 2:
-                continue
-            # found it!
-            return comps[1][:comps[1].rindex('.')]
-    # Package not available
+    import yum
+    from rpmUtils.arch import getBaseArch
+    
+    yb = yum.YumBase() 
+    # look for available packages only, if package is already installed with 
+    # latest version it will not show up here.
+    pl = yb.doPackageLists('available')
+    exactmatch, matched, unmatched = yum.packages.parsePackages(pl.available, 
+                                                                [name])
+    
+    for pkg in exactmatch:
+        # ignore packages that do not match base arch
+        if pkg.arch == getBaseArch():
+            return '-'.join([pkg.version, pkg.release])
+    
     return ''
 
 
@@ -75,13 +78,15 @@ def list_pkgs(*args):
     import rpm
     ts = rpm.TransactionSet()
     pkgs = {}
-    
+    # if no args are passed in get all packages
     if len(args) == 0:
         for h in ts.dbMatch():
             pkgs[h['name']] = '-'.join([h['version'],h['release']])
     else:
-        for h in ts.dbMatch('name', args[0]):
-            pkgs[h['name']] = '-'.join([h['version'],h['release']])
+        # get package version for each package in *args
+        for arg in args:
+            for h in ts.dbMatch('name', arg):
+                pkgs[h['name']] = '-'.join([h['version'],h['release']])
     
     return pkgs
 
@@ -95,9 +100,11 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'yum clean dbcache'
-    __salt__['cmd.retcode'](cmd)
-    return True
+    import yum
+    yb = yum.YumBase()
+    yb.cleanMetadata()
+    return true
+    
 
 
 def install(pkg, refresh=False):
