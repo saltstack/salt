@@ -279,6 +279,38 @@ def _pre_index_check(handler, core_name=None):
 
     return resp
 
+def _find_value(ret_dict, key, path=None):
+    '''
+    PRIVATE METHOD
+    Traverses a dictionary of dictionaries/lists to find key
+    and return the value stored.
+    TODO:// this method doesn't really work very well, and it's not really very
+            useful in it's current state. The purpose for this method is to
+            simplify parsing the json ouput so you can just pass the key
+            you want to find and have it return the value.
+
+    Param: dict return_dict: The return dictionary
+    Param: str key: The key to find in the dictionary.
+
+    Return: list [{path:path, value:value}]
+    '''
+    if path is None:
+        path = key
+    else:
+        path = "{0}:{1}".format(path, key)
+
+    ret = []
+    for (k, v) in ret_dict.items():
+        if k == key:
+            ret.append({path:v})
+        if type(v) is list:
+            for x in v:
+                if type(x) is dict:
+                    ret = ret + _find_value(x, key, path)
+        if type(v) is dict:
+            ret = ret + _find_value(v, key, path)
+    return ret
+
 ########################## PUBLIC METHODS ##############################
 
 def lucene_version(core_name=None):
@@ -722,35 +754,6 @@ def signal(signal=None):
     
     cmd = "{0} {1}".format(__opts__['solr.init_script'], signal)
     out = __salt__['cmd.run'](cmd)
-
-def find_value(ret_dict, key, path=None):
-    '''
-    Traverses a dictionary of dictionaries/lists to find key
-    and return the value stored.
-    TODO:// this method doesn't really work very well, and not really very 
-            useful. Clean it up, consider using xpath or some other way.
-
-    Param: dict return_dict: The return dictionary
-    Param: str key: The key to find in the dictionary.
-
-    Return: list [{path:path, value:value}]
-    '''
-    if path is None:
-        path = key
-    else:
-        path = "{0}:{1}".format(path, key)
-
-    ret = []
-    for (k, v) in ret_dict.items():
-        if k == key:
-            ret.append({path:v})
-        if type(v) is list:
-            for x in v:
-                if type(x) is dict:
-                    ret = ret + find_value(x, key, path)
-        if type(v) is dict:
-            ret = ret + find_value(v, key, path)
-    return ret
 
 def reload_core(core_name):
     '''
