@@ -192,6 +192,8 @@ def os_data():
             grains['os'] = 'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
             grains['os'] = 'Mandrake'
+        elif os.path.isfile('/etc/mageia-version'):
+            grains['os'] = 'Mageia'
         elif os.path.isfile('/etc/meego-version'):
             grains['os'] = 'MeeGo'
         elif os.path.isfile('/etc/vmware-version'):
