@@ -88,3 +88,25 @@ So, please feel free to sprinkle some of this around your systems and
 let the deliciousness come forth.
 
 .. _`Apache 2.0 licence`: http://www.apache.org/licenses/LICENSE-2.0.html
+
+Contribute
+==========
+This world is not salty enough yet... help us make it a saltier place:
+
+* install gitflow e.g. aptitude install git-flow on Debian or from source https://github.com/nvie/gitflow
+* fork the salt repository to you your github account
+* git clone git@github.com:<youraccount>/salt.git
+* cd salt; ./setuprepo.sh
+
+Start contributing... write a test, make sure the test fails, write
+the actual code, make the test pass and if it does, make an atomic
+commit (referencing the issue(s) if this is a fix) and git push to
+your fork. Issue a pull request so one of the saltstack members can
+review it and accept or require/advice a change. Lather, rinse,
+repeat...
+
+* git pull upstream develop
+* write the test, make it fail...
+* pep8, pylint, pychecker
+* commit, push
+* pull request
