@@ -171,9 +171,6 @@ def os_data():
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
-        elif os.path.isfile('/etc/gentoo-version'):
-            grains['os'] = 'Gentoo'
-        # All of my gentoo machines have gentoo-release, don't know if gentoo-version is necessary
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-version'):
