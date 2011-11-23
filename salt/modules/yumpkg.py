@@ -150,10 +150,10 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(*args, **kwargs):
+def install(pkgs, refresh=False):
     '''
-    Install the passed package, add refresh=True to clean out the yum database
-    before executing
+    Install the passed package(s), add refresh=True to clean out the yum 
+    database before executing
 
     Return a dict containing the new package names and versions::
 
@@ -162,20 +162,21 @@ def install(*args, **kwargs):
 
     CLI Example::
 
-        salt '*' pkg.install <package name>
+        salt '*' pkg.install <package,package,package>
     '''
     # If the kwarg refresh exists get it, otherwise set it to False
-    refresh = kwargs.get('refresh', False)
+    #refresh = kwargs.get('refresh', False)
     
     if refresh:
         refresh_db()
     
-    old = list_pkgs(*args)
+    pkgs = pkgs.split(',')
+    old = list_pkgs(*pkgs)
     
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
-      
-    for pkg in args:
+    
+    for pkg in pkgs:
         yb.install(name=pkg)
     # Resolve Deps before attempting install.  This needs to be improved
     # by also tracking any deps that may get upgraded/installed during this
@@ -185,7 +186,7 @@ def install(*args, **kwargs):
     yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
     yb.closeRpmDB()
 
-    new = list_pkgs(*args)
+    new = list_pkgs(*pkgs)
     
     return _compare_versions(old, new)
 
@@ -221,7 +222,7 @@ def upgrade():
     return _compare_versions(old, new)
 
 
-def remove(*args):
+def remove(pkgs):
     '''
     Removes packages with yum remove
 
@@ -229,27 +230,28 @@ def remove(*args):
 
     CLI Example::
 
-        salt '*' pkg.remove <package name>
+        salt '*' pkg.remove <package,package,package>
     '''
     
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
-    old = list_pkgs(*args)
+    pkgs = pkgs.split(',')
+    old = list_pkgs(*pkgs)
     
     # same comments as in upgrade for remove.
-    for pkg in args:
+    for pkg in pkgs:
         yb.remove(name=pkg)
         
     yb.resolveDeps()
     yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
     yb.closeRpmDB()
     
-    new = list_pkgs(*args)
+    new = list_pkgs(*pkgs)
     
     return _list_removed(old, new)
 
 
-def purge(*args):
+def purge(pkgs):
     '''
     Yum does not have a purge, this function calls remove
 
@@ -259,4 +261,4 @@ def purge(*args):
 
         salt '*' pkg.purge <package name>
     '''
-    return remove(*args)
+    return remove(pkgs)
