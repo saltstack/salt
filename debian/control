@@ -13,7 +13,7 @@ Package: salt
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends}, python-setuptools,
  python-yaml, python-crypto, python-m2crypto, python-zmq, libzmq1,
- libzmq-dev, python (>= 2.6)
+ libzmq-dev, python (>= 2.6), python-jinja2
 Description: This package provides a remote manager to administer servers.
  This package is a powerful remote execution manager that can be used to
  administer servers in a fast and efficient way.
