@@ -153,7 +153,7 @@ class SaltCMD(object):
             if len(args) < 1:
                 err = ('Please pass in a command to query the old salt '
                        'calls for.')
-                sys.stderr.write(err, + '\n')
+                sys.stderr.write(err + '\n')
                 sys.exit('2')
             opts['cmd'] = args[0]
         else:
