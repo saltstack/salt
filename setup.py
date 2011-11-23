@@ -3,7 +3,6 @@
 The setup script for salt
 '''
 
-from Cython.Distutils import build_ext
 from distutils import log
 from distutils.cmd import Command
 from distutils.core import setup
@@ -31,13 +30,6 @@ else:
 setup(
       name=NAME,
       version=VER,
-      #ext_modules=[
-      #    Extension('salt.modules.grains', ['salt/modules/grains.pyx']),
-      #    Extension('salt.modules.cytest', ['salt/modules/cytest.pyx']),
-      #    ],
-      cmdclass={
-          'build_ext': build_ext,
-          },
       description=DESC,
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
