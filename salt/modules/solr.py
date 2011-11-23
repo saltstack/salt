@@ -252,7 +252,7 @@ def _pre_index_check(handler, core_name=None):
     we can talk to solr before trying to send a command to solr.
     '''
     #make sure that it's a master minion
-    if not is_master():
+    if not _is_master():
         err = ['solr.pre_indexing_check can only be called by "master" minions']
         return _get_return_dict(False, err)
     '''
@@ -801,7 +801,7 @@ def reload_import_config(handler, core_name=None, verbose=False):
     '''
 
     #make sure that it's a master minion
-    if not is_master():
+    if not _is_master():
         err = ['solr.pre_indexing_check can only be called by "master" minions']
         return _get_return_dict(False, err)
 
@@ -836,7 +836,7 @@ def abort_import(handler, core_name=None, verbose=False):
     url = _format_url(handler,core_name=core_name,extra=params)    
     return _http_request(url)
 
-def full_import(handler, core_name=None, options={}, extra={}):
+def full_import(handler, core_name=None, options={}, extra=[]):
     '''
     MASTER ONLY
     Submits an import command to the specified handler using specified options.
@@ -849,7 +849,7 @@ def full_import(handler, core_name=None, options={}, extra={}):
                                     commit, verbose, and pause_replication.
                                     leave blank to use __opts__ defaults.
                                     options will be merged with __opts__
-    Param: dict extra ({}): Extra name value pairs to pass to the handler.
+    Param: dict extra ([]): Extra name value pairs to pass to the handler.
                             e.g. ["name=value"]
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
@@ -871,11 +871,11 @@ def full_import(handler, core_name=None, options={}, extra={}):
             return _get_return_dict(False, errors=errors)
     params = ['command=full-import']
     for (k,v) in options.items():
-        params.append("{0}={1}".format(k,v))
+        params.append("&{0}={1}".format(k,v))
     url = _format_url(handler,core_name=core_name,extra=params + extra)    
     return _http_request(url)
 
-def delta_import(handler, core_name=None, options={}, extra={}):
+def delta_import(handler, core_name=None, options={}, extra=[]):
     '''
     Submits an import command to the specified handler using specified options.
     This command can only be run if the minion is is configured with
@@ -887,7 +887,7 @@ def delta_import(handler, core_name=None, options={}, extra={}):
                                     commit, verbose, and pause_replication.
                                     leave blank to use __opts__ defaults.
                                     options will be merged with __opts__
-    Param dict extra ({}): Extra name value pairs to pass to the handler.
+    Param dict extra ([]): Extra name value pairs to pass to the handler.
                             eg ["name=value"]
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
 
