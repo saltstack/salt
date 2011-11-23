@@ -308,7 +308,15 @@ def managed(name,
         sfn = __salt__['cp.cache_file'](source, __env__)
         t_key = '_{0}'.format(template)
         if t_key in globals():
-            data = globals()[t_key](sfn)
+            data = globals()[t_key](
+                    sfn,
+                    name,
+                    source,
+                    user,
+                    group,
+                    mode,
+                    __env__
+                    )
         else:
             ret['result'] = False
             ret['comment'] = ('Specified template format {0} is not supported'
