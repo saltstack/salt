@@ -625,7 +625,8 @@ def recurse(name, source, __env__='base'):
                     os.path.join(
                         __opts__['cachedir'],
                         'files',
-                        __env__
+                        __env__,
+                        source[7:]
                         )
                     )
                 )
