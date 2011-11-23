@@ -72,12 +72,13 @@ class SMaster(object):
         '''
         log.info('Preparing the root key for local communication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-        key = salt.crypt.Crypticle.generate_key_string()
         if os.path.isfile(keyfile):
             return open(keyfile, 'r').read()
-        open(keyfile, 'w+').write(key)
-        os.chmod(keyfile, 256)
-        return key
+        else:
+            key = salt.crypt.Crypticle.generate_key_string()
+            open(keyfile, 'w+').write(key)
+            os.chmod(keyfile, 256)
+            return key
 
 
 class Master(SMaster):
