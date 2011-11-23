@@ -2,7 +2,6 @@
 Support for YUM
 '''
 
-
 def __virtual__():
     '''
     Confine this module to yum based systems
@@ -21,6 +20,29 @@ def _list_removed(old, new):
     for pkg in old:
         if pkg not in new:
             pkgs.append(pkg)
+    
+    return pkgs
+
+
+def _compare_versions(old, new):
+    '''
+    Returns a dict that that displays old and new versions for a package after
+    install/upgrade of package. 
+    '''
+    pkgs = {}
+    for npkg in new:
+        if npkg in old:
+            if old[npkg] == new[npkg]:
+                # no change in the package
+                continue
+            else:
+                # the package was here before and the version has changed
+                pkgs[npkg] = {'old': old[npkg],
+                              'new': new[npkg]}
+        else:
+            # the package is freshly installed
+            pkgs[npkg] = {'old': '',
+                          'new': new[npkg]}
     return pkgs
 
 
@@ -132,7 +154,7 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(pkg, refresh=False):
+def install(*args, **kwargs):
     '''
     Install the passed package, add refresh=True to clean out the yum database
     before executing
@@ -146,38 +168,40 @@ def install(pkg, refresh=False):
 
         salt '*' pkg.install <package name>
     '''
-    
-    # WIP only commiting this so I can keep working on it at home later...
     import yum
-
+    import rpm
+    
+    # If the kwarg refresh exists get it, otherwise set it to False
+    refresh = kwargs.get('refresh', False)
+    
     if refresh:
         refresh_db()
-
+    
+    old = list_pkgs(*args)
+    
     yb = yum.YumBase()
-    
-    try:        
-        yb.install(name=pkg)
+    setattr(yb.conf, 'assumeyes', True)
+      
+    try:
+        for pkg in args:
+            yb.install(name=pkg)
+        # Resolve Deps before attempting install.  This needs to be improved
+        # by also tracking any deps that may get upgraded/installed during this
+        # process.  For now only the version of the package(s) you request be
+        # installed is tracked.
         yb.resolveDeps()
+        yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+        yb.closeRpmDB()
+        
     except yum.Errors.InstallError, e:
-        return False
-
+        # returns a empyt string in the event of a failure.  Any ideas on what
+        # we should do here?  Do we want to return a failure message of some
+        # sort?
+        return ''
     
-    pkgs = {}
-
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    new = list_pkgs(*args)
+    
+    return _compare_versions(old, new)
 
 
 def upgrade():
@@ -193,30 +217,31 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+    import yum
+    
+    yb = yum.YumBase()
+    setattr(yb.conf, 'assumeyes', True)
+    
     old = list_pkgs()
-    cmd = 'yum -y upgrade'
-    __salt__['cmd.retcode'](cmd)
+    
+    try:
+        # ideally we would look in the yum transaction and get info on all the
+        # packages that are going to be upgraded and only look up old/new
+        # version info on those packages.   
+        yb.update()
+        yb.resolveDeps()
+        yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+        yb.closeRpmDB()
+    except yum.Errors.InstallError, e:
+        return ''
+    
     new = list_pkgs()
-    pkgs = {}
-    for npkg in new:
-        if npkg in old:
-            if old[npkg] == new[npkg]:
-                # no change in the package
-                continue
-            else:
-                # the package was here before and the version has changed
-                pkgs[npkg] = {'old': old[npkg],
-                              'new': new[npkg]}
-        else:
-            # the package is freshly installed
-            pkgs[npkg] = {'old': '',
-                          'new': new[npkg]}
-    return pkgs
+    return _compare_versions(old, new)
 
 
-def remove(pkg):
+def remove(*args):
     '''
-    Remove a single package with yum remove
+    Removes packages with yum remove
 
     Return a list containing the removed packages:
 
@@ -224,12 +249,25 @@ def remove(pkg):
 
         salt '*' pkg.remove <package name>
     '''
-#    import subprocess as sp
-    old = list_pkgs()
-#    sp.Popen(['yum', '-y', 'remove', pkg])
-    cmd = 'yum -y remove ' + pkg
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
+    import yum
+    
+    yb = yum.YumBase()
+    setattr(yb.conf, 'assumeyes', True)
+    old = list_pkgs(*args)
+    
+    try:
+        # same comments as in upgrade for remove.
+        for pkg in args:
+            yb.remove(name=pkg)
+            
+        yb.resolveDeps()
+        yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+        yb.closeRpmDB()
+    except yum.Errors.RemoveError, e:
+        return ''
+    
+    new = list_pkgs(*args)
+    
     return _list_removed(old, new)
 
 
