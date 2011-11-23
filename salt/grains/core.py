@@ -138,15 +138,26 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    if 'Linux OpenBSD SunOS HP-UX'.count(osdata['kernel']):
-        if os.path.isdir('/proc/vz'):
+    choices =  ['Linux', 'OpenBSD', 'SunOS', 'HP-UX']
+    isdir = os.path.isdir
+    if osdata['kernel'] in choices:
+        if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
             else:
                 grains['virtual'] = 'openvzve'
-        if os.path.isdir('/.SUNWnative'):
+        elif isdir("/proc/sys/xen") or isdir("/sys/bus/xen") or isdir("/proc/xen"):
+            grains['virtual'] = 'xen'
+            if os.path.isfile('/proc/xen/xsd_kva'):
+                grains['virtual_subtype'] = 'Xen Dom0'
+            else:
+                if os.path.isfile('/proc/xen/capabilities'):
+                    grains['virtual_subtype'] = 'Xen full virt DomU'
+                else:
+                    grains['virtual_subtype'] = 'Xen paravirt DomU'
+        elif isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
-        if os.path.isfile('/proc/cpuinfo'):
+        elif os.path.isfile('/proc/cpuinfo'):
             if open('/proc/cpuinfo', 'r').read().count('QEMU Virtual CPU'):
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
