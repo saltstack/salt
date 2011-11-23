@@ -10,6 +10,7 @@ grainmap = {
            'RedHat': '/etc/init.d',
            'Debian': '/etc/init.d',
            'Ubuntu': '/etc/init.d',
+           'Gentoo': '/etc/init.d',
           }
 
 def start(name):
