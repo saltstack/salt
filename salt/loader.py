@@ -105,12 +105,12 @@ def grains(opts):
     return grains
 
 
-# FIXME: mutable types as default parameter values, NO!
-# http://goo.gl/ToU2z
-def call(fun, args=[], dirs=[]):
+def call(fun, **kwargs):
     '''
     Directly call a function inside a loader directory
     '''
+    args = kwargs.get('args', [])
+    dirs = kwargs.get('dirs', [])
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
         ] + dirs
