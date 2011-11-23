@@ -37,17 +37,32 @@ def available_version(name):
     
     yb = yum.YumBase() 
     # look for available packages only, if package is already installed with 
-    # latest version it will not show up here.
-    pl = yb.doPackageLists('available')
-    exactmatch, matched, unmatched = yum.packages.parsePackages(pl.available, 
-                                                                [name])
+    # latest version it will not show up here.  If we want to use wildcards
+    # here we can, but for now its exactmatch only.
     
-    for pkg in exactmatch:
-        # ignore packages that do not match base arch
-        if pkg.arch == getBaseArch():
-            return '-'.join([pkg.version, pkg.release])
+    versions_list = []
+    for pkgtype in ['available', 'updates']:
+        
+        pl = yb.doPackageLists(pkgtype)
+        exactmatch, matched, unmatched = yum.packages.parsePackages(pl, [name])
+        # build a list of available packages from either available or updates
+        # this will result in a double match for a package that is already
+        # installed.  Maybe we should just return the value if we get a hit
+        # on available, and only iterate though updates if we don't..
+        for pkg in exactmatch:
+            if pkg.arch == getBaseArch():
+                versions_list.append('-'.join([pkg.version, pkg.release]))
     
-    return ''
+    if len(versions_list) == 0:
+        # if versions_list is empty return empty string.  It may make sense
+        # to also check if a package is installed and on latest version
+        # already and return a message saying 'up to date' or something along
+        # those lines.
+        return ''
+    
+    # remove the duplicate items from the list and return the first one
+    return list(set(versions_list))[0]
+    
 
 
 def version(name):
@@ -103,8 +118,18 @@ def refresh_db():
     import yum
     yb = yum.YumBase()
     yb.cleanMetadata()
-    return true
+    return True
     
+
+def clean_metadata():
+    '''
+    Cleans local yum metadata.
+
+    CLI Example::
+
+        salt '*' pkg.clean_metadata
+    '''
+    return refresh_db()
 
 
 def install(pkg, refresh=False):
@@ -121,13 +146,24 @@ def install(pkg, refresh=False):
 
         salt '*' pkg.install <package name>
     '''
-    old = list_pkgs()
-    cmd = 'yum -y install ' + pkg
+    
+    # WIP only commiting this so I can keep working on it at home later...
+    import yum
+
     if refresh:
         refresh_db()
-    __salt__['cmd.retcode'](cmd)
-    new = list_pkgs()
+
+    yb = yum.YumBase()
+    
+    try:        
+        yb.install(name=pkg)
+        yb.resolveDeps()
+    except yum.Errors.InstallError, e:
+        return False
+
+    
     pkgs = {}
+
     for npkg in new:
         if npkg in old:
             if old[npkg] == new[npkg]:
@@ -188,7 +224,9 @@ def remove(pkg):
 
         salt '*' pkg.remove <package name>
     '''
+#    import subprocess as sp
     old = list_pkgs()
+#    sp.Popen(['yum', '-y', 'remove', pkg])
     cmd = 'yum -y remove ' + pkg
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
