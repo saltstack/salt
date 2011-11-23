@@ -1,6 +1,9 @@
 '''
 Support for YUM
 '''
+import yum
+import rpm
+from rpmUtils.arch import getBaseArch
 
 def __virtual__():
     '''
@@ -53,15 +56,11 @@ def available_version(name):
     CLI Example::
 
         salt '*' pkg.available_version <package name>
-    '''
-    import yum
-    from rpmUtils.arch import getBaseArch
-    
+    '''    
     yb = yum.YumBase() 
     # look for available packages only, if package is already installed with 
     # latest version it will not show up here.  If we want to use wildcards
     # here we can, but for now its exactmatch only.
-    
     versions_list = []
     for pkgtype in ['available', 'updates']:
         
@@ -85,7 +84,6 @@ def available_version(name):
     # remove the duplicate items from the list and return the first one
     return list(set(versions_list))[0]
     
-
 
 def version(name):
     '''
@@ -112,7 +110,6 @@ def list_pkgs(*args):
 
         salt '*' pkg.list_pkgs
     '''
-    import rpm
     ts = rpm.TransactionSet()
     pkgs = {}
     # if no args are passed in get all packages
@@ -137,7 +134,6 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    import yum
     yb = yum.YumBase()
     yb.cleanMetadata()
     return True
@@ -168,9 +164,6 @@ def install(*args, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    import yum
-    import rpm
-    
     # If the kwarg refresh exists get it, otherwise set it to False
     refresh = kwargs.get('refresh', False)
     
@@ -182,23 +175,16 @@ def install(*args, **kwargs):
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
       
-    try:
-        for pkg in args:
-            yb.install(name=pkg)
-        # Resolve Deps before attempting install.  This needs to be improved
-        # by also tracking any deps that may get upgraded/installed during this
-        # process.  For now only the version of the package(s) you request be
-        # installed is tracked.
-        yb.resolveDeps()
-        yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
-        yb.closeRpmDB()
-        
-    except yum.Errors.InstallError, e:
-        # returns a empyt string in the event of a failure.  Any ideas on what
-        # we should do here?  Do we want to return a failure message of some
-        # sort?
-        return ''
-    
+    for pkg in args:
+        yb.install(name=pkg)
+    # Resolve Deps before attempting install.  This needs to be improved
+    # by also tracking any deps that may get upgraded/installed during this
+    # process.  For now only the version of the package(s) you request be
+    # installed is tracked.
+    yb.resolveDeps()
+    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    yb.closeRpmDB()
+
     new = list_pkgs(*args)
     
     return _compare_versions(old, new)
@@ -217,23 +203,19 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
-    import yum
-    
+
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
     
     old = list_pkgs()
     
-    try:
-        # ideally we would look in the yum transaction and get info on all the
-        # packages that are going to be upgraded and only look up old/new
-        # version info on those packages.   
-        yb.update()
-        yb.resolveDeps()
-        yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
-        yb.closeRpmDB()
-    except yum.Errors.InstallError, e:
-        return ''
+    # ideally we would look in the yum transaction and get info on all the
+    # packages that are going to be upgraded and only look up old/new version
+    # info on those packages.   
+    yb.update()
+    yb.resolveDeps()
+    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    yb.closeRpmDB()
     
     new = list_pkgs()
     return _compare_versions(old, new)
@@ -249,29 +231,25 @@ def remove(*args):
 
         salt '*' pkg.remove <package name>
     '''
-    import yum
     
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
     old = list_pkgs(*args)
     
-    try:
-        # same comments as in upgrade for remove.
-        for pkg in args:
-            yb.remove(name=pkg)
-            
-        yb.resolveDeps()
-        yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
-        yb.closeRpmDB()
-    except yum.Errors.RemoveError, e:
-        return ''
+    # same comments as in upgrade for remove.
+    for pkg in args:
+        yb.remove(name=pkg)
+        
+    yb.resolveDeps()
+    yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
+    yb.closeRpmDB()
     
     new = list_pkgs(*args)
     
     return _list_removed(old, new)
 
 
-def purge(pkg):
+def purge(*args):
     '''
     Yum does not have a purge, this function calls remove
 
@@ -281,4 +259,4 @@ def purge(pkg):
 
         salt '*' pkg.purge <package name>
     '''
-    return remove(pkg)
+    return remove(*args)
