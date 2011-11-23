@@ -86,7 +86,7 @@ def _is_bin(path):
     return False
 
 
-def _mako(sfn):
+def _mako(sfn, name, source, user, group, mode, env):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
@@ -115,7 +115,7 @@ def _mako(sfn):
                 'data': trb}
 
 
-def _jinja(sfn):
+def _jinja(sfn, name, source, user, group, mode, env):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
@@ -134,6 +134,12 @@ def _jinja(sfn):
         passthrough = {}
         passthrough['salt'] = __salt__
         passthrough['grains'] = __grains__
+        passthrough['name'] = name
+        passthrough['source'] = source
+        passthrough['user'] = user
+        passthrough['group'] = group
+        passthrough['mode'] = mode
+        passthrough['env'] = env
         template = Template(open(sfn, 'r').read())
         open(tgt, 'w+').write(template.render(**passthrough))
         return {'result': True,
@@ -302,7 +308,15 @@ def managed(name,
         sfn = __salt__['cp.cache_file'](source, __env__)
         t_key = '_{0}'.format(template)
         if t_key in globals():
-            data = globals()[t_key](sfn)
+            data = globals()[t_key](
+                    sfn,
+                    name,
+                    source,
+                    user,
+                    group,
+                    mode,
+                    __env__
+                    )
         else:
             ret['result'] = False
             ret['comment'] = ('Specified template format {0} is not supported'
@@ -611,7 +625,8 @@ def recurse(name, source, __env__='base'):
                     os.path.join(
                         __opts__['cachedir'],
                         'files',
-                        __env__
+                        __env__,
+                        source[7:]
                         )
                     )
                 )
