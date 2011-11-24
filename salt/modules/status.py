@@ -317,6 +317,10 @@ def netdev():
         if line.find(':') < 0:
             continue
         comps = line.split()
+        # Fix lines like eth0:9999..'
+        comps[0] = line.split(':')[0].strip()
+        #Support lines both like eth0:999 and eth0: 9999
+        comps[1] = line.split(':')[1].strip().split()[0]
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
                          'rx_compressed': _number(comps[7]),
