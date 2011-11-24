@@ -1265,7 +1265,7 @@ regardless of what the actual module is named.
 The package manager modules are the best example of using the \fB__virtual__\fP
 function:
 \fI\%https://github.com/thatch45/salt/blob/v0.9.3/salt/modules/pacman.py\fP
-\fI\%https://github.com/thatch45/salt/blob/v0.9.3/salt/modules/yum.py\fP
+\fI\%https://github.com/thatch45/salt/blob/v0.9.3/salt/modules/yumpkg.py\fP
 \fI\%https://github.com/thatch45/salt/blob/v0.9.3/salt/modules/apt.py\fP
 .SS Documentation
 .sp
@@ -1432,7 +1432,7 @@ def ping():
 .IP \(bu 2
 \fI\%salt.modules.virt\fP
 .IP \(bu 2
-\fI\%salt.modules.yum\fP
+\fI\%salt.modules.yumpkg\fP
 .UNINDENT
 .SS \fBsalt.modules.apache\fP
 .sp
@@ -3714,12 +3714,12 @@ Return detailed information about the vms on this hyper in a dict:
 CLI Example:
 salt \(aq*\(aq virt.vm_info
 .UNINDENT
-.SS \fBsalt.modules.yum\fP
+.SS \fBsalt.modules.yumpkg\fP
 .sp
 Support for YUM
 .INDENT 0.0
 .TP
-.B salt.modules.yum.available_version(name)
+.B salt.modules.yumpkg.available_version(name)
 The available version of the package in the repository
 .sp
 CLI Example:
@@ -3727,7 +3727,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yum.install(pkg, refresh=False)
+.B salt.modules.yumpkg.install(pkg, refresh=False)
 Install the passed package, add refresh=True to clean out the yum database
 before executing
 .sp
@@ -3745,7 +3745,7 @@ salt \(aq*\(aq pkg.install <package name>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yum.list_pkgs()
+.B salt.modules.yumpkg.list_pkgs()
 List the packages currently installed in a dict:
 {\(aq<package_name>\(aq: \(aq<version>\(aq}
 .sp
@@ -3754,7 +3754,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yum.purge(pkg)
+.B salt.modules.yumpkg.purge(pkg)
 Yum does not have a purge, this function calls remove
 .sp
 Return a list containing the removed packages:
@@ -3764,7 +3764,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yum.refresh_db()
+.B salt.modules.yumpkg.refresh_db()
 Since yum refreshes the database automatically, this runs a yum clean,
 so that the next yum operation will have a clean database
 .sp
@@ -3773,7 +3773,7 @@ salt \(aq*\(aq pkg.refresh_db
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yum.remove(pkg)
+.B salt.modules.yumpkg.remove(pkg)
 Remove a single package with yum remove
 .sp
 Return a list containing the removed packages:
@@ -3783,7 +3783,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yum.upgrade()
+.B salt.modules.yumpkg.upgrade()
 Run a full system upgrade, a yum upgrade
 .sp
 Return a dict containing the new package names and versions:
@@ -3800,7 +3800,7 @@ salt \(aq*\(aq pkg.upgrade
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yum.version(name)
+.B salt.modules.yumpkg.version(name)
 Returns a version if the package is installed, else returns an empty string
 .sp
 CLI Example:
