@@ -209,6 +209,32 @@ class State(object):
             err += self.verify_data(chunk)
         return err
 
+    def order_chunks(self, chunks):
+        '''
+        Sort the chunk list verifying that the chunks follow the order
+        specified in the order options.
+        '''
+        cap = 1
+        for chunk in chunks:
+            if 'order' in chunk:
+                if chunk['order'] > cap - 1:
+                    cap = chunk['order'] + 100
+        for chunk in chunks:
+            if not 'order' in chunk:
+                chunk['order'] = cap
+            else:
+                if not isinstance(chunk['order'], int):
+                    chunk['order'] = cap
+        chunks = sorted(
+                chunks,
+                key=lambda k:'{0[state]}{0[name]}{0[fun]}'.format(k)
+                )
+        chunks = sorted(
+                chunks,
+                key=lambda k: k['order']
+                )
+        return chunks
+
     def format_call(self, data):
         '''
         Formats low data into a list of dict's used to actually call the state,
@@ -292,8 +318,8 @@ class State(object):
                     for fun in funcs:
                         live['fun'] = fun
                         chunks.append(live)
-
-        return sorted(chunks, key=lambda k: k['state'] + k['name'] + k['fun'])
+        chunks = self.order_chunks(chunks)
+        return chunks
 
     def reconcile_extend(self, high):
         '''
