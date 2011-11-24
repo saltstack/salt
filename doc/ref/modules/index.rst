@@ -142,7 +142,7 @@ regardless of what the actual module is named.
 The package manager modules are the best example of using the ``__virtual__``
 function:
 :blob:`salt/modules/pacman.py`
-:blob:`salt/modules/yum.py`
+:blob:`salt/modules/yumpkg.py`
 :blob:`salt/modules/apt.py`
 
 Documentation
