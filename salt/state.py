@@ -409,10 +409,25 @@ class State(object):
         '''
         running = {}
         for low in chunks:
-            if (low['state'] + '.' + low['name'] +
-                '.' + low['fun'] not in running):
+            if '__FAILHARD__' in running:
+                running.pop('__FAILHARD__')
+                return running
+            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
+            if tag not in running:
                 running = self.call_chunk(low, running, chunks)
+                if self.check_failhard(low, running):
+                    return running
         return running
+
+    def check_failhard(self, low, running):
+        '''
+        Check if the low data chunk should send a failhard signal
+        '''
+        tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
+        if low.get('failhard', False) and tag in running:
+            if not running[tag]['result']:
+                return True
+        return False
 
     def check_requires(self, low, running, chunks):
         '''
@@ -430,7 +445,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = req['state'] + '.' + req['name'] + '.' + req['fun']
+            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -458,7 +473,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = req['state'] + '.' + req['name'] + '.' + req['fun']
+            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -476,7 +491,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then the
         chunk
         '''
-        tag = low['state'] + '.' + low['name'] + '.' + low['fun']
+        tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
         if 'require' in low:
             status = self.check_requires(low, running, chunks)
             if status == 'unmet':
@@ -493,7 +508,13 @@ class State(object):
                     if (chunk['state'] + '.' + chunk['name'] +
                         '.' + chunk['fun'] not in running):
                         running = self.call_chunk(chunk, running, chunks)
+                        if self.check_failhard(chunk, running):
+                            running['__FAILHARD__'] = True
+                            return running
                 running = self.call_chunk(low, running, chunks)
+                if self.check_failhard(chunk, running):
+                    running['__FAILHARD__'] = True
+                    return running
             elif status == 'met':
                 running[tag] = self.call(low)
             elif status == 'fail':
@@ -516,7 +537,13 @@ class State(object):
                     if (chunk['state'] + '.' + chunk['name'] +
                         '.' + chunk['fun'] not in running):
                         running = self.call_chunk(chunk, running, chunks)
+                        if self.check_failhard(chunk, running):
+                            running['__FAILHARD__'] = True
+                            return running
                 running = self.call_chunk(low, running, chunks)
+                if self.check_failhard(chunk, running):
+                    running['__FAILHARD__'] = True
+                    return running
             elif status == 'nochange':
                 running[tag] = self.call(low)
             elif status == 'change':
