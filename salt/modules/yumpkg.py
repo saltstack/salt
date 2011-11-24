@@ -164,9 +164,6 @@ def install(pkgs, refresh=False):
 
         salt '*' pkg.install <package,package,package>
     '''
-    # If the kwarg refresh exists get it, otherwise set it to False
-    #refresh = kwargs.get('refresh', False)
-    
     if refresh:
         refresh_db()
     
