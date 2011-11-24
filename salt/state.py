@@ -424,7 +424,9 @@ class State(object):
         Check if the low data chunk should send a failhard signal
         '''
         tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
-        if low.get('failhard', False) and tag in running:
+        if low.get('failhard', False) \
+                or self.opts['failhard'] \
+                and tag in running:
             if not running[tag]['result']:
                 return True
         return False
@@ -623,6 +625,7 @@ class HighState(object):
                 return opts
         mopts = self.client.master_opts()
         opts['renderer'] = mopts['renderer']
+        opts['failhard'] = mopts['failhard']
         if mopts['state_top'].startswith('salt://'):
             opts['state_top'] = mopts['state_top']
         elif mopts['state_top'].startswith('/'):
