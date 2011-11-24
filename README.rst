@@ -110,3 +110,8 @@ repeat...
 * pep8, pylint, pychecker
 * commit, push
 * pull request
+
+Following the gitflow branching model is optional i.e. if you prefer a
+different branching model then that's fine. All that setuprepo.sh does
+is provide you with a quick and hassle-free way to setup the same
+branching model that's used for the main repository.
