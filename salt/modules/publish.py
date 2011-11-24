@@ -17,7 +17,7 @@ def _get_socket():
     return socket
 
 
-def publish(tgt, fun, arg, expr_form='glob', returner=''):
+def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
     '''
     Publish a command from the minion out to other minions, publications need
     to be enabled on the Salt master and the minion needs to have permission
@@ -38,13 +38,17 @@ def publish(tgt, fun, arg, expr_form='glob', returner=''):
     if fun == 'publish.publish':
         # Need to log something here
         return {}
+    if not arg:
+        arg = []
+    else:
+        arg = arg.split(',')
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     payload = {'enc': 'aes'}
     load = {
             'cmd': 'minion_publish',
             'fun': fun,
-            'arg': arg.split(','),
+            'arg': arg,
             'tgt': tgt,
             'ret': returner,
             'tok': tok,
