@@ -30,3 +30,13 @@ installed in tandem with any other state declaration set to the order `1`.
 
 Any state declared without an order option will be executed after all states
 with order options are executed.
+
+But this construct can only handle ordering states from the beggining.
+Sometimes you may want to send a state to the end of the line, to do this
+set the order to last:
+
+.. code-block:: yaml
+    vim:
+      pkg:
+        - installed
+        - order: last
