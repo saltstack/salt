@@ -203,7 +203,7 @@ class State(object):
                             continue
                         errors.append(('No function declared in state {0} in'
                             ' sls {1}').format(state, body['__sls__']))
-                    if fun > 1:
+                    elif fun > 1:
                         errors.append(('Too many functions declared in state'
                             ' {0} in sls {1}').format(state, body['__sls__']))
         return errors
