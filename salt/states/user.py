@@ -94,6 +94,7 @@ def present(
                         # Set the new password
                         __salt__['shadow.set_password'](name, password)
             post = __salt__['user.info'](name)
+            spost = {}
             if __grains__['os'] != 'FreeBSD':
                 if lshad['pwd'] != password:
                     spost = __salt__['shadow.info'](name)
