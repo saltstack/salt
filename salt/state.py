@@ -198,6 +198,14 @@ class State(object):
                                 ' in argument of state {0} in sls {1}').format(
                                     name,
                                     body['__sls__']))
+                    if not fun:
+                        if state == 'require' or state == 'watch':
+                            continue
+                        errors.append(('No function declared in state {0} in'
+                            ' sls {1}').format(state, body['__sls__']))
+                    if fun > 1:
+                        errors.append(('Too many functions declared in state'
+                            ' {0} in sls {1}').format(state, body['__sls__']))
         return errors
 
     def verify_chunks(self, chunks):
