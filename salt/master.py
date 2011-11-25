@@ -541,14 +541,16 @@ class AESFuncs(object):
         # Don't honor private functions
         if func.startswith('__'):
             return self.crypticle.dumps({})
-        # Run the func
-        ret = getattr(self, func)(load)
-        # Don't encrypt the return value for the _return func
-        # (we don't care about the return value, so why encrypt it?)
-        if func == '_return':
+        elif func == '_return':
+            # Don't encrypt the return value for the _return func
+            # (we don't care about the return value, so why encrypt it?)
             return ret
-        # AES Encrypt the return
-        return self.crypticle.dumps(ret)
+        else:
+            # Run the func
+            ret = getattr(self, func)(load)
+            
+            # AES Encrypt the return
+            return self.crypticle.dumps(ret)
 
 
 class ClearFuncs(object):
