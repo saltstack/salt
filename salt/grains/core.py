@@ -158,7 +158,7 @@ def _virtual(osdata):
         elif isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
         elif os.path.isfile('/proc/cpuinfo'):
-            if open('/proc/cpuinfo', 'r').read().count('QEMU Virtual CPU'):
+            if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
         model = subprocess.Popen(
@@ -166,7 +166,7 @@ def _virtual(osdata):
                 shell=True,
                 stdout=subprocess.PIPE
                 ).communicate()[0].split(':')[1].strip()
-        if model.count('QEMU Virtual CPU'):
+        if 'QEMU Virtual CPU' in model:
             grains['virtual'] = 'kvm'
     return grains
 
@@ -177,7 +177,7 @@ def _ps(osdata):
     '''
     grains = {}
     grains['ps'] = 'ps auxwww' if\
-            'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -ef'
+            'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -efH'
     return grains
 
 
@@ -222,19 +222,19 @@ def os_data():
                 grains['os'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
             data = open('/etc/redhat-release', 'r').read()
-            if data.count('centos'):
+            if 'centos' in data.lower():
                 grains['os'] = 'CentOS'
-            elif data.count('scientific'):
+            elif 'scientific' in data.lower():
                 grains['os'] = 'Scientific'
             else:
                 grains['os'] = 'RedHat'
         elif os.path.isfile('/etc/SuSE-release'):
             data = open('/etc/SuSE-release', 'r').read()
-            if data.count('SUSE LINUX Enterprise Server'):
+            if 'SUSE LINUX Enterprise Server' in data:
                 grains['os'] = 'SLES'
-            elif data.count('SUSE LINUX Enterprise Desktop'):
+            elif 'SUSE LINUX Enterprise Desktop' in data:
                 grains['os'] = 'SLED'
-            elif data.count('openSUSE'):
+            elif 'openSUSE' in data:
                 grains['os'] = 'openSUSE'
             else:
                 grains['os'] = 'SUSE'
