@@ -26,13 +26,15 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    if type(groups) == type(str()):
+        groups = groups.split(',')
     cmd = 'useradd -s {0} '.format(shell)
     if uid:
         cmd += '-u {0} '.format(uid)
     if gid:
         cmd += '-g {0} '.format(gid)
     if groups:
-        cmd += '-G {0} '.format(groups)
+        cmd += '-G {0} '.format(','.join(groups))
     if home:
         cmd += '-m -d {0} '.format(home)
     cmd += name
