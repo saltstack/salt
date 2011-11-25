@@ -498,17 +498,13 @@ class AESFuncs(object):
         if not good:
             return {}
         # Set up the publication payload
-        jid_dir = os.path.join(
-            self.opts['cachedir'],
-            'jobs',
-            clear_load['jid'])
-        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        jid = prep_jid(self.opts['cachedir'], clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'tgt': clear_load['tgt'],
-                'jid': clear_load['jid'],
+                'jid': jid,
                 'ret': clear_load['ret'],
                }
         expr_form = 'glob'
@@ -530,7 +526,7 @@ class AESFuncs(object):
         pub_sock.send(salt.payload.package(payload))
         # Run the client get_returns method
         return self.local.get_returns(
-                clear_load['jid'],
+                jid,
                 self.local.check_minions(
                     clear_load['tgt'],
                     expr_form
@@ -545,16 +541,14 @@ class AESFuncs(object):
         # Don't honor private functions
         if func.startswith('__'):
             return self.crypticle.dumps({})
-        elif func == '_return':
-            # Don't encrypt the return value for the _return func
-            # (we don't care about the return value, so why encrypt it?)
+        # Run the func
+        ret = getattr(self, func)(load)
+        # Don't encrypt the return value for the _return func
+        # (we don't care about the return value, so why encrypt it?)
+        if func == '_return':
             return ret
-        else:
-            # Run the func
-            ret = getattr(self, func)(load)
-            
-            # AES Encrypt the return
-            return self.crypticle.dumps(ret)
+        # AES Encrypt the return
+        return self.crypticle.dumps(ret)
 
 
 class ClearFuncs(object):
