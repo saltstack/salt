@@ -20,6 +20,7 @@ The order option is used by adding an order number to a state declaration
 with the option `order`:
 
 .. code-block:: yaml
+
     vim:
       pkg:
         - installed
@@ -36,6 +37,7 @@ Sometimes you may want to send a state to the end of the line, to do this
 set the order to last:
 
 .. code-block:: yaml
+
     vim:
       pkg:
         - installed
