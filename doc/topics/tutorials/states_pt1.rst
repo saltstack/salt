@@ -55,7 +55,7 @@ minion matches is defined; for now simply specify all hosts (``*``).
 
     The expressions can use any of the targeting mechanisms used by Salt —
     minions can be matched by glob, pcre regular expression, or by :doc:`grains
-    <ref/grains>`. For example::
+    </ref/grains>`. For example::
 
         base:
           'os:Fedora':
