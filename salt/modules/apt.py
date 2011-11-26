@@ -150,7 +150,7 @@ def purge(pkg):
     autoremove_cmd = 'apt-get -y autoremove'
     subprocess.call(purge_cmd, shell=True)
     
-    new = list_pkgs()
+    new_pkts = list_pkgs()
     
     for pkg in old_pkgs:
         if not new_pkgs.has_key(pkg):
