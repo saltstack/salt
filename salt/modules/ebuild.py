@@ -68,7 +68,7 @@ def refresh_db():
     CLI Example:
     salt '*' pkg.refresh_db
     '''
-    if __salt__['retcode']('emerge --sync --quiet'):
+    if __salt__['cmd.retcode']('emerge --sync --quiet'):
         return False
     else:
         return True
@@ -91,6 +91,7 @@ def install(pkg, refresh=False):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
+    cmd = 'emerge --quiet {0}'.format(pkg)
     __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
@@ -127,7 +128,6 @@ def update(pkg, refresh=False):
     old_pkgs = list_pkgs()
     cmd = 'emerge --update --quiet {0}'.format(pkg)
     __salt__['cmd.retcode'](cmd)
-#    emerge_main(['--quiet', '--update', pkg])
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
