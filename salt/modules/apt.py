@@ -121,7 +121,7 @@ def remove(pkg):
     
     cmd = 'apt-get -y remove ' + pkg
     subprocess.call(cmd, shell=True)
-    new = list_pkgs()
+    new_pkgs = list_pkgs()
     
     for pkg in old_pkgs:
         if not new_pkgs.has_key(pkg):
