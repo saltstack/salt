@@ -134,8 +134,7 @@ def remove(pkg):
 
     cmd = 'aptitude -y remove ' + pkg
     subprocess.call(cmd, shell=True)
-    new = list_pkgs()
-
+    new_pkgs = list_pkgs()
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
@@ -160,8 +159,9 @@ def purge(pkg):
     # Remove inital package
     purge_cmd = 'aptitude -y purge ' + pkg
     subprocess.call(purge_cmd, shell=True)
-    new = list_pkgs()
-
+    
+    new_pkgs = list_pkgs()
+    
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
