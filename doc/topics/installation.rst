@@ -6,6 +6,33 @@ The Salt system setup is amazingly simple, as this is one of the central design
 goals of Salt. Setting up Salt only requires that the Salt :term:`master` be
 running and the Salt :term:`minions <minion>` point to the master.
 
+.. admonition:: Salt dependencies
+
+    Salt should run on any Unix-like platform so long as the dependencies are
+    met.
+
+    * `Python 2.6`_
+    * `ZeroMQ`_ >= 2.1.9
+    * `pyzmq`_ >= 2.1.9 — ZeroMQ Python bindings
+    * `M2Crypto`_ — Python OpenSSL wrapper
+    * `PyCrypto`_ — The Python cryptography toolkit
+    * `YAML`_ — Python YAML bindings
+
+    Optional Dependencies:
+
+    * `Jinja2`_ — parsing Salt States (other renderers can be used via the
+      :conf_master:`renderer` setting).
+    * gcc — dynamic `Cython`_ module compiling
+
+.. _`Python 2.6`: http://python.org/download/
+.. _`ZeroMQ`: http://www.zeromq.org/
+.. _`pyzmq`: https://github.com/zeromq/pyzmq
+.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
+.. _`YAML`: http://pyyaml.org/
+.. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
+.. _`Cython`: http://cython.org/
+.. _`Jinja2`: http://jinja.pocoo.org/
+
 .. contents:: Instructions by operating system
     :depth: 1
     :local:
@@ -98,27 +125,3 @@ Installing from source
     tar xvf salt-|version|.tar.gz
     cd salt-|version|
     python2 setup.py install
-
-Salt dependencies
------------------
-
-This is a basic Python setup, nothing fancy. Salt should run on any Unix-like
-platform so long as the dependencies are met:
-
-* `Python 2.6`_
-* `pyzmq`_ - ZeroMQ Python bindings
-* `M2Crypto`_ - Python OpenSSL wrapper
-* `YAML`_ - Python YAML bindings
-* `PyCrypto`_ - The Python cryptography toolkit
-
-.. _`Python 2.6`: http://python.org/download/
-.. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
-.. _`YAML`: http://pyyaml.org/
-.. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
-
-Optional Dependencies:
-
-* gcc - dynamic `Cython`_ module compiling
-
-.. _`Cython`: http://cython.org/
