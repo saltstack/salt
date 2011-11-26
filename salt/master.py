@@ -35,7 +35,7 @@ def prep_jid(cachedir, load):
     job id directory.
     '''
     jid_root = os.path.join(cachedir, 'jobs')
-    jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+    jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     jid_dir = os.path.join(jid_root, jid)
     if not os.path.isdir(jid_dir):
@@ -96,7 +96,7 @@ class Master(SMaster):
         Clean out the old jobs
         '''
         while True:
-            cur = "{:%Y%m%d%H}".format(datetime.datetime.now())
+            cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
             if self.opts['keep_jobs'] == 0:
                 return
