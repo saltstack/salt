@@ -22,7 +22,7 @@ def available_version(name):
     version = ''
     cmd = 'apt-cache show {0} | grep Version'.format(name)
 
-    out = __salt__['cmd.stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd)
 
     version_list = out.split()
     if len(version_list) >= 2:
@@ -61,7 +61,7 @@ def refresh_db():
     '''
     cmd = 'apt-get update'
 
-    out = __salt__['cmd.stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd)
 
     servers = {}
     for line in out:
@@ -96,7 +96,7 @@ def install(pkg, refresh=False):
     ret_pkgs = {}
     old_pkgs = list_pkgs()
     cmd = 'apt-get -y install {0}'.format(pkg)
-    __salt__['cmd.redcode'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
@@ -218,9 +218,11 @@ def list_pkgs(regex_string=""):
     ret = {}
     cmd = 'dpkg --list {0}'.format(regex_string)
 
-    __salt__['cmd.stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd)
 
-    for line in out:
+    for line in out.split('\n'):
+        print line
+        print 
         cols = line.split()
         if len(cols) and cols[0].count('ii'):
             ret[cols[1]] = cols[2]
