@@ -83,7 +83,10 @@ def loadavg():
 
         salt '*' status.loadavg
     '''
-    comps = open('/proc/loadavg', 'r').read().strip()
+    procf = '/proc/loadavg'
+    if not os.path.isfile(procf):
+        return {}
+    comps = open(procf, 'r').read().strip()
     load_avg = comps.split()
     return {'1-min':  _number(load_avg[0]),
             '5-min':  _number(load_avg[1]),
@@ -98,7 +101,10 @@ def cpustats():
 
         salt '*' status.cpustats
     '''
-    stats = open('/proc/stat', 'r').read().split('\n')
+    procf = '/proc/stat'
+    if not os.path.isfile(procf):
+        return {}
+    stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
         if not line.count(' '):
@@ -132,7 +138,10 @@ def meminfo():
 
         salt '*' status.meminfo
     '''
-    stats = open('/proc/meminfo', 'r').read().split('\n')
+    procf = '/proc/meminfo'
+    if not os.path.isfile(procf):
+        return {}
+    stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
         if not line.count(' '):
@@ -155,7 +164,10 @@ def cpuinfo():
 
         salt '*' status.cpuinfo
     '''
-    stats = open('/proc/cpuinfo', 'r').read().split('\n')
+    procf = '/proc/cpuinfo'
+    if not os.path.isfile(procf):
+        return {}
+    stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
         if not line.count(' '):
@@ -177,7 +189,10 @@ def diskstats():
 
         salt '*' status.diskstats
     '''
-    stats = open('/proc/diskstats', 'r').read().split('\n')
+    procf = '/proc/diskstats'
+    if not os.path.isfile(procf):
+        return {}
+    stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
         if not line.count(' '):
@@ -215,6 +230,9 @@ def diskusage(*args):
         salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
     '''
+    procf = '/proc/mounts'
+    if not os.path.isfile(procf):
+        return {}
     selected = set()
     fstypes = set()
     if not args:
@@ -233,7 +251,7 @@ def diskusage(*args):
         # determine which mount points host the specifed fstypes
         p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
                             for fstype in fstypes))
-        with open('/proc/mounts', 'r') as fp:
+        with open(procf, 'r') as fp:
             for line in fp:
                 comps = line.split()
                 if len(comps) >= 3:
@@ -261,7 +279,10 @@ def vmstats():
 
         salt '*' status.vmstats
     '''
-    stats = open('/proc/vmstat', 'r').read().split('\n')
+    procf = '/proc/vmstat'
+    if not os.path.isfile(procf):
+        return {}
+    stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
         if not line.count(' '):
@@ -279,7 +300,10 @@ def netstats():
 
         salt '*' status.netstats
     '''
-    stats = open('/proc/net/netstat', 'r').read().split('\n')
+    procf = '/proc/net/netstat'
+    if not os.path.isfile(procf):
+        return {}
+    stats = open(procf, 'r').read().split('\n')
     ret = {}
     headers = ['']
     for line in stats:
@@ -309,7 +333,10 @@ def netdev():
 
         salt '*' status.netdev
     '''
-    stats = open('/proc/net/dev', 'r').read().split('\n')
+    procf = '/proc/net/dev'
+    if not os.path.isfile(procf):
+        return {}
+    stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
         if not line.count(' '):
