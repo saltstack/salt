@@ -115,7 +115,7 @@ def install(pkg, refresh=False):
 
 def remove(pkg):
     '''
-    Remove a single package via ``aptitude remove``
+    Remove a single package via ``apt-get remove``
 
     Returns a list containing the names of the removed packages.
 
@@ -138,8 +138,8 @@ def remove(pkg):
 
 def purge(pkg):
     '''
-    Remove a package via aptitude along with all configuration files and
-    unused dependencies.
+    Remove a package via ``apt-get purge`` along with all configuration
+    files and unused dependencies.
 
     Returns a list containing the names of the removed packages
 
@@ -165,7 +165,7 @@ def purge(pkg):
 
 def upgrade(refresh=True):
     '''
-    Upgrades all packages via aptitude full-upgrade
+    Upgrades all packages via ``apt-get dist-upgrade``
 
     Returns a list of dicts containing the package names, and the new and old
     versions::
