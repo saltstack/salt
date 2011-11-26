@@ -64,47 +64,26 @@ Salt can be easily installed from the Arch Linux AUR in one of two flavors:
 Debian / Ubuntu
 ===============
 
-A deb package is `currently in testing`__. Until it is accepted the best way to
-install Salt on Debian and Ubuntu systems is as follows:
+A deb package is `currently in testing`__. For now, we have a PPA available for
+Ubuntu users::
+
+    aptitude -y install python-software-properties
+    add-apt-repository ppa:saltstack/salt
+    aptitude update
+    aptitude install salt
 
 .. __: http://mentors.debian.net/package/salt
 
-1.  Install the prerequisite packages::
+.. admonition:: Installing ZeroMQ on Ubuntu Lucid (10.04 LTS)
 
-        aptitude install python-dev python-setuptools \
-            python-yaml python-jinja2 \
-            python-crypto python-m2crypto libzmq-dev
+    The ZeroMQ package is available starting with Maverick but there are `PPA
+    packages available for Lucid`_ for both ZeroMQ and pyzmq. You will need to
+    also enable the following PPAs before running the commands above::
 
-    .. admonition:: Installing on Ubuntu Lucid (10.04 LTS)
+        add-apt-repository ppa:chris-lea/libpgm
+        add-apt-repository ppa:chris-lea/zeromq
 
-        The ZeroMQ package is available starting with Maverick but it is not
-        yet available in Lucid backports. Fortunately, Chris Lea has made a
-        `ZeroMQ PPA`_ available. Install it before installing Salt::
-
-            aptitude install python-software-properties
-            add-apt-repository ppa:chris-lea/zeromq
-            add-apt-repository ppa:chris-lea/libpgm
-            aptitude update
-            aptitude install libzmq-dev
-
-        If you have an older version of ZeroMQ installed (perhaps from a
-        previous installation of Salt) you may need to purge it: ``aptitude
-        purge libzmq0``.
-
-2.  Grab the latest Python ZeroMQ bindings::
-
-        easy_install -U pyzmq
-
-3.  Install Salt:
-
-    .. parsed-literal::
-
-        easy_install -U --install-layout=deb |latest|
-
-    Please take note of the ``--install-layout=deb`` flag. This is important
-    for a functioning installation of Salt.
-
-.. _`ZeroMQ PPA`: https://launchpad.net/~chris-lea/+archive/zeromq
+.. _`PPA packages available for Lucid`: https://launchpad.net/~chris-lea/+archive/zeromq
 
 Installing from source
 ======================
