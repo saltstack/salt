@@ -221,8 +221,6 @@ def list_pkgs(regex_string=""):
     out = __salt__['cmd.run_stdout'](cmd)
 
     for line in out.split('\n'):
-        print line
-        print 
         cols = line.split()
         if len(cols) and cols[0].count('ii'):
             ret[cols[1]] = cols[2]
