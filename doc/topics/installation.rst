@@ -91,15 +91,15 @@ Salt can be easily installed from the Arch Linux AUR in one of two flavors:
 Debian / Ubuntu
 ===============
 
-A deb package is `currently in testing`__. For now, we have a PPA available for
-Ubuntu users::
+Ubuntu
+------
+
+A PPA is available until we can get packages into apt::
 
     aptitude -y install python-software-properties
     add-apt-repository ppa:saltstack/salt
     aptitude update
     aptitude install salt
-
-.. __: http://mentors.debian.net/package/salt
 
 .. admonition:: Installing ZeroMQ on Ubuntu Lucid (10.04 LTS)
 
@@ -111,6 +111,29 @@ Ubuntu users::
         add-apt-repository ppa:chris-lea/zeromq
 
 .. _`PPA packages available for Lucid`: https://launchpad.net/~chris-lea/+archive/zeromq
+
+Debian
+------
+
+`A deb package is currently in testing`__. Until that is accepted you can
+install Salt via :command:`easy_install` or :command:`pip`::
+
+    pip install salt
+
+.. __: http://mentors.debian.net/package/salt
+
+.. admonition:: Installing ZeroMQ on Squeeze (Debian 6)
+
+    ZeroMQ packages are available in squeeze-backports.
+
+    1.  Add the following line to your :file:`/etc/apt/sources.list`::
+
+            deb http://backports.debian.org/debian-backports squeeze-backports main
+
+    2.  Run::
+
+            aptitude update
+            aptitude install libzmq1 python-zmq
 
 Installing from source
 ======================
