@@ -46,4 +46,4 @@ Full list of builtin modules
     test
     useradd
     virt
-    yum
+    yumpkg
