@@ -40,7 +40,14 @@ SERVICE=salt-master
 PROCESS=salt-master
 CONFIG_ARGS=" "
 
+PS_CMD="ps -e -o pid,args"
+PROC_LIST=""
+
 RETVAL=0
+
+findproc() {
+    PROC_LIST=`$PS_CMD | grep $PROCESS | grep -v grep | grep -v sh | grep -v vi | awk '{ print $1 }'`
+}
 
 start() {
     echo -n $"Starting salt-master daemon: "
@@ -48,7 +55,8 @@ start() {
         startproc -f -p /var/run/$SERVICE.pid /usr/bin/salt-master -d $CONFIG_ARGS
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
-        if [ -f $LOCKFILE ]; then
+        findproc
+        if [ -n "$PROC_LIST" ]; then
             echo -n "already started, lock file found" 
             RETVAL=1
         elif /usr/bin/python /usr/bin/salt-master -d; then
@@ -70,7 +78,8 @@ stop() {
         rc_status -v
     elif [ -f $DEBIAN_VERSION ]; then
         # Added this since Debian's start-stop-daemon doesn't support spawned processes
-        if ps -ef | grep "/usr/bin/python /usr/bin/salt-master" | grep -v grep | awk '{print $2}' | xargs kill &> /dev/null; then
+        findproc
+        if echo $PROC_LIST | xargs kill >/dev/null 2>&1 ; then
             echo -n "OK"
             RETVAL=0
         else
@@ -100,7 +109,8 @@ case "$1" in
             checkproc /usr/bin/salt-master
             rc_status -v
         elif [ -f $DEBIAN_VERSION ]; then
-            if [ -f $LOCKFILE ]; then
+            findproc
+            if [ -n "$PROC_LIST" ]; then
                 RETVAL=0
                 echo "salt-master is running."
             else
@@ -113,7 +123,8 @@ case "$1" in
         fi
         ;;
     condrestart)
-        [ -f $LOCKFILE ] && restart || :
+        findproc
+        [ -n "$PROC_LIST" ] && restart || :
         ;;
     reload|force-reload)
         echo "Can't reload configuration, you have to restart it"
