@@ -88,7 +88,7 @@ def _is_bin(path):
 
 def _mako(sfn, name, source, user, group, mode, env):
     '''
-    Render a jinja2 template, returns the location of the rendered file,
+    Render a mako template, returns the location of the rendered file,
     return False if render fails.
     Returns::
 
