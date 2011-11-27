@@ -33,8 +33,9 @@ def available_version(name):
     '''
     The available version of the package in the repository
 
-    CLI Example:
-    salt '*' pkg.available_version <package name>
+    CLI Example::
+
+        salt '*' pkg.available_version <package name>
     '''
     return _cpv_to_version(_porttree().dep_bestmatch(name))
 
@@ -42,18 +43,21 @@ def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
 
-    CLI Example:
-    salt '*' pkg.version <package name>
+    CLI Example::
+
+        salt '*' pkg.version <package name>
     '''
     return _cpv_to_version(_vartree().dep_bestmatch(name))
 
 def list_pkgs():
     '''
-    List the packages currently installed in a dict:
-    {'<package_name>': '<version>'}
+    List the packages currently installed in a dict::
 
-    CLI Example:
-    salt '*' pkg.list_pkgs
+        {'<package_name>': '<version>'}
+
+    CLI Example::
+
+        salt '*' pkg.list_pkgs
     '''
     ret = {}
     pkgs = _vartree().dbapi.cpv_all()
@@ -65,8 +69,9 @@ def refresh_db():
     '''
     Updates the portage tree (emerge --sync)
 
-    CLI Example:
-    salt '*' pkg.refresh_db
+    CLI Example::
+
+        salt '*' pkg.refresh_db
     '''
     if __salt__['cmd.retcode']('emerge --sync --quiet'):
         return False
@@ -180,23 +185,24 @@ def upgrade(refresh=False):
 def remove(pkg):
     '''
     Remove a single package via emerge --unmerge
-    
+
     Return a list containing the names of the removed packages:
-    
-    CLI Example:
-    salt '*' pkg.remove <package name>
+
+    CLI Example::
+
+        salt '*' pkg.remove <package name>
     '''
     ret_pkgs = []
     old_pkgs = list_pkgs()
-    
+
     cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn {0}'.format(pkg)
     __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
-    
+
     for pkg in old_pkgs:
         if not new_pkgs.has_key(pkg):
             ret_pkgs.append(pkg)
-    
+
     return ret_pkgs
 
 def purge(pkg):
@@ -205,8 +211,9 @@ def purge(pkg):
 
     Return a list containing the removed packages:
 
-    CLI Example:
-    salt '*' pkg.purge <package name>
+    CLI Example::
+
+        salt '*' pkg.purge <package name>
 
     '''
     return remove(pkg)
