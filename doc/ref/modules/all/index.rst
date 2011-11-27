@@ -12,12 +12,14 @@ Full list of builtin modules
 
     apache
     apt
+    archive
     butterkvm
     cluster
     cmd
     cp
     cron
     disk
+    ebuild
     file
     freebsdpkg
     grains
@@ -44,6 +46,7 @@ Full list of builtin modules
     state
     status
     test
+    tomcat
     useradd
     virt
     yumpkg
