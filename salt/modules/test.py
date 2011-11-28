@@ -38,6 +38,17 @@ def ping():
     '''
     return True
 
+def version():
+    '''
+    Return the version of salt on the minion
+
+    CLI Example::
+
+        salt '*' test.version
+    '''
+    import salt
+    return salt.__version__
+
 
 def conf_test():
     '''
