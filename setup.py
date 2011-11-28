@@ -33,7 +33,7 @@ setup(
       description=DESC,
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
-      url='https://github.com/thatch45/salt',
+      url='http://saltstack.org',
       classifiers=[
           'Programming Language :: Python',
           'Programming Language :: Cython',
