@@ -1,3 +1,9 @@
+salt (0.9.4-1) lucid; urgency=low
+
+  * Build PPA for 0.9.4
+
+ -- Seth House <seth@eseth.com>  Sun, 27 Nov 2011 16:11:36 -0700
+
 salt (0.9.4.pre-d353743-1) lucid; urgency=low
 
   * Build PPA for Ubuntu (fixed?)
