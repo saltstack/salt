@@ -6,6 +6,33 @@ The Salt system setup is amazingly simple, as this is one of the central design
 goals of Salt. Setting up Salt only requires that the Salt :term:`master` be
 running and the Salt :term:`minions <minion>` point to the master.
 
+.. admonition:: Salt dependencies
+
+    Salt should run on any Unix-like platform so long as the dependencies are
+    met.
+
+    * `Python 2.6`_
+    * `ZeroMQ`_ >= 2.1.9
+    * `pyzmq`_ >= 2.1.9 — ZeroMQ Python bindings
+    * `M2Crypto`_ — Python OpenSSL wrapper
+    * `PyCrypto`_ — The Python cryptography toolkit
+    * `YAML`_ — Python YAML bindings
+
+    Optional Dependencies:
+
+    * `Jinja2`_ — parsing Salt States (other renderers can be used via the
+      :conf_master:`renderer` setting).
+    * gcc — dynamic `Cython`_ module compiling
+
+.. _`Python 2.6`: http://python.org/download/
+.. _`ZeroMQ`: http://www.zeromq.org/
+.. _`pyzmq`: https://github.com/zeromq/pyzmq
+.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
+.. _`YAML`: http://pyyaml.org/
+.. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
+.. _`Cython`: http://cython.org/
+.. _`Jinja2`: http://jinja.pocoo.org/
+
 .. contents:: Instructions by operating system
     :depth: 1
     :local:
@@ -64,47 +91,53 @@ Salt can be easily installed from the Arch Linux AUR in one of two flavors:
 Debian / Ubuntu
 ===============
 
-A deb package is `currently in testing`__. Until it is accepted the best way to
-install Salt on Debian and Ubuntu systems is as follows:
+Ubuntu
+------
+
+A PPA is available until we can get packages into apt::
+
+    aptitude -y install python-software-properties
+    add-apt-repository ppa:saltstack/salt
+    aptitude update
+    aptitude install salt
+
+.. admonition:: Installing ZeroMQ on Ubuntu Lucid (10.04 LTS)
+
+    The ZeroMQ package is available starting with Maverick but there are `PPA
+    packages available for Lucid`_ for both ZeroMQ and pyzmq. You will need to
+    also enable the following PPAs before running the commands above::
+
+        add-apt-repository ppa:chris-lea/libpgm
+        add-apt-repository ppa:chris-lea/zeromq
+
+.. _`PPA packages available for Lucid`: https://launchpad.net/~chris-lea/+archive/zeromq
+
+Debian
+------
+
+`A deb package is currently in testing`__ for inclusion in apt. Until that is
+accepted you can install Salt by downloading the latest ``.deb`` in the
+`downloads section on GitHub`__ and installing that manually:
+
+.. parsed-literal::
+
+    dpkg -i salt-|version|.deb
 
 .. __: http://mentors.debian.net/package/salt
+.. __: https://github.com/saltstack/salt/downloads
 
-1.  Install the prerequisite packages::
+.. admonition:: Installing ZeroMQ on Squeeze (Debian 6)
 
-        aptitude install python-dev python-setuptools \
-            python-yaml python-jinja2 \
-            python-crypto python-m2crypto libzmq-dev
+    ZeroMQ packages are available in squeeze-backports.
 
-    .. admonition:: Installing on Ubuntu Lucid (10.04 LTS)
+    1.  Add the following line to your :file:`/etc/apt/sources.list`::
 
-        The ZeroMQ package is available starting with Maverick but it is not
-        yet available in Lucid backports. Fortunately, Chris Lea has made a
-        `ZeroMQ PPA`_ available. Install it before installing Salt::
+            deb http://backports.debian.org/debian-backports squeeze-backports main
 
-            aptitude install python-software-properties
-            add-apt-repository ppa:chris-lea/zeromq
-            add-apt-repository ppa:chris-lea/libpgm
+    2.  Run::
+
             aptitude update
-            aptitude install libzmq-dev
-
-        If you have an older version of ZeroMQ installed (perhaps from a
-        previous installation of Salt) you may need to purge it: ``aptitude
-        purge libzmq0``.
-
-2.  Grab the latest Python ZeroMQ bindings::
-
-        easy_install -U pyzmq
-
-3.  Install Salt:
-
-    .. parsed-literal::
-
-        easy_install -U --install-layout=deb |latest|
-
-    Please take note of the ``--install-layout=deb`` flag. This is important
-    for a functioning installation of Salt.
-
-.. _`ZeroMQ PPA`: https://launchpad.net/~chris-lea/+archive/zeromq
+            aptitude install libzmq1 python-zmq
 
 Installing from source
 ======================
@@ -119,27 +152,3 @@ Installing from source
     tar xvf salt-|version|.tar.gz
     cd salt-|version|
     python2 setup.py install
-
-Salt dependencies
------------------
-
-This is a basic Python setup, nothing fancy. Salt should run on any Unix-like
-platform so long as the dependencies are met:
-
-* `Python 2.6`_
-* `pyzmq`_ - ZeroMQ Python bindings
-* `M2Crypto`_ - Python OpenSSL wrapper
-* `YAML`_ - Python YAML bindings
-* `PyCrypto`_ - The Python cryptography toolkit
-
-.. _`Python 2.6`: http://python.org/download/
-.. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
-.. _`YAML`: http://pyyaml.org/
-.. _`PyCrypto`: http://www.dlitz.net/software/pycrypto/
-
-Optional Dependencies:
-
-* gcc - dynamic `Cython`_ module compiling
-
-.. _`Cython`: http://cython.org/

@@ -12,9 +12,9 @@ complicated, have requirements, and use even more Salt States.
 Call multiple States
 ====================
 
-You can specify multiple :term:`state declarations` under an :term:`ID
-delcaration`. For example, a quick modification to our ``webserver.sls`` to
-also start Apache if it is not running:
+You can specify multiple :term:`state declarations <state declaration>` under
+an :term:`ID declaration`. For example, a quick modification to our
+``webserver.sls`` to also start Apache if it is not running:
 
 .. code-block:: yaml
     :linenos:

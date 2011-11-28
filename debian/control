@@ -2,9 +2,11 @@ Source: salt
 Section: admin
 Priority: optional
 Maintainer: Aaron Toponce <aaron.toponce@gmail.com>
-Build-Depends: debhelper (>= 8.0.0), python-support,
- cython
-Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 7), python-support, cython, python-yaml,
+ python-setuptools, python-yaml, python-crypto, python-m2crypto,
+ python-zmq (>= 2.1.9), libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9),
+ python (>= 2.6), python-jinja2
+Standards-Version: 3.8.3
 Homepage: http://saltstack.org
 #Vcs-Git: git://git.debian.org/collab-maint/salt.git
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/salt.git;a=summary
@@ -12,8 +14,8 @@ Homepage: http://saltstack.org
 Package: salt
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends}, python-setuptools,
- python-yaml, python-crypto, python-m2crypto, python-zmq, libzmq1,
- libzmq-dev, python (>= 2.6)
+ python-yaml, python-crypto, python-m2crypto, python-zmq (>= 2.1.9),
+ libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9), python (>= 2.6), python-jinja2
 Description: This package provides a remote manager to administer servers.
  This package is a powerful remote execution manager that can be used to
  administer servers in a fast and efficient way.

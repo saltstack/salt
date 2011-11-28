@@ -5,6 +5,17 @@ Highstate data structure definitions
 The Salt State Tree
 ===================
 
+.. glossary::
+
+    Top file
+        The main state file that instructs minions what environment and modules
+        to use during state execution.
+
+        Configurable via :conf_master:`state_top`.
+
+    State tree
+        A collection of ``sls`` files.
+
 Include declaration
 -------------------
 
@@ -43,7 +54,8 @@ ID declaration
         Defines an individual highstate component. Always references a value of
         a dictionary containing keys referencing :term:`state declarations
         <state declaration>` and :term:`requisite declarations <requisite
-        declaration>`. Can be overridden by :term:`name` and :term:`names`.
+        declaration>`. Can be overridden by a :term:`name declaration` or a
+        :term:`names declaration`.
 
         Occurs on the top level or under the :term:`extend declaration`.
 
@@ -53,7 +65,7 @@ Extend declaration
 .. glossary::
 
     Extend declaration
-        Used to extend a :term:`name` declaration from an included ``sls
+        Used to extend a :term:`name declaration` from an included ``sls
         module``. The keys of the extend declaration always define existing
         :term:`ID declarations <ID declaration>` which have been defined in
         included ``sls modules``.
@@ -66,12 +78,14 @@ State declaration
 .. glossary::
 
     State declaration
-        A list which contains one string defining the :term:`function` and any
-        number of :term:`function arg` dictionaries.
+        A list which contains one string defining the :term:`function
+        declaration` and any number of :term:`function arg declaration`
+        dictionaries.
 
         Can, optionally, contain a number of additional components like the
-        name override components — :term:`name` and :term:`names <name>`. Can
-        also contain :term:`requisite declarations <requisite declaration>`.
+        name override components — :term:`name <name declaration>` and
+        :term:`names <names declaration>`. Can also contain :term:`requisite
+        declarations <requisite declaration>`.
 
         Occurs under an :term:`ID declaration`.
 
@@ -120,10 +134,10 @@ Function arg declaration
 
     Function arg declaration
         A single key dictionary referencing a Python type which is to be passed
-        to the named :term:`function` as a parameter. The type must be the data
-        type expected by the function.
+        to the named :term:`function declaration` as a parameter. The type must
+        be the data type expected by the function.
 
-        Occurs under a :term:`function`.
+        Occurs under a :term:`function declaration`.
 
 Name declaration
 ----------------
