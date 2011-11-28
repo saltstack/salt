@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Aaron Toponce <aaron.toponce@gmail.com>
 Build-Depends: debhelper (>= 7), python-support, cython, python-yaml,
  python-setuptools, python-yaml, python-crypto, python-m2crypto,
- python-pyzmq (>= 2.1.9), libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9),
+ python-zmq (>= 2.1.9), libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9),
  python (>= 2.6), python-jinja2
 Standards-Version: 3.8.3
 Homepage: http://saltstack.org
@@ -14,7 +14,7 @@ Homepage: http://saltstack.org
 Package: salt
 Architecture: all
 Depends: ${python:Depends}, ${misc:Depends}, python-setuptools,
- python-yaml, python-crypto, python-m2crypto, python-pyzmq (>= 2.1.9),
+ python-yaml, python-crypto, python-m2crypto, python-zmq (>= 2.1.9),
  libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9), python (>= 2.6), python-jinja2
 Description: This package provides a remote manager to administer servers.
  This package is a powerful remote execution manager that can be used to
