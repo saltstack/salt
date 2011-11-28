@@ -35,7 +35,7 @@ def prep_jid(cachedir, load):
     job id directory.
     '''
     jid_root = os.path.join(cachedir, 'jobs')
-    jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+    jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     jid_dir = os.path.join(jid_root, jid)
     if not os.path.isdir(jid_dir):
@@ -72,12 +72,13 @@ class SMaster(object):
         '''
         log.info('Preparing the root key for local communication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-        key = salt.crypt.Crypticle.generate_key_string()
         if os.path.isfile(keyfile):
             return open(keyfile, 'r').read()
-        open(keyfile, 'w+').write(key)
-        os.chmod(keyfile, 256)
-        return key
+        else:
+            key = salt.crypt.Crypticle.generate_key_string()
+            open(keyfile, 'w+').write(key)
+            os.chmod(keyfile, 256)
+            return key
 
 
 class Master(SMaster):
@@ -95,7 +96,7 @@ class Master(SMaster):
         Clean out the old jobs
         '''
         while True:
-            cur = "{:%Y%m%d%H}".format(datetime.datetime.now())
+            cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
             if self.opts['keep_jobs'] == 0:
                 return
@@ -497,17 +498,13 @@ class AESFuncs(object):
         if not good:
             return {}
         # Set up the publication payload
-        jid_dir = os.path.join(
-            self.opts['cachedir'],
-            'jobs',
-            clear_load['jid'])
-        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        jid = prep_jid(self.opts['cachedir'], clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'tgt': clear_load['tgt'],
-                'jid': clear_load['jid'],
+                'jid': jid,
                 'ret': clear_load['ret'],
                }
         expr_form = 'glob'
@@ -529,7 +526,7 @@ class AESFuncs(object):
         pub_sock.send(salt.payload.package(payload))
         # Run the client get_returns method
         return self.local.get_returns(
-                clear_load['jid'],
+                jid,
                 self.local.check_minions(
                     clear_load['tgt'],
                     expr_form

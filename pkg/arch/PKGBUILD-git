@@ -12,7 +12,8 @@ depends=('python2'
          'python-m2crypto'
          'python2-yaml'
          'pycrypto'
-         'python2-psutil')
+         'python2-psutil'
+         'python2-jinja')
 makedepends=('git')
 provides=()
 backup=('etc/salt/master' 
@@ -25,7 +26,7 @@ md5sums=('1594591acb0a266854186a694da21103'
          '21ab2eac231e9f61bf002ba5f16f8a3d'
          '09683ef4966e401761f7d2db6ad4b692')
 
-_gitroot="git://github.com/thatch45/salt.git"
+_gitroot="git://github.com/saltstack/salt.git"
 _gitname="salt"
 
 build() {

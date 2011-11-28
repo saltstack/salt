@@ -12,9 +12,9 @@ complicated, have requirements, and use even more Salt States.
 Call multiple States
 ====================
 
-You can specify multiple :term:`state declarations` under an :term:`ID
-delcaration`. For example, a quick modification to our ``webserver.sls`` to
-also start Apache if it is not running:
+You can specify multiple :term:`state declarations <state declaration>` under
+an :term:`ID declaration`. For example, a quick modification to our
+``webserver.sls`` to also start Apache if it is not running:
 
 .. code-block:: yaml
     :linenos:
@@ -126,24 +126,33 @@ Verify that Apache is now serving your custom HTML.
 .. admonition:: ``require`` vs. ``watch``
 
     There are two :term:`requisite declarations <requisite declaration>`,
-    “require” and “watch”. Not every state supports “watch”. In the :mod:`file
-    state <salt.states.file>`, for example, Salt will watch a file for changes
-    then take action if it does change.
+    “require” and “watch”. Not every state supports “watch”. The :mod:`service
+    state <salt.states.service>` does support “watch” and will restart a
+    service based on the watch condition.
 
     For example, if you use Salt to install an Apache virtual host
-    configuration file and want to restart Apache when that file is changed you
-    could modify our Apache example from earlier as follows:
+    configuration file and want to restart Apache whenever that file is changed
+    you could modify our Apache example from earlier as follows:
 
     .. code-block:: yaml
-        :emphasize-lines: 6,7
+        :emphasize-lines: 1,2,3,4,11,12
+
+        /etc/httpd/extra/httpd-vhosts.conf:
+          file:
+            - managed
+            - source: salt://webserver/httpd-vhosts.conf
 
         apache:
           pkg:
             - installed
           service:
             - running
-          - watch:
-            - file: /etc/httpd/extra/httpd-vhosts.conf
+            - watch:
+              - file: /etc/httpd/extra/httpd-vhosts.conf
+
+    If the pkg and service names differ on your OS or distro of choice you can
+    specify each one separately using a :term:`name declaration` which
+    explained in :doc:`Part 3 <states_pt3>`.
 
 Next steps
 ==========

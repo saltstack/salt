@@ -2,9 +2,6 @@
 Support for APT (Advanced Packaging Tool)
 '''
 
-# FIXME: we want module internal calls rather than using subprocess direclty
-import subprocess
-
 
 def __virtual__():
     '''
@@ -23,11 +20,9 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     version = ''
-    cmd = 'apt-cache show ' + name + ' | grep Version'
+    cmd = 'apt-cache show {0} | grep Version'.format(name)
 
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
+    out = __salt__['cmd.run_stdout'](cmd)
 
     version_list = out.split()
     if len(version_list) >= 2:
@@ -64,10 +59,9 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'aptitude update'
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    cmd = 'apt-get update'
+
+    out = __salt__['cmd.run_stdout'](cmd)
 
     servers = {}
     for line in out:
@@ -96,13 +90,13 @@ def install(pkg, refresh=False):
 
         salt '*' pkg.install <package name>
     '''
-    if(refresh):
+    if refresh:
         refresh_db()
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'aptitude -y install ' + pkg
-    subprocess.call(cmd, shell=True)
+    cmd = 'apt-get -y install {0}'.format(pkg)
+    __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
@@ -132,10 +126,9 @@ def remove(pkg):
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
-    cmd = 'aptitude -y remove ' + pkg
-    subprocess.call(cmd, shell=True)
-    new = list_pkgs()
-
+    cmd = 'apt-get -y remove {0}'.format(pkg)
+    __salt__['cmd.retcode'](cmd)
+    new_pkgs = list_pkgs()
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
@@ -158,10 +151,11 @@ def purge(pkg):
     old_pkgs = list_pkgs()
 
     # Remove inital package
-    purge_cmd = 'aptitude -y purge ' + pkg
-    subprocess.call(purge_cmd, shell=True)
-    new = list_pkgs()
-
+    purge_cmd = 'apt-get -y purge {0}'.format(pkg)
+    __salt__['cmd.retcode'](purge_cmd)
+    
+    new_pkgs = list_pkgs()
+    
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
@@ -169,7 +163,6 @@ def purge(pkg):
     return ret_pkgs
 
 
-# FIXME: Unused argument 'refresh'? Undefined variable 'update_repos'?
 def upgrade(refresh=True):
     '''
     Upgrades all packages via aptitude full-upgrade
@@ -189,13 +182,13 @@ def upgrade(refresh=True):
         salt '*' pkg.upgrade
     '''
 
-    if(update_repos):
+    if refresh:
         refresh_db()
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'aptitude -y full-upgrade'
-    subprocess.call(cmd, shell=True)
+    cmd = 'apt-get -y dist-upgrade'
+    __salt__['cmd.retcode'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
@@ -223,13 +216,11 @@ def list_pkgs(regex_string=""):
         salt '*' pkg.list_pkgs
     '''
     ret = {}
-    cmd = 'dpkg --list ' + regex_string
+    cmd = 'dpkg --list {0}'.format(regex_string)
 
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run_stdout'](cmd)
 
-    for line in out:
+    for line in out.split('\n'):
         cols = line.split()
         if len(cols) and cols[0].count('ii'):
             ret[cols[1]] = cols[2]

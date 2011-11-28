@@ -1,3 +1,27 @@
+salt (0.9.4-1) lucid; urgency=low
+
+  * Build PPA for 0.9.4
+
+ -- Seth House <seth@eseth.com>  Sun, 27 Nov 2011 16:11:36 -0700
+
+salt (0.9.4.pre-d353743-1) lucid; urgency=low
+
+  * Build PPA for Ubuntu (fixed?)
+
+ -- Seth House <seth@eseth.com>  Wed, 25 Nov 2011 23:19:00 -0600
+
+salt (0.9.4.pre-6dd76f2-1) lucid; urgency=low
+
+  * Build PPA for Ubuntu (fixed?)
+
+ -- Seth House <seth@eseth.com>  Wed, 25 Nov 2011 11:19:00 -0600
+
+salt (0.9.4.pre-1) lucid; urgency=low
+
+  * Build PPA for Ubuntu
+
+ -- Seth House <seth@eseth.com>  Wed, 25 Nov 2011 11:19:00 -0600
+
 salt (0.9.2-2) unstable; urgency=low
 
   * Fixed many lintian(1) warnings and errors

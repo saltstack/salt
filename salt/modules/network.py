@@ -138,3 +138,4 @@ def isportopen(host, port):
     out = sock.connect_ex((_sanitize_host(host), int(port)))
 
     return out
+

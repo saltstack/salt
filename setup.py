@@ -3,7 +3,6 @@
 The setup script for salt
 '''
 
-from Cython.Distutils import build_ext
 from distutils import log
 from distutils.cmd import Command
 from distutils.core import setup
@@ -31,17 +30,10 @@ else:
 setup(
       name=NAME,
       version=VER,
-      #ext_modules=[
-      #    Extension('salt.modules.grains', ['salt/modules/grains.pyx']),
-      #    Extension('salt.modules.cytest', ['salt/modules/cytest.pyx']),
-      #    ],
-      cmdclass={
-          'build_ext': build_ext,
-          },
       description=DESC,
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
-      url='https://github.com/thatch45/salt',
+      url='http://saltstack.org',
       classifiers=[
           'Programming Language :: Python',
           'Programming Language :: Cython',
@@ -98,14 +90,6 @@ setup(
                     ]),
                 (doc_path,
                     ['LICENSE'
-                    ]),
-                (template_path,
-                    ['doc/example/templates/yaml-jinja.yml',
-                     'doc/example/templates/yaml-mako.yml',
-                     'doc/example/templates/yaml.yml',
-                     'doc/example/templates/json-jinja.json',
-                     'doc/example/templates/json-mako.json',
-                     'doc/example/templates/json.json',
                     ]),
                  ],
      )

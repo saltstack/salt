@@ -16,6 +16,7 @@ as those returned here
 import os
 import socket
 import subprocess
+import sys
 
 
 def _kernel():
@@ -180,7 +181,7 @@ def os_data():
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
-        elif os.path.isfile('/etc/gentoo-version'):
+        elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-version'):
             grains['os'] = 'Fedora'
@@ -271,3 +272,28 @@ def path():
     # Provides:
     #   path
     return {'path': os.environ['PATH'].strip()}
+
+def pythonversion():
+    '''
+    Return the Python version
+    '''
+    # Provides:
+    #   pythonversion
+    return {'pythonversion': list(sys.version_info)}
+
+def pythonpath():
+    '''
+    Return the Python path
+    '''
+    # Provides:
+    #   pythonpath
+    return {'pythonpath': sys.path}
+
+def saltpath():
+    '''
+    Return the path of the salt module
+    '''
+    # Provides:
+    #   saltpath
+    path = os.path.abspath(os.path.join(__file__, os.path.pardir))
+    return {'saltpath': os.path.dirname(path)}

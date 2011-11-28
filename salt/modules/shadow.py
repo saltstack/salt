@@ -8,7 +8,7 @@ import spwd
 
 def info(name):
     '''
-    Return the information for the specified user
+    Return information for the specified user
 
     CLI Example::
 
@@ -40,7 +40,7 @@ def info(name):
 
 def set_password(name, password):
     '''
-    Set the password for a named user, the password must be a properly defined
+    Set the password for a named user. The password must be a properly defined
     hash, the password hash can be generated with this command:
     ``openssl passwd -1 <plaintext password>``
 
@@ -62,7 +62,6 @@ def set_password(name, password):
         line = ':'.join(comps)
         lines.append('{0}\n'.format(line))
     open(s_file, 'w+').writelines(lines)
-    print name
     uinfo = info(name)
     if uinfo['pwd'] == password:
         return True

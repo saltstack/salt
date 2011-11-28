@@ -23,7 +23,7 @@ def add(name, gid=None):
     cmd = 'pw groupadd '
     if gid:
         cmd += '-g {0} '.format(gid)
-    cmd += name
+    cmd = '{0} -n {1}'.format(cmd, name)
     ret = __salt__['cmd.run_all'](cmd)
 
     return not ret['retcode']

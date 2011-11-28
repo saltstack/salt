@@ -80,13 +80,15 @@ def present(name,
            'comment': '',
            'name': name,
            'result': True}
-    data = __salt__['cron.set_job'](daymonth,
-                                    dayweek,
-                                    hour,
-                                    minute,
-                                    month,
-                                    name,
-                                    user)
+    data = __salt__['cron.set_job'](
+            dom=daymonth,
+            dow=dayweek,
+            hour=hour,
+            minute=minute,
+            month=month,
+            cmd=name,
+            user=user
+            )
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret

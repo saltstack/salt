@@ -17,16 +17,16 @@ def _get_socket():
     return socket
 
 
-def publish(tgt, fun, arg, expr_form='glob', returner=''):
+def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
     '''
     Publish a command from the minion out to other minions, publications need
     to be enabled on the Salt master and the minion needs to have permission
     to publish the command. The Salt master will also prevent a recursive
     publication loop, this means that a minion cannot command another minion
-    to command another minion as that would create an infinate command loop.
+    to command another minion as that would create an infinite command loop.
 
-    The arguments sent to the minion publish function are seperated with
-    commas. This means that a minion who is executing a command with multiple
+    The arguments sent to the minion publish function are separated with
+    commas. This means that for a minion executing a command with multiple
     args it will look like this::
 
         salt system.example.com publish.publish '*' user.add 'foo,1020,1020'
@@ -38,13 +38,17 @@ def publish(tgt, fun, arg, expr_form='glob', returner=''):
     if fun == 'publish.publish':
         # Need to log something here
         return {}
+    if not arg:
+        arg = []
+    else:
+        arg = arg.split(',')
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     payload = {'enc': 'aes'}
     load = {
             'cmd': 'minion_publish',
             'fun': fun,
-            'arg': arg.split(','),
+            'arg': arg,
             'tgt': tgt,
             'ret': returner,
             'tok': tok,
