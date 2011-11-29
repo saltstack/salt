@@ -79,6 +79,14 @@ class SaltCMD(object):
                 action='store_true',
                 help=('Instead of using shell globs use the return code '
                       'of a function.'))
+        parser.add_option('-N',
+                '--hostgroup',
+                default=False,
+                dest='hostgroup',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use one of the predefined hostgroups to identify a '
+                      'list of targets.'))
         parser.add_option('--return',
                 default='',
                 dest='return_',
@@ -134,6 +142,7 @@ class SaltCMD(object):
         opts['list'] = options.list_
         opts['grain'] = options.grain
         opts['exsel'] = options.exsel
+        opts['hostgroup'] = options.hostgroup
         opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
@@ -204,6 +213,8 @@ class SaltCMD(object):
                 args.append('grain')
             elif self.opts['exsel']:
                 args.append('exsel')
+            elif self.opts['hostgroup']:
+                args.append('hostgroup')
             else:
                 args.append('glob')
 
