@@ -180,7 +180,7 @@ def os_data():
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
-            if "Ubuntu" in open('/etc/lsb-release').readlines().pop():
+            if "Ubuntu" in open('/etc/lsb-release').read():
                 grains['os'] = 'Ubuntu'
             else:
                 grains['os'] = 'Debian'
