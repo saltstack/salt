@@ -130,14 +130,9 @@ class LocalClient(object):
         '''
         Return the minions found by looking in the hostgroups
         '''
-        targets = self.opts['hostgroups'][expr].split(',')
-        ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
-            if targets.count(fn_):
-                if not ret.count(fn_):
-                    ret.append(fn_)
-        return ret
-
+        members = self.opts['hostgroups'][expr]
+        return self._check_list_minions(members)
+        
     def _check_grain_minions(self, expr):
         '''
         Return the minions found by looking via a list
@@ -343,6 +338,11 @@ class LocalClient(object):
         # send!
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
+
+        if expr_form == 'hostgroup':
+          tgt = self.opts['hostgroups'][tgt]
+          expr_form = 'list'
+
         if not minions:
             return {'jid': '',
                     'minions': minions}
