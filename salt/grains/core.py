@@ -183,7 +183,7 @@ def os_data():
             grains['os'] = 'Debian'
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
-        elif os.path.isfile('/etc/fedora-version'):
+        elif os.path.isfile('/etc/fedora-release'):
             grains['os'] = 'Fedora'
         elif os.path.isfile('/etc/mandriva-version'):
             grains['os'] = 'Mandriva'
