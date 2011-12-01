@@ -44,7 +44,7 @@ def group_to_gid(group):
 
 def get_gid(path):
     '''
-    Return the user that owns a given file
+    Return the id of the group that owns a given file
 
     CLI Example::
 
@@ -57,7 +57,7 @@ def get_gid(path):
 
 def get_group(path):
     '''
-    Return the user that owns a given file
+    Return the group that owns a given file
 
     CLI Example::
 
@@ -85,7 +85,7 @@ def uid_to_user(uid):
 
 def user_to_uid(user):
     '''
-    Convert user name to a gid
+    Convert user name to a uid
 
     CLI Example::
 
@@ -99,7 +99,7 @@ def user_to_uid(user):
 
 def get_uid(path):
     '''
-    Return the user that owns a given file
+    Return the id of the user that owns a given file
 
     CLI Example::
 
@@ -142,7 +142,7 @@ def get_mode(path):
 
 def set_mode(path, mode):
     '''
-    Set the more of a file
+    Set the mode of a file
 
     CLI Example::
 

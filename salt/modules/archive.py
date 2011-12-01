@@ -32,7 +32,7 @@ def gzip(sourcefile):
 
 def gunzip(gzipfile):
     '''
-    Uses the gzip command to create gzip files
+    Uses the gunzip command to unpack gzip files
 
     CLI Example to create ``/tmp/sourcefile.txt``::
 

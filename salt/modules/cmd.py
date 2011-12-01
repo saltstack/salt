@@ -54,7 +54,7 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_stdout "ls -l | grep foo | awk '{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stdout = subprocess.Popen(cmd,
@@ -71,7 +71,7 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_stderr "ls -l | grep foo | awk '{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stderr = subprocess.Popen(cmd,
@@ -130,7 +130,7 @@ def has_exec(cmd):
 
     CLI Example::
 
-        salt '*' cat
+        salt '*' cmd.has_exec cat
     '''
     if cmd.startswith('/'):
         return _is_exec(cmd)
