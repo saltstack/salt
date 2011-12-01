@@ -12,6 +12,7 @@ import sys
 
 # Import salt libs
 import salt.config
+import salt.utils.verify
 
 
 def verify_env(dirs):
@@ -25,6 +26,8 @@ def verify_env(dirs):
                 os.makedirs(dir_)
             except OSError, e:
                 print 'Failed to create directory path "%s" - %s' % (dir_, e)
+    # Run the extra verification checks
+    salt.utils.verify.run()
 
 
 class Master(object):
