@@ -138,16 +138,27 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    if 'Linux OpenBSD SunOS HP-UX'.count(osdata['kernel']):
-        if os.path.isdir('/proc/vz'):
+    choices =  ['Linux', 'OpenBSD', 'SunOS', 'HP-UX']
+    isdir = os.path.isdir
+    if osdata['kernel'] in choices:
+        if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
             else:
                 grains['virtual'] = 'openvzve'
-        if os.path.isdir('/.SUNWnative'):
+        elif isdir("/proc/sys/xen") or isdir("/sys/bus/xen") or isdir("/proc/xen"):
+            grains['virtual'] = 'xen'
+            if os.path.isfile('/proc/xen/xsd_kva'):
+                grains['virtual_subtype'] = 'Xen Dom0'
+            else:
+                if os.path.isfile('/proc/xen/capabilities'):
+                    grains['virtual_subtype'] = 'Xen full virt DomU'
+                else:
+                    grains['virtual_subtype'] = 'Xen paravirt DomU'
+        elif isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
-        if os.path.isfile('/proc/cpuinfo'):
-            if open('/proc/cpuinfo', 'r').read().count('QEMU Virtual CPU'):
+        elif os.path.isfile('/proc/cpuinfo'):
+            if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
         model = subprocess.Popen(
@@ -155,7 +166,7 @@ def _virtual(osdata):
                 shell=True,
                 stdout=subprocess.PIPE
                 ).communicate()[0].split(':')[1].strip()
-        if model.count('QEMU Virtual CPU'):
+        if 'QEMU Virtual CPU' in model:
             grains['virtual'] = 'kvm'
     return grains
 
@@ -166,7 +177,7 @@ def _ps(osdata):
     '''
     grains = {}
     grains['ps'] = 'ps auxwww' if\
-            'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -ef'
+            'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -efH'
     return grains
 
 
@@ -177,13 +188,31 @@ def os_data():
     grains = {}
     grains.update(_kernel())
     if grains['kernel'] == 'Linux':
+        # Add lsb grains on any distro with lsb-release
+        if os.path.isfile('/etc/lsb-release'):
+            for line in open('/etc/lsb-release').readlines():
+                # Matches any possible format:
+                #     DISTRIB_ID=Ubuntu
+                #     DISTRIB_ID="Mageia"
+                #     DISTRIB_ID='Fedora'
+                #     DISTRIB_RELEASE=10.10
+                #     DISTRIB_CODENAME=squeeze
+                #     DISTRIB_DESCRIPTION="Ubuntu 10.10"
+                regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                match = regex.match(line)
+                if match:
+                    # Adds: lsb_distrib_{id,release,codename,description}
+                    grains['lsb_{0}'.format(match.groups()[0].lower()] = match.groups()[1]
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
-            if "Ubuntu" in open('/etc/lsb-release').read():
-                grains['os'] = 'Ubuntu'
-            else:
-                grains['os'] = 'Debian'
+            grains['os'] = 'Debian'
+            if "lsb_distrib_id" in grains:
+                if "Ubuntu" in grains['lsb_distrib_id']:
+                    grains['os'] = 'Ubuntu'
+                elif os.path.isfile("/etc/issue.net") and \
+                  "Ubuntu" in open("/etc/issue.net").readline():
+                    grains['os'] = 'Ubuntu'
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-release'):
@@ -192,6 +221,8 @@ def os_data():
             grains['os'] = 'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
             grains['os'] = 'Mandrake'
+        elif os.path.isfile('/etc/mageia-version'):
+            grains['os'] = 'Mageia'
         elif os.path.isfile('/etc/meego-version'):
             grains['os'] = 'MeeGo'
         elif os.path.isfile('/etc/vmware-version'):
@@ -209,22 +240,25 @@ def os_data():
                 grains['os'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
             data = open('/etc/redhat-release', 'r').read()
-            if data.count('centos'):
+            if 'centos' in data.lower():
                 grains['os'] = 'CentOS'
-            elif data.count('scientific'):
+            elif 'scientific' in data.lower():
                 grains['os'] = 'Scientific'
             else:
                 grains['os'] = 'RedHat'
         elif os.path.isfile('/etc/SuSE-release'):
             data = open('/etc/SuSE-release', 'r').read()
-            if data.count('SUSE LINUX Enterprise Server'):
+            if 'SUSE LINUX Enterprise Server' in data:
                 grains['os'] = 'SLES'
-            elif data.count('SUSE LINUX Enterprise Desktop'):
+            elif 'SUSE LINUX Enterprise Desktop' in data:
                 grains['os'] = 'SLED'
-            elif data.count('openSUSE'):
+            elif 'openSUSE' in data:
                 grains['os'] = 'openSUSE'
             else:
                 grains['os'] = 'SUSE'
+        # If the Linux version can not be determined
+        if not 'os' in grains:
+            grains['os'] = 'Unknown {0}'.format(grains['kernel'])
     elif grains['kernel'] == 'sunos':
         grains['os'] = 'Solaris'
     elif grains['kernel'] == 'VMkernel':
