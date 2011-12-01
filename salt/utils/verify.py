@@ -6,7 +6,7 @@ A few checks to make sure the environment is sane
 import logging
 log = logging.getLogger(__name__)
 
-__all__ = ('zmq_version', 'run')
+__all__ = ('zmq_version', 'check_root', 'run')
 
 def zmq_version():
     '''ZeroMQ python bindings >= 2.1.9 are required'''
@@ -24,10 +24,9 @@ def check_root():
     verify that root is the user before the application discovers it.
     '''
     if os.getuid():
-        print ('Sorry, the salt must run as root, it needs to operate '
-               'in a privileged environment to do what it does.\n'
-               'http://xkcd.com/838/')
-        sys.exit(1)
+        log.critical('Sorry, the salt must run as root. It needs to operate in a privileged environment to do what it does. http://xkcd.com/838/')
+        return False
+    return True
 
 def run():
     for func in __all__:
