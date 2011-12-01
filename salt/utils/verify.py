@@ -18,6 +18,17 @@ def zmq_version():
         return False
     return True
 
+def check_root():
+    '''
+    Most of the salt scripts need to run as root, this function will simply
+    verify that root is the user before the application discovers it.
+    '''
+    if os.getuid():
+        print ('Sorry, the salt must run as root, it needs to operate '
+               'in a privileged environment to do what it does.\n'
+               'http://xkcd.com/838/')
+        sys.exit(1)
+
 def run():
     for func in __all__:
         if func == "run": continue
