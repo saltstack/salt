@@ -3,6 +3,8 @@ A few checks to make sure the environment is sane
 '''
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
+import os
+import sys
 import logging
 log = logging.getLogger(__name__)
 
@@ -31,5 +33,5 @@ def check_root():
 def run():
     for func in __all__:
         if func == "run": continue
-        if not locals().get(func)():
+        if not globals().get(func)():
             sys.exit(1)
