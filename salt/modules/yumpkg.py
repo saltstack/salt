@@ -12,7 +12,11 @@ def __virtual__():
     # We don't need to support pre-yum OSes because they don't support
     # python <= 2.6
     dists = 'CentOS Scientific RedHat Fedora'
-    return 'pkg' if dists.count(__grains__['os']) else False
+    if dists.count(__grains__['os']):
+        if int(__grains__['release'].split('.')[0]) >= 6:
+            return 'pkg' 
+    else:
+        return False
 
 
 def _list_removed(old, new):

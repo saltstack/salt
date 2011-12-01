@@ -17,6 +17,7 @@ import os
 import socket
 import subprocess
 import sys
+import platform
 
 
 def _kernel():
@@ -239,6 +240,7 @@ def os_data():
             else:
                 grains['os'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
+            grains['release'] = platform.dist()[1]
             data = open('/etc/redhat-release', 'r').read()
             if 'centos' in data.lower():
                 grains['os'] = 'CentOS'
