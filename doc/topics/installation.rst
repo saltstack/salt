@@ -115,12 +115,16 @@ A PPA is available until we can get packages into apt::
 Debian
 ------
 
-`A deb package is currently in testing`__. Until that is accepted you can
-install Salt via :command:`easy_install` or :command:`pip`::
+`A deb package is currently in testing`__ for inclusion in apt. Until that is
+accepted you can install Salt by downloading the latest ``.deb`` in the
+`downloads section on GitHub`__ and installing that manually:
 
-    pip install salt
+.. parsed-literal::
+
+    dpkg -i salt-|version|.deb
 
 .. __: http://mentors.debian.net/package/salt
+.. __: https://github.com/saltstack/salt/downloads
 
 .. admonition:: Installing ZeroMQ on Squeeze (Debian 6)
 
