@@ -126,13 +126,6 @@ class LocalClient(object):
         os.chdir(cwd)
         return ret
 
-    def _check_hostgroup_minions(self, expr):
-        '''
-        Return the minions found by looking in the hostgroups
-        '''
-        members = self.opts['hostgroups'][expr]
-        return self._check_list_minions(members)
-        
     def _check_grain_minions(self, expr):
         '''
         Return the minions found by looking via a list
@@ -304,7 +297,6 @@ class LocalClient(object):
                 'list': self._check_list_minions,
                 'grain': self._check_grain_minions,
                 'exsel': self._check_grain_minions,
-                'hostgroup': self._check_hostgroup_minions,
                 }[expr_form](expr)
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
@@ -330,6 +322,17 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
+
+
+        if expr_form == 'hostgroup':
+          group = self.opts['hostgroups'][tgt]
+          forms = ['glob','pcre','list','grain','exsel']
+
+          for form in forms:
+            if form in group:
+              tgt       = group[form]
+              expr_form = form
+
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module
@@ -338,10 +341,6 @@ class LocalClient(object):
         # send!
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
-
-        if expr_form == 'hostgroup':
-          tgt = self.opts['hostgroups'][tgt]
-          expr_form = 'list'
 
         if not minions:
             return {'jid': '',
