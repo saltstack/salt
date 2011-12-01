@@ -188,13 +188,31 @@ def os_data():
     grains = {}
     grains.update(_kernel())
     if grains['kernel'] == 'Linux':
+        # Add lsb grains on any distro with lsb-release
+        if os.path.isfile('/etc/lsb-release'):
+            for line in open('/etc/lsb-release').readlines():
+                # Matches any possible format:
+                #     DISTRIB_ID=Ubuntu
+                #     DISTRIB_ID="Mageia"
+                #     DISTRIB_ID='Fedora'
+                #     DISTRIB_RELEASE=10.10
+                #     DISTRIB_CODENAME=squeeze
+                #     DISTRIB_DESCRIPTION="Ubuntu 10.10"
+                regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                match = regex.match(line)
+                if match:
+                    # Adds: lsb_distrib_{id,release,codename,description}
+                    grains['lsb_{0}'.format(match.groups()[0].lower()] = match.groups()[1]
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
-            if "Ubuntu" in open('/etc/lsb-release').read():
-                grains['os'] = 'Ubuntu'
-            else:
-                grains['os'] = 'Debian'
+            grains['os'] = 'Debian'
+            if "lsb_distrib_id" in grains:
+                if "Ubuntu" in grains['lsb_distrib_id']:
+                    grains['os'] = 'Ubuntu'
+                elif os.path.isfile("/etc/issue.net") and \
+                  "Ubuntu" in open("/etc/issue.net").readline():
+                    grains['os'] = 'Ubuntu'
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-release'):
@@ -238,6 +256,9 @@ def os_data():
                 grains['os'] = 'openSUSE'
             else:
                 grains['os'] = 'SUSE'
+        # If the Linux version can not be determined
+        if not 'os' in grains:
+            grains['os'] = 'Unknown {0}'.format(grains['kernel'])
     elif grains['kernel'] == 'sunos':
         grains['os'] = 'Solaris'
     elif grains['kernel'] == 'VMkernel':
