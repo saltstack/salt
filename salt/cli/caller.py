@@ -58,7 +58,7 @@ class Caller(object):
         Print out the grains
         '''
         grains = salt.loader.grains(self.opts)
-        printout = self._get_outputter()
+        printout = self._get_outputter(out='yaml')
         # If --json-out is specified, pretty print it
         printout.indent = 2
         printout(grains)
