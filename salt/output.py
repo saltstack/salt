@@ -151,6 +151,8 @@ class JSONOutputter(Outputter):
     enabled = JSON
 
     def __call__(self, data, **kwargs):
+        if hasattr(self, 'indent'):
+            kwargs.update({'indent': self.indent})
         try:
             # A good kwarg might be: indent=4
             if 'color' in kwargs:
