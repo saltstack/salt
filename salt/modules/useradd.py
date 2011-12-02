@@ -204,13 +204,13 @@ def info(name):
         ret['shell'] = data.pw_shell
         ret['uid'] = data.pw_uid
     except KeyError:
-	ret['gid'] = ''
-	ret['groups'] = ''
-	ret['home'] = ''
-	ret['name'] = ''
-	ret['passwd'] = ''
-	ret['shell'] = ''
-	ret['uid'] = ''
+        ret['gid'] = ''
+        ret['groups'] = ''
+        ret['home'] = ''
+        ret['name'] = ''
+        ret['passwd'] = ''
+        ret['shell'] = ''
+        ret['uid'] = ''
     return ret
 
 
