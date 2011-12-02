@@ -405,6 +405,33 @@ def seed_non_shared_migrate(disks, force=False):
     return True
 
 
+def set_autostart(vm_, state='on'):
+    '''
+    Set the autostart flag on a VM so that the VM will start with the host 
+    system on reboot.
+    
+    CLI Example::
+        salt "*" virt.enable_autostart <vm name> <on | off>
+    '''
+        
+    dom = _get_dom(vm_)
+    
+    if state == 'on':
+        if dom.setAutostart(1) == 0:
+            return True
+        else:
+            return False
+        
+    elif state == 'off':
+        if dom.setAutostart(0) == 0:
+            return True
+        else:
+            return False
+    
+    else:
+        # return False if state is set to something other then on or off
+        return False
+
 def destroy(vm_):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the
