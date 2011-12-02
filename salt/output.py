@@ -31,7 +31,7 @@ class Outputter(object):
     @classmethod
     def check(cls, name):
         # Don't advertise Outputter classes for optional modules
-        if hasattr(cls, "enabled") and not cls.enabled: # FIXME: class Outputter
+        if hasattr(cls, 'enabled') and not cls.enabled: # FIXME: class Outputter
             return False                                # has no enabled member
         return cls.supports == name
 
@@ -118,7 +118,7 @@ class RawOutputter(Outputter):
     '''
     Raw output. This calls repr() on the returned data.
     '''
-    supports = "raw"
+    supports = 'raw'
 
     def __call__(self, data, **kwargs):
         print data
@@ -130,18 +130,18 @@ class TxtOutputter(Outputter):
     shell commands in the exact same way they would output
     on the shell when ran directly.
     '''
-    supports = "txt"
+    supports = 'txt'
 
     def __call__(self, data, **kwargs):
-        if hasattr(data, "keys"):
+        if hasattr(data, 'keys'):
             for key in data.keys():
                 value = data[key]
                 # Don't blow up on non-strings
                 try:
                     for line in value.split('\n'):
-                        print "{0}: {1}".format(key, line)
+                        print '{0}: {1}'.format(key, line)
                 except AttributeError:
-                    print "key: %s" % value
+                    print 'key: {0}'.format(value)
         else:
             # For non-dictionary data, just use print
             RawOutputter()(data)
@@ -151,7 +151,7 @@ class JSONOutputter(Outputter):
     '''
     JSON output.
     '''
-    supports = "json"
+    supports = 'json'
     enabled = JSON
 
     def __call__(self, data, **kwargs):
@@ -172,7 +172,7 @@ class YamlOutputter(Outputter):
     '''
     Yaml output. All of the cool kids are doing it.
     '''
-    supports = "yaml"
+    supports = 'yaml'
 
     def __call__(self, data, **kwargs):
         if 'color' in kwargs:
