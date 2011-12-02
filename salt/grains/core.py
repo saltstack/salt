@@ -87,20 +87,20 @@ def _freebsd_cpudata():
     '''
     grains = {}
     grains['cpuarch'] = subprocess.Popen(
-            '/sbin/sysctl hw.machine',
+            '/sbin/sysctl -n hw.machine',
             shell=True,
             stdout=subprocess.PIPE
-            ).communicate()[0].split(':')[1].strip()
+            ).communicate()[0].strip()
     grains['num_cpus'] = subprocess.Popen(
-            '/sbin/sysctl hw.ncpu',
+            '/sbin/sysctl -n hw.ncpu',
             shell=True,
             stdout=subprocess.PIPE
-            ).communicate()[0].split(':')[1].strip()
+            ).communicate()[0].strip()
     grains['cpu_model'] = subprocess.Popen(
-            '/sbin/sysctl hw.model',
+            '/sbin/sysctl -n hw.model',
             shell=True,
             stdout=subprocess.PIPE
-            ).communicate()[0].split(':')[1].strip()
+            ).communicate()[0].strip()
     grains['cpu_flags'] = []
     return grains
 
@@ -114,20 +114,22 @@ def _memdata(osdata):
     grains = {'mem_total': 0}
     if osdata['kernel'] == 'Linux':
         meminfo = '/proc/meminfo'
-        if os.path.isfile(meminfo):
+        
+        if os.path.isfile(meminfo):          
             for line in open(meminfo, 'r').readlines():
                 comps = line.split(':')
                 if not len(comps) > 1:
                     continue
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    elif osdata['kernel'] == 'FreeBSD':
+    elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
         mem = subprocess.Popen(
-                '/sbin/sysctl hw.physmem',
+                '/sbin/sysctl -n hw.physmem',
                 shell=True,
                 stdout=subprocess.PIPE
-                ).communicate()[0].split(':')[1].strip()
+                ).communicate()[0].strip()
         grains['mem_total'] = str(int(mem) / 1024 / 1024)
+    
     return grains
 
 
@@ -178,7 +180,7 @@ def _ps(osdata):
     Return the ps grain
     '''
     grains = {}
-    grains['ps'] = 'ps auxwww' if\
+    grains['ps'] = 'ps auxwww' if \
             'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -efH'
     return grains
 
@@ -201,12 +203,14 @@ def _linux_platform_data(osdata):
         grains['oscodename'] = oscodename
     return grains
 
+
 def os_data():
     '''
     Return grains pertaining to the operating system
     '''
     grains = {}
     grains.update(_kernel())
+
     if grains['kernel'] == 'Linux':
         # Add lsb grains on any distro with lsb-release
         if os.path.isfile('/etc/lsb-release'):
@@ -224,12 +228,14 @@ def os_data():
                     # Adds: lsb_distrib_{id,release,codename,description}
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         if os.path.isfile('/etc/arch-release'):
-            grains['os'] = 'Arch'
+            grains['os'] = 'Arch'       
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
             if "lsb_distrib_id" in grains:
+            
                 if "Ubuntu" in grains['lsb_distrib_id']:
                     grains['os'] = 'Ubuntu'
+                
                 elif os.path.isfile("/etc/issue.net") and \
                   "Ubuntu" in open("/etc/issue.net").readline():
                     grains['os'] = 'Ubuntu'
@@ -276,10 +282,8 @@ def os_data():
                 grains['os'] = 'openSUSE'
             else:
                 grains['os'] = 'SUSE'
-
         # Use the already intelligent platform module to get distro info
         grains.update(_linux_platform_data(grains))
-
         # If the Linux version can not be determined
         if not 'os' in grains:
             grains['os'] = 'Unknown {0}'.format(grains['kernel'])
@@ -291,18 +295,17 @@ def os_data():
         grains['os'] = 'MacOS'
     else:
         grains['os'] = grains['kernel']
-
     if grains['kernel'] == 'Linux':
         grains.update(_linux_cpudata())
-    elif grains['kernel'] == 'FreeBSD':
+    elif grains['kernel'] in ('FreeBSD', 'OpenBSD'):
+        # _freebsd_cpudata works on OpenBSD as well.
         grains.update(_freebsd_cpudata())
 
     grains.update(_memdata(grains))
-
     # Load the virtual machine info
-
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+    
     return grains
 
 
