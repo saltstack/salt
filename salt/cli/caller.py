@@ -4,7 +4,7 @@ minion modules.
 '''
 
 # Import python modules
-import pprint
+import sys
 
 # Import salt libs
 import salt
@@ -30,10 +30,15 @@ class Caller(object):
         '''
         ret = {}
         if self.opts['fun'] not in self.minion.functions:
-            print 'Function {0} is not available'.format(self.opts['fun'])
-        ret['return'] = self.minion.functions[self.opts['fun']](
-                *self.opts['arg']
-                )
+            sys.stderr.write('Function {0} is not available\n'.format(self.opts['fun']))
+            sys.exit(1)
+        try:
+            ret['return'] = self.minion.functions[self.opts['fun']](
+                    *self.opts['arg']
+                    )
+        except TypeError, exc:
+            sys.stderr.write('Error running \'{0}\': {1}\n'.format(self.opts['fun'], str(exc)))
+            sys.exit(1)
         if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
             oput = self.minion.functions[self.opts['fun']].__outputter__
             if isinstance(oput, str):
