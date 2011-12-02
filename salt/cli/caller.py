@@ -65,7 +65,8 @@ class Caller(object):
         grains = salt.loader.grains(self.opts)
         printout = self._get_outputter(out='yaml')
         # If --json-out is specified, pretty print it
-        printout.indent = 2
+        if 'json_out' in self.opts and self.opts['json_out']:
+            printout.indent = 2
         printout(grains)
 
     def _get_outputter(self, out=None):
@@ -99,5 +100,7 @@ class Caller(object):
                 printout = self._get_outputter(ret['out'])
             else:
                 printout = self._get_outputter()
+            if 'json_out' in self.opts and self.opts['json_out']:
+                printout.indent = 2
 
             printout({'local': ret['return']}, color=self.opts['color'])
