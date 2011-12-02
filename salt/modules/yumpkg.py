@@ -13,7 +13,7 @@ def __virtual__():
     # python <= 2.6
     dists = 'CentOS Scientific RedHat Fedora'
     if dists.count(__grains__['os']):
-        if int(__grains__['release'].split('.')[0]) >= 6:
+        if int(__grains__['osrelease'].split('.')[0]) >= 6:
             return 'pkg' 
     else:
         return False
