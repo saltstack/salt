@@ -222,7 +222,7 @@ def os_data():
                 match = regex.match(line)
                 if match:
                     # Adds: lsb_distrib_{id,release,codename,description}
-                    grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1]
+                    grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
