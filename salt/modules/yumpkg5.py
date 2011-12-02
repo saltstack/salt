@@ -8,7 +8,7 @@ def __virtual__():
     # We don't need to support pre-yum OSes because they don't support python 2.6
     dists = 'CentOS Scientific RedHat Fedora'
     if dists.count(__grains__['os']):
-        if int(__grains__['release'].split('.')[0]) == 5:
+        if int(__grains__['osrelease'].split('.')[0]) == 5:
             return 'pkg' 
     else:
         return False
