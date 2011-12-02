@@ -115,25 +115,19 @@ def _memdata(osdata):
     if osdata['kernel'] == 'Linux':
         meminfo = '/proc/meminfo'
         
-        if os.path.isfile(meminfo):
-            
+        if os.path.isfile(meminfo):          
             for line in open(meminfo, 'r').readlines():
                 comps = line.split(':')
-                
                 if not len(comps) > 1:
                     continue
-    
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    
     elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
-    
         mem = subprocess.Popen(
                 '/sbin/sysctl -n hw.physmem',
                 shell=True,
                 stdout=subprocess.PIPE
                 ).communicate()[0].strip()
-        
         grains['mem_total'] = str(int(mem) / 1024 / 1024)
     
     return grains
@@ -216,11 +210,10 @@ def os_data():
     '''
     grains = {}
     grains.update(_kernel())
-    
+
     if grains['kernel'] == 'Linux':
         # Add lsb grains on any distro with lsb-release
         if os.path.isfile('/etc/lsb-release'):
-    
             for line in open('/etc/lsb-release').readlines():
                 # Matches any possible format:
                 #     DISTRIB_ID=Ubuntu
@@ -231,17 +224,13 @@ def os_data():
                 #     DISTRIB_DESCRIPTION="Ubuntu 10.10"
                 regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
                 match = regex.match(line)
-                
                 if match:
                     # Adds: lsb_distrib_{id,release,codename,description}
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
-        
         if os.path.isfile('/etc/arch-release'):
-            grains['os'] = 'Arch'
-        
+            grains['os'] = 'Arch'       
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
-        
             if "lsb_distrib_id" in grains:
             
                 if "Ubuntu" in grains['lsb_distrib_id']:
@@ -250,57 +239,41 @@ def os_data():
                 elif os.path.isfile("/etc/issue.net") and \
                   "Ubuntu" in open("/etc/issue.net").readline():
                     grains['os'] = 'Ubuntu'
-        
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
-        
         elif os.path.isfile('/etc/fedora-release'):
             grains['os'] = 'Fedora'
-        
         elif os.path.isfile('/etc/mandriva-version'):
             grains['os'] = 'Mandriva'
-        
         elif os.path.isfile('/etc/mandrake-version'):
             grains['os'] = 'Mandrake'
-        
         elif os.path.isfile('/etc/mageia-version'):
             grains['os'] = 'Mageia'
-        
         elif os.path.isfile('/etc/meego-version'):
             grains['os'] = 'MeeGo'
-        
         elif os.path.isfile('/etc/vmware-version'):
             grains['os'] = 'VMWareESX'
-        
         elif os.path.isfile('/etc/bluewhite64-version'):
             grains['os'] = 'Bluewhite64'
-        
         elif os.path.isfile('/etc/slamd64-version'):
             grains['os'] = 'Slamd64'
-        
         elif os.path.isfile('/etc/slackware-version'):
             grains['os'] = 'Slackware'
-        
         elif os.path.isfile('/etc/enterprise-release'):
-        
             if os.path.isfile('/etc/ovs-release'):
                 grains['os'] = 'OVS'
             else:
                 grains['os'] = 'OEL'
-        
         elif os.path.isfile('/etc/redhat-release'):
             data = open('/etc/redhat-release', 'r').read()
-        
             if 'centos' in data.lower():
                 grains['os'] = 'CentOS'
             elif 'scientific' in data.lower():
                 grains['os'] = 'Scientific'
             else:
                 grains['os'] = 'RedHat'
-        
         elif os.path.isfile('/etc/SuSE-release'):
             data = open('/etc/SuSE-release', 'r').read()
-        
             if 'SUSE LINUX Enterprise Server' in data:
                 grains['os'] = 'SLES'
             elif 'SUSE LINUX Enterprise Desktop' in data:
@@ -309,29 +282,21 @@ def os_data():
                 grains['os'] = 'openSUSE'
             else:
                 grains['os'] = 'SUSE'
-
         # Use the already intelligent platform module to get distro info
         grains.update(_linux_platform_data(grains))
-
         # If the Linux version can not be determined
         if not 'os' in grains:
             grains['os'] = 'Unknown {0}'.format(grains['kernel'])
-    
     elif grains['kernel'] == 'sunos':
         grains['os'] = 'Solaris'
-    
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
-    
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
-    
     else:
         grains['os'] = grains['kernel']
-
     if grains['kernel'] == 'Linux':
         grains.update(_linux_cpudata())
-    
     elif grains['kernel'] in ('FreeBSD', 'OpenBSD'):
         # _freebsd_cpudata works on OpenBSD as well.
         grains.update(_freebsd_cpudata())
