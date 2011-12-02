@@ -194,14 +194,23 @@ def info(name):
         salt '*' user.info root
     '''
     ret = {}
-    data = pwd.getpwnam(name)
-    ret['gid'] = data.pw_gid
-    ret['groups'] = list_groups(name)
-    ret['home'] = data.pw_dir
-    ret['name'] = data.pw_name
-    ret['passwd'] = data.pw_passwd
-    ret['shell'] = data.pw_shell
-    ret['uid'] = data.pw_uid
+    try:
+        data = pwd.getpwnam(name)
+        ret['gid'] = data.pw_gid
+        ret['groups'] = list_groups(name)
+        ret['home'] = data.pw_dir
+        ret['name'] = data.pw_name
+        ret['passwd'] = data.pw_passwd
+        ret['shell'] = data.pw_shell
+        ret['uid'] = data.pw_uid
+    except KeyError:
+	ret['gid'] = ''
+	ret['groups'] = ''
+	ret['home'] = ''
+	ret['name'] = ''
+	ret['passwd'] = ''
+	ret['shell'] = ''
+	ret['uid'] = ''
     return ret
 
 
