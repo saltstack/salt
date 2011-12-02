@@ -136,8 +136,12 @@ class TxtOutputter(Outputter):
         if hasattr(data, "keys"):
             for key in data.keys():
                 value = data[key]
-                for line in value.split('\n'):
-                    print "{0}: {1}".format(key, line)
+                # Don't blow up on non-strings
+                try:
+                    for line in value.split('\n'):
+                        print "{0}: {1}".format(key, line)
+                except AttributeError:
+                    print "key: %s" % value
         else:
             # For non-dictionary data, just use print
             RawOutputter()(data)
@@ -151,6 +155,8 @@ class JSONOutputter(Outputter):
     enabled = JSON
 
     def __call__(self, data, **kwargs):
+        if hasattr(self, 'indent'):
+            kwargs.update({'indent': self.indent})
         try:
             # A good kwarg might be: indent=4
             if 'color' in kwargs:

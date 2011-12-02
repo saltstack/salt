@@ -183,6 +183,24 @@ def _ps(osdata):
     return grains
 
 
+def _linux_platform_data(osdata):
+    '''
+    The platform module is very smart about figuring out linux distro
+    information. Instead of re-inventing the wheel, lets use it!
+    '''
+    # Provides:
+    #    osrelease
+    #    oscodename
+    grains = {}
+    (osname, osrelease, oscodename) = platform.dist()
+    if 'os' not in osdata and osname:
+        grains['os'] = osname
+    if osrelease:
+        grains['osrelease'] = osrelease
+    if oscodename:
+        grains['oscodename'] = oscodename
+    return grains
+
 def os_data():
     '''
     Return grains pertaining to the operating system
@@ -204,7 +222,7 @@ def os_data():
                 match = regex.match(line)
                 if match:
                     # Adds: lsb_distrib_{id,release,codename,description}
-                    grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1]
+                    grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
@@ -241,7 +259,6 @@ def os_data():
             else:
                 grains['os'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
-            grains['release'] = platform.dist()[1]
             data = open('/etc/redhat-release', 'r').read()
             if 'centos' in data.lower():
                 grains['os'] = 'CentOS'
@@ -259,6 +276,10 @@ def os_data():
                 grains['os'] = 'openSUSE'
             else:
                 grains['os'] = 'SUSE'
+
+        # Use the already intelligent platform module to get distro info
+        grains.update(_linux_platform_data(grains))
+
         # If the Linux version can not be determined
         if not 'os' in grains:
             grains['os'] = 'Unknown {0}'.format(grains['kernel'])
