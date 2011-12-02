@@ -232,7 +232,6 @@ def os_data():
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
             if "lsb_distrib_id" in grains:
-            
                 if "Ubuntu" in grains['lsb_distrib_id']:
                     grains['os'] = 'Ubuntu'
                 
