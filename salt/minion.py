@@ -313,12 +313,33 @@ class Minion(object):
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.aes)
 
+    def passive_refresh(self):
+        '''
+        Check to see if the salt refresh file has been laid down, if it has,
+        refresh the functions and returners.
+        '''
+        if os.path.isfile(
+                os.path.join(
+                    self.opts['cachedir'],
+                    '.module_refresh'
+                    )
+                ):
+            self.functions, self.returners = self.__load_modules()
+            os.remove(
+                    os.path.join(
+                        self.opts['cachedir'],
+                        '.module_refresh'
+                        )
+                    )
+
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        master_pub = ('tcp://' + self.opts['master_ip'] +
-                      ':' + str(self.publish_port))
+        master_pub = 'tcp://{0}:{1}'.format(
+            self.opts['master_ip'],
+            str(self.publish_port)
+            )
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -343,15 +364,18 @@ class Minion(object):
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
-        while True:
-            payload = None
-            try:
-                payload = socket.recv_pyobj(1)
-                self._handle_payload(payload)
-            except:
-                pass
-            time.sleep(0.05)
-            multiprocessing.active_children()
+                self.passive_refresh()
+        else:
+            while True:
+                payload = None
+                try:
+                    payload = socket.recv_pyobj(1)
+                    self._handle_payload(payload)
+                except:
+                    pass
+                time.sleep(0.05)
+                multiprocessing.active_children()
+                self.passive_refresh()
 
 
 class Syndic(salt.client.LocalClient, Minion):
