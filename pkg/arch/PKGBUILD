@@ -34,8 +34,8 @@ package() {
   python2 setup.py install --root=$pkgdir/ --optimize=1
 
   mkdir -p $pkgdir/etc/rc.d/
-  cp scripts/salt-master $pkgdir/etc/rc.d/
-  cp scripts/salt-minion $pkgdir/etc/rc.d/
-  cp scripts/salt-syndic $pkgdir/etc/rc.d/
+  cp $srcdir/salt-master $pkgdir/etc/rc.d/
+  cp $srcdir/salt-minion $pkgdir/etc/rc.d/
+  cp $srcdir/salt-syndic $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
 }
