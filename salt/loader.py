@@ -293,6 +293,7 @@ class Loader(object):
         funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
         funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
+        funcs['sys.reload_modules'] = lambda: True
         return funcs
 
     def list_funcs(self, funcs):

@@ -65,7 +65,7 @@ class SMinion(object):
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
-        self.functions['sys.reload'] = self.gen_modules
+        self.functions['sys.reload_modules'] = self.gen_modules
 
 class Minion(object):
     '''
@@ -158,6 +158,10 @@ class Minion(object):
         Override this method if you wish to handle the decoded
         data differently.
         '''
+        if isinstance(data['fun'], str):
+            if data['fun'] == 'sys.reload_modules':
+                self.functions, self.returners = self.__load_modules()
+                
         if self.opts['multiprocessing']:
             if type(data['fun']) == type(list()):
                 multiprocessing.Process(
@@ -288,14 +292,6 @@ class Minion(object):
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
         return socket.recv()
-
-    def reload_functions(self):
-        '''
-        Reload the functions dict for this minion, reading in any new functions
-        '''
-        self.functions = self.__load_functions()
-        log.debug('Refreshed functions, loaded functions: %s', self.functions)
-        return True
 
     def authenticate(self):
         '''
