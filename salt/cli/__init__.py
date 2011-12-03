@@ -84,7 +84,7 @@ class SaltCMD(object):
                 default=False,
                 dest='compound',
                 action='store_true',
-                help=(('The compound target option allows for multiple '
+                help=('The compound target option allows for multiple '
                        'target types to be evaluated, allowing for greater '
                        'granularity in target matching. The compound target '
                        'is space delimited, targets other than globs are '

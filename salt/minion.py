@@ -128,7 +128,7 @@ class Minion(object):
         # Verify that the publication applies to this minion
         if 'tgt_type' in data:
             if not getattr(self.matcher,
-                           data['tgt_type'] + '_match')(data['tgt']):
+                           '{0}_match'.format(data['tgt_type']))(data['tgt']):
                 return
         else:
             if not self.matcher.glob_match(data['tgt']):
@@ -473,7 +473,7 @@ class Matcher(object):
                 if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
-            return getattr(self, matcher + '_match')(match)
+            return getattr(self, '{0}_match'.format(matcher))(match)
         else:
             log.error('Attempting to match with unknown matcher: %s', matcher)
             return False
@@ -512,7 +512,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for grains from master')
             return False
         if comps[0] not in self.opts['grains']:
-            log.error('Got unknown grain from master: %s', comps[0])
+            log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
         return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
 
@@ -524,6 +524,54 @@ class Matcher(object):
             return False
         return(self.functions[tgt]())
 
+    def compound_match(self, tgt):
+        '''
+        Runs the compound target check
+        '''
+        if not isinstance(tgt, str):
+            print 'target not string'
+            return False
+        ref = {'G': 'grain',
+               'X': 'exsel',
+               'L': 'list',
+               'E': 'pcre'}
+        results = []
+        for match in tgt.split():
+            # Attach the boolean operator
+            if match == 'and':
+                results.append('and')
+                continue
+            elif match == 'or':
+                results.append('or')
+                continue
+            # If we are here then it is not a boolean operator, check if the
+            # last member of the result list is a boolen, if no, append and
+            if results:
+                if results[-1] != 'and' or results[-1] != 'or':
+                    results.append('and')
+            if match[1] == '@':
+                comps = match.split('@')
+                matcher = ref.get(comps[0])
+                if not matcher:
+                    # If un unknown matcher is called at any time, fail out
+                    return False
+                print comps
+                results.append(
+                        str(getattr(
+                            self,
+                            '{0}_match'.format(matcher)
+                            )('@'.join(comps[1:]))
+                        ))
+            else:
+                results.append(
+                        str(getattr(
+                            self,
+                            '{0}_match'.format(matcher)
+                            )('@'.join(comps[1:]))
+                        ))
+
+        print ' '.join(results)
+        return eval(' '.join(results))
 
 class FileClient(object):
     '''
