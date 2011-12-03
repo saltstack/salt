@@ -106,8 +106,17 @@ class State(object):
                     data['name'].endswith('.pyc'),
                     data['name'].endswith('.so'))):
                 self.load_modules()
+                open(os.path.join(
+                    self.opts['cachedir'],
+                    '.module_refresh'),
+                    'w+').write('')
         elif data['fun'] == 'recurse':
             self.load_modules()
+            open(os.path.join(
+                self.opts['cachedir'],
+                '.module_refresh'),
+                'w+').write('')
+
 
     def verify_data(self, data):
         '''
