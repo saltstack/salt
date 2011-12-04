@@ -79,6 +79,18 @@ class SaltCMD(object):
                 action='store_true',
                 help=('Instead of using shell globs use the return code '
                       'of a function.'))
+        parser.add_option('-C',
+                '--compound',
+                default=False,
+                dest='compound',
+                action='store_true',
+                help=('The compound target option allows for multiple '
+                       'target types to be evaluated, allowing for greater '
+                       'granularity in target matching. The compound target '
+                       'is space delimited, targets other than globs are '
+                       'preceted with an identifyer matching the specific '
+                       'targets argument type: salt \'G@os:RedHat and '
+                       'webser* or E@database.*\''))
         parser.add_option('--return',
                 default='',
                 dest='return_',
@@ -134,6 +146,7 @@ class SaltCMD(object):
         opts['list'] = options.list_
         opts['grain'] = options.grain
         opts['exsel'] = options.exsel
+        opts['compound'] = options.compound
         opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
@@ -204,6 +217,8 @@ class SaltCMD(object):
                 args.append('grain')
             elif self.opts['exsel']:
                 args.append('exsel')
+            elif self.opts['compound']:
+                args.append('compound')
             else:
                 args.append('glob')
 

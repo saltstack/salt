@@ -297,6 +297,7 @@ class LocalClient(object):
                 'list': self._check_list_minions,
                 'grain': self._check_grain_minions,
                 'exsel': self._check_grain_minions,
+                'compound': self._check_grain_minions,
                 }[expr_form](expr)
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
