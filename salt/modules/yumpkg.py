@@ -9,11 +9,14 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
+    # Return this for pkg on RHEL/Fedora based distros that ship with python
+    # 2.6 or greater.
     dists = 'CentOS Scientific RedHat'
-    # If the OS is Fedora return pkg since Fedora has had python 2.6 since
-    # version 11.
     if __grains__['os'] == 'Fedora':
-        return 'pkg'
+        if int(__grains__['osrelease'].split('.')[0]) >= 11:
+            return 'pkg'
+        else:
+            return False
     else:
         if dists.count(__grains__['os']):
             if int(__grains__['osrelease'].split('.')[0]) >= 6:
