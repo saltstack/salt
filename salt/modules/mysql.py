@@ -73,3 +73,29 @@ def version():
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
     return row
+
+
+def slave_lag():
+    '''
+    Return the number of seconds that a slave SQL server is lagging behind the
+    master.
+
+    CLI Example::
+
+        salt '*' mysql.slave_lag
+    '''
+    db = connect()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute('show slave status')
+    results = cur.fetchone()
+    if results['Master_Host'] == '':
+        # Server is not a slave if master is not defined.  Return empty tuple
+        # in this case.  Could probably check to see if Slave_IO_Running and
+        # Slave_SQL_Running are both set to 'Yes' as well to be really really
+        # sure that it is a slave.
+        return ()
+    else:
+        return results['Seconds_Behind_Master']
+    
+    
+    
