@@ -91,6 +91,24 @@ on the return of the primary function the main function is executed.
 Execution matching allows for matching minions based on any arbitrairy running
 data on tne minions.
 
+Compound Targeting
+``````````````````
+Multiple target interfaces can be used in conjunction to determine the command
+targets. These targets can then be combined using and or or statements. This
+is well defined with an example:
+
+.. code-block:: bash
+
+    salt -C 'G@os:Debian and webser* or E@db.*' test.ping
+
+in this example any minion who's id starts with webser and is running Debian,
+or any minion who's id starts with db will be matched.
+
+The type of matcher defaults to glob, but can be specified with the
+corresponding letter followed by the @ symbol. In the above example a grain is
+used with G@ as well as a regular expression with E@. The webser* target does
+not need to be prefaced with a target type specifier because it is a glob.
+
 Calling the Function
 --------------------
 
