@@ -99,7 +99,7 @@ def slave_lag():
     
 def promote_slave():
     '''
-    Useful comments go here.
+    This is a WIP, do not use.
     '''
     slave_db = connect()
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
