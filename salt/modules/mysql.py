@@ -130,27 +130,3 @@ def promote_slave():
         return 'promoted'
     else:
         return 'failed'
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
