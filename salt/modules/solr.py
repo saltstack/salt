@@ -87,6 +87,16 @@ def __virtual__():
 
     return False
 
+def _get_none_or_value(string):
+    if string is None:
+        return None
+    elif string == 'None':
+        return None
+    elif string == '':
+        return None
+    else:
+        return string
+
 def _check_for_cores():
     '''
     PRIVATE METHOD
@@ -148,11 +158,11 @@ def _format_url(handler,host=None,core_name=None,extra=[]):
     Param: list extra ([]): A list of additional name value pairs ['name=value]
     Return: str formatted url
     '''
-    if host is None:
+    if _get_none_or_value(host) is None or host == 'None':
         host = __opts__['solr.host']
     port = __opts__['solr.port']
     baseurl = __opts__['solr.baseurl']
-    if core_name is None:
+    if _get_none_or_value(core_name) is None:
         if extra is None or len(extra) == 0:
             return "http://{0}:{1}{2}/{3}?wt=json".format(
                     host, port, baseurl, handler)
@@ -257,7 +267,6 @@ def _merge_options(options):
             defaults[k] = str(bool(v)).lower()
     return defaults
 
-
 def _pre_index_check(handler, host=None, core_name=None):
     '''
     PRIVATE METHOD - MASTER CALL
@@ -274,7 +283,7 @@ def _pre_index_check(handler, host=None, core_name=None):
     Return:  dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
     '''
     #make sure that it's a master minion
-    if host is None and not _is_master():
+    if _get_none_or_value(host) is None and not _is_master():
         err = ['solr.pre_indexing_check can only be called by "master" minions']
         return _get_return_dict(False, err)
     '''
@@ -282,7 +291,7 @@ def _pre_index_check(handler, host=None, core_name=None):
     handlers at the same time, so if it's a multicore setup require a 
     core_name param.
     '''
-    if core_name is None and _check_for_cores(): 
+    if _get_none_or_value(core_name) is None and _check_for_cores(): 
         errors = ['solr.full_import is not safe to multiple handlers at once']
         return _get_return_dict(False, errors=errors)
     #check to make sure that we're not already indexing
@@ -351,7 +360,7 @@ def lucene_version(core_name=None):
     '''
     ret = _get_return_dict()
     #do we want to check for all the cores?
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             resp = _get_admin_info('system', core_name=name )
@@ -387,7 +396,7 @@ def version(core_name=None):
     '''
     ret = _get_return_dict()
     #do we want to check for all the cores?
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             resp = _get_admin_info('system', core_name=name )
@@ -432,7 +441,7 @@ def optimize(host=None, core_name=None):
     '''
     ret = _get_return_dict()
 
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             url = _format_url('update',host=host,core_name=name,extra=["optimize=true"])
@@ -466,7 +475,7 @@ def ping(host=None, core_name=None):
     salt '*' solr.ping music
     '''
     ret = _get_return_dict()
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             resp = _get_admin_info('ping', host=host,core_name=name)
@@ -497,7 +506,7 @@ def is_replication_enabled(host=None, core_name=None):
     ret = _get_return_dict()
     success = True
     # since only slaves can call this let's check the config:
-    if self._is_master() and host is None:
+    if self._is_master() and is_none(host) is None:
         errors = ['Only "slave" minions can run "is_replication_enabled"']
         return ret.update({'success':False, 'errors':errors})
     #define a convenience method so we don't duplicate code
@@ -534,7 +543,7 @@ def is_replication_enabled(host=None, core_name=None):
                                         resp['errors'], resp['warnings'])
         return (ret, success)
 
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         for name in __opts__['solr.cores']:
             response = _replication_request('details', host=host,core_name=name)
             ret, success = _checks(ret, success, response,name)
@@ -563,12 +572,12 @@ def match_index_versions(host=None,core_name=None):
     salt '*' solr.match_index_versions music
     '''
     # since only slaves can call this let's check the config:
-    if _is_master() and host is None:
+    ret = _get_return_dict()
+    success = True
+    if _is_master() and _get_none_or_value(host) is None:
         e = ['solr.match_index_versions can only be called by "slave" minions']
         return ret.update({'success':False, 'errors':e})
     #get the default return dict
-    ret = _get_return_dict()
-    success = True
 
     def _match(ret, success, resp, core):
         if response['success']:
@@ -583,11 +592,13 @@ def match_index_versions(host=None,core_name=None):
                 #alterer can get what it wants
                 data = slave if core is None else {core : {'data': slave}}
             else:
-                versions = {'master':slave['masterDetails']['indexVersion'],
+                versions = {'master':slave['masterDetails']['master']['replicatableIndexVersion'],
                             'slave' : resp['data']['details']['indexVersion'],
                             'next_replication' : slave['nextExecutionAt'],
-                            'failed_list' : slave['replicationFailedAtList']
+                            'failed_list': []
                            }
+                if 'replicationFailedAtList' in slave:
+                    versions.update({'failed_list' : slave['replicationFailedAtList']})
                 #check the index versions
                 if versions['master'] != versions['slave']:
                     success = False
@@ -604,7 +615,7 @@ def match_index_versions(host=None,core_name=None):
         return (ret, success)
                 
     #check all cores?        
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success = True
         for name in __opts__['solr.cores']:
             response = _replication_request('details', host=host,core_name=name)
@@ -629,7 +640,7 @@ def replication_details(host=None, core_name=None):
     salt '*' solr.replication_details music
     '''
     ret = _get_return_dict()
-    if core_name is None:
+    if _get_none_or_value(core_name) is None:
         success=True
         for name in __opts__['solr.cores']:
             resp = _replication_request('details', host=host,core_name=name)
@@ -674,7 +685,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
             path += os.path.sep
 
     ret = _get_return_dict()
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             params = []
@@ -717,12 +728,12 @@ def set_is_polling(polling, host=None, core_name=None):
 
     ret = _get_return_dict()        
     # since only slaves can call this let's check the config:
-    if _is_master() and host is None:
+    if _is_master() and _get_none_or_value(host) is None:
         err = ['solr.set_is_polling can only be called by "slave" minions']
         return ret.update({'success':False, 'errors':err})
 
     cmd = "enablepoll" if polling else "disapblepoll"
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             resp = set_is_polling(cmd, host=host,core_name=name)
@@ -750,11 +761,11 @@ def set_replication_enabled(status, host=None,core_name=None):
                                 if you want to set the status on all cores.
     Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
     '''
-    if _is_master() and host is None:
+    if not _is_master() and _get_none_or_value(host) is None:
         return _get_return_dict(False, 
                 errors=['Only minions configured as master can run this'])
     cmd = 'enablereplication' if status else 'disablereplication'
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         ret = _get_return_dict()
         success=True
         for name in __opts__['solr.cores']:
@@ -809,7 +820,7 @@ def reload_core(host=None,core_name=None):
         err = ['solr.reload_core can only be called by "multi-core" minions']
         return ret.update({'success':False, 'errors':err})
 
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             resp = reload_core(host, name)
@@ -837,7 +848,7 @@ def core_status(host=None, core_name=None):
         err = ['solr.reload_core can only be called by "multi-core" minions']
         return ret.update({'success':False, 'errors':err})
 
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         success=True
         for name in __opts__['solr.cores']:
             resp = reload_core(host, name)
@@ -872,11 +883,11 @@ def reload_import_config(handler, host=None,core_name=None, verbose=False):
     '''
 
     #make sure that it's a master minion
-    if not _is_master() and host is None:
+    if not _is_master() and _get_none_or_value(host) is None:
         err = ['solr.pre_indexing_check can only be called by "master" minions']
         return _get_return_dict(False, err)
 
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         err = ['No core specified when minion is configured as "multi-core".']
         return _get_return_dict(False, err)
 
@@ -903,11 +914,11 @@ def abort_import(handler, host=None,core_name=None, verbose=False):
     CLI Example:
     salt '*' solr.abort_import dataimport music {'clean':True}
     '''
-    if not _is_master() and host is None:
+    if not _is_master() and _get_none_or_value(host) is None:
         err = ['solr.abort_import can only be called on "master" minions']
         return _get_return_dict(False, errors=err)
     
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         err = ['No core specified when minion is configured as "multi-core".']
         return _get_return_dict(False, err)
     
@@ -943,7 +954,7 @@ def full_import(handler, host=None, core_name=None, options={}, extra=[]):
         err = ['solr.full_import can only be called on "master" minions']
         return _get_return_dict(False, errors=err)
 
-    if core_name is None and _check_for_cores():
+    if _get_none_or_value(core_name) is None and _check_for_cores():
         err = ['No core specified when minion is configured as "multi-core".']
         return _get_return_dict(False, err)
 
@@ -983,7 +994,7 @@ def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
     CLI Example:
     salt '*' solr.delta_import dataimport music {'clean':True}
     '''
-    if not _is_master() and host is None:
+    if not _is_master() and _get_none_or_value(host) is None:
         err = ['solr.delta_import can only be called on "master" minions']
         return _get_return_dict(False, errors=err)
 
@@ -1019,7 +1030,7 @@ def import_status(handler, host=None,core_name=None, verbose=False):
     CLI Example
     salt '*' solr.import_status dataimport music False
     '''
-    if not _is_master() and host is None:
+    if not _is_master() and _get_none_or_value(host) is None:
         errors = ['solr.import_status can only be called by "master" minions']
         return _get_return_dict(False, errors=errors)
 
