@@ -143,24 +143,24 @@ def _virtual(osdata):
     #   virtual
     grains = {'virtual': 'physical'}
     try:
-        if not subprocess.check_call( "lspci", stdout = subprocess.PIPE, stderr = subprocess.PIPE ):
-            isLspciPresent = True
+        if not subprocess.check_call("lspci",stdout=subprocess.PIPE,stderr=subprocess.PIPE):
+            isLspciPresent=True
         else:
-            isLspciPresent = False
+            isLspciPresent=False
     except:
-        isLspciPresent = False
+        isLspciPresent=False
     if isLspciPresent:
-        model = subprocess.Popen( 
+        model=subprocess.Popen( 
                 'lspci|grep -i system',
-                shell = True,
-                stdout = subprocess.PIPE
+                shell=True,
+                stdout=subprocess.PIPE
                 ).communicate()[0]
-        if model.lower().count( "vmware" ):
-            grains['virtual'] = "VMware"
-        elif model.lower().count( "virtualbox" ):
-            grains['virtual'] = "VirtualBox"
-        elif model.lower().count( "qemu" ):
-            grains['virtual'] = 'kvm'
+        if model.lower().count("vmware"):
+            grains['virtual']="VMware"
+        elif model.lower().count("virtualbox"):
+            grains['virtual']="VirtualBox"
+        elif model.lower().count("qemu"):
+            grains['virtual']='kvm'
     choices =  ['Linux', 'OpenBSD', 'SunOS', 'HP-UX']
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
