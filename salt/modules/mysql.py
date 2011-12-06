@@ -17,16 +17,15 @@ import MySQLdb
 __opts__ = {}
 
 
-def connect():
+def connect(**kwargs):
     '''
     wrap authentication credentials here
     '''
-
-    hostname = __opts__['mysql.host']
-    username = __opts__['mysql.user']
-    password = __opts__['mysql.pass']
-    dbport = __opts__['mysql.port']
-    dbname = __opts__['mysql.db']
+    hostname = kwargs.get('host', __opts__['mysql.host'])
+    username = kwargs.get('user', __opts__['mysql.user'])
+    password = kwargs.get('pass', __opts__['mysql.pass'])
+    dbport = kwargs.get('port', __opts__['mysql.port'])
+    dbname = kwargs.get('db', __opts__['mysql.db'])
 
     db = MySQLdb.connect(
         hostname,
@@ -86,7 +85,7 @@ def slave_lag():
     '''
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute('show slave status')
+    cur.execute("show slave status")
     results = cur.fetchone()
     if results['Master_Host'] == '':
         # Server is not a slave if master is not defined.  Return empty tuple
@@ -98,4 +97,60 @@ def slave_lag():
         return results['Seconds_Behind_Master']
     
     
+def promote_slave():
+    '''
+    This is a WIP, do not use.
+    '''
+    slave_db = connect()
+    slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
+    slave_cur.execute("show slave status")
+    slave_status = slave_cur.fetchone()
+    master = {'host': slave_status['Master_Host']}
     
+    try:
+        # Try to connect to the master and flush logs before promoting to
+        # master.  This may fail if the master is no longer available.
+        # I am also assuming that the admin password is the same on both
+        # servers here, and only overriding the host option in the connect
+        # function.
+        master_db = connect(**master)
+        master_cur = master_db.cursor()
+        master_cur.execute("flush logs")
+        master_db.close()
+    except MySQLdb.OperationalError:
+        pass
+    
+    slave_cur.execute("stop slave")
+    slave_cur.execute("reset master")
+    slave_cur.execute("change master to MASTER_HOST=''")
+    slave_cur.execute("show slave status")
+    results = slave_cur.fetchone()
+    
+    if results is None:
+        return 'promoted'
+    else:
+        return 'failed'
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
