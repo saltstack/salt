@@ -170,7 +170,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzhn'
             else:
                 grains['virtual'] = 'openvzve'
-        elif isdir("/proc/sys/xen") or isdir("/sys/bus/xen") or isdir("/proc/xen"):
+        elif isdir('/proc/sys/xen') or isdir('/sys/bus/xen') or isdir('/proc/xen'):
             grains['virtual'] = 'xen'
             if os.path.isfile('/proc/xen/xsd_kva'):
                 grains['virtual_subtype'] = 'Xen Dom0'
