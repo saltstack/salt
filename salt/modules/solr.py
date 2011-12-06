@@ -162,10 +162,10 @@ def _format_url(handler,host=None,core_name=None,extra=[]):
     else:
         if extra is None or len(extra) == 0:
             return "http://{0}:{1}{2}/{3}/{4}?wt=json".format(
-                    host,port,baseurl,handler,core_name)
+                    host,port,baseurl,core_name,handler)
         else:
             return "http://{0}:{1}{2}/{3}/{4}?wt=json&{5}".format(
-                    host,port,baseurl,handler,core_name,"&".join(extra))
+                    host,port,baseurl,core_name,handler,"&".join(extra))
 
 def _http_request(url):
     '''
@@ -589,7 +589,7 @@ def match_index_versions(host=None,core_name=None):
                             'failed_list' : slave['replicationFailedAtList']
                            }
                 #check the index versions
-                if index_versions['master'] != index_versions['slave']:
+                if versions['master'] != versions['slave']:
                     success = False
                     err = "Master and Slave index versions do not match."
                     resp['errors'].append(err)
