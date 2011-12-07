@@ -80,12 +80,12 @@ class SaltCMD(object):
                 help=('Instead of using shell globs use the return code '
                       'of a function.'))
         parser.add_option('-N',
-                '--hostgroup',
+                '--nodegroup',
                 default=False,
-                dest='hostgroup',
+                dest='nodegroup',
                 action='store_true',
                 help=('Instead of using shell globs to evaluate the target '
-                      'use one of the predefined hostgroups to identify a '
+                      'use one of the predefined nodegroups to identify a '
                       'list of targets.'))
         parser.add_option('--return',
                 default='',
@@ -142,7 +142,7 @@ class SaltCMD(object):
         opts['list'] = options.list_
         opts['grain'] = options.grain
         opts['exsel'] = options.exsel
-        opts['hostgroup'] = options.hostgroup
+        opts['nodegroup'] = options.nodegroup
         opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
@@ -213,8 +213,8 @@ class SaltCMD(object):
                 args.append('grain')
             elif self.opts['exsel']:
                 args.append('exsel')
-            elif self.opts['hostgroup']:
-                args.append('hostgroup')
+            elif self.opts['nodegroup']:
+                args.append('nodegroup')
             else:
                 args.append('glob')
 
@@ -318,6 +318,14 @@ class SaltCP(object):
                       'use a grain value to identify targets, the syntax '
                       'for the target is the grains key followed by a pcre '
                       'regular expression:\n"os:Arch.*"'))
+        parser.add_option('-N',
+                '--nodegroup',
+                default=False,
+                dest='nodegroup',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use one of the predefined nodegroups to identify a '
+                      'list of targets.'))
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
@@ -334,6 +342,7 @@ class SaltCP(object):
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
+        opts['nodegroup'] = options.nodegroup
         opts['conf_file'] = options.conf_file
 
         if opts['list']:

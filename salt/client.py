@@ -322,16 +322,15 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
-
-
-        if expr_form == 'hostgroup':
-          group = self.opts['hostgroups'][tgt]
+        if expr_form == 'nodegroup':
+          group = self.opts['nodegroups'][tgt]
           forms = ['glob','pcre','list','grain','exsel']
 
           for form in forms:
             if form in group:
               tgt       = group[form]
               expr_form = form
+              break
 
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
