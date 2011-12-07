@@ -149,7 +149,6 @@ class JSONOutputter(Outputter):
     JSON output.
     '''
     supports = 'json'
-    enabled = JSON
 
     def __call__(self, data, **kwargs):
         if hasattr(self, 'indent'):
