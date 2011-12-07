@@ -11,9 +11,6 @@ import salt.utils
 
 __all__ = ('get_outputter',)
 
-# FIXME: get rid of the JSON constant as it's acutally not needed anymore
-JSON = True
-
 
 def remove_colors():
     '''
@@ -31,8 +28,8 @@ class Outputter(object):
     @classmethod
     def check(cls, name):
         # Don't advertise Outputter classes for optional modules
-        if hasattr(cls, 'enabled') and not cls.enabled: # FIXME: class Outputter
-            return False                                # has no enabled member
+        if hasattr(cls, 'enabled') and not cls.enabled: 
+            return False
         return cls.supports == name
 
     def __call__(self, data, **kwargs):
@@ -64,11 +61,11 @@ class HighStateOutputter(Outputter):
                 # Everything rendered as it should display the output
                 for tname, ret in data[host].items():
                     tcolor = colors['GREEN']
+                    if ret['changes']:
+                        tcolor = colors['CYAN']
                     if not ret['result']:
                         hcolor = colors['RED']
                         tcolor = colors['RED']
-                    if ret['changes']:
-                        tcolor = colors['CYAN']
                     comps = tname.split('.')
                     hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                                   .format(tcolor, comps[0], colors)))
