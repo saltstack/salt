@@ -93,6 +93,9 @@ data on tne minions.
 
 Compound Targeting
 ``````````````````
+
+.. versionadded:: 0.9.5
+
 Multiple target interfaces can be used in conjunction to determine the command
 targets. These targets can then be combined using and or or statements. This
 is well defined with an example:
