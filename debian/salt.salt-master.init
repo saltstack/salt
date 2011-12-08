@@ -29,7 +29,7 @@ DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
 if [ -f $DEBIAN_VERSION ]; then
-   break   
+   break
 elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else
@@ -50,7 +50,7 @@ findproc() {
 }
 
 start() {
-    echo -n $"Starting salt-master daemon: "
+    echo -n "Starting salt-master daemon: "
     if [ -f $SUSE_RELEASE ]; then
         startproc -f -p /var/run/$SERVICE.pid /usr/bin/salt-master -d $CONFIG_ARGS
         rc_status -v
@@ -72,7 +72,7 @@ start() {
 }
 
 stop() {
-    echo -n $"Stopping salt-master daemon: "
+    echo -n "Stopping salt-master daemon: "
     if [ -f $SUSE_RELEASE ]; then
         killproc -TERM /usr/bin/salt-master
         rc_status -v
@@ -131,7 +131,7 @@ case "$1" in
         RETVAL=$?
         ;;
     *)
-        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload|force-reload}"
+        echo "Usage: $0 {start|stop|status|restart|condrestart|reload|force-reload}"
         exit 1
         ;;
 esac
