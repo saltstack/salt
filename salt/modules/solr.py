@@ -3,8 +3,8 @@ Apache Solr Salt Module
 =======================
 
 Author: Jed Glazner
-Version: 0.2
-Modified: 9/20/2011
+Version: 0.2.1
+Modified: 12/09/2011
 
 This module uses http requests to talk to the apache solr request handlers
 to gather information and report errors. Because of this the minion doesn't
@@ -64,31 +64,6 @@ import json
 import socket
 import os
 
-# Override these in the minion config. 
-'''
-solr.cores: A list of core names eg ['core1','core2'].
-            An empty list indicates non-multicore setup.
-solr.host: The host name of solr node. (localhost)
-solr.port: The port that solr runs on. (8983)
-solr.baseurl: The root url path to access solr eg /solr
-solr.request_timeout: The number of seconds before timing out an http/https/ftp
-                      request. If nothing is specified then the python global
-                      timeout setting is used.
-solr.type: Possible values are 'master' or 'slave'
-solr.backup_path: The path to store your backups. If you are using cores and
-                  you can specify to append the core name to the path in the
-                  backup method.
-solr.num_backups: For versions of solr >= 3.5. Indicates the number of backups
-                  to keep. This option is ignored if your version is less.
-solr.init_script: The full path to your init script with start/stop options
-solr.dih.options: A list of options to pass to the dih. 
--------------------
-Required Options for DIH
-clean (False): Clear the index before importing
-commit (True): Commit the documents to the index upon completion
-optimize (True): Optimize the index after commit is complete
-verbose (True): Get verbose output
-'''
 #sane defaults
 __opts__ = {'solr.cores': [],
             'solr.host': 'localhost',
@@ -110,7 +85,7 @@ def __virtual__():
     PRIVATE METHOD
     Solr needs to be installed to use this.
 
-    Return: str/bool Indicates weather solr is present or not
+    Return: str/bool::
 
     TODO:// currently __salt__ is not available to call in this method because 
     all the salt modules have not been loaded yet. Use a grains module?
@@ -123,15 +98,30 @@ def __virtual__():
 
     return False
 
-def _get_none_or_value(string):
-    if string is None:
+def _get_none_or_value(value):
+    '''
+    PRIVATE METHOD
+    Checks to see if the value of a primitive or built-in container such as
+    a list, dict, set, tuple etc is empty or none. None type is returned if the
+    value is empty/None/False. Number data types that are 0 will return None.
+
+    value : obj
+        The primitive or built-in container to evaluate.
+
+    Return: None or value
+    '''
+    if value is None:
         return None
-    elif string == 'None':
-        return None
-    elif string == '':
-        return None
+    elif value:
+        return value
+    # if it's a string, and it's not empty check for none
+    elif type(value) == str:
+        if value.lower() == 'none':
+            return None
+        return value
+    # return None
     else:
-        return string
+        return None
 
 def _check_for_cores():
     '''
@@ -139,7 +129,9 @@ def _check_for_cores():
     Checks to see if using_cores has been set or not. if it's been set
     return it, otherwise figure it out and set it. Then return it
 
-    Return: bool True indicates that cores are used.
+    Return: boolean::
+        
+        True if one or more cores defined in __opts__['solr.cores']
     '''
     if len(__opts__['solr.cores']) > 0:
         return True
@@ -150,11 +142,19 @@ def _get_return_dict(success=True, data={}, errors=[], warnings=[]):
     '''
     PRIVATE METHOD
     Creates a new return dict with default values. Defaults may be overwritten.
+    
+    success : boolean (True)
+        True indicates a successful result.
+    data : dict<str,obj> ({})
+        Data to be returned to the caller.
+    errors : list<str> ([()])
+        A list of error messages to be returned to the caller
+    warnings : list<str> ([])
+        A list of warnings to be returned to the caller.
 
-    Param: bool success Default = True
-    Param: dict data Default = {}
-    Param: list errors Default = []
-    Param: list warnings Default= []
+    Return: dict<str,obj>::
+    
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}    
     '''
     ret = {'success':success, 
            'data':data, 
@@ -168,11 +168,21 @@ def _update_return_dict(ret, success, data, errors=[], warnings=[]):
     PRIVATE METHOD
     Updates the return dictionary and returns it.
 
-    Param: dict ret: The original returning dictionary to update
-    Param: bool success: Indicates if the call was successful.
-    Param: dict data: The data to update.
-    Param: list errors: Errors list to append to the return
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    ret : dict<str,obj>
+        The original return dict to update. The ret param should have
+        been created from _get_return_dict()
+    success : boolean (True)
+        True indicates a successful result.
+    data : dict<str,obj> ({})
+        Data to be returned to the caller.
+    errors : list<str> ([()])
+        A list of error messages to be returned to the caller
+    warnings : list<str> ([])
+        A list of warnings to be returned to the caller.
+
+    Return: dict<str,obj>::
+    
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}    
     '''
     ret['success'] = success
     ret['data'].update(data)
@@ -186,13 +196,19 @@ def _format_url(handler,host=None,core_name=None,extra=[]):
     PRIVATE METHOD
     Formats the url based on parameters, and if cores are used or not
 
-    Param: str request_handler: The request handler to hit
-    Param: str host (None): The solr host to query. __opts__['host'] is default
-    Param: str core_name (None): The name of the solr core if using cores. 
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.  
-    Param: list extra ([]): A list of additional name value pairs ['name=value]
-    Return: str formatted url
+    handler : str
+        The request handler to hit.
+    host : str (None)
+        The solr host to query. __opts__['host'] is default
+    core_name : str (None)
+        The name of the solr core if using cores. Leave this blank if you
+        are not using cores or if you want to check all cores.
+    extra : list<str> ([])
+        A list of name value pairs in string format. eg ['name=value']
+
+    Return: str::
+        
+        A fullly formatted url (http://<host>:<port>/solr/<handler>?wt=json&<extra>
     '''
     if _get_none_or_value(host) is None or host == 'None':
         host = __opts__['solr.host']
@@ -213,17 +229,23 @@ def _format_url(handler,host=None,core_name=None,extra=[]):
             return "http://{0}:{1}{2}/{3}/{4}?wt=json&{5}".format(
                     host,port,baseurl,core_name,handler,"&".join(extra))
 
-def _http_request(url):
+def _http_request(url,request_timeout=None):
     '''
     PRIVATE METHOD
     Uses json.load to fetch the json results from the solr api.
 
-    Param: str Url (A formatted url to and to urllib)
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    url : str 
+        a complete url that can be passed to urllib.open
+    request_timeout : int (None)
+        The number of seconds before the timeout should fail. Leave blank/None to 
+        use the default. __opts__['solr.request_timeout']
+        
+    Return: dict<str,obj>::
 
-    TODO://Add a timeout param.
+         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
     try:
+        
         request_timeout = __opts__['solr.request_timeout']
         if request_timeout is None:
             data = json.load(urllib2.urlopen(url))
@@ -233,23 +255,29 @@ def _http_request(url):
     except Exception as e:
         return _get_return_dict(False, {}, ["{0} : {1}".format(url,e)])
 
-def _replication_request(replication_command, host=None,core_name=None, params=[]):
+def _replication_request(command, host=None,core_name=None, params=[]):
     '''
     PRIVATE METHOD
     Performs the requested replication command and returns a dictionary with 
     success, errors and data as keys. The data object will contain the json 
     response.
+    
+    command : str
+        The replication command to execute.
+    host : str (None)
+        The solr host to query. __opts__['host'] is default
+    core_name: str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
+    params : list<str> ([])
+        Any additional parameters you want to send. Should be a lsit of
+        strings in name=value format. eg ['name=value']
 
-    Param: str replication_command: The replication command to execute
-    Param: str host (None): The solr host to query. __opts__['host'] is default
-    Param: str core_name (None): The name of the solr core if using cores. 
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
-    Param: list params ([]): Any additional parameters you want send.  
-                             Should be a list of strings in name=value format.
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    Return: dict<str, obj>:: 
+    
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
-    extra = ["command={0}".format(replication_command)] + params
+    extra = ["command={0}".format(command)] + params
     url = _format_url('replication',host=host,core_name=core_name,extra=extra)
     return _http_request(url)
 
@@ -261,12 +289,17 @@ def _get_admin_info(command, host=None, core_name=None):
     periodically to make sure everything this OK. The data object will contain 
     the json response. 
 
-    Param: str command: The admin command to run
-    Param: str host (None): The solr host to query. __opts__['host'] is default
-    Param: str core_name (None): The name of the solr core if using cores. 
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores.
-    Return: dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    command : str
+        The admin command to execute.
+    host : str (None)
+        The solr host to query. __opts__['host'] is default
+    core_name: str (None)
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores.
+
+    Return: dict<str,obj>::
+    
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
     url = _format_url("admin/{0}".format(command), host,core_name=core_name)
     resp =  _http_request(url)
@@ -277,7 +310,8 @@ def _is_master():
     PRIVATE METHOD
     Simple method to determine if the minion is configured as master or slave
 
-    Return: bool
+    Return: boolean::
+        True if __opts__['solr.type'] = master
     '''
     if __opts__['solr.type'] == 'master':
         return True
@@ -289,9 +323,14 @@ def _merge_options(options):
     updates the default import options from __opts__['solr.dih.import_options']
     with the dictionary passed in.  Also converts booleans to strings 
     to pass to solr.
+    
+    options : dict<str,boolean>
+        Dictionary the over rides the default options defined in 
+        __opts__['solr.dih.import_options']
 
-    Param: dict options {str:bool}: Dictionary that over rides default options
-    Return: dict {str:str}
+    Return: dict<str,boolean>::
+
+        {option:boolean}
     '''
     defaults = __opts__['solr.dih.import_options']
     if type(options) == dict:
@@ -308,13 +347,17 @@ def _pre_index_check(handler, host=None, core_name=None):
     we can talk to solr before trying to send a command to solr. This
     Command should only be issued to masters.
 
-    Param: str handler:
-    Param: str host (None): The solr host to query. __opts__['host'] is default
-    Param: str core_name (None): The name of the solr core if using cores. 
-                                 Leave this blank if you are not using cores or
-                                 if you want to check all cores. - this field
-                                 is required if you are using cores.
-    Return:  dict {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    handler : str
+        The import handler to check the state of
+    host : str (None):
+        The solr host to query. __opts__['host'] is default
+    core_name (None):
+        The name of the solr core if using cores. Leave this blank if you are
+        not using cores or if you want to check all cores. 
+        REQUIRED if you are using cores.
+    Return:  dict<str,obj>::
+    
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
     #make sure that it's a master minion
     if _get_none_or_value(host) is None and not _is_master():
@@ -353,11 +396,15 @@ def _find_value(ret_dict, key, path=None):
             useful in it's current state. The purpose for this method is to
             simplify parsing the json ouput so you can just pass the key
             you want to find and have it return the value.
+    ret : dict<str,obj>
+        The dictionary to search through. Typically this will be a dict
+        returned from solr.
+    key : str
+        The key (str) to find in the dictionary
 
-    Param: dict return_dict: The return dictionary
-    Param: str key: The key to find in the dictionary.
-
-    Return: list [{path:path, value:value}]
+    Return: list<dict<str,obj>>::
+        
+        [{path:path, value:value}]
     '''
     if path is None:
         path = key
@@ -388,9 +435,9 @@ def lucene_version(core_name=None):
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    Return: dict::
+    Return: dict<str,obj>::
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -428,9 +475,9 @@ def version(core_name=None):
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    Return : dict::
+    Return : dict<str,obj>::
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -462,7 +509,6 @@ def version(core_name=None):
 
 def optimize(host=None, core_name=None):
     '''
-    Optimize the solr index.  Optimizing the index is a good way to keep 
     Search queries fast, but it is a very expensive operation. The ideal
     process is to run this with a master/slave configuration.  Then you 
     can optimize the master, and push the optimized index to the slaves.
@@ -472,22 +518,19 @@ def optimize(host=None, core_name=None):
     to run and your http request may timeout. If that happens adjust your
     timeout settings.
 
-
     host : str (None)
-        The solr host to query. ``__opts__['host']`` is default
-
+        The solr host to query. __opts__['host'] is default. 
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    Return : dict::
+    Return : dict<str,obj>::
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
         salt '*' solr.optimize music
-    
     '''
     ret = _get_return_dict()
 
@@ -514,16 +557,15 @@ def ping(host=None, core_name=None):
     '''
     Does a health check on solr, makes sure solr can talk to the indexes.
 
+    host : str (None)
+        The solr host to query. __opts__['host'] is default. 
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    host : str (None)
-        The solr host to query. ``__opts__['host']`` is default
+    Return : dict<str,obj>::
 
-    Return : dict::
-
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -549,17 +591,16 @@ def is_replication_enabled(host=None, core_name=None):
     '''
     SLAVE CALL
     Check for errors, and determine if a slave is replicating or not.
-
+    
+    host : str (None)
+        The solr host to query. __opts__['host'] is default. 
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    host : str (None)
-        The solr host to query. ``__opts__['host']`` is default
+    Return : dict<str,obj>::
 
-    Return : dict::
-
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -624,16 +665,15 @@ def match_index_versions(host=None,core_name=None):
     to this is pause indexing every so often to allow the slave to replicate
     and then call this method before allowing indexing to resume.
 
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    host : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
-
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -698,16 +738,15 @@ def replication_details(host=None, core_name=None):
     '''
     Get the full replication details.
 
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    slave : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
-
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -737,20 +776,18 @@ def backup(host=None, core_name=None, append_core_to_path=False):
     The status: 'OK' in the response simply means that solr received the
     request successfully.
 
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
-
-    append_core_to_path : str (False)
+    append_core_to_path : boolean (False)
         If True add the name of the core to the backup path. Assumes that
         minion backup path is not None.
 
-    host : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
-
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -795,19 +832,17 @@ def set_is_polling(polling, host=None, core_name=None):
     SLAVE CALL
     Prevent the slaves from polling the master for updates.
 
-    polling : bool
+    polling : boolean
         True will enable polling. False will disable it.
-
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
-    host : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
-
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
@@ -842,19 +877,22 @@ def set_replication_enabled(status, host=None,core_name=None):
     don't want the slaves replicating during indexing or when clearing the
     index.
 
-    status : bool
+    status : boolean
         Sets the replication status to the specified state.
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
 
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to set the status on all cores.
 
-    host : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    CLI Example::
+    
+        salt '*' solr.set_replication_enabled false, None, music
     '''
     if not _is_master() and _get_none_or_value(host) is None:
         return _get_return_dict(False, 
@@ -907,14 +945,19 @@ def reload_core(host=None,core_name=None):
     While the "new" core is initializing, the "old" one will continue to accept
     requests. Once it has finished, all new request will go to the "new" core,
     and the "old" core will be unloaded.
-
+    
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core_name : str
         The name of the core to reload
 
-    host : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
+
+    CLI Example::
+
+        salt '*' solr.reload_core None music
 
         {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
     '''
@@ -942,15 +985,18 @@ def core_status(host=None, core_name=None):
     MULTI-CORE HOSTS ONLY
     Get the status for a given core or all cores if no core is specified
 
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core_name : str
         The name of the core to reload
 
-    host : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+    CLI Example::
+
+        salt '*' solr.core_status None music
     '''
     ret = _get_return_dict()
     if not _check_for_cores():
@@ -982,18 +1028,20 @@ def reload_import_config(handler, host=None,core_name=None, verbose=False):
 
     handler : str
         The name of the data import handler.
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core : str (None)
         The core the handler belongs to.
-    verbose : bool (False)
+    verbose : boolean (False)
         Run the command with verbose output.
 
-    Return : dict::
+    Return : dict<str,obj>::
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
-        salt '*' solr.reload_import_config dataimport music {'clean':True}
+        salt '*' solr.reload_import_config dataimport None music {'clean':True}
     '''
 
     #make sure that it's a master minion
@@ -1017,26 +1065,23 @@ def abort_import(handler, host=None,core_name=None, verbose=False):
     Aborts an existing import command to the specified handler.
     This command can only be run if the minion is is configured with
     solr.type=master
-
+    
     handler : str
         The name of the data import handler.
-
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core : str (None)
         The core the handler belongs to.
-
-    verbose : bool (False)
+    verbose : boolean (False)
         Run the command with verbose output.
 
-    host : str (None)
-        The hostname of the slave to run the command on
+    Return : dict<str,obj>::
 
-    Return : dict::
-
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
-        salt '*' solr.abort_import dataimport music {'clean':True}
+        salt '*' solr.abort_import dataimport None music {'clean':True}
     '''
     if not _is_master() and _get_none_or_value(host) is None:
         err = ['solr.abort_import can only be called on "master" minions']
@@ -1058,9 +1103,11 @@ def full_import(handler, host=None, core_name=None, options={}, extra=[]):
     Submits an import command to the specified handler using specified options.
     This command can only be run if the minion is is configured with
     solr.type=master
-
+    
     handler : str
         The name of the data import handler.
+    host : str (None)
+        The solr host to query. __opts__['host'] is default.
     core : str (None)
         The core the handler belongs to.
     options : dict (__opts__)
@@ -1070,13 +1117,13 @@ def full_import(handler, host=None, core_name=None, options={}, extra=[]):
     extra : dict ([])
         Extra name value pairs to pass to the handler. e.g. ["name=value"]
 
-    Return : dict::
+    Return : dict<str,obj>::
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
-        salt '*' solr.full_import dataimport music {'clean':True}
+        salt '*' solr.full_import dataimport None music {'clean':True}
     '''
     if not _is_master():
         err = ['solr.full_import can only be called on "master" minions']
@@ -1109,13 +1156,10 @@ def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
 
     handler : str
         The name of the data import handler.
-
     host : str (None)
-        The hostname of the slave to run the command on
-
+        The solr host to query. __opts__['host'] is default.
     core : str (None)
         The core the handler belongs to.
-
     options : dict (__opts__)
         A list of options such as clean, optimize commit, verbose, and
         pause_replication. leave blank to use __opts__ defaults. options will
@@ -1124,13 +1168,13 @@ def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
     extra : dict ([])
         Extra name value pairs to pass to the handler. eg ["name=value"]
 
-    Return : dict::
+    Return : dict<str,obj>::
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
-        salt '*' solr.delta_import dataimport music {'clean':True}
+        salt '*' solr.delta_import dataimport None music {'clean':True}
     '''
     if not _is_master() and _get_none_or_value(host) is None:
         err = ['solr.delta_import can only be called on "master" minions']
@@ -1160,23 +1204,20 @@ def import_status(handler, host=None,core_name=None, verbose=False):
 
     handler : str
         The name of the data import handler.
-
     host : str (None)
-        The hostname of the slave to run the command on
-
+        The solr host to query. __opts__['host'] is default.
     core : str (None)
         The core the handler belongs to.
-
-    verbose : bool (False)
+    verbose : boolean (False)
         Specifies verbose output
 
-    Return : dict::
+    Return : dict<str,obj>::
 
-        {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
+        {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
 
     CLI Example::
 
-        salt '*' solr.import_status dataimport music False
+        salt '*' solr.import_status dataimport None music False
     '''
     if not _is_master() and _get_none_or_value(host) is None:
         errors = ['solr.import_status can only be called by "master" minions']
