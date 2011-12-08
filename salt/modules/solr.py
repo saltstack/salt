@@ -472,6 +472,10 @@ def optimize(host=None, core_name=None):
     to run and your http request may timeout. If that happens adjust your
     timeout settings.
 
+
+    host : str (None)
+        The solr host to query. ``__opts__['host']`` is default
+
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
@@ -514,6 +518,9 @@ def ping(host=None, core_name=None):
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
+    host : str (None)
+        The solr host to query. ``__opts__['host']`` is default
+
     Return : dict::
 
         {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
@@ -546,6 +553,9 @@ def is_replication_enabled(host=None, core_name=None):
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
+
+    host : str (None)
+        The solr host to query. ``__opts__['host']`` is default
 
     Return : dict::
 
@@ -618,6 +628,9 @@ def match_index_versions(host=None,core_name=None):
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
+    host : str (None)
+        The hostname of the slave to run the command on
+
     Return : dict::
 
         {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
@@ -689,6 +702,9 @@ def replication_details(host=None, core_name=None):
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
 
+    slave : str (None)
+        The hostname of the slave to run the command on
+
     Return : dict::
 
         {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
@@ -724,9 +740,13 @@ def backup(host=None, core_name=None, append_core_to_path=False):
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
+
     append_core_to_path : str (False)
         If True add the name of the core to the backup path. Assumes that
         minion backup path is not None.
+
+    host : str (None)
+        The hostname of the slave to run the command on
 
     Return : dict::
 
@@ -777,9 +797,13 @@ def set_is_polling(polling, host=None, core_name=None):
 
     polling : bool
         True will enable polling. False will disable it.
+
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
+
+    host : str (None)
+        The hostname of the slave to run the command on
 
     Return : dict::
 
@@ -820,9 +844,13 @@ def set_replication_enabled(status, host=None,core_name=None):
 
     status : bool
         Sets the replication status to the specified state.
+
     core_name : str (None)
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to set the status on all cores.
+
+    host : str (None)
+        The hostname of the slave to run the command on
 
     Return : dict::
 
@@ -883,6 +911,9 @@ def reload_core(host=None,core_name=None):
     core_name : str
         The name of the core to reload
 
+    host : str (None)
+        The hostname of the slave to run the command on
+
     Return : dict::
 
         {'success':bool, 'data':dict, 'errors':list, 'warnings':list}
@@ -913,6 +944,9 @@ def core_status(host=None, core_name=None):
 
     core_name : str
         The name of the core to reload
+
+    host : str (None)
+        The hostname of the slave to run the command on
 
     Return : dict::
 
@@ -986,10 +1020,15 @@ def abort_import(handler, host=None,core_name=None, verbose=False):
 
     handler : str
         The name of the data import handler.
+
     core : str (None)
         The core the handler belongs to.
+
     verbose : bool (False)
         Run the command with verbose output.
+
+    host : str (None)
+        The hostname of the slave to run the command on
 
     Return : dict::
 
@@ -1070,12 +1109,18 @@ def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
 
     handler : str
         The name of the data import handler.
+
+    host : str (None)
+        The hostname of the slave to run the command on
+
     core : str (None)
         The core the handler belongs to.
+
     options : dict (__opts__)
         A list of options such as clean, optimize commit, verbose, and
         pause_replication. leave blank to use __opts__ defaults. options will
         be merged with __opts__
+
     extra : dict ([])
         Extra name value pairs to pass to the handler. eg ["name=value"]
 
@@ -1115,8 +1160,13 @@ def import_status(handler, host=None,core_name=None, verbose=False):
 
     handler : str
         The name of the data import handler.
+
+    host : str (None)
+        The hostname of the slave to run the command on
+
     core : str (None)
         The core the handler belongs to.
+
     verbose : bool (False)
         Specifies verbose output
 
