@@ -19,6 +19,7 @@ import subprocess
 import sys
 import re
 import platform
+from utils import which
 
 
 def _kernel():
@@ -86,22 +87,25 @@ def _freebsd_cpudata():
     Return cpu information for FreeBSD systems
     '''
     grains = {}
-    grains['cpuarch'] = subprocess.Popen(
-            '/sbin/sysctl -n hw.machine',
-            shell=True,
-            stdout=subprocess.PIPE
-            ).communicate()[0].strip()
-    grains['num_cpus'] = subprocess.Popen(
-            '/sbin/sysctl -n hw.ncpu',
-            shell=True,
-            stdout=subprocess.PIPE
-            ).communicate()[0].strip()
-    grains['cpu_model'] = subprocess.Popen(
-            '/sbin/sysctl -n hw.model',
-            shell=True,
-            stdout=subprocess.PIPE
-            ).communicate()[0].strip()
-    grains['cpu_flags'] = []
+    sysctl = which("sysctl")
+
+    if sysctl:
+        grains['cpuarch'] = subprocess.Popen(
+                '{0} -n hw.machine'.format(sysctl),
+                shell=True,
+                stdout=subprocess.PIPE
+        ).communicate()[0].strip()
+        grains['num_cpus'] = subprocess.Popen(
+                '{0} -n hw.ncpu'.format(sysctl),
+                shell=True,
+                stdout=subprocess.PIPE
+        ).communicate()[0].strip()
+        grains['cpu_model'] = subprocess.Popen(
+                '{0} -n hw.model'.format(sysctl),
+                shell=True,
+                stdout=subprocess.PIPE
+        ).communicate()[0].strip()
+        grains['cpu_flags'] = []
     return grains
 
 
@@ -123,11 +127,13 @@ def _memdata(osdata):
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
     elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
-        mem = subprocess.Popen(
-                '/sbin/sysctl -n hw.physmem',
-                shell=True,
-                stdout=subprocess.PIPE
-                ).communicate()[0].strip()
+        sysctl = which("sysctl")
+        if sysctl:
+            mem = subprocess.Popen(
+                    '{0} -n hw.physmem'.format(sysctl),
+                    shell=True,
+                    stdout=subprocess.PIPE
+            ).communicate()[0].strip()
         grains['mem_total'] = str(int(mem) / 1024 / 1024)
     
     return grains
@@ -142,25 +148,18 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    try:
-        if not subprocess.check_call('lspci',
-                stdout=subprocess.PIPE,stderr=subprocess.PIPE):
-            isLspciPresent=True
-        else:
-            isLspciPresent=False
-    except:
-        isLspciPresent=False
-    if isLspciPresent:
+    lspci = which("lspci")
+    if lspci:
         model=subprocess.Popen( 
                 'lspci | grep -i system',
                 shell=True,
                 stdout=subprocess.PIPE
-                ).communicate()[0]
-        if model.lower().count('vmware'):
+                ).communicate()[0].lower()
+        if 'vmware' in model:
             grains['virtual'] = 'VMware'
-        elif model.lower().count('virtualbox'):
+        elif 'virtualbox' in model:
             grains['virtual'] = 'VirtualBox'
-        elif model.lower().count('qemu'):
+        elif 'qemu' in model:
             grains['virtual'] = 'kvm'
     choices =  ['Linux', 'OpenBSD', 'SunOS', 'HP-UX']
     isdir = os.path.isdir
@@ -185,11 +184,13 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
-        model = subprocess.Popen(
-                '/sbin/sysctl hw.model',
-                shell=True,
-                stdout=subprocess.PIPE
-                ).communicate()[0].split(':')[1].strip()
+        sysctl = which("sysctl")
+        if sysctl:
+            model = subprocess.Popen(
+                    '{0} hw.model'.format(sysctl),
+                    shell=True,
+                    stdout=subprocess.PIPE
+            ).communicate()[0].split(':')[1].strip()
         if 'QEMU Virtual CPU' in model:
             grains['virtual'] = 'kvm'
     return grains
@@ -254,7 +255,6 @@ def os_data():
             if "lsb_distrib_id" in grains:
                 if "Ubuntu" in grains['lsb_distrib_id']:
                     grains['os'] = 'Ubuntu'
-                
                 elif os.path.isfile("/etc/issue.net") and \
                   "Ubuntu" in open("/etc/issue.net").readline():
                     grains['os'] = 'Ubuntu'
