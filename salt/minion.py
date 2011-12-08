@@ -529,7 +529,7 @@ class Matcher(object):
         Runs the compound target check
         '''
         if not isinstance(tgt, str):
-            print 'target not string'
+            log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',
                'X': 'exsel',
@@ -545,7 +545,7 @@ class Matcher(object):
                 results.append('or')
                 continue
             # If we are here then it is not a boolean operator, check if the
-            # last member of the result list is a boolen, if no, append and
+            # last member of the result list is a boolean, if no, append and
             if results:
                 if results[-1] != 'and' or results[-1] != 'or':
                     results.append('and')
