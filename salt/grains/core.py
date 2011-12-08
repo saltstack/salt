@@ -118,8 +118,8 @@ def _memdata(osdata):
     grains = {'mem_total': 0}
     if osdata['kernel'] == 'Linux':
         meminfo = '/proc/meminfo'
-        
-        if os.path.isfile(meminfo):          
+
+        if os.path.isfile(meminfo):
             for line in open(meminfo, 'r').readlines():
                 comps = line.split(':')
                 if not len(comps) > 1:
@@ -135,7 +135,7 @@ def _memdata(osdata):
                     stdout=subprocess.PIPE
             ).communicate()[0].strip()
         grains['mem_total'] = str(int(mem) / 1024 / 1024)
-    
+
     return grains
 
 
@@ -149,14 +149,35 @@ def _virtual(osdata):
     #   virtual
     grains = {'virtual': 'physical'}
     lspci = which("lspci")
-    if lspci:
-        model=subprocess.Popen( 
-                'lspci | grep -i system',
+    dmidecode = which("dmidecode")
+
+    if dmidecode:
+        output=subprocess.Popen(dmidecode,
                 shell=True,
                 stdout=subprocess.PIPE
-                ).communicate()[0].lower()
+        ).communicate()[0].lower()
+        # Product Name: VirtualBox
+        if 'Vendor: QEMU' in output:
+            # FIXME: Make this detect between kvm or qemu
+            grains['virtual'] = 'kvm'
+        elif 'VirtualBox' in output:
+            grains['virtual'] = 'VirtualBox'
+        # Product Name: VMware Virtual Platform
+        elif 'VMware' in output
+            grains['virtual'] = 'VMware'
+        # Manufacturer: Microsoft Corporation
+        # Product Name: Virtual Machine
+        elif 'Manufacturer: Microsoft' in output and 'Virtual Machine' in output:
+            grains['virtual'] = 'VirtualPC'
+    # Fall back to lspci if dmidecode isn't available
+    elif lspci:
+        model=subprocess.Popen(lspci,
+                shell=True,
+                stdout=subprocess.PIPE
+        ).communicate()[0].lower()
         if 'vmware' in model:
             grains['virtual'] = 'VMware'
+        # 00:04.0 System peripheral: InnoTek Systemberatung GmbH VirtualBox Guest Service
         elif 'virtualbox' in model:
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
@@ -249,7 +270,7 @@ def os_data():
                     # Adds: lsb_distrib_{id,release,codename,description}
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         if os.path.isfile('/etc/arch-release'):
-            grains['os'] = 'Arch'       
+            grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
             if "lsb_distrib_id" in grains:
@@ -324,7 +345,7 @@ def os_data():
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
-    
+
     return grains
 
 
