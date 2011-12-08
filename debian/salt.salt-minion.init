@@ -46,7 +46,7 @@ PROC_LIST=""
 RETVAL=0
 
 findproc() {
-    PROC_LIST=`$PS_CMD | grep $PROCESS | grep -v grep | grep -v sh | grep -v vi | awk '{ print $1 }'`
+    PROC_LIST=`$PS_CMD | grep 'bin/python.*salt-minion' | grep -v grep | grep -v sh | grep -v vi | awk '{ print $1 }'`
 }
 
 start() {
