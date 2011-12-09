@@ -77,7 +77,7 @@ def version():
 def slave_lag():
     '''
     Return the number of seconds that a slave SQL server is lagging behind the
-    master.
+    master, if the host is not a slave it will return -1.
 
     CLI Example::
 
@@ -87,16 +87,20 @@ def slave_lag():
     cur = db.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("show slave status")
     results = cur.fetchone()
-    if results['Master_Host'] == '':
+    if cur.rowcount == 0:
         # Server is not a slave if master is not defined.  Return empty tuple
         # in this case.  Could probably check to see if Slave_IO_Running and
         # Slave_SQL_Running are both set to 'Yes' as well to be really really
         # sure that it is a slave.
-        return ()
+        return -1
     else:
-        return results['Seconds_Behind_Master']
-    
-    
+        if results['Slave_IO_Running'] == 'Yes':
+            return results['Seconds_Behind_Master']
+        else:
+            # Replication is broken if you get here.
+            return -1
+
+
 def promote_slave():
     '''
     This is a WIP, do not use.
@@ -106,7 +110,7 @@ def promote_slave():
     slave_cur.execute("show slave status")
     slave_status = slave_cur.fetchone()
     master = {'host': slave_status['Master_Host']}
-    
+
     try:
         # Try to connect to the master and flush logs before promoting to
         # master.  This may fail if the master is no longer available.
@@ -119,14 +123,15 @@ def promote_slave():
         master_db.close()
     except MySQLdb.OperationalError:
         pass
-    
+
     slave_cur.execute("stop slave")
     slave_cur.execute("reset master")
     slave_cur.execute("change master to MASTER_HOST=''")
     slave_cur.execute("show slave status")
     results = slave_cur.fetchone()
-    
+
     if results is None:
         return 'promoted'
     else:
         return 'failed'
+
