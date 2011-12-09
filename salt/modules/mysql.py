@@ -77,7 +77,9 @@ def version():
 def slave_lag():
     '''
     Return the number of seconds that a slave SQL server is lagging behind the
-    master, if the host is not a slave it will return -1.
+    master, if the host is not a slave it will return -1.  If the server is
+    configured to be a slave but replication but slave IO is not running then
+    -2 will be returned.
 
     CLI Example::
 
@@ -98,12 +100,12 @@ def slave_lag():
             return results['Seconds_Behind_Master']
         else:
             # Replication is broken if you get here.
-            return -1
+            return -2
 
 
-def promote_slave():
+def free_slave():
     '''
-    This is a WIP, do not use.
+    Frees a slave from its master.  This is a WIP, do not use.
     '''
     slave_db = connect()
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
@@ -134,4 +136,3 @@ def promote_slave():
         return 'promoted'
     else:
         return 'failed'
-
