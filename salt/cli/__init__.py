@@ -7,12 +7,7 @@ import optparse
 import os
 import sys
 import yaml
-JSON = False
-try:
-    import json
-    JSON = True
-except:
-    pass
+import json
 
 # Import salt components
 import salt.cli.caller
@@ -130,12 +125,11 @@ class SaltCMD(object):
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt command in yaml.')
-        if JSON:
-            parser.add_option('--json-out',
-                    default=False,
-                    action='store_true',
-                    dest='json_out',
-                    help='Print the output from the salt command in json.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
 
         options, args = parser.parse_args()
 
@@ -152,10 +146,7 @@ class SaltCMD(object):
         opts['raw_out'] = options.raw_out
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
-        if JSON:
-            opts['json_out'] = options.json_out
-        else:
-            opts['json_out'] = False
+        opts['json_out'] = options.json_out
 
         if opts['return']:
             if opts['timeout'] == 5:
@@ -527,12 +518,11 @@ class SaltCall(object):
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt command in yaml.')
-        if JSON:
-            parser.add_option('--json-out',
-                    default=False,
-                    action='store_true',
-                    dest='json_out',
-                    help='Print the output from the salt command in json.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
         parser.add_option('--no-color',
                 default=False,
                 dest='no_color',
@@ -550,10 +540,7 @@ class SaltCall(object):
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
         opts['color'] = not options.no_color
-        if JSON:
-            opts['json_out'] = options.json_out
-        else:
-            opts['json_out'] = False
+        opts['json_out'] = options.json_out
         opts.update(salt.config.minion_config(options.config))
         opts['log_level'] = options.log_level
         if len(args) >= 1:
