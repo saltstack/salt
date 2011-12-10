@@ -327,3 +327,163 @@ def find(path, *opts):
     ret = [p for p in f.find(path)]
     ret.sort()
     return ret
+
+def sed_esc(s):
+    '''
+    Escape single quotes and forward slashes
+    '''
+    return s.replace("'", "'\"'\"'").replace("/", "\/")
+
+def sed(path, before, after, limit='', backup='.bak', options='-r -e',
+        flags='g'):
+    '''
+    Make a simple edit to a file
+
+    Equivalent to::
+
+        sed <backup> <options> "/<limit>/ s/<before>/<after>/<flags> <file>"
+
+    For convenience, ``before`` and ``after`` will automatically escape forward
+    slashes, single quotes and parentheses for you, so you don't need to
+    specify e.g.  ``http:\/\/foo\.com``, instead just using ``http://foo\.com``
+    is fine.
+
+    Usage::
+
+        salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
+
+    .. versionadded:: 0.9.5
+    '''
+    # This is largely stolen from Fabric's contrib.files.sed()
+
+    before = sed_esc(before)
+    after = sed_esc(after)
+    after = after.replace("(", r"\(").replace(")", r"\)")
+
+    cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
+            backup = '-i{0} '.format(backup) if backup else '',
+            options = options,
+            limit = '/{0}/ '.format(limit) if limit else '',
+            before = before,
+            after = after,
+            flags = flags,
+            path = path)
+
+    return __salt__['cmd.run'](cmd)
+
+def uncomment(path, regex, char='#', backup='.bak'):
+    '''
+    Uncomment specified commented lines in a file
+
+    The default comment delimiter is `#` and may be overridden by the ``char``
+    argument.
+
+    `uncomment` will remove a single whitespace character following the comment
+    character, if it exists, but will preserve all preceding whitespace.  For
+    example, ``# foo`` would become ``foo`` (the single space is stripped) but
+    ``    # foo`` would become ``    foo`` (the single space is still stripped,
+    but the preceding 4 spaces are not.)
+
+    Usage::
+
+        salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
+
+    .. versionadded:: 0.9.5
+    '''
+    # This is largely stolen from Fabric's contrib.files.uncomment()
+
+    return __salt__['file.sed'](path,
+        before=r'^([[:space:]]*){0}[[:space:]]?'.format(char),
+        after=r'\1',
+        limit=regex,
+        backup=backup)
+
+def comment(path, regex, char='#', backup='.bak'):
+    '''
+    Comment out specified lines in a file
+
+    The default commenting character is `#` and may be overridden by the
+    ``char`` argument.
+
+    `comment` will prepend the comment character to the very beginning of the
+    line, so that lines end up looking like so::
+
+        this line is uncommented
+        #this line is commented
+        #   this line is indented and commented
+
+    .. note::
+
+        In order to preserve the line being commented out, this function will
+        wrap your ``regex`` argument in parentheses, so you don't need to. It
+        will ensure that any preceding/trailing ``^`` or ``$`` characters are
+        correctly moved outside the parentheses. For example, calling
+        ``comment(filename, r'^foo$')`` will result in a `sed` call with the
+        "before" regex of ``r'^(foo)$'`` (and the "after" regex, naturally, of
+        ``r'#\\1'``.)
+
+    Usage::
+
+        salt '*' file.comment /etc/modules pcspkr
+
+    .. versionadded:: 0.9.5
+    '''
+    # This is largely stolen from Fabric's contrib.files.comment()
+
+    carot, dollar = '', ''
+
+    if regex.startswith('^'):
+        carot = '^'
+        regex = regex[1:]
+
+    if regex.endswith('$'):
+        dollar = '$'
+        regex = regex[:-1]
+
+    regex = "{0}({1}){2}".format(carot, regex, dollar)
+
+    return __salt__['file.sed'](
+        path,
+        before=regex,
+        after=r'{0}\1'.format(char),
+        backup=backup)
+
+def contains(path, text, limit=''):
+    '''
+    Return True if the file at ``path`` contains ``text``
+
+    Usage::
+
+        salt '*' file.contains /etc/crontab 'mymaintenance.sh'
+
+    .. versionadded:: 0.9.5
+    '''
+    # This is largely inspired by Fabric's contrib.files.contains()
+
+    if not os.path.exists(path):
+        return False
+
+    result = __salt__['filenew.sed'](path, text, '&', limit=limit, backup='',
+            options='-n -r -e', flags='gp')
+
+    return bool(result)
+
+def append(path, *args):
+    '''
+    Append text to the end of a file
+
+    Usage::
+
+        salt '*' file.append /etc/motd \\
+                "With all thine offerings thou shalt offer salt."\\
+                "Salt is what makes things taste bad when it isn't in them."
+
+    .. versionadded:: 0.9.5
+    '''
+    # This is largely inspired by Fabric's contrib.files.append()
+
+    with open(path, "a") as f:
+        for line in args:
+            f.write('{0}\n'.format(line))
+
+    return "Wrote {0} lines to '{1}'".format(len(args), path)
