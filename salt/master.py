@@ -4,7 +4,7 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python modules
-import cPickle as pickle
+import salt.msgpack as msgpack
 import datetime
 import hashlib
 import logging
@@ -40,7 +40,7 @@ def prep_jid(cachedir, load):
     jid_dir = os.path.join(jid_root, jid)
     if not os.path.isdir(jid_dir):
         os.makedirs(jid_dir)
-        pickle.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        msgpack.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
     else:
         return prep_jid(load)
     return jid
@@ -425,10 +425,10 @@ class AESFuncs(object):
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
-        pickle.dump(load['return'],
+        msgpack.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
         if 'out' in load:
-            pickle.dump(load['out'],
+            msgpack.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
     def _syndic_return(self, load):
@@ -608,7 +608,7 @@ class ClearFuncs(object):
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
         # 3. make an rsa key with the pub key
-        # 4. encrypt the aes key as an encrypted pickle
+        # 4. encrypt the aes key as an encrypted msgpack
         # 5. package the return and return it
         log.info('Authentication request from %(id)s', load)
         pubfn = os.path.join(self.opts['pki_dir'],
@@ -696,7 +696,7 @@ class ClearFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
         # Save the invocation information
-        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        msgpack.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
         # Set up the payload
         payload = {'enc': 'aes'}
         load = {

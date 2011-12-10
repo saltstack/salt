@@ -5,7 +5,7 @@ authenticating peers
 '''
 
 # Import python libs
-import cPickle as pickle
+import salt.msgpack as msgpack
 import hashlib
 import hmac
 import logging
@@ -288,21 +288,21 @@ class Crypticle(object):
         data = cypher.decrypt(data)
         return data[:-ord(data[-1])]
 
-    def dumps(self, obj, pickler=pickle):
+    def dumps(self, obj):
         '''
-        pickle and encrypt a python object
+        Serialize and encrypt a python object
         '''
-        return self.encrypt(self.PICKLE_PAD + pickler.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + msgpack.dumps(obj))
 
-    def loads(self, data, pickler=pickle):
+    def loads(self, data):
         '''
-        decrypt and un-pickle a python object
+        Decrypt and un-serialize a python object
         '''
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        return pickler.loads(data[len(self.PICKLE_PAD):])
+        return msgpack.loads(data[len(self.PICKLE_PAD):])
 
 
 class SAuth(Auth):
