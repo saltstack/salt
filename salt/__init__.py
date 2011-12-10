@@ -2,8 +2,6 @@
 Make me some salt!
 '''
 
-__version_info__ = (0, 9, 5, 'pre')
-__version__ = '.'.join(map(str, __version_info__))
 
 # Import python libs
 import optparse
@@ -13,7 +11,7 @@ import sys
 # Import salt libs
 import salt.config
 import salt.utils.verify
-
+from salt.version import *
 
 def verify_env(dirs):
     '''

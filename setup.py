@@ -13,7 +13,7 @@ from distutils.cmd import Command
 from distutils.core import setup
 from distutils.sysconfig import get_python_lib, PREFIX
 
-from salt import __version__
+from version import *
 
 try:
     from Cython.Distutils import build_ext
