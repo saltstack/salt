@@ -193,7 +193,26 @@ class SaltCMD(object):
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         if 'query' in self.opts:
-            print local.find_cmd(self.opts['cmd'])
+            ret = local.find_cmd(self.opts['cmd'])
+            for jid in ret:
+                if isinstance(ret, list) or isinstance(ret, dict):
+                    # Determine the proper output method and run it
+                    get_outputter = salt.output.get_outputter
+                    if self.opts['raw_out']:
+                        printout = get_outputter('raw')
+                    elif self.opts['json_out']:
+                        printout = get_outputter('json')
+                    elif self.opts['txt_out']:
+                        printout = get_outputter('txt')
+                    elif self.opts['yaml_out']:
+                        printout = get_outputter('yaml')
+                    else:
+                        printout = get_outputter(None)
+                    
+                    print 'Return data for job {0}:'.format(jid)
+                    printout(ret[jid])
+                    print ''
+
         else:
             args = [self.opts['tgt'],
                     self.opts['fun'],
