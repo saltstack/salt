@@ -98,6 +98,7 @@ def daemonize():
     os.dup2(dev_null.fileno(), sys.stdout.fileno())
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
+
 def profile_func(filename=None):
     '''
     Decorator for adding profiling to a nested function in Salt
@@ -118,3 +119,18 @@ def profile_func(filename=None):
             return retval
         return profiled_func
     return proffunc
+
+
+def list_files(directory):
+    '''
+    Return a list of all files found under directory
+    '''
+    ret = set()
+    ret.add(directory)
+    for root, dirs, files in os.walk(directory):
+        for name in files:
+            ret.add(os.path.join(root, name))
+        for name in dirs:
+            ret.add(os.path.join(root, name))
+
+    return list(ret)
