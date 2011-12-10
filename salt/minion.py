@@ -25,6 +25,7 @@ import salt.loader
 import salt.modules
 import salt.returners
 import salt.utils
+import salt.msgpack as msgpack
 
 log = logging.getLogger(__name__)
 
@@ -290,7 +291,7 @@ class Minion(object):
         except KeyError:
             pass
         payload['load'] = self.crypticle.dumps(load)
-        socket.send_pyobj(payload)
+        socket.send(msgpack.dumps(payload))
         return socket.recv()
 
     def authenticate(self):
@@ -349,7 +350,7 @@ class Minion(object):
             while True:
                 payload = None
                 try:
-                    payload = socket.recv_pyobj(1)
+                    payload = msgpack.loads(socket.recv(1))
                     self._handle_payload(payload)
                     last = time.time()
                 except:
@@ -369,7 +370,7 @@ class Minion(object):
             while True:
                 payload = None
                 try:
-                    payload = socket.recv_pyobj(1)
+                    payload = msgpack(socket.recv(1))
                     self._handle_payload(payload)
                 except:
                     pass
@@ -623,8 +624,8 @@ class FileClient(object):
             else:
                 load['loc'] = fn_.tell()
             payload['load'] = self.auth.crypticle.dumps(load)
-            self.socket.send_pyobj(payload)
-            data = self.auth.crypticle.loads(self.socket.recv_pyobj())
+            self.socket.send(msgpack.dumps(payload))
+            data = self.auth.crypticle.loads(msgpack.loads(self.socket.recv()))
             if not data['data']:
                 break
             if not fn_:
@@ -686,8 +687,8 @@ class FileClient(object):
         load = {'env': env,
                 'cmd': '_file_list'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send_pyobj(payload)
-        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+        self.socket.send(msgpack.dumps(payload))
+        return self.auth.crypticle.loads(msgpack.loads(self.socket.recv()))
 
     def hash_file(self, path, env='base'):
         '''
@@ -701,8 +702,8 @@ class FileClient(object):
                 'env': env,
                 'cmd': '_file_hash'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send_pyobj(payload)
-        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+        self.socket.send(msgpack.dumps(payload))
+        return self.auth.crypticle.loads(msgpack.loads(self.socket.recv()))
 
     def list_env(self, path, env='base'):
         '''
@@ -712,8 +713,8 @@ class FileClient(object):
         load = {'env': env,
                 'cmd': '_file_list'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send_pyobj(payload)
-        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+        self.socket.send(msgpack.dumps(payload))
+        return self.auth.crypticle.loads(msgpack.loads(self.socket.recv()))
 
     def get_state(self, sls, env):
         '''
@@ -736,5 +737,5 @@ class FileClient(object):
         payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send_pyobj(payload)
-        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+        self.socket.send(msgpack.dumps(payload))
+        return self.auth.crypticle.loads(msgpack.loads(self.socket.recv()))
