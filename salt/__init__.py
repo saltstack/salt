@@ -10,7 +10,8 @@ import optparse
 import os
 import sys
 
-# Import salt libs
+# Import salt libs, the try block bypasses an issue at build time so that c
+# modules don't cause the build to fail
 try:
     import salt.config
     import salt.utils.verify
