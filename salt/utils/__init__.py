@@ -124,13 +124,14 @@ def which(exe=None):
     '''
     Python clone of POSIX's /usr/bin/which
     '''
-    (path, name) = os.path.split(exe)
-    if os.access(exe, os.X_OK):
-        return exe
-    for path in os.environ.get('PATH').split(os.pathsep):
-        full_path = os.path.join(path, exe)
-        if os.access(full_path, os.X_OK):
-            return full_path
+    if exe:
+        (path, name) = os.path.split(exe)
+        if os.access(exe, os.X_OK):
+            return exe
+        for path in os.environ.get('PATH').split(os.pathsep):
+            full_path = os.path.join(path, exe)
+            if os.access(full_path, os.X_OK):
+                return full_path
     return None
 
 def list_files(directory):
