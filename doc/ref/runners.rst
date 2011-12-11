@@ -7,7 +7,7 @@ Salt runners are convenience applications executed with the salt-run command.
 A Salt runner can be a simple client call, or a complex application.
 
 The use for a salt running is to build a frontend hook for running sets of
-commands via salt of creating special formatted output.
+commands via salt or creating special formatted output.
 
 Writing Salt Runners
 --------------------

@@ -7,12 +7,7 @@ import optparse
 import os
 import sys
 import yaml
-JSON = False
-try:
-    import json
-    JSON = True
-except:
-    pass
+import json
 
 # Import salt components
 import salt.cli.caller
@@ -130,12 +125,11 @@ class SaltCMD(object):
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt command in yaml.')
-        if JSON:
-            parser.add_option('--json-out',
-                    default=False,
-                    action='store_true',
-                    dest='json_out',
-                    help='Print the output from the salt command in json.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
 
         options, args = parser.parse_args()
 
@@ -152,10 +146,7 @@ class SaltCMD(object):
         opts['raw_out'] = options.raw_out
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
-        if JSON:
-            opts['json_out'] = options.json_out
-        else:
-            opts['json_out'] = False
+        opts['json_out'] = options.json_out
 
         if opts['return']:
             if opts['timeout'] == 5:
@@ -202,7 +193,26 @@ class SaltCMD(object):
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         if 'query' in self.opts:
-            print local.find_cmd(self.opts['cmd'])
+            ret = local.find_cmd(self.opts['cmd'])
+            for jid in ret:
+                if isinstance(ret, list) or isinstance(ret, dict):
+                    # Determine the proper output method and run it
+                    get_outputter = salt.output.get_outputter
+                    if self.opts['raw_out']:
+                        printout = get_outputter('raw')
+                    elif self.opts['json_out']:
+                        printout = get_outputter('json')
+                    elif self.opts['txt_out']:
+                        printout = get_outputter('txt')
+                    elif self.opts['yaml_out']:
+                        printout = get_outputter('yaml')
+                    else:
+                        printout = get_outputter(None)
+                    
+                    print 'Return data for job {0}:'.format(jid)
+                    printout(ret[jid])
+                    print ''
+
         else:
             args = [self.opts['tgt'],
                     self.opts['fun'],
@@ -527,12 +537,11 @@ class SaltCall(object):
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt command in yaml.')
-        if JSON:
-            parser.add_option('--json-out',
-                    default=False,
-                    action='store_true',
-                    dest='json_out',
-                    help='Print the output from the salt command in json.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
         parser.add_option('--no-color',
                 default=False,
                 dest='no_color',
@@ -550,10 +559,7 @@ class SaltCall(object):
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
         opts['color'] = not options.no_color
-        if JSON:
-            opts['json_out'] = options.json_out
-        else:
-            opts['json_out'] = False
+        opts['json_out'] = options.json_out
         opts.update(salt.config.minion_config(options.config))
         opts['log_level'] = options.log_level
         if len(args) >= 1:

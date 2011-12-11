@@ -86,6 +86,58 @@ def _is_bin(path):
     return False
 
 
+def _gen_keep_files(name, require):
+    '''
+    Generate the list of files that need to be kept when a dir based cunction
+    like directory or recurse has a clean.
+    '''
+    keep = set()
+    keep.add(name)
+    if isinstance(require, list):
+        for comp in require:
+            if 'file' in comp:
+                keep.add(comp['file'])
+                if os.path.isdir(comp['file']):
+                    for root, dirs, files in os.walk(comp['file']):
+                        for name in files:
+                            keep.add(os.path.join(root, name))
+                        for name in dirs:
+                            keep.add(os.path.join(root, name))
+    return list(keep)
+
+
+def _clean_dir(root, keep):
+    '''
+    Clean out all of the files and directories in a directory (root) while
+    preserving the files in a list (keep)
+    '''
+    removed = set()
+    real_keep = set()
+    real_keep.add(root)
+    if isinstance(keep, list):
+        for fn_ in keep:
+            real_keep.add(fn_)
+            while True:
+                fn_ = os.path.dirname(fn_)
+                real_keep.add(fn_)
+                if fn_ == '/':
+                    break
+    rm_files = []
+    print real_keep
+    for roots, dirs, files in os.walk(root):
+        for name in files:
+            nfn = os.path.join(roots, name)
+            if not nfn in real_keep:
+                removed.add(nfn)
+                os.remove(nfn)
+        for name in dirs:
+            nfn = os.path.join(roots, name)
+            if not nfn in real_keep:
+                removed.add(nfn)
+                shutil.rmtree(nfn)
+    return list(removed)
+
+
 def _mako(sfn, name, source, user, group, mode, env):
     '''
     Render a mako template, returns the location of the rendered file,
@@ -488,7 +540,9 @@ def directory(name,
         user=None,
         group=None,
         mode=None,
-        makedirs=False):
+        makedirs=False,
+        clean=False,
+        require=None):
     '''
     Ensure that a named directory is present and has the right perms
 
@@ -511,6 +565,11 @@ def directory(name,
         the the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
+    
+    clean
+        Make sure that only files that are set up by salt and required by this
+        function are kept. If this option is set then everything in this
+        directory will be deleted unless it is required.
     '''
     if mode:
         mode = str(mode)
@@ -581,6 +640,13 @@ def directory(name,
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
+    if clean:
+        keep = _gen_keep_files(name, require)
+        removed = _clean_dir(name, list(keep))
+        if removed:
+            ret['changes']['removed'] = removed
+            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
+
     if not ret['comment']:
         ret['comment'] = 'Directory {0} updated'.format(name)
 
@@ -591,7 +657,11 @@ def directory(name,
     return ret
 
 
-def recurse(name, source, __env__='base'):
+def recurse(name,
+        source,
+        clean=False,
+        require=None,
+        __env__='base'):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
     over to the specified path.
@@ -604,11 +674,17 @@ def recurse(name, source, __env__='base'):
         server and is specified with the salt:// protocol. If the directory is
         located on the master in the directory named spam, and is called eggs,
         the source string is salt://spam/eggs
+
+    clean
+        Make sure that only files that are set up by salt and required by this
+        function are kept. If this option is set then everything in this
+        directory will be deleted unless it is required.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
+    keep = set()
     # Verify the target directory
     if not os.path.isdir(name):
         if os.path.exists(name):
@@ -633,6 +709,7 @@ def recurse(name, source, __env__='base'):
         if not os.path.isdir(os.path.dirname(dest)):
             _makedirs(dest)
         if os.path.isfile(dest):
+            keep.add(dest)
             # The file is present, if the sum differes replace it
             srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
             dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
@@ -641,7 +718,15 @@ def recurse(name, source, __env__='base'):
                 shutil.copy(fn_, dest)
                 ret['changes'][dest] = 'updated'
         else:
+            keep.add(dest)
             # The destination file is not present, make it
             shutil.copy(fn_, dest)
             ret['changes'][dest] = 'new'
+    keep = list(keep)
+    if clean:
+        keep += _gen_keep_files(name, require)
+        removed = _clean_dir(name, list(keep))
+        if removed:
+            ret['changes']['removed'] = removed
+            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
