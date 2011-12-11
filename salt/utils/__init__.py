@@ -119,7 +119,7 @@ def profile_func(filename=None):
         return profiled_func
     return proffunc
 
-def which(exe):
+def which(exe=None):
     '''
     Python clone of POSIX's /usr/bin/which
     '''

@@ -19,7 +19,7 @@ import subprocess
 import sys
 import re
 import platform
-from salt.utils import which
+import salt.utils
 
 
 def _kernel():
@@ -87,7 +87,7 @@ def _freebsd_cpudata():
     Return cpu information for FreeBSD systems
     '''
     grains = {}
-    sysctl = which("sysctl")
+    sysctl = salt.utils.which("sysctl")
 
     if sysctl:
         grains['cpuarch'] = subprocess.Popen(
@@ -127,7 +127,7 @@ def _memdata(osdata):
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
     elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
-        sysctl = which("sysctl")
+        sysctl = salt.utils.which("sysctl")
         if sysctl:
             mem = subprocess.Popen(
                     '{0} -n hw.physmem'.format(sysctl),
@@ -148,8 +148,8 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    lspci = which("lspci")
-    dmidecode = which("dmidecode")
+    lspci = salt.utils.which("lspci")
+    dmidecode = salt.utils.which("dmidecode")
 
     if dmidecode:
         output=subprocess.Popen(dmidecode,
@@ -205,7 +205,7 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
-        sysctl = which("sysctl")
+        sysctl = salt.utils.which("sysctl")
         if sysctl:
             model = subprocess.Popen(
                     '{0} hw.model'.format(sysctl),
