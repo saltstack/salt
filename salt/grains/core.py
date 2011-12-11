@@ -19,7 +19,7 @@ import subprocess
 import sys
 import re
 import platform
-from utils import which
+from salt.utils import which
 
 
 def _kernel():
