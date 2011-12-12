@@ -26,7 +26,6 @@ The data structure needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
-import salt.msgpack as msgpack
 import datetime
 import glob
 import os
@@ -200,7 +199,7 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret[fn_] = msgpack.load(open(retp, 'r'))
+                            ret[fn_] = salt.payload.load(open(retp, 'r'))
                         except:
                             pass
             if ret and start == 999999999999:
@@ -239,10 +238,10 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret_data = msgpack.load(open(retp, 'r'))
+                            ret_data = salt.payload.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = msgpack.load(open(outp, 'r'))
+                                ret[fn_]['out'] = salt.payload.load(open(outp, 'r'))
                         except:
                             pass
             if ret and start == 999999999999:
@@ -269,7 +268,7 @@ class LocalClient(object):
             loadp = os.path.join(jid_dir, '.load.p')
             if os.path.isfile(loadp):
                 try:
-                    load = msgpack.load(open(loadp, 'r'))
+                    load = salt.payload.load(open(loadp, 'r'))
                     if load['fun'] == cmd:
                         # We found a match! Add the return values
                         ret[jid] = {}
@@ -278,7 +277,7 @@ class LocalClient(object):
                             retp = os.path.join(host_dir, 'return.p')
                             if not os.path.isfile(retp):
                                 continue
-                            ret[jid][host] = msgpack.load(open(retp))
+                            ret[jid][host] = salt.payload.load(open(retp))
                 except:
                     continue
             else:

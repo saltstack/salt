@@ -5,7 +5,6 @@ authenticating peers
 '''
 
 # Import python libs
-import salt.msgpack as msgpack
 import hashlib
 import hmac
 import logging
@@ -292,7 +291,7 @@ class Crypticle(object):
         '''
         Serialize and encrypt a python object
         '''
-        return self.encrypt(self.PICKLE_PAD + msgpack.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + salt.payload.dumps(obj))
 
     def loads(self, data):
         '''
@@ -302,7 +301,7 @@ class Crypticle(object):
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        return msgpack.loads(data[len(self.PICKLE_PAD):])
+        return salt.payload.loads(data[len(self.PICKLE_PAD):])
 
 
 class SAuth(Auth):

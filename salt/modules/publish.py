@@ -5,7 +5,7 @@ Publish a command from a minion to a target
 import zmq
 
 import salt.crypt
-import salt.msgpack as msgpack
+import salt.salt.payload
 
 
 def _get_socket():
@@ -56,5 +56,5 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
             'id': __opts__['id']}
     payload['load'] = auth.crypticle.dumps(load)
     socket = _get_socket()
-    socket.send(msgpack.dumps(payload))
-    return auth.crypticle.loads(msgpack.loads(socket.recv()))
+    socket.send(salt.payload.dumps(payload))
+    return auth.crypticle.loads(salt.payload.loads(socket.recv()))
