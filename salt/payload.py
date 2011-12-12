@@ -21,6 +21,20 @@ def unpackage(package_):
     return msgpack.loads(package_)
 
 
+def loads(msg):
+    '''
+    Run the correct loads serialization format
+    '''
+    return msgpack.loads(msg)
+
+
+def dumps(msg):
+    '''
+    Run the correct dums serialization format
+    '''
+    return msgpack.dumps(payload)
+
+
 def format_payload(enc, **kwargs):
     '''
     Pass in the required arguments for a payload, the enc type and the cmd,
