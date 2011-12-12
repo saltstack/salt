@@ -28,11 +28,26 @@ def loads(msg):
     return msgpack.loads(msg)
 
 
+def load(fn_):
+    '''
+    Run the correct serialization to load a file
+    '''
+    data = fn_.read()
+    return loads(data)
+
+
 def dumps(msg):
     '''
     Run the correct dums serialization format
     '''
     return msgpack.dumps(payload)
+
+
+def dump(msg, fn_):
+    '''
+    Serialize the correct data into the named file object
+    '''
+    fn_.write(dumps(msg))
 
 
 def format_payload(enc, **kwargs):
