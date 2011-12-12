@@ -71,23 +71,15 @@ Debian / Ubuntu
 Ubuntu
 ------
 
-A PPA is available until we can get packages into apt::
+We are working to get Salt into apt. In the meantime we have a PPA available
+for Lucid::
 
     aptitude -y install python-software-properties
+    add-apt-repository ppa:chris-lea/libpgm
+    add-apt-repository ppa:chris-lea/zeromq
     add-apt-repository ppa:saltstack/salt
     aptitude update
     aptitude install salt
-
-.. admonition:: Installing ZeroMQ on Ubuntu Lucid (10.04 LTS)
-
-    The ZeroMQ package is available starting with Maverick but there are `PPA
-    packages available for Lucid`_ for both ZeroMQ and pyzmq. You will need to
-    also enable the following PPAs before running the commands above::
-
-        add-apt-repository ppa:chris-lea/libpgm
-        add-apt-repository ppa:chris-lea/zeromq
-
-.. _`PPA packages available for Lucid`: https://launchpad.net/~chris-lea/+archive/zeromq
 
 Debian
 ------
