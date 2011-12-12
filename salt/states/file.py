@@ -730,3 +730,172 @@ def recurse(name,
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
+
+def sed(name, before, after, limit='', backup='.bak', options='-r -e',
+        flags='g'):
+    '''
+    Maintain a simple edit to a file
+
+    Usage::
+
+        # Disable the epel repo by default
+        /etc/yum.repos.d/epel.repo:
+          file:
+            - sed
+            - before: 1
+            - after: 0
+            - limit: ^enabled=
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.exists(name):
+        ret['comment'] = "File '{0}' not found".format(name)
+        return ret
+
+    # sed returns no output if the edit matches anything or not so we'll have
+    # to look for ourselves
+
+    # make sure the pattern(s) match
+    if not __salt__['file.contains'](name, before, limit):
+        ret['comment'] = "Pattern not matched"
+        return ret
+
+    # should be ok now; perform the edit
+    __salt__['file.sed'](name, before, after, limit, backup, options, flags)
+
+    # check the result
+    ret['result'] = __salt__['file.contains'](name, after, limit)
+
+    if ret['result']:
+        ret['comment'] = "File successfully edited"
+        ret['changes'].update({'old': before, 'new': after})
+    else:
+        ret['comment'] = "Expected edit does not appear in file"
+
+    return ret
+
+def comment(name, regex, char='#', backup='.bak'):
+    '''
+    Usage::
+
+        /etc/fstab:
+          file:
+            - comment
+            - regex: ^//10.10.20.5
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.exists(name):
+        ret['comment'] = "File not found"
+        return ret
+
+    # Make sure the pattern appears in the file
+    if not __salt__['file.contains'](name, regex):
+        ret['comment'] = "Pattern not found"
+        return ret
+
+    # Perform the edit
+    __salt__['file.comment'](name, regex, char, backup)
+
+    # Check the result
+    ret['result'] = __salt__['file.contains'](name, regex,
+            limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char))
+
+    if ret['result']:
+        ret['comment'] = "Commented lines successfully"
+        ret['changes'] = {'old': '',
+                'new': 'Commented lines matching: {0}'.format(regex)}
+    else:
+        ret['comment'] = "Expected commented lines not found"
+
+    return ret
+
+def uncomment(name, regex, char='#', backup='.bak'):
+    '''
+    Usage::
+
+        /etc/adduser.conf:
+          file:
+            - uncomment
+            - regex: EXTRA_GROUPS
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.exists(name):
+        ret['comment'] = "File not found"
+        return ret
+
+    # Make sure the pattern appears in the file
+    if not __salt__['file.contains'](name, regex,
+            limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char)):
+        ret['comment'] = "Pattern not found"
+        return ret
+
+    # Perform the edit
+    __salt__['file.uncomment'](name, regex, char, backup)
+
+    # Check the result
+    ret['result'] = __salt__['file.contains'](name, regex)
+
+    if ret['result']:
+        ret['comment'] = "Uncommented lines successfully"
+        ret['changes'] = {'old': '',
+                'new': 'Uncommented lines matching: {0}'.format(regex)}
+    else:
+        ret['comment'] = "Expected uncommented lines not found"
+
+    return ret
+
+def append(name, text):
+    '''
+    Ensure that some text appears at the end of a file
+
+    The text will not be appended again if it already exists in the file. You
+    may specify a single line of text or a list of lines to append.
+
+    Multi-line example::
+
+        /etc/motd:
+          file:
+            - append
+            - text: |
+                Thou hadst better eat salt with the Philosophers of Greece,
+                than sugar with the Courtiers of Italy.
+                - Benjamin Franklin
+
+    Multiple lines of text::
+
+        /etc/motd:
+          file:
+            - append
+            - text:
+              - Trust no one unless you have eaten much salt with him.
+              - Salt is born of the purest of parents: the sun and the sea.
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if isinstance(text, basestring):
+        text = (text,)
+
+    for chunk in text:
+        for line in chunk.split('\n'):
+            if __salt__['filenew.contains'](name, line):
+                continue
+            else:
+                __salt__['filenew.append'](name, line)
+                cgs = ret['changes'].setdefault('new', [])
+                cgs.append(line)
+
+    count = len(ret['changes'].get('new', []))
+
+    ret['comment'] = "Appended {0} lines".format(count)
+    ret['result'] = True
+    return ret
