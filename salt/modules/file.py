@@ -44,7 +44,7 @@ def group_to_gid(group):
 
 def get_gid(path):
     '''
-    Return the user that owns a given file
+    Return the id of the group that owns a given file
 
     CLI Example::
 
@@ -57,7 +57,7 @@ def get_gid(path):
 
 def get_group(path):
     '''
-    Return the user that owns a given file
+    Return the group that owns a given file
 
     CLI Example::
 
@@ -85,7 +85,7 @@ def uid_to_user(uid):
 
 def user_to_uid(user):
     '''
-    Convert user name to a gid
+    Convert user name to a uid
 
     CLI Example::
 
@@ -99,7 +99,7 @@ def user_to_uid(user):
 
 def get_uid(path):
     '''
-    Return the user that owns a given file
+    Return the id of the user that owns a given file
 
     CLI Example::
 
@@ -142,7 +142,7 @@ def get_mode(path):
 
 def set_mode(path, mode):
     '''
-    Set the more of a file
+    Set the mode of a file
 
     CLI Example::
 
@@ -327,3 +327,169 @@ def find(path, *opts):
     ret = [p for p in f.find(path)]
     ret.sort()
     return ret
+
+def _sed_esc(s):
+    '''
+    Escape single quotes and forward slashes
+    '''
+    return s.replace("'", "'\"'\"'").replace("/", "\/")
+
+def sed(path, before, after, limit='', backup='.bak', options='-r -e',
+        flags='g'):
+    '''
+    Make a simple edit to a file
+
+    Equivalent to::
+
+        sed <backup> <options> "/<limit>/ s/<before>/<after>/<flags> <file>"
+
+    path
+        The full path to the file to be edited
+    before
+        A pattern to find in order to replace with ``after``
+    after
+        Text that will replace ``before``
+    limit : ``''``
+        An initial pattern to search for before searching for ``before``
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension;
+        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
+        overwrite this backup
+    options : ``-r -e``
+        Options to pass to sed
+    flags : ``g``
+        Flags to modify the sed search; e.g., ``i`` for case-insensitve pattern
+        matching
+
+    Forward slashes and single quotes will be escaped automatically in the
+    ``before`` and ``after`` patterns.
+
+    Usage::
+
+        salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
+
+    .. versionadded:: 0.9.5
+    '''
+    # Largely inspired by Fabric's contrib.files.sed()
+
+    before = _sed_esc(before)
+    after = _sed_esc(after)
+
+    cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
+            backup = '-i{0} '.format(backup) if backup else '',
+            options = options,
+            limit = '/{0}/ '.format(limit) if limit else '',
+            before = before,
+            after = after,
+            flags = flags,
+            path = path)
+
+    return __salt__['cmd.run'](cmd)
+
+def uncomment(path, regex, char='#', backup='.bak'):
+    '''
+    Uncomment specified commented lines in a file
+
+    path
+        The full path to the file to be edited
+    regex
+        A regular expression used to find the lines that are to be uncommented
+    char : ``#``
+        The character to remove in order to uncomment a line; if a single
+        whitespace character follows the comment it will also be removed
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension;
+        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
+        overwrite this backup
+
+    Usage::
+
+        salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
+
+    .. versionadded:: 0.9.5
+    '''
+    # Largely inspired by Fabric's contrib.files.uncomment()
+
+    return __salt__['file.sed'](path,
+        before=r'^([[:space:]]*){0}[[:space:]]?'.format(char),
+        after=r'\1',
+        limit=regex,
+        backup=backup)
+
+def comment(path, regex, char='#', backup='.bak'):
+    '''
+    Comment out specified lines in a file
+
+    path
+        The full path to the file to be edited
+    regex
+        A regular expression used to find the lines that are to be commented;
+        this pattern will be wrapped in parenthasis and will move any
+        preceeding/trailing ``^`` or ``$`` characters outside the parenthasis
+        (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)
+    char : ``#``
+        The character to be inserted at the beginning of a line in order to
+        comment it out
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension;
+        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
+        overwrite this backup
+
+    Usage::
+
+        salt '*' file.comment /etc/modules pcspkr
+
+    .. versionadded:: 0.9.5
+    '''
+    # Largely inspired by Fabric's contrib.files.comment()
+
+    regex = "{0}({1}){2}".format(
+            '^' if regex.startswith('^') else '',
+            regex.lstrip('^').rstrip('$'),
+            '$' if regex.endswith('$') else '')
+
+    return __salt__['file.sed'](
+        path,
+        before=regex,
+        after=r'{0}\1'.format(char),
+        backup=backup)
+
+def contains(path, text, limit=''):
+    '''
+    Return True if the file at ``path`` contains ``text``
+
+    Usage::
+
+        salt '*' file.contains /etc/crontab 'mymaintenance.sh'
+
+    .. versionadded:: 0.9.5
+    '''
+    # Largely inspired by Fabric's contrib.files.contains()
+
+    if not os.path.exists(path):
+        return False
+
+    result = __salt__['filenew.sed'](path, text, '&', limit=limit, backup='',
+            options='-n -r -e', flags='gp')
+
+    return bool(result)
+
+def append(path, *args):
+    '''
+    Append text to the end of a file
+
+    Usage::
+
+        salt '*' file.append /etc/motd \\
+                "With all thine offerings thou shalt offer salt."\\
+                "Salt is what makes things taste bad when it isn't in them."
+
+    .. versionadded:: 0.9.5
+    '''
+    # Largely inspired by Fabric's contrib.files.append()
+
+    with open(path, "a") as f:
+        for line in args:
+            f.write('{0}\n'.format(line))
+
+    return "Wrote {0} lines to '{1}'".format(len(args), path)

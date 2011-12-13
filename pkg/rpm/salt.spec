@@ -2,29 +2,34 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.9.2
-Release: 1%{?dist}
+Version: 0.9.4
+Release: 2%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System/Utilities
 License: ASL 2.0
 URL:     https://github.com/thatch45/salt
-Source0: %{name}-%{version}.tar.gz
+# http://saltstack.org/
+Source0: https://github.com/downloads/saltstack/%{name}/%{name}-%{version}.tar.gz
 Source1: %{name}-master
 Source2: %{name}-syndic
 Source3: %{name}-minion
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Requires: python
+Requires: python(abi)
 Requires: PyYAML
 Requires: python-crypto
 Requires: m2crypto
 Requires: python-zmq
+Requires: python-jinja
 
 BuildArch: noarch
 
+BuildRequires: python-zmq
+BuildRequires: python-crypto
+BuildRequires: m2crypto
+BuildRequires: PyYAML
 BuildRequires: python-devel
-BuildRequires: Cython
 
 %description
 Salt is a distributed remote execution system used to execute commands and 
@@ -53,6 +58,7 @@ Requires: salt
 Group:   System/Utilities
 Summary: Client tools for salt, a parallel remote execution system 
 Requires: salt
+#Requires: Cython
 
 %description -n salt-minion
 Salt is a distributed remote execution system used to execute commands and 
@@ -84,13 +90,13 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc %{_defaultdocdir}/salt*
 %{python_sitelib}/*
-%doc %{_mandir}/man7/salt.7.gz
+%doc %{_mandir}/man7/salt.7.*
 #{_initrddir}/*
 
 %files -n salt-minion
 %defattr(-,root,root)
-%doc %{_mandir}/man1/salt-call.1.gz
-%doc %{_mandir}/man1/salt-minion.1.gz
+%doc %{_mandir}/man1/salt-call.1.*
+%doc %{_mandir}/man1/salt-minion.1.*
 %{_bindir}/salt-minion
 %{_bindir}/salt-call
 %{_initrddir}/salt-minion
@@ -98,12 +104,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -n salt-master
 %defattr(-,root,root)
-%doc %{_mandir}/man1/salt-master.1.gz
-%doc %{_mandir}/man1/salt.1.gz
-%doc %{_mandir}/man1/salt-cp.1.gz
-%doc %{_mandir}/man1/salt-key.1.gz
-%doc %{_mandir}/man1/salt-run.1.gz
-%doc %{_mandir}/man1/salt-syndic.1.gz
+%doc %{_mandir}/man1/salt-master.1.*
+%doc %{_mandir}/man1/salt.1.*
+%doc %{_mandir}/man1/salt-cp.1.*
+%doc %{_mandir}/man1/salt-key.1.*
+%doc %{_mandir}/man1/salt-run.1.*
+%doc %{_mandir}/man1/salt-syndic.1.*
 %{_bindir}/salt
 %{_bindir}/salt-master
 %{_bindir}/salt-syndic
@@ -115,6 +121,15 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) /etc/salt/master
 
 %changelog
+
+* Thu Dec 1 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-2
+- Removing requirement for Cython. Optional only for salt-minion
+
+* Thu Nov 30 2011 Clint Savage <herlo1@gmail.com> - 0.9.4-1
+- New upstream release with new features and bugfixes
+
+* Thu Nov 17 2011 Clint Savage <herlo1@gmail.com> - 0.9.3-1
+- New upstream release with new features and bugfixes
 
 * Sat Sep 17 2011 Clint Savage <herlo1@gmail.com> - 0.9.2-1
 - Bugfix release from upstream to fix python2.6 issues

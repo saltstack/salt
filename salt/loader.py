@@ -253,6 +253,14 @@ class Loader(object):
                 else:
                     setattr(mod, pack['name'], pack['value'])
 
+            # Call a module's initialization method if it exists
+            if hasattr(mod, '__init__'):
+                if callable(mod.__init__):
+                    try:
+                        mod.__init__()
+                    except TypeError:
+                        pass
+
             if hasattr(mod, '__virtual__'):
                 if callable(mod.__virtual__):
                     virtual = mod.__virtual__()
@@ -293,6 +301,7 @@ class Loader(object):
         funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
         funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
+        funcs['sys.reload_modules'] = lambda: True
         return funcs
 
     def list_funcs(self, funcs):

@@ -9,7 +9,9 @@ Synopsis
 
     salt -E '.*' [ options ] sys.doc cmd
 
-    salt -F 'operatingsystem:Arch.*' [ options ] test.ping
+    salt -F 'os:Arch.*' [ options ] test.ping
+
+    salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
 
     salt -Q test.ping
 
@@ -48,6 +50,14 @@ Options
     The target expression matches values returned by the salt grains system on
     the minions. The target expression is in the format of '<grain value>:<pcre
     regular expression>'; example: 'os:Arch.*'
+
+.. option:: -C, --compound
+
+    Utilize many target definitions to make the call very granular. This option
+    takes a group of targets seperated by and or or. The default matcher is a 
+    glob as usual, if something other than a glob is used preface it with the
+    letter denoting the type, example: 'webserv* and G@os:Debian or E@db.*'
+    make sure that the compount target is encapsultaed in quotes.
 
 .. option:: -Q, --query
 

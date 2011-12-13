@@ -9,10 +9,20 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
-    # We don't need to support pre-yum OSes because they don't support
-    # python <= 2.6
-    dists = 'CentOS Scientific RedHat Fedora'
-    return 'pkg' if dists.count(__grains__['os']) else False
+    # Return this for pkg on RHEL/Fedora based distros that ship with python
+    # 2.6 or greater.
+    dists = 'CentOS Scientific RedHat'
+    if __grains__['os'] == 'Fedora':
+        if int(__grains__['osrelease'].split('.')[0]) >= 11:
+            return 'pkg'
+        else:
+            return False
+    else:
+        if dists.count(__grains__['os']):
+            if int(__grains__['osrelease'].split('.')[0]) >= 6:
+                return 'pkg' 
+        else:
+            return False
 
 
 def _list_removed(old, new):

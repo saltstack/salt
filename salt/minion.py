@@ -54,12 +54,18 @@ class SMinion(object):
     def __init__(self, opts):
         # Generate all of the minion side components
         self.opts = opts
+        self.gen_modules()
+
+    def gen_modules(self):
+        '''
+        Load all of the modules for the minion
+        '''
         self.functions = salt.loader.minion_mods(self.opts)
         self.returners = salt.loader.returners(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
-
+        self.functions['sys.reload_modules'] = self.gen_modules
 
 class Minion(object):
     '''
@@ -122,7 +128,7 @@ class Minion(object):
         # Verify that the publication applies to this minion
         if 'tgt_type' in data:
             if not getattr(self.matcher,
-                           data['tgt_type'] + '_match')(data['tgt']):
+                           '{0}_match'.format(data['tgt_type']))(data['tgt']):
                 return
         else:
             if not self.matcher.glob_match(data['tgt']):
@@ -152,6 +158,10 @@ class Minion(object):
         Override this method if you wish to handle the decoded
         data differently.
         '''
+        if isinstance(data['fun'], str):
+            if data['fun'] == 'sys.reload_modules':
+                self.functions, self.returners = self.__load_modules()
+                
         if self.opts['multiprocessing']:
             if type(data['fun']) == type(list()):
                 multiprocessing.Process(
@@ -283,14 +293,6 @@ class Minion(object):
         socket.send_pyobj(payload)
         return socket.recv()
 
-    def reload_functions(self):
-        '''
-        Reload the functions dict for this minion, reading in any new functions
-        '''
-        self.functions = self.__load_functions()
-        log.debug('Refreshed functions, loaded functions: %s', self.functions)
-        return True
-
     def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
@@ -311,12 +313,33 @@ class Minion(object):
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.aes)
 
+    def passive_refresh(self):
+        '''
+        Check to see if the salt refresh file has been laid down, if it has,
+        refresh the functions and returners.
+        '''
+        if os.path.isfile(
+                os.path.join(
+                    self.opts['cachedir'],
+                    '.module_refresh'
+                    )
+                ):
+            self.functions, self.returners = self.__load_modules()
+            os.remove(
+                    os.path.join(
+                        self.opts['cachedir'],
+                        '.module_refresh'
+                        )
+                    )
+
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        master_pub = ('tcp://' + self.opts['master_ip'] +
-                      ':' + str(self.publish_port))
+        master_pub = 'tcp://{0}:{1}'.format(
+            self.opts['master_ip'],
+            str(self.publish_port)
+            )
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -341,15 +364,18 @@ class Minion(object):
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
-        while True:
-            payload = None
-            try:
-                payload = socket.recv_pyobj(1)
-                self._handle_payload(payload)
-            except:
-                pass
-            time.sleep(0.05)
-            multiprocessing.active_children()
+                self.passive_refresh()
+        else:
+            while True:
+                payload = None
+                try:
+                    payload = socket.recv_pyobj(1)
+                    self._handle_payload(payload)
+                except:
+                    pass
+                time.sleep(0.05)
+                multiprocessing.active_children()
+                self.passive_refresh()
 
 
 class Syndic(salt.client.LocalClient, Minion):
@@ -447,7 +473,7 @@ class Matcher(object):
                 if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
-            return getattr(self, matcher + '_match')(match)
+            return getattr(self, '{0}_match'.format(matcher))(match)
         else:
             log.error('Attempting to match with unknown matcher: %s', matcher)
             return False
@@ -486,7 +512,7 @@ class Matcher(object):
             log.error('Got insufficient arguments for grains from master')
             return False
         if comps[0] not in self.opts['grains']:
-            log.error('Got unknown grain from master: %s', comps[0])
+            log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
         return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
 
@@ -498,6 +524,54 @@ class Matcher(object):
             return False
         return(self.functions[tgt]())
 
+    def compound_match(self, tgt):
+        '''
+        Runs the compound target check
+        '''
+        if not isinstance(tgt, str):
+            log.debug('Compound target received that is not a string')
+            return False
+        ref = {'G': 'grain',
+               'X': 'exsel',
+               'L': 'list',
+               'E': 'pcre'}
+        results = []
+        for match in tgt.split():
+            # Attach the boolean operator
+            if match == 'and':
+                results.append('and')
+                continue
+            elif match == 'or':
+                results.append('or')
+                continue
+            # If we are here then it is not a boolean operator, check if the
+            # last member of the result list is a boolean, if no, append and
+            if results:
+                if results[-1] != 'and' or results[-1] != 'or':
+                    results.append('and')
+            if match[1] == '@':
+                comps = match.split('@')
+                matcher = ref.get(comps[0])
+                if not matcher:
+                    # If un unknown matcher is called at any time, fail out
+                    return False
+                print comps
+                results.append(
+                        str(getattr(
+                            self,
+                            '{0}_match'.format(matcher)
+                            )('@'.join(comps[1:]))
+                        ))
+            else:
+                results.append(
+                        str(getattr(
+                            self,
+                            '{0}_match'.format(matcher)
+                            )('@'.join(comps[1:]))
+                        ))
+
+        print ' '.join(results)
+        return eval(' '.join(results))
 
 class FileClient(object):
     '''

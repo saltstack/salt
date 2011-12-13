@@ -31,6 +31,10 @@ def load_config(opts, path, env_var):
             if conf_opts == None:
                 # The config file is empty and the yaml.load returned None
                 conf_opts = {}
+            else:
+                # allow using numeric ids: convert int to string
+                if 'id' in conf_opts:
+                    conf_opts['id'] = str(conf_opts['id'])
             opts.update(conf_opts)
             opts['conf_file'] = path
         except Exception, e:
@@ -76,6 +80,7 @@ def minion_config(path):
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
+            'state_verbose': False,
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')

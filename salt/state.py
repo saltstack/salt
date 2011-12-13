@@ -78,9 +78,60 @@ class State(object):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.load_modules()
+
+    def load_modules(self):
+        '''
+        Load the modules into the stae
+        '''
+        log.info('Loading fresh modules for state activity')
         self.functions = salt.loader.minion_mods(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
+
+    def module_refresh(self, data):
+        '''
+        Check to see if the modules for this state instance need to be
+        updated, only update if the state is a file. If the function is
+        managed check to see if the file is a possible module type, eg a
+        python, pyx, or .so. Always refresh if the function is recuse, since
+        that can lay down anything.
+        '''
+        if not data['state'] == 'file':
+            return None
+        if data['fun'] == 'managed':
+            if any((data['name'].endswith('.py'),
+                    data['name'].endswith('.pyx'),
+                    data['name'].endswith('.pyo'),
+                    data['name'].endswith('.pyc'),
+                    data['name'].endswith('.so'))):
+                self.load_modules()
+                open(os.path.join(
+                    self.opts['cachedir'],
+                    '.module_refresh'),
+                    'w+').write('')
+        elif data['fun'] == 'recurse':
+            self.load_modules()
+            open(os.path.join(
+                self.opts['cachedir'],
+                '.module_refresh'),
+                'w+').write('')
+
+    def format_verbosity(self, returns):
+        '''
+        Check for the state_verbose option and strip out the result=True and
+        changes={} members of the state return list.
+        '''
+        if self.opts['state_verbose']:
+            return returns
+        rm_tags = []
+        for tag in returns:
+            if returns[tag]['result'] and not returns[tag]['changes']:
+                rm_tags.append(tag)
+        for tag in rm_tags:
+            returns.pop(tag)
+        return returns
+
 
     def verify_data(self, data):
         '''
@@ -440,6 +491,7 @@ class State(object):
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
         format_log(ret)
+        self.module_refresh(data)
         return ret
 
     def call_chunks(self, chunks):
@@ -617,7 +669,8 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        return self.call_chunks(chunks)
+        ret = self.format_verbosity(self.call_chunks(chunks))
+        return ret
 
     def call_template(self, template):
         '''
