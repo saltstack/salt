@@ -253,6 +253,14 @@ class Loader(object):
                 else:
                     setattr(mod, pack['name'], pack['value'])
 
+            # Call a module's initialization method if it exists
+            if hasattr(mod, '__init__'):
+                if callable(mod.__init__):
+                    try:
+                        mod.__init__()
+                    except TypeError:
+                        pass
+
             if hasattr(mod, '__virtual__'):
                 if callable(mod.__virtual__):
                     virtual = mod.__virtual__()

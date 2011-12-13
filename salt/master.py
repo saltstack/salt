@@ -655,7 +655,7 @@ class ClearFuncs(object):
             else:
                 log.info(
                     'Authentication failed from host %(id)s, the key is in '
-                    'pending and needs to be accepted with saltkey -a %(id)s',
+                    'pending and needs to be accepted with salt-key -a %(id)s',
                     load
                 )
                 return {'enc': 'clear',
