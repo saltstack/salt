@@ -136,6 +136,7 @@ def master_config(path):
             'log_granular_levels': {},
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
+            'hostgroups': [],
             }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
