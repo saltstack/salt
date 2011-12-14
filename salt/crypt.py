@@ -5,7 +5,6 @@ authenticating peers
 '''
 
 # Import python libs
-import cPickle as pickle
 import hashlib
 import hmac
 import logging
@@ -98,6 +97,7 @@ class Auth(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
         if 'syndic_master' in self.opts:
             self.mpub = 'syndic_master.pub'
@@ -188,9 +188,9 @@ class Auth(object):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
-        payload = salt.payload.package(self.minion_sign_in_payload())
+        payload = self.serial.dumps(self.minion_sign_in_payload())
         socket.send(payload)
-        payload = salt.payload.unpackage(socket.recv())
+        payload = self.serial.loads(socket.recv())
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
@@ -244,9 +244,10 @@ class Crypticle(object):
     AES_BLOCK_SIZE = 16
     SIG_SIZE = hashlib.sha256().digest_size
 
-    def __init__(self, key_string, key_size=192):
+    def __init__(self, opts, key_string, key_size=192):
         self.keys = self.extract_keys(key_string, key_size)
         self.key_size = key_size
+        self.serial = salt.payload.Serial(opts)
 
     @classmethod
     def generate_key_string(cls, key_size=192):
@@ -288,21 +289,21 @@ class Crypticle(object):
         data = cypher.decrypt(data)
         return data[:-ord(data[-1])]
 
-    def dumps(self, obj, pickler=pickle):
+    def dumps(self, obj):
         '''
-        pickle and encrypt a python object
+        Serialize and encrypt a python object
         '''
-        return self.encrypt(self.PICKLE_PAD + pickler.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
 
-    def loads(self, data, pickler=pickle):
+    def loads(self, data):
         '''
-        decrypt and un-pickle a python object
+        Decrypt and un-serialize a python object
         '''
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        return pickler.loads(data[len(self.PICKLE_PAD):])
+        return self.serial.loads(data[len(self.PICKLE_PAD):])
 
 
 class SAuth(Auth):
@@ -326,7 +327,7 @@ class SAuth(Auth):
             print 'Failed to authenticate with the master, verify that this'\
                 + ' minion\'s public key has been accepted on the salt master'
             sys.exit(2)
-        return Crypticle(creds['aes'])
+        return Crypticle(self.opts, creds['aes'])
 
     def gen_token(self, clear_tok):
         '''

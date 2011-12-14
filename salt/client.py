@@ -26,7 +26,6 @@ The data structure needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
-import cPickle as pickle
 import datetime
 import glob
 import os
@@ -72,6 +71,7 @@ class LocalClient(object):
     '''
     def __init__(self, c_path='/etc/salt/master'):
         self.opts = salt.config.master_config(c_path)
+        self.serial = salt.payload.Serial(self.opts)
         self.key = self.__read_master_key()
 
     def __read_master_key(self):
@@ -200,7 +200,7 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret[fn_] = pickle.load(open(retp, 'r'))
+                            ret[fn_] = self.serial.load(open(retp, 'r'))
                         except:
                             pass
             if ret and start == 999999999999:
@@ -239,10 +239,10 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret_data = pickle.load(open(retp, 'r'))
+                            ret_data = self.serial.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = pickle.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
                         except:
                             pass
             if ret and start == 999999999999:
@@ -269,7 +269,7 @@ class LocalClient(object):
             loadp = os.path.join(jid_dir, '.load.p')
             if os.path.isfile(loadp):
                 try:
-                    load = pickle.load(open(loadp, 'r'))
+                    load = self.serial.load(open(loadp, 'r'))
                     if load['fun'] == cmd:
                         # We found a match! Add the return values
                         ret[jid] = {}
@@ -278,7 +278,7 @@ class LocalClient(object):
                             retp = os.path.join(host_dir, 'return.p')
                             if not os.path.isfile(retp):
                                 continue
-                            ret[jid][host] = pickle.load(open(retp))
+                            ret[jid][host] = self.serial.load(open(retp))
                 except:
                     continue
             else:
@@ -370,7 +370,7 @@ class LocalClient(object):
         payload = None
         for ind in range(100):
             try:
-                payload = salt.payload.unpackage(
+                payload = self.serial.loads(
                         socket.recv(
                             zmq.NOBLOCK
                             )

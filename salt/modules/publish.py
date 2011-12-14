@@ -5,6 +5,7 @@ Publish a command from a minion to a target
 import zmq
 
 import salt.crypt
+import salt.payload
 
 
 def _get_socket():
@@ -35,6 +36,7 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
+    serial = salt.payload.Serial(__opts__)
     if fun == 'publish.publish':
         # Need to log something here
         return {}
@@ -55,5 +57,5 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
             'id': __opts__['id']}
     payload['load'] = auth.crypticle.dumps(load)
     socket = _get_socket()
-    socket.send_pyobj(payload)
-    return auth.crypticle.loads(socket.recv_pyobj())
+    socket.send(serial.dumps(payload))
+    return auth.crypticle.loads(serial.loads(socket.recv()))
