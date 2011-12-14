@@ -335,7 +335,7 @@ class LocalClient(object):
             return {'jid': '',
                     'minions': minions}
         if self.opts['order_masters']:
-            package = self.serial.format_payload(
+            package = salt.payload.format_payload(
                     'clear',
                     cmd='publish',
                     tgt=tgt,
@@ -347,7 +347,7 @@ class LocalClient(object):
                     jid=jid,
                     to=timeout)
         else:
-            package = self.serial.format_payload(
+            package = salt.payload.format_payload(
                     'clear',
                     cmd='publish',
                     tgt=tgt,
@@ -370,7 +370,7 @@ class LocalClient(object):
         payload = None
         for ind in range(100):
             try:
-                payload = self.serial.unpackage(
+                payload = self.serial.loads(
                         socket.recv(
                             zmq.NOBLOCK
                             )
