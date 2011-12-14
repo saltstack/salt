@@ -28,20 +28,21 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def prep_jid(cachedir, load):
+def prep_jid(opts, load):
     '''
     Parses the job return directory, generates a job id and sets up the
     job id directory.
     '''
+    serial = salt.payload.Serial(opts)
     jid_root = os.path.join(cachedir, 'jobs')
     jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     jid_dir = os.path.join(jid_root, jid)
     if not os.path.isdir(jid_dir):
         os.makedirs(jid_dir)
-        salt.payload.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        serial.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
     else:
-        return prep_jid(load)
+        return prep_jid(cachedir, load)
     return jid
 
 
@@ -62,7 +63,7 @@ class SMaster(object):
         '''
         Return the crypticle used for AES
         '''
-        return salt.crypt.Crypticle(self.opts['aes'])
+        return salt.crypt.Crypticle(self.opts['aes'], self.opts)
 
     def __prep_key(self):
         '''
@@ -229,6 +230,7 @@ class MWorker(multiprocessing.Process):
             clear_funcs):
         multiprocessing.Process.__init__(self)
         self.opts = opts
+        self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         self.aes_funcs = aes_funcs
         self.clear_funcs = clear_funcs
@@ -247,8 +249,8 @@ class MWorker(multiprocessing.Process):
 
         while True:
             package = socket.recv()
-            payload = salt.payload.unpackage(package)
-            ret = salt.payload.package(self._handle_payload(payload))
+            payload = self.serial.unpackage(package)
+            ret = self.serial.package(self._handle_payload(payload))
             socket.send(ret)
 
     def _handle_payload(self, payload):
@@ -302,6 +304,7 @@ class AESFuncs(object):
     #
     def __init__(self, opts, crypticle):
         self.opts = opts
+        self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
@@ -424,10 +427,10 @@ class AESFuncs(object):
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
-        salt.payload.dump(load['return'],
+        self.serial.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
         if 'out' in load:
-            salt.payload.dump(load['out'],
+            self.serial.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
     def _syndic_return(self, load):
@@ -497,7 +500,7 @@ class AESFuncs(object):
         if not good:
             return {}
         # Set up the publication payload
-        jid = prep_jid(self.opts['cachedir'], clear_load)
+        jid = prep_jid(self.opts, clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
@@ -522,7 +525,7 @@ class AESFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        pub_sock.send(salt.payload.package(payload))
+        pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method
         return self.local.get_returns(
                 jid,
@@ -561,6 +564,7 @@ class ClearFuncs(object):
     # _auth
     def __init__(self, opts, key, master_key, crypticle):
         self.opts = opts
+        self.serial = salt.payload.Serial(opts)
         self.key = key
         self.master_key = master_key
         self.crypticle = crypticle
@@ -695,7 +699,7 @@ class ClearFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
         # Save the invocation information
-        salt.payload.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        self.serial.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
         # Set up the payload
         payload = {'enc': 'aes'}
         load = {
@@ -717,6 +721,6 @@ class ClearFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        pub_sock.send(salt.payload.package(payload))
+        pub_sock.send(self.serial.dumps(payload))
         return {'enc': 'clear',
                 'load': {'jid': clear_load['jid']}}

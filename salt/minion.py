@@ -78,6 +78,7 @@ class Minion(object):
         Pass in the options dict
         '''
         self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
@@ -291,7 +292,7 @@ class Minion(object):
         except KeyError:
             pass
         payload['load'] = self.crypticle.dumps(load)
-        socket.send(salt.payload.dumps(payload))
+        socket.send(self.serial.dumps(payload))
         return socket.recv()
 
     def authenticate(self):
@@ -312,7 +313,7 @@ class Minion(object):
             time.sleep(10)
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
-        self.crypticle = salt.crypt.Crypticle(self.aes)
+        self.crypticle = salt.crypt.Crypticle(self.aes, self.opts)
 
     def passive_refresh(self):
         '''
@@ -350,7 +351,7 @@ class Minion(object):
             while True:
                 payload = None
                 try:
-                    payload = salt.payload.loads(socket.recv(1))
+                    payload = self.serial.loads(socket.recv(1))
                     self._handle_payload(payload)
                     last = time.time()
                 except:
@@ -370,7 +371,7 @@ class Minion(object):
             while True:
                 payload = None
                 try:
-                    payload = salt.payload(socket.recv(1))
+                    payload = self.serial(socket.recv(1))
                     self._handle_payload(payload)
                 except:
                     pass
@@ -580,6 +581,7 @@ class FileClient(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)
         self.auth = salt.crypt.SAuth(opts)
         self.socket = self.__get_socket()
 
@@ -624,8 +626,8 @@ class FileClient(object):
             else:
                 load['loc'] = fn_.tell()
             payload['load'] = self.auth.crypticle.dumps(load)
-            self.socket.send(salt.payload.dumps(payload))
-            data = self.auth.crypticle.loads(salt.payload.loads(self.socket.recv()))
+            self.socket.send(self.serial.dumps(payload))
+            data = self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
             if not data['data']:
                 break
             if not fn_:
@@ -687,8 +689,8 @@ class FileClient(object):
         load = {'env': env,
                 'cmd': '_file_list'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(salt.payload.dumps(payload))
-        return self.auth.crypticle.loads(salt.payload.loads(self.socket.recv()))
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
 
     def hash_file(self, path, env='base'):
         '''
@@ -702,8 +704,8 @@ class FileClient(object):
                 'env': env,
                 'cmd': '_file_hash'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(salt.payload.dumps(payload))
-        return self.auth.crypticle.loads(salt.payload.loads(self.socket.recv()))
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
 
     def list_env(self, path, env='base'):
         '''
@@ -713,8 +715,8 @@ class FileClient(object):
         load = {'env': env,
                 'cmd': '_file_list'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(salt.payload.dumps(payload))
-        return self.auth.crypticle.loads(salt.payload.loads(self.socket.recv()))
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
 
     def get_state(self, sls, env):
         '''
@@ -737,5 +739,5 @@ class FileClient(object):
         payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}
         payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(salt.payload.dumps(payload))
-        return self.auth.crypticle.loads(salt.payload.loads(self.socket.recv()))
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
