@@ -23,7 +23,7 @@ def items():
     return __grains__
 
 
-def item(key):
+def item(key=None):
     '''
     Return a singe component of the grains data
 
@@ -31,9 +31,7 @@ def item(key):
 
         salt '*' grains.item os
     '''
-    if key in __grains__:
-        return __grains__[key]
-    return ''
+    return __grains__.get(key, '')
 
 def list():
     '''
@@ -43,7 +41,7 @@ def list():
 
         salt '*' grains.list
     '''
-    return sorted(__grains__.keys())
+    return sorted(__grains__)
 
 # Keep the wise 'nix beards happy
 ls = list
