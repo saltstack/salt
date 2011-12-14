@@ -249,8 +249,8 @@ class MWorker(multiprocessing.Process):
 
         while True:
             package = socket.recv()
-            payload = self.serial.unpackage(package)
-            ret = self.serial.package(self._handle_payload(payload))
+            payload = self.serial.loads(package)
+            ret = self.serial.dumps(self._handle_payload(payload))
             socket.send(ret)
 
     def _handle_payload(self, payload):

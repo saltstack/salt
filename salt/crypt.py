@@ -190,7 +190,7 @@ class Auth(object):
         socket.connect(self.opts['master_uri'])
         payload = self.serial.dumps(self.minion_sign_in_payload())
         socket.send(payload)
-        payload = self.serial.unpackage(socket.recv())
+        payload = self.serial.loads(socket.recv())
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
