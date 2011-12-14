@@ -3,6 +3,8 @@ Many aspects of the salt payload need to be managed, from the return of
 encrypted keys to general payload dynamics and packaging, these happen in here
 '''
 
+import cPickle as pickle
+
 import salt.msgpack as msgpack
 
 
@@ -21,35 +23,6 @@ def unpackage(package_):
     return msgpack.loads(package_)
 
 
-def loads(msg):
-    '''
-    Run the correct loads serialization format
-    '''
-    return msgpack.loads(msg)
-
-
-def load(fn_):
-    '''
-    Run the correct serialization to load a file
-    '''
-    data = fn_.read()
-    return loads(data)
-
-
-def dumps(msg):
-    '''
-    Run the correct dums serialization format
-    '''
-    return msgpack.dumps(payload)
-
-
-def dump(msg, fn_):
-    '''
-    Serialize the correct data into the named file object
-    '''
-    fn_.write(dumps(msg))
-
-
 def format_payload(enc, **kwargs):
     '''
     Pass in the required arguments for a payload, the enc type and the cmd,
@@ -61,3 +34,46 @@ def format_payload(enc, **kwargs):
         load[key] = kwargs[key]
     payload['load'] = load
     return package(payload)
+
+class Serial(object):
+    '''
+    Create a serialization object, this object manages all message
+    serialization in Salt
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.serial = self.opts.get(serial, 'msgpack')
+
+    def loads(msg):
+        '''
+        Run the correct loads serialization format
+        '''
+        if self.serial == 'msgpack':
+            return msgpack.loads(msg)
+        elif self.serial == 'pickle':
+            try:
+                return pickle.loads(msg)
+            except:
+                return msgpack.loads(msg)
+
+    def load(fn_):
+        '''
+        Run the correct serialization to load a file
+        '''
+        data = fn_.read()
+        return self.loads(data)
+
+    def dumps(msg):
+        '''
+        Run the correct dums serialization format
+        '''
+        if self.serial == 'pickle':
+            return pickle.dumps(msg)
+        else:
+            return msgpack.dumps(msg)
+
+    def dump(msg, fn_):
+        '''
+        Serialize the correct data into the named file object
+        '''
+        fn_.write(self.dumps(msg))
