@@ -4,7 +4,11 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 import socket
-import subprocess
+import salt.utils
+
+__outputter__ = {
+    'ping': 'txt',
+}
 
 
 def _sanitize_host(host):
@@ -25,11 +29,7 @@ def ping(host):
         salt '*' network.ping archlinux.org -c 4
     '''
     cmd = 'ping -c 4 %s' % _sanitize_host(host)
-
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
-    return out
+    return __salt__['cmd.run'](cmd)
 
 
 def netstat():
@@ -40,13 +40,11 @@ def netstat():
 
         salt '*' network.netstat
     '''
-    cmd = 'netstat -tulpnea'
     ret = []
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    cmd = 'netstat -tulpnea'
+    out = __salt__['cmd.run'](cmd)
     for line in out:
-        if not line.count(' '):
+        if ' ' not in line:
             continue
         comps = line.split()
         if line.startswith('tcp'):
