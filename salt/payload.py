@@ -44,7 +44,7 @@ class Serial(object):
         self.opts = opts
         self.serial = self.opts.get('serial', 'msgpack')
 
-    def loads(msg):
+    def loads(self, msg):
         '''
         Run the correct loads serialization format
         '''
@@ -56,14 +56,14 @@ class Serial(object):
             except:
                 return msgpack.loads(msg)
 
-    def load(fn_):
+    def load(self, fn_):
         '''
         Run the correct serialization to load a file
         '''
         data = fn_.read()
         return self.loads(data)
 
-    def dumps(msg):
+    def dumps(self, msg):
         '''
         Run the correct dums serialization format
         '''
@@ -72,7 +72,7 @@ class Serial(object):
         else:
             return msgpack.dumps(msg)
 
-    def dump(msg, fn_):
+    def dump(self, msg, fn_):
         '''
         Serialize the correct data into the named file object
         '''

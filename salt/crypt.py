@@ -188,7 +188,7 @@ class Auth(object):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
-        payload = self.serial.package(self.minion_sign_in_payload())
+        payload = self.serial.dumps(self.minion_sign_in_payload())
         socket.send(payload)
         payload = self.serial.unpackage(socket.recv())
         if 'load' in payload:
