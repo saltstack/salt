@@ -42,7 +42,7 @@ class Serial(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.serial = self.opts.get(serial, 'msgpack')
+        self.serial = self.opts.get('serial', 'msgpack')
 
     def loads(msg):
         '''
