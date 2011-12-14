@@ -313,7 +313,7 @@ class Minion(object):
             time.sleep(10)
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
-        self.crypticle = salt.crypt.Crypticle(self.aes, self.opts)
+        self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
 
     def passive_refresh(self):
         '''

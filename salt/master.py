@@ -63,7 +63,7 @@ class SMaster(object):
         '''
         Return the crypticle used for AES
         '''
-        return salt.crypt.Crypticle(self.opts['aes'], self.opts)
+        return salt.crypt.Crypticle(self.opts, self.opts['aes'])
 
     def __prep_key(self):
         '''
