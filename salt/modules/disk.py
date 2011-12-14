@@ -2,9 +2,6 @@
 Module for gathering disk information
 '''
 
-# FIXME: we want module internal calls rather than using subprocess directly
-import subprocess
-
 
 def usage():
     '''
@@ -16,9 +13,7 @@ def usage():
     '''
     cmd = 'df -P'
     ret = {}
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         if not line.count(' '):
             continue

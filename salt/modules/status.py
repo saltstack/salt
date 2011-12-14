@@ -6,8 +6,6 @@ These data can be useful for compiling into stats later.
 import fnmatch
 import os
 import re
-import subprocess
-
 
 __opts__ = {}
 
@@ -71,8 +69,7 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    return subprocess.Popen(['uptime'],
-            stdout=subprocess.PIPE).communicate()[0].strip()
+    return __salt__['cmd.run']('uptime').strip()
 
 
 def loadavg():
@@ -376,10 +373,8 @@ def w():
 
         salt '*' status.w
     '''
-    users = subprocess.Popen(['w -h'],
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
     user_list = []
+    users = __salt__['cmd.run']('w -h').split('\n')
     for row in users:
         if not row.count(' '):
             continue
