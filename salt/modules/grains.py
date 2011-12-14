@@ -33,7 +33,7 @@ def item(key=None):
     '''
     return __grains__.get(key, '')
 
-def list():
+def ls():
     '''
     Return a list of all available grains
 
@@ -42,6 +42,3 @@ def list():
         salt '*' grains.list
     '''
     return sorted(__grains__)
-
-# Keep the wise 'nix beards happy
-ls = list
