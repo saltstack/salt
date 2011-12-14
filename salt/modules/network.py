@@ -79,13 +79,12 @@ def traceroute(host):
 
         salt '*' network.traceroute archlinux.org
     '''
-    cmd = 'traceroute %s' % _sanitize_host(host)
     ret = []
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    cmd = 'traceroute %s' % _sanitize_host(host)
+    out = __salt__['cmd.run'](cmd)
+
     for line in out:
-        if not line.count(' '):
+        if not ' ' in line:
             continue
         if line.startswith('traceroute'):
             continue
@@ -113,11 +112,7 @@ def dig(host):
         salt '*' network.dig archlinux.org
     '''
     cmd = 'dig %s' % _sanitize_host(host)
-
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
-    return out
+    return __salt__['cmd.run'](cmd)
 
 
 def isportopen(host, port):
@@ -136,4 +131,3 @@ def isportopen(host, port):
     out = sock.connect_ex((_sanitize_host(host), int(port)))
 
     return out
-
