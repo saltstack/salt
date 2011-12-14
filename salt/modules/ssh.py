@@ -86,7 +86,7 @@ def host_keys(keydir=None):
     # Set up the default keydir - needs to support sshd_config parsing in the
     # future
     if not keydir:
-        if __grains__['Linux']:
+        if __grains__['kernel'] == 'Linux':
             keydir = '/etc/ssh'
     keys = {}
     for fn_ in os.listdir(keydir):
