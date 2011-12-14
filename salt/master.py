@@ -258,6 +258,11 @@ class MWorker(multiprocessing.Process):
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
         '''
+        try:
+            key = payload['enc']
+            load = payload['load']
+        except KeyError:
+            return ''
         return {'aes': self._handle_aes,
                 'pub': self._handle_pub,
                 'clear': self._handle_clear}[payload['enc']](payload['load'])
