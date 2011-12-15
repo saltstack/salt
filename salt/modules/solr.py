@@ -621,7 +621,7 @@ def is_replication_enabled(host=None, core_name=None):
             replication_enabled  = 'false'
             master_url = slave['masterUrl']
             #check for errors on the slave
-            if slave.has_key('ERROR'):
+            if 'ERROR' in slave:
                 success=False
                 err = "{0}: {1} - {2}".format(name, slave['ERROR'], master_url)
                 resp['errors'].append(err)
@@ -691,7 +691,7 @@ def match_index_versions(host=None,core_name=None):
         if response['success']:
             slave = resp['data']['details']['slave']
             master_url = resp['data']['details']['slave']['masterUrl']
-            if slave.has_key('ERROR'):
+            if 'ERROR' in slave:
                 error = slave['ERROR']
                 success=False
                 err = "{0}: {1} - {2}".format(name, error, master_url)
