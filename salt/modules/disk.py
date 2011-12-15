@@ -15,7 +15,7 @@ def usage():
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         if line.startswith('Filesystem'):
             continue

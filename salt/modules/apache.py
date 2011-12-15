@@ -142,7 +142,7 @@ def vhosts():
     namevhost = ''
     out = __salt__['cmd.run'](cmd)
     for line in out.split('\n'):
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split()
         if 'is a NameVirtualHost' in line:

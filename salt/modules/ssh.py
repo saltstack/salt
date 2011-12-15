@@ -12,9 +12,9 @@ def _refine_enc(enc):
     '''
     rsa = ['r', 'rsa', 'ssh-rsa']
     dss = ['d', 'dsa', 'dss', 'ssh-dss']
-    if rsa.count(enc):
+    if enc in rsa:
         return 'ssh-rsa'
-    elif dss.count(enc):
+    elif enc in dss:
         return 'ssh-dss'
     else:
         return 'ssh-rsa'

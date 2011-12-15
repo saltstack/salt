@@ -40,7 +40,7 @@ def _get_dom(vm_):
     Return a domain object for the named vm
     '''
     conn = __get_conn()
-    if not list_vms().count(vm_):
+    if vm_ not in list_vms():
         raise Exception('The specified vm is not present')
     return conn.lookupByName(vm_)
 
@@ -169,8 +169,8 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if target.attributes.keys().count('dev')\
-                and source.attributes.keys().count('file'):
+        if 'dev' in target.attributes.keys():
+                and 'file' in source.attributes.keys():
             disks[target.getAttribute('dev')] =\
                     {'file': source.getAttribute('file')}
     for dev in disks:
@@ -509,11 +509,9 @@ def is_kvm_hyper():
     '''
     if __grains__['virtual'] != 'physical':
         return False
-    if not open('/proc/modules').read().count('kvm_'):
+    if 'kvm_' not in open('/proc/modules').read():
         return False
-    libvirt_ret = subprocess.Popen('ps aux',
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].count('libvirtd')
+    libvirt_ret = __salt__['cmd.run'](__grains__['ps']).count('libvirtd')
     if not libvirt_ret:
         return False
     return True

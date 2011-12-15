@@ -52,7 +52,7 @@ def available():
     for path in __salt__['cmd.run']('ls /boot/kernel | grep .ko$').split('\n'):
         bpath = os.path.basename(path)
         comps = bpath.split('.')
-        if comps.count('ko'):
+        if 'ko' in comps:
             # This is a kernel module, return it without the .ko extension
             ret.append('.'.join(comps[:comps.index('ko')]))
     return ret
@@ -66,7 +66,7 @@ def check_available(mod):
 
         salt '*' kmod.check_available kvm
     '''
-    if available().count(mod):
+    if mod in available():
         # the module is available, return True
         return True
     return False

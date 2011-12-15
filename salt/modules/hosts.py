@@ -42,7 +42,7 @@ def get_ip(host):
         return ''
     # Look for the op
     for addr in hosts:
-        if hosts[addr].count(host):
+        if host in hosts[addr]:
             return addr
     # ip not found
     return ''
@@ -71,7 +71,7 @@ def has_pair(ip, alias):
     hosts = list_hosts()
     if ip not in hosts:
         return False
-    if hosts[ip].count(alias):
+    if alias in hosts[ip]:
         return True
     return False
 
