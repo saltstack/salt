@@ -169,12 +169,12 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys():
+        if 'dev' in target.attributes.keys() \
                 and 'file' in source.attributes.keys():
-            disks[target.getAttribute('dev')] =\
+            disks[target.getAttribute('dev')] = \
                     {'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '\
+        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
             + disks[dev]['file'],
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]))
