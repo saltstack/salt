@@ -7,6 +7,7 @@ import salt.state
 
 __outputter__ = {
                  'highstate': 'highstate',
+                 'modules': 'highstate',
                  }
 
 
@@ -74,6 +75,22 @@ def highstate():
     st_ = salt.state.HighState(__opts__)
     return st_.call_highstate()
 
+def sls(mods, env='base'):
+    '''
+    Execute a set list of state modules from an environment, default
+    environment is base
+
+    CLI Example:
+    
+        salt \* state.modules core,edit.vim dev
+    '''
+    st_ = salt.state.HighState(__opts__)
+    if isinstance(mods, str):
+        mods = mods.split(',')
+    high, errors = st_.render_highstate({env: mods})
+    if errors:
+        return errors
+    return st_.state.call_high(high)
 
 def show_highstate():
     '''
