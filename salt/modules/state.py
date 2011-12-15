@@ -2,12 +2,15 @@
 Control the state system on the minion
 '''
 
+import os
+
 import salt.state
 
 
 __outputter__ = {
                  'highstate': 'highstate',
-                 'modules': 'highstate',
+                 'sls': 'highstate',
+                 'top': 'highstate',
                  }
 
 
@@ -75,6 +78,7 @@ def highstate():
     st_ = salt.state.HighState(__opts__)
     return st_.call_highstate()
 
+
 def sls(mods, env='base'):
     '''
     Execute a set list of state modules from an environment, default
@@ -91,6 +95,16 @@ def sls(mods, env='base'):
     if errors:
         return errors
     return st_.state.call_high(high)
+
+
+def top(topfn):
+    '''
+    Execute a specific top file instead of the default
+    '''
+    st_ = salt.state.HighState(__opts__)
+    st_.opts['state_top'] = os.path.join('salt://', topfn)
+    return st_.call_highstate()
+
 
 def show_highstate():
     '''
