@@ -7,7 +7,9 @@ import socket
 import salt.utils
 
 __outputter__ = {
-    'ping': 'txt',
+    'dig':     'txt',
+    'ping':    'txt',
+    'netstat': 'txt',
 }
 
 
@@ -32,6 +34,7 @@ def ping(host):
     return __salt__['cmd.run'](cmd)
 
 
+# FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools 1.6.0 (Ubuntu 10.10)
 def netstat():
     '''
     Return information on open ports and states
@@ -44,8 +47,6 @@ def netstat():
     cmd = 'netstat -tulpnea'
     out = __salt__['cmd.run'](cmd)
     for line in out:
-        if ' ' not in line:
-            continue
         comps = line.split()
         if line.startswith('tcp'):
             ret.append({
@@ -71,6 +72,8 @@ def netstat():
     return ret
 
 
+# FIXME: This is broken on: Modern traceroute for Linux, version 2.0.14, May 10 2010 (Ubuntu 10.10)
+# FIXME: traceroute is deprecated, make this fall back to tracepath
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
