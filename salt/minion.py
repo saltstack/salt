@@ -3,6 +3,8 @@ Routines to set up a minion
 '''
 
 # Import python libs
+import BaseHTTPServer
+import contextlib
 import glob
 import logging
 import multiprocessing
@@ -13,6 +15,8 @@ import tempfile
 import threading
 import time
 import traceback
+import urllib2
+import urlparse
 
 # Import zeromq libs
 import zmq
@@ -643,6 +647,32 @@ class FileClient(object):
                 fn_ = open(dest, 'w+')
             fn_.write(data['data'])
         return dest
+
+    def get_url(self, url, dest, makedirs=False, env='base'):
+        '''
+        Get a single file from a URL.
+        '''
+        if urlparse.urlparse(url).scheme == 'salt':
+            return self.get_file(url, dest, makedirs, env)
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            if makedirs:
+                os.makedirs(destdir)
+            else:
+                return False
+        try:
+            with contextlib.closing(urllib2.urlopen(url)) as srcfp:
+                with open(dest, 'wb') as destfp:
+                    shutil.copyfileobj(srcfp, destfp)
+            return dest
+        except urllib2.HTTPError, ex:
+            raise MinionError('HTTP error {0} reading {1}: {3}'.format(
+                    ex.code,
+                    url,
+                    *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
+        except urllib2.URLError, ex:
+            raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
+        return False
 
     def cache_file(self, path, env='base'):
         '''
