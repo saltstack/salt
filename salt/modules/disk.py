@@ -20,11 +20,42 @@ def usage():
         if line.startswith('Filesystem'):
             continue
         comps = line.split()
-        ret[comps[0]] = {
-            '1K-blocks': comps[1],
-            'available': comps[3],
-            'capacity': comps[4],
-            'mountpoint': comps[5],
-            'used': comps[2]
+        ret[comps[5]] = {
+            'filesystem': comps[0],
+            '1K-blocks':  comps[1],
+            'used':       comps[2],
+            'available':  comps[3],
+            'capacity':   comps[4],
         }
+    return ret
+
+def inodeusage():
+    '''
+    Return inode usage information for volumes mounted on this minion
+
+    CLI Example::
+
+        salt '*' disk.inodeusage
+    '''
+    cmd = 'df -i'
+    ret = {}
+    out = __salt__['cmd.run'](cmd).split('\n')
+    for line in out:
+        if line.startswith('Filesystem'):
+            continue
+        comps = line.split()
+        # Don't choke on empty lines
+        if not comps:
+            continue
+
+        try:
+            ret[comps[5]] = {
+                'inodes': comps[1],
+                'used':   comps[2],
+                'free':   comps[3],
+                'use':    comps[4],
+                'filesystem': comps[0],
+            }
+        except IndexError:
+            print "DEBUG: comps='%s'" % comps
     return ret
