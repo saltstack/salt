@@ -43,6 +43,17 @@ def get_file(path, dest, env='base'):
     return client.get_file(path, dest, False, env)
 
 
+def get_url(path, dest, env='base'):
+    '''
+    Used to get a single file from a URL.
+    For example,
+        cp.get_url salt://my/file /tmp/mine
+        cp.get_url http://www.slashdot.org /tmp/index.html
+    '''
+    client = salt.minion.FileClient(__opts__)
+    return client.get_url(path, dest, False, env)
+
+
 def cache_file(path, env='base'):
     '''
     Used to cache a single file in the local salt-master file cache.

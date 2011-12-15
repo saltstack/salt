@@ -717,7 +717,7 @@ class HighState(object):
                 return opts
         mopts = self.client.master_opts()
         opts['renderer'] = mopts['renderer']
-        opts['failhard'] = mopts['failhard']
+        opts['failhard'] = mopts.get('failhard', False)
         if mopts['state_top'].startswith('salt://'):
             opts['state_top'] = mopts['state_top']
         elif mopts['state_top'].startswith('/'):
