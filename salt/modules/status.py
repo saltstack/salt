@@ -6,8 +6,6 @@ These data can be useful for compiling into stats later.
 import fnmatch
 import os
 import re
-import subprocess
-
 
 __opts__ = {}
 
@@ -71,8 +69,7 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    return subprocess.Popen(['uptime'],
-            stdout=subprocess.PIPE).communicate()[0].strip()
+    return __salt__['cmd.run']('uptime').strip()
 
 
 def loadavg():
@@ -107,7 +104,7 @@ def cpustats():
     stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split()
         if comps[0] == 'cpu':
@@ -144,7 +141,7 @@ def meminfo():
     stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split()
         comps[0] = comps[0].replace(':', '')
@@ -170,7 +167,7 @@ def cpuinfo():
     stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split(':')
         comps[0] = comps[0].strip()
@@ -195,7 +192,7 @@ def diskstats():
     stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split()
         ret[comps[2]] = {'major': _number(comps[0]),
@@ -285,7 +282,7 @@ def vmstats():
     stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split()
         ret[comps[0]] = _number(comps[1])
@@ -307,7 +304,7 @@ def netstats():
     ret = {}
     headers = ['']
     for line in stats:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split()
         if comps[0] == headers[0]:
@@ -339,7 +336,7 @@ def netdev():
     stats = open(procf, 'r').read().split('\n')
     ret = {}
     for line in stats:
-        if not line.count(' '):
+        if not line:
             continue
         if line.find(':') < 0:
             continue
@@ -376,12 +373,10 @@ def w():
 
         salt '*' status.w
     '''
-    users = subprocess.Popen(['w -h'],
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
     user_list = []
+    users = __salt__['cmd.run']('w -h').split('\n')
     for row in users:
-        if not row.count(' '):
+        if not row:
             continue
         comps = row.split()
         rec = {'idle': comps[3],

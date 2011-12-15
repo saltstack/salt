@@ -62,7 +62,7 @@ def list_pkgs():
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split()
         ret[comps[0]] = comps[1]
@@ -88,9 +88,9 @@ def refresh_db():
         if not line:
             continue
         key = line.strip().split()[0]
-        if line.count('is up to date'):
+        if 'is up to date' in line:
             ret[key] = False
-        elif line.count('downloading'):
+        elif 'downloading' in line:
             ret[key] = True
     return ret
 

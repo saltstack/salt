@@ -27,7 +27,7 @@ def version():
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         if 'Server version' in line:
             comps = line.split(': ')
@@ -46,7 +46,7 @@ def fullversion():
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         if ': ' in line:
             comps = line.split(': ')

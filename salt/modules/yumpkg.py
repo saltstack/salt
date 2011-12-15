@@ -11,14 +11,14 @@ def __virtual__():
     '''
     # Return this for pkg on RHEL/Fedora based distros that ship with python
     # 2.6 or greater.
-    dists = 'CentOS Scientific RedHat'
+    dists = ('CentOS', 'Scientific', 'RedHat')
     if __grains__['os'] == 'Fedora':
         if int(__grains__['osrelease'].split('.')[0]) >= 11:
             return 'pkg'
         else:
             return False
     else:
-        if dists.count(__grains__['os']):
+        if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) >= 6:
                 return 'pkg' 
         else:

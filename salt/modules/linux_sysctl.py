@@ -24,9 +24,9 @@ def show():
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
-        if not line.count(' = '):
+        if ' = ' not in line:
             continue
         comps = line.split(' = ')
         ret[comps[0]] = comps[1]
@@ -80,7 +80,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
         if line.startswith('#'):
             nlines.append(line)
             continue
-        if not line.count('='):
+        if '=' not in line:
             nlines.append(line)
             continue
         comps = line.split('=')
