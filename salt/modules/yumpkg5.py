@@ -7,14 +7,14 @@ def __virtual__():
     '''
     # Return this for pkg on RHEL/Fedora based distros that do not ship with
     # python 2.6 or greater.
-    dists = 'CentOS Scientific RedHat'
+    dists = ('CentOS', 'Scientific', 'RedHat')
     if __grains__['os'] == 'Fedora':
         if int(__grains__['osrelease'].split('.')[0]) < 11:
             return 'pkg'
         else:
             return False
     else:
-        if dists.count(__grains__['os']):
+        if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) <= 5:
                 return 'pkg' 
         else:
@@ -84,7 +84,7 @@ def list_pkgs():
     ret = {}
     out = __salt__['cmd.run_stdout'](cmd)
     for line in out.split(';'):
-        if not line.count(':'):
+        if ':' not in line:
             continue
         comps = line.split(':')
         ret[comps[0]] = comps[1]

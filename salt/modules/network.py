@@ -4,7 +4,13 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 import socket
-import subprocess
+import salt.utils
+
+__outputter__ = {
+    'dig':     'txt',
+    'ping':    'txt',
+    'netstat': 'txt',
+}
 
 
 def _sanitize_host(host):
@@ -25,13 +31,10 @@ def ping(host):
         salt '*' network.ping archlinux.org -c 4
     '''
     cmd = 'ping -c 4 %s' % _sanitize_host(host)
-
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
-    return out
+    return __salt__['cmd.run'](cmd)
 
 
+# FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools 1.6.0 (Ubuntu 10.10)
 def netstat():
     '''
     Return information on open ports and states
@@ -40,14 +43,10 @@ def netstat():
 
         salt '*' network.netstat
     '''
-    cmd = 'netstat -tulpnea'
     ret = []
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    cmd = 'netstat -tulpnea'
+    out = __salt__['cmd.run'](cmd)
     for line in out:
-        if not line.count(' '):
-            continue
         comps = line.split()
         if line.startswith('tcp'):
             ret.append({
@@ -73,6 +72,8 @@ def netstat():
     return ret
 
 
+# FIXME: This is broken on: Modern traceroute for Linux, version 2.0.14, May 10 2010 (Ubuntu 10.10)
+# FIXME: traceroute is deprecated, make this fall back to tracepath
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
@@ -81,13 +82,12 @@ def traceroute(host):
 
         salt '*' network.traceroute archlinux.org
     '''
-    cmd = 'traceroute %s' % _sanitize_host(host)
     ret = []
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    cmd = 'traceroute %s' % _sanitize_host(host)
+    out = __salt__['cmd.run'](cmd)
+
     for line in out:
-        if not line.count(' '):
+        if not ' ' in line:
             continue
         if line.startswith('traceroute'):
             continue
@@ -115,11 +115,7 @@ def dig(host):
         salt '*' network.dig archlinux.org
     '''
     cmd = 'dig %s' % _sanitize_host(host)
-
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
-    return out
+    return __salt__['cmd.run'](cmd)
 
 
 def isportopen(host, port):
@@ -138,4 +134,3 @@ def isportopen(host, port):
     out = sock.connect_ex((_sanitize_host(host), int(port)))
 
     return out
-

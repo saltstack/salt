@@ -52,10 +52,10 @@ def available():
     for path in __salt__['cmd.run']('modprobe -l').split('\n'):
         bpath = os.path.basename(path)
         comps = bpath.split('.')
-        if comps.count('ko'):
+        if 'ko' in comps:
             # This is a kernel module, return it without the .ko extension
             ret.append('.'.join(comps[:comps.index('ko')]))
-    return ret
+    return sorted(list(ret))
 
 
 def check_available(mod):
@@ -66,10 +66,7 @@ def check_available(mod):
 
         salt '*' kmod.check_available kvm
     '''
-    if available().count(mod):
-        # the module is available, return True
-        return True
-    return False
+    return mod in available()
 
 
 def lsmod():
@@ -87,10 +84,11 @@ def lsmod():
             continue
         if comps[0] == 'Module':
             continue
-        mdat = {}
-        mdat['module'] = comps[0]
-        mdat['size'] = comps[1]
-        mdat['depcount'] = comps[2]
+        mdat = {
+            'size': comps[1],
+            'module': comps[0],
+            'depcount': comps[2],
+        }
         if len(comps) > 3:
             mdat['deps'] = comps[3].split(',')
         else:

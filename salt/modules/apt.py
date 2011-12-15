@@ -69,7 +69,7 @@ def refresh_db():
         if not len(cols):
             continue
         ident = " ".join(cols[1:4])
-        if cols[0].count('Get'):
+        if 'Get' in cols[0]:
             servers[ident] = True
         else:
             servers[ident] = False
@@ -222,7 +222,7 @@ def list_pkgs(regex_string=""):
 
     for line in out.split('\n'):
         cols = line.split()
-        if len(cols) and cols[0].count('ii'):
+        if len(cols) and 'ii' in cols[0]:
             ret[cols[1]] = cols[2]
 
     return ret

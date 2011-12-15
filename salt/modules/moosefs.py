@@ -20,7 +20,7 @@ def dirinfo(path, opts=None):
 
     output = out['stdout'].split('\n')
     for line in output:
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split(':')
         ret[comps[0].strip()] = comps[1].strip()
@@ -42,7 +42,7 @@ def fileinfo(path):
 
     output = out['stdout'].split('\n')
     for line in output:
-        if not line.count(' '):
+        if not line:
             continue
         if '/' in line:
             comps = line.split('/')
@@ -85,7 +85,7 @@ def mounts():
 
     output = out['stdout'].split('\n')
     for line in output:
-        if not line.count(' '):
+        if not line:
             continue
         if 'fuse.mfs' in line:
             comps = line.split(' ')
@@ -130,7 +130,7 @@ def getgoal(path, opts=None):
         }
     else:
         for line in output:
-            if not line.count(' '):
+            if not line:
                 continue
             if path in line:
                 continue
