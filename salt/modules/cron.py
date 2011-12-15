@@ -100,6 +100,9 @@ def list_tab(user):
             ret['pre'].append(line)
     return ret
 
+# For consistency's sake
+ls = list_tab
+
 
 def set_special(user, special, cmd):
     '''
@@ -188,3 +191,5 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
         # Failed to commit, return the error
         return comdat['stderr']
     return ret
+
+rm = rm_job
