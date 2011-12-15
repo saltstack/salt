@@ -2,18 +2,22 @@
 Support for Apache
 '''
 
-from re import sub
+import re
+
+__outputter__ = {
+    'signal': 'txt',
+}
 
 
 def __detect_os():
     '''
     Apache commands and paths differ depending on packaging
     '''
-    httpd = 'CentOS Scientific RedHat Fedora'
-    apache2 = 'Ubuntu'
-    if httpd.count(__grains__['os']):
+    httpd = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
+    apache2 = ('Ubuntu',)
+    if __grains__['os'] in httpd:
         return 'apachectl'
-    elif apache2.count(__grains__['os']):
+    elif __grains__['os'] in apache2:
         return 'apache2ctl'
     else:
         return 'apachectl'
@@ -46,10 +50,10 @@ def fullversion():
     ret['compiled_with'] = []
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
-            continue
         if ': ' in line:
             comps = line.split(': ')
+            if not comps:
+                continue
             ret[comps[0].strip().lower().replace(' ', '_')] = comps[1].strip()
         elif ' -D' in line:
             cw = line.strip(' -D ')
@@ -71,9 +75,9 @@ def modules():
     ret['shared'] = []
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
-            continue
         comps = line.split()
+        if not comps:
+            continue
         if '(static)' in line:
             ret['static'].append(comps[0])
         if '(shared)' in line:
@@ -93,7 +97,7 @@ def servermods():
     ret = []
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         if '.c' in line:
             ret.append(line.strip())
@@ -114,7 +118,7 @@ def directives():
     out = __salt__['cmd.run'](cmd)
     out = out.replace('\n\t', '\t')
     for line in out.split('\n'):
-        if not line.count(' '):
+        if not line:
             continue
         comps = line.split('\t')
         desc = '\n'.join(comps[1:])
@@ -148,11 +152,11 @@ def vhosts():
             if comps[0] == 'default':
                 ret[namevhost]['default'] = {}
                 ret[namevhost]['default']['vhost'] = comps[2]
-                ret[namevhost]['default']['conf'] = sub(r'\(|\)', '', comps[3])
+                ret[namevhost]['default']['conf'] = re.sub(r'\(|\)', '', comps[3])
             if comps[0] == 'port':
                 ret[namevhost][comps[3]] = {}
                 ret[namevhost][comps[3]]['vhost'] = comps[3]
-                ret[namevhost][comps[3]]['conf'] = sub(r'\(|\)', '', comps[4])
+                ret[namevhost][comps[3]]['conf'] = re.sub(r'\(|\)', '', comps[4])
                 ret[namevhost][comps[3]]['port'] = comps[1]
     return ret
 
@@ -165,8 +169,28 @@ def signal(signal=None):
 
         salt '*' apache.signal restart
     '''
-    valid_signals = 'start stop restart graceful graceful-stop'
-    if not valid_signals.count(signal):
+    no_extra_args = ('configtest', 'status', 'fullstatus')
+    valid_signals = ('start', 'stop', 'restart', 'graceful', 'graceful-stop')
+
+    if signal not in valid_signals and signal not in no_extra_args:
         return
-    cmd = __detect_os() + ' -k %s' % signal
-    out = __salt__['cmd.run'](cmd)
+    # Make sure you use the right arguments
+    if signal in valid_signals:
+        arguments = ' -k {0}'.format(signal)
+    else:
+        arguments = ' {0}'.format(signal)
+    cmd = __detect_os() + arguments
+    out = __salt__['cmd.run_all'](cmd)
+
+    # A non-zero return code means fail
+    if out['retcode'] and out['stderr']:
+        ret = out['stderr'].strip()
+    # 'apachectl configtest' returns 'Syntax OK' to stderr
+    elif out['stderr']:
+        ret = out['stderr'].strip()
+    elif out['stdout']:
+        ret = out['stdout'].strip()
+    # No output for something like: apachectl graceful
+    else:
+        ret = 'Command: "{0}" completed successfully!'.format(cmd)
+    return ret
