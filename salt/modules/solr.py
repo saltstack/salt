@@ -931,9 +931,13 @@ def signal(signal=None):
     '''
 
     ret = _get_return_dict()
-    valid_signals = 'start stop restart'
-    if not valid_signals.count(signal):
-        return
+    valid_signals = ('start', 'stop', 'restart')
+
+    # Give a friendly error message for invalid signals
+    # TODO: Fix this logic to be reusable and used by apache.signal
+    if signal not in valid_signals:
+        msg = valid_signals[:-1] + ('or {0}'.format(valid_signals[-1]),)
+        return '{0} is an invalid signal. Try: one of: {1}'.format(signal, ', '.join(msg))
 
     cmd = "{0} {1}".format(__opts__['solr.init_script'], signal)
     out = __salt__['cmd.run'](cmd)
