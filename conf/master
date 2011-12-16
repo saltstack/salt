@@ -173,19 +173,10 @@
 #####         Node Groups           #####
 ##########################################
 # Node groups allow for logical groupings of minion nodes.
-# A group consists of a target evalation form(ie; list, glob, grain)
-# and the value of that form. Currently a group can only consist
-# of one target eval form and the value for that form. 
+# A group consists of a group name and a compound target.
 # 
 # nodegroups: {
-#   group1: {
-#     list: [
-#       'foo.domain.com',
-#       'bar.domain.com',
-#       'baz.domain.com',
-#       ]
-#   },
-#   group2: {
-#     glob: 'ba*.domain.com',
-#   },
+#   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
+#   group2: 'G@os:Debian and foo.domain.com',
 # }
+
