@@ -410,8 +410,8 @@ def managed(name,
                 slines = open(sfn, 'rb').readlines()
                 nlines = open(name, 'rb').readlines()
                 ret['changes']['diff'] = ('\n'.join(difflib
-                                                    .unified_diff(slines,
-                                                                  nlines)))
+                                                    .unified_diff(nlines,
+                                                                  slines)))
             # Pre requs are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copy(sfn, name)
