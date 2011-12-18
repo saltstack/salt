@@ -21,6 +21,11 @@ makes use of the jinja templating system would look like this:
         - group: root
         - mode: 644
         - template: jinja
+        - context:
+          custom_var: "override"
+        - defaults:
+          custom_var: "default value"
+          other_var: 123
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the premissions on a directory. A directory statement will
@@ -138,7 +143,7 @@ def _clean_dir(root, keep):
     return list(removed)
 
 
-def _mako(sfn, name, source, user, group, mode, env):
+def _mako(sfn, name, source, user, group, mode, env, context=None):
     '''
     Render a mako template, returns the location of the rendered file,
     return False if render fails.
@@ -154,7 +159,7 @@ def _mako(sfn, name, source, user, group, mode, env):
                 'data': 'Failed to import jinja'}
     try:
         tgt = tempfile.mkstemp()[1]
-        passthrough = {}
+        passthrough = context if context else {}
         passthrough.update(__salt__)
         passthrough.update(__grains__)
         template = Template(open(sfn, 'r').read())
@@ -167,7 +172,7 @@ def _mako(sfn, name, source, user, group, mode, env):
                 'data': trb}
 
 
-def _jinja(sfn, name, source, user, group, mode, env):
+def _jinja(sfn, name, source, user, group, mode, env, context=None):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
@@ -183,7 +188,7 @@ def _jinja(sfn, name, source, user, group, mode, env):
                 'data': 'Failed to import jinja'}
     try:
         tgt = tempfile.mkstemp()[1]
-        passthrough = {}
+        passthrough = context if context else {}
         passthrough['salt'] = __salt__
         passthrough['grains'] = __grains__
         passthrough['name'] = name
@@ -311,7 +316,9 @@ def managed(name,
         mode=None,
         template=None,
         makedirs=False,
-        __env__='base'):
+        __env__='base',
+        context=None,
+        defaults=None):
     '''
     Manage a given file, this function allows for a file to be downloaded from
     the salt master and potentially run through a templating system.
@@ -346,6 +353,12 @@ def managed(name,
         the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
+
+    context
+        Overrides default context variables passed to the template.
+
+    defaults
+        Default context passed to the template.
     '''
     if mode:
         mode = str(mode)
@@ -360,6 +373,8 @@ def managed(name,
         sfn = __salt__['cp.cache_file'](source, __env__)
         t_key = '_{0}'.format(template)
         if t_key in globals():
+            context_dict = defaults if defaults else {}
+            if context: context_dict.update(context)
             data = globals()[t_key](
                     sfn,
                     name,
@@ -367,7 +382,8 @@ def managed(name,
                     user,
                     group,
                     mode,
-                    __env__
+                    __env__,
+                    context_dict
                     )
         else:
             ret['result'] = False
