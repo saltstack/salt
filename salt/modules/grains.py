@@ -39,6 +39,6 @@ def ls():
 
     CLI Example::
 
-        salt '*' grains.list
+        salt '*' grains.ls
     '''
     return sorted(__grains__)
