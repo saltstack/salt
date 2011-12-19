@@ -86,7 +86,7 @@ def sls(mods, env='base'):
 
     CLI Example:
     
-        salt \* state.modules core,edit.vim dev
+        salt '*' state.sls core,edit.vim dev
     '''
     st_ = salt.state.HighState(__opts__)
     if isinstance(mods, str):
