@@ -86,6 +86,10 @@ class Minion(object):
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
+        if hasattr(self,'_syndic') and self._syndic:
+            log.warn('Starting the Salt Syndic Minion')
+        else:
+            log.warn('Starting the Salt Minion')
         self.authenticate()
 
     def __prep_mod_opts(self):
@@ -167,7 +171,7 @@ class Minion(object):
         if isinstance(data['fun'], str):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
-                
+
         if self.opts['multiprocessing']:
             if type(data['fun']) == type(list()):
                 multiprocessing.Process(
@@ -390,6 +394,7 @@ class Syndic(salt.client.LocalClient, Minion):
     authenticate with a higher level master.
     '''
     def __init__(self, opts):
+        self._syndic = True
         salt.client.LocalClient.__init__(self, opts['_master_conf_file'])
         Minion.__init__(self, opts)
 
