@@ -39,6 +39,7 @@ import zmq
 # Import salt modules
 import salt.config
 import salt.payload
+from salt.exceptions import SaltClientError
 
 
 def prep_jid(cachedir):
@@ -56,13 +57,6 @@ def prep_jid(cachedir):
     else:
         return prep_jid(cachedir)
     return jid
-
-
-class SaltClientError(Exception):
-    '''
-    Custom exception class.
-    '''
-    pass
 
 
 class LocalClient(object):

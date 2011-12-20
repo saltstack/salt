@@ -22,7 +22,7 @@ import urlparse
 import zmq
 
 # Import salt libs
-from salt.crypt import AuthenticationError
+from salt.exceptions import AuthenticationError, MinionError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -40,13 +40,6 @@ log = logging.getLogger(__name__)
 # 4. Store the aes key
 # 5. connect to the publisher
 # 6. handle publications
-
-
-class MinionError(Exception):
-    '''
-    Custom exception class.
-    '''
-    pass
 
 
 class SMinion(object):
