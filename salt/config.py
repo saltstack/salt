@@ -121,7 +121,7 @@ def master_config(path):
             'cachedir': '/var/cache/salt',
             'file_roots': {
                 'base': ['/srv/salt'],
-                },
+            },
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
@@ -137,7 +137,8 @@ def master_config(path):
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
             'serial': 'msgpack',
-            }
+            'nodegroups': {},
+    }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 

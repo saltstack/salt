@@ -317,6 +317,10 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
+        if expr_form == 'nodegroup':
+          tgt = self.opts['nodegroups'][tgt]
+          expr_form = 'compound'
+
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module
@@ -325,6 +329,7 @@ class LocalClient(object):
         # send!
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
+
         if not minions:
             return {'jid': '',
                     'minions': minions}
