@@ -18,6 +18,7 @@ import salt.output
 import salt.runner
 
 from salt import __version__ as VERSION
+from salt.exceptions import SaltInvocationError
 
 
 class SaltCMD(object):
@@ -245,16 +246,20 @@ class SaltCMD(object):
 
             if self.opts['return']:
                 args.append(self.opts['return'])
-            full_ret = local.cmd_full_return(*args)
-            ret, out = self._format_ret(full_ret)
+            try:
+                full_ret = local.cmd_full_return(*args)
+                ret, out = self._format_ret(full_ret)
+            except SaltInvocationError, exc:
+                ret = exc
+                out = ''
 
             # Handle special case commands
             if self.opts['fun'] == 'sys.doc':
                 self._print_docs(ret)
             else:
+                # Determine the proper output method and run it
+                get_outputter = salt.output.get_outputter
                 if isinstance(ret, list) or isinstance(ret, dict):
-                    # Determine the proper output method and run it
-                    get_outputter = salt.output.get_outputter
                     if self.opts['raw_out']:
                         printout = get_outputter('raw')
                     elif self.opts['json_out']:
@@ -267,8 +272,14 @@ class SaltCMD(object):
                         printout = get_outputter(out)
                     else:
                         printout = get_outputter(None)
+                elif isinstance(ret, SaltInvocationError):
+                    # Pretty print invocation errors
+                    printout = get_outputter("txt")
+                printout(ret)
 
-                    printout(ret)
+                # Always exit with a return code of 1 on issues
+                if isinstance(ret, Exception):
+                    sys.exit(1)
 
     def _format_ret(self, full_ret):
         '''
