@@ -157,7 +157,7 @@ def total_phymem():
     '''
     Return the total number of bytes of physical memory.
     '''
-    return psutil.total_phymeM
+    return psutil.total_phymem
 
 
 def num_cpus():
