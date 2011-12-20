@@ -90,14 +90,14 @@ def cpu_times(per_cpu=False):
     return result
 
 
-def phymem_usage():
+def physical_memory_usage():
     '''
     Return a dict that describes free and available physical memory.
     '''
     return dict(psutil.phymem_usage()._asdict())
 
 
-def virtmem_usage():
+def virtual_memory_usage():
     '''
     Return a dict that describes free and available memory, both physical
     and virtual.
@@ -105,14 +105,14 @@ def virtmem_usage():
     return dict(psutil.virtmem_usage()._asdict())
 
 
-def cached_phymem():
+def cached_physical_memory():
     '''
     Return the amount cached memory.
     '''
     return psutil.cached_phymem()
 
 
-def phymem_buffers():
+def physical_memory_buffers():
     '''
     Return the amount of physical memory buffers.
     '''
@@ -153,22 +153,22 @@ def disk_partition_usage(all=False):
     return result
 
 
-def total_phymem():
+def total_physical_memory():
     '''
     Return the total number of bytes of physical memory.
     '''
-    return psutil.total_phymem
+    return psutil.TOTAL_PHYMEM
 
 
 def num_cpus():
     '''
     Return the number of CPUs.
     '''
-    return psutil.num_cpus
+    return psutil.NUM_CPUS
 
 
 def boot_time():
     '''
     Return the boot time in number of seconds since the epoch began.
     '''
-    return psutil.boot_time
+    return psutil.BOOT_TIME
