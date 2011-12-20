@@ -208,7 +208,7 @@ def get_sum(path, form='md5'):
 
     CLI Example::
 
-        salt '*' /etc/passwd sha512
+        salt '*' file.get_sum /etc/passwd sha512
     '''
     if not os.path.isfile(path):
         return 'File not found'
@@ -311,9 +311,9 @@ def find(path, *opts):
 
     CLI Examples::
 
-        salt '*' / type=f name=\*.bak size=+10m
-        salt '*' /var mtime=+30d size=+10m print=path,size,mtime
-        salt '*' /var/log name=\*.[0-9] mtime=+30d size=+10m delete
+        salt '*' file.find / type=f name=\*.bak size=+10m
+        salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
+        salt '*' file.find /var/log name=\*.[0-9] mtime=+30d size=+10m delete
     '''
     opts_dict = {}
     for opt in opts:

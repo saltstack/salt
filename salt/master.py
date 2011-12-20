@@ -112,7 +112,7 @@ class Master(SMaster):
         '''
         Turn on the master server components
         '''
-        log.info('Starting the Salt Master')
+        log.warn('Starting the Salt Master')
         multiprocessing.Process(target=self._clear_old_jobs).start()
         aes_funcs = AESFuncs(self.opts, self.crypticle)
         clear_funcs = ClearFuncs(
