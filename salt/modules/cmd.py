@@ -9,6 +9,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import salt.utils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -19,8 +20,8 @@ DEFAULT_CWD = os.path.expanduser('~')
 
 # Set up the default outputters
 __outputter__ = {
-                 'run': 'txt'
-                 }
+    'run': 'txt',
+}
 
 
 def _is_exec(path):
@@ -36,7 +37,7 @@ def run(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     out = subprocess.Popen(cmd,
@@ -54,7 +55,7 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run_stdout "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stdout = subprocess.Popen(cmd,
@@ -71,7 +72,7 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run_stderr "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     stderr = subprocess.Popen(cmd,
@@ -88,7 +89,7 @@ def run_all(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run_all "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     ret = {}
@@ -132,14 +133,17 @@ def has_exec(cmd):
 
         salt '*' cmd.has_exec cat
     '''
-    if cmd.startswith('/'):
-        return _is_exec(cmd)
-    for path in os.environ['PATH'].split(os.pathsep):
-        fn_ = os.path.join(path, cmd)
-        if _is_exec(fn_):
-            return True
-    return False
+    return bool(salt.utils.which(cmd))
 
+def which(cmd):
+    '''
+    Returns the path of an executable available on the minion, None otherwise
+
+    CLI Example::
+
+        salt '*' cmd.which cat
+    '''
+    return salt.utils.which(cmd)
 
 def exec_code(lang, code, cwd=DEFAULT_CWD):
     '''
