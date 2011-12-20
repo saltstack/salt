@@ -33,3 +33,10 @@ class MinionError(Exception):
     Minion problems reading uris such as salt:// or http://
     '''
     pass
+
+class SaltInvocationError(Exception):
+    '''
+    Used when the wrong number of arguments are sent to modules
+    or invalid arguments are  specified  on  the  command  line
+    '''
+    pass
