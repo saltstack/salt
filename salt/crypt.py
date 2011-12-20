@@ -22,6 +22,7 @@ import zmq
 # Import salt utils
 import salt.payload
 import salt.utils
+from salt.exceptions import AuthenticationError
 
 log = logging.getLogger(__name__)
 
@@ -224,14 +225,6 @@ class Auth(object):
         auth['aes'] = self.decrypt_aes(payload['aes'])
         auth['publish_port'] = payload['publish_port']
         return auth
-
-
-class AuthenticationError(Exception):
-    '''
-    Custom exception class.
-    '''
-
-    pass
 
 
 class Crypticle(object):

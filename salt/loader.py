@@ -11,17 +11,10 @@ import imp
 import logging
 import os
 import salt
+from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
 salt_base_path = os.path.dirname(salt.__file__)
-
-
-class LoaderError(Exception):
-    '''
-    Custom exception class.
-    '''
-
-    pass
 
 
 def minion_mods(opts):
