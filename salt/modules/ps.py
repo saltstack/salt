@@ -153,22 +153,22 @@ def disk_partition_usage(all=False):
     return result
 
 
-def TOTAL_PHYMEM():
+def total_phymem():
     '''
     Return the total number of bytes of physical memory.
     '''
-    return psutil.TOTAL_PHYMEM
+    return psutil.total_phymeM
 
 
-def NUM_CPUS():
+def num_cpus():
     '''
     Return the number of CPUs.
     '''
-    return psutil.NUM_CPUS
+    return psutil.num_cpus
 
 
-def BOOT_TIME():
+def boot_time():
     '''
     Return the boot time in number of seconds since the epoch began.
     '''
-    return psutil.BOOT_TIME
+    return psutil.boot_time
