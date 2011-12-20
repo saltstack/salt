@@ -16,6 +16,12 @@ class AuthenticationError(Exception):
     pass
 
 
+class CommandNotFoundError(Exception):
+    '''
+    Used in modules or grains when a required binary is not available
+    '''
+    pass
+
 class LoaderError(Exception):
     '''
     Problems loading the right renderer
