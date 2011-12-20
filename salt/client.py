@@ -39,7 +39,7 @@ import zmq
 # Import salt modules
 import salt.config
 import salt.payload
-from salt.exceptions import SaltClientError
+from salt.exceptions import SaltClientError, SaltInvocationError
 
 
 def prep_jid(cachedir):
@@ -318,6 +318,10 @@ class LocalClient(object):
                 A set, the targets that the tgt passed should match.
         '''
         if expr_form == 'nodegroup':
+          if tgt not in self.opts['nodegroups']:
+              conf_file = self.opts.get('conf_file', 'the master config file')
+              err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
+              raise SaltInvocationError(err)
           tgt = self.opts['nodegroups'][tgt]
           expr_form = 'compound'
 
