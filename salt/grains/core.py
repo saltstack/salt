@@ -83,7 +83,7 @@ def _freebsd_cpudata():
     Return cpu information for FreeBSD systems
     '''
     grains = {}
-    sysctl = salt.utils.which("sysctl")
+    sysctl = salt.utils.which('sysctl')
 
     if sysctl:
         grains['cpuarch'] = __salt__['cmd.run']('{0} -n hw.machine').strip()
@@ -111,7 +111,7 @@ def _memdata(osdata):
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
     elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
-        sysctl = salt.utils.which("sysctl")
+        sysctl = salt.utils.which('sysctl')
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem').strip()
         grains['mem_total'] = str(int(mem) / 1024 / 1024)
@@ -128,8 +128,8 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    lspci = salt.utils.which("lspci")
-    dmidecode = salt.utils.which("dmidecode")
+    lspci = salt.utils.which('lspci')
+    dmidecode = salt.utils.which('dmidecode')
 
     if dmidecode:
         output = __salt__['cmd.run']('dmidecode').lower()
@@ -179,7 +179,7 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
-        sysctl = salt.utils.which("sysctl")
+        sysctl = salt.utils.which('sysctl')
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model').strip()
         if 'QEMU Virtual CPU' in model:
@@ -228,12 +228,12 @@ def os_data():
         if os.path.isfile('/etc/lsb-release'):
             for line in open('/etc/lsb-release').readlines():
                 # Matches any possible format:
-                #     DISTRIB_ID=Ubuntu
-                #     DISTRIB_ID="Mageia"
+                #     DISTRIB_ID='Ubuntu'
+                #     DISTRIB_ID='Mageia'
                 #     DISTRIB_ID='Fedora'
-                #     DISTRIB_RELEASE=10.10
-                #     DISTRIB_CODENAME=squeeze
-                #     DISTRIB_DESCRIPTION="Ubuntu 10.10"
+                #     DISTRIB_RELEASE='10.10'
+                #     DISTRIB_CODENAME='squeeze'
+                #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
                 regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
                 match = regex.match(line)
                 if match:
@@ -243,11 +243,11 @@ def os_data():
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
-            if "lsb_distrib_id" in grains:
-                if "Ubuntu" in grains['lsb_distrib_id']:
+            if 'lsb_distrib_id' in grains:
+                if 'Ubuntu' in grains['lsb_distrib_id']:
                     grains['os'] = 'Ubuntu'
-                elif os.path.isfile("/etc/issue.net") and \
-                  "Ubuntu" in open("/etc/issue.net").readline():
+                elif os.path.isfile('/etc/issue.net') and \
+                  'Ubuntu' in open('/etc/issue.net').readline():
                     grains['os'] = 'Ubuntu'
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
