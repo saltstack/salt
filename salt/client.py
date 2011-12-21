@@ -318,10 +318,10 @@ class LocalClient(object):
                 A set, the targets that the tgt passed should match.
         '''
         if expr_form == 'nodegroup':
-          if tgt not in self.opts['nodegroups']:
-              conf_file = self.opts.get('conf_file', 'the master config file')
-              err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
-              raise SaltInvocationError(err)
+            if tgt not in self.opts['nodegroups']:
+                conf_file = self.opts.get('conf_file', 'the master config file')
+                err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
+                raise SaltInvocationError(err)
           tgt = self.opts['nodegroups'][tgt]
           expr_form = 'compound'
 

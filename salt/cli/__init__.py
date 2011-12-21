@@ -249,7 +249,7 @@ class SaltCMD(object):
             try:
                 full_ret = local.cmd_full_return(*args)
                 ret, out = self._format_ret(full_ret)
-            except SaltInvocationError, exc:
+            except SaltInvocationError as exc:
                 ret = exc
                 out = ''
 
