@@ -23,13 +23,6 @@ __outputter__ = {
     'run': 'txt',
 }
 
-
-def _is_exec(path):
-    '''
-    Return true if the passed path exists and is execuatable
-    '''
-    return os.path.exists(path) and os.access(path, os.X_OK)
-
 def _run(cmd,
         cwd=DEFAULT_CWD,
         stdout=subprocess.PIPE,
