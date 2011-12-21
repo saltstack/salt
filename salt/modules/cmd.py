@@ -30,6 +30,30 @@ def _is_exec(path):
     '''
     return os.path.exists(path) and os.access(path, os.X_OK)
 
+def _run(cmd,
+        cwd=DEFAULT_CWD,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE):
+    '''
+    Do the DRY thing and only call subprocess.Popen() once
+
+    '''
+    ret = {}
+    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
+    proc = subprocess.Popen(cmd,
+        cwd=cwd,
+        shell=True,
+        stdout=stdout,
+        stderr=stderr,
+    )
+    out = proc.communicate()
+    ret['stdout'] = out[0]
+    ret['stderr'] = out[1]
+    ret['retcode'] = proc.returncode
+    ret['pid'] = proc.pid
+
+    return ret
+
 
 def run(cmd, cwd=DEFAULT_CWD):
     '''
@@ -39,12 +63,7 @@ def run(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    out = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT).communicate()[0]
+    out = _run(cmd, cwd=cwd, stderr=subprocess.STDOUT)['stdout']
     log.debug(out)
     return out
 
@@ -57,11 +76,7 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    stdout = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE).communicate()[0]
+    stdout = _run(cmd, cwd=cwd)["stdout"]
     log.debug(stdout)
     return stdout
 
@@ -74,11 +89,7 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    stderr = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stderr=subprocess.PIPE).communicate()[0]
+    stderr = _run(cmd, cwd=cwd)["stderr"]
     log.debug(stderr)
     return stderr
 
@@ -91,18 +102,7 @@ def run_all(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    ret = {}
-    proc = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-    out = proc.communicate()
-    ret['stdout'] = out[0]
-    ret['stderr'] = out[1]
-    ret['retcode'] = proc.returncode
-    ret['pid'] = proc.pid
+    ret = _run(cmd, cwd=cwd)
     if not ret['retcode']:
         log.error('Command {0} failed'.format(cmd))
         log.error('stdout: {0}'.format(ret['stdout']))
@@ -155,10 +155,8 @@ def exec_code(lang, code, cwd=DEFAULT_CWD):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    fd, cfn = tempfile.mkstemp()
-    open(cfn, 'w+').write(code)
-    return subprocess.Popen(lang + ' ' + cfn,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT).communicate()[0]
+    fd, codefile = tempfile.mkstemp()
+    open(codefile, 'w+').write(code)
+
+    cmd = '{0} {1}'.format(lang, codefile)
+    return run(cmd, cwd=cwd)
