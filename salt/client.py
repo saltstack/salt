@@ -322,8 +322,8 @@ class LocalClient(object):
                 conf_file = self.opts.get('conf_file', 'the master config file')
                 err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
                 raise SaltInvocationError(err)
-          tgt = self.opts['nodegroups'][tgt]
-          expr_form = 'compound'
+            tgt = self.opts['nodegroups'][tgt]
+            expr_form = 'compound'
 
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
