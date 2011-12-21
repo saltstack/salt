@@ -77,7 +77,7 @@ def render(opts, functions):
     rend = load.filter_func('render', pack)
     if opts['renderer'] not in rend:
         err = ('The renderer {0} is unavailable, this error is often because '
-               'the needed software is unavailabe'.format(opts['renderer']))
+               'the needed software is unavailable'.format(opts['renderer']))
         log.critical(err)
         raise LoaderError(err)
     return rend
@@ -340,7 +340,7 @@ class Loader(object):
     def gen_grains(self):
         '''
         Read the grains directory and execute all of the public callable
-        members. then verify that the returns are python dict's and return a
+        members. Then verify that the returns are python dict's and return a
         dict containing all of the returned values.
         '''
         grains = {}

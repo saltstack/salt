@@ -20,7 +20,7 @@ def __virtual__():
     else:
         if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) >= 6:
-                return 'pkg' 
+                return 'pkg'
         else:
             return False
 
@@ -33,14 +33,14 @@ def _list_removed(old, new):
     for pkg in old:
         if pkg not in new:
             pkgs.append(pkg)
-    
+
     return pkgs
 
 
 def _compare_versions(old, new):
     '''
     Returns a dict that that displays old and new versions for a package after
-    install/upgrade of package. 
+    install/upgrade of package.
     '''
     pkgs = {}
     for npkg in new:
@@ -66,14 +66,14 @@ def available_version(name):
     CLI Example::
 
         salt '*' pkg.available_version <package name>
-    '''    
-    yb = yum.YumBase() 
-    # look for available packages only, if package is already installed with 
+    '''
+    yb = yum.YumBase()
+    # look for available packages only, if package is already installed with
     # latest version it will not show up here.  If we want to use wildcards
-    # here we can, but for now its exactmatch only.
+    # here we can, but for now its exact match only.
     versions_list = []
     for pkgtype in ['available', 'updates']:
-        
+
         pl = yb.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(pl, [name])
         # build a list of available packages from either available or updates
@@ -83,17 +83,17 @@ def available_version(name):
         for pkg in exactmatch:
             if pkg.arch == getBaseArch():
                 versions_list.append('-'.join([pkg.version, pkg.release]))
-    
+
     if len(versions_list) == 0:
         # if versions_list is empty return empty string.  It may make sense
         # to also check if a package is installed and on latest version
         # already and return a message saying 'up to date' or something along
         # those lines.
         return ''
-    
+
     # remove the duplicate items from the list and return the first one
     return list(set(versions_list))[0]
-    
+
 
 def version(name):
     '''
@@ -131,7 +131,7 @@ def list_pkgs(*args):
         for arg in args:
             for h in ts.dbMatch('name', arg):
                 pkgs[h['name']] = '-'.join([h['version'],h['release']])
-    
+
     return pkgs
 
 
@@ -147,7 +147,7 @@ def refresh_db():
     yb = yum.YumBase()
     yb.cleanMetadata()
     return True
-    
+
 
 def clean_metadata():
     '''
@@ -162,7 +162,7 @@ def clean_metadata():
 
 def install(pkgs, refresh=False):
     '''
-    Install the passed package(s), add refresh=True to clean out the yum 
+    Install the passed package(s), add refresh=True to clean out the yum
     database before executing
 
     Return a dict containing the new package names and versions::
@@ -176,13 +176,13 @@ def install(pkgs, refresh=False):
     '''
     if refresh:
         refresh_db()
-    
+
     pkgs = pkgs.split(',')
     old = list_pkgs(*pkgs)
-    
+
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
-    
+
     for pkg in pkgs:
         yb.install(name=pkg)
     # Resolve Deps before attempting install.  This needs to be improved
@@ -194,7 +194,7 @@ def install(pkgs, refresh=False):
     yb.closeRpmDB()
 
     new = list_pkgs(*pkgs)
-    
+
     return _compare_versions(old, new)
 
 
@@ -214,17 +214,17 @@ def upgrade():
 
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
-    
+
     old = list_pkgs()
-    
+
     # ideally we would look in the yum transaction and get info on all the
     # packages that are going to be upgraded and only look up old/new version
-    # info on those packages.   
+    # info on those packages.
     yb.update()
     yb.resolveDeps()
     yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
     yb.closeRpmDB()
-    
+
     new = list_pkgs()
     return _compare_versions(old, new)
 
@@ -239,22 +239,22 @@ def remove(pkgs):
 
         salt '*' pkg.remove <package,package,package>
     '''
-    
+
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
     pkgs = pkgs.split(',')
     old = list_pkgs(*pkgs)
-    
+
     # same comments as in upgrade for remove.
     for pkg in pkgs:
         yb.remove(name=pkg)
-        
+
     yb.resolveDeps()
     yb.processTransaction(rpmDisplay=yum.rpmtrans.NoOutputCallBack())
     yb.closeRpmDB()
-    
+
     new = list_pkgs(*pkgs)
-    
+
     return _list_removed(old, new)
 
 

@@ -7,7 +7,7 @@ The data sent to the state calls is as follows:
     { 'state': '<state module name>',
       'fun': '<state function name>',
       'name': '<the name argument passed to all states>'
-      'argn': '<arbitrairy argument, can have many of these>'
+      'argn': '<arbitrary argument, can have many of these>'
       }
 '''
 
@@ -82,7 +82,7 @@ class State(object):
 
     def load_modules(self):
         '''
-        Load the modules into the stae
+        Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
         self.functions = salt.loader.minion_mods(self.opts)
@@ -162,7 +162,7 @@ class State(object):
                             )
                         )
         else:
-            # First verify that the paramaters are met
+            # First verify that the parameters are met
             aspec = inspect.getargspec(self.states[full])
             arglen = 0
             deflen = 0
@@ -172,7 +172,7 @@ class State(object):
                 deflen = len(aspec[3])
             for ind in range(arglen - deflen):
                 if aspec[0][ind] not in data:
-                    errors.append('Missing paramater ' + aspec[0][ind]\
+                    errors.append('Missing parameter ' + aspec[0][ind]\
                                 + ' for state ' + full)
         # If this chunk has a recursive require, then it will cause a
         # recursive loop when executing, check for it
@@ -199,12 +199,12 @@ class State(object):
         '''
         errors = []
         if not isinstance(high, dict):
-            errors.append('High data is not a dictonary and is invalid')
+            errors.append('High data is not a dictionary and is invalid')
         for name, body in high.items():
             if name.startswith('__'):
                 continue
             if not isinstance(body, dict):
-                err = ('The type {0} in {1} is not formated as a dictonary'
+                err = ('The type {0} in {1} is not formated as a dictionary'
                        .format(name, body['__sls__']))
                 errors.append(err)
                 continue
@@ -239,13 +239,13 @@ class State(object):
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
                                             ' in SLS {1} is not formed as a'
-                                            ' single key dictonary').format(
+                                            ' single key dictionary').format(
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
                             # Make sure that there is only one key in the dict
                             if len(arg.keys()) != 1:
-                                errors.append(('Multiple dictonaries defined'
+                                errors.append(('Multiple dictionaries defined'
                                 ' in argument of state {0} in sls {1}').format(
                                     name,
                                     body['__sls__']))
@@ -695,7 +695,7 @@ class HighState(object):
     '''
     Generate and execute the salt "High State". The High State is the compound
     state derived from a group of template files stored on the salt master or
-    in a the local cache.
+    in the local cache.
     '''
     def __init__(self, opts):
         self.client = salt.minion.FileClient(opts)
@@ -790,7 +790,7 @@ class HighState(object):
             for env in pops:
                 if env in include:
                     include.pop(env)
-            
+
         return tops
 
     def merge_tops(self, tops):
@@ -865,7 +865,7 @@ class HighState(object):
 
     def render_state(self, sls, env, mods):
         '''
-        Render a state file and retrive all of the include states
+        Render a state file and retrieve all of the include states
         '''
         err = ''
         errors = []
@@ -880,7 +880,7 @@ class HighState(object):
         nstate = None
         if state:
             if not isinstance(state, dict):
-                errors.append(('SLS {0} does not render to a dictonary'
+                errors.append(('SLS {0} does not render to a dictionary'
                                .format(sls)))
             else:
                 if 'include' in state:
@@ -900,8 +900,8 @@ class HighState(object):
                     ext = state.pop('extend')
                     for name in ext:
                         if not isinstance(ext[name], dict):
-                            errors.append(('Extention name {0} in sls {1} is '
-                                           'not a dictonary'
+                            errors.append(('Extension name {0} in sls {1} is '
+                                           'not a dictionary'
                                            .format(name, sls)))
                             continue
                         if '__sls__' not in ext[name]:
@@ -916,7 +916,7 @@ class HighState(object):
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
                             continue
-                        errors.append(('Name {0} in sls {1} is not a dictonary'
+                        errors.append(('Name {0} in sls {1} is not a dictionary'
                                        .format(name, sls)))
                         continue
                     if '__sls__' not in state[name]:

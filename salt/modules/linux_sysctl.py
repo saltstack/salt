@@ -63,7 +63,7 @@ def assign(name, value):
 
 def persist(name, value, config='/etc/sysctl.conf'):
     '''
-    Assign and persist a simple sysctl paramater for this minion
+    Assign and persist a simple sysctl parameter for this minion
 
     CLI Example::
 

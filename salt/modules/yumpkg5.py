@@ -16,7 +16,7 @@ def __virtual__():
     else:
         if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) <= 5:
-                return 'pkg' 
+                return 'pkg'
         else:
             return False
 
@@ -44,7 +44,7 @@ def available_version(name):
     for line in out.split('\n'):
         if not line.strip():
             continue
-        # Itterate through the output
+        # Iterate through the output
         comps = line.split()
         if comps[0].split('.')[0] == name:
             if len(comps) < 2:

@@ -29,7 +29,6 @@ def _run(cmd,
         stderr=subprocess.PIPE):
     '''
     Do the DRY thing and only call subprocess.Popen() once
-
     '''
     ret = {}
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
