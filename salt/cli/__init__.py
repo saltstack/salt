@@ -18,6 +18,7 @@ import salt.output
 import salt.runner
 
 from salt import __version__ as VERSION
+from salt.exceptions import SaltInvocationError
 
 
 class SaltCMD(object):
@@ -74,6 +75,14 @@ class SaltCMD(object):
                 action='store_true',
                 help=('Instead of using shell globs use the return code '
                       'of a function.'))
+        parser.add_option('-N',
+                '--nodegroup',
+                default=False,
+                dest='nodegroup',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use one of the predefined nodegroups to identify a '
+                      'list of targets.'))
         parser.add_option('-C',
                 '--compound',
                 default=False,
@@ -140,6 +149,7 @@ class SaltCMD(object):
         opts['list'] = options.list_
         opts['grain'] = options.grain
         opts['exsel'] = options.exsel
+        opts['nodegroup'] = options.nodegroup
         opts['compound'] = options.compound
         opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
@@ -227,6 +237,8 @@ class SaltCMD(object):
                 args.append('grain')
             elif self.opts['exsel']:
                 args.append('exsel')
+            elif self.opts['nodegroup']:
+                args.append('nodegroup')
             elif self.opts['compound']:
                 args.append('compound')
             else:
@@ -234,16 +246,20 @@ class SaltCMD(object):
 
             if self.opts['return']:
                 args.append(self.opts['return'])
-            full_ret = local.cmd_full_return(*args)
-            ret, out = self._format_ret(full_ret)
+            try:
+                full_ret = local.cmd_full_return(*args)
+                ret, out = self._format_ret(full_ret)
+            except SaltInvocationError as exc:
+                ret = exc
+                out = ''
 
             # Handle special case commands
             if self.opts['fun'] == 'sys.doc':
                 self._print_docs(ret)
             else:
+                # Determine the proper output method and run it
+                get_outputter = salt.output.get_outputter
                 if isinstance(ret, list) or isinstance(ret, dict):
-                    # Determine the proper output method and run it
-                    get_outputter = salt.output.get_outputter
                     if self.opts['raw_out']:
                         printout = get_outputter('raw')
                     elif self.opts['json_out']:
@@ -256,8 +272,14 @@ class SaltCMD(object):
                         printout = get_outputter(out)
                     else:
                         printout = get_outputter(None)
+                elif isinstance(ret, SaltInvocationError):
+                    # Pretty print invocation errors
+                    printout = get_outputter("txt")
+                printout(ret)
 
-                    printout(ret)
+                # Always exit with a return code of 1 on issues
+                if isinstance(ret, Exception):
+                    sys.exit(1)
 
     def _format_ret(self, full_ret):
         '''
@@ -332,6 +354,14 @@ class SaltCP(object):
                       'use a grain value to identify targets, the syntax '
                       'for the target is the grains key followed by a pcre '
                       'regular expression:\n"os:Arch.*"'))
+        parser.add_option('-N',
+                '--nodegroup',
+                default=False,
+                dest='nodegroup',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use one of the predefined nodegroups to identify a '
+                      'list of targets.'))
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
@@ -348,6 +378,7 @@ class SaltCP(object):
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
+        opts['nodegroup'] = options.nodegroup
         opts['conf_file'] = options.conf_file
 
         if opts['list']:
