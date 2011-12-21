@@ -1,10 +1,10 @@
 # Maintainer: Thomas S Hatch <thatch45 at gmail dot com>
-pkgname=salt
+pkgname=salt-git
 pkgver=$(date +%Y%m%d)
 pkgrel=1
 pkgdesc="A remote execution and communication system built on zeromq"
 arch=('any')
-url="https://github.com/thatch45/salt"
+url="https://github.com/saltstack/salt"
 license=('APACHE')
 groups=()
 depends=('python2'
@@ -16,9 +16,10 @@ depends=('python2'
          'python2-jinja')
 makedepends=('git')
 provides=()
-backup=('etc/salt/master' 
+backup=('etc/salt/master'
         'etc/salt/minion')
 options=()
+conflicts=('salt')
 source=("salt-master"
         "salt-minion"
         "salt-syndic")
@@ -52,10 +53,10 @@ package() {
   cd "$srcdir/$_gitname-build"
 
   python2 setup.py install --root=$pkgdir/ --optimize=1
-  
+
   mkdir -p $pkgdir/etc/rc.d/
   cp $srcdir/salt-master $pkgdir/etc/rc.d/
   cp $srcdir/salt-minion $pkgdir/etc/rc.d/
   cp $srcdir/salt-syndic $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
-} 
+}
