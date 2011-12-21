@@ -2,7 +2,7 @@
 File Management
 ===============
 
-Salt States can agresively manipulate files on a system. There are a number of
+Salt States can aggressively manipulate files on a system. There are a number of
 ways in which files can be managed.
 
 Regular files can be enforced with the ``managed`` function. This function
@@ -23,7 +23,7 @@ makes use of the jinja templating system would look like this:
         - template: jinja
 
 Directories can be managed via the ``directory`` function. This function can
-create and enforce the premissions on a directory. A directory statement will
+create and enforce the permissions on a directory. A directory statement will
 look like this:
 
 .. code-block:: yaml
@@ -48,7 +48,7 @@ takes a few arguments
 
 Recursive directory management can also be set via the ``recurse``
 function. Recursive directory management allows for a directory on the salt
-master to be recursively coppied down to the minion. This is a great tool for
+master to be recursively copied down to the minion. This is a great tool for
 deploying large code and configuration systems. A recuse state would look
 something like this:
 
@@ -88,7 +88,7 @@ def _is_bin(path):
 
 def _gen_keep_files(name, require):
     '''
-    Generate the list of files that need to be kept when a dir based cunction
+    Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
     '''
     keep = set()
@@ -257,7 +257,7 @@ def symlink(name, target, force=False, makedirs=False):
             shutil.rmtree(name)
         else:
             ret['result'] = False
-            ret['comment'] = ('Direcotry exists where the symlink {0} '
+            ret['comment'] = ('Directory exists where the symlink {0} '
                               'should be'.format(name))
             return ret
     if not os.path.exists(name):
@@ -342,7 +342,7 @@ def managed(name,
         supported
 
     makedirs
-        If the file is located in a path without a parent directory, then the
+        If the file is located in a path without a parent directory, then
         the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
@@ -413,7 +413,7 @@ def managed(name,
                 ret['changes']['diff'] = (''.join(difflib
                                                     .unified_diff(nlines,
                                                                   slines)))
-            # Pre requs are met, and the file needs to be replaced, do it
+            # Pre requisites are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copy(sfn, name)
         # Check permissions
@@ -563,10 +563,10 @@ def directory(name,
 
     makedirs
         If the directory is located in a path without a parent directory, then
-        the the state will fail. If makedirs is set to True, then the parent
+        the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
-    
+
     clean
         Make sure that only files that are set up by salt and required by this
         function are kept. If this option is set then everything in this
@@ -580,7 +580,7 @@ def directory(name,
            'comment': ''}
     if os.path.isfile(name):
         ret['result'] = False
-        ret['comment'] = ('Specifed location {0} exists and is a file'
+        ret['comment'] = ('Specified location {0} exists and is a file'
                           .format(name))
         return ret
     if not os.path.isdir(name):

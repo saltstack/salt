@@ -3,7 +3,7 @@ Command Executions
 ==================
 
 The cmd state module manages the enforcement of executed commands, this
-state can tell a command to run under certian circumstances.
+state can tell a command to run under certain circumstances.
 
 Available Functions
 -------------------
@@ -11,9 +11,9 @@ Available Functions
 The cmd state only has a single function, the ``run`` function
 
 run
-    Execute a command given certian conditions
+    Execute a command given certain conditions
 
-    A simple exampe:
+    A simple example:
 
     .. code-block:: yaml
 
@@ -21,7 +21,7 @@ run
         cmd:
             - run
 
-Only run if another execution returns sucessfully, in this case truncate
+Only run if another execution returns successfully, in this case truncate
 syslog if there is no disk space:
 
 .. code-block:: yaml
@@ -45,7 +45,7 @@ def run(name,
         user=None,
         group=None):
     '''
-    Run a command if certian circumstances are met
+    Run a command if certain circumstances are met
 
     name
         The command to execute, remember that the command will execute with the
@@ -107,7 +107,7 @@ def run(name,
         except KeyError:
             ret['comment'] = 'The user ' + user + ' is not available'
             return ret
-    # Wow, we pased the test, run this sucker!
+    # Wow, we passed the test, run this sucker!
     cmd_all = __salt__['cmd.run_all'](name, cwd)
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])

@@ -65,7 +65,7 @@ class Serial(object):
 
     def dumps(self, msg):
         '''
-        Run the correct dums serialization format
+        Run the correct dumps serialization format
         '''
         if self.serial == 'pickle':
             return pickle.dumps(msg)

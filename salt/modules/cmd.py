@@ -26,7 +26,7 @@ __outputter__ = {
 
 def _is_exec(path):
     '''
-    Return true if the passed path exists and is execuatable
+    Return true if the passed path exists and is executable
     '''
     return os.path.exists(path) and os.access(path, os.X_OK)
 
