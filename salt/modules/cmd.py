@@ -22,7 +22,7 @@ DEFAULT_CWD = os.path.expanduser('~')
 __outputter__ = {
     'run': 'txt',
 }
-
+# TODO: Add a way to quiet down the logging here when salt-call -g is ran
 def _run(cmd,
         cwd=DEFAULT_CWD,
         stdout=subprocess.PIPE,
