@@ -106,7 +106,10 @@ class Master(SMaster):
             for jid in os.listdir(jid_root):
                 if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
                     shutil.rmtree(os.path.join(jid_root, jid))
-            time.sleep(60)
+            try:
+                time.sleep(60)
+            except KeyboardInterrupt:
+                break
 
     def start(self):
         '''
@@ -128,7 +131,13 @@ class Master(SMaster):
                 aes_funcs,
                 clear_funcs)
         reqserv.start_publisher()
-        reqserv.run()
+
+        try:
+            reqserv.run()
+        except KeyboardInterrupt:
+            # Shut the master down gracefully on SIGINT
+            log.warn('Stopping the Salt Master')
+            raise SystemExit('\nExiting on Ctrl-c')
 
 
 class Publisher(multiprocessing.Process):
@@ -137,7 +146,7 @@ class Publisher(multiprocessing.Process):
     commands.
     '''
     def __init__(self, opts):
-        multiprocessing.Process.__init__(self)
+        super(Publisher, self).__init__()
         self.opts = opts
 
     def run(self):
@@ -155,10 +164,14 @@ class Publisher(multiprocessing.Process):
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
 
-        while True:
-            package = pull_sock.recv()
-            log.info('Publishing command')
-            pub_sock.send(package)
+        try:
+            while True:
+                package = pull_sock.recv()
+                log.info('Publishing command')
+                pub_sock.send(package)
+        except KeyboardInterrupt:
+            pub_sock.close()
+            pull_sock.close()
 
 
 class ReqServer(object):
@@ -247,13 +260,16 @@ class MWorker(multiprocessing.Process):
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
             )
         log.info('Worker binding to socket {0}'.format(w_uri))
-        socket.connect(w_uri)
+        try:
+            socket.connect(w_uri)
 
-        while True:
-            package = socket.recv()
-            payload = self.serial.loads(package)
-            ret = self.serial.dumps(self._handle_payload(payload))
-            socket.send(ret)
+            while True:
+                package = socket.recv()
+                payload = self.serial.loads(package)
+                ret = self.serial.dumps(self._handle_payload(payload))
+                socket.send(ret)
+        except KeyboardInterrupt:
+            socket.close()
 
     def _handle_payload(self, payload):
         '''
