@@ -4,25 +4,25 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python modules
-import datetime
-import hashlib
-import logging
-import multiprocessing
 import os
 import re
-import shutil
-import tempfile
 import time
+import shutil
+import logging
+import hashlib
+import tempfile
+import datetime
+import multiprocessing
 
 # Import zeromq
-from M2Crypto import RSA
 import zmq
+from M2Crypto import RSA
 
 # Import salt modules
-import salt.client
 import salt.crypt
-import salt.payload
 import salt.utils
+import salt.client
+import salt.payload
 
 
 log = logging.getLogger(__name__)
