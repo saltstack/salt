@@ -71,7 +71,7 @@ def list_pkgs():
 
 def refresh_db():
     '''
-    Update the ports tree with portsnap. If the ports tre does not exist it
+    Update the ports tree with portsnap. If the ports tree does not exist it
     will be downloaded and set up.
 
     CLI Example::

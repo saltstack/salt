@@ -392,7 +392,7 @@ def w():
 
 def all_status():
     '''
-    Return a composite of all status data and info for this minoon.
+    Return a composite of all status data and info for this minion.
     Warning: There is a LOT here!
 
     CLI Example::

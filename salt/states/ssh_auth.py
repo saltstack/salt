@@ -29,7 +29,7 @@ def present(
         The ssh key to manage
 
     user
-        The user who owns the ssh authorixed keys file to modify
+        The user who owns the ssh authorized keys file to modify
 
     enc
         Defines what type of key is being used, can be ssh-rsa or ssh-dss
@@ -42,7 +42,7 @@ def present(
 
     config
         The location of the authorized keys file relative to the user's home
-        direcotory, defaults to ".ssh/authorized_keys"
+        directory, defaults to ".ssh/authorized_keys"
     '''
     ret = {'name': name,
            'changes': {},
@@ -81,11 +81,11 @@ def absent(name, user, config='.ssh/authorized_keys'):
         The ssh key to manage
 
     user
-        The user who owns the ssh authorixed keys file to modify
+        The user who owns the ssh authorized keys file to modify
 
     config
         The location of the authorized keys file relative to the user's home
-        direcotory, defaults to ".ssh/authorized_keys"
+        directory, defaults to ".ssh/authorized_keys"
     '''
     ret = {'name': name,
            'changes': {},

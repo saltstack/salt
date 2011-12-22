@@ -15,11 +15,15 @@ as those returned here
 
 import os
 import socket
-import subprocess
 import sys
 import re
 import platform
 import salt.utils
+
+# Solve the Chicken and egg problem where grains need to run before any
+# of the modules are loaded and are generally available for any usage.
+import salt.modules.cmd
+__salt__ = {'cmd.run': salt.modules.cmd.run}
 
 
 def _kernel():
@@ -29,14 +33,12 @@ def _kernel():
     # Provides:
     # kernel
     grains = {}
-    grains['kernel'] = subprocess.Popen(['uname', '-s'],
-        stdout=subprocess.PIPE).communicate()[0].strip()
+    grains['kernel'] = __salt__['cmd.run']('uname -s').strip()
+
     if grains['kernel'] == 'aix':
-        grains['kernelrelease'] = subprocess.Popen(['oslevel', '-s'],
-            stdout=subprocess.PIPE).communicate()[0].strip()
+        grains['kernelrelease'] = __salt__['cmd.run']('oslevel -s').strip()
     else:
-        grains['kernelrelease'] = subprocess.Popen(['uname', '-r'],
-            stdout=subprocess.PIPE).communicate()[0].strip()
+        grains['kernelrelease'] = __salt__['cmd.run']('uname -r').strip()
     if 'kernel' not in grains:
         grains['kernel'] = 'Unknown'
     if not grains['kernel']:
@@ -56,8 +58,7 @@ def _linux_cpudata():
     grains = {}
     cpuinfo = '/proc/cpuinfo'
     # Grab the Arch
-    arch = subprocess.Popen(['uname', '-m'],
-            stdout=subprocess.PIPE).communicate()[0].strip()
+    arch = __salt__['cmd.run']('uname -m').strip()
     grains['cpuarch'] = arch
     if not grains['cpuarch']:
         grains['cpuarch'] = 'Unknown'
@@ -87,24 +88,12 @@ def _freebsd_cpudata():
     Return cpu information for FreeBSD systems
     '''
     grains = {}
-    sysctl = salt.utils.which("sysctl")
+    sysctl = salt.utils.which('sysctl')
 
     if sysctl:
-        grains['cpuarch'] = subprocess.Popen(
-                '{0} -n hw.machine'.format(sysctl),
-                shell=True,
-                stdout=subprocess.PIPE
-        ).communicate()[0].strip()
-        grains['num_cpus'] = subprocess.Popen(
-                '{0} -n hw.ncpu'.format(sysctl),
-                shell=True,
-                stdout=subprocess.PIPE
-        ).communicate()[0].strip()
-        grains['cpu_model'] = subprocess.Popen(
-                '{0} -n hw.model'.format(sysctl),
-                shell=True,
-                stdout=subprocess.PIPE
-        ).communicate()[0].strip()
+        grains['cpuarch'] = __salt__['cmd.run']('{0} -n hw.machine').strip()
+        grains['num_cpus'] = __salt__['cmd.run']('{0} -n hw.ncpu').strip()
+        grains['cpu_model'] = __salt__['cmd.run']('{0} -n hw.model').strip()
         grains['cpu_flags'] = []
     return grains
 
@@ -127,13 +116,9 @@ def _memdata(osdata):
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
     elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
-        sysctl = salt.utils.which("sysctl")
+        sysctl = salt.utils.which('sysctl')
         if sysctl:
-            mem = subprocess.Popen(
-                    '{0} -n hw.physmem'.format(sysctl),
-                    shell=True,
-                    stdout=subprocess.PIPE
-            ).communicate()[0].strip()
+            mem = __salt__['cmd.run']('{0} -n hw.physmem').strip()
         grains['mem_total'] = str(int(mem) / 1024 / 1024)
 
     return grains
@@ -148,14 +133,11 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    lspci = salt.utils.which("lspci")
-    dmidecode = salt.utils.which("dmidecode")
+    lspci = salt.utils.which('lspci')
+    dmidecode = salt.utils.which('dmidecode')
 
     if dmidecode:
-        output=subprocess.Popen(dmidecode,
-                shell=True,
-                stdout=subprocess.PIPE
-        ).communicate()[0].lower()
+        output = __salt__['cmd.run']('dmidecode').lower()
         # Product Name: VirtualBox
         if 'Vendor: QEMU' in output:
             # FIXME: Make this detect between kvm or qemu
@@ -171,10 +153,7 @@ def _virtual(osdata):
             grains['virtual'] = 'VirtualPC'
     # Fall back to lspci if dmidecode isn't available
     elif lspci:
-        model=subprocess.Popen(lspci,
-                shell=True,
-                stdout=subprocess.PIPE
-        ).communicate()[0].lower()
+        model = __salt__['cmd.run']('lspci').lower()
         if 'vmware' in model:
             grains['virtual'] = 'VMware'
         # 00:04.0 System peripheral: InnoTek Systemberatung GmbH VirtualBox Guest Service
@@ -205,13 +184,9 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
-        sysctl = salt.utils.which("sysctl")
+        sysctl = salt.utils.which('sysctl')
         if sysctl:
-            model = subprocess.Popen(
-                    '{0} hw.model'.format(sysctl),
-                    shell=True,
-                    stdout=subprocess.PIPE
-            ).communicate()[0].split(':')[1].strip()
+            model = __salt__['cmd.run']('{0} hw.model').strip()
         if 'QEMU Virtual CPU' in model:
             grains['virtual'] = 'kvm'
     return grains
@@ -258,12 +233,12 @@ def os_data():
         if os.path.isfile('/etc/lsb-release'):
             for line in open('/etc/lsb-release').readlines():
                 # Matches any possible format:
-                #     DISTRIB_ID=Ubuntu
-                #     DISTRIB_ID="Mageia"
+                #     DISTRIB_ID='Ubuntu'
+                #     DISTRIB_ID='Mageia'
                 #     DISTRIB_ID='Fedora'
-                #     DISTRIB_RELEASE=10.10
-                #     DISTRIB_CODENAME=squeeze
-                #     DISTRIB_DESCRIPTION="Ubuntu 10.10"
+                #     DISTRIB_RELEASE='10.10'
+                #     DISTRIB_CODENAME='squeeze'
+                #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
                 regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
                 match = regex.match(line)
                 if match:
@@ -273,11 +248,11 @@ def os_data():
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
-            if "lsb_distrib_id" in grains:
-                if "Ubuntu" in grains['lsb_distrib_id']:
+            if 'lsb_distrib_id' in grains:
+                if 'Ubuntu' in grains['lsb_distrib_id']:
                     grains['os'] = 'Ubuntu'
-                elif os.path.isfile("/etc/issue.net") and \
-                  "Ubuntu" in open("/etc/issue.net").readline():
+                elif os.path.isfile('/etc/issue.net') and \
+                  'Ubuntu' in open('/etc/issue.net').readline():
                     grains['os'] = 'Ubuntu'
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'

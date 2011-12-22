@@ -60,7 +60,7 @@ def available():
 
 def check_available(mod):
     '''
-    Check to see if the speciified kernel module is available
+    Check to see if the specified kernel module is available
 
     CLI Example::
 

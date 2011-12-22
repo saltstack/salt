@@ -1,5 +1,5 @@
 '''
-This module contains all fo the routines needed to set up a master server, this
+This module contains all foo the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
@@ -291,7 +291,7 @@ class MWorker(multiprocessing.Process):
         except:
             return ''
         if 'cmd' not in data:
-            log.error('Recieved malformed command {0}'.format(data))
+            log.error('Received malformed command {0}'.format(data))
             return {}
         log.info('AES payload received with command {0}'.format(data['cmd']))
         return self.aes_funcs.run_func(data['cmd'], data)
@@ -442,7 +442,7 @@ class AESFuncs(object):
 
     def _syndic_return(self, load):
         '''
-        Recieve a syndic minion return and format it to look like returns from
+        Receive a syndic minion return and format it to look like returns from
         individual minions.
         '''
         # Verify the load
@@ -489,7 +489,7 @@ class AESFuncs(object):
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
             return {}
-        # Check the permisions for this minion
+        # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
@@ -565,7 +565,7 @@ class ClearFuncs(object):
     Set up functions that are safe to execute when commands sent to the master
     without encryption and authentication
     '''
-    # The ClearFuncs object encasulates the functions that can be executed in
+    # The ClearFuncs object encapsulates the functions that can be executed in
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth

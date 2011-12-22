@@ -424,8 +424,8 @@ def comment(path, regex, char='#', backup='.bak'):
         The full path to the file to be edited
     regex
         A regular expression used to find the lines that are to be commented;
-        this pattern will be wrapped in parenthasis and will move any
-        preceeding/trailing ``^`` or ``$`` characters outside the parenthasis
+        this pattern will be wrapped in parenthesis and will move any
+        preceding/trailing ``^`` or ``$`` characters outside the parenthesis
         (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)
     char : ``#``
         The character to be inserted at the beginning of a line in order to

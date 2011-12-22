@@ -43,7 +43,7 @@ def present(name, ip):
 
 def absent(name, ip):
     '''
-    Ensure that the the named host is absent
+    Ensure that the named host is absent
 
     name
         The host to remove

@@ -216,7 +216,7 @@ def info(name):
 
 def list_groups(name):
     '''
-    Return a list of groups the named user belings to
+    Return a list of groups the named user belongs to
 
     CLI Example::
 

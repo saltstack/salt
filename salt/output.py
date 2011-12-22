@@ -14,7 +14,7 @@ __all__ = ('get_outputter',)
 
 def remove_colors():
     '''
-    Acces all of the utility colors and change them to empy strings
+    Access all of the utility colors and change them to empty strings
     '''
     pass
 
@@ -28,7 +28,7 @@ class Outputter(object):
     @classmethod
     def check(cls, name):
         # Don't advertise Outputter classes for optional modules
-        if hasattr(cls, 'enabled') and not cls.enabled: 
+        if hasattr(cls, 'enabled') and not cls.enabled:
             return False
         return cls.supports == name
 

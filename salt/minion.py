@@ -557,7 +557,7 @@ class Matcher(object):
                 comps = match.split('@')
                 matcher = ref.get(comps[0])
                 if not matcher:
-                    # If un unknown matcher is called at any time, fail out
+                    # If an unknown matcher is called at any time, fail out
                     return False
                 print comps
                 results.append(

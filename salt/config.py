@@ -49,8 +49,9 @@ def prepend_root_dir(opts, path_options):
     'root_dir' option.
     '''
     for path_option in path_options:
-        opts[path_option] = os.path.normpath(
-                os.sep.join([opts['root_dir'], opts[path_option]]))
+        if path_option in opts:
+            opts[path_option] = os.path.normpath(
+                    os.sep.join([opts['root_dir'], opts[path_option]]))
 
 
 def minion_config(path):
@@ -145,7 +146,7 @@ def master_config(path):
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir'])
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!
