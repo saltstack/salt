@@ -66,19 +66,8 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    out = __salt__['cmd.run_stdout']('yum list {0} -q'.format(name))
-    for line in out.split('\n'):
-        if not line.strip():
-            continue
-        # Iterate through the output
-        comps = line.split()
-        if comps[0].split('.')[0] == name:
-            if len(comps) < 2:
-                continue
-            # found it!
-            return comps[1][:comps[1].rindex('.')]
-    # Package not available
-    return ''
+    out = _parse_yum('list {0}'.format(name))
+    return out[0].version if out else ''
 
 
 def version(name):
@@ -106,16 +95,8 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = "rpm -qa --qf '%{NAME}:%{VERSION}-%{RELEASE};'"
-    ret = {}
-    out = __salt__['cmd.run_stdout'](cmd)
-    for line in out.split(';'):
-        if ':' not in line:
-            continue
-        comps = line.split(':')
-        ret[comps[0]] = comps[1]
-    return ret
-
+    out = _parse_yum('list installed')
+    return dict([(i.name, i.version) for i in out])
 
 def refresh_db():
     '''
