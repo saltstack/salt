@@ -97,16 +97,13 @@ accepted you can install Salt by downloading the latest ``.deb`` in the
 
 .. admonition:: Installing ZeroMQ on Squeeze (Debian 6)
 
-    ZeroMQ packages are available in squeeze-backports.
+    There is a `python-zmq`__ package available in Debian "wheezy (testing)".
+    If you don't have that repo enabled the best way to install Salt and pyzmq
+    is by using :command:`pip` (or :command:`easy_install`)::
 
-    1.  Add the following line to your :file:`/etc/apt/sources.list`::
+        pip install pyzmq salt
 
-            deb http://backports.debian.org/debian-backports squeeze-backports main
-
-    2.  Run::
-
-            aptitude update
-            aptitude install libzmq1 python-zmq
+.. __: http://packages.debian.org/search?keywords=python-zmq
 
 Installing from source
 ======================
