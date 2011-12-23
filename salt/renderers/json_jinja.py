@@ -28,9 +28,13 @@ def render(template_file, env='', sls=''):
 
     file_cache = '/files/%s/' % env
     if file_cache in template_file:
+        def cachefile_filter(value):
+            __salt__['cp.cache_file']('salt://%s' % value)
+            return value
         cache_dir, file_rel = template_file.split(file_cache, 1)
         loader = FileSystemLoader(cache_dir + file_cache)
         jinja_env = Environment(loader=loader)
+        jinja_env.filters['cachefile'] = cachefile_filter
         template = jinja_env.get_template(file_rel)
     else:
         template = Template(open(template_file, 'r').read())
