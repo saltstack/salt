@@ -194,10 +194,8 @@ class Minion(object):
         for ind in range(0, len(data['arg'])):
             try:
                 arg = eval(data['arg'][ind])
-                if isinstance(arg, str) \
-                        or isinstance(arg, list) \
-                        or isinstance(arg, int) \
-                        or isinstance(arg, dict):
+                types = (int, str, dict, list)
+                if type(arg) in types:
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
@@ -210,10 +208,10 @@ class Minion(object):
                 ret['return'] = self.functions[data['fun']](*data['arg'])
             except Exception as exc:
                 trb = traceback.format_exc()
-                log.warning('The minion function caused an exception: %s', exc)
+                log.warning('The minion function caused an exception: {0}'.format(exc))
                 ret['return'] = trb
         else:
-            ret['return'] = '"%s" is not available.' % function_name
+            ret['return'] = '"{0}" is not available.'.format(function_name)
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
@@ -236,11 +234,8 @@ class Minion(object):
             for index in range(0, len(data['arg'][ind])):
                 try:
                     arg = eval(data['arg'][ind][index])
-                    # FIXME: do away the ugly here...
-                    if isinstance(arg, str) \
-                            or isinstance(arg, list) \
-                            or isinstance(arg, int) \
-                            or isinstance(arg, dict):
+                    types = (str, int, list, dict)
+                    if type(arg) in types:
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
@@ -312,6 +307,7 @@ class Minion(object):
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
+            # TODO: Make this a configuration setting and default to 10
             time.sleep(10)
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
@@ -506,7 +502,7 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
-        return bool(tgt.count(self.opts['id']))
+        return bool(tgt in self.opts['id'])
 
     def grain_match(self, tgt):
         '''
@@ -602,7 +598,7 @@ class FileClient(object):
         Make sure that this path is intended for the salt master and trim it
         '''
         if not path.startswith('salt://'):
-            raise MinionError('Unsupported path')
+            raise MinionError('Unsupported path: {0}'.format(path))
         return path[7:]
 
     def get_file(self, path, dest='', makedirs=False, env='base'):
