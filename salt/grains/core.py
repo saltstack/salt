@@ -208,8 +208,11 @@ def _ps(osdata):
     Return the ps grain
     '''
     grains = {}
-    grains['ps'] = 'ps auxwww' if \
-            'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -efH'
+    bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'Darwin')
+    if osdata['os'] in bsd_choices:
+        grains['ps'] = 'ps auxwww'
+    else:
+        grains['ps'] = 'ps -efH'
     return grains
 
 
