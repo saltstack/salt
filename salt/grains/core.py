@@ -161,7 +161,7 @@ def _virtual(osdata):
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
             grains['virtual'] = 'kvm'
-    choices =  ['Linux', 'OpenBSD', 'SunOS', 'HP-UX']
+    choices =  ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
@@ -363,7 +363,7 @@ def pythonversion():
     '''
     # Provides:
     #   pythonversion
-    return {'pythonversion': list(sys.version_info)}
+    return {'pythonversion': tuple(sys.version_info)}
 
 def pythonpath():
     '''
