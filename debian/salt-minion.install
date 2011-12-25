@@ -1,0 +1,6 @@
+man1/salt-call.1.*
+man1/salt-minion.1.*
+bin/salt-minion
+bin/salt-call
+init/salt-minion
+/etc/salt/minion
