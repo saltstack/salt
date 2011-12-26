@@ -2,5 +2,5 @@ usr/share/man/man$SECTION/salt-call.$SECTION
 usr/share/man/man$SECTION/salt-minion.$SECTION
 scripts/salt-minion /usr/share/salt/salt-minion
 scripts/salt-call /usr/share/salt/salt-call
-debian/salt.salt-minion.init /etc/init
+debian/salt.salt-minion.init /etc/init.d/salt-minion
 conf/minion /etc/salt/minion

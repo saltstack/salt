@@ -5,3 +5,4 @@ scripts/salt-cp /usr/share/salt/salt-cp
 scripts/salt-key /usr/share/salt/salt-key
 scripts/salt-run /usr/share/salt/salt-run
 conf/master /etc/salt/master
+debian/salt.salt-master.init /etc/init.d/salt-master
