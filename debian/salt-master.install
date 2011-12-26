@@ -1,18 +1,7 @@
-doc/man/salt.1
-doc/man/salt.7
-doc/man/salt-call.1
-doc/man/salt-cp.1
-doc/man/salt-key.1
-doc/man/salt-minion.1
-doc/man/salt-run.1
-doc/man/salt-syndic.1
-bin/salt
-bin/salt-master
-bin/salt-syndic
-bin/salt-cp
-bin/salt-key
-bin/salt-run
-bin/salt-master
-bin/salt-syndic
-etc/salt/master
-etc/salt/minion
+scripts/salt /usr/share/salt/salt
+scripts/salt-master /usr/share/salt/salt-master
+scripts/salt-syndic /usr/share/salt/salt-syndic
+scripts/salt-cp /usr/share/salt/salt-cp
+scripts/salt-key /usr/share/salt/salt-key
+scripts/salt-run /usr/share/salt/salt-run
+conf/master /etc/salt/master

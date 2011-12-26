@@ -1,6 +1,6 @@
-man1/salt-call.1.*
-man1/salt-minion.1.*
-bin/salt-minion
-bin/salt-call
-init/salt-minion
-/etc/salt/minion
+usr/share/man/man$SECTION/salt-call.$SECTION
+usr/share/man/man$SECTION/salt-minion.$SECTION
+scripts/salt-minion /usr/share/salt/salt-minion
+scripts/salt-call /usr/share/salt/salt-call
+debian/salt.salt-minion.init /etc/init
+conf/minion /etc/salt/minion
