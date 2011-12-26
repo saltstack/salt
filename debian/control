@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Corey Quinn <corey@sequestered.net>
 Build-Depends: debhelper (>= 7),
                python-support,
-               cython
+               cython,
                python-yaml,
                python-setuptools,
                python-yaml,
