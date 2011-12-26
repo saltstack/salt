@@ -112,10 +112,10 @@ def _get_none_or_value(value):
     '''
     if value is None:
         return None
-    elif value:
+    elif not value:
         return value
     # if it's a string, and it's not empty check for none
-    elif type(value) == str:
+    elif isinstance(value, basestring):
         if value.lower() == 'none':
             return None
         return value
@@ -333,11 +333,11 @@ def _merge_options(options):
         {option:boolean}
     '''
     defaults = __opts__['solr.dih.import_options']
-    if type(options) == dict:
+    if isinstance(options, dict):
         defaults.update(options)
     for (k,v) in defaults.items():
         if type(v) is bool:
-            defaults[k] = str(bool(v)).lower()
+            defaults[k] = str(v).lower()
     return defaults
 
 def _pre_index_check(handler, host=None, core_name=None):
@@ -415,11 +415,11 @@ def _find_value(ret_dict, key, path=None):
     for (k, v) in ret_dict.items():
         if k == key:
             ret.append({path:v})
-        if type(v) is list:
+        if isinstance(v, list):
             for x in v:
-                if type(x) is dict:
+                if isinstance(x, dict):
                     ret = ret + _find_value(x, key, path)
-        if type(v) is dict:
+        if isinstance(v, dict):
             ret = ret + _find_value(v, key, path)
     return ret
 
