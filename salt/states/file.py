@@ -318,7 +318,7 @@ def managed(name,
         makedirs=False,
         context=None,
         defaults=None,
-        __env__='base':
+        __env__='base'):
     '''
     Manage a given file, this function allows for a file to be downloaded from
     the salt master and potentially run through a templating system.
