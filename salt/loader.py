@@ -240,7 +240,7 @@ class Loader(object):
             mod.__grains__ = self.grains
 
             if pack:
-                if type(pack) == type(list()):
+                if isinstance(pack, list):
                     for chunk in pack:
                         setattr(mod, chunk['name'], chunk['value'])
                 else:
@@ -349,14 +349,14 @@ class Loader(object):
             if not key[key.index('.') + 1:] == 'core':
                 continue
             ret = fun()
-            if not type(ret) == type(dict()):
+            if not isinstance(ret, dict):
                 continue
             grains.update(ret)
         for key, fun in funcs.items():
             if key[key.index('.') + 1:] == 'core':
                 continue
             ret = fun()
-            if not type(ret) == type(dict()):
+            if not isinstance(ret, dict):
                 continue
             grains.update(ret)
         return grains

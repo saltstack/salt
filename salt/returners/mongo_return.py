@@ -34,7 +34,7 @@ def returner(ret):
     col = db[ret['id']]
     back = {}
 
-    if type(ret['return']) == type(dict()):
+    if isinstance(ret['return'], dict):
         for key in ret['return']:
             back[key.replace('.', '-')] = ret['return'][key]
     else:

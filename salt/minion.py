@@ -166,7 +166,7 @@ class Minion(object):
                 self.functions, self.returners = self.__load_modules()
 
         if self.opts['multiprocessing']:
-            if type(data['fun']) == type(list()):
+            if isinstance(data['fun'], list):
                 multiprocessing.Process(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
@@ -175,7 +175,7 @@ class Minion(object):
                     target=lambda: self._thread_return(data)
                 ).start()
         else:
-            if type(data['fun']) == type(list()):
+            if isinstance(data['fun'], list):
                 threading.Thread(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
@@ -473,7 +473,7 @@ class Matcher(object):
         '''
         matcher = 'glob'
         for item in data:
-            if type(item) == type(dict()):
+            if isinstance(item, dict):
                 if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
