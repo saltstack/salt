@@ -177,7 +177,7 @@ def _jinja(sfn, name, source, user, group, mode, env):
          'data': <Error data or rendered file path>}
     '''
     try:
-        from jinja2 import Template
+        from salt.utils.jinja import get_template
     except ImportError:
         return {'result': False,
                 'data': 'Failed to import jinja'}
@@ -192,7 +192,7 @@ def _jinja(sfn, name, source, user, group, mode, env):
         passthrough['group'] = group
         passthrough['mode'] = mode
         passthrough['env'] = env
-        template = Template(open(sfn, 'r').read())
+        template = get_template(sfn, __opts__, env)
         open(tgt, 'w+').write(template.render(**passthrough))
         return {'result': True,
                     'data': tgt}

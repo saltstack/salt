@@ -7,11 +7,7 @@ high data format for salt states.
 
 import json
 import os
-
-# Import Third Party libs
-from jinja2 import Template, FileSystemLoader
-from jinja2.environment import Environment
-
+from salt.utils.jinja import get_template
 
 def render(template_file, env='', sls=''):
     '''
@@ -26,18 +22,7 @@ def render(template_file, env='', sls=''):
     passthrough['env'] = env
     passthrough['sls'] = sls
 
-    file_cache = '/files/%s/' % env
-    if file_cache in template_file:
-        def cachefile_filter(value):
-            __salt__['cp.cache_file']('salt://%s' % value)
-            return value
-        cache_dir, file_rel = template_file.split(file_cache, 1)
-        loader = FileSystemLoader(cache_dir + file_cache)
-        jinja_env = Environment(loader=loader)
-        jinja_env.filters['cachefile'] = cachefile_filter
-        template = jinja_env.get_template(file_rel)
-    else:
-        template = Template(open(template_file, 'r').read())
+    template = get_template(template_file, __opts__, env)
 
     json_data = template.render(**passthrough)
 
