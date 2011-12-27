@@ -1,22 +1,49 @@
 Source: salt
 Section: admin
 Priority: optional
-Maintainer: Aaron Toponce <aaron.toponce@gmail.com>
-Build-Depends: debhelper (>= 7), python-support, cython, python-yaml,
- python-setuptools, python-yaml, python-crypto, python-m2crypto,
- python-zmq (>= 2.1.9), libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9),
- python (>= 2.6), python-jinja2
-Standards-Version: 3.8.3
+Maintainer: Corey Quinn <corey@sequestered.net>
+Build-Depends: debhelper (>= 7.0.50~),
+               python-support,
+               cython,
+               python-yaml,
+               python-setuptools,
+               python-yaml,
+               python-crypto,
+               python-m2crypto,
+               python-pyzmq (>= 2.1.9),
+               libzmq1 (>= 2.1.9),
+               libzmq-dev (>= 2.1.9),
+               python (>= 2.6),
+               python-jinja2
+Standards-Version: 3.9.2
 Homepage: http://saltstack.org
 #Vcs-Git: git://git.debian.org/collab-maint/salt.git
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/salt.git;a=summary
 
-Package: salt
+Package: salt-master
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python-setuptools,
- python-yaml, python-crypto, python-m2crypto, python-zmq (>= 2.1.9),
- libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9), python (>= 2.6), python-jinja2
+Depends:    ${python:Depends},
+            ${misc:Depends}
 Description: This package provides a remote manager to administer servers.
+ This package is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of servers. This
+ means systems can be easily managed, but data can also be easily gathered.
+ Quick introspection into running systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a remote
+ system. Salt addresses this problem as well, the salt state system uses
+ salt state files to define the state a server needs to be in.
+ .
+ Between the remote execution system, and state management Salt addresses
+ the backbone of cloud and data center management.
+
+Package: salt-minion
+Architecture: all
+Depends:    ${python:Depends},
+            ${misc:Depends}
+Description: salt-minion represents the client package for salt
  This package is a powerful remote execution manager that can be used to
  administer servers in a fast and efficient way.
  .

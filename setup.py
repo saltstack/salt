@@ -125,7 +125,7 @@ setup(
                     ['salt/modules/cytest.pyx',
                     ]),
                 (doc_path,
-                    ['LICENSE'
+                    [
                     ]),
                  ],
      )

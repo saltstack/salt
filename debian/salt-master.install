@@ -1,0 +1,15 @@
+usr/share/man/man1/salt-master.1
+usr/share/man/man1/salt.1
+usr/share/man/man7/salt.7
+usr/share/man/man1/salt-key.1
+usr/share/man/man1/salt-cp.1
+usr/share/man/man1/salt-run.1
+usr/share/man/man1/salt-syndic.1
+scripts/salt /usr/share/salt/salt
+scripts/salt-master /usr/share/salt/salt-master
+scripts/salt-syndic /usr/share/salt/salt-syndic
+scripts/salt-cp /usr/share/salt/salt-cp
+scripts/salt-key /usr/share/salt/salt-key
+scripts/salt-run /usr/share/salt/salt-run
+conf/master /etc/salt/master
+debian/salt.salt-master.init /etc/init.d/salt-master

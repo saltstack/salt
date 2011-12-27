@@ -153,9 +153,9 @@ def purge(pkg):
     # Remove inital package
     purge_cmd = 'apt-get -y purge {0}'.format(pkg)
     __salt__['cmd.retcode'](purge_cmd)
-    
+
     new_pkgs = list_pkgs()
-    
+
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
