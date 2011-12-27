@@ -7,16 +7,13 @@ high data format for salt states.
 
 import json
 import os
+from salt.utils.jinja import get_template
 
-# Import Third Party libs
-from jinja2 import Template
-
-
-def render(template, env='', sls=''):
+def render(template_file, env='', sls=''):
     '''
     Render the data passing the functions and grains into the rendering system
     '''
-    if not os.path.isfile(template):
+    if not os.path.isfile(template_file):
         return {}
 
     passthrough = {}
@@ -25,7 +22,8 @@ def render(template, env='', sls=''):
     passthrough['env'] = env
     passthrough['sls'] = sls
 
-    template = Template(open(template, 'r').read())
+    template = get_template(template_file, __opts__, env)
+
     json_data = template.render(**passthrough)
 
     return json.loads(json_data)

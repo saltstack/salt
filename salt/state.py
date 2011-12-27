@@ -29,19 +29,19 @@ def format_log(ret):
     Format the state into a log message
     '''
     msg = ''
-    if type(ret) == type(dict()):
+    if isinstance(ret, dict):
         # Looks like the ret may be a valid state return
         if 'changes' in ret:
             # Yep, looks like a valid state return
             chg = ret['changes']
             if not chg:
                 msg = 'No changes made for {0[name]}'.format(ret)
-            elif type(chg) == type(dict()):
+            elif isinstance(chg, dict):
                 if 'diff' in chg:
-                    if type(chg['diff']) == type(str()):
+                    if isinstance(chg['diff'], basestring):
                         msg = 'File changed:\n{0}'.format(
                                 chg['diff'])
-                if type(chg[chg.keys()[0]]) == type(dict()):
+                if isinstance(chg[chg.keys()[0]], dict):
                     if 'new' in chg[chg.keys()[0]]:
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
@@ -319,9 +319,9 @@ class State(object):
         aspec = inspect.getargspec(self.states[ret['full']])
         arglen = 0
         deflen = 0
-        if type(aspec[0]) == type(list()):
+        if isinstance(aspec[0], list):
             arglen = len(aspec[0])
-        if type(aspec[3]) == type(tuple()):
+        if isinstance(aspec[3], tuple):
             deflen = len(aspec[3])
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
@@ -360,10 +360,10 @@ class State(object):
                 funcs = set()
                 names = set()
                 for arg in run:
-                    if type(arg) == type(str()):
+                    if isinstance(arg, str):
                         funcs.add(arg)
                         continue
-                    if type(arg) == type(dict()):
+                    if isinstance(arg, dict):
                         for key, val in arg.items():
                             if key == 'names':
                                 names.update(val)
@@ -847,7 +847,7 @@ class HighState(object):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
-                        if type(item) == type(str()):
+                        if isinstance(item, basestring):
                             matches[env].append(item)
         return matches
 
