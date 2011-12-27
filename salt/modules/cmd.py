@@ -22,16 +22,17 @@ DEFAULT_CWD = os.path.expanduser('~')
 __outputter__ = {
     'run': 'txt',
 }
-# TODO: Add a way to quiet down the logging here when salt-call -g is ran
 def _run(cmd,
         cwd=DEFAULT_CWD,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE):
+        stderr=subprocess.PIPE,
+        quiet=False):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
     ret = {}
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
+    if not quiet:
+        log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
     proc = subprocess.Popen(cmd,
         cwd=cwd,
         shell=True,
@@ -45,6 +46,13 @@ def _run(cmd,
     ret['pid'] = proc.pid
 
     return ret
+
+
+def _run_quiet(cmd, cwd=DEFAULT_CWD):
+    '''
+    Helper for running commands quietly for minion startup
+    '''
+    return _run(cmd, cwd, stderr=subprocess.STDOUT, quiet=True)['stdout']
 
 
 def run(cmd, cwd=DEFAULT_CWD):
