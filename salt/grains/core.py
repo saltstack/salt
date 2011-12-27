@@ -60,7 +60,15 @@ def _linux_cpudata():
     # Grab the Arch
     arch = __salt__['cmd.run']('uname -m').strip()
     grains['cpuarch'] = arch
-    if not grains['cpuarch']:
+    # Some systems such as Debian don't like uname -m
+    # so fallback gracefully to the processor type
+    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
+        arch = __salt__['cmd.run']('uname -p')
+        grains['cpuarch'] = arch
+    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
+        arch = __salt__['cmd.run']('uname -i')
+        grains['cpuarch'] = arch
+    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
         grains['cpuarch'] = 'Unknown'
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
