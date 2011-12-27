@@ -91,9 +91,12 @@ def _freebsd_cpudata():
     sysctl = salt.utils.which('sysctl')
 
     if sysctl:
-        grains['cpuarch'] = __salt__['cmd.run']('{0} -n hw.machine').strip()
-        grains['num_cpus'] = __salt__['cmd.run']('{0} -n hw.ncpu').strip()
-        grains['cpu_model'] = __salt__['cmd.run']('{0} -n hw.model').strip()
+        machine_cmd = '{0} -n hw.machine'.format(sysctl)
+        ncpu_cmd    = '{0} -n hw.ncpu'.format(sysctl)
+        model_cpu   = '{0} -n hw.model'.format(sysctl)
+        grains['num_cpus'] = __salt__['cmd.run'](ncpu_cmd).strip()
+        grains['cpu_model'] = __salt__['cmd.run'](model_cpu).strip()
+        grains['cpuarch'] = __salt__['cmd.run'](machine_cmd).strip()
         grains['cpu_flags'] = []
     return grains
 
@@ -118,8 +121,8 @@ def _memdata(osdata):
     elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
-            mem = __salt__['cmd.run']('{0} -n hw.physmem').strip()
-        grains['mem_total'] = str(int(mem) / 1024 / 1024)
+            mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
+            grains['mem_total'] = str(int(mem) / 1024 / 1024)
 
     return grains
 
@@ -186,7 +189,7 @@ def _virtual(osdata):
     elif osdata['kernel'] == 'FreeBSD':
         sysctl = salt.utils.which('sysctl')
         if sysctl:
-            model = __salt__['cmd.run']('{0} hw.model').strip()
+            model = __salt__['cmd.run']('{0} hw.model'.format(sysctl)).strip()
         if 'QEMU Virtual CPU' in model:
             grains['virtual'] = 'kvm'
     return grains
