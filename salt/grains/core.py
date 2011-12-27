@@ -226,6 +226,11 @@ def os_data():
     Return grains pertaining to the operating system
     '''
     grains = {}
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            grains['os'] = 'Windows'
+            grains['kernel'] = 'Windows'
+            return grains
     grains.update(_kernel())
 
     if grains['kernel'] == 'Linux':
