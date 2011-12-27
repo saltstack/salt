@@ -1,6 +1,6 @@
 salt (0.9.5.pre-v0.9.4-10-g8182e48-1ubuntu1) lucid; urgency=low
 
-  * Split packages into master and minion
+  * Initial release of salt-master and salt-minion (closes #398)
 
  -- Corey Quinn <corey@sequestered.net>  Mon, 26 Dec 2011 13:55:22 -0800
 
