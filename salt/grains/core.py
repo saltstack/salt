@@ -19,6 +19,7 @@ import sys
 import re
 import platform
 import salt.utils
+import subprocess
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -120,6 +121,13 @@ def _memdata(osdata):
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem').strip()
         grains['mem_total'] = str(int(mem) / 1024 / 1024)
+    elif osdata['kernel'] == 'Windows':
+       for line in subprocess.Popen(['SYSTEMINFO','/FO','LIST'], cwd=os.getcwd(), stdout=subprocess.PIPE).communicate()[0].split('\n'):
+           comps = line.split(':')
+           if not len(comps) > 1:
+               continue
+           if comps[0].strip() == 'Total Physical Memory':
+               grains['mem_total'] = int(comps[1].split()[0].replace(',', ''))
 
     return grains
 
@@ -230,6 +238,7 @@ def os_data():
         if os.environ['os'].startswith('Windows'):
             grains['os'] = 'Windows'
             grains['kernel'] = 'Windows'
+            grains.update(_memdata(grains))
             return grains
     grains.update(_kernel())
 
