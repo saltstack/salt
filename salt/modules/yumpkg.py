@@ -172,12 +172,16 @@ def install(pkgs, refresh=False):
 
     CLI Example::
 
-        salt '*' pkg.install <package,package,package>
+        salt '*' pkg.install 'package package package'
     '''
     if refresh:
         refresh_db()
 
-    pkgs = pkgs.split(',')
+    if ',' in pkgs:
+        pkgs = pkgs.split(',')
+    else:
+        pkgs = pkgs.split(' ')
+
     old = list_pkgs(*pkgs)
 
     yb = yum.YumBase()
