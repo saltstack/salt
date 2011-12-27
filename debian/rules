@@ -12,4 +12,4 @@ get-orig-source:
 	git clone https://github.com/saltstack/salt.git
 	mv salt salt-0.9.5
 	tar -zcvf salt_0.9.5.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.5
-    rm -rf salt-0.9.5
+	rm -rf salt-0.9.5
