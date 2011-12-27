@@ -238,9 +238,9 @@ def os_data():
         if os.path.isfile('/etc/lsb-release'):
             for line in open('/etc/lsb-release').readlines():
                 # Matches any possible format:
-                #     DISTRIB_ID='Ubuntu'
+                #     DISTRIB_ID="Ubuntu"
                 #     DISTRIB_ID='Mageia'
-                #     DISTRIB_ID='Fedora'
+                #     DISTRIB_ID=Fedora
                 #     DISTRIB_RELEASE='10.10'
                 #     DISTRIB_CODENAME='squeeze'
                 #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
