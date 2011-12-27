@@ -22,9 +22,8 @@ Homepage: http://saltstack.org
 
 Package: salt-master
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python-setuptools,
- python-yaml, python-crypto, python-m2crypto, python-pyzmq (>= 2.1.9),
- libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9), python (>= 2.6), python-jinja2
+Depends:    ${python:Depends},
+            ${misc:Depends}
 Description: This package provides a remote manager to administer servers.
  This package is a powerful remote execution manager that can be used to
  administer servers in a fast and efficient way.
@@ -42,9 +41,8 @@ Description: This package provides a remote manager to administer servers.
 
 Package: salt-minion
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python-setuptools,
- python-yaml, python-crypto, python-m2crypto, python-pyzmq (>= 2.1.9),
- libzmq1 (>= 2.1.9), libzmq-dev (>= 2.1.9), python (>= 2.6), python-jinja2
+Depends:    ${python:Depends},
+            ${misc:Depends}
 Description: salt-minion represents the client package for salt
  This package is a powerful remote execution manager that can be used to
  administer servers in a fast and efficient way.
