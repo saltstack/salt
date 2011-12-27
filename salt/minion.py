@@ -8,6 +8,7 @@ import contextlib
 import glob
 import logging
 import multiprocessing
+import hashlib
 import os
 import re
 import shutil
@@ -739,7 +740,19 @@ class FileClient(object):
         salt master file server prepend the path with salt://<file on server>
         otherwise, prepend the file with / for a local file.
         '''
-        path = self._check_proto(path)
+        try:
+            path = self._check_proto(path)
+        except MinionError:
+            if not os.path.isfile(path):
+                err = ('Specified file {0} is not present to generate '
+                        'hash').format(path)
+                log.warning(err)
+                return {}
+            else:
+                ret = {}
+                ret['hsum'] = hashlib.md5(open(path, 'rb').read()).hexdigest()
+                ret['hash_type'] = 'md5'
+                return ret
         payload = {'enc': 'aes'}
         load = {'path': path,
                 'env': env,
