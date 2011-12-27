@@ -25,6 +25,9 @@ def check_root():
     Most of the salt scripts need to run as root, this function will simply
     verify that root is the user before the application discovers it.
     '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            return True
     if os.getuid():
         log.critical('Sorry, the salt must run as root. It needs to operate in a privileged environment to do what it does. http://xkcd.com/838/')
         return False
