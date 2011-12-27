@@ -166,7 +166,7 @@ class Minion(object):
                 self.functions, self.returners = self.__load_modules()
 
         if self.opts['multiprocessing']:
-            if type(data['fun']) == type(list()):
+            if isinstance(data['fun'], list):
                 multiprocessing.Process(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
@@ -175,7 +175,7 @@ class Minion(object):
                     target=lambda: self._thread_return(data)
                 ).start()
         else:
-            if type(data['fun']) == type(list()):
+            if isinstance(data['fun'], list):
                 threading.Thread(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
@@ -473,7 +473,7 @@ class Matcher(object):
         '''
         matcher = 'glob'
         for item in data:
-            if type(item) == type(dict()):
+            if isinstance(item, dict):
                 if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
@@ -631,6 +631,19 @@ class FileClient(object):
             self.socket.send(self.serial.dumps(payload))
             data = self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
             if not data['data']:
+                if not fn_ and data['dest']:
+                    # This is a 0 byte file on the master
+                    dest = os.path.join(
+                        self.opts['cachedir'],
+                        'files',
+                        env,
+                        data['dest']
+                        )
+                    destdir = os.path.dirname(dest)
+                    if not os.path.isdir(destdir):
+                        os.makedirs(destdir)
+                    if not os.path.exists(dest):
+                        open(dest, 'w+').write(data['data'])
                 break
             if not fn_:
                 dest = os.path.join(
