@@ -11,5 +11,5 @@ override_dh_installinit:
 get-orig-source:
 	git clone https://github.com/saltstack/salt.git
 	mv salt salt-0.9.5
-	tar -zcvf --exclude=debian/ --exlude=.git salt_0.9.5.orig.tar.gz salt-0.9.5
+	tar -zcvf --exclude=debian/ --exclude=.git salt_0.9.5.orig.tar.gz salt-0.9.5
 	mv salt_0.9.5.orig.tar.gz ../
