@@ -205,7 +205,7 @@ class Loader(object):
                 log.info('Cython is enabled in options put not present '
                          'on the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
-            if not mod_dir.startswith('/'):
+            if not os.path.isabs(mod_dir):
                 continue
             if not os.path.isdir(mod_dir):
                 continue
