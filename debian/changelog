@@ -1,3 +1,9 @@
+salt (0.9.5.pre-v0.9.4-10-g8182e48-1ubuntu1) lucid; urgency=low
+
+  * Split packages into master and minion
+
+ -- Corey Quinn <corey@sequestered.net>  Mon, 26 Dec 2011 13:55:22 -0800
+
 salt (0.9.5.pre-v0.9.4-10-g8182e48-1) unstable; urgency=low
 
   * Build deb for 0.9.4
