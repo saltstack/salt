@@ -131,6 +131,14 @@ def _memdata(osdata):
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
+    elif osdata['kernel'] == 'Windows':
+       for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
+           comps = line.split(':')
+           if not len(comps) > 1:
+               continue
+           if comps[0].strip() == 'Total Physical Memory':
+               grains['mem_total'] = int(comps[1].split()[0].replace(',', ''))
+               break
 
     return grains
 
@@ -244,6 +252,7 @@ def os_data():
         if os.environ['os'].startswith('Windows'):
             grains['os'] = 'Windows'
             grains['kernel'] = 'Windows'
+            grains.update(_memdata(grains))
             return grains
     grains.update(_kernel())
 
