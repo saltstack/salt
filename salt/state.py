@@ -870,6 +870,9 @@ class HighState(object):
         err = ''
         errors = []
         fn_ = self.client.get_state(sls, env)
+        if not fn_:
+            errors.append(('Specifed SLS {0} in environment {1} is not'
+                           ' available on the salt master').format(sls, env))
         state = None
         try:
             state = self.state.compile_template(fn_, env, sls)
