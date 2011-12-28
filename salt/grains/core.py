@@ -336,9 +336,13 @@ def os_data():
         grains.update(_freebsd_cpudata())
 
     grains.update(_memdata(grains))
+
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+
+    # Get the hardware and bios data
+    grains.update(_hw_data(grains))
 
     return grains
 
@@ -395,3 +399,84 @@ def saltpath():
     #   saltpath
     path = os.path.abspath(os.path.join(__file__, os.path.pardir))
     return {'saltpath': os.path.dirname(path)}
+
+
+# Relatively complex mini-algorithm to iterate over the various
+# sections of dmidecode output and return matches for  specific
+# lines containing data we want, but only in the right section.
+def _dmidecode_data(regex_dict):
+    '''
+    Parse the output of dmidecode in a generic fashion that can
+    be used for the multiple system types which have dmidecode.
+    '''
+    # NOTE: This function might gain support for smbios instead
+    #       of dmidecode when salt gets working Solaris support
+    ret = {}
+
+    # No use running if dmidecode isn't in the path
+    if not salt.utils.which('dmidecode'):
+        return ret
+
+    out = __salt__['cmd.run']('dmidecode')
+
+    for section in regex_dict:
+        section_found = False
+
+        # Look at every line for the right section
+        for line in out.split('\n'):
+            if not line: continue
+            # We've found it, woohoo!
+            if re.match(section, line):
+                section_found = True
+                continue
+            if not section_found:
+                continue
+
+            # Now that a section has been found, find the data
+            for item in regex_dict[section]:
+                # Examples:
+                #    Product Name: 64639SU
+                #    Version: 7LETC1WW (2.21 )
+                regex = re.compile('\s+{0}\s+(.*)$'.format(item))
+                grain = regex_dict[section][item]
+                # Skip to the next iteration if this grain
+                # has been found in the dmidecode output.
+                if grain in ret: continue
+
+                match = regex.match(line)
+
+                # Finally, add the matched data to the grains returned
+                if match:
+                    ret[grain] = match.group(1).strip()
+    return ret
+
+
+def _hw_data(osdata):
+    '''
+    Get system specific hardware data from dmidecode
+
+    Provides
+        biosversion
+        productname
+        manufacturer
+        serialnumber
+        biosreleasedate
+
+    .. versionadded:: 0.9.5
+    '''
+    grains = {}
+    # TODO: *BSD dmidecode output
+    if osdata['kernel'] == 'Linux':
+        linux_dmi_regex = {
+            'BIOS [Ii]nformation': {
+                '[Vv]ersion:': 'biosversion',
+                '[Rr]elease [Dd]ate:': 'biosreleasedate',
+            },
+            '[Ss]ystem [Ii]nformation': {
+                'Manufacturer:': 'manufacturer',
+                'Product(?: Name)?:': 'productname',
+                'Serial Number:': 'serialnumber',
+            },
+        }
+        grains.update(_dmidecode_data(linux_dmi_regex))
+    return grains
