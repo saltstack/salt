@@ -555,8 +555,8 @@ if(sizeof(unsigned long long) == 2) {
 msgpack_pack_inline_func(_float)(msgpack_pack_user x, float d)
 {
 	union { char buf[4]; uint32_t num; } f;
-	*((float*)&f.buf) = d;  // FIXME
 	unsigned char buf[5];
+	*((float*)&f.buf) = d;  // FIXME
 	buf[0] = 0xca; *(uint32_t*)&buf[1] = _msgpack_be32(f.num);
 	msgpack_pack_append_buffer(x, buf, 5);
 }
@@ -564,8 +564,8 @@ msgpack_pack_inline_func(_float)(msgpack_pack_user x, float d)
 msgpack_pack_inline_func(_double)(msgpack_pack_user x, double d)
 {
 	union { char buf[8]; uint64_t num; } f;
-	*((double*)&f.buf) = d;  // FIXME
 	unsigned char buf[9];
+	*((double*)&f.buf) = d;  // FIXME
 	buf[0] = 0xcb; *(uint64_t*)&buf[1] = _msgpack_be64(f.num);
 	msgpack_pack_append_buffer(x, buf, 9);
 }
