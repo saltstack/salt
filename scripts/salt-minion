@@ -11,12 +11,8 @@ def main():
     '''
     The main function
     '''
-    pid = os.getpid()
-    try:
-        minion = salt.Minion()
-        minion.start()
-    except KeyboardInterrupt:
-        os.kill(pid, 15)
+    minion = salt.Minion()
+    minion.start()
 
 if __name__ == '__main__':
     main()

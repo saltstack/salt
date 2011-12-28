@@ -71,9 +71,9 @@ class MasterKeys(dict):
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            log.debug('Loaded master key: %s', self.rsa_path)
+            log.debug('Loaded master key: {0}'.format(self.rsa_path))
         except:
-            log.info('Generating master key: %s', self.rsa_path)
+            log.info('Generating master key: {0}'.format(self.rsa_path))
             key = gen_keys(self.opts['pki_dir'], 'master', 4096)
         return key
 
@@ -116,9 +116,9 @@ class Auth(object):
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            log.debug('Loaded minion key: %s', self.rsa_path)
+            log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         except:
-            log.info('Generating minion key: %s', self.rsa_path)
+            log.info('Generating minion key: {0}'.format(self.rsa_path))
             key = gen_keys(self.opts['pki_dir'], 'minion', 4096)
         return key
 
