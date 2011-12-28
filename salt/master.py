@@ -509,6 +509,9 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
+            jid = clear_load['jid']
+            msg = 'Minion id {0} is not who it says it is!'.format(jid)
+            log.warn(msg)
             return {}
         perms = set()
         for match in self.opts['peer']:
@@ -692,6 +695,7 @@ class ClearFuncs(object):
             pass
         else:
             # Something happened that I have not accounted for, FAIL!
+            log.warn('Unaccounted for authentication failure')
             return {'enc': 'clear',
                     'load': {'ret': False}}
 

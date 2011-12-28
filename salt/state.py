@@ -180,7 +180,13 @@ class State(object):
         if 'require' in data:
             reqdec = 'require'
         if 'watch' in data:
-            reqdec = 'watch'
+            # Check to see if the service has a watcher function, if it does
+            # not, then just require
+            if not '{0}.watcher'.format(data['state']) in self.states:
+                data['require'] = data.pop('watch')
+                reqdec = 'require'
+            else:
+                reqdec = 'watch'
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
@@ -870,6 +876,9 @@ class HighState(object):
         err = ''
         errors = []
         fn_ = self.client.get_state(sls, env)
+        if not fn_:
+            errors.append(('Specifed SLS {0} in environment {1} is not'
+                           ' available on the salt master').format(sls, env))
         state = None
         try:
             state = self.state.compile_template(fn_, env, sls)

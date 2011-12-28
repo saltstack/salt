@@ -138,7 +138,7 @@ class TxtOutputter(Outputter):
                     for line in value.split('\n'):
                         print '{0}: {1}'.format(key, line)
                 except AttributeError:
-                    print 'key: {0}'.format(value)
+                    print '{0}: {1}'.format(key, value)
         else:
             # For non-dictionary data, just use print
             RawOutputter()(data)
