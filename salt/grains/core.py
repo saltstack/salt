@@ -148,7 +148,7 @@ def _virtual(osdata):
     dmidecode = salt.utils.which('dmidecode')
 
     if dmidecode:
-        output = __salt__['cmd.run']('dmidecode').lower()
+        output = __salt__['cmd.run']('dmidecode')
         # Product Name: VirtualBox
         if 'Vendor: QEMU' in output:
             # FIXME: Make this detect between kvm or qemu
