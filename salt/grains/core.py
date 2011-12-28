@@ -23,7 +23,7 @@ import salt.utils
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmd
-__salt__ = {'cmd.run': salt.modules.cmd.run}
+__salt__ = {'cmd.run': salt.modules.cmd._run_quiet}
 
 
 def _kernel():
@@ -60,7 +60,15 @@ def _linux_cpudata():
     # Grab the Arch
     arch = __salt__['cmd.run']('uname -m').strip()
     grains['cpuarch'] = arch
-    if not grains['cpuarch']:
+    # Some systems such as Debian don't like uname -m
+    # so fallback gracefully to the processor type
+    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
+        arch = __salt__['cmd.run']('uname -p')
+        grains['cpuarch'] = arch
+    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
+        arch = __salt__['cmd.run']('uname -i')
+        grains['cpuarch'] = arch
+    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
         grains['cpuarch'] = 'Unknown'
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
@@ -91,9 +99,12 @@ def _freebsd_cpudata():
     sysctl = salt.utils.which('sysctl')
 
     if sysctl:
-        grains['cpuarch'] = __salt__['cmd.run']('{0} -n hw.machine').strip()
-        grains['num_cpus'] = __salt__['cmd.run']('{0} -n hw.ncpu').strip()
-        grains['cpu_model'] = __salt__['cmd.run']('{0} -n hw.model').strip()
+        machine_cmd = '{0} -n hw.machine'.format(sysctl)
+        ncpu_cmd    = '{0} -n hw.ncpu'.format(sysctl)
+        model_cpu   = '{0} -n hw.model'.format(sysctl)
+        grains['num_cpus'] = __salt__['cmd.run'](ncpu_cmd).strip()
+        grains['cpu_model'] = __salt__['cmd.run'](model_cpu).strip()
+        grains['cpuarch'] = __salt__['cmd.run'](machine_cmd).strip()
         grains['cpu_flags'] = []
     return grains
 
@@ -118,8 +129,8 @@ def _memdata(osdata):
     elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
-            mem = __salt__['cmd.run']('{0} -n hw.physmem').strip()
-        grains['mem_total'] = str(int(mem) / 1024 / 1024)
+            mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
+            grains['mem_total'] = str(int(mem) / 1024 / 1024)
     elif osdata['kernel'] == 'Windows':
        for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
            comps = line.split(':')
@@ -127,6 +138,7 @@ def _memdata(osdata):
                continue
            if comps[0].strip() == 'Total Physical Memory':
                grains['mem_total'] = int(comps[1].split()[0].replace(',', ''))
+               break
 
     return grains
 
@@ -144,7 +156,7 @@ def _virtual(osdata):
     dmidecode = salt.utils.which('dmidecode')
 
     if dmidecode:
-        output = __salt__['cmd.run']('dmidecode').lower()
+        output = __salt__['cmd.run']('dmidecode')
         # Product Name: VirtualBox
         if 'Vendor: QEMU' in output:
             # FIXME: Make this detect between kvm or qemu
@@ -168,7 +180,7 @@ def _virtual(osdata):
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
             grains['virtual'] = 'kvm'
-    choices =  ['Linux', 'OpenBSD', 'SunOS', 'HP-UX']
+    choices =  ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
@@ -193,7 +205,7 @@ def _virtual(osdata):
     elif osdata['kernel'] == 'FreeBSD':
         sysctl = salt.utils.which('sysctl')
         if sysctl:
-            model = __salt__['cmd.run']('{0} hw.model').strip()
+            model = __salt__['cmd.run']('{0} hw.model'.format(sysctl)).strip()
         if 'QEMU Virtual CPU' in model:
             grains['virtual'] = 'kvm'
     return grains
@@ -204,8 +216,11 @@ def _ps(osdata):
     Return the ps grain
     '''
     grains = {}
-    grains['ps'] = 'ps auxwww' if \
-            'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -efH'
+    bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'Darwin')
+    if osdata['os'] in bsd_choices:
+        grains['ps'] = 'ps auxwww'
+    else:
+        grains['ps'] = 'ps -efH'
     return grains
 
 
@@ -246,9 +261,9 @@ def os_data():
         if os.path.isfile('/etc/lsb-release'):
             for line in open('/etc/lsb-release').readlines():
                 # Matches any possible format:
-                #     DISTRIB_ID='Ubuntu'
+                #     DISTRIB_ID="Ubuntu"
                 #     DISTRIB_ID='Mageia'
-                #     DISTRIB_ID='Fedora'
+                #     DISTRIB_ID=Fedora
                 #     DISTRIB_RELEASE='10.10'
                 #     DISTRIB_CODENAME='squeeze'
                 #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
@@ -330,9 +345,13 @@ def os_data():
         grains.update(_freebsd_cpudata())
 
     grains.update(_memdata(grains))
+
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
+
+    # Get the hardware and bios data
+    grains.update(_hw_data(grains))
 
     return grains
 
@@ -371,7 +390,7 @@ def pythonversion():
     '''
     # Provides:
     #   pythonversion
-    return {'pythonversion': list(sys.version_info)}
+    return {'pythonversion': tuple(sys.version_info)}
 
 def pythonpath():
     '''
@@ -389,3 +408,84 @@ def saltpath():
     #   saltpath
     path = os.path.abspath(os.path.join(__file__, os.path.pardir))
     return {'saltpath': os.path.dirname(path)}
+
+
+# Relatively complex mini-algorithm to iterate over the various
+# sections of dmidecode output and return matches for  specific
+# lines containing data we want, but only in the right section.
+def _dmidecode_data(regex_dict):
+    '''
+    Parse the output of dmidecode in a generic fashion that can
+    be used for the multiple system types which have dmidecode.
+    '''
+    # NOTE: This function might gain support for smbios instead
+    #       of dmidecode when salt gets working Solaris support
+    ret = {}
+
+    # No use running if dmidecode isn't in the path
+    if not salt.utils.which('dmidecode'):
+        return ret
+
+    out = __salt__['cmd.run']('dmidecode')
+
+    for section in regex_dict:
+        section_found = False
+
+        # Look at every line for the right section
+        for line in out.split('\n'):
+            if not line: continue
+            # We've found it, woohoo!
+            if re.match(section, line):
+                section_found = True
+                continue
+            if not section_found:
+                continue
+
+            # Now that a section has been found, find the data
+            for item in regex_dict[section]:
+                # Examples:
+                #    Product Name: 64639SU
+                #    Version: 7LETC1WW (2.21 )
+                regex = re.compile('\s+{0}\s+(.*)$'.format(item))
+                grain = regex_dict[section][item]
+                # Skip to the next iteration if this grain
+                # has been found in the dmidecode output.
+                if grain in ret: continue
+
+                match = regex.match(line)
+
+                # Finally, add the matched data to the grains returned
+                if match:
+                    ret[grain] = match.group(1).strip()
+    return ret
+
+
+def _hw_data(osdata):
+    '''
+    Get system specific hardware data from dmidecode
+
+    Provides
+        biosversion
+        productname
+        manufacturer
+        serialnumber
+        biosreleasedate
+
+    .. versionadded:: 0.9.5
+    '''
+    grains = {}
+    # TODO: *BSD dmidecode output
+    if osdata['kernel'] == 'Linux':
+        linux_dmi_regex = {
+            'BIOS [Ii]nformation': {
+                '[Vv]ersion:': 'biosversion',
+                '[Rr]elease [Dd]ate:': 'biosreleasedate',
+            },
+            '[Ss]ystem [Ii]nformation': {
+                'Manufacturer:': 'manufacturer',
+                'Product(?: Name)?:': 'productname',
+                'Serial Number:': 'serialnumber',
+            },
+        }
+        grains.update(_dmidecode_data(linux_dmi_regex))
+    return grains

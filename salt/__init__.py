@@ -93,6 +93,7 @@ class Master(object):
         for name, level in self.opts['log_granular_levels'].iteritems():
             salt.log.set_logger_level(name, level)
         import logging
+        log = logging.getLogger(__name__)
         # Late import so logging works correctly
         import salt.master
         master = salt.master.Master(self.opts)
@@ -162,12 +163,17 @@ class Minion(object):
 
         # Late import so logging works correctly
         import salt.minion
-        if self.cli['daemon']:
-            # Late import so logging works correctly
-            import salt.utils
-            salt.utils.daemonize()
-        minion = salt.minion.Minion(self.opts)
-        minion.tune_in()
+        log = logging.getLogger(__name__)
+        try:
+            if self.cli['daemon']:
+                # Late import so logging works correctly
+                import salt.utils
+                salt.utils.daemonize()
+            minion = salt.minion.Minion(self.opts)
+            minion.tune_in()
+        except KeyboardInterrupt:
+            log.warn('Stopping the Salt Minion')
+            raise SystemExit('\nExiting on Ctrl-c')
 
 
 class Syndic(object):
@@ -259,9 +265,14 @@ class Syndic(object):
 
         # Late import so logging works correctly
         import salt.minion
-        syndic = salt.minion.Syndic(self.opts)
-        if self.cli['daemon']:
-            # Late import so logging works correctly
-            import salt.utils
-            salt.utils.daemonize()
-        syndic.tune_in()
+        log = logging.getLogger(__name__)
+        try:
+            syndic = salt.minion.Syndic(self.opts)
+            if self.cli['daemon']:
+                # Late import so logging works correctly
+                import salt.utils
+                salt.utils.daemonize()
+            syndic.tune_in()
+        except KeyboardInterrupt:
+            log.warn('Stopping the Salt Syndic Minion')
+            raise SystemExit('\nExiting on Ctrl-c')
