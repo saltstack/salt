@@ -14,6 +14,7 @@ Build-Depends: debhelper (>= 7.0.50~),
                libzmq1 (>= 2.1.9),
                libzmq-dev (>= 2.1.9),
                python (>= 2.6),
+               python-dev (>= 2.6),
                python-jinja2
 Standards-Version: 3.9.2
 Homepage: http://saltstack.org
@@ -44,6 +45,26 @@ Architecture: all
 Depends:    ${python:Depends},
             ${misc:Depends}
 Description: salt-minion represents the client package for salt
+ This package is a powerful remote execution manager that can be used to
+ administer servers in a fast and efficient way.
+ .
+ It allows commands to be executed across large groups of servers. This
+ means systems can be easily managed, but data can also be easily gathered.
+ Quick introspection into running systems becomes a reality.
+ .
+ Remote execution is usually used to set up a certain state on a remote
+ system. Salt addresses this problem as well, the salt state system uses
+ salt state files to define the state a server needs to be in.
+ .
+ Between the remote execution system, and state management Salt addresses
+ the backbone of cloud and data center management.
+
+Package: salt-syndic
+Architecture: all
+Depends:    ${python:Depends},
+            ${misc:Depends},
+            salt-master
+Description: salt-syndic represents the master-of-masters for salt.
  This package is a powerful remote execution manager that can be used to
  administer servers in a fast and efficient way.
  .

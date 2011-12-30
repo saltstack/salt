@@ -3,10 +3,10 @@
 %:
 	dh $@
 
-override_dh_installinit:
-	dh_installinit --no-start --name="salt-master"
-	dh_installinit --no-start --name="salt-minion"
-	dh_installinit --no-start --name="salt-syndic"
+#override_dh_installinit:
+#	dh_installinit --no-start --name="salt-master"
+#	dh_installinit --no-start --name="salt-minion"
+#	dh_installinit --no-start --name="salt-syndic"
 
 get-orig-source:
 	git clone https://github.com/saltstack/salt.git
