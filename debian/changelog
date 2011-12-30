@@ -2,4 +2,5 @@ salt (0.9.5+git20111227.g8182e48-1) unstable; urgency=low
 
   * First package release. (Closes: #643789)
 
-     -- Corey Quinn <corey@sequestered.net>  Mon, 26 Dec 2011 13:55:22 -0800
+ -- Corey Quinn <corey@sequestered.net>  Mon, 26 Dec 2011 13:55:22 -0800
+
