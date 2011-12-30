@@ -60,7 +60,8 @@ def present(
            'comment': 'User {0} is present and up to date'.format(name)}
 
     print password
-    lshad = __salt__['shadow.info'](name)
+    if __grains__['os'] != 'FreeBSD':
+        lshad = __salt__['shadow.info'](name)
 
     for lusr in __salt__['user.getent']():
         # Scan over the users
@@ -88,18 +89,23 @@ def present(
                     # Fix the shell
                     __salt__['user.chshell'](name, shell)
             if password:
-                if lshad['pwd'] != password:
-                    # Set the new password
-                    __salt__['shadow.set_password'](name, password)
+                if __grains__['os'] != 'FreeBSD':
+                    if lshad['pwd'] != password:
+                        # Set the new password
+                        __salt__['shadow.set_password'](name, password)
             post = __salt__['user.info'](name)
-            spost = __salt__['shadow.info'](name)
+            spost = {}
+            if __grains__['os'] != 'FreeBSD':
+                if lshad['pwd'] != password:
+                    spost = __salt__['shadow.info'](name)
             # See if anything changed
             for key in post:
                 if post[key] != pre[key]:
                     ret['changes'][key] = post[key]
-            for key in spost:
-                if lshad[key] != spost[key]:
-                    ret['changes'][key] = spost[key]
+            if __grains__['os'] != 'FreeBSD':
+                for key in spost:
+                    if lshad[key] != spost[key]:
+                        ret['changes'][key] = spost[key]
             if ret['changes']:
                 ret['comment'] = 'Updated user {0}'.format(name)
             return ret

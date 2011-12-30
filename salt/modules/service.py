@@ -11,6 +11,7 @@ grainmap = {
            'Fedora': '/etc/init.d',
            'RedHat': '/etc/init.d',
            'Ubuntu': '/etc/init.d',
+           'Gentoo': '/etc/init.d',
           }
 
 

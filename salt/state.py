@@ -198,6 +198,14 @@ class State(object):
                                 ' in argument of state {0} in sls {1}').format(
                                     name,
                                     body['__sls__']))
+                    if not fun:
+                        if state == 'require' or state == 'watch':
+                            continue
+                        errors.append(('No function declared in state {0} in'
+                            ' sls {1}').format(state, body['__sls__']))
+                    elif fun > 1:
+                        errors.append(('Too many functions declared in state'
+                            ' {0} in sls {1}').format(state, body['__sls__']))
         return errors
 
     def verify_chunks(self, chunks):
@@ -208,6 +216,37 @@ class State(object):
         for chunk in chunks:
             err += self.verify_data(chunk)
         return err
+
+    def order_chunks(self, chunks):
+        '''
+        Sort the chunk list verifying that the chunks follow the order
+        specified in the order options.
+        '''
+        cap = 1
+        for chunk in chunks:
+            if 'order' in chunk:
+                if not isinstance(chunk['order'], int):
+                    continue
+                if chunk['order'] > cap - 1:
+                    cap = chunk['order'] + 100
+        for chunk in chunks:
+            if not 'order' in chunk:
+                chunk['order'] = cap
+            else:
+                if not isinstance(chunk['order'], int):
+                    if chunk['order'] == 'last':
+                        chunk['order'] = cap + 100
+                    else:
+                        chunk['order'] = cap
+        chunks = sorted(
+                chunks,
+                key=lambda k:'{0[state]}{0[name]}{0[fun]}'.format(k)
+                )
+        chunks = sorted(
+                chunks,
+                key=lambda k: k['order']
+                )
+        return chunks
 
     def format_call(self, data):
         '''
@@ -292,8 +331,8 @@ class State(object):
                     for fun in funcs:
                         live['fun'] = fun
                         chunks.append(live)
-
-        return sorted(chunks, key=lambda k: k['state'] + k['name'] + k['fun'])
+        chunks = self.order_chunks(chunks)
+        return chunks
 
     def reconcile_extend(self, high):
         '''
@@ -409,10 +448,27 @@ class State(object):
         '''
         running = {}
         for low in chunks:
-            if (low['state'] + '.' + low['name'] +
-                '.' + low['fun'] not in running):
+            if '__FAILHARD__' in running:
+                running.pop('__FAILHARD__')
+                return running
+            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
+            if tag not in running:
                 running = self.call_chunk(low, running, chunks)
+                if self.check_failhard(low, running):
+                    return running
         return running
+
+    def check_failhard(self, low, running):
+        '''
+        Check if the low data chunk should send a failhard signal
+        '''
+        tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
+        if low.get('failhard', False) \
+                or self.opts['failhard'] \
+                and tag in running:
+            if not running[tag]['result']:
+                return True
+        return False
 
     def check_requires(self, low, running, chunks):
         '''
@@ -430,7 +486,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = req['state'] + '.' + req['name'] + '.' + req['fun']
+            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -458,7 +514,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = req['state'] + '.' + req['name'] + '.' + req['fun']
+            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -476,7 +532,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then the
         chunk
         '''
-        tag = low['state'] + '.' + low['name'] + '.' + low['fun']
+        tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
         if 'require' in low:
             status = self.check_requires(low, running, chunks)
             if status == 'unmet':
@@ -493,7 +549,13 @@ class State(object):
                     if (chunk['state'] + '.' + chunk['name'] +
                         '.' + chunk['fun'] not in running):
                         running = self.call_chunk(chunk, running, chunks)
+                        if self.check_failhard(chunk, running):
+                            running['__FAILHARD__'] = True
+                            return running
                 running = self.call_chunk(low, running, chunks)
+                if self.check_failhard(chunk, running):
+                    running['__FAILHARD__'] = True
+                    return running
             elif status == 'met':
                 running[tag] = self.call(low)
             elif status == 'fail':
@@ -516,7 +578,13 @@ class State(object):
                     if (chunk['state'] + '.' + chunk['name'] +
                         '.' + chunk['fun'] not in running):
                         running = self.call_chunk(chunk, running, chunks)
+                        if self.check_failhard(chunk, running):
+                            running['__FAILHARD__'] = True
+                            return running
                 running = self.call_chunk(low, running, chunks)
+                if self.check_failhard(chunk, running):
+                    running['__FAILHARD__'] = True
+                    return running
             elif status == 'nochange':
                 running[tag] = self.call(low)
             elif status == 'change':
@@ -596,6 +664,7 @@ class HighState(object):
                 return opts
         mopts = self.client.master_opts()
         opts['renderer'] = mopts['renderer']
+        opts['failhard'] = mopts['failhard']
         if mopts['state_top'].startswith('salt://'):
             opts['state_top'] = mopts['state_top']
         elif mopts['state_top'].startswith('/'):
