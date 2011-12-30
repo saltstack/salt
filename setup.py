@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 '''
 The setup script for salt
 '''
@@ -8,12 +8,28 @@ import sys
 from glob import glob
 from distutils.core import setup, Extension
 from distutils.command.sdist import sdist
-from distutils import log
 from distutils.cmd import Command
-from distutils.core import setup
 from distutils.sysconfig import get_python_lib, PREFIX
-
 from salt import __version__
+
+class TestCommand(Command):
+    description = 'Run tests'
+    user_options = []
+    def initialize_options(self): pass
+    def finalize_options(self): pass
+    def run(self):
+        from subprocess import Popen
+        self.run_command('build')
+        build_cmd = self.get_finalized_command('build_ext')
+        runner = os.path.abspath('tests/runtests.py')
+        test_cmd = 'python %s' % runner
+        print("running test")
+        test_process = Popen(
+            test_cmd, shell=True,
+            stdout=sys.stdout, stderr=sys.stderr,
+            cwd=build_cmd.build_lib
+        )
+        test_process.communicate()
 
 try:
     from Cython.Distutils import build_ext
@@ -67,8 +83,8 @@ setup(
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
       url='http://saltstack.org',
-      cmdclass={'build_ext': build_ext, 'sdist': Sdist},
       ext_modules=[msgpack_mod],
+      cmdclass={'build_ext': build_ext, 'sdist': Sdist, 'test': TestCommand},
       classifiers=[
           'Programming Language :: Python',
           'Programming Language :: Cython',
