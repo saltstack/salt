@@ -48,7 +48,7 @@ def status(name):
    Return the status for a service via systemd, returns the PID if the service
    is running or an empty string if the service is not running
    '''
-   cmd = ("systemctl restart {0}.service | grep 'Main PID'"
-		  " | awk '{print $3}'").format(name)
+   cmd = ("systemctl restart {0}.service"
+		  " | awk '/Main PID/{print $3}'").format(name)
    return __salt__['cmd.run'](cmd).strip()
 
