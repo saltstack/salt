@@ -100,6 +100,14 @@
 #log_granular_levels: {}
 
 
+######  Miscellaneous configuration   #####
+###########################################
+# When waiting for a master to accept the minion's public key, salt will
+# contiuously attempt to reconnect until successful. This is the time, in
+# seconds, between those reconnection attempts.
+# acceptance_wait_time = 10
+
+
 ######      Module configuration      #####
 ###########################################
 # Salt allows for modules to be passed arbitrary configuration data, any data
