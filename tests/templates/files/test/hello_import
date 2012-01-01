@@ -1,0 +1,3 @@
+{% from 'macro' import mymacro -%}
+{% from 'macro' import mymacro -%}
+{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}
