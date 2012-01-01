@@ -307,8 +307,7 @@ class Minion(object):
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
-            # TODO: Make this a configuration setting and default to 10
-            time.sleep(10)
+            time.sleep(self.opts['acceptance_wait_time'])
         self.aes = creds['aes']
         self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
