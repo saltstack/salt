@@ -102,11 +102,11 @@
 
 ######  Miscellaneous configuration   #####
 ###########################################
-# When a master is in 'verify' trust_mode, the minion key will be put in
-# pending, and the minion will continuously attempt to reconnect until the key
-# is accepted on the master. This is the wait time, in seconds, between
-# connection attempts.
+# When waiting for a master to accept the minion's public key, it will
+# contiuously attempt to reconnect until successful. This is the time, in
+# seconds, between those reconnection attempts.
 # acceptance_wait_time = 10
+
 
 ######      Module configuration      #####
 ###########################################
