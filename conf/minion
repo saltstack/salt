@@ -102,7 +102,7 @@
 
 ######  Miscellaneous configuration   #####
 ###########################################
-# When waiting for a master to accept the minion's public key, it will
+# When waiting for a master to accept the minion's public key, salt will
 # contiuously attempt to reconnect until successful. This is the time, in
 # seconds, between those reconnection attempts.
 # acceptance_wait_time = 10
