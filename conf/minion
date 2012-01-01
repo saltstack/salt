@@ -100,6 +100,14 @@
 #log_granular_levels: {}
 
 
+######  Miscellaneous configuration   #####
+###########################################
+# When a master is in 'verify' trust_mode, the minion key will be put in
+# pending, and the minion will continuously attempt to reconnect until the key
+# is accepted on the master. This is the wait time, in seconds, between
+# connection attempts.
+# acceptance_wait_time = 10
+
 ######      Module configuration      #####
 ###########################################
 # Salt allows for modules to be passed arbitrary configuration data, any data
