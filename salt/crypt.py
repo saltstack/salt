@@ -208,8 +208,9 @@ class Auth(object):
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
-                        'node, this salt minion will wait for 10 seconds '
-                        'before attempting to re-authenticate'
+                        'node, this salt minion will wait for %s seconds '
+                        'before attempting to re-authenticate',
+                        self.opts['acceptance_wait_time']
                     )
                     return 'retry'
         if not self.verify_master(payload['pub_key'], payload['token']):
