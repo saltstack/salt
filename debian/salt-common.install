@@ -1,0 +1,3 @@
+usr/share/man/man1/salt-minion.1
+conf/minion /etc/salt/minion
+salt/* /usr/share/salt/
