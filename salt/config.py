@@ -83,6 +83,7 @@ def minion_config(path):
             'test': False,
             'cython_enable': False,
             'state_verbose': False,
+            'acceptance_wait_time': 10,
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
