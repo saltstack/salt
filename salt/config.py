@@ -4,6 +4,7 @@ All salt configuration loading and defaults should be in this module
 
 # Import python modules
 import os
+import tempfile
 import socket
 import sys
 
@@ -114,7 +115,7 @@ def master_config(path):
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
             'worker_threads': 5,
-            'sock_dir': '/tmp/.salt-unix',
+            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',
             'keep_jobs': 24,
             'root_dir': '/',
