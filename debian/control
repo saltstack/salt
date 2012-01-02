@@ -23,7 +23,7 @@ Homepage: http://saltstack.org
 
 
 Package: salt-common
-Architecture: all
+Architecture: any
 Depends:    ${python:Depends},
             ${misc:Depends}
 Description:  This package is a powerful remote execution manager that can be used
