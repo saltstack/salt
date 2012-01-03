@@ -105,6 +105,35 @@ accepted you can install Salt by downloading the latest ``.deb`` in the
 
 .. __: http://packages.debian.org/search?keywords=python-zmq
 
+Gentoo
+======
+
+Salt can be easily installed on Gentoo::
+
+    emerge pyyaml m2crypto pycrypto jinja pyzmq
+
+Then download and install from source:
+
+1.  Download the latest source tarball from the GitHub downloads directory for
+    the Salt project: |latest|
+
+2.  Untar the tarball and run the :file:`setup.py` as root:
+
+.. parsed-literal::
+
+    tar xvf salt-|version|.tar.gz
+    cd salt-|version|
+    python2 setup.py install
+
+FreeBSD
+=======
+
+Salt is available in the FreeBSD ports tree::
+
+    cd /usr/ports/sysutils/salt && make install clean
+
+.. seealso:: :doc:`freebsd installation guide </topics/tutorials/freebsd>`
+
 Installing from source
 ======================
 
