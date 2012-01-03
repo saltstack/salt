@@ -15,8 +15,9 @@ import sys
 try:
     import salt.config
     import salt.utils.verify
-except ImportError:
-    pass
+except ImportError as e:
+    if e.message != 'No module named _msgpack':
+        raise
 
 def verify_env(dirs):
     '''
