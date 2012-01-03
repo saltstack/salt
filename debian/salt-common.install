@@ -1,0 +1,9 @@
+usr/share/man/man1/salt-minion.1
+usr/share/man/man1/salt-call.1
+usr/share/man/man1/salt-key.1
+usr/share/man/man1/salt-master.1
+usr/share/man/man1/salt-syndic.1
+usr/share/man/man1/salt-cp.1
+usr/share/man/man1/salt.1
+conf/minion /etc/salt/minion
+salt/* /usr/share/salt/

@@ -96,7 +96,7 @@ def install(pkg, refresh=False):
     ret_pkgs = {}
     old_pkgs = list_pkgs()
     cmd = 'apt-get -y install {0}'.format(pkg)
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
@@ -127,7 +127,7 @@ def remove(pkg):
     old_pkgs = list_pkgs()
 
     cmd = 'apt-get -y remove {0}'.format(pkg)
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
@@ -152,7 +152,7 @@ def purge(pkg):
 
     # Remove inital package
     purge_cmd = 'apt-get -y purge {0}'.format(pkg)
-    __salt__['cmd.retcode'](purge_cmd)
+    __salt__['cmd.run'](purge_cmd)
 
     new_pkgs = list_pkgs()
 
@@ -188,7 +188,7 @@ def upgrade(refresh=True):
     ret_pkgs = {}
     old_pkgs = list_pkgs()
     cmd = 'apt-get -y dist-upgrade'
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:

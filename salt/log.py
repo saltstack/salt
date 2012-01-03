@@ -2,7 +2,7 @@
     salt.log
     ~~~~~~~~
 
-    This is were Salt's logging get's setup.
+    This is where Salt's logging gets set up.
 
 
     :copyright: 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
