@@ -125,6 +125,15 @@ Then download and install from source:
     cd salt-|version|
     python2 setup.py install
 
+FreeBSD
+=======
+
+Salt is available in the FreeBSD ports tree::
+
+    cd /usr/ports/sysutils/salt && make install clean
+
+.. seealso:: :doc:`freebsd installation guide </topics/tutorials/freebsd>`
+
 Installing from source
 ======================
 
