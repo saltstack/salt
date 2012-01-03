@@ -473,7 +473,9 @@ class SaltKey(object):
                 default=2048,
                 type=int,
                 help=('Set the keysize for the generated key, only works with '
-                      'the "--gen-keys" option; default=2048'))
+                      'the "--gen-keys" option, the key size must be 2048 or '
+                      'higher, otherwise it will be rounded up to 2048'
+                      '; default=2048'))
 
         parser.add_option('-c',
                 '--config',
@@ -494,7 +496,10 @@ class SaltKey(object):
         opts['delete'] = options.delete
         opts['gen_keys'] = options.gen_keys
         opts['gen_keys_dir'] = options.gen_keys_dir
-        opts['keysize'] = options.keysize
+        if options.keysize < 2048:
+            opts['keysize'] = 2048
+        else:
+            opts['keysize'] = options.keysize
 
         opts.update(salt.config.master_config(options.config))
 
