@@ -106,7 +106,7 @@ accepted you can install Salt by downloading the latest ``.deb`` in the
 .. __: http://packages.debian.org/search?keywords=python-zmq
 
 Gentoo
-------
+======
 
 Salt can be easily installed on Gentoo::
 
