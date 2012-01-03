@@ -45,6 +45,20 @@ def _kernel():
         grains['kernel'] = 'Unknown'
     return grains
 
+def _windows_cpudata():
+    '''
+    Return the cpu information for Windows systems architecture
+    '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    grains = {}
+    grains['cpuarch'] = platform.machine()
+    if 'NUMBER_OF_PROCESSORS' in os.environ:
+        grains['num_cpus'] = os.environ['NUMBER_OF_PROCESSORS']
+    grains['cpu_model'] = platform.processor()
+    return grains
 
 def _linux_cpudata():
     '''
@@ -242,6 +256,22 @@ def _linux_platform_data(osdata):
         grains['oscodename'] = oscodename
     return grains
 
+def _windows_platform_data(osdata):
+    '''
+    Use the platform module for as much as we can.
+    '''
+    # Provides:
+    #    osrelease
+    #    oscodename
+    grains = {}
+    (osname, hostname, osrelease, osversion, machine, processor) = platform.uname()
+    if 'os' not in osdata and osname:
+        grains['os'] = osname
+    if osrelease:
+        grains['osrelease'] = osrelease
+    if osversion:
+        grains['osversion'] = osversion
+    return grains
 
 def os_data():
     '''
@@ -253,6 +283,8 @@ def os_data():
             grains['os'] = 'Windows'
             grains['kernel'] = 'Windows'
             grains.update(_memdata(grains))
+            grains.update(_windows_platform_data(grains))
+            grains.update(_windows_cpudata())
             return grains
     grains.update(_kernel())
 
