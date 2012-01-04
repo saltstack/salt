@@ -332,7 +332,7 @@ def _sed_esc(s):
     '''
     Escape single quotes and forward slashes
     '''
-    return s.replace("'", "'\"'\"'").replace("/", "\/")
+    return '{0}'.format(s).replace("'", "'\"'\"'").replace("/", "\/")
 
 def sed(path, before, after, limit='', backup='.bak', options='-r -e',
         flags='g'):
