@@ -78,7 +78,7 @@ def slave_lag():
     '''
     Return the number of seconds that a slave SQL server is lagging behind the
     master, if the host is not a slave it will return -1.  If the server is
-    configured to be a slave but replication but slave IO is not running then
+    configured to be a slave for replication but slave IO is not running then
     -2 will be returned.
 
     CLI Example::
