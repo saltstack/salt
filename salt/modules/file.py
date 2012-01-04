@@ -469,7 +469,7 @@ def contains(path, text, limit=''):
     if not os.path.exists(path):
         return False
 
-    result = __salt__['filenew.sed'](path, text, '&', limit=limit, backup='',
+    result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
             options='-n -r -e', flags='gp')
 
     return bool(result)
