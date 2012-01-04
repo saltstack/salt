@@ -5,6 +5,8 @@ import yum
 import rpm
 from rpmUtils.arch import getBaseArch
 
+log = logging.getLogger(__name__)
+
 def __virtual__():
     '''
     Confine this module to yum based systems
@@ -191,7 +193,7 @@ def install(pkgs, refresh=False):
         try:
             yb.install(name=pkg)
         except yum.Errors.InstallError:
-            pass
+            log.error('Package {0} failed to install'.format(pkg))
     # Resolve Deps before attempting install.  This needs to be improved
     # by also tracking any deps that may get upgraded/installed during this
     # process.  For now only the version of the package(s) you request be
