@@ -11,7 +11,7 @@ declarations are typically rather simple:
       pkg:
         - installed
 '''
-
+from distutils.version import LooseVersion
 
 def installed(name):
     '''
@@ -51,8 +51,8 @@ def latest(name):
         The name of the package to maintain at the latest available version
     '''
     changes = {}
-    version = __salt__['pkg.version'](name)
-    avail = __salt__['pkg.available_version'](name)
+    version = LooseVersion(__salt__['pkg.version'](name))
+    avail = LooseVersion(__salt__['pkg.available_version'](name))
     if avail > version:
         changes = __salt__['pkg.install'](name, True)
         if not changes:
