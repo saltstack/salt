@@ -44,3 +44,10 @@ class SaltInvocationError(SaltException):
     or invalid arguments are  specified  on  the  command  line
     '''
     pass
+
+class PkgParseError(SaltException):
+    '''
+    Used when of the pkg modules cannot correctly parse the output from the CLI
+    tool (pacman, yum, apt, aptitude, etc)
+    '''
+    pass
