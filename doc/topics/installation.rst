@@ -40,22 +40,29 @@ running and the Salt :term:`minions <minion>` point to the master.
 Red Hat
 =======
 
-We are working to get Salt packages into EPEL. In the meantime you can install
-Salt via our Fedora People repository. This should work for Red Hat Enterprise
-Linux 5 & 6, CentOS 5 & 6, as well as Fedora 14, 15, & 16.
+We are working to get Salt packages into EPEL. In the meantime you can
+:command:`yum install salt-master salt-minion` via our Fedora People
+repository.
 
-1.  If you are running el5 or el6 `install the EPEL repository`__
+Red Hat Enterprise Linux 5 & 6 or CentOS 5 & 6
+----------------------------------------------
 
-2.  Enable our repository on FedoraPeople::
+1.  Install the `EPEL`__ repository::
+
+2.  Install our repository on FedoraPeople::
 
         wget -O /etc/yum.repos.d/epel-salt.repo \
             http://repos.fedorapeople.org/repos/herlo/salt/epel-salt.repo
 
-3.  Install Salt::
-
-        yum install salt-master salt-minion
-
 .. __: http://fedoraproject.org/wiki/EPEL#How_can_I_use_these_extra_packages.3F
+
+Fedora 15 & 16
+--------------
+
+1.  Install our repository on FedoraPeople::
+
+        wget -O /etc/yum.repos.d/fedora-salt.repo \
+            http://repos.fedorapeople.org/repos/herlo/salt/fedora-salt.repo
 
 Arch Linux
 ==========
