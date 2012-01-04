@@ -3,6 +3,7 @@ Support for YUM
 '''
 import yum
 import rpm
+import logging
 from rpmUtils.arch import getBaseArch
 
 log = logging.getLogger(__name__)
