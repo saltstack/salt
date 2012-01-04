@@ -189,7 +189,7 @@ def install(pkgs, refresh=False, opts=()):
         if '--nogpgcheck' in opt:
             setattr(yb.conf, 'gpgcheck', False)
         if opt.startswith('--enablerepo'):
-            yb.repos.enableRepo(arg.split('=')[0])
+            yb.repos.enableRepo(arg.split('=')[1])
 
     for pkg in pkgs:
         try:
