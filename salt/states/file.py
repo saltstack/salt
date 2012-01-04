@@ -904,10 +904,10 @@ def append(name, text):
 
     for chunk in text:
         for line in chunk.split('\n'):
-            if __salt__['filenew.contains'](name, line):
+            if __salt__['file.contains'](name, line):
                 continue
             else:
-                __salt__['filenew.append'](name, line)
+                __salt__['file.append'](name, line)
                 cgs = ret['changes'].setdefault('new', [])
                 cgs.append(line)
 
