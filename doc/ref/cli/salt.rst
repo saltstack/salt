@@ -9,7 +9,7 @@ Synopsis
 
     salt -E '.*' [ options ] sys.doc cmd
 
-    salt -F 'os:Arch.*' [ options ] test.ping
+    salt -G 'os:Arch.*' [ options ] test.ping
 
     salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
 
