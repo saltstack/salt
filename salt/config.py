@@ -106,6 +106,9 @@ def minion_config(path):
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
 
+    # set up the extension_modules location from the cachedir
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+    
     return opts
 
 

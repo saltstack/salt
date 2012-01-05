@@ -150,8 +150,10 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
-        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
-                os.path.dirname(self.opts['log_file']),
+        verify_env([self.opts['pki_dir'],
+            self.opts['cachedir'],
+            self.opts['extension_modules'],
+            os.path.dirname(self.opts['log_file']),
                 ])
         import salt.log
         salt.log.setup_logfile_logger(
