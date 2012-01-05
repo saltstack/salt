@@ -4,6 +4,11 @@ Manage the information in the hosts file
 
 import os
 
+def __get_hosts_filename():
+    if __grains__['kernel'].startswith('Windows'):
+        return 'C:\Windows\System32\drivers\etc\hosts'
+    else:
+        return '/etc/hosts'
 
 def list_hosts():
     '''
@@ -15,7 +20,7 @@ def list_hosts():
 
         salt '*' hosts.list_hosts
     '''
-    hfn = list_hosts.hosts_filename
+    hfn = __get_hosts_filename()
     ret = {}
     if not os.path.isfile(hfn):
         return ret
@@ -32,7 +37,6 @@ def list_hosts():
         else:
             ret[comps[0]] = comps[1:]
     return ret
-list_hosts.hosts_filename = '/etc/hosts'
 
 
 def get_ip(host):
@@ -89,7 +93,7 @@ def set_host(ip, alias):
     CLI Example::
         salt '*' hosts.set_host <ip> <alias>
     '''
-    hfn = set_host.hosts_filename
+    hfn = __get_hosts_filename()
     ovr = False
     if not os.path.isfile(hfn):
         return False
@@ -115,7 +119,6 @@ def set_host(ip, alias):
         lines.append(line)
     open(hfn, 'w+').writelines(lines)
     return True
-set_host.hosts_filename = '/etc/hosts'
 
 
 def rm_host(ip, alias):
@@ -127,7 +130,7 @@ def rm_host(ip, alias):
     '''
     if not has_pair(ip, alias):
         return True
-    hfn = rm_host.hosts_filename
+    hfn = __get_hosts_filename()
     lines = open(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
@@ -148,7 +151,6 @@ def rm_host(ip, alias):
                 lines[ind] = newline
     open(hfn, 'w+').writelines(lines)
     return True
-rm_host.hosts_filename = '/etc/hosts'
 
 
 def add_host(ip, alias):
@@ -159,7 +161,7 @@ def add_host(ip, alias):
     CLI Example::
         salt '*' hosts.add_host <ip> <alias>
     '''
-    hfn = add_host.hosts_filename
+    hfn = __get_hosts_filename()
     ovr = False
     if not os.path.isfile(hfn):
         return False
@@ -188,4 +190,3 @@ def add_host(ip, alias):
         lines.append(line)
     open(hfn, 'w+').writelines(lines)
     return True
-add_host.hosts_filename = '/etc/hosts'
