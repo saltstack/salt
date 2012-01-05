@@ -443,7 +443,7 @@ def pythonversion():
     '''
     # Provides:
     #   pythonversion
-    return {'pythonversion': tuple(sys.version_info)}
+    return {'pythonversion': list(sys.version_info)}
 
 def pythonpath():
     '''
