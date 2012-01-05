@@ -36,13 +36,14 @@ def _parse_yum(arg):
     out = __salt__['cmd.run_stdout'](cmd)
     YumOut = namedtuple('YumOut', ('name', 'version', 'status'))
 
-    try:
-        results = map(YumOut._make,
-                [i.split() for i in out.split('\n') if len(i.split()) == 3])
-    except TypeError as exc:
-        results = ()
-        msg = "Could not parse yum output for: {0}".format(cmd)
-        logger.debug(msg, exc_info=exc)
+    results = []
+
+    for line in out.split('\n'):
+        if len(line.split()) == 3:
+            namearchstr, pkgver, pkgstatus = line.split()
+            pkgname = namearchstr.rpartition('.')[0]
+
+            results.append(YumOut(pkgname, pkgver, pkgstatus))
 
     return results
 
