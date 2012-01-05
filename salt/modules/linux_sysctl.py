@@ -5,6 +5,10 @@ Module for viewing and modifying sysctl parameters
 import os
 from salt.exceptions import CommandExecutionError
 
+__outputter__ = {
+    'assign': 'txt',
+}
+
 
 def __virtual__():
     '''
