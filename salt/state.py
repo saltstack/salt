@@ -857,6 +857,17 @@ class HighState(object):
                             matches[env].append(item)
         return matches
 
+    def load_dynamic(self, matches):
+        '''
+        If autoload_dynamic_modules is True then automatically load the
+        dynamic modules
+        '''
+        if not self.opts['autoload_dynamic_modules']:
+            return
+        self.state.functions['saltutil.sync_all'](matches.keys())
+        faux = {'state': 'file', 'fun': 'recurse'}
+        self.state.module_refresh(faux)
+
     def gather_states(self, matches):
         '''
         Gather the template files from the master
@@ -957,6 +968,7 @@ class HighState(object):
         '''
         top = self.get_top()
         matches = self.top_matches(top)
+        self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
         if errors:
             return errors

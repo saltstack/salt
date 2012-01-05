@@ -3,6 +3,11 @@ Module for viewing and modifying sysctl parameters
 '''
 
 import os
+from salt.exceptions import CommandExecutionError
+
+__outputter__ = {
+    'assign': 'txt',
+}
 
 
 def __virtual__():
@@ -53,6 +58,10 @@ def assign(name, value):
     CLI Example:
     salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
+    sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
+    if not os.path.exists(sysctl_file):
+        raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+
     cmd = 'sysctl -w {0}={1}'.format(name, value)
     ret = {}
     out = __salt__['cmd.run'](cmd).strip()

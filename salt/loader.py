@@ -21,9 +21,12 @@ def minion_mods(opts):
     '''
     Returns the minion modules
     '''
-    extra_dirs = []
+    extra_dirs = [
+            os.path.join(opts['extension_modules'],
+                'modules')
+            ]
     if 'module_dirs' in opts:
-        extra_dirs = opts['module_dirs']
+        extra_dirs.extend(opts['module_dirs'])
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
         ] + extra_dirs
@@ -35,9 +38,12 @@ def returners(opts):
     '''
     Returns the returner modules
     '''
-    extra_dirs = []
+    extra_dirs = [
+            os.path.join(opts['extension_modules'],
+                'returners')
+            ]
     if 'returner_dirs' in opts:
-        extra_dirs = opts['returner_dirs']
+        extra_dirs.extend(opts['returner_dirs'])
     module_dirs = [
         os.path.join(salt_base_path, 'returners'),
         ] + extra_dirs
@@ -49,9 +55,12 @@ def states(opts, functions):
     '''
     Returns the returner modules
     '''
-    extra_dirs = []
+    extra_dirs = [
+            os.path.join(opts['extension_modules'],
+                'states')
+            ]
     if 'states_dirs' in opts:
-        extra_dirs = opts['states_dirs']
+        extra_dirs.extend(opts['states_dirs'])
     module_dirs = [
         os.path.join(salt_base_path, 'states'),
         ] + extra_dirs
@@ -65,9 +74,12 @@ def render(opts, functions):
     '''
     Returns the render modules
     '''
-    extra_dirs = []
+    extra_dirs = [
+            os.path.join(opts['extension_modules'],
+                'renderers')
+            ]
     if 'render_dirs' in opts:
-        extra_dirs = opts['render_dirs']
+        extra_dirs.extend(opts['render_dirs'])
     module_dirs = [
         os.path.join(salt_base_path, 'renderers'),
         ] + extra_dirs
