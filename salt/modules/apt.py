@@ -77,9 +77,17 @@ def refresh_db():
     return servers
 
 
-def install(pkg, refresh=False):
+def install(pkg, refresh=False, repo=''):
     '''
     Install the passed package
+
+    pkg
+        The name of the package to be installed
+    refresh : False
+        Update apt before continuing
+    repo : (default)
+        Specify a package repository to install from
+        (e.g., ``apt-get -t unstable install somepackage``)
 
     Return a dict containing the new package names and versions::
 
@@ -95,7 +103,13 @@ def install(pkg, refresh=False):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y -o DPkg::Options::=--force-confold install {0}'.format(pkg)
+
+    cmd = '{nonint} apt-get -q -y {confold}{target} install {pkg}'.format(
+            nonint='DEBIAN_FRONTEND=noninteractive',
+            confold='-o DPkg::Options::=--force-confold',
+            target=' -t {0}'.format(repo) if repo else '',
+            pkg=pkg)
+
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 

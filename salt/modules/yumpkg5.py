@@ -113,10 +113,17 @@ def refresh_db():
     return True
 
 
-def install(pkg, refresh=False):
+def install(pkg, refresh=False, repo=''):
     '''
-    Install the passed package, add refresh=True to clean out the yum database
-    before executing
+    Install the passed package
+
+    pkg
+        The name of the package to be installed
+    refresh : False
+        Clean out the yum database before executing
+    repo : (default)
+        Specify a package repository to install from
+        (e.g., ``yum --enablerepo=somerepo``)
 
     Return a dict containing the new package names and versions::
 
@@ -128,7 +135,12 @@ def install(pkg, refresh=False):
         salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
-    cmd = 'yum -y install ' + pkg
+
+    cmd = 'yum -y {repo} install {pkg}'.format(
+        repo='--enablerepo={0}'.format(repo) if repo else '',
+        pkg=pkg,
+    )
+
     if refresh:
         refresh_db()
     retcode = __salt__['cmd.retcode'](cmd)

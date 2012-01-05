@@ -163,10 +163,17 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(pkgs, refresh=False):
+def install(pkgs, refresh=False, repo=''):
     '''
-    Install the passed package(s), add refresh=True to clean out the yum
-    database before executing
+    Install the passed package(s)
+
+    pkg
+        The name of the package to be installed
+    refresh : False
+        Clean out the yum database before executing
+    repo : (default)
+        Specify a package repository to install from
+        (e.g., ``yum --enablerepo=somerepo``)
 
     Return a dict containing the new package names and versions::
 
@@ -189,6 +196,9 @@ def install(pkgs, refresh=False):
 
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
+
+    if repo:
+        yb.repos.enableRepo(repo)
 
     for pkg in pkgs:
         try:
