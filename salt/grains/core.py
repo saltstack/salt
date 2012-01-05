@@ -220,9 +220,15 @@ def _virtual(osdata):
                         # Shouldn't get to this, but just in case
                         grains['virtual_subtype'] = 'Xen Dom0'
                     caps.close()
-                # Tested on Fedora 10 / 2.6.27.30-170.2.82.fc10.x86_64
-                elif os.path.isdir('/sys/bus/xen'):
-                    grains['virtual_subtype'] = 'Xen PV DomU'
+                # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
+                # Tested on Fedora 15 / 2.6.41.4-1 without running xen
+                elif isdir('/sys/bus/xen'):
+                    if 'xen' in __salt__['cmd.run']('dmesg').lower():
+                        grains['virtual_subtype'] = 'Xen PV DomU'
+                    elif os.listdir('/sys/bus/xen/drivers'):
+                        # An actual DomU will have several drivers
+                        # whereas a paravirt ops kernel will  not.
+                        grains['virtual_subtype'] = 'Xen PV DomU'
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
