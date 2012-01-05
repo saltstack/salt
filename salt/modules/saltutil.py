@@ -4,6 +4,8 @@ used to manage minion modules as well as automate updates to the salt minion
 '''
 
 import os
+import hashlib
+import shutil
 import logging
 
 log = logging.getLogger(__name__)
@@ -13,12 +15,10 @@ def _sync(form, env):
     Sync the given directory in the given environment
     '''
     ret = []
-    source = os.path.join('salt://{0}'.format(env), '_{0}'.format(form))
-    mod_dir = os.path.join(__opts__['extention_modules'], '{0}'.format(form))
+    source = os.path.join('salt://_{0}'.format(form))
+    mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
-        # Specified a non existing module type
-        log.error('Failed to sync modules for {0}'.format(directory))
-        return ret
+        os.makedirs(mod_dir)
     for fn_ in __salt__['cp.cache_dir'](source, env):
         dest = os.path.join(mod_dir,
                 os.path.basename(fn_)
