@@ -15,11 +15,14 @@ def _sync(form, env):
     Sync the given directory in the given environment
     '''
     ret = []
+    remote = set()
     source = os.path.join('salt://_{0}'.format(form))
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         os.makedirs(mod_dir)
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    cache = __salt__['cp.cache_dir'](source, env)
+    for fn_ in cache:
+        remote.add(os.path.basename(fn_))
         dest = os.path.join(mod_dir,
                 os.path.basename(fn_)
                 )
@@ -41,6 +44,12 @@ def _sync(form, env):
                     '.module_refresh'),
                 'w+'
                 ).write()
+    if __opts__.get('clean_dynamic_modules', True):
+        current = set(os.listdir(mod_dir))
+        for fn_ in current.difference(remote):
+            full = os.path.join(mod_dir, fn_)
+            if os.path.isfile(full):
+                os.remove(full)
     return ret
 
 
