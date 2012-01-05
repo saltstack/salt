@@ -11,6 +11,8 @@ import salt
 import salt.loader
 import salt.minion
 
+# Custom exceptions
+from salt.exceptions import CommandExecutionError
 
 class Caller(object):
     '''
@@ -36,7 +38,7 @@ class Caller(object):
             ret['return'] = self.minion.functions[self.opts['fun']](
                     *self.opts['arg']
                     )
-        except TypeError, exc:
+        except (TypeError, CommandExecutionError) as exc:
             sys.stderr.write('Error running \'{0}\': {1}\n'.format(self.opts['fun'], str(exc)))
             sys.exit(1)
         if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
