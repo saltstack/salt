@@ -10,7 +10,8 @@ from distutils.core import setup, Extension
 from distutils.command.sdist import sdist
 from distutils.cmd import Command
 from distutils.sysconfig import get_python_lib, PREFIX
-from salt import __version__
+
+execfile('salt/version.py')
 
 class TestCommand(Command):
     description = 'Run tests'

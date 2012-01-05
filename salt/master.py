@@ -34,7 +34,7 @@ def prep_jid(opts, load):
     job id directory.
     '''
     serial = salt.payload.Serial(opts)
-    jid_root = os.path.join(cachedir, 'jobs')
+    jid_root = os.path.join(opts['cachedir'], 'jobs')
     jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     jid_dir = os.path.join(jid_root, jid)

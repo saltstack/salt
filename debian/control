@@ -89,6 +89,8 @@ Description: This package represents the client package for salt
  the backbone of cloud and data center management.
  .
  This particular package provides the worker / agent for salt.
+
+
 Package: salt-syndic
 Architecture: all
 Depends:    ${python:Depends},

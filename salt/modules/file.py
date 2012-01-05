@@ -332,7 +332,7 @@ def _sed_esc(s):
     '''
     Escape single quotes and forward slashes
     '''
-    return s.replace("'", "'\"'\"'").replace("/", "\/")
+    return '{0}'.format(s).replace("'", "'\"'\"'").replace("/", "\/")
 
 def sed(path, before, after, limit='', backup='.bak', options='-r -e',
         flags='g'):
@@ -469,7 +469,7 @@ def contains(path, text, limit=''):
     if not os.path.exists(path):
         return False
 
-    result = __salt__['filenew.sed'](path, text, '&', limit=limit, backup='',
+    result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
             options='-n -r -e', flags='gp')
 
     return bool(result)
