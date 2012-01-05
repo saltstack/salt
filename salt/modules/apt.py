@@ -20,7 +20,7 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     version = ''
-    cmd = 'apt-cache show {0} | grep Version'.format(name)
+    cmd = 'apt-cache -q show {0} | grep Version'.format(name)
 
     out = __salt__['cmd.run_stdout'](cmd)
 
@@ -59,7 +59,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'apt-get update'
+    cmd = 'apt-get -q update'
 
     out = __salt__['cmd.run_stdout'](cmd)
 
@@ -95,7 +95,7 @@ def install(pkg, refresh=False):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'apt-get -y install {0}'.format(pkg)
+    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y -o DPkg::Options::=--force-confold install {0}'.format(pkg)
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
@@ -126,7 +126,7 @@ def remove(pkg):
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
-    cmd = 'apt-get -y remove {0}'.format(pkg)
+    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y remove {0}'.format(pkg)
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
     for pkg in old_pkgs:
@@ -151,7 +151,7 @@ def purge(pkg):
     old_pkgs = list_pkgs()
 
     # Remove inital package
-    purge_cmd = 'apt-get -y purge {0}'.format(pkg)
+    purge_cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y purge {0}'.format(pkg)
     __salt__['cmd.run'](purge_cmd)
 
     new_pkgs = list_pkgs()
@@ -187,7 +187,7 @@ def upgrade(refresh=True):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'apt-get -y dist-upgrade'
+    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y -o DPkg::Options::=--force-confold dist-upgrade'
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
