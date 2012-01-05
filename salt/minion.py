@@ -23,7 +23,8 @@ import urlparse
 import zmq
 
 # Import salt libs
-from salt.exceptions import AuthenticationError, MinionError
+from salt.exceptions import AuthenticationError, MinionError, \
+    CommandExecutionError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -206,6 +207,9 @@ class Minion(object):
         if function_name in self.functions:
             try:
                 ret['return'] = self.functions[data['fun']](*data['arg'])
+            except CommandExecutionError as exc:
+                log.error('A command in {0} had a problem: {1}'.format(function_name, str(exc)))
+                ret['return'] = 'ERROR: {0}'.format(str(exc))
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning('The minion function caused an exception: {0}'.format(exc))

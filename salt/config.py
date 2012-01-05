@@ -68,12 +68,14 @@ def minion_config(path):
             'conf_file': path,
             'renderer': 'yaml_jinja',
             'failhard': False,
+            'autoload_dynamic_modules': True,
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
             'returner_dirs': [],
             'states_dirs': [],
             'render_dirs': [],
+            'clean_dynamic_modules': True,
             'open_mode': False,
             'multiprocessing': True,
             'sub_timeout': 60,
@@ -106,6 +108,9 @@ def minion_config(path):
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
 
+    # set up the extension_modules location from the cachedir
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+    
     return opts
 
 
