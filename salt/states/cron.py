@@ -4,12 +4,12 @@ Cron Management
 
 The cron state module allows for user crontabs to be cleanly managed.
 
-Cron declarations require a number of paramaters. The timing paramaters, need
+Cron declarations require a number of parameters. The timing parameters, need
 to be declared, minute, hour, daymonth, month and dayweek. The  user who's
 crontab is to be edited also needs to be defined.
 
 By default the timing arguments are all ``*`` and the user is root. When making
-changes to an existing cron job the name declaraion is the uniqe factor, so if
+changes to an existing cron job the name declaration is the unique factor, so if
 and existing cron that looks like this:
 
 .. code-block:: yaml
@@ -47,7 +47,7 @@ def present(name,
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
-    timing paramaters check your cron system's documentation. Most Unix-like
+    timing parameters check your cron system's documentation. Most Unix-like
     systems' cron documentation can be found via the crontab man page:
     ``man 5 crontab``.
 

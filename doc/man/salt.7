@@ -1912,7 +1912,7 @@ A module to wrap archive calls
 .INDENT 0.0
 .TP
 .B salt.modules.archive.gunzip(gzipfile)
-Uses the gzip command to create gzip files
+Uses the gunzip command to unpack gzip files
 .sp
 CLI Example to create \fB/tmp/sourcefile.txt\fP:
 .sp
@@ -2123,7 +2123,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq cat
+salt \(aq*\(aq cmd.has_exec cat
 .ft P
 .fi
 .UNINDENT
@@ -2175,7 +2175,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq cmd.run "ls \-l | grep foo | awk \(aq{print $2}\(aq"
+salt \(aq*\(aq cmd.run_stderr "ls \-l | grep foo | awk \(aq{print $2}\(aq"
 .ft P
 .fi
 .UNINDENT
@@ -2188,7 +2188,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq cmd.run "ls \-l | grep foo | awk \(aq{print $2}\(aq"
+salt \(aq*\(aq cmd.run_stdout "ls \-l | grep foo | awk \(aq{print $2}\(aq"
 .ft P
 .fi
 .UNINDENT
@@ -2615,7 +2615,7 @@ salt \(aq*\(aq /var/log name=\e*.[0\-9] mtime=+30d size=+10m delete
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_gid(path)
-Return the user that owns a given file
+Return the id of the group that owns a given file
 .sp
 CLI Example:
 .sp
@@ -2628,7 +2628,7 @@ salt \(aq*\(aq file.get_gid /etc/passwd
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_group(path)
-Return the user that owns a given file
+Return the group that owns a given file
 .sp
 CLI Example:
 .sp
@@ -2668,7 +2668,7 @@ salt \(aq*\(aq /etc/passwd sha512
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_uid(path)
-Return the user that owns a given file
+Return the id of the user that owns a given file
 .sp
 CLI Example:
 .sp
@@ -2720,7 +2720,7 @@ salt \(aq*\(aq file.group_to_gid root
 .INDENT 0.0
 .TP
 .B salt.modules.file.set_mode(path, mode)
-Set the more of a file
+Set the mode of a file
 .sp
 CLI Example:
 .sp
@@ -2746,7 +2746,7 @@ salt \(aq*\(aq file.uid_to_user 0
 .INDENT 0.0
 .TP
 .B salt.modules.file.user_to_uid(user)
-Convert user name to a gid
+Convert user name to a uid
 .sp
 CLI Example:
 .sp
@@ -2940,13 +2940,13 @@ salt \(aq*\(aq group.add foo 3456
 .INDENT 0.0
 .TP
 .B salt.modules.groupadd.chgid(name, gid)
-Change the default shell of the user
+Change the gid for a named group
 .sp
 CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq user.chshell foo /bin/zsh
+salt \(aq*\(aq group.chgid foo 4376
 .ft P
 .fi
 .UNINDENT
@@ -3649,13 +3649,13 @@ salt \(aq*\(aq group.add foo 3456
 .INDENT 0.0
 .TP
 .B salt.modules.pw_group.chgid(name, gid)
-Change the default shell of the user
+Change the gid for a named group
 .sp
 CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq user.chshell foo /bin/zsh
+salt \(aq*\(aq group.chgid foo 4376
 .ft P
 .fi
 .UNINDENT
@@ -8369,7 +8369,7 @@ salt \(aq*\(aq [ options ] sys.doc
 .sp
 salt \-E \(aq.*\(aq [ options ] sys.doc cmd
 .sp
-salt \-F \(aqoperatingsystem:Arch.*\(aq [ options ] test.ping
+salt \-G \(aqos:Arch.*\(aq [ options ] test.ping
 .sp
 salt \-Q test.ping
 .UNINDENT

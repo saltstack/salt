@@ -1,48 +1,48 @@
 '''
-This module contains all fo the routines needed to set up a master server, this
+This module contains all foo the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python modules
-import cPickle as pickle
-import datetime
-import hashlib
-import logging
-import multiprocessing
 import os
 import re
-import shutil
-import tempfile
 import time
+import shutil
+import logging
+import hashlib
+import tempfile
+import datetime
+import multiprocessing
 
 # Import zeromq
-from M2Crypto import RSA
 import zmq
+from M2Crypto import RSA
 
 # Import salt modules
-import salt.client
 import salt.crypt
-import salt.payload
 import salt.utils
+import salt.client
+import salt.payload
 
 
 log = logging.getLogger(__name__)
 
 
-def prep_jid(cachedir, load):
+def prep_jid(opts, load):
     '''
     Parses the job return directory, generates a job id and sets up the
     job id directory.
     '''
-    jid_root = os.path.join(cachedir, 'jobs')
+    serial = salt.payload.Serial(opts)
+    jid_root = os.path.join(opts['cachedir'], 'jobs')
     jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     jid_dir = os.path.join(jid_root, jid)
     if not os.path.isdir(jid_dir):
         os.makedirs(jid_dir)
-        pickle.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        serial.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
     else:
-        return prep_jid(load)
+        return prep_jid(cachedir, load)
     return jid
 
 
@@ -63,7 +63,7 @@ class SMaster(object):
         '''
         Return the crypticle used for AES
         '''
-        return salt.crypt.Crypticle(self.opts['aes'])
+        return salt.crypt.Crypticle(self.opts, self.opts['aes'])
 
     def __prep_key(self):
         '''
@@ -76,7 +76,9 @@ class SMaster(object):
             return open(keyfile, 'r').read()
         else:
             key = salt.crypt.Crypticle.generate_key_string()
+            cumask = os.umask(191);
             open(keyfile, 'w+').write(key)
+            os.umask(cumask)
             os.chmod(keyfile, 256)
             return key
 
@@ -104,13 +106,16 @@ class Master(SMaster):
             for jid in os.listdir(jid_root):
                 if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
                     shutil.rmtree(os.path.join(jid_root, jid))
-            time.sleep(60)
+            try:
+                time.sleep(60)
+            except KeyboardInterrupt:
+                break
 
     def start(self):
         '''
         Turn on the master server components
         '''
-        log.info('Starting the Salt Master')
+        log.warn('Starting the Salt Master')
         multiprocessing.Process(target=self._clear_old_jobs).start()
         aes_funcs = AESFuncs(self.opts, self.crypticle)
         clear_funcs = ClearFuncs(
@@ -126,7 +131,13 @@ class Master(SMaster):
                 aes_funcs,
                 clear_funcs)
         reqserv.start_publisher()
-        reqserv.run()
+
+        try:
+            reqserv.run()
+        except KeyboardInterrupt:
+            # Shut the master down gracefully on SIGINT
+            log.warn('Stopping the Salt Master')
+            raise SystemExit('\nExiting on Ctrl-c')
 
 
 class Publisher(multiprocessing.Process):
@@ -135,7 +146,7 @@ class Publisher(multiprocessing.Process):
     commands.
     '''
     def __init__(self, opts):
-        multiprocessing.Process.__init__(self)
+        super(Publisher, self).__init__()
         self.opts = opts
 
     def run(self):
@@ -153,10 +164,14 @@ class Publisher(multiprocessing.Process):
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
 
-        while True:
-            package = pull_sock.recv()
-            log.info('Publishing command')
-            pub_sock.send(package)
+        try:
+            while True:
+                package = pull_sock.recv()
+                log.info('Publishing command')
+                pub_sock.send(package)
+        except KeyboardInterrupt:
+            pub_sock.close()
+            pull_sock.close()
 
 
 class ReqServer(object):
@@ -230,6 +245,7 @@ class MWorker(multiprocessing.Process):
             clear_funcs):
         multiprocessing.Process.__init__(self)
         self.opts = opts
+        self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         self.aes_funcs = aes_funcs
         self.clear_funcs = clear_funcs
@@ -244,19 +260,27 @@ class MWorker(multiprocessing.Process):
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
             )
         log.info('Worker binding to socket {0}'.format(w_uri))
-        socket.connect(w_uri)
+        try:
+            socket.connect(w_uri)
 
-        while True:
-            package = socket.recv()
-            payload = salt.payload.unpackage(package)
-            ret = salt.payload.package(self._handle_payload(payload))
-            socket.send(ret)
+            while True:
+                package = socket.recv()
+                payload = self.serial.loads(package)
+                ret = self.serial.dumps(self._handle_payload(payload))
+                socket.send(ret)
+        except KeyboardInterrupt:
+            socket.close()
 
     def _handle_payload(self, payload):
         '''
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
         '''
+        try:
+            key = payload['enc']
+            load = payload['load']
+        except KeyError:
+            return ''
         return {'aes': self._handle_aes,
                 'pub': self._handle_pub,
                 'clear': self._handle_clear}[payload['enc']](payload['load'])
@@ -283,7 +307,7 @@ class MWorker(multiprocessing.Process):
         except:
             return ''
         if 'cmd' not in data:
-            log.error('Recieved malformed command {0}'.format(data))
+            log.error('Received malformed command {0}'.format(data))
             return {}
         log.info('AES payload received with command {0}'.format(data['cmd']))
         return self.aes_funcs.run_func(data['cmd'], data)
@@ -303,6 +327,7 @@ class AESFuncs(object):
     #
     def __init__(self, opts, crypticle):
         self.opts = opts
+        self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
@@ -425,15 +450,15 @@ class AESFuncs(object):
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
-        pickle.dump(load['return'],
+        self.serial.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
         if 'out' in load:
-            pickle.dump(load['out'],
+            self.serial.dump(load['out'],
                     open(os.path.join(hn_dir, 'out.p'), 'w+'))
 
     def _syndic_return(self, load):
         '''
-        Recieve a syndic minion return and format it to look like returns from
+        Receive a syndic minion return and format it to look like returns from
         individual minions.
         '''
         # Verify the load
@@ -480,10 +505,13 @@ class AESFuncs(object):
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
             return {}
-        # Check the permisions for this minion
+        # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
+            jid = clear_load['jid']
+            msg = 'Minion id {0} is not who it says it is!'.format(jid)
+            log.warn(msg)
             return {}
         perms = set()
         for match in self.opts['peer']:
@@ -498,7 +526,7 @@ class AESFuncs(object):
         if not good:
             return {}
         # Set up the publication payload
-        jid = prep_jid(self.opts['cachedir'], clear_load)
+        jid = prep_jid(self.opts, clear_load)
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
@@ -523,7 +551,7 @@ class AESFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        pub_sock.send(salt.payload.package(payload))
+        pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method
         return self.local.get_returns(
                 jid,
@@ -556,12 +584,13 @@ class ClearFuncs(object):
     Set up functions that are safe to execute when commands sent to the master
     without encryption and authentication
     '''
-    # The ClearFuncs object encasulates the functions that can be executed in
+    # The ClearFuncs object encapsulates the functions that can be executed in
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
     def __init__(self, opts, key, master_key, crypticle):
         self.opts = opts
+        self.serial = salt.payload.Serial(opts)
         self.key = key
         self.master_key = master_key
         self.crypticle = crypticle
@@ -608,7 +637,7 @@ class ClearFuncs(object):
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
         # 3. make an rsa key with the pub key
-        # 4. encrypt the aes key as an encrypted pickle
+        # 4. encrypt the aes key as an encrypted salt.payload
         # 5. package the return and return it
         log.info('Authentication request from %(id)s', load)
         pubfn = os.path.join(self.opts['pki_dir'],
@@ -655,7 +684,7 @@ class ClearFuncs(object):
             else:
                 log.info(
                     'Authentication failed from host %(id)s, the key is in '
-                    'pending and needs to be accepted with saltkey -a %(id)s',
+                    'pending and needs to be accepted with salt-key -a %(id)s',
                     load
                 )
                 return {'enc': 'clear',
@@ -666,6 +695,7 @@ class ClearFuncs(object):
             pass
         else:
             # Something happened that I have not accounted for, FAIL!
+            log.warn('Unaccounted for authentication failure')
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -696,7 +726,7 @@ class ClearFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
         # Save the invocation information
-        pickle.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        self.serial.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
         # Set up the payload
         payload = {'enc': 'aes'}
         load = {
@@ -718,6 +748,6 @@ class ClearFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        pub_sock.send(salt.payload.package(payload))
+        pub_sock.send(self.serial.dumps(payload))
         return {'enc': 'clear',
                 'load': {'jid': clear_load['jid']}}

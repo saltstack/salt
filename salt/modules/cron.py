@@ -41,7 +41,7 @@ def _render_tab(lst):
 
 def _write_cron(user, lines):
     '''
-    Takes a list of lines to be commited to a user's crontab and writes it
+    Takes a list of lines to be committed to a user's crontab and writes it
     '''
     tmpd, path = tempfile.mkstemp()
     open(path, 'w+').writelines(lines)
@@ -99,6 +99,9 @@ def list_tab(user):
         else:
             ret['pre'].append(line)
     return ret
+
+# For consistency's sake
+ls = list_tab
 
 
 def set_special(user, special, cmd):
@@ -188,3 +191,5 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
         # Failed to commit, return the error
         return comdat['stderr']
     return ret
+
+rm = rm_job

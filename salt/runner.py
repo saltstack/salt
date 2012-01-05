@@ -41,7 +41,7 @@ class Runner(object):
 
     def run(self):
         '''
-        Execuete the runner sequence
+        Execute the runner sequence
         '''
         if self.opts['doc']:
             self._print_docs()

@@ -1,11 +1,10 @@
 '''
-The crypt module manages all of the cyptogophy functions for minions and
+The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 '''
 
 # Import python libs
-import cPickle as pickle
 import hashlib
 import hmac
 import logging
@@ -23,6 +22,7 @@ import zmq
 # Import salt utils
 import salt.payload
 import salt.utils
+from salt.exceptions import AuthenticationError
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +42,9 @@ def gen_keys(keydir, keyname, keysize):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
     gen = RSA.gen_key(keysize, 1)
+    cumask = os.umask(191)
     gen.save_key(priv, callback=foo_pass)
+    os.umask(cumask)
     gen.save_pub_key(pub)
     key = RSA.load_key(priv, callback=foo_pass)
     os.chmod(priv, 256)
@@ -69,9 +71,9 @@ class MasterKeys(dict):
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            log.debug('Loaded master key: %s', self.rsa_path)
+            log.debug('Loaded master key: {0}'.format(self.rsa_path))
         except:
-            log.info('Generating master key: %s', self.rsa_path)
+            log.info('Generating master key: {0}'.format(self.rsa_path))
             key = gen_keys(self.opts['pki_dir'], 'master', 4096)
         return key
 
@@ -98,6 +100,7 @@ class Auth(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
         if 'syndic_master' in self.opts:
             self.mpub = 'syndic_master.pub'
@@ -113,9 +116,9 @@ class Auth(object):
         key = None
         try:
             key = RSA.load_key(self.rsa_path, callback=foo_pass)
-            log.debug('Loaded minion key: %s', self.rsa_path)
+            log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         except:
-            log.info('Generating minion key: %s', self.rsa_path)
+            log.info('Generating minion key: {0}'.format(self.rsa_path))
             key = gen_keys(self.opts['pki_dir'], 'minion', 4096)
         return key
 
@@ -188,9 +191,9 @@ class Auth(object):
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
-        payload = salt.payload.package(self.minion_sign_in_payload())
+        payload = self.serial.dumps(self.minion_sign_in_payload())
         socket.send(payload)
-        payload = salt.payload.unpackage(socket.recv())
+        payload = self.serial.loads(socket.recv())
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
@@ -205,8 +208,9 @@ class Auth(object):
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
-                        'node, this salt minion will wait for 10 seconds '
-                        'before attempting to re-authenticate'
+                        'node, this salt minion will wait for %s seconds '
+                        'before attempting to re-authenticate',
+                        self.opts['acceptance_wait_time']
                     )
                     return 'retry'
         if not self.verify_master(payload['pub_key'], payload['token']):
@@ -224,14 +228,6 @@ class Auth(object):
         return auth
 
 
-class AuthenticationError(Exception):
-    '''
-    Custom exception class.
-    '''
-
-    pass
-
-
 class Crypticle(object):
     '''
     Authenticated encryption class
@@ -244,9 +240,10 @@ class Crypticle(object):
     AES_BLOCK_SIZE = 16
     SIG_SIZE = hashlib.sha256().digest_size
 
-    def __init__(self, key_string, key_size=192):
+    def __init__(self, opts, key_string, key_size=192):
         self.keys = self.extract_keys(key_string, key_size)
         self.key_size = key_size
+        self.serial = salt.payload.Serial(opts)
 
     @classmethod
     def generate_key_string(cls, key_size=192):
@@ -288,21 +285,21 @@ class Crypticle(object):
         data = cypher.decrypt(data)
         return data[:-ord(data[-1])]
 
-    def dumps(self, obj, pickler=pickle):
+    def dumps(self, obj):
         '''
-        pickle and encrypt a python object
+        Serialize and encrypt a python object
         '''
-        return self.encrypt(self.PICKLE_PAD + pickler.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
 
-    def loads(self, data, pickler=pickle):
+    def loads(self, data):
         '''
-        decrypt and un-pickle a python object
+        Decrypt and un-serialize a python object
         '''
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        return pickler.loads(data[len(self.PICKLE_PAD):])
+        return self.serial.loads(data[len(self.PICKLE_PAD):])
 
 
 class SAuth(Auth):
@@ -326,7 +323,7 @@ class SAuth(Auth):
             print 'Failed to authenticate with the master, verify that this'\
                 + ' minion\'s public key has been accepted on the salt master'
             sys.exit(2)
-        return Crypticle(creds['aes'])
+        return Crypticle(self.opts, creds['aes'])
 
     def gen_token(self, clear_tok):
         '''

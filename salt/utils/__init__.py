@@ -99,18 +99,6 @@ def daemonize():
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
-def check_root():
-    '''
-    Most of the salt scripts need to run as root, this function will simply
-    verify that root is the user before the application discovers it.
-    '''
-    if os.getuid():
-        print ('Sorry, the salt must run as root, it needs to operate '
-               'in a privileged environment to do what it does.\n'
-               'http://xkcd.com/838/')
-        sys.exit(1)
-
-
 def profile_func(filename=None):
     '''
     Decorator for adding profiling to a nested function in Salt
@@ -131,3 +119,31 @@ def profile_func(filename=None):
             return retval
         return profiled_func
     return proffunc
+
+def which(exe=None):
+    '''
+    Python clone of POSIX's /usr/bin/which
+    '''
+    if exe:
+        (path, name) = os.path.split(exe)
+        if os.access(exe, os.X_OK):
+            return exe
+        for path in os.environ.get('PATH').split(os.pathsep):
+            full_path = os.path.join(path, exe)
+            if os.access(full_path, os.X_OK):
+                return full_path
+    return None
+
+def list_files(directory):
+    '''
+    Return a list of all files found under directory
+    '''
+    ret = set()
+    ret.add(directory)
+    for root, dirs, files in os.walk(directory):
+        for name in files:
+            ret.add(os.path.join(root, name))
+        for name in dirs:
+            ret.add(os.path.join(root, name))
+
+    return list(ret)

@@ -119,7 +119,7 @@ Last, call :func:`state.highstate <salt.modules.state.highstate>` again and the
 minion will fetch and execute the highstate as well as our HTML file from the
 master using Salt's File Server::
 
-    salt '*' salt.highstate
+    salt '*' state.highstate
 
 Verify that Apache is now serving your custom HTML.
 
