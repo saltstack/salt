@@ -1,9 +1,7 @@
 '''
 Make me some salt!
 '''
-
-__version_info__ = (0, 9, 5, 'pre')
-__version__ = '.'.join(map(str, __version_info__))
+from salt.version import __version__
 
 # Import python libs
 import optparse

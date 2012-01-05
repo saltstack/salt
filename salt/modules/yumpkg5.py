@@ -1,6 +1,13 @@
 '''
 Support for YUM
 '''
+import logging
+from collections import namedtuple
+
+from salt.exceptions import PkgParseError
+
+logger = logging.getLogger(__name__)
+
 def __virtual__():
     '''
     Confine this module to yum based systems
@@ -19,6 +26,25 @@ def __virtual__():
                 return 'pkg'
         else:
             return False
+
+
+def _parse_yum(arg):
+    '''
+    A small helper to parse yum output; returns a list of namedtuples
+    '''
+    cmd = 'yum -q {0}'.format(arg)
+    out = __salt__['cmd.run_stdout'](cmd)
+    YumOut = namedtuple('YumOut', ('name', 'version', 'status'))
+
+    try:
+        results = map(YumOut._make,
+                [i.split() for i in out.split('\n') if len(i.split()) == 3])
+    except TypeError as exc:
+        results = ()
+        msg = "Could not parse yum output for: {0}".format(cmd)
+        logger.debug(msg, exc_info=exc)
+
+    return results
 
 
 def _list_removed(old, new):
@@ -40,19 +66,8 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    out = __salt__['cmd.run_stdout']('yum list {0} -q'.format(name))
-    for line in out.split('\n'):
-        if not line.strip():
-            continue
-        # Iterate through the output
-        comps = line.split()
-        if comps[0].split('.')[0] == name:
-            if len(comps) < 2:
-                continue
-            # found it!
-            return comps[1][:comps[1].rindex('.')]
-    # Package not available
-    return ''
+    out = _parse_yum('list {0}'.format(name))
+    return out[0].version if out else ''
 
 
 def version(name):
@@ -80,16 +95,8 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = "rpm -qa --qf '%{NAME}:%{VERSION}-%{RELEASE};'"
-    ret = {}
-    out = __salt__['cmd.run_stdout'](cmd)
-    for line in out.split(';'):
-        if ':' not in line:
-            continue
-        comps = line.split(':')
-        ret[comps[0]] = comps[1]
-    return ret
-
+    out = _parse_yum('list installed')
+    return dict([(i.name, i.version) for i in out])
 
 def refresh_db():
     '''
