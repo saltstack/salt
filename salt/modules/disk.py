@@ -11,7 +11,11 @@ def usage():
 
         salt '*' disk.usage
     '''
-    cmd = 'df -P'
+    # TODO: Windows support
+    if __grains__['kernel'] == 'Linux':
+        cmd = 'df -P'
+    else:
+        cmd = 'df'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
