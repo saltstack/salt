@@ -5,32 +5,34 @@ authenticating peers
 '''
 
 # Import python libs
-import os
-import sys
+import cPickle as pickle
+import hashlib
 import hmac
 import logging
+import os
+import sys
 import tempfile
-import random
-import hashlib
-import time
-import string
-import cPickle as pickle
+
 # Import Cryptography libs
-from M2Crypto import RSA
 from Crypto.Cipher import AES
+from M2Crypto import RSA
+
 # Import zeromq libs
 import zmq
+
 # Import salt utils
-import salt.utils
 import salt.payload
+import salt.utils
 
 log = logging.getLogger(__name__)
+
 
 def foo_pass(self, data=''):
     '''
     used as a workaround for the no-passphrase issue in M2Crypto.RSA
     '''
     return 'foo'
+
 
 def gen_keys(keydir, keyname, keysize):
     '''
@@ -45,6 +47,7 @@ def gen_keys(keydir, keyname, keysize):
     key = RSA.load_key(priv, callback=foo_pass)
     os.chmod(priv, 256)
     return key
+
 
 class MasterKeys(dict):
     '''
@@ -96,9 +99,9 @@ class Auth(object):
     def __init__(self, opts):
         self.opts = opts
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
-        if self.opts.has_key('syndic_master'):
+        if 'syndic_master' in self.opts:
             self.mpub = 'syndic_master.pub'
-        elif self.opts.has_key('alert_master'):
+        elif 'alert_master' in self.opts:
             self.mpub = 'monitor_master.pub'
         else:
             self.mpub = 'minion_master.pub'
@@ -141,7 +144,7 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        log.info('Decrypting the current master AES key')
+        log.debug('Decrypting the current master AES key')
         key = self.get_priv_key()
         return key.private_decrypt(aes, 4)
 
@@ -188,13 +191,13 @@ class Auth(object):
         payload = salt.payload.package(self.minion_sign_in_payload())
         socket.send(payload)
         payload = salt.payload.unpackage(socket.recv())
-        if payload.has_key('load'):
-            if payload['load'].has_key('ret'):
+        if 'load' in payload:
+            if 'ret' in payload['load']:
                 if not payload['load']['ret']:
                     log.critical(
                         'The Salt Master has rejected this minion\'s public '
-                        'key!\nTo repair this issue, delete the public key for '
-                        'this minion on the Salt Master and restart this '
+                        'key!\nTo repair this issue, delete the public key '
+                        'for this minion on the Salt Master and restart this '
                         'minion.\nOr restart the Salt Master in open mode to '
                         'clean out the keys. The Salt Minion will now exit.'
                     )
@@ -221,7 +224,12 @@ class Auth(object):
         return auth
 
 
-class AuthenticationError(Exception): pass
+class AuthenticationError(Exception):
+    '''
+    Custom exception class.
+    '''
+
+    pass
 
 
 class Crypticle(object):
@@ -272,6 +280,7 @@ class Crypticle(object):
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
         if hmac.new(hmac_key, data, hashlib.sha256).digest() != sig:
+            log.warning('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
         iv_bytes = data[:self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE:]
@@ -291,7 +300,8 @@ class Crypticle(object):
         '''
         data = self.decrypt(data)
         # simple integrity check to verify that we got meaningful data
-        assert data.startswith(self.PICKLE_PAD), 'unexpected header'
+        if not data.startswith(self.PICKLE_PAD):
+            return {}
         return pickler.loads(data[len(self.PICKLE_PAD):])
 
 

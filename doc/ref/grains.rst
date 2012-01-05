@@ -35,4 +35,4 @@ Examples of Grains
 The core module in the grains package is where the main grains are loaded by
 the salt minion and the principal example of how to write grains:
 
-https://github.com/thatch45/salt/blob/master/salt/grains/core.py
+:blob:`salt/grains/core.py`

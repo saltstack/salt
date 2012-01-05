@@ -7,6 +7,7 @@ The data structure needs to be:
               'tgt': '<glob or id>',
               'key': '<read in the key file>'}
 '''
+
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
 # option.
@@ -25,12 +26,13 @@ The data structure needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
+import cPickle as pickle
+import datetime
+import glob
 import os
 import re
-import glob
+import sys
 import time
-import datetime
-import cPickle as pickle
 
 # Import zmq modules
 import zmq
@@ -53,10 +55,16 @@ def prep_jid(cachedir):
     if not os.path.isdir(jid_dir):
         os.makedirs(jid_dir)
     else:
-        return prep_jid(load)
+        return prep_jid(cachedir)
     return jid
 
-class SaltClientError(Exception): pass
+
+class SaltClientError(Exception):
+    '''
+    Custom exception class.
+    '''
+    pass
+
 
 class LocalClient(object):
     '''
@@ -82,7 +90,13 @@ class LocalClient(object):
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        try:
+            os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        except OSError:
+            err = ('The Salt Master has not been set up on this system, '
+                   'a salt-master needs to be running to use the salt command')
+            sys.stderr.write(err)
+            sys.exit(2)
         ret = set(glob.glob(expr))
         os.chdir(cwd)
         return ret
@@ -149,7 +163,7 @@ class LocalClient(object):
         expr_form='glob',
         ret=''):
         '''
-        Execute a salt command and return 
+        Execute a salt command and return
         '''
         jid = prep_jid(self.opts['cachedir'])
         pub_data = self.pub(
@@ -160,7 +174,8 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        return self.get_full_returns(pub_data['jid'], pub_data['minions'], timeout)
+        return (self.get_full_returns(pub_data['jid'],
+                pub_data['minions'], timeout))
 
     def get_returns(self, jid, minions, timeout=5):
         '''
@@ -171,16 +186,19 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            return ret
         # Wait for the hosts to check in
         while True:
             for fn_ in os.listdir(jid_dir):
                 if fn_.startswith('.'):
                     continue
-                if not ret.has_key(fn_):
+                if fn_ not in ret:
                     retp = os.path.join(jid_dir, fn_, 'return.p')
                     if not os.path.isfile(retp):
                         continue
-                    while not ret.has_key(fn_):
+                    while fn_ not in ret:
                         try:
                             ret[fn_] = pickle.load(open(retp, 'r'))
                         except:
@@ -206,17 +224,20 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            return ret
         # Wait for the hosts to check in
         while True:
             for fn_ in os.listdir(jid_dir):
                 if fn_.startswith('.'):
                     continue
-                if not ret.has_key(fn_):
+                if fn_ not in ret:
                     retp = os.path.join(jid_dir, fn_, 'return.p')
                     outp = os.path.join(jid_dir, fn_, 'out.p')
                     if not os.path.isfile(retp):
                         continue
-                    while not ret.has_key(fn_):
+                    while fn_ not in ret:
                         try:
                             ret_data = pickle.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
@@ -278,7 +299,8 @@ class LocalClient(object):
                 'exsel': self._check_grain_minions,
                 }[expr_form](expr)
 
-    def pub(self, tgt, fun, arg=(), expr_form='glob', ret='', jid='', timeout=5):
+    def pub(self, tgt, fun, arg=(), expr_form='glob',
+            ret='', jid='', timeout=5):
         '''
         Take the required arguments and publish the given command.
         Arguments:
@@ -337,8 +359,25 @@ class LocalClient(object):
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
-        socket.connect('tcp://%(interface)s:%(ret_port)s' % self.opts)
+        socket.linger = 0
+        socket.connect(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(
+                    self.opts
+                    )
+                )
         socket.send(package)
-        payload = salt.payload.unpackage(socket.recv())
+        payload = None
+        for ind in range(100):
+            try:
+                payload = salt.payload.unpackage(
+                        socket.recv(
+                            zmq.NOBLOCK
+                            )
+                        )
+                break
+            except zmq.core.error.ZMQError:
+                time.sleep(0.01)
+        if not payload:
+            return {'jid': '0', 'minions': []}
         return {'jid': payload['load']['jid'],
                 'minions': minions}

@@ -8,12 +8,16 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
+
 # This needs some refactoring, I made it "as fast as I could" and could be a
 # lot clearer, so far it is spaghetti code
 # Import python modules
+
 import os
 import socket
 import subprocess
+import sys
+
 
 def _kernel():
     '''
@@ -30,15 +34,16 @@ def _kernel():
     else:
         grains['kernelrelease'] = subprocess.Popen(['uname', '-r'],
             stdout=subprocess.PIPE).communicate()[0].strip()
-    if not grains.has_key('kernel'):
+    if 'kernel' not in grains:
         grains['kernel'] = 'Unknown'
     if not grains['kernel']:
         grains['kernel'] = 'Unknown'
     return grains
 
-def _cpudata():
+
+def _linux_cpudata():
     '''
-    Return the cpu architecture
+    Return the cpu information for Linux systems architecture
     '''
     # Provides:
     #   cpuarch
@@ -65,13 +70,64 @@ def _cpudata():
                 grains['cpu_model'] = comps[1].strip()
             elif comps[0].strip() == 'flags':
                 grains['cpu_flags'] = comps[1].split()
-    if not grains.has_key('num_cpus'):
+    if 'num_cpus' not in grains:
         grains['num_cpus'] = 0
-    if not grains.has_key('cpu_model'):
+    if 'cpu_model' not in grains:
         grains['cpu_model'] = 'Unknown'
-    if not grains.has_key('cpu_flags'):
+    if 'cpu_flags' not in grains:
         grains['cpu_flags'] = []
     return grains
+
+
+def _freebsd_cpudata():
+    '''
+    Return cpu information for FreeBSD systems
+    '''
+    grains = {}
+    grains['cpuarch'] = subprocess.Popen(
+            '/sbin/sysctl hw.machine',
+            shell=True,
+            stdout=subprocess.PIPE
+            ).communicate()[0].split(':')[1].strip()
+    grains['num_cpus'] = subprocess.Popen(
+            '/sbin/sysctl hw.ncpu',
+            shell=True,
+            stdout=subprocess.PIPE
+            ).communicate()[0].split(':')[1].strip()
+    grains['cpu_model'] = subprocess.Popen(
+            '/sbin/sysctl hw.model',
+            shell=True,
+            stdout=subprocess.PIPE
+            ).communicate()[0].split(':')[1].strip()
+    grains['cpu_flags'] = []
+    return grains
+
+
+def _memdata(osdata):
+    '''
+    Gather information about the system memory
+    '''
+    # Provides:
+    #   mem_total
+    grains = {'mem_total': 0}
+    if osdata['kernel'] == 'Linux':
+        meminfo = '/proc/meminfo'
+        if os.path.isfile(meminfo):
+            for line in open(meminfo, 'r').readlines():
+                comps = line.split(':')
+                if not len(comps) > 1:
+                    continue
+                if comps[0].strip() == 'MemTotal':
+                    grains['mem_total'] = int(comps[1].split()[0]) / 1024
+    elif osdata['kernel'] == 'FreeBSD':
+        mem = subprocess.Popen(
+                '/sbin/sysctl hw.physmem',
+                shell=True,
+                stdout=subprocess.PIPE
+                ).communicate()[0].split(':')[1].strip()
+        grains['mem_total'] = str(int(mem) / 1024 / 1024)
+    return grains
+
 
 def _virtual(osdata):
     '''
@@ -82,7 +138,7 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     grains = {'virtual': 'physical'}
-    if 'Linux FreeBSD OpenBSD SunOS HP-UX GNU/kFreeBSD'.count(osdata['kernel']):
+    if 'Linux OpenBSD SunOS HP-UX'.count(osdata['kernel']):
         if os.path.isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'
@@ -93,7 +149,16 @@ def _virtual(osdata):
         if os.path.isfile('/proc/cpuinfo'):
             if open('/proc/cpuinfo', 'r').read().count('QEMU Virtual CPU'):
                 grains['virtual'] = 'kvm'
+    elif osdata['kernel'] == 'FreeBSD':
+        model = subprocess.Popen(
+                '/sbin/sysctl hw.model',
+                shell=True,
+                stdout=subprocess.PIPE
+                ).communicate()[0].split(':')[1].strip()
+        if model.count('QEMU Virtual CPU'):
+            grains['virtual'] = 'kvm'
     return grains
+
 
 def _ps(osdata):
     '''
@@ -104,24 +169,24 @@ def _ps(osdata):
             'FreeBSD NetBSD OpenBSD Darwin'.count(osdata['os']) else 'ps -ef'
     return grains
 
+
 def os_data():
     '''
     Return grains pertaining to the operating system
     '''
     grains = {}
     grains.update(_kernel())
-    grains.update(_cpudata())
     if grains['kernel'] == 'Linux':
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
-        elif os.path.isfile('/etc/gentoo-version'):
+        elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-version'):
             grains['os'] = 'Fedora'
         elif os.path.isfile('/etc/mandriva-version'):
-            grains['os'] =  'Mandriva'
+            grains['os'] = 'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
             grains['os'] = 'Mandrake'
         elif os.path.isfile('/etc/meego-version'):
@@ -166,11 +231,19 @@ def os_data():
     else:
         grains['os'] = grains['kernel']
 
+    if grains['kernel'] == 'Linux':
+        grains.update(_linux_cpudata())
+    elif grains['kernel'] == 'FreeBSD':
+        grains.update(_freebsd_cpudata())
+
+    grains.update(_memdata(grains))
+
     # Load the virtual machine info
 
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
     return grains
+
 
 def hostname():
     '''
@@ -191,6 +264,7 @@ def hostname():
         grains['domain'] = ''
     return grains
 
+
 def path():
     '''
     Return the path
@@ -199,20 +273,27 @@ def path():
     #   path
     return {'path': os.environ['PATH'].strip()}
 
-def memdata():
+def pythonversion():
     '''
-    Gather information about the system memory
+    Return the Python version
     '''
     # Provides:
-    #   mem_total
-    grains = {'mem_total': 0}
-    meminfo = '/proc/meminfo'
-    if os.path.isfile(meminfo):
-        for line in open(meminfo, 'r').readlines():
-            comps = line.split(':')
-            if not len(comps) > 1:
-                continue
-            if comps[0].strip() == 'MemTotal':
-                grains['mem_total'] = int(comps[1].split()[0])/1024
-    return grains
+    #   pythonversion
+    return {'pythonversion': list(sys.version_info)}
 
+def pythonpath():
+    '''
+    Return the Python path
+    '''
+    # Provides:
+    #   pythonpath
+    return {'pythonpath': sys.path}
+
+def saltpath():
+    '''
+    Return the path of the salt module
+    '''
+    # Provides:
+    #   saltpath
+    path = os.path.abspath(os.path.join(__file__, os.path.pardir))
+    return {'saltpath': os.path.dirname(path)}

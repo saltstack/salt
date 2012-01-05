@@ -2,12 +2,6 @@
 Returners
 =========
 
-.. toctree::
-    :hidden:
-    :glob:
-
-    *
-
 By default the return values of the commands sent to the salt minions are
 returned to the salt-master. But since the commands executed on the salt
 minions are detatched from the call on the salt master, there is no need for
@@ -20,7 +14,7 @@ The returner interface allows the return data to be sent to any system that
 can receive data. This means that return data can be sent to a Redis server,
 a MongoDB server, a MySQL server, or any system!
 
-.. seealso:: :doc:`Full list of builtin returners <returners>`
+.. seealso:: :ref:`Full list of builtin returners <all-salt.returners>`
 
 Writing a Returner
 ==================
@@ -58,4 +52,4 @@ Examples
 --------
 
 The collection of builtin salt returners can be found here:
-https://github.com/thatch45/salt/tree/master/salt/returners
+:blob:`salt/returners`

@@ -20,9 +20,13 @@
 # clusters.
 #id:
 
+# The minion connection to the master may be inturupted, the minion will
+# verify the connection every so many seconds, to disable connection
+# verification set this value to 0
+#sub_timeout: 60
+
 # Where cache data goes
 #cachedir: /var/cache/salt
-
 
 #####   Minion module management     #####
 ##########################################

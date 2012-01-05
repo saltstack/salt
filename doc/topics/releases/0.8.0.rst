@@ -4,7 +4,8 @@ Salt 0.8.0 release notes
 Salt 0.8.0 is ready for general consumption!
 The source tarball is available on github for download:
 
-https://github.com/downloads/thatch45/salt/salt-0.8.0.tar.gz
+:download:`salt-0.8.0.tar.gz`
+
 A lot of work has gone into salt since the last release just 2 weeks ago, and
 salt has improved a great deal. A swath of new features are here along with
 performance and threading improvements!
@@ -51,7 +52,8 @@ therefore executed in compiled c. Simply write the salt module in cython and
 use the file extension “.pyx” and the minion module will be compiled when
 the minion is started. An example cython module is included in the main
 distribution called cytest.pyx:
-https://github.com/thatch45/salt/blob/master/salt/modules/cytest.pyx
+
+:blob:`salt/modules/cytest.pyx`
 
 Dynamic Returners -
 ========================
@@ -65,7 +67,8 @@ This means that a custom data returner can be added to communicate the return
 data so anything from MySQL, redis, mongodb and more!
 
 There are 2 simple stock returners in the returners directory:
-https://github.com/thatch45/salt/tree/master/salt/returners
+
+:blob:`salt/returners`
 
 The documentation on writing returners will be added to the wiki shortly, and
 returners can be written in pure python, or in cython.
@@ -81,7 +84,8 @@ https://github.com/thatch45/salt/wiki/Writing-Salt-Modules
 
 The test module has an example of using the __opts__ dict, and how to set
 default options:
-https://github.com/thatch45/salt/blob/master/salt/modules/test.py
+
+:blob:`salt/modules/test.py`
 
 Advanced Minion Threading:
 ==============================
@@ -93,7 +97,8 @@ multiprocessing will cause executions that are cpu bound or would otherwise
 exploit the negative aspects of the Python GIL to run faster and more reliably,
 but simple calls will still be faster with python threading.
 The configuration option can be found in the minion configuration file:
-https://github.com/thatch45/salt/blob/master/conf/minion
+
+:blob:`conf/minion`
 
 Lowered Supported Python to 2.6 -
 

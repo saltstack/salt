@@ -4,7 +4,7 @@ What is Salt?
 
 .. rubric:: We’re not just talking about NaCl.
 
-Distributed remote execution
+Distributed Remote Execution
 ============================
 
 Salt is a distributed remote execution system used to execute commands and
@@ -26,7 +26,7 @@ server/client model with the needed functionality built into a single set of
 daemons. While the default configuration will work with little to no
 modification, Salt can be fine tuned to meet specific needs.
 
-Parallel execution
+Parallel Execution
 ==================
 
 The core function of Salt is to enable remote commands to be called in parallel
@@ -36,7 +36,7 @@ also introduces more granular controls to the realm of remote execution,
 allowing for commands to be executed in parallel and for systems to be targeted
 based on more than just hostname, but by system properties.
 
-Building on proven technology
+Building on Proven Technology
 =============================
 
 Salt takes advantage of a number of technologies and techniques. The networking
@@ -49,7 +49,7 @@ Python pickles, enabling fast and light network traffic.
 
 .. _`ZeroMQ`: http://www.zeromq.org/
 
-Python client interface
+Python Client Interface
 =======================
 
 In order to allow for simple expansion, Salt execution routines can be written
@@ -59,23 +59,32 @@ a simple Python API, or from the command line, so that Salt can be used to
 execute one-off commands as well as operate as an integral part of a larger
 application.
 
-Fast, flexible, scalable
-========================
+Fast, Flexible, Scalable, Secure
+================================
 
-The result is a system that can execute commands across groups of varying size,
-from very few to very many servers at considerably high speed. A system that is
-very fast, easy to set up and amazingly malleable, able to suit the needs of
-any number of servers working within the same system. Salt’s unique
-architecture brings together the best of the remote execution world, amplifies
-its capabilities and expands its range, resulting in this system that is as
-versatile as it is practical, able to suit any network.
+The result is a system that can execute commands across groups of
+varying size, from very few to very many servers at considerably high
+speed. A system that is very fast, easy to set up and amazingly
+malleable, able to suit the needs of any number of servers working
+within the same system. Salt’s unique architecture brings together the
+best of the remote execution world, amplifies its capabilities and
+expands its range, resulting in this system that is as versatile as it
+is practical, able to suit any network. Our source code is pretty
+(*pep8*, *pylint*, *pychecker*), well documented, and since we use a
+battle-tested branching model (*gitflow*), we are able to deliver
+stable software while keeping a fast pace. Last but not least,
+security is an intrinsic part of salt and something not just
+influencing how source code is written and how tests are done, but
+also something that defines the overall architecture and has heavy
+influence on the core design of salt.
 
 Open
 ====
 
-Salt is developed under the `Apache 2.0 licence`_, and can be used for open and
-proprietary projects. Please submit your expansions back to the Salt project so
-that we can all benefit together as Salt grows.  So, please feel free to
-sprinkle some of this around your systems and let the deliciousness come forth.
+Salt is developed under the `Apache 2.0 licence`_, and can be used for
+open and proprietary projects. Please submit your expansions back to
+the Salt project so that we can all benefit together as Salt grows.
+So, please feel free to sprinkle some of this around your systems and
+let the deliciousness come forth.
 
 .. _`Apache 2.0 licence`: http://www.apache.org/licenses/LICENSE-2.0.html

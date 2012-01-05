@@ -1,16 +1,20 @@
 '''
 All salt configuration loading and defaults should be in this module
 '''
+
 # Import python modules
 import os
 import socket
 import sys
-# Import third party libs
+
+# import third party libs
 import yaml
+
 # Import salt libs
 import salt.crypt
 import salt.loader
 import salt.utils
+
 
 def load_config(opts, path, env_var):
     '''
@@ -23,7 +27,7 @@ def load_config(opts, path, env_var):
 
     if os.path.isfile(path):
         try:
-            conf_opts = yaml.load(open(path, 'r'))
+            conf_opts = yaml.safe_load(open(path, 'r'))
             if conf_opts == None:
                 # The config file is empty and the yaml.load returned None
                 conf_opts = {}
@@ -34,6 +38,7 @@ def load_config(opts, path, env_var):
     else:
         print 'Missing configuration file: {0}'.format(path)
 
+
 def prepend_root_dir(opts, path_options):
     '''
     Prepends the options that represent filesystem paths with value of the
@@ -42,6 +47,7 @@ def prepend_root_dir(opts, path_options):
     for path_option in path_options:
         opts[path_option] = os.path.normpath(
                 os.sep.join([opts['root_dir'], opts[path_option]]))
+
 
 def minion_config(path):
     '''
@@ -55,6 +61,7 @@ def minion_config(path):
             'cachedir': '/var/cache/salt',
             'conf_file': path,
             'renderer': 'yaml_jinja',
+            'failhard': False,
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
@@ -63,6 +70,7 @@ def minion_config(path):
             'render_dirs': [],
             'open_mode': False,
             'multiprocessing': True,
+            'sub_timeout': 60,
             'log_file': '/var/log/salt/minion',
             'log_level': 'warning',
             'log_granular_levels': {},
@@ -92,6 +100,7 @@ def minion_config(path):
 
     return opts
 
+
 def master_config(path):
     '''
     Reads in the master configuration file and sets up default options
@@ -114,6 +123,7 @@ def master_config(path):
             'open_mode': False,
             'auto_accept': False,
             'renderer': 'yaml_jinja',
+            'failhard': False,
             'state_top': 'top.sls',
             'order_masters': False,
             'log_file': '/var/log/salt/master',
@@ -144,6 +154,7 @@ def master_config(path):
             opts['auto_accept'] = False
     return opts
 
+
 def dns_check(addr):
     '''
     Verify that the passed address is valid and return the ipv4 addr if it is
@@ -158,9 +169,9 @@ def dns_check(addr):
             addr = socket.gethostbyname(addr)
         except socket.gaierror:
             # Woah, this addr is totally bogus, die!!!
-            err = 'The master address {0} could not be validated, please'\
-                + ' check that the specified master in the minion config'\
-                + ' file is correct\n'
+            err = ('The master address {0} could not be validated, please '
+                   'check that the specified master in the minion config '
+                   'file is correct\n')
             err = err.format(addr)
             sys.stderr.write(err)
             sys.exit(42)

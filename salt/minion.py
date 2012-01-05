@@ -1,29 +1,30 @@
 '''
 Routines to set up a minion
 '''
+
 # Import python libs
-import os
-import distutils.sysconfig
 import glob
-import re
-import time
 import logging
-import tempfile
-import traceback
-import shutil
-import threading
 import multiprocessing
+import os
+import re
+import shutil
+import tempfile
+import threading
+import time
+import traceback
 
 # Import zeromq libs
 import zmq
+
 # Import salt libs
-import salt.crypt
 from salt.crypt import AuthenticationError
-import salt.utils
+import salt.client
+import salt.crypt
+import salt.loader
 import salt.modules
 import salt.returners
-import salt.loader
-import salt.client
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,12 @@ log = logging.getLogger(__name__)
 # 5. connect to the publisher
 # 6. handle publications
 
-class MinionError(Exception): pass
+
+class MinionError(Exception):
+    '''
+    Custom exception class.
+    '''
+    pass
 
 
 class SMinion(object):
@@ -110,22 +116,21 @@ class Minion(object):
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
-        if not data.has_key('tgt')\
-                or not data.has_key('jid')\
-                or not data.has_key('fun')\
-                or not data.has_key('arg'):
+        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
+           or 'arg' not in data:
             return
         # Verify that the publication applies to this minion
-        if data.has_key('tgt_type'):
-            if not getattr(self.matcher, data['tgt_type'] + '_match')(data['tgt']):
+        if 'tgt_type' in data:
+            if not getattr(self.matcher,
+                           data['tgt_type'] + '_match')(data['tgt']):
                 return
         else:
             if not self.matcher.glob_match(data['tgt']):
                 return
-        # If the minion does not have the function, don't execute, this prevents
-        # minions that could not load a minion module from returning a
-        # predictable exception
-        #if not self.functions.has_key(data['fun']):
+        # If the minion does not have the function, don't execute,
+        # this prevents minions that could not load a minion module
+        # from returning a predictable exception
+        #if data['fun'] not in self.functions:
         #    return
         log.debug('Executing command {0[fun]} with jid {0[jid]}'.format(data))
         self._handle_decoded_payload(data)
@@ -144,7 +149,8 @@ class Minion(object):
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded data differently.
+        Override this method if you wish to handle the decoded
+        data differently.
         '''
         if self.opts['multiprocessing']:
             if type(data['fun']) == type(list()):
@@ -173,7 +179,14 @@ class Minion(object):
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
-                data['arg'][ind] = eval(data['arg'][ind])
+                arg = eval(data['arg'][ind])
+                if isinstance(arg, str) \
+                        or isinstance(arg, list) \
+                        or isinstance(arg, int) \
+                        or isinstance(arg, dict):
+                    data['arg'][ind] = arg
+                else:
+                    data['arg'][ind] = str(data['arg'][ind])
             except:
                 pass
 
@@ -208,7 +221,15 @@ class Minion(object):
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
                 try:
-                    data['arg'][ind][index] = eval(data['arg'][ind][index])
+                    arg = eval(data['arg'][ind][index])
+                    # FIXME: do away the ugly here...
+                    if isinstance(arg, str) \
+                            or isinstance(arg, list) \
+                            or isinstance(arg, int) \
+                            or isinstance(arg, dict):
+                        data['arg'][ind][index] = arg
+                    else:
+                        data['arg'][ind][index] = str(data['arg'][ind][index])
                 except:
                     pass
 
@@ -251,10 +272,13 @@ class Minion(object):
                     'cmd': ret_cmd,
                     'jid': ret['jid'],
                     'id': self.opts['id']}
-        if hasattr(self.functions[ret['fun']], '__outputter__'):
-            oput = self.functions[ret['fun']].__outputter__
-            if isinstance(oput, str):
-                load['out'] = oput
+        try:
+            if hasattr(self.functions[ret['fun']], '__outputter__'):
+                oput = self.functions[ret['fun']].__outputter__
+                if isinstance(oput, str):
+                    load['out'] = oput
+        except KeyError:
+            pass
         payload['load'] = self.crypticle.dumps(load)
         socket.send_pyobj(payload)
         return socket.recv()
@@ -291,15 +315,41 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        master_pub = 'tcp://' + self.opts['master_ip'] + ':'\
-                   + str(self.publish_port)
+        master_pub = ('tcp://' + self.opts['master_ip'] +
+                      ':' + str(self.publish_port))
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
-        socket.connect(master_pub)
         socket.setsockopt(zmq.SUBSCRIBE, '')
+        socket.connect(master_pub)
+        if self.opts['sub_timeout']:
+            last = time.time()
+            while True:
+                payload = None
+                try:
+                    payload = socket.recv_pyobj(1)
+                    self._handle_payload(payload)
+                    last = time.time()
+                except:
+                    pass
+                if time.time() - last > self.opts['sub_timeout']:
+                    # It has been a while since the last command, make sure
+                    # the connection is fresh by reconnecting
+                    socket.close()
+                    socket = context.socket(zmq.SUB)
+                    socket.setsockopt(zmq.SUBSCRIBE, '')
+                    socket.connect(master_pub)
+                    last = time.time()
+                time.sleep(0.05)
+                multiprocessing.active_children()
         while True:
-            payload = socket.recv_pyobj()
-            self._handle_payload(payload)
+            payload = None
+            try:
+                payload = socket.recv_pyobj(1)
+                self._handle_payload(payload)
+            except:
+                pass
+            time.sleep(0.05)
+            multiprocessing.active_children()
 
 
 class Syndic(salt.client.LocalClient, Minion):
@@ -324,19 +374,18 @@ class Syndic(salt.client.LocalClient, Minion):
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
-        if not data.has_key('tgt')\
-                or not data.has_key('jid')\
-                or not data.has_key('fun')\
-                or not data.has_key('to')\
-                or not data.has_key('arg'):
+        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
+           or 'to' not in data or 'arg' not in data:
             return
         data['to'] = int(data['to']) - 1
-        log.debug('Executing syndic command {0[fun]} with jid {0[jid]}'.format(data))
+        log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
+                  .format(data)))
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded data differently.
+        Override this method if you wish to handle
+        the decoded data differently.
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
@@ -351,9 +400,8 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         Take the now clear load and forward it on to the client cmd
         '''
-        #{'tgt_type': 'glob', 'jid': '20110817205225753516', 'tgt': '*', 'ret': '', 'to': 4, 'arg': [], 'fun': 'test.ping'}
         # Set up default expr_form
-        if not data.has_key('expr_form'):
+        if 'expr_form' not in data:
             data['expr_form'] = 'glob'
         # Send out the publication
         pub_data = self.pub(
@@ -376,6 +424,7 @@ class Syndic(salt.client.LocalClient, Minion):
         # Return the publication data up the pipe
         self._return_pub(ret, '_syndic_return')
 
+
 class Matcher(object):
     '''
     Use to return the value for matching calls from the master
@@ -387,7 +436,7 @@ class Matcher(object):
         else:
             self.functions = functions
 
-    def confirm_top(self, match, data):            
+    def confirm_top(self, match, data):
         '''
         Takes the data passed to a top file environment and determines if the
         data matches this minion
@@ -395,7 +444,7 @@ class Matcher(object):
         matcher = 'glob'
         for item in data:
             if type(item) == type(dict()):
-                if item.has_key('match'):
+                if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
             return getattr(self, matcher + '_match')(match)
@@ -436,7 +485,7 @@ class Matcher(object):
         if len(comps) < 2:
             log.error('Got insufficient arguments for grains from master')
             return False
-        if not self.opts['grains'].has_key(comps[0]):
+        if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: %s', comps[0])
             return False
         return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
@@ -445,7 +494,7 @@ class Matcher(object):
         '''
         Runs a function and return the exit code
         '''
-        if not self.functions.has_key(tgt):
+        if tgt not in self.functions:
             return False
         return(self.functions[tgt]())
 
@@ -475,7 +524,7 @@ class FileClient(object):
         if not path.startswith('salt://'):
             raise MinionError('Unsupported path')
         return path[7:]
-        
+
     def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
         Get a single file from the salt-master
@@ -508,6 +557,7 @@ class FileClient(object):
                 dest = os.path.join(
                     self.opts['cachedir'],
                     'files',
+                    env,
                     data['dest']
                     )
                 destdir = os.path.dirname(dest)
@@ -526,13 +576,44 @@ class FileClient(object):
 
     def cache_files(self, paths, env='base'):
         '''
-        Download a list of files stored on the master and put them in the minion
-        file cache
+        Download a list of files stored on the master and put them
+        in the minion file cache
         '''
         ret = []
         for path in paths:
             ret.append(self.cache_file(path, env))
         return ret
+
+    def cache_master(self, env='base'):
+        '''
+        Download and cache all files on a master in a specified environment
+        '''
+        ret = []
+        for path in self.file_list(env):
+            ret.append(self.cache_file('salt://{0}'.format(path), env))
+        return ret
+
+    def cache_dir(self, path, env='base'):
+        '''
+        Download all of the files in a subdir of the master
+        '''
+        ret = []
+        path = self._check_proto(path)
+        for fn_ in self.file_list(env):
+            if fn_.startswith(path):
+                ret.append(self.cache_file('salt://{0}'.format(fn_), env))
+        return ret
+
+    def file_list(self, env='base'):
+        '''
+        List the files on the master
+        '''
+        payload = {'enc': 'aes'}
+        load = {'env': env,
+                'cmd': '_file_list'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send_pyobj(payload)
+        return self.auth.crypticle.loads(self.socket.recv_pyobj())
 
     def hash_file(self, path, env='base'):
         '''
@@ -549,6 +630,17 @@ class FileClient(object):
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(self.socket.recv_pyobj())
 
+    def list_env(self, path, env='base'):
+        '''
+        Return a list of the files in the file server's specified environment
+        '''
+        payload = {'enc': 'aes'}
+        load = {'env': env,
+                'cmd': '_file_list'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send_pyobj(payload)
+        return self.auth.crypticle.loads(self.socket.recv_pyobj())
+
     def get_state(self, sls, env):
         '''
         Get a state file from the master and store it in the local minion cache
@@ -556,10 +648,8 @@ class FileClient(object):
         '''
         if sls.count('.'):
             sls = sls.replace('.', '/')
-        for path in [
-                'salt://' + sls + '.sls', 
-                os.path.join('salt://', sls, 'init.sls')
-                ]:
+        for path in ['salt://' + sls + '.sls',
+                     os.path.join('salt://', sls, 'init.sls')]:
             dest = self.cache_file(path, env)
             if dest:
                 return dest
@@ -567,11 +657,10 @@ class FileClient(object):
 
     def master_opts(self):
         '''
-        Return the master opts data 
+        Return the master opts data
         '''
         payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send_pyobj(payload)
         return self.auth.crypticle.loads(self.socket.recv_pyobj())
-

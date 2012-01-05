@@ -6,6 +6,7 @@ minion to run.
 
 import salt.cli
 
+
 def main():
     '''
     The main function

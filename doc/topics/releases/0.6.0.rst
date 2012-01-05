@@ -47,11 +47,11 @@ You can find the source code for Salt on my github page, I have also set up a
 few wiki pages explaining how to use and set up Salt. If you are using Arch
 Linux there is a package available in the Arch Linux AUR.
 
-Salt 0.6.0 Source: https://github.com/downloads/thatch45/salt/salt-0.6.0.tar.gz
+Salt 0.6.0 Source: :download:`salt-0.6.0.tar.gz`
 
-Github page: https://github.com/thatch45/salt
+Github page: |saltrepo|
 
-Wiki: https://github.com/thatch45/salt/wiki
+Wiki: https://github.com/saltstack/salt/wiki
 
 Arch Linux Package: https://aur.archlinux.org/packages.php?ID=47512
 

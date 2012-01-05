@@ -1,26 +1,35 @@
 '''
 Routines to set up a minion
 '''
-# This module still needs package support, so that the functions dict returned
-# can send back functions like: foo.bar.baz
+
+# This module still needs package support, so that the functions dict
+# returned can send back functions like: foo.bar.baz
+
 
 # Import python libs
-import os
-import sys
 import imp
 import logging
+import os
 import salt
 
 log = logging.getLogger(__name__)
-
 salt_base_path = os.path.dirname(salt.__file__)
+
+
+class LoaderError(Exception):
+    '''
+    Custom exception class.
+    '''
+
+    pass
+
 
 def minion_mods(opts):
     '''
     Returns the minion modules
     '''
     extra_dirs = []
-    if opts.has_key('module_dirs'):
+    if 'module_dirs' in opts:
         extra_dirs = opts['module_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
@@ -28,12 +37,13 @@ def minion_mods(opts):
     load = Loader(module_dirs, opts)
     return load.apply_introspection(load.gen_functions())
 
+
 def returners(opts):
     '''
     Returns the returner modules
     '''
     extra_dirs = []
-    if opts.has_key('returner_dirs'):
+    if 'returner_dirs' in opts:
         extra_dirs = opts['returner_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'returners'),
@@ -41,12 +51,13 @@ def returners(opts):
     load = Loader(module_dirs, opts)
     return load.filter_func('returner')
 
+
 def states(opts, functions):
     '''
     Returns the returner modules
     '''
     extra_dirs = []
-    if opts.has_key('states_dirs'):
+    if 'states_dirs' in opts:
         extra_dirs = opts['states_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'states'),
@@ -56,12 +67,13 @@ def states(opts, functions):
             'value': functions}
     return load.gen_functions(pack)
 
+
 def render(opts, functions):
     '''
     Returns the render modules
     '''
     extra_dirs = []
-    if opts.has_key('render_dirs'):
+    if 'render_dirs' in opts:
         extra_dirs = opts['render_dirs']
     module_dirs = [
         os.path.join(salt_base_path, 'renderers'),
@@ -69,7 +81,14 @@ def render(opts, functions):
     load = Loader(module_dirs, opts)
     pack = {'name': '__salt__',
             'value': functions}
-    return load.filter_func('render', pack)
+    rend = load.filter_func('render', pack)
+    if opts['renderer'] not in rend:
+        err = ('The renderer {0} is unavailable, this error is often because '
+               'the needed software is unavailabe'.format(opts['renderer']))
+        log.critical(err)
+        raise LoaderError(err)
+    return rend
+
 
 def grains(opts):
     '''
@@ -81,19 +100,23 @@ def grains(opts):
         ]
     load = Loader(module_dirs, opts)
     grains = load.gen_grains()
-    if opts.has_key('grains'):
+    if 'grains' in opts:
         grains.update(opts['grains'])
     return grains
 
-def call(fun, args=[], dirs=[]):
+
+def call(fun, **kwargs):
     '''
     Directly call a function inside a loader directory
     '''
+    args = kwargs.get('args', [])
+    dirs = kwargs.get('dirs', [])
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
         ] + dirs
     load = Loader(module_dirs)
     return load.call(fun, args)
+
 
 def runner(opts):
     '''
@@ -114,7 +137,7 @@ class Loader(object):
     '''
     def __init__(self, module_dirs, opts={}):
         self.module_dirs = module_dirs
-        if opts.has_key('grains'):
+        if 'grains' in opts:
             self.grains = opts['grains']
         else:
             self.grains = {}
@@ -186,8 +209,8 @@ class Loader(object):
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
-                log.info("Cython is enabled in options though it's not present "
-                         "in the system path. Skipping Cython modules.")
+                log.info('Cython is enabled in options put not present '
+                         'on the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not mod_dir.startswith('/'):
                 continue
@@ -259,7 +282,7 @@ class Loader(object):
         '''
         if hasattr(mod, '__outputter__'):
             outp = mod.__outputter__
-            if outp.has_key(func.__name__):
+            if func.__name__ in outp:
                 func.__outputter__ = outp[func.__name__]
 
     def apply_introspection(self, funcs):
@@ -335,4 +358,3 @@ class Loader(object):
                 continue
             grains.update(ret)
         return grains
-

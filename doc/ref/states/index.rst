@@ -9,6 +9,23 @@ state of systems from a central manager.
 The Salt state system is made to be accurate, simple, and fast. And like the
 rest of the Salt system, Salt states are highly modular.
 
+State management
+================
+
+State management, also frequently called software configuration management
+(SCM), is a program that puts and keeps a system into a predetermined state. It
+installs software packages, starts or restarts services, or puts configuration
+files in place and watches them for changes.
+
+Having a state management system in place allows you to easily and reliably
+configure and manage a few servers or a few thousand servers. It allows you to
+keep that configuration under version control.
+
+Salt States is an extension of the Salt Modules that we discussed in the
+previous :doc:`remote execution </topics/tutorials/modules>` tutorial. Instead
+of calling one-off executions the state of a system can be easily defined and
+then enforced.
+
 Understanding the Salt State System Components
 ==============================================
 
@@ -20,17 +37,20 @@ to write the states used by salt.
 Salt SLS System
 ---------------
 
-The primary system used by the Salt state system is the SLS system. SLS stands
-for SaLt State.
+.. glossary::
 
-The Salt States are files which contain the information about how to configure
-salt minions. The states are laid out in a directory tree and can be written in
-many different formats.
+    sls
+        The primary system used by the Salt state system is the SLS system. SLS
+        stands for **S**\ a\ **L**\ t **S**\ tate.
 
-The contents of the files and they way they are laid out is intended to be as
-simple as possible while allowing for maximum flexibility. The files are laid
-out in states and contains information about how the minion needs to be 
-configured.
+        The Salt States are files which contain the information about how to
+        configure salt minions. The states are laid out in a directory tree and
+        can be written in many different formats.
+
+        The contents of the files and they way they are laid out is intended to
+        be as simple as possible while allowing for maximum flexibility. The
+        files are laid out in states and contains information about how the
+        minion needs to be configured.
 
 SLS File Layout
 ```````````````
@@ -158,7 +178,7 @@ files.
 The available renderers can be found in the renderers directory in the Salt
 source code:
 
-https://github.com/thatch45/salt/tree/master/salt/renderers
+:blob:`salt/renderers`
 
 By default sls files are rendered using jinja as a templating engine, and yaml
 as the serialization format. Since the rendering system can be extended simply

@@ -1,20 +1,22 @@
 '''
 Salt module to manage unix mounts and the fstab file
 '''
-# Import python libs
-import os
-import stat
+
 import logging
+import os
+
 
 # Set up logger
 log = logging.getLogger(__name__)
+
 
 def active():
     '''
     List the active mounts.
 
-    CLI Example:
-    salt '*' mount.active
+    CLI Example::
+
+        salt '*' mount.active
     '''
     ret = {}
     for line in __salt__['cmd.run_stdout']('mount').split('\n'):
@@ -27,12 +29,14 @@ def active():
                          'opts': comps[5][1:-1].split(',')}
     return ret
 
+
 def fstab(config='/etc/fstab'):
     '''
     List the contents of the fstab
 
-    CLI Example:
-    salt '*' mount.fstab
+    CLI Example::
+
+        salt '*' mount.fstab
     '''
     ret = {}
     if not os.path.isfile(config):
@@ -55,15 +59,17 @@ def fstab(config='/etc/fstab'):
                          'pass': comps[5]}
     return ret
 
+
 def rm_fstab(name, config='/etc/fstab'):
     '''
     Remove the mount point from the fstab
 
-    CLI Example:
-    salt '*' /mnt/foo
+    CLI Example::
+
+        salt '*' /mnt/foo
     '''
     contents = fstab(config)
-    if not contents.has_key(name):
+    if name not in contents:
         return True
     # The entry is present, get rid of it
     lines = []
@@ -88,6 +94,7 @@ def rm_fstab(name, config='/etc/fstab'):
     open(config, 'w+').writelines(lines)
     return True
 
+
 def set_fstab(
         name,
         device,
@@ -101,8 +108,9 @@ def set_fstab(
     Verify that this mount is represented in the fstab, chage the mount point
     to match the data passed, or add the mount if it is not present.
 
-    CLI Example:
-    salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
+    CLI Example::
+
+        salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
     # Fix the opts type if it is a list
     if type(opts) == type(list()):
@@ -145,14 +153,10 @@ def set_fstab(
                 change = True
                 comps[5] = str(pass_num)
             if change:
-                log.debug('fstab entry for mount point {0} is being updated'.format(name))
-                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
-                        device,
-                        name,
-                        fstype,
-                        opts,
-                        dump,
-                        pass_num)
+                log.debug('fstab entry for mount point {0} is being updated'
+                          .format(name))
+                newline = ('{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'
+                           .format(device, name, fstype, opts, dump, pass_num))
                 lines.append(newline)
         else:
             lines.append(line)
@@ -176,19 +180,17 @@ def set_fstab(
         return 'present'
     return 'new'
 
+
 def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     Mount a device
 
-    CLI Example:
-    salt '*' mount.mount /mnt/foo /dev/sdz1 True
+    CLI Example::
+
+        salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
-    if not os.path.exists(device):
-        return False
-    if not stat.S_ISBLK(os.stat(device).st_mode):
-        return False
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
     lopts = ','.join(opts)
@@ -196,31 +198,54 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
     if fstype:
         cmd += ' -t {0}'.format(fstype)
     out = __salt__['cmd.run_all'](cmd)
-    if not out['retcode']:
+    if out['retcode']:
         return out['stderr']
     return True
+
 
 def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     '''
     Attempt to remount a device, if the device is not already mounted, mount
     is called
 
-    CLI Example:
-    salt '*' mount.remount /mnt/foo /dev/sdz1 True
+    CLI Example::
+
+        salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
     if type(opts) == type(str()):
         opts = opts.split(',')
     mnts = active()
-    if mnts.has_key(name):
+    if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
-        opts.append('remount')
+        if not opts.count('remount'):
+            opts.append('remount')
         lopts = ','.join(opts)
         cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
         if fstype:
             cmd += ' -t {0}'.format(fstype)
         out = __salt__['cmd.run_all'](cmd)
         if out['retcode']:
-            return opt['stderr']
+            return out['stderr']
         return True
     else:
         return mount(name, device, mkmnt, fstype, opts)
+
+
+def is_fuse_exec(cmd):
+    '''
+    Returns true if the command passed is a fuse mountable application.
+
+    CLI Example::
+
+        salt '*' mount.is_fuse_exec sshfs
+    '''
+    if not __salt__['cmd.has_exec'](cmd):
+        return False
+    for path in os.environ['PATH'].split(os.pathsep):
+        if not __salt__['cmd.has_exec'](path):
+            continue
+        out = __salt__['cmd.run']('ldd {0}'.format(path))
+        for line in out.split('\n'):
+            if line.count('libfuse'):
+                return True
+    return False

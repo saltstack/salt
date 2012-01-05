@@ -2,13 +2,14 @@
 The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 '''
+
 # Import python modules
-import os
 import pprint
+
 # Import salt libs
+import salt
 import salt.loader
 import salt.minion
-import salt
 
 
 class Caller(object):
@@ -28,7 +29,11 @@ class Caller(object):
         Call the module
         '''
         ret = {}
-        ret['return'] = self.minion.functions[self.opts['fun']](*self.opts['arg'])
+        if self.opts['fun'] not in self.minion.functions:
+            print 'Function {0} is not available'.format(self.opts['fun'])
+        ret['return'] = self.minion.functions[self.opts['fun']](
+                *self.opts['arg']
+                )
         if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
             oput = self.minion.functions[self.opts['fun']].__outputter__
             if isinstance(oput, str):
@@ -41,7 +46,7 @@ class Caller(object):
         '''
         docs = {}
         for name, func in self.minion.functions.items():
-            if not docs.has_key(name):
+            if name not in docs:
                 if func.__doc__:
                     docs[name] = func.__doc__
         for name in sorted(docs):
@@ -75,11 +80,9 @@ class Caller(object):
                 printout = get_outputter('txt')
             elif self.opts['yaml_out']:
                 printout = get_outputter('yaml')
-            elif ret.has_key('out'):
+            elif 'out' in ret:
                 printout = get_outputter(ret['out'])
             else:
                 printout = get_outputter(None)
 
             printout({'local': ret['return']}, color=self.opts['color'])
-
-

@@ -1,10 +1,42 @@
 '''
-Manage command executions cron a state perspective
+Command Executions
+==================
+
+The cmd state module manages the enforcement of executed commands, this
+state can tell a command to run under certian circumstances.
+
+Available Functions
+-------------------
+
+The cmd state only has a single function, the ``run`` function
+
+run
+    Execute a command given certian conditions
+
+    A simple exampe:
+
+    .. code-block:: yaml
+
+        date > /tmp/salt-run:
+        cmd:
+            - run
+
+Only run if another execution returns sucessfully, in this case truncate
+syslog if there is no disk space:
+
+.. code-block:: yaml
+
+    > /var/log/messages:
+      cmd:
+        - run
+        - unless: echo 'foo' > /tmp/.test
+
 '''
 
+import grp
 import os
 import pwd
-import grp
+
 
 def run(name,
         onlyif=None,
@@ -13,37 +45,54 @@ def run(name,
         user=None,
         group=None):
     '''
-    Ensure that the named command is executed
+    Run a command if certian circumstances are met
 
-    Arguments:
-    name -- The command to run
+    name
+        The command to execute, remember that the command will execute with the
+        path and permissions of the salt-minion.
 
-    Keyword Argument:
-    onlyif -- Only run the main command if this command returns true
-    unless -- Only run the main command if this command returns False
-    cwd -- Run the command from this directory, defaults to /root
-    user -- Run the command as this user
-    group -- run the command as this group
+    onlyif
+        A command to run as a check, run the named command only if the command
+        passed to the ``onlyif`` option returns true
+
+    unless
+        A command to run as a check, only run the named command if the command
+        passed to the ``unless`` option returns false
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    user
+        The user name to run the command as
+
+    group
+        The group context to run the command as
     '''
     ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
+
     if onlyif:
         if __salt__['cmd.retcode'](onlyif) != 0:
             ret['comment'] = 'onlyif exec failed'
             ret['result'] = True
             return ret
+
     if unless:
         if __salt__['cmd.retcode'](unless) == 0:
             ret['comment'] = 'unless executed successfully'
             ret['result'] = True
             return ret
+
     if not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory is not available'
         return ret
+
     puid = os.geteuid()
     pgid = os.getegid()
+
     if group:
         try:
             egid = grp.getgrnam(group).gr_gid
@@ -67,3 +116,4 @@ def run(name,
     os.setegid(pgid)
     return ret
 
+watcher = run

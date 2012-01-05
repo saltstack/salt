@@ -1,10 +1,15 @@
 '''
 Make me some salt!
 '''
+
+__version_info__ = (0, 9, 4)
+__version__ = '.'.join(map(str, __version_info__))
+
 # Import python libs
 import optparse
 import os
 import sys
+
 # Import salt libs
 import salt.config
 
@@ -21,6 +26,7 @@ def verify_env(dirs):
             except OSError, e:
                 print 'Failed to create directory path "%s" - %s' % (dir_, e)
 
+
 class Master(object):
     '''
     Creates a master server
@@ -34,7 +40,7 @@ class Master(object):
         Parse the cli for options passed to a master daemon
         '''
         import salt.log
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
                 '--daemon',
                 dest='daemon',
@@ -104,7 +110,7 @@ class Minion(object):
         Parse the cli input
         '''
         import salt.log
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
                 '--daemon',
                 dest='daemon',
@@ -173,19 +179,19 @@ class Syndic(object):
         opts = salt.config.master_config(self.cli['master_config'])
         opts['_minion_conf_file'] = opts['conf_file']
         opts.update(salt.config.minion_config(self.cli['minion_config']))
-        if opts.has_key('syndic_master'):
+        if 'syndic_master' in opts:
             # Some of the opts need to be changed to match the needed opts
             # in the minion class.
             opts['master'] = opts['syndic_master']
             opts['master_ip'] = salt.config.dns_check(opts['master'])
 
-            opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
-                               + str(opts['master_port'])
+            opts['master_uri'] = ('tcp://' + opts['master_ip'] +
+                                  ':' + str(opts['master_port']))
             opts['_master_conf_file'] = opts['conf_file']
             opts.pop('conf_file')
             return opts
-        err = 'The syndic_master needs to be configured in the salt master'\
-            + ' config, EXITING!\n'
+        err = ('The syndic_master needs to be configured in the salt master '
+               'config, EXITING!\n')
         sys.stderr.write(err)
         sys.exit(2)
 
@@ -194,7 +200,7 @@ class Syndic(object):
         Parse the cli for options passed to a master daemon
         '''
         import salt.log
-        parser = optparse.OptionParser()
+        parser = optparse.OptionParser(version="%%prog %s" % __version__)
         parser.add_option('-d',
                 '--daemon',
                 dest='daemon',
@@ -214,10 +220,10 @@ class Syndic(object):
                 dest='log_level',
                 default='warning',
                 choices=salt.log.LOG_LEVELS.keys(),
-                help='Console log level. One of %s. For the logfile settings '
-                     'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
-                )
+                help=('Console log level. One of %s. For the logfile settings '
+                      'see the config file. Default: \'%%default\'.' %
+                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
+                     )
 
         options, args = parser.parse_args()
         salt.log.setup_console_logger(options.log_level)

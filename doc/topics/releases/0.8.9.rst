@@ -19,7 +19,7 @@ Download!
 
 The Salt source can be downloaded from the salt github site:
 
-https://github.com/downloads/thatch45/salt/salt-0.8.9.tar.gz
+:download:`salt-0.8.9.tar.gz`
 
 Or from PiPy:
 
@@ -29,12 +29,8 @@ Here s the md5sum:
 
 7d5aca4633bc22f59045f59e82f43b56
 
-For instructions on how to set up Salt please see the tutorial
-
-.. toctree::
-    :maxdepth: 1
-
-    ../tutorial
+For instructions on how to set up Salt please see the :doc:`installation
+instructions </topics/installation>`.
 
 New Features
 ------------

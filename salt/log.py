@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
+'''
     salt.log
     ~~~~~~~~
 
     This is were Salt's logging get's setup.
 
 
-    :copyright: © 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :copyright: 2011 :email:`Pedro Algarvio (pedro@algarvio.me)`
     :license: Apache 2.0, see LICENSE for more details.
-"""
+'''
 
 import logging
 import logging.handlers
@@ -17,18 +16,17 @@ TRACE = 5
 GARBAGE = 1
 
 LOG_LEVELS = {
-    'none': logging.NOTSET,
-    'info': logging.INFO,
-    'warn': logging.WARNING,
-    'warning': logging.WARNING,
-    'error': logging.ERROR,
-    'none': logging.CRITICAL,
     'debug': logging.DEBUG,
+    'error': logging.ERROR,
+    'garbage': GARBAGE,
+    'info': logging.INFO,
+    'none': logging.NOTSET,
     'trace': TRACE,
-    'garbage': GARBAGE
+    'warning': logging.WARNING,
 }
 
 LoggingLoggerClass = logging.getLoggerClass()
+
 
 class Logging(LoggingLoggerClass):
     def garbage(self, msg, *args, **kwargs):
@@ -37,9 +35,11 @@ class Logging(LoggingLoggerClass):
     def trace(self, msg, *args, **kwargs):
         return LoggingLoggerClass.log(self, 5, msg, *args, **kwargs)
 
+
 def getLogger(name):
     init()
     return logging.getLogger(name)
+
 
 def init():
     '''
@@ -52,6 +52,7 @@ def init():
         logging.addLevelName(1, 'GARBAGE')
         # Set the root logger at the lowest level possible
         logging.getLogger().setLevel(1)
+
 
 def setup_console_logger(log_level):
     '''
@@ -93,6 +94,7 @@ def setup_logfile_logger(log_path, log_level):
 
     handler.setFormatter(formatter)
     rootLogger.addHandler(handler)
+
 
 def set_logger_level(logger_name, log_level):
     '''

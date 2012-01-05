@@ -50,6 +50,10 @@
 #
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
+#
+# The failhard option tells the minions to stop immediately after the first
+# failure detected in the state execution, defaults to False
+#failhard: False
 
 #####      File Server settings      #####
 ##########################################

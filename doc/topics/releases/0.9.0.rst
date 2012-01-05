@@ -14,7 +14,7 @@ Download!
 
 The Salt source can be downloaded from the salt github site:
 
-https://github.com/downloads/thatch45/salt/salt-0.9.0.tar.gz
+:download:`salt-0.9.0.tar.gz`
 
 Or from PiPy:
 
@@ -24,12 +24,8 @@ Here is the md5sum:
 
 9a925da04981e65a0f237f2e77ddab37
 
-For instructions on how to set up Salt please see the tutorial
-
-.. toctree::
-    :maxdepth: 1
-
-    ../tutorial
+For instructions on how to set up Salt please see the :doc:`installation
+instructions </topics/installation>`.
 
 New Features
 ------------
@@ -64,7 +60,7 @@ The minion and master classes have been redesigned to allow for specialized
 minion and master servers to be easily created. An example on how this is done
 for the master can be found in the ``master.py`` salt module:
 
-https://github.com/thatch45/salt/blob/master/salt/master.py
+:blob:`salt/master.py`
 
 The ``Master`` class extends the ``SMaster`` class and set up the main master
 server.
@@ -72,7 +68,7 @@ server.
 The minion functions can now also be easily added to another application via
 the ``SMinion`` class, this class can be found in the ``minion.py`` module:
 
-https://github.com/thatch45/salt/blob/master/salt/minion.py
+:blob:`salt/minion.py`
 
 Cleaner Key Management
 ``````````````````````

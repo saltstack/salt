@@ -1,9 +1,12 @@
 '''
 Some of the utils used by salt
 '''
-# Import python libs
+
+import logging
 import os
 import sys
+
+log = logging.getLogger(__name__)
 
 # Do not use these color declarations, use get_colors()
 # These color declarations will be removed in the future
@@ -26,6 +29,7 @@ WHITE = '\033[1;37m'
 DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
+
 
 def get_colors(use=True):
     '''
@@ -53,10 +57,13 @@ def get_colors(use=True):
             'RED_BOLD': '\033[01;31m',
             'ENDC': '\033[0m',
             }
+
     if not use:
         for color in colors:
             colors[color] = ''
+
     return colors
+
 
 def daemonize():
     '''
@@ -86,10 +93,11 @@ def daemonize():
         print >> sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
         sys.exit(1)
 
-    dev_null = open('/dev/null','rw')
+    dev_null = open('/dev/null', 'rw')
     os.dup2(dev_null.fileno(), sys.stdin.fileno())
     os.dup2(dev_null.fileno(), sys.stdout.fileno())
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
+
 
 def check_root():
     '''
@@ -102,3 +110,24 @@ def check_root():
                'http://xkcd.com/838/')
         sys.exit(1)
 
+
+def profile_func(filename=None):
+    '''
+    Decorator for adding profiling to a nested function in Salt
+    '''
+    def proffunc(fun):
+        def profiled_func(*args, **kwargs):
+            import cProfile
+            logging.info('Profiling function {0}'.format(fun.__name__))
+            try:
+                profiler = cProfile.Profile()
+                retval = profiler.runcall(fun, *args, **kwargs)
+                profiler.dump_stats((filename or '{0}_func.profile'
+                                     .format(fun.__name__)))
+            except IOError:
+                logging.exception(('Could not open profile file {0}'
+                                   .format(filename)))
+
+            return retval
+        return profiled_func
+    return proffunc
