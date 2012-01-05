@@ -203,14 +203,35 @@ def _virtual(osdata):
             else:
                 grains['virtual'] = 'openvzve'
         elif isdir('/proc/sys/xen') or isdir('/sys/bus/xen') or isdir('/proc/xen'):
-            grains['virtual'] = 'xen'
             if os.path.isfile('/proc/xen/xsd_kva'):
+                # Tested on CentOS 5.3 / 2.6.18-194.26.1.el5xen
+                # Tested on CentOS 5.4 / 2.6.18-164.15.1.el5xen
                 grains['virtual_subtype'] = 'Xen Dom0'
             else:
-                if os.path.isfile('/proc/xen/capabilities'):
-                    grains['virtual_subtype'] = 'Xen full virt DomU'
-                else:
-                    grains['virtual_subtype'] = 'Xen paravirt DomU'
+                if grains.get('productname', '') == 'HVM domU':
+                    # Requires dmidecode!
+                    grains['virtual_subtype'] = 'Xen HVM DomU'
+                elif os.path.isfile('/proc/xen/capabilities'):
+                    caps = open('/proc/xen/capabilities')
+                    if 'control_d' not in caps.read():
+                        # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
+                        grains['virtual_subtype'] = 'Xen PV DomU'
+                    else:
+                        # Shouldn't get to this, but just in case
+                        grains['virtual_subtype'] = 'Xen Dom0'
+                    caps.close()
+                # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
+                # Tested on Fedora 15 / 2.6.41.4-1 without running xen
+                elif isdir('/sys/bus/xen'):
+                    if 'xen' in __salt__['cmd.run']('dmesg').lower():
+                        grains['virtual_subtype'] = 'Xen PV DomU'
+                    elif os.listdir('/sys/bus/xen/drivers'):
+                        # An actual DomU will have several drivers
+                        # whereas a paravirt ops kernel will  not.
+                        grains['virtual_subtype'] = 'Xen PV DomU'
+            # If a Dom0 or DomU was detected, obviously this is xen
+            if 'dom' in grains.get('virtual_subtype', '').lower():
+                grains['virtual'] = 'xen'
         elif isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
         elif os.path.isfile('/proc/cpuinfo'):
@@ -378,12 +399,12 @@ def os_data():
 
     grains.update(_memdata(grains))
 
+    # Get the hardware and bios data
+    grains.update(_hw_data(grains))
+
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
-
-    # Get the hardware and bios data
-    grains.update(_hw_data(grains))
 
     return grains
 
@@ -422,7 +443,7 @@ def pythonversion():
     '''
     # Provides:
     #   pythonversion
-    return {'pythonversion': tuple(sys.version_info)}
+    return {'pythonversion': list(sys.version_info)}
 
 def pythonpath():
     '''
