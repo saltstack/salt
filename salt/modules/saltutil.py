@@ -42,12 +42,7 @@ def _sync(form, env):
             shutil.copy(fn_, dest)
             ret.append('{0}.{1}'.format(form, os.path.basename(fn_)))
     if ret:
-        open(
-                os.path.join(
-                    __opts__['cachedir'],
-                    '.module_refresh'),
-                'w+'
-                ).write()
+        open(os.path.join(__opts__['cachedir'], '.module_refresh'), 'w+').write()
     if __opts__.get('clean_dynamic_modules', True):
         current = set(os.listdir(mod_dir))
         for fn_ in current.difference(remote):
