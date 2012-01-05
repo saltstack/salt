@@ -11,7 +11,10 @@ declarations are typically rather simple:
       pkg:
         - installed
 '''
+import logging
 from distutils.version import LooseVersion
+
+logger = logging.getLogger(__name__)
 
 def installed(name):
     '''
@@ -50,20 +53,28 @@ def latest(name):
     name
         The name of the package to maintain at the latest available version
     '''
-    changes = {}
-    version = LooseVersion(__salt__['pkg.version'](name))
-    avail = LooseVersion(__salt__['pkg.available_version'](name))
-    if avail > version:
-        changes = __salt__['pkg.install'](name, True)
-        if not changes:
-            return {'name': name,
-                    'changes': changes,
-                    'result': False,
-                    'comment': 'Package ' + name + ' failed to install'}
-    return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package ' + name + ' installed'}
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    version = __salt__['pkg.version'](name)
+    avail = __salt__['pkg.available_version'](name)
+
+    try:
+        has_newer = LooseVersion(avail) > LooseVersion(version)
+    except AttributeError:
+        logger.debug("Error comparing versions for '%s' (%s > %s)",
+                name, avail, version, exc_info=True)
+
+        ret['comment'] = "No version could be retrieved for '{0}'".format(name)
+        return ret
+
+    if has_newer:
+        ret['changes'] = __salt__['pkg.install'](name, True)
+        ret['comment'] = 'Package {0} failed to install'.format(name)
+
+    ret['result'] = True
+    ret['comment'] = 'Package {0} installed'.format(name)
+
+    return ret
 
 
 def removed(name):
