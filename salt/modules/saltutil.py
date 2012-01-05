@@ -14,13 +14,17 @@ def _sync(form, env):
     '''
     Sync the given directory in the given environment
     '''
+    if isinstance(env, str):
+        env = env.split(',')
     ret = []
     remote = set()
     source = os.path.join('salt://_{0}'.format(form))
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         os.makedirs(mod_dir)
-    cache = __salt__['cp.cache_dir'](source, env)
+    cache = []
+    for sub_env in env:
+        cache.extend(__salt__['cp.cache_dir'](source, sub_env))
     for fn_ in cache:
         remote.add(os.path.basename(fn_))
         dest = os.path.join(mod_dir,
