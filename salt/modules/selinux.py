@@ -4,18 +4,26 @@ Execute calls on selinux
 
 import os
 
+__selinux_fs_path__ = None
 
 def __virtual__():
     '''
     Check if the os is Linux, and then if selinux is running in permissive or
     enforcing mode.
     '''
+    global __selinux_fs_path__
     if __grains__['kernel'] == 'Linux':
-        if os.path.isdir('/selinux'):
-            if os.path.isfile('/selinux/enforce'):
-                return 'selinux'
+        # systems running systemd (e.g. Fedora 15 and newer)
+        # have the selinux filesystem in a different location
+        for directory in ['/sys/fs/selinux', '/selinux']:
+            if os.path.isdir(directory):
+                if os.path.isfile(os.path.join(directory, 'enforce')):
+                    __selinux_fs_path__ = directory
+                    return 'selinux'
     return False
 
+def selinux_fs_path():
+    return __selinux_fs_path__
 
 def getenforce():
     '''
@@ -25,7 +33,7 @@ def getenforce():
 
         salt '*' selinux.getenforce
     '''
-    if open('/selinux/enforce', 'r').read() == '0':
+    if open(os.path.join(__selinux_fs_path__, 'enforce'), 'r').read() == '0':
         return 'Permissive'
     else:
         return 'Enforcing'
