@@ -283,7 +283,16 @@ def _windows_platform_data(osdata):
     '''
     # Provides:
     #    osrelease
-    #    oscodename
+    #    osversion
+    #    osmanufacturer
+    #    manufacturer
+    #    productname
+    #    biosversion
+    #    osfullname
+    #    inputlocale
+    #    timezone
+    #    windowsdomain
+        
     grains = {}
     (osname, hostname, osrelease, osversion, machine, processor) = platform.uname()
     if 'os' not in osdata and osname:
@@ -292,17 +301,18 @@ def _windows_platform_data(osdata):
         grains['osrelease'] = osrelease
     if osversion:
         grains['osversion'] = osversion
-    get_these_grains = ['OS Manufacturer', 'Registered Owner','Registered Organization',
-            'Product ID', 'Original Install Date', 'System Boot Time', 'System Manufacturer',
-            'System Model', 'System Type', 'BIOS Version', 'Windows Directory', 'System Directory',
-            'Input Locale', 'Time Zone', 'Domain', 'Logon Server']
+    get_these_grains = { 'OS Manufacturer': 'osmanufacturer','System Manufacturer': 'manufacturer', 
+            'System Model': 'productname', 'BIOS Version': 'biosversion', 'OS Name': 'osfullname',
+            'Input Locale': 'inputlocale', 'Time Zone': 'timezone', 'Domain': 'windowsdomain' }
     systeminfo = __salt__['cmd.run']('SYSTEMINFO')
     for line in  systeminfo.split('\n'):
         comps = line.split(':', 1)
         if not len(comps) > 1:
             continue
-        if comps[0].strip() in get_these_grains:
-            grains[comps[0].strip()] = comps[1].strip()
+        item = comps[0].strip()
+        value = comps[1].strip()
+        if item in get_these_grains:
+            grains[get_these_grains[item]] = value
     return grains
 
 def os_data():
