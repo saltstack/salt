@@ -10,63 +10,60 @@ def __virtual__():
     '''
     Only work on systems which default to systemd
     '''
-    # Disable on these platforms, specific service modules exist:
-    enable = [
-               'RedHat',
-               'CentOS',
-               'Fedora',
-              ]
-    if __grains__['os'] in enable:
-        if __grains__['os'] == 'Fedora':
-            if __grains__['osrelease'] > 15:
-                return False
+    if __grains__['os'] == 'Gentoo':
         return 'service'
     return False
 
 
 def get_enabled():
     '''
-    Return the enabled services
+    Return a list of service that are enabled on boot
 
     CLI Example::
 
         salt '*' service.get_enabled
     '''
     ret = set()
-    cmd = 'chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run']('rc-update show').strip().split('\n')
     for line in lines:
-        comps = line.split()
-        if '3:on' in line:
-            ret.add(comps[0])
+        if not '|' in line:
+            continue
+        if 'shutdown' in line:
+            continue
+        ret.add(line.split('|')[0].strip())
     return sorted(list(ret))
+
 
 def get_disabled():
     '''
-    Return the disabled services
-
+    Return a set of services that are installed but disabled
+    
     CLI Example::
 
         salt '*' service.get_enabled
     '''
     ret = set()
-    cmd = 'chkconfig --list'
-    lines = __salt__['cmd.run'](cmd).split('\n')
+    lines = __salt__['cmd.run']('rc-update -v show').strip().split('\n')
     for line in lines:
+        if not '|' in line:
+            continue
+        elif 'shutdown' in line:
+            continue
         comps = line.split()
-        if not '3:on' in line:
+        if len(comps) < 3:
             ret.add(comps[0])
     return sorted(list(ret))
 
 def get_all():
     '''
-    Return all installed services
+    Return all available boot services
 
     CLI Example::
 
         salt '*' service.get_enabled
     '''
     return sorted(get_enabled() + get_disabled())
+
 
 def start(name):
     '''
@@ -76,7 +73,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'service {0} start'.format(name)
+    cmd = '/etc/init.d/{0} start'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -88,7 +85,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'service {0} stop'.format(name)
+    cmd = '/etc/init.d/{0} stop'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -100,7 +97,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = 'service {0} restart'.format(name)
+    cmd = '/etc/init.d/{0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -119,7 +116,6 @@ def status(name, sig=None):
             __grains__, sig)
     return __salt__['cmd.run'](cmd).strip()
 
-
 def enable(name):
     '''
     Enable the named service to start at boot
@@ -128,9 +124,8 @@ def enable(name):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'chkconfig {0} on'.format(name)
+    cmd = 'rc-update add {0} default'.format(name)
     return not __salt__['cmd.retcode'](cmd)
-
 
 def disable(name):
     '''
@@ -140,13 +135,12 @@ def disable(name):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'chkconfig {0} off'.format(name)
+    cmd = 'rc-update delete {0} default'.format(name)
     return not __salt__['cmd.retcode'](cmd)
-
 
 def enabled(name):
     '''
-    Check to see if the named service is enabled to start on boot
+    Return True if the named servioce is enabled, false otherwise
 
     CLI Example::
 
@@ -156,14 +150,13 @@ def enabled(name):
         return True
     return False
 
-
 def disabled(name):
     '''
-    Check to see if the named service is disabled to start on boot
+    Return True if the named servioce is enabled, false otherwise
 
     CLI Example::
 
-        salt '*' service.disabled <service name>
+        salt '*' service.enabled <service name>
     '''
     if name in get_disabled():
         return True
