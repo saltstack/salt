@@ -46,7 +46,7 @@ def setenforce(mode):
     if isinstance(mode, str):
         if mode.lower() == 'enforcing':
             mode = '1'
-        elif mode.lower() == 'Permissive':
+        elif mode.lower() == 'permissive':
             mode = '0'
         else:
             return 'Invalid mode {0}'.format(mode)
