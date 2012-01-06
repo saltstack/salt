@@ -301,9 +301,16 @@ def _windows_platform_data(osdata):
         grains['osrelease'] = osrelease
     if osversion:
         grains['osversion'] = osversion
-    get_these_grains = { 'OS Manufacturer': 'osmanufacturer','System Manufacturer': 'manufacturer', 
-            'System Model': 'productname', 'BIOS Version': 'biosversion', 'OS Name': 'osfullname',
-            'Input Locale': 'inputlocale', 'Time Zone': 'timezone', 'Domain': 'windowsdomain' }
+    get_these_grains = {
+            'OS Manufacturer': 'osmanufacturer',
+            'System Manufacturer': 'manufacturer', 
+            'System Model': 'productname',
+            'BIOS Version': 'biosversion',
+            'OS Name': 'osfullname',
+            'Input Locale': 'inputlocale',
+            'Time Zone': 'timezone',
+            'Domain': 'windowsdomain',
+            }
     systeminfo = __salt__['cmd.run']('SYSTEMINFO')
     for line in  systeminfo.split('\n'):
         comps = line.split(':', 1)
