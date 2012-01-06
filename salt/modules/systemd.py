@@ -2,6 +2,9 @@
 Provide the service module for systemd
 '''
 
+import os
+
+
 def __virtual__():
     '''
     Only work on systems which default to systemd
@@ -9,6 +12,54 @@ def __virtual__():
     if __grains__['os'] == 'Fedora' and __grains__['osrelease'] > 15:
         return 'service'
     return False
+
+
+def get_enabled():
+    '''
+    Return a list of all enabled services
+
+    CLI Example::
+
+        salt '*' service.get_enabled
+    '''
+    ret = []
+    for serv in get_all():
+        cmd = 'systemctl is-enabled {0}.service'.format(serv)
+        if not __salt__['cmd.retcode'](cmd):
+            ret.append(serv)
+    return sorted(ret)
+
+def get_disabled():
+    '''
+    Return a list of all disabled services
+
+    CLI Example::
+
+        salt '*' service.get_disabled
+    '''
+    ret = []
+    for serv in get_all():
+        cmd = 'systemctl is-enabled {0}.service'.format(serv)
+        if __salt__['cmd.retcode'](cmd):
+            ret.append(serv)
+    return sorted(ret)
+
+def get_all():
+    '''
+    Return a list of all available services
+
+    CLI Example::
+
+        salt '*' service.get_all
+    '''
+    ret = set()
+    sdir = '/lib/systemd/system'
+    if not os.path.isdir('/lib/systemd/system'):
+        return []
+    for fn_ in os.listdir(sdir):
+        if fn_.endswith('.service'):
+            ret.add(fn_[:fn_.rindex('.')])
+    return sorted(list(ret))
 
 def start(name):
     '''
@@ -21,6 +72,7 @@ def start(name):
     cmd = 'systemctl start {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def stop(name):
     '''
     Stop the specifed service with systemd
@@ -32,6 +84,7 @@ def stop(name):
     cmd = 'systemctl stop {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def restart(name):
     '''
     Start the specified service with systemd
@@ -42,6 +95,7 @@ def restart(name):
     '''
     cmd = 'systemctl restart {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
+
 
 def status(name):
     '''
@@ -56,6 +110,7 @@ def status(name):
            " | awk '/Main PID/{print $3}'").format(name)
     return __salt__['cmd.run'](cmd).strip()
 
+
 def enable(name):
     '''
     Enable the named service to start when the system boots
@@ -67,6 +122,7 @@ def enable(name):
     cmd = 'systemctl enable {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def disable(name):
     '''
     Disable the named service to not start when the system boots
@@ -77,3 +133,19 @@ def disable(name):
     '''
     cmd = 'systemctl disable {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
+
+
+def enabled(name):
+    '''
+    Return if the named service is enabled to start on boot
+    '''
+    cmd = 'systemctl is-enabled {0}.service'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def disabled(name):
+    '''
+    Return if the named service is disabled to start on boot
+    '''
+    cmd = 'systemctl is-enabled {0}.service'.format(name)
+    return bool(__salt__['cmd.retcode'](cmd))
