@@ -1,6 +1,6 @@
 '''
-Top level package command wrapper, used to translate the os detected by the
-grains to the correct service manager
+The default service module, if not otherwise specified salt will fall back
+to this basic module
 '''
 
 import os
@@ -83,3 +83,4 @@ def status(name, sig=None):
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
             __grains__, sig)
     return __salt__['cmd.run'](cmd).strip()
+
