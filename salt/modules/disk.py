@@ -2,9 +2,6 @@
 Module for gathering disk information
 '''
 
-# FIXME: we want module internal calls rather than using subprocess directly
-import subprocess
-
 
 def usage():
     '''
@@ -16,20 +13,49 @@ def usage():
     '''
     cmd = 'df -P'
     ret = {}
-    out = subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('\n')
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
         if line.startswith('Filesystem'):
             continue
         comps = line.split()
-        ret[comps[0]] = {
-            '1K-blocks': comps[1],
-            'available': comps[3],
-            'capacity': comps[4],
-            'mountpoint': comps[5],
-            'used': comps[2]
+        ret[comps[5]] = {
+            'filesystem': comps[0],
+            '1K-blocks':  comps[1],
+            'used':       comps[2],
+            'available':  comps[3],
+            'capacity':   comps[4],
         }
+    return ret
+
+def inodeusage():
+    '''
+    Return inode usage information for volumes mounted on this minion
+
+    CLI Example::
+
+        salt '*' disk.inodeusage
+    '''
+    cmd = 'df -i'
+    ret = {}
+    out = __salt__['cmd.run'](cmd).split('\n')
+    for line in out:
+        if line.startswith('Filesystem'):
+            continue
+        comps = line.split()
+        # Don't choke on empty lines
+        if not comps:
+            continue
+
+        try:
+            ret[comps[5]] = {
+                'inodes': comps[1],
+                'used':   comps[2],
+                'free':   comps[3],
+                'use':    comps[4],
+                'filesystem': comps[0],
+            }
+        except IndexError:
+            print "DEBUG: comps='%s'" % comps
     return ret

@@ -7,12 +7,7 @@ import optparse
 import os
 import sys
 import yaml
-JSON = False
-try:
-    import json
-    JSON = True
-except:
-    pass
+import json
 
 # Import salt components
 import salt.cli.caller
@@ -23,6 +18,7 @@ import salt.output
 import salt.runner
 
 from salt import __version__ as VERSION
+from salt.exceptions import SaltInvocationError
 
 
 class SaltCMD(object):
@@ -79,6 +75,26 @@ class SaltCMD(object):
                 action='store_true',
                 help=('Instead of using shell globs use the return code '
                       'of a function.'))
+        parser.add_option('-N',
+                '--nodegroup',
+                default=False,
+                dest='nodegroup',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use one of the predefined nodegroups to identify a '
+                      'list of targets.'))
+        parser.add_option('-C',
+                '--compound',
+                default=False,
+                dest='compound',
+                action='store_true',
+                help=('The compound target option allows for multiple '
+                       'target types to be evaluated, allowing for greater '
+                       'granularity in target matching. The compound target '
+                       'is space delimited, targets other than globs are '
+                       'preceted with an identifyer matching the specific '
+                       'targets argument type: salt \'G@os:RedHat and '
+                       'webser* or E@database.*\''))
         parser.add_option('--return',
                 default='',
                 dest='return_',
@@ -118,12 +134,11 @@ class SaltCMD(object):
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt command in yaml.')
-        if JSON:
-            parser.add_option('--json-out',
-                    default=False,
-                    action='store_true',
-                    dest='json_out',
-                    help='Print the output from the salt command in json.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
 
         options, args = parser.parse_args()
 
@@ -134,15 +149,14 @@ class SaltCMD(object):
         opts['list'] = options.list_
         opts['grain'] = options.grain
         opts['exsel'] = options.exsel
+        opts['nodegroup'] = options.nodegroup
+        opts['compound'] = options.compound
         opts['return'] = options.return_
         opts['conf_file'] = options.conf_file
         opts['raw_out'] = options.raw_out
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
-        if JSON:
-            opts['json_out'] = options.json_out
-        else:
-            opts['json_out'] = False
+        opts['json_out'] = options.json_out
 
         if opts['return']:
             if opts['timeout'] == 5:
@@ -189,7 +203,26 @@ class SaltCMD(object):
         '''
         local = salt.client.LocalClient(self.opts['conf_file'])
         if 'query' in self.opts:
-            print local.find_cmd(self.opts['cmd'])
+            ret = local.find_cmd(self.opts['cmd'])
+            for jid in ret:
+                if isinstance(ret, list) or isinstance(ret, dict):
+                    # Determine the proper output method and run it
+                    get_outputter = salt.output.get_outputter
+                    if self.opts['raw_out']:
+                        printout = get_outputter('raw')
+                    elif self.opts['json_out']:
+                        printout = get_outputter('json')
+                    elif self.opts['txt_out']:
+                        printout = get_outputter('txt')
+                    elif self.opts['yaml_out']:
+                        printout = get_outputter('yaml')
+                    else:
+                        printout = get_outputter(None)
+                    
+                    print 'Return data for job {0}:'.format(jid)
+                    printout(ret[jid])
+                    print ''
+
         else:
             args = [self.opts['tgt'],
                     self.opts['fun'],
@@ -204,21 +237,29 @@ class SaltCMD(object):
                 args.append('grain')
             elif self.opts['exsel']:
                 args.append('exsel')
+            elif self.opts['nodegroup']:
+                args.append('nodegroup')
+            elif self.opts['compound']:
+                args.append('compound')
             else:
                 args.append('glob')
 
             if self.opts['return']:
                 args.append(self.opts['return'])
-            full_ret = local.cmd_full_return(*args)
-            ret, out = self._format_ret(full_ret)
+            try:
+                full_ret = local.cmd_full_return(*args)
+                ret, out = self._format_ret(full_ret)
+            except SaltInvocationError as exc:
+                ret = exc
+                out = ''
 
             # Handle special case commands
             if self.opts['fun'] == 'sys.doc':
                 self._print_docs(ret)
             else:
+                # Determine the proper output method and run it
+                get_outputter = salt.output.get_outputter
                 if isinstance(ret, list) or isinstance(ret, dict):
-                    # Determine the proper output method and run it
-                    get_outputter = salt.output.get_outputter
                     if self.opts['raw_out']:
                         printout = get_outputter('raw')
                     elif self.opts['json_out']:
@@ -231,8 +272,14 @@ class SaltCMD(object):
                         printout = get_outputter(out)
                     else:
                         printout = get_outputter(None)
+                elif isinstance(ret, SaltInvocationError):
+                    # Pretty print invocation errors
+                    printout = get_outputter("txt")
+                printout(ret)
 
-                    printout(ret)
+                # Always exit with a return code of 1 on issues
+                if isinstance(ret, Exception):
+                    sys.exit(1)
 
     def _format_ret(self, full_ret):
         '''
@@ -307,6 +354,14 @@ class SaltCP(object):
                       'use a grain value to identify targets, the syntax '
                       'for the target is the grains key followed by a pcre '
                       'regular expression:\n"os:Arch.*"'))
+        parser.add_option('-N',
+                '--nodegroup',
+                default=False,
+                dest='nodegroup',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use one of the predefined nodegroups to identify a '
+                      'list of targets.'))
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
@@ -323,6 +378,7 @@ class SaltCP(object):
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
+        opts['nodegroup'] = options.nodegroup
         opts['conf_file'] = options.conf_file
 
         if opts['list']:
@@ -417,7 +473,9 @@ class SaltKey(object):
                 default=2048,
                 type=int,
                 help=('Set the keysize for the generated key, only works with '
-                      'the "--gen-keys" option; default=2048'))
+                      'the "--gen-keys" option, the key size must be 2048 or '
+                      'higher, otherwise it will be rounded up to 2048'
+                      '; default=2048'))
 
         parser.add_option('-c',
                 '--config',
@@ -438,7 +496,10 @@ class SaltKey(object):
         opts['delete'] = options.delete
         opts['gen_keys'] = options.gen_keys
         opts['gen_keys_dir'] = options.gen_keys_dir
-        opts['keysize'] = options.keysize
+        if options.keysize < 2048:
+            opts['keysize'] = 2048
+        else:
+            opts['keysize'] = options.keysize
 
         opts.update(salt.config.master_config(options.config))
 
@@ -512,12 +573,11 @@ class SaltCall(object):
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt command in yaml.')
-        if JSON:
-            parser.add_option('--json-out',
-                    default=False,
-                    action='store_true',
-                    dest='json_out',
-                    help='Print the output from the salt command in json.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
         parser.add_option('--no-color',
                 default=False,
                 dest='no_color',
@@ -535,10 +595,7 @@ class SaltCall(object):
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
         opts['color'] = not options.no_color
-        if JSON:
-            opts['json_out'] = options.json_out
-        else:
-            opts['json_out'] = False
+        opts['json_out'] = options.json_out
         opts.update(salt.config.minion_config(options.config))
         opts['log_level'] = options.log_level
         if len(args) >= 1:

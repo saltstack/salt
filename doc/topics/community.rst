@@ -26,14 +26,11 @@ http://groups.google.com/group/salt-users
 IRC
 ===
 
-The Salt IRC channel is hosted on the `OFTC`_ network. Connect to the OFTC
-server:
+The ``#salt`` IRC channel is hosted on the popular `Freenode`__ network. You
+can use the `Freenode webchat client`__ right from your browser.
 
-irc://irc.oftc.net:6667
-
-and join us in ``#salt``.
-
-.. _`OFTC`: http://www.oftc.net/oftc/
+.. __: http://freenode.net/irc_servers.shtml
+.. __: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
 
 .. _community-github:
 

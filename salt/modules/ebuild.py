@@ -5,7 +5,7 @@ Support for Portage
 try:
     import portage
 except ImportError:
-    None
+    pass
 
 def __virtual__():
     '''
@@ -101,7 +101,7 @@ def install(pkg, refresh=False):
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
-        if old_pkgs.has_key(pkg):
+        if pkg in old_pkgs:
             if old_pkgs[pkg] == new_pkgs[pkg]:
                 continue
             else:
@@ -136,7 +136,7 @@ def update(pkg, refresh=False):
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
-        if old_pkgs.has_key(pkg):
+        if pkg in old_pkgs:
             if old_pkgs[pkg] == new_pkgs[pkg]:
                 continue
             else:
@@ -170,7 +170,7 @@ def upgrade(refresh=False):
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
-        if old_pkgs.has_key(pkg):
+        if pkg in old_pkgs:
             if old_pkgs[pkg] == new_pkgs[pkg]:
                 continue
             else:
@@ -200,7 +200,7 @@ def remove(pkg):
     new_pkgs = list_pkgs()
 
     for pkg in old_pkgs:
-        if not new_pkgs.has_key(pkg):
+        if not pkg in new_pkgs:
             ret_pkgs.append(pkg)
 
     return ret_pkgs

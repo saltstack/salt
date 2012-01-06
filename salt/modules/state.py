@@ -2,11 +2,15 @@
 Control the state system on the minion
 '''
 
+import os
+
 import salt.state
 
 
 __outputter__ = {
                  'highstate': 'highstate',
+                 'sls': 'highstate',
+                 'top': 'highstate',
                  }
 
 
@@ -75,9 +79,36 @@ def highstate():
     return st_.call_highstate()
 
 
+def sls(mods, env='base'):
+    '''
+    Execute a set list of state modules from an environment, default
+    environment is base
+
+    CLI Example:
+
+        salt '*' state.sls core,edit.vim dev
+    '''
+    st_ = salt.state.HighState(__opts__)
+    if isinstance(mods, str):
+        mods = mods.split(',')
+    high, errors = st_.render_highstate({env: mods})
+    if errors:
+        return errors
+    return st_.state.call_high(high)
+
+
+def top(topfn):
+    '''
+    Execute a specific top file instead of the default
+    '''
+    st_ = salt.state.HighState(__opts__)
+    st_.opts['state_top'] = os.path.join('salt://', topfn)
+    return st_.call_highstate()
+
+
 def show_highstate():
     '''
-    Retrive the highstate data from the salt master and display it
+    Retrieve the highstate data from the salt master and display it
 
     CLI Example::
 

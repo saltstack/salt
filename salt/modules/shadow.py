@@ -12,7 +12,7 @@ def info(name):
 
     CLI Example::
 
-        salt '*' shadow.user root
+        salt '*' shadow.info root
     '''
     try:
         data = spwd.getspnam(name)
@@ -46,7 +46,7 @@ def set_password(name, password):
 
     CLI Example::
 
-        salt '*' root $1$UYCIxa628.9qXjpQCjM4a..
+        salt '*' shadow.set_password root $1$UYCIxa628.9qXjpQCjM4a..
     '''
     s_file = '/etc/shadow'
     ret = {}

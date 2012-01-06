@@ -8,7 +8,7 @@ def __virtual__():
     Confirm this module is on a Debian based system
     '''
 
-    return 'pkg' if __grains__['os'] == 'Debian' else False
+    return 'pkg' if __grains__['os'] in [ 'Debian', 'Ubuntu' ] else False
 
 
 def available_version(name):
@@ -69,7 +69,7 @@ def refresh_db():
         if not len(cols):
             continue
         ident = " ".join(cols[1:4])
-        if cols[0].count('Get'):
+        if 'Get' in cols[0]:
             servers[ident] = True
         else:
             servers[ident] = False
@@ -96,7 +96,7 @@ def install(pkg, refresh=False):
     ret_pkgs = {}
     old_pkgs = list_pkgs()
     cmd = 'apt-get -y install {0}'.format(pkg)
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
@@ -115,7 +115,7 @@ def install(pkg, refresh=False):
 
 def remove(pkg):
     '''
-    Remove a single package via ``aptitude remove``
+    Remove a single package via ``apt-get remove``
 
     Returns a list containing the names of the removed packages.
 
@@ -127,7 +127,7 @@ def remove(pkg):
     old_pkgs = list_pkgs()
 
     cmd = 'apt-get -y remove {0}'.format(pkg)
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
@@ -138,8 +138,8 @@ def remove(pkg):
 
 def purge(pkg):
     '''
-    Remove a package via aptitude along with all configuration files and
-    unused dependencies.
+    Remove a package via ``apt-get purge`` along with all configuration
+    files and unused dependencies.
 
     Returns a list containing the names of the removed packages
 
@@ -152,10 +152,10 @@ def purge(pkg):
 
     # Remove inital package
     purge_cmd = 'apt-get -y purge {0}'.format(pkg)
-    __salt__['cmd.retcode'](purge_cmd)
-    
+    __salt__['cmd.run'](purge_cmd)
+
     new_pkgs = list_pkgs()
-    
+
     for pkg in old_pkgs:
         if pkg not in new_pkgs:
             ret_pkgs.append(pkg)
@@ -165,7 +165,7 @@ def purge(pkg):
 
 def upgrade(refresh=True):
     '''
-    Upgrades all packages via aptitude full-upgrade
+    Upgrades all packages via ``apt-get dist-upgrade``
 
     Returns a list of dicts containing the package names, and the new and old
     versions::
@@ -188,7 +188,7 @@ def upgrade(refresh=True):
     ret_pkgs = {}
     old_pkgs = list_pkgs()
     cmd = 'apt-get -y dist-upgrade'
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
     for pkg in new_pkgs:
@@ -222,7 +222,7 @@ def list_pkgs(regex_string=""):
 
     for line in out.split('\n'):
         cols = line.split()
-        if len(cols) and cols[0].count('ii'):
+        if len(cols) and 'ii' in cols[0]:
             ret[cols[1]] = cols[2]
 
     return ret

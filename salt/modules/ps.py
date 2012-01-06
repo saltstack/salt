@@ -49,6 +49,10 @@ def top(num_processes=5, interval=3):
 def get_pid_list():
     '''
     Return a list of process ids (PIDs) for all running processes.
+
+    CLI Example::
+
+        salt '*' ps.get_pid_list
     '''
     return psutil.get_pid_list()
 
@@ -61,7 +65,11 @@ def cpu_percent(interval=0.1, per_cpu=False):
         the number of seconds to sample CPU usage over
     per_cpu
         if True return an array of CPU percent busy for each CPU, otherwise
-        aggregate all precents into one number
+        aggregate all percents into one number
+
+    CLI Example::
+
+        salt '*' ps.cpu_percent
     '''
     if per_cpu:
         result = []
@@ -79,7 +87,11 @@ def cpu_times(per_cpu=False):
 
     per_cpu
         if True return an array of percents for each CPU, otherwise aggregate
-        all precents into one number
+        all percents into one number
+
+    CLI Example::
+
+        salt '*' ps.cpu_times
     '''
     if per_cpu:
         result = []
@@ -90,31 +102,47 @@ def cpu_times(per_cpu=False):
     return result
 
 
-def phymem_usage():
+def physical_memory_usage():
     '''
     Return a dict that describes free and available physical memory.
+
+    CLI Examples::
+
+        salt '*' ps.physical_memory_usage
     '''
     return dict(psutil.phymem_usage()._asdict())
 
 
-def virtmem_usage():
+def virtual_memory_usage():
     '''
     Return a dict that describes free and available memory, both physical
     and virtual.
+
+    CLI Example::
+
+        salt '*' virtual_memory_usage
     '''
     return dict(psutil.virtmem_usage()._asdict())
 
 
-def cached_phymem():
+def cached_physical_memory():
     '''
     Return the amount cached memory.
+
+    CLI Example::
+
+        salt '*' ps.cached_physical_memory
     '''
     return psutil.cached_phymem()
 
 
-def phymem_buffers():
+def physical_memory_buffers():
     '''
     Return the amount of physical memory buffers.
+
+    CLI Example::
+
+        salt '*' ps.physical_memory_buffers
     '''
     return psutil.phymem_buffers()
 
@@ -127,6 +155,10 @@ def disk_partitions(all=False):
     all
         if set to False, only return local, physical partitions (hard disk,
         USB, CD/DVD partitions).  If True, return all filesystems.
+
+    CLI Example::
+
+        salt '*' ps.disk_partitions
     '''
     result = []
     for partition in psutil.disk_partitions(all):
@@ -138,6 +170,10 @@ def disk_usage(path):
     '''
     Given a path, return a dict listing the total available space as well as
     the free space, and used space.
+
+    CLI Example::
+
+        salt '*' ps.disk_usage /home
     '''
     return dict(psutil.disk_usage(path)._asdict())
 
@@ -146,6 +182,10 @@ def disk_partition_usage(all=False):
     '''
     Return a list of disk partitions plus the mount point, filesystem and usage
     statistics.
+
+    CLI Example::
+
+        salt '*' ps.disk_partition_usage
     '''
     result = disk_partitions(all)
     for partition in result:
@@ -153,22 +193,34 @@ def disk_partition_usage(all=False):
     return result
 
 
-def TOTAL_PHYMEM():
+def total_physical_memory():
     '''
     Return the total number of bytes of physical memory.
+
+    CLI Example::
+
+        salt '*' ps.total_physical_memory
     '''
     return psutil.TOTAL_PHYMEM
 
 
-def NUM_CPUS():
+def num_cpus():
     '''
     Return the number of CPUs.
+
+    CLI Example::
+
+        salt '*' ps.num_cpus
     '''
     return psutil.NUM_CPUS
 
 
-def BOOT_TIME():
+def boot_time():
     '''
     Return the boot time in number of seconds since the epoch began.
+
+    CLI Example::
+
+        salt '*' ps.boot_time
     '''
     return psutil.BOOT_TIME

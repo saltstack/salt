@@ -33,12 +33,12 @@
 ##########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
-# the situation where your keys end up in a bad state. If you run in open more
+# the situation where your keys end up in a bad state. If you run in open mode
 # you do so at your own risk!
 #open_mode: False
 
 # Enable auto_accept, this setting will automatically accept all incoming
-# public keys from the minions
+# public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
 #####      State System settings     #####
@@ -168,3 +168,15 @@
 #   }
 #
 #log_granular_levels: {}
+
+
+#####         Node Groups           #####
+##########################################
+# Node groups allow for logical groupings of minion nodes.
+# A group consists of a group name and a compound target.
+# 
+# nodegroups: {
+#   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
+#   group2: 'G@os:Debian and foo.domain.com',
+# }
+

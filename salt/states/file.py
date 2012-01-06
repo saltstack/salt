@@ -2,7 +2,7 @@
 File Management
 ===============
 
-Salt States can agresively manipulate files on a system. There are a number of
+Salt States can aggressively manipulate files on a system. There are a number of
 ways in which files can be managed.
 
 Regular files can be enforced with the ``managed`` function. This function
@@ -21,9 +21,14 @@ makes use of the jinja templating system would look like this:
         - group: root
         - mode: 644
         - template: jinja
+        - context:
+          custom_var: "override"
+        - defaults:
+          custom_var: "default value"
+          other_var: 123
 
 Directories can be managed via the ``directory`` function. This function can
-create and enforce the premissions on a directory. A directory statement will
+create and enforce the permissions on a directory. A directory statement will
 look like this:
 
 .. code-block:: yaml
@@ -48,7 +53,7 @@ takes a few arguments
 
 Recursive directory management can also be set via the ``recurse``
 function. Recursive directory management allows for a directory on the salt
-master to be recursively coppied down to the minion. This is a great tool for
+master to be recursively copied down to the minion. This is a great tool for
 deploying large code and configuration systems. A recuse state would look
 something like this:
 
@@ -86,9 +91,61 @@ def _is_bin(path):
     return False
 
 
-def _mako(sfn, name, source, user, group, mode, env):
+def _gen_keep_files(name, require):
     '''
-    Render a jinja2 template, returns the location of the rendered file,
+    Generate the list of files that need to be kept when a dir based function
+    like directory or recurse has a clean.
+    '''
+    keep = set()
+    keep.add(name)
+    if isinstance(require, list):
+        for comp in require:
+            if 'file' in comp:
+                keep.add(comp['file'])
+                if os.path.isdir(comp['file']):
+                    for root, dirs, files in os.walk(comp['file']):
+                        for name in files:
+                            keep.add(os.path.join(root, name))
+                        for name in dirs:
+                            keep.add(os.path.join(root, name))
+    return list(keep)
+
+
+def _clean_dir(root, keep):
+    '''
+    Clean out all of the files and directories in a directory (root) while
+    preserving the files in a list (keep)
+    '''
+    removed = set()
+    real_keep = set()
+    real_keep.add(root)
+    if isinstance(keep, list):
+        for fn_ in keep:
+            real_keep.add(fn_)
+            while True:
+                fn_ = os.path.dirname(fn_)
+                real_keep.add(fn_)
+                if fn_ == '/':
+                    break
+    rm_files = []
+    print real_keep
+    for roots, dirs, files in os.walk(root):
+        for name in files:
+            nfn = os.path.join(roots, name)
+            if not nfn in real_keep:
+                removed.add(nfn)
+                os.remove(nfn)
+        for name in dirs:
+            nfn = os.path.join(roots, name)
+            if not nfn in real_keep:
+                removed.add(nfn)
+                shutil.rmtree(nfn)
+    return list(removed)
+
+
+def _mako(sfn, name, source, user, group, mode, env, context=None):
+    '''
+    Render a mako template, returns the location of the rendered file,
     return False if render fails.
     Returns::
 
@@ -102,7 +159,7 @@ def _mako(sfn, name, source, user, group, mode, env):
                 'data': 'Failed to import jinja'}
     try:
         tgt = tempfile.mkstemp()[1]
-        passthrough = {}
+        passthrough = context if context else {}
         passthrough.update(__salt__)
         passthrough.update(__grains__)
         template = Template(open(sfn, 'r').read())
@@ -115,7 +172,7 @@ def _mako(sfn, name, source, user, group, mode, env):
                 'data': trb}
 
 
-def _jinja(sfn, name, source, user, group, mode, env):
+def _jinja(sfn, name, source, user, group, mode, env, context=None):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
@@ -125,13 +182,13 @@ def _jinja(sfn, name, source, user, group, mode, env):
          'data': <Error data or rendered file path>}
     '''
     try:
-        from jinja2 import Template
+        from salt.utils.jinja import get_template
     except ImportError:
         return {'result': False,
                 'data': 'Failed to import jinja'}
     try:
         tgt = tempfile.mkstemp()[1]
-        passthrough = {}
+        passthrough = context if context else {}
         passthrough['salt'] = __salt__
         passthrough['grains'] = __grains__
         passthrough['name'] = name
@@ -140,7 +197,7 @@ def _jinja(sfn, name, source, user, group, mode, env):
         passthrough['group'] = group
         passthrough['mode'] = mode
         passthrough['env'] = env
-        template = Template(open(sfn, 'r').read())
+        template = get_template(sfn, __opts__, env)
         open(tgt, 'w+').write(template.render(**passthrough))
         return {'result': True,
                     'data': tgt}
@@ -205,7 +262,7 @@ def symlink(name, target, force=False, makedirs=False):
             shutil.rmtree(name)
         else:
             ret['result'] = False
-            ret['comment'] = ('Direcotry exists where the symlink {0} '
+            ret['comment'] = ('Directory exists where the symlink {0} '
                               'should be'.format(name))
             return ret
     if not os.path.exists(name):
@@ -259,6 +316,8 @@ def managed(name,
         mode=None,
         template=None,
         makedirs=False,
+        context=None,
+        defaults=None,
         __env__='base'):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -290,10 +349,16 @@ def managed(name,
         supported
 
     makedirs
-        If the file is located in a path without a parent directory, then the
+        If the file is located in a path without a parent directory, then
         the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
+
+    context
+        Overrides default context variables passed to the template.
+
+    defaults
+        Default context passed to the template.
     '''
     if mode:
         mode = str(mode)
@@ -308,6 +373,8 @@ def managed(name,
         sfn = __salt__['cp.cache_file'](source, __env__)
         t_key = '_{0}'.format(template)
         if t_key in globals():
+            context_dict = defaults if defaults else {}
+            if context: context_dict.update(context)
             data = globals()[t_key](
                     sfn,
                     name,
@@ -315,7 +382,8 @@ def managed(name,
                     user,
                     group,
                     mode,
-                    __env__
+                    __env__,
+                    context_dict
                     )
         else:
             ret['result'] = False
@@ -357,10 +425,11 @@ def managed(name,
             else:
                 slines = open(sfn, 'rb').readlines()
                 nlines = open(name, 'rb').readlines()
-                ret['changes']['diff'] = ('\n'.join(difflib
-                                                    .unified_diff(slines,
-                                                                  nlines)))
-            # Pre requs are met, and the file needs to be replaced, do it
+                # Print a diff equivalent to diff -u old new
+                ret['changes']['diff'] = (''.join(difflib
+                                                    .unified_diff(nlines,
+                                                                  slines)))
+            # Pre requisites are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copy(sfn, name)
         # Check permissions
@@ -488,7 +557,9 @@ def directory(name,
         user=None,
         group=None,
         mode=None,
-        makedirs=False):
+        makedirs=False,
+        clean=False,
+        require=None):
     '''
     Ensure that a named directory is present and has the right perms
 
@@ -508,9 +579,14 @@ def directory(name,
 
     makedirs
         If the directory is located in a path without a parent directory, then
-        the the state will fail. If makedirs is set to True, then the parent
+        the state will fail. If makedirs is set to True, then the parent
         directories will be created to facilitate the creation of the named
         file.
+
+    clean
+        Make sure that only files that are set up by salt and required by this
+        function are kept. If this option is set then everything in this
+        directory will be deleted unless it is required.
     '''
     if mode:
         mode = str(mode)
@@ -520,7 +596,7 @@ def directory(name,
            'comment': ''}
     if os.path.isfile(name):
         ret['result'] = False
-        ret['comment'] = ('Specifed location {0} exists and is a file'
+        ret['comment'] = ('Specified location {0} exists and is a file'
                           .format(name))
         return ret
     if not os.path.isdir(name):
@@ -581,6 +657,13 @@ def directory(name,
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
+    if clean:
+        keep = _gen_keep_files(name, require)
+        removed = _clean_dir(name, list(keep))
+        if removed:
+            ret['changes']['removed'] = removed
+            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
+
     if not ret['comment']:
         ret['comment'] = 'Directory {0} updated'.format(name)
 
@@ -591,7 +674,11 @@ def directory(name,
     return ret
 
 
-def recurse(name, source, __env__='base'):
+def recurse(name,
+        source,
+        clean=False,
+        require=None,
+        __env__='base'):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
     over to the specified path.
@@ -604,11 +691,17 @@ def recurse(name, source, __env__='base'):
         server and is specified with the salt:// protocol. If the directory is
         located on the master in the directory named spam, and is called eggs,
         the source string is salt://spam/eggs
+
+    clean
+        Make sure that only files that are set up by salt and required by this
+        function are kept. If this option is set then everything in this
+        directory will be deleted unless it is required.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
+    keep = set()
     # Verify the target directory
     if not os.path.isdir(name):
         if os.path.exists(name):
@@ -633,6 +726,7 @@ def recurse(name, source, __env__='base'):
         if not os.path.isdir(os.path.dirname(dest)):
             _makedirs(dest)
         if os.path.isfile(dest):
+            keep.add(dest)
             # The file is present, if the sum differes replace it
             srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
             dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
@@ -641,7 +735,184 @@ def recurse(name, source, __env__='base'):
                 shutil.copy(fn_, dest)
                 ret['changes'][dest] = 'updated'
         else:
+            keep.add(dest)
             # The destination file is not present, make it
             shutil.copy(fn_, dest)
             ret['changes'][dest] = 'new'
+    keep = list(keep)
+    if clean:
+        keep += _gen_keep_files(name, require)
+        removed = _clean_dir(name, list(keep))
+        if removed:
+            ret['changes']['removed'] = removed
+            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
+    return ret
+
+def sed(name, before, after, limit='', backup='.bak', options='-r -e',
+        flags='g'):
+    '''
+    Maintain a simple edit to a file
+
+    Usage::
+
+        # Disable the epel repo by default
+        /etc/yum.repos.d/epel.repo:
+          file:
+            - sed
+            - before: 1
+            - after: 0
+            - limit: ^enabled=
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.exists(name):
+        ret['comment'] = "File '{0}' not found".format(name)
+        return ret
+
+    # sed returns no output if the edit matches anything or not so we'll have
+    # to look for ourselves
+
+    # make sure the pattern(s) match
+    if not __salt__['file.contains'](name, before, limit):
+        ret['comment'] = "Pattern not matched"
+        return ret
+
+    # should be ok now; perform the edit
+    __salt__['file.sed'](name, before, after, limit, backup, options, flags)
+
+    # check the result
+    ret['result'] = __salt__['file.contains'](name, after, limit)
+
+    if ret['result']:
+        ret['comment'] = "File successfully edited"
+        ret['changes'].update({'old': before, 'new': after})
+    else:
+        ret['comment'] = "Expected edit does not appear in file"
+
+    return ret
+
+def comment(name, regex, char='#', backup='.bak'):
+    '''
+    Usage::
+
+        /etc/fstab:
+          file:
+            - comment
+            - regex: ^//10.10.20.5
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.exists(name):
+        ret['comment'] = "File not found"
+        return ret
+
+    # Make sure the pattern appears in the file
+    if not __salt__['file.contains'](name, regex):
+        ret['comment'] = "Pattern not found"
+        return ret
+
+    # Perform the edit
+    __salt__['file.comment'](name, regex, char, backup)
+
+    # Check the result
+    ret['result'] = __salt__['file.contains'](name, regex,
+            limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char))
+
+    if ret['result']:
+        ret['comment'] = "Commented lines successfully"
+        ret['changes'] = {'old': '',
+                'new': 'Commented lines matching: {0}'.format(regex)}
+    else:
+        ret['comment'] = "Expected commented lines not found"
+
+    return ret
+
+def uncomment(name, regex, char='#', backup='.bak'):
+    '''
+    Usage::
+
+        /etc/adduser.conf:
+          file:
+            - uncomment
+            - regex: EXTRA_GROUPS
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.exists(name):
+        ret['comment'] = "File not found"
+        return ret
+
+    # Make sure the pattern appears in the file
+    if not __salt__['file.contains'](name, regex,
+            limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char)):
+        ret['comment'] = "Pattern not found"
+        return ret
+
+    # Perform the edit
+    __salt__['file.uncomment'](name, regex, char, backup)
+
+    # Check the result
+    ret['result'] = __salt__['file.contains'](name, regex)
+
+    if ret['result']:
+        ret['comment'] = "Uncommented lines successfully"
+        ret['changes'] = {'old': '',
+                'new': 'Uncommented lines matching: {0}'.format(regex)}
+    else:
+        ret['comment'] = "Expected uncommented lines not found"
+
+    return ret
+
+def append(name, text):
+    '''
+    Ensure that some text appears at the end of a file
+
+    The text will not be appended again if it already exists in the file. You
+    may specify a single line of text or a list of lines to append.
+
+    Multi-line example::
+
+        /etc/motd:
+          file:
+            - append
+            - text: |
+                Thou hadst better eat salt with the Philosophers of Greece,
+                than sugar with the Courtiers of Italy.
+                - Benjamin Franklin
+
+    Multiple lines of text::
+
+        /etc/motd:
+          file:
+            - append
+            - text:
+              - Trust no one unless you have eaten much salt with him.
+              - Salt is born of the purest of parents: the sun and the sea.
+
+    .. versionadded:: 0.9.5
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if isinstance(text, basestring):
+        text = (text,)
+
+    for chunk in text:
+        for line in chunk.split('\n'):
+            if __salt__['file.contains'](name, line):
+                continue
+            else:
+                __salt__['file.append'](name, line)
+                cgs = ret['changes'].setdefault('new', [])
+                cgs.append(line)
+
+    count = len(ret['changes'].get('new', []))
+
+    ret['comment'] = "Appended {0} lines".format(count)
+    ret['result'] = True
     return ret

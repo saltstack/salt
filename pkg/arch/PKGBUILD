@@ -19,12 +19,14 @@ backup=('etc/salt/master'
 makedepends=()
 optdepends=()
 options=()
-source=("https://github.com/downloads/thatch45/salt/$pkgname-$pkgver.tar.gz"
+source=("https://github.com/downloads/saltstack/salt/$pkgname-$pkgver.tar.gz"
         "salt-master"
         "salt-syndic"
         "salt-minion")
-md5sums=('26456860e89f53deaf75193da50b449a'
-         '4baf45d1610d771b742de2cbd8951b9f')
+md5sums=('c27837bac06dadfdb51b4a2b63fe6d35'
+         '1594591acb0a266854186a694da21103'
+         '09683ef4966e401761f7d2db6ad4b692'
+         '21ab2eac231e9f61bf002ba5f16f8a3d')
 
 package() {
   cd $srcdir/$pkgname-$pkgver
@@ -32,8 +34,8 @@ package() {
   python2 setup.py install --root=$pkgdir/ --optimize=1
 
   mkdir -p $pkgdir/etc/rc.d/
-  cp $srcdir/pkg/arch/salt-master $pkgdir/etc/rc.d/
-  cp $srcdir/pkg/arch/salt-minion $pkgdir/etc/rc.d/
-  cp $srcdir/pkg/arch/salt-syndic $pkgdir/etc/rc.d/
+  cp $srcdir/salt-master $pkgdir/etc/rc.d/
+  cp $srcdir/salt-minion $pkgdir/etc/rc.d/
+  cp $srcdir/salt-syndic $pkgdir/etc/rc.d/
   chmod +x $pkgdir/etc/rc.d/*
 }

@@ -17,16 +17,15 @@ import MySQLdb
 __opts__ = {}
 
 
-def connect():
+def connect(**kwargs):
     '''
     wrap authentication credentials here
     '''
-
-    hostname = __opts__['mysql.host']
-    username = __opts__['mysql.user']
-    password = __opts__['mysql.pass']
-    dbport = __opts__['mysql.port']
-    dbname = __opts__['mysql.db']
+    hostname = kwargs.get('host', __opts__['mysql.host'])
+    username = kwargs.get('user', __opts__['mysql.user'])
+    password = kwargs.get('pass', __opts__['mysql.pass'])
+    dbport = kwargs.get('port', __opts__['mysql.port'])
+    dbname = kwargs.get('db', __opts__['mysql.db'])
 
     db = MySQLdb.connect(
         hostname,
@@ -73,3 +72,67 @@ def version():
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
     return row
+
+
+def slave_lag():
+    '''
+    Return the number of seconds that a slave SQL server is lagging behind the
+    master, if the host is not a slave it will return -1.  If the server is
+    configured to be a slave but replication but slave IO is not running then
+    -2 will be returned.
+
+    CLI Example::
+
+        salt '*' mysql.slave_lag
+    '''
+    db = connect()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("show slave status")
+    results = cur.fetchone()
+    if cur.rowcount == 0:
+        # Server is not a slave if master is not defined.  Return empty tuple
+        # in this case.  Could probably check to see if Slave_IO_Running and
+        # Slave_SQL_Running are both set to 'Yes' as well to be really really
+        # sure that it is a slave.
+        return -1
+    else:
+        if results['Slave_IO_Running'] == 'Yes':
+            return results['Seconds_Behind_Master']
+        else:
+            # Replication is broken if you get here.
+            return -2
+
+
+def free_slave():
+    '''
+    Frees a slave from its master.  This is a WIP, do not use.
+    '''
+    slave_db = connect()
+    slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
+    slave_cur.execute("show slave status")
+    slave_status = slave_cur.fetchone()
+    master = {'host': slave_status['Master_Host']}
+
+    try:
+        # Try to connect to the master and flush logs before promoting to
+        # master.  This may fail if the master is no longer available.
+        # I am also assuming that the admin password is the same on both
+        # servers here, and only overriding the host option in the connect
+        # function.
+        master_db = connect(**master)
+        master_cur = master_db.cursor()
+        master_cur.execute("flush logs")
+        master_db.close()
+    except MySQLdb.OperationalError:
+        pass
+
+    slave_cur.execute("stop slave")
+    slave_cur.execute("reset master")
+    slave_cur.execute("change master to MASTER_HOST=''")
+    slave_cur.execute("show slave status")
+    results = slave_cur.fetchone()
+
+    if results is None:
+        return 'promoted'
+    else:
+        return 'failed'
