@@ -106,9 +106,14 @@ def status(name):
 
         salt '*' service.status <service name>
     '''
-    cmd = ("systemctl restart {0}.service"
-           " | awk '/Main PID/{print $3}'").format(name)
-    return __salt__['cmd.run'](cmd).strip()
+    cmd = 'systemctl show {0}.service'.format(name)
+    ret = __salt__['cmd.run'](cmd)
+    index1 = ret.find('\nMainPID=')
+    index2 = ret.find('\n', index1+9)
+    mainpid = ret[index1+9:index2]
+    if mainpid == '0':
+        return ''
+    return mainpid
 
 
 def enable(name):
