@@ -393,7 +393,10 @@ def uncomment(path, regex, char='#', backup='.bak'):
     path
         The full path to the file to be edited
     regex
-        A regular expression used to find the lines that are to be uncommented
+        A regular expression used to find the lines that are to be uncommented.
+        This regex should not include the comment character. A leading ``^``
+        character will be stripped for convenience (for easily switching
+        between comment() and uncomment()).
     char : ``#``
         The character to remove in order to uncomment a line; if a single
         whitespace character follows the comment it will also be removed
@@ -413,7 +416,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
     return __salt__['file.sed'](path,
         before=r'^([[:space:]]*){0}[[:space:]]?'.format(char),
         after=r'\1',
-        limit=regex,
+        limit=regex.lstrip('^'),
         backup=backup)
 
 def comment(path, regex, char='#', backup='.bak'):
@@ -431,9 +434,13 @@ def comment(path, regex, char='#', backup='.bak'):
         The character to be inserted at the beginning of a line in order to
         comment it out
     backup : ``.bak``
-        The file will be backed up before edit with this file extension;
-        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
-        overwrite this backup
+        The file will be backed up before edit with this file extension
+
+        .. warning::
+
+            This backup will be overwritten each time ``sed`` / ``comment`` /
+            ``uncomment`` is called. Meaning the backup will only be useful
+            after the first invocation.
 
     Usage::
 
