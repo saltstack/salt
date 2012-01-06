@@ -45,6 +45,8 @@ def get_enabled():
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
+        if not comps:
+            continue
         if '{0}:on'.format(rlevel) in line:
             ret.add(comps[0])
     return sorted(list(ret))
@@ -63,6 +65,8 @@ def get_disabled():
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
+        if not comps:
+            continue
         if not '{0}:on'.format(rlevel) in line:
             ret.add(comps[0])
     return sorted(list(ret))
