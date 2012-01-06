@@ -31,7 +31,7 @@ def get_enabled():
         if 'shutdown' in line:
             continue
         ret.add(line.split('|')[0].strip())
-    return list(ret)
+    return sorted(list(ret))
 
 
 def get_disabled():
@@ -52,7 +52,7 @@ def get_disabled():
         comps = line.split()
         if len(comps) < 3:
             ret.add(comps[0])
-    return list(ret)
+    return sorted(list(ret))
 
 def get_all():
     '''
@@ -62,7 +62,7 @@ def get_all():
 
         salt '*' service.get_enabled
     '''
-    return get_enabled() + get_disabled()
+    return sorted(get_enabled() + get_disabled())
 
 
 def start(name):
