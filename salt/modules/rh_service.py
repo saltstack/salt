@@ -5,29 +5,23 @@ grains to the correct service manager
 
 import os
 
-grainmap = {
-           'Arch': '/etc/rc.d',
-           'Debian': '/etc/init.d',
-           'Fedora': '/etc/init.d',
-           'RedHat': '/etc/init.d',
-           'Ubuntu': '/etc/init.d',
-           'Gentoo': '/etc/init.d',
-           'CentOS': '/etc/init.d',
-          }
 
 def __virtual__():
     '''
     Only work on systems which default to systemd
     '''
     # Disable on these platforms, specific service modules exist:
-    disable = [
+    enable = [
                'RedHat',
                'CentOS',
                'Fedora',
               ]
-    if __grains__['os'] in disable:
-        return False
-    return 'service'
+    if __grains__['os'] in enable:
+        if __grains__['os'] == 'Fedora':
+            if __grains__['osrelease'] > 15:
+                return False
+        return 'service'
+    return False
 
 
 def start(name):
@@ -38,8 +32,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = os.path.join(grainmap[__grains__['os']],
-            name + ' start')
+    cmd = 'service {0} start'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -51,8 +44,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = os.path.join(grainmap[__grains__['os']],
-            name + ' stop')
+    cmd = 'service {0} stop'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -64,8 +56,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = os.path.join(grainmap[__grains__['os']],
-            name + ' restart')
+    cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
