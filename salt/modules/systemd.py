@@ -138,6 +138,10 @@ def disable(name):
 def enabled(name):
     '''
     Return if the named service is enabled to start on boot
+    
+    CLI Example::
+
+        salt '*' service.enabled <service name>
     '''
     cmd = 'systemctl is-enabled {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -146,6 +150,10 @@ def enabled(name):
 def disabled(name):
     '''
     Return if the named service is disabled to start on boot
+
+    CLI Example::
+
+        salt '*' service.disabled <service name>
     '''
     cmd = 'systemctl is-enabled {0}.service'.format(name)
     return bool(__salt__['cmd.retcode'](cmd))
