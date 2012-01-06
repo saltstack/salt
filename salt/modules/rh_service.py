@@ -23,6 +23,13 @@ def __virtual__():
         return 'service'
     return False
 
+def _runlevel():
+    '''
+    Return the current runlevel
+    '''
+    out = __salt__['cmd.run']('runlevel').strip()
+    return out.split()[1]
+
 
 def get_enabled():
     '''
@@ -32,12 +39,13 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
+    rlevel = _runlevel()
     ret = set()
     cmd = 'chkconfig --list'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
-        if '3:on' in line:
+        if '{0}:on'.format(rlevel) in line:
             ret.add(comps[0])
     return sorted(list(ret))
 
@@ -49,12 +57,13 @@ def get_disabled():
 
         salt '*' service.get_enabled
     '''
+    rlevel = _runlevel()
     ret = set()
     cmd = 'chkconfig --list'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
-        if not '3:on' in line:
+        if not '{0}:on'.format(rlevel) in line:
             ret.add(comps[0])
     return sorted(list(ret))
 
