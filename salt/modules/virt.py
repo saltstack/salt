@@ -40,7 +40,7 @@ def _get_dom(vm_):
     Return a domain object for the named vm
     '''
     conn = __get_conn()
-    if not list_vms().count(vm_):
+    if vm_ not in list_vms():
         raise Exception('The specified vm is not present')
     return conn.lookupByName(vm_)
 
@@ -169,12 +169,12 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if target.attributes.keys().count('dev')\
-                and source.attributes.keys().count('file'):
-            disks[target.getAttribute('dev')] =\
+        if 'dev' in target.attributes.keys() \
+                and 'file' in source.attributes.keys():
+            disks[target.getAttribute('dev')] = \
                     {'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '\
+        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
             + disks[dev]['file'],
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]))
@@ -405,6 +405,33 @@ def seed_non_shared_migrate(disks, force=False):
     return True
 
 
+def set_autostart(vm_, state='on'):
+    '''
+    Set the autostart flag on a VM so that the VM will start with the host
+    system on reboot.
+
+    CLI Example::
+        salt "*" virt.enable_autostart <vm name> <on | off>
+    '''
+
+    dom = _get_dom(vm_)
+
+    if state == 'on':
+        if dom.setAutostart(1) == 0:
+            return True
+        else:
+            return False
+
+    elif state == 'off':
+        if dom.setAutostart(0) == 0:
+            return True
+        else:
+            return False
+
+    else:
+        # return False if state is set to something other then on or off
+        return False
+
 def destroy(vm_):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the
@@ -443,7 +470,7 @@ def purge(vm_, dirs=False):
     '''
     Recursively destroy and delete a virtual machine, pass True for dir's to
     also delete the directories containing the virtual machine disk images -
-    USE WITH EXTREAME CAUTION!
+    USE WITH EXTREME CAUTION!
 
     CLI Example::
 
@@ -482,11 +509,9 @@ def is_kvm_hyper():
     '''
     if __grains__['virtual'] != 'physical':
         return False
-    if not open('/proc/modules').read().count('kvm_'):
+    if 'kvm_' not in open('/proc/modules').read():
         return False
-    libvirt_ret = subprocess.Popen('ps aux',
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].count('libvirtd')
+    libvirt_ret = __salt__['cmd.run'](__grains__['ps']).count('libvirtd')
     if not libvirt_ret:
         return False
     return True
