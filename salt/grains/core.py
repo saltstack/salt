@@ -445,7 +445,7 @@ def hostname():
     # Provides:
     #   fqdn
     #   host
-    #   dnshost
+    #   localhost
     #   domain
     grains = {}
     grains['fqdn'] = socket.getfqdn()
