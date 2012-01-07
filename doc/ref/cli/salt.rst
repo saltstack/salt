@@ -54,14 +54,14 @@ Options
 .. option:: -C, --compound
 
     Utilize many target definitions to make the call very granular. This option
-    takes a group of targets seperated by and or or. The default matcher is a 
+    takes a group of targets seperated by and or or. The default matcher is a
     glob as usual, if something other than a glob is used preface it with the
     letter denoting the type, example: 'webserv* and G@os:Debian or E@db.*'
     make sure that the compount target is encapsultaed in quotes.
 
 .. option:: -Q, --query
 
-    Execute a salt command query, this can be used to find the results os a
+    Execute a salt command query, this can be used to find the results of a
     previous function call: -Q test.echo')
 
 .. option:: -c CONFIG, --config=CONFIG
