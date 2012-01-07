@@ -31,7 +31,7 @@ def get_enabled():
         if 'shutdown' in line:
             continue
         ret.add(line.split('|')[0].strip())
-    return sorted(list(ret))
+    return sorted(ret)
 
 
 def get_disabled():
@@ -52,7 +52,7 @@ def get_disabled():
         comps = line.split()
         if len(comps) < 3:
             ret.add(comps[0])
-    return sorted(list(ret))
+    return sorted(ret)
 
 def get_all():
     '''
