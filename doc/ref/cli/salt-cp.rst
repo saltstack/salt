@@ -52,7 +52,7 @@ Options
 
 .. option:: -Q, --query
 
-    Execute a salt command query, this can be used to find the results os a
+    Execute a salt command query, this can be used to find the results of a
     previous function call: -Q test.echo')
 
 .. option:: -c CONFIG, --config=CONFIG
