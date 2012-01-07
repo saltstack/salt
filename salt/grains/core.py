@@ -445,11 +445,13 @@ def hostname():
     # Provides:
     #   fqdn
     #   host
+    #   dnshost
     #   domain
     grains = {}
     grains['fqdn'] = socket.getfqdn()
     comps = grains['fqdn'].split('.')
     grains['host'] = comps[0]
+    grains['localhost'] = socket.gethostname()
     if len(comps) > 1:
         grains['domain'] = '.'.join(comps[1:])
     else:
