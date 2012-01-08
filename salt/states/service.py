@@ -87,7 +87,7 @@ def _enable(name, started):
             ' and the service is dead').format(name)
         return ret
     
-def _disable(name, stopped):
+def _disable(name, started):
     '''
     Disable the service
     '''
