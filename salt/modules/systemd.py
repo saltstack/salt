@@ -97,7 +97,9 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def status(name):
+# The unused sig argument is required to maintain consistency in the state
+# system
+def status(name, sig=None):
     '''
     Return the status for a service via systemd, returns the PID if the service
     is running or an empty string if the service is not running
