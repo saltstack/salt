@@ -54,7 +54,7 @@ def init():
         logging.getLogger().setLevel(1)
 
 
-def setup_console_logger(log_level='error'):
+def setup_console_logger(log_level='error', log_format=None, date_format=None):
     '''
     Setup the console logger
     '''
@@ -65,9 +65,16 @@ def setup_console_logger(log_level='error'):
     handler = logging.StreamHandler()
 
     handler.setLevel(level)
+
+    # Set the default console formatter config
+    if not log_format:
+        log_format = '[%(levelname)-8s] %(message)s',
+    if not date_format:
+        date_format = '%H:%M:%S'
+
     formatter = logging.Formatter(
-        '[%(name)-15s][%(levelname)-8s] %(message)s',
-        datefmt="%H:%M:%S"
+        log_format,
+        datefmt = date_format
     )
 
     handler.setFormatter(formatter)
