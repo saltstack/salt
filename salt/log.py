@@ -66,7 +66,7 @@ def setup_console_logger(log_level='error'):
 
     handler.setLevel(level)
     formatter = logging.Formatter(
-        '%(levelname)-8s: %(message)s',
+        '[%(name)-15s][%(levelname)-8s] %(message)s',
         datefmt="%H:%M:%S"
     )
 
@@ -74,7 +74,7 @@ def setup_console_logger(log_level='error'):
     rootLogger.addHandler(handler)
 
 
-def setup_logfile_logger(log_path, log_level):
+def setup_logfile_logger(log_path, log_level='error'):
     '''
     Setup the logfile logger
     '''
@@ -96,7 +96,7 @@ def setup_logfile_logger(log_path, log_level):
     rootLogger.addHandler(handler)
 
 
-def set_logger_level(logger_name, log_level):
+def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
     '''
