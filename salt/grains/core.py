@@ -448,6 +448,7 @@ def hostname():
     #   localhost
     #   domain
     grains = {}
+    grains['hostname'] = socket.gethostname()
     grains['fqdn'] = socket.getfqdn()
     comps = grains['fqdn'].split('.')
     grains['host'] = comps[0]
