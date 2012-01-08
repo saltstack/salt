@@ -54,7 +54,7 @@ def init():
         logging.getLogger().setLevel(1)
 
 
-def setup_console_logger(log_level):
+def setup_console_logger(log_level='error', log_format=None, date_format=None):
     '''
     Setup the console logger
     '''
@@ -65,16 +65,23 @@ def setup_console_logger(log_level):
     handler = logging.StreamHandler()
 
     handler.setLevel(level)
+
+    # Set the default console formatter config
+    if not log_format:
+        log_format = '[%(levelname)-8s] %(message)s'
+    if not date_format:
+        date_format = '%H:%M:%S'
+
     formatter = logging.Formatter(
-        '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s',
-        datefmt="%H:%M:%S"
+        log_format,
+        datefmt = date_format
     )
 
     handler.setFormatter(formatter)
     rootLogger.addHandler(handler)
 
 
-def setup_logfile_logger(log_path, log_level):
+def setup_logfile_logger(log_path, log_level='error'):
     '''
     Setup the logfile logger
     '''
@@ -96,7 +103,7 @@ def setup_logfile_logger(log_path, log_level):
     rootLogger.addHandler(handler)
 
 
-def set_logger_level(logger_name, log_level):
+def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
     '''
