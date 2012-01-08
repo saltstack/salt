@@ -11,6 +11,13 @@ rc scripts, services can be defined as running or dead.
         - running
 '''
 
+def __virtual__():
+    '''
+    Ensure that the service state returns the correct name
+    '''
+    return 'service'
+
+
 def _enable(name, started):
     '''
     Enable the service
