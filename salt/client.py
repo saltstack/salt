@@ -31,7 +31,6 @@ import re
 import sys
 import glob
 import time
-import glob
 import datetime
 
 # Import zmq modules
