@@ -54,7 +54,7 @@ def init():
         logging.getLogger().setLevel(1)
 
 
-def setup_console_logger(log_level):
+def setup_console_logger(log_level='error'):
     '''
     Setup the console logger
     '''

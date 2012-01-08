@@ -6,6 +6,7 @@ A few checks to make sure the environment is sane
 import os
 import sys
 import logging
+import salt.log
 log = logging.getLogger(__name__)
 
 __all__ = ('zmq_version', 'check_root', 'run')
@@ -28,8 +29,9 @@ def check_root():
     if 'os' in os.environ:
         if os.environ['os'].startswith('Windows'):
             return True
+    msg = 'Sorry, the salt must run as root.  http://xkcd.com/838'
     if os.getuid():
-        log.critical('Sorry, the salt must run as root. It needs to operate in a privileged environment to do what it does. http://xkcd.com/838/')
+        log.critical(msg)
         return False
     return True
 
