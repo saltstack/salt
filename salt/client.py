@@ -26,12 +26,13 @@ The data structure needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
-import datetime
-import glob
 import os
 import re
 import sys
+import glob
 import time
+import glob
+import datetime
 
 # Import zmq modules
 import zmq
@@ -76,8 +77,8 @@ class LocalClient(object):
             keyfile = os.path.join(self.opts['cachedir'], '.root_key')
             key = open(keyfile, 'r').read()
             return key
-        except:
-            raise SaltClientError('Failed to read in the salt root key')
+        except (OSError, IOError):
+            raise SaltClientError('Problem reading the salt root key. Are you root?')
 
     def _check_glob_minions(self, expr):
         '''

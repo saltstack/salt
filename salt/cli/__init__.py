@@ -18,7 +18,8 @@ import salt.output
 import salt.runner
 
 from salt import __version__ as VERSION
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, SaltClientError, \
+    SaltException
 
 
 class SaltCMD(object):
@@ -201,7 +202,12 @@ class SaltCMD(object):
         '''
         Execute the salt command line
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
+        try:
+            local = salt.client.LocalClient(self.opts['conf_file'])
+        except SaltClientError as exc:
+            local = None
+            ret = exc
+            out = ''
         if 'query' in self.opts:
             ret = local.find_cmd(self.opts['cmd'])
             for jid in ret:
@@ -218,7 +224,7 @@ class SaltCMD(object):
                         printout = get_outputter('yaml')
                     else:
                         printout = get_outputter(None)
-                    
+
                     print 'Return data for job {0}:'.format(jid)
                     printout(ret[jid])
                     print ''
@@ -247,8 +253,10 @@ class SaltCMD(object):
             if self.opts['return']:
                 args.append(self.opts['return'])
             try:
-                full_ret = local.cmd_full_return(*args)
-                ret, out = self._format_ret(full_ret)
+                # local will be None when there was an error
+                if local:
+                    full_ret = local.cmd_full_return(*args)
+                    ret, out = self._format_ret(full_ret)
             except SaltInvocationError as exc:
                 ret = exc
                 out = ''
@@ -272,14 +280,14 @@ class SaltCMD(object):
                         printout = get_outputter(out)
                     else:
                         printout = get_outputter(None)
-                elif isinstance(ret, SaltInvocationError):
-                    # Pretty print invocation errors
+                # Pretty print any salt exceptions
+                elif isinstance(ret, SaltException):
                     printout = get_outputter("txt")
                 printout(ret)
 
-                # Always exit with a return code of 1 on issues
-                if isinstance(ret, Exception):
-                    sys.exit(1)
+            # Always exit with a return code of 1 on issues
+            if isinstance(ret, Exception):
+                sys.exit(1)
 
     def _format_ret(self, full_ret):
         '''
