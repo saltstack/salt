@@ -68,7 +68,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     # Set the default console formatter config
     if not log_format:
-        log_format = '[%(levelname)-8s] %(message)s',
+        log_format = '[%(levelname)-8s] %(message)s'
     if not date_format:
         date_format = '%H:%M:%S'
 
