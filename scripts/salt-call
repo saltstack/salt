@@ -5,6 +5,8 @@ minion to run.
 '''
 
 import salt.cli
+import salt.log
+salt.log.setup_console_logger()
 
 
 def main():
