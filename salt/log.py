@@ -66,7 +66,7 @@ def setup_console_logger(log_level='error'):
 
     handler.setLevel(level)
     formatter = logging.Formatter(
-        '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s',
+        '%(levelname)-8s: %(message)s',
         datefmt="%H:%M:%S"
     )
 
