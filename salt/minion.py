@@ -722,6 +722,20 @@ class FileClient(object):
                 ret.append(self.cache_file('salt://{0}'.format(fn_), env))
         return ret
 
+    def cache_local_file(self, path, env='base'):
+        '''
+        Cache a local file on the minion in that minion's cache
+        '''
+        dest = os.path.join(self.opts['cachedir'], 'files', env,
+                path.lstrip('/'))
+        destdir = os.path.dirname(dest)
+
+        if not os.path.isdir(destdir):
+            os.makedirs(destdir)
+
+        shutil.copyfile(path, dest)
+        return dest
+
     def file_list(self, env='base'):
         '''
         List the files on the master
