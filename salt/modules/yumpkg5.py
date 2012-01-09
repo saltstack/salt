@@ -113,10 +113,19 @@ def refresh_db():
     return True
 
 
-def install(pkg, refresh=False):
+def install(pkg, refresh=False, repo='', skip_verify=False):
     '''
-    Install the passed package, add refresh=True to clean out the yum database
-    before executing
+    Install the passed package
+
+    pkg
+        The name of the package to be installed
+    refresh : False
+        Clean out the yum database before executing
+    repo : (default)
+        Specify a package repository to install from
+        (e.g., ``yum --enablerepo=somerepo``)
+    skip_verify : False
+        Skip the GPG verification check (e.g., ``--nogpgcheck``)
 
     Return a dict containing the new package names and versions::
 
@@ -128,7 +137,13 @@ def install(pkg, refresh=False):
         salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
-    cmd = 'yum -y install ' + pkg
+
+    cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
+        repo='--enablerepo={0}'.format(repo) if repo else '',
+        gpgcheck='--nogpgcheck' if skip_verify else '',
+        pkg=pkg,
+    )
+
     if refresh:
         refresh_db()
     retcode = __salt__['cmd.retcode'](cmd)
