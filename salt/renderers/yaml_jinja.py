@@ -5,8 +5,18 @@ This renderer will take a yaml file with the jinja2 template and render it to a
 high data format for salt states.
 '''
 
+# Import Python Modules
 import os
+
+# Import thirt party modules
 import yaml
+try:
+    yaml.Loader = yaml.CLoader
+    yaml.Dumper = yaml.CDumper
+except:
+    pass
+
+# Import Salt libs
 from salt.utils.jinja import get_template
 
 def render(template_file, env='', sls=''):
