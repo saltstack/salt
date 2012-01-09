@@ -69,6 +69,39 @@ def daemonize():
     '''
     Daemonize a process
     '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            import ctypes
+            if ctypes.windll.shell32.IsUserAnAdmin() == 0:
+                import win32api
+                executablepath = sys.executable
+                pypath = executablepath.split('\\')
+                win32api.ShellExecute(
+                    0,
+                    'runas',
+                    executablepath, 
+                    os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
+                    os.path.join(pypath[0], os.sep, pypath[1]),
+                    0 )
+                sys.exit(0)
+            else:
+                import saltminionservice
+                import win32serviceutil
+                import win32service
+                import winerror
+                servicename = 'salt-minion'
+                try:
+                    status = win32serviceutil.QueryServiceStatus(servicename)
+                except win32service.error, details:
+                    if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
+                        saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
+                        sys.exit(0)
+                if status[1] == win32service.SERVICE_RUNNING:
+                    win32serviceutil.StopServiceWithDeps(servicename)
+                    win32serviceutil.StartService(servicename)
+                else:
+                    win32serviceutil.StartService(servicename)
+                sys.exit(0)
     try:
         pid = os.fork()
         if pid > 0:
@@ -147,3 +180,4 @@ def list_files(directory):
             ret.add(os.path.join(root, name))
 
     return list(ret)
+
