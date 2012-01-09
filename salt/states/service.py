@@ -48,7 +48,7 @@ def _enable(name, started):
         if started == True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
             ret['comment'] = ('Service {0} is already enabled,'
@@ -65,7 +65,7 @@ def _enable(name, started):
         if started == True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
             ret['changes'][name] = True
@@ -83,7 +83,7 @@ def _enable(name, started):
         ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
-            ' but the service was started').format(name)
+            ' but the service is running').format(name)
         return ret
     elif started == None:
         ret['result'] = False
@@ -126,7 +126,7 @@ def _disable(name, started):
         if started == True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already disabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
             ret['comment'] = ('Service {0} is already disabled,'
@@ -143,7 +143,7 @@ def _disable(name, started):
         if started == True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
             ret['changes'][name] = True
@@ -161,7 +161,7 @@ def _disable(name, started):
         ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
-            ' at boot, but the service was started').format(name)
+            ' at boot, and is running').format(name)
         return ret
     elif started == None:
         ret['result'] = False
@@ -250,16 +250,16 @@ def dead(name, enable=None, sig=None):
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable == True:
-            return _enable(name, False)
+            return _enable(name, True)
         elif enable == False:
-            return _disable(name, False)
+            return _disable(name, True)
         else:
             return ret
 
     if enable == True:
-        return _enable(name, True)
+        return _enable(name, False)
     elif enable == False:
-        return _disable(name, True)
+        return _disable(name, False)
     else:
         return ret
 
