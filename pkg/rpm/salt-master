@@ -6,17 +6,16 @@
 # LSB header
 
 ### BEGIN INIT INFO
+# Description: This is a daemon that controls the salt minions
 # Provides: salt-master
 # Required-Start: network
-# Default-Start: 3 4 5
 # Short-Description: salt master control daemon
-# Description: This is a daemon that controls the salt minions
 ### END INIT INFO
 
 # chkconfig header
 
 # chkconfig: 345 99 99 
-# description:  This is a daemon that controls the salt mininons
+# description:  This is a daemon that controls the salt minions
 #
 # processname: /usr/bin/salt-master
 
