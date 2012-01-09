@@ -108,7 +108,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'yum clean dbcache'
+    cmd = 'yum -q clean dbcache'
     retcode = __salt__['cmd.retcode'](cmd)
     return True
 
@@ -164,7 +164,7 @@ def upgrade():
         salt '*' pkg.upgrade
     '''
     old = list_pkgs()
-    cmd = 'yum -y upgrade'
+    cmd = 'yum -q -y upgrade'
     retcode = __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
@@ -195,7 +195,7 @@ def remove(pkg):
         salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    cmd = 'yum -y remove ' + pkg
+    cmd = 'yum -q -y remove ' + pkg
     retcode = __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
