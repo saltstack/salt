@@ -183,7 +183,9 @@ def running(name, enable=None, sig=None):
         The name of the init or rc script used to manage the service
 
     enable
-        Set the service to be enabled at boot time
+        Set the service to be enabled at boot time, True sets the service to
+        be enabled, False sets the named service to be disabled. The default
+        is None, which does not enable or disable anything.
 
     sig
         The string to search for when looking for the service process with ps
@@ -227,6 +229,11 @@ def dead(name, enable=None, sig=None):
 
     name
         The name of the init or rc script used to manage the service
+
+    enable
+        Set the service to be enabled at boot time, True sets the service to
+        be enabled, False sets the named service to be disabled. The default
+        is None, which does not enable or disable anything.
 
     sig
         The string to search for when looking for the service process with ps
