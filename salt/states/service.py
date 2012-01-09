@@ -68,10 +68,12 @@ def _enable(name, started):
                 ' and was started').format(name)
             return ret
         elif started == None:
+            ret['changes']['name'] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is in the desired state').format(name)
             return ret
         else:
+            ret['changes']['name'] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is dead').format(name)
             return ret
@@ -137,17 +139,19 @@ def _disable(name, started):
 
     # Service needs to be disabled
     if __salt__['service.disable'](name):
-        # Service has been enabled
+        # Service has been disabled
         if started == True:
             ret['changes']['name'] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and was started').format(name)
             return ret
         elif started == None:
+            ret['changes']['name'] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is in the desired state').format(name)
             return ret
         else:
+            ret['changes']['name'] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is dead').format(name)
             return ret
