@@ -46,7 +46,7 @@ def _enable(name, started):
     if __salt__['service.enabled'](name):
         # Service is enabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
                 ' and was started').format(name)
             return ret
@@ -63,24 +63,24 @@ def _enable(name, started):
     if __salt__['service.enable'](name):
         # Service has been enabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and was started').format(name)
             return ret
         elif started == None:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is in the desired state').format(name)
             return ret
         else:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is dead').format(name)
             return ret
 
     # Service failed to be enabled
     if started == True:
-        ret['changes']['name'] = True
+        ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
             ' but the service was started').format(name)
@@ -124,7 +124,7 @@ def _disable(name, started):
     if __salt__['service.disabled'](name):
         # Service is disabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already disabled,'
                 ' and was started').format(name)
             return ret
@@ -141,24 +141,24 @@ def _disable(name, started):
     if __salt__['service.disable'](name):
         # Service has been disabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and was started').format(name)
             return ret
         elif started == None:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is in the desired state').format(name)
             return ret
         else:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is dead').format(name)
             return ret
 
     # Service failed to be disabled
     if started == True:
-        ret['changes']['name'] = True
+        ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
             ' at boot, but the service was started').format(name)
