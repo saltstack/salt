@@ -61,18 +61,28 @@ def latest(name):
     try:
         has_newer = LooseVersion(avail) > LooseVersion(version)
     except AttributeError:
-        logger.debug("Error comparing versions for '%s' (%s > %s)",
-                name, avail, version, exc_info=True)
-
-        ret['comment'] = "No version could be retrieved for '{0}'".format(name)
-        return ret
+        # Not yet installed
+        if not version:
+            has_newer = True
+        else:
+            logger.debug("Error comparing versions for '%s' (%s > %s)",
+                    name, avail, version)
+            ret['comment'] = "No version could be retrieved for '{0}'".format(name)
+            return ret
 
     if has_newer:
         ret['changes'] = __salt__['pkg.install'](name, True)
-        ret['comment'] = 'Package {0} failed to install'.format(name)
 
-    ret['result'] = True
-    ret['comment'] = 'Package {0} installed'.format(name)
+        if ret['changes']:
+            ret['comment'] = 'Package {0} upgraded to latest'.format(name)
+            ret['result'] = True
+        else:
+            ret['comment'] = 'Package {0} failed to install'.format(name)
+            ret['result'] = False
+            return ret
+    else:
+        ret['comment'] = 'Package {0} already at latest'.format(name)
+        ret['result'] = True
 
     return ret
 
