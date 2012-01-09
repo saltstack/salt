@@ -106,8 +106,6 @@ def manage(name,
             __salt__['pip.install'](requirements=new_reqs, env=name)
             after = set(__salt__['pip.freeze'](env=name))
 
-            logger.debug("after: %s\nbefore: %s", after, before)
-
             new = list(after - before)
             old = list(before - after)
 
