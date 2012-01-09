@@ -67,11 +67,15 @@ something like this:
 
 import difflib
 import hashlib
+import logging
 import os
 import shutil
 import tempfile
 import traceback
 
+logger = logging.getLogger(__name__)
+
+COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
 def _makedirs(path):
     '''
@@ -776,8 +780,13 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
     # make sure the pattern(s) match
     if not __salt__['file.contains'](name, before, limit):
-        ret['comment'] = "Pattern not matched"
-        return ret
+        if __salt__['file.contains'](name, after, limit):
+            ret['comment'] = "Edit already performed"
+            ret['result'] = True
+            return ret
+        else:
+            ret['comment'] = "Pattern not matched"
+            return ret
 
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
@@ -806,21 +815,31 @@ def comment(name, regex, char='#', backup='.bak'):
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    unanchor_regex = regex.lstrip('^').rstrip('$')
+
     if not os.path.exists(name):
         ret['comment'] = "File not found"
         return ret
 
-    # Make sure the pattern appears in the file
+    # Make sure the pattern appears in the file before continuing
     if not __salt__['file.contains'](name, regex):
-        ret['comment'] = "Pattern not found"
-        return ret
+        if __salt__['file.contains'](name, unanchor_regex,
+                limit=COMMENT_REGEX.format(char)):
+            ret['comment'] = "Pattern already commented"
+            ret['result'] = True
+            return ret
+        else:
+            ret['comment'] = "Pattern not found"
+            return ret
 
     # Perform the edit
     __salt__['file.comment'](name, regex, char, backup)
 
     # Check the result
-    ret['result'] = __salt__['file.contains'](name, regex,
-            limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char))
+    ret['result'] = __salt__['file.contains'](name, unanchor_regex,
+            limit=COMMENT_REGEX.format(char))
+    ret['result'] = __salt__['file.contains'](name, unanchor_regex,
+            limit=COMMENT_REGEX.format(char))
 
     if ret['result']:
         ret['comment'] = "Commented lines successfully"
@@ -843,16 +862,22 @@ def uncomment(name, regex, char='#', backup='.bak'):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    unanchor_regex = regex.lstrip('^')
 
     if not os.path.exists(name):
         ret['comment'] = "File not found"
         return ret
 
     # Make sure the pattern appears in the file
-    if not __salt__['file.contains'](name, regex,
+    if not __salt__['file.contains'](name, unanchor_regex,
             limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char)):
-        ret['comment'] = "Pattern not found"
-        return ret
+        if __salt__['file.contains'](name, regex):
+            ret['comment'] = "Pattern already uncommented"
+            ret['result'] = True
+            return ret
+        else:
+            ret['comment'] = "Pattern not found"
+            return ret
 
     # Perform the edit
     __salt__['file.uncomment'](name, regex, char, backup)

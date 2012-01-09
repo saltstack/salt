@@ -97,7 +97,9 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def status(name):
+# The unused sig argument is required to maintain consistency in the state
+# system
+def status(name, sig=None):
     '''
     Return the status for a service via systemd, returns the PID if the service
     is running or an empty string if the service is not running
@@ -106,9 +108,14 @@ def status(name):
 
         salt '*' service.status <service name>
     '''
-    cmd = ("systemctl restart {0}.service"
-           " | awk '/Main PID/{print $3}'").format(name)
-    return __salt__['cmd.run'](cmd).strip()
+    cmd = 'systemctl show {0}.service'.format(name)
+    ret = __salt__['cmd.run'](cmd)
+    index1 = ret.find('\nMainPID=')
+    index2 = ret.find('\n', index1+9)
+    mainpid = ret[index1+9:index2]
+    if mainpid == '0':
+        return ''
+    return mainpid
 
 
 def enable(name):

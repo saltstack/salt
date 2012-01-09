@@ -78,7 +78,7 @@ def refresh_db():
     else:
         return True
 
-def install(pkg, refresh=False):
+def install(pkg, refresh=False, **kwargs):
     '''
     Install the passed package
 

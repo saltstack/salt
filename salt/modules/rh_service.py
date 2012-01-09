@@ -49,7 +49,7 @@ def get_enabled():
             continue
         if '{0}:on'.format(rlevel) in line:
             ret.add(comps[0])
-    return sorted(list(ret))
+    return sorted(ret)
 
 def get_disabled():
     '''
@@ -69,7 +69,7 @@ def get_disabled():
             continue
         if not '{0}:on'.format(rlevel) in line:
             ret.add(comps[0])
-    return sorted(list(ret))
+    return sorted(ret)
 
 def get_all():
     '''

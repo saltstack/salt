@@ -8,17 +8,14 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
-%{!?%_unitdir: %global _unitdir /lib/systemd/system}
-
 Name: salt
 Version: 0.9.4
-Release: 3%{?dist}
+Release: 6%{?dist}
 Summary: A parallel remote execution system
 
-Group:   System/Utilities
+Group:   System Environment/Daemons
 License: ASL 2.0
-URL:     https://github.com/thatch45/salt
-# http://saltstack.org/
+URL:     http://saltstack.org/
 Source0: https://github.com/downloads/saltstack/%{name}/%{name}-%{version}.tar.gz
 Source1: %{name}-master
 Source2: %{name}-syndic
@@ -29,8 +26,6 @@ Source6: %{name}-minion.service
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildArch: noarch
-
-Requires: python(abi) >= 2.6
 
 %if 0%{?with_python26}
 BuildRequires: python26-zmq
@@ -44,6 +39,7 @@ Requires: python26-zmq
 Requires: python26-jinja2
 Requires: python26-PyYAML
 Requires: python26-m2crypto
+Requires: python26-PyXML
 
 %else
 
@@ -58,9 +54,24 @@ Requires: python-zmq
 Requires: python-jinja2
 Requires: PyYAML
 Requires: m2crypto
+Requires: PyXML
 
 %endif
 
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+
+Requires(post): chkconfig
+Requires(preun): chkconfig
+Requires(preun): initscripts
+Requires(postun): initscripts
+
+%else
+
+BuildRequires: systemd-units
+
+%endif
+
+Requires: MySQL-python libvirt-python yum
 
 %description
 Salt is a distributed remote execution system used to execute commands and 
@@ -71,32 +82,21 @@ information, and not just dozens, but hundreds or even thousands of individual
 servers, handle them quickly and through a simple and manageable interface.
 
 %package -n salt-master
-Group:   System/Utilities
 Summary: Management component for salt, a parallel remote execution system 
-Requires: salt >= 0.9.4-3
+Group:   System Environment/Daemons
+Requires: salt = %{version}-%{release}
 
 %description -n salt-master 
-Salt is a distributed remote execution system used to execute commands and 
-query data. It was developed in order to bring the best solutions found in 
-the world of remote execution together and make them better, faster and more 
-malleable. Salt accomplishes this via its ability to handle larger loads of 
-information, and not just dozens, but hundreds or even thousands of individual 
-servers, handle them quickly and through a simple and manageable interface.
-Summary: A parallel remote execution system
+The Salt master is the central server to which all minions connect.
+Summary: 
 
 %package -n salt-minion
-Group:   System/Utilities
-Summary: Client tools for salt, a parallel remote execution system 
-Requires: salt >= 0.9.4-3
+Summary: Client component for salt, a parallel remote execution system 
+Group:   System Environment/Daemons
+Requires: salt = %{version}-%{release}
 
 %description -n salt-minion
-Salt is a distributed remote execution system used to execute commands and 
-query data. It was developed in order to bring the best solutions found in 
-the world of remote execution together and make them better, faster and more 
-malleable. Salt accomplishes this via its ability to handle larger loads of 
-information, and not just dozens, but hundreds or even thousands of individual 
-servers, handle them quickly and through a simple and manageable interface.
-Summary: Client utilities for Salt, a parallel remote execution system
+Salt minion is queried and controlled from the master.
 
 %prep
 %setup -q
@@ -108,16 +108,16 @@ Summary: Client utilities for Salt, a parallel remote execution system
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --root $RPM_BUILD_ROOT
 
-%if (0%{?rhel} || 0%{?fedora} < 15)
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 mkdir -p $RPM_BUILD_ROOT%{_initrddir}
-install -p -m 0775 %{SOURCE1} $RPM_BUILD_ROOT%{_initrddir}/
-install -p -m 0775 %{SOURCE2} $RPM_BUILD_ROOT%{_initrddir}/
-install -p -m 0775 %{SOURCE3} $RPM_BUILD_ROOT%{_initrddir}/
+install -p %{SOURCE1} $RPM_BUILD_ROOT%{_initrddir}/
+install -p %{SOURCE2} $RPM_BUILD_ROOT%{_initrddir}/
+install -p %{SOURCE3} $RPM_BUILD_ROOT%{_initrddir}/
 %else
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-install -p -m 0775 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
-install -p -m 0775 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
-install -p -m 0775 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
+install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
 %endif
  
 %clean
@@ -125,10 +125,10 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc %{_defaultdocdir}/salt*
-%{python_sitelib}/*
+%doc LICENSE
+%{python_sitelib}/%{name}/*
+%{python_sitelib}/%{name}-%{version}-py?.?.egg-info
 %doc %{_mandir}/man7/salt.7.*
-#{_initrddir}/*
 
 %files -n salt-minion
 %defattr(-,root,root)
@@ -136,11 +136,13 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man1/salt-minion.1.*
 %{_bindir}/salt-minion
 %{_bindir}/salt-call
-%if (0%{?rhel} || 0%{?fedora} < 15)
-%{_initrddir}/salt-minion
+
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+%attr(0755, root, root) %{_initrddir}/salt-minion
 %else
 %{_unitdir}/salt-minion.service
 %endif
+
 %config(noreplace) /etc/salt/minion
 
 %files -n salt-master
@@ -157,16 +159,98 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-run
-%if (0%{?rhel} || 0%{?fedora} < 15)
-%{_initrddir}/salt-master
-%{_initrddir}/salt-syndic
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+%attr(0755, root, root) %{_initrddir}/salt-master
+%attr(0755, root, root) %{_initrddir}/salt-syndic
 %else
 %{_unitdir}/salt-master.service
 %{_unitdir}/salt-syndic.service
 %endif
 %config(noreplace) /etc/salt/master
 
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+
+%preun -n salt-master
+if [ $1 -eq 0 ] ; then
+    /sbin/service salt-master stop >/dev/null 2>&1
+    /sbin/service salt-syndic stop >/dev/null 2>&1
+    /sbin/chkconfig --del salt-master
+    /sbin/chkconfig --del salt-syndic
+fi
+
+%preun -n salt-minion
+if [ $1 -eq 0 ] ; then
+    /sbin/service salt-minion stop >/dev/null 2>&1
+    /sbin/chkconfig --del salt-minion
+fi
+
+%post -n salt-master
+/sbin/chkconfig --add salt-master
+/sbin/chkconfig --add salt-syndic
+
+%post -n salt-minion
+/sbin/chkconfig --add salt-minion
+
+%postun -n salt-master
+if [ "$1" -ge "1" ] ; then
+    /sbin/service salt-master condrestart >/dev/null 2>&1 || :
+    /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
+fi
+
+%postun -n salt-minion
+if [ "$1" -ge "1" ] ; then
+    /sbin/service salt-master condrestart >/dev/null 2>&1 || :
+    /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
+fi
+
+%else
+
+%preun -n salt-master
+if [ $1 -eq 0 ] ; then
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable salt-master.service > /dev/null 2>&1 || :
+    /bin/systemctl stop salt-master.service > /dev/null 2>&1 || :
+
+    /bin/systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
+    /bin/systemctl stop salt-syndic.service > /dev/null 2>&1 || :
+fi
+
+%preun -n salt-minion
+if [ $1 -eq 0 ] ; then
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable salt-master.service > /dev/null 2>&1 || :
+    /bin/systemctl stop salt-master.service > /dev/null 2>&1 || :
+
+fi
+
+%post -n salt-master
+/bin/systemctl daemon-reload &>/dev/null || :
+
+%post -n salt-minion
+/bin/systemctl daemon-reload &>/dev/null || :
+
+%postun -n salt-master
+/bin/systemctl daemon-reload &>/dev/null
+[ $1 -gt 0 ] && /bin/systemctl try-restart salt-master.service &>/dev/null || :
+[ $1 -gt 0 ] && /bin/systemctl try-restart salt-syndic.service &>/dev/null || :
+
+%postun -n salt-minion
+/bin/systemctl daemon-reload &>/dev/null
+[ $1 -gt 0 ] && /bin/systemctl try-restart salt-master.service &>/dev/null || :
+[ $1 -gt 0 ] && /bin/systemctl try-restart salt-syndic.service &>/dev/null || :
+
+%endif
+
 %changelog
+* Sun Jan 8 2012 Clint Savage <herlo1@gmail.com> - 0.9.4-6
+- Missed some critical elements for SysV and rpmlint cleanup
+
+* Sun Jan 8 2012 Clint Savage <herlo1@gmail.com> - 0.9.4-5
+- SysV clean up in post
+
+* Sat Jan 7 2012 Clint Savage <herlo1@gmail.com> - 0.9.4-4
+- Cleaning up perms, group and descriptions, adding post scripts for systemd
+
 * Thu Jan 5 2012 Clint Savage <herlo1@gmail.com> - 0.9.4-3
 - Updating for systemd on Fedora 15+
 

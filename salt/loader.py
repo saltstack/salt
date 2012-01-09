@@ -239,7 +239,9 @@ class Loader(object):
                 else:
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(name, fn_, path, desc)
-            except ImportError:
+            except ImportError as exc:
+                log.debug(('Failed to import module {0}, this is most likely'
+                           ' NOT a problem: {1}').format(name, exc))
                 continue
             modules.append(mod)
         for mod in modules:

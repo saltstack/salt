@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 '''
 Approximate the Unix find(1) command and return a list of paths that
 meet the specified criteria.
