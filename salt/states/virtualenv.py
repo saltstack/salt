@@ -100,13 +100,11 @@ def manage(name,
             if requirements.startswith('salt://'):
                 new_reqs = __salt__['cp.cache_file'](requirements, __env__)
             else:
-                new_reqs = __salt__['cp.cache_local_file'](requirements, __env__)
+                new_reqs = __salt__['cp.cache_local_file'](requirements)
 
             before = set(__salt__['pip.freeze'](env=name))
             __salt__['pip.install'](requirements=new_reqs, env=name)
             after = set(__salt__['pip.freeze'](env=name))
-
-            logger.debug("after: %s\nbefore: %s", after, before)
 
             new = list(after - before)
             old = list(before - after)

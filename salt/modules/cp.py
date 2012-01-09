@@ -88,14 +88,14 @@ def cache_master(env='base'):
     return client.cache_master(env)
 
 
-def cache_local_file(path, env='base'):
+def cache_local_file(path):
     '''
-    Cache a local file on the minion in that minion's cache
+    Cache a local file on the minion in the localfiles cache
     '''
     if not os.path.exists(path):
         return ''
 
-    path_cached = is_cached(path, env)
+    path_cached = is_cached(path)
 
     # If the file has already been cached, return the path
     if path_cached:
@@ -107,7 +107,7 @@ def cache_local_file(path, env='base'):
 
     # The file hasn't been cached or has changed; cache it
     client = salt.minion.FileClient(__opts__)
-    return client.cache_local_file(path, env)
+    return client.cache_local_file(path)
 
 
 def list_master(env='base'):
