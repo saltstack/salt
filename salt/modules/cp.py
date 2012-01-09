@@ -90,7 +90,7 @@ def cache_master(env='base'):
 
 def list_master(env='base'):
     '''
-    Retrieve all of the files on the master and cache them locally
+    List all of the files stored on the master
     '''
     client = salt.minion.FileClient(__opts__)
     return client.file_list(env)
