@@ -90,10 +90,27 @@ def cache_master(env='base'):
 
 def list_master(env='base'):
     '''
-    Retrieve all of the files on the master and cache them locally
+    List all of the files stored on the master
     '''
     client = salt.minion.FileClient(__opts__)
     return client.file_list(env)
+
+
+def list_minion(env='base'):
+    '''
+    List all of the files cached on the minion
+    '''
+    client = salt.minion.FileClient(__opts__)
+    return client.file_local_list(env)
+
+
+def is_cached(path, env='base'):
+    '''
+    Return a boolean if the given path on the master has been cached on the
+    minion
+    '''
+    client = salt.minion.FileClient(__opts__)
+    return client.is_cached(path, env)
 
 
 def hash_file(path, env='base'):
