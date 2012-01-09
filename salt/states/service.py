@@ -158,7 +158,6 @@ def _disable(name, started):
 
     # Service failed to be disabled
     if started == True:
-        ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
             ' at boot, and is running').format(name)
@@ -169,6 +168,7 @@ def _disable(name, started):
             ' at boot, but the service was already running').format(name)
         return ret
     else:
+        ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
             ' at boot, and the service is dead').format(name)
