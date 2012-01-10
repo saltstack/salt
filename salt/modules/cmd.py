@@ -103,8 +103,9 @@ def run_all(cmd, cwd=DEFAULT_CWD):
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
     ret = _run(cmd, cwd=cwd)
-    if not ret['retcode']:
+    if ret['retcode'] != 0:
         log.error('Command {0} failed'.format(cmd))
+        log.error('retcode: {0}'.format(ret['retcode']))
         log.error('stdout: {0}'.format(ret['stdout']))
         log.error('stderr: {0}'.format(ret['stderr']))
     else:
