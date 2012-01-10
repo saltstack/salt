@@ -1,6 +1,5 @@
 '''
-Top level package command wrapper, used to translate the os detected by the
-grains to the correct service manager
+Windows Service module. 
 '''
 
 import os
@@ -9,13 +8,9 @@ import time
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only works on Windows systems
     '''
-    # Disable on these platforms, specific service modules exist:
-    enable = [
-               'Windows',
-              ]
-    if __grains__['os'] in enable:
+    if __grains__['os'] == 'Windows':
         return 'service'
     else:
         return False
@@ -92,7 +87,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'sc start {0}'.format(name)
+    cmd = 'sc start "{0}"'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -104,7 +99,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'sc stop {0}'.format(name)
+    cmd = 'sc stop "{0}"'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -116,10 +111,16 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    stopcmd = 'sc stop {0}'.format(name)
+    stopcmd = 'sc stop "{0}"'.format(name)
     stopped = __salt__['cmd.run'](stopcmd)
-    time.sleep(4)
-    startcmd = 'sc start {0}'.format(name)
+    servicestate = status(name)
+    while True:
+        servicestate = status(name)
+        if servicestate == '':
+            break
+        else:
+            time.sleep(2)
+    startcmd = 'sc start "{0}"'.format(name)
     return not __salt__['cmd.retcode'](startcmd)
 
 
@@ -133,19 +134,20 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = "sc query {0}".format(name)
+    cmd = 'sc query "{0}"'.format(name)
     status = __salt__['cmd.run'](cmd).split('\n')
     for line in status:
         if 'RUNNING' in line:
             return getsid(name)
-            sys.exit(0)
+        elif 'PENDING' in line:
+            return getsid(name)
     return ''
 
 def getsid(name):
     '''
     Return the sid for this windows service
     '''
-    cmd = "sc showsid {0}".format(name)
+    cmd = 'sc showsid "{0}"'.format(name)
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         if 'SERVICE SID:' in line:
@@ -163,7 +165,7 @@ def enable(name):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'sc config {0} start= auto'.format(name)
+    cmd = 'sc config "{0}" start= auto'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -175,7 +177,7 @@ def disable(name):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'sc config {0} start= demand'.format(name)
+    cmd = 'sc config "{0}" start= demand'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -187,10 +189,7 @@ def enabled(name):
 
         salt '*' service.enabled <service name>
     '''
-    if name in get_enabled():
-        return True
-    return False
-
+    return name in get_enabled()
 
 def disabled(name):
     '''
@@ -200,6 +199,4 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    if name in get_disabled():
-        return True
-    return False
+    return name in get_disabled()
