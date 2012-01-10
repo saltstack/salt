@@ -24,6 +24,23 @@ import salt.minion
 log = logging.getLogger(__name__)
 
 
+def _getargs(func):
+    '''
+    A small wrapper around getargspec that also supports callable classes
+    '''
+    if not callable(func):
+        raise TypeError('{0} is not a callable'.format(func))
+
+    if inspect.isfunction(func):
+        aspec = inspect.getargspec(func)
+    elif isinstance(func, object):
+        aspec = inspect.getargspec(func.__call__)
+        del aspec.args[0] # self
+    else:
+        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+
+    return aspec
+
 def format_log(ret):
     '''
     Format the state into a log message
@@ -163,7 +180,7 @@ class State(object):
                         )
         else:
             # First verify that the parameters are met
-            aspec = inspect.getargspec(self.states[full])
+            aspec = _getargs(self.states[full])
             arglen = 0
             deflen = 0
             if isinstance(aspec[0], list):
@@ -322,7 +339,7 @@ class State(object):
         ret = {}
         ret['full'] = '{0[state]}.{0[fun]}'.format(data)
         ret['args'] = []
-        aspec = inspect.getargspec(self.states[ret['full']])
+        aspec = _getargs(self.states[ret['full']])
         arglen = 0
         deflen = 0
         if isinstance(aspec[0], list):
