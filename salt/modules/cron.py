@@ -46,7 +46,9 @@ def _write_cron(user, lines):
     tmpd, path = tempfile.mkstemp()
     open(path, 'w+').writelines(lines)
     cmd = 'crontab -u {0} {1}'.format(user, path)
-    return __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd)
+    os.remove(path)
+    return ret
 
 
 def raw_cron(user):
