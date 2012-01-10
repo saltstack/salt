@@ -85,8 +85,7 @@ def refresh_db():
         __salt__['cmd.run']('portsnap update')
 
 
-# FIXME: Unused argument 'refresh'
-def install(name, refresh=False):
+def install(name, **kwargs):
     '''
     Install the passed package
 

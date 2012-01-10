@@ -8,7 +8,6 @@
 ### BEGIN INIT INFO
 # Provides: salt-syndic
 # Required-Start: network
-# Default-Start: 3 4 5
 # Short-Description: salt syndic master-minion passthrough daemon
 # Description: This is a daemon that controls the salt syndic
 ### END INIT INFO

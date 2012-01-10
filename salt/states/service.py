@@ -46,9 +46,9 @@ def _enable(name, started):
     if __salt__['service.enabled'](name):
         # Service is enabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
             ret['comment'] = ('Service {0} is already enabled,'
@@ -63,25 +63,27 @@ def _enable(name, started):
     if __salt__['service.enable'](name):
         # Service has been enabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is in the desired state').format(name)
             return ret
         else:
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is dead').format(name)
             return ret
 
     # Service failed to be enabled
     if started == True:
-        ret['changes']['name'] = True
+        ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
-            ' but the service was started').format(name)
+            ' but the service is running').format(name)
         return ret
     elif started == None:
         ret['result'] = False
@@ -122,9 +124,9 @@ def _disable(name, started):
     if __salt__['service.disabled'](name):
         # Service is disabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already disabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
             ret['comment'] = ('Service {0} is already disabled,'
@@ -137,27 +139,28 @@ def _disable(name, started):
 
     # Service needs to be disabled
     if __salt__['service.disable'](name):
-        # Service has been enabled
+        # Service has been disabled
         if started == True:
-            ret['changes']['name'] = True
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
-                ' and was started').format(name)
+                ' and is running').format(name)
             return ret
         elif started == None:
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is in the desired state').format(name)
             return ret
         else:
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is dead').format(name)
             return ret
 
     # Service failed to be disabled
     if started == True:
-        ret['changes']['name'] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
-            ' at boot, but the service was started').format(name)
+            ' at boot, and is running').format(name)
         return ret
     elif started == None:
         ret['result'] = False
@@ -165,6 +168,7 @@ def _disable(name, started):
             ' at boot, but the service was already running').format(name)
         return ret
     else:
+        ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
             ' at boot, and the service is dead').format(name)
@@ -179,7 +183,9 @@ def running(name, enable=None, sig=None):
         The name of the init or rc script used to manage the service
 
     enable
-        Set the service to be enabled at boot time
+        Set the service to be enabled at boot time, True sets the service to
+        be enabled, False sets the named service to be disabled. The default
+        is None, which does not enable or disable anything.
 
     sig
         The string to search for when looking for the service process with ps
@@ -224,6 +230,11 @@ def dead(name, enable=None, sig=None):
     name
         The name of the init or rc script used to manage the service
 
+    enable
+        Set the service to be enabled at boot time, True sets the service to
+        be enabled, False sets the named service to be disabled. The default
+        is None, which does not enable or disable anything.
+
     sig
         The string to search for when looking for the service process with ps
     '''
@@ -246,16 +257,16 @@ def dead(name, enable=None, sig=None):
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable == True:
-            return _enable(name, False)
+            return _enable(name, True)
         elif enable == False:
-            return _disable(name, False)
+            return _disable(name, True)
         else:
             return ret
 
     if enable == True:
-        return _enable(name, True)
+        return _enable(name, False)
     elif enable == False:
-        return _disable(name, True)
+        return _disable(name, False)
     else:
         return ret
 

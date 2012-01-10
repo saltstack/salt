@@ -159,4 +159,6 @@ def exec_code(lang, code, cwd=DEFAULT_CWD):
     open(codefile, 'w+').write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
-    return run(cmd, cwd=cwd)
+    ret = run(cmd, cwd=cwd)
+    os.remove(codefile)
+    return ret

@@ -163,10 +163,19 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(pkgs, refresh=False):
+def install(pkgs, refresh=False, repo='', skip_verify=False):
     '''
-    Install the passed package(s), add refresh=True to clean out the yum
-    database before executing
+    Install the passed package(s)
+
+    pkg
+        The name of the package to be installed
+    refresh : False
+        Clean out the yum database before executing
+    repo : (default)
+        Specify a package repository to install from
+        (e.g., ``yum --enablerepo=somerepo``)
+    skip_verify : False
+        Skip the GPG verification check (e.g., ``--nogpgcheck``)
 
     Return a dict containing the new package names and versions::
 
@@ -189,6 +198,10 @@ def install(pkgs, refresh=False):
 
     yb = yum.YumBase()
     setattr(yb.conf, 'assumeyes', True)
+    setattr(yb.conf, 'gpgcheck', not skip_verify)
+
+    if repo:
+        yb.repos.enableRepo(repo)
 
     for pkg in pkgs:
         try:

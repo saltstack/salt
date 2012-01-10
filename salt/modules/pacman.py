@@ -95,7 +95,7 @@ def refresh_db():
     return ret
 
 
-def install(name, refresh=False):
+def install(name, refresh=False, **kwargs):
     '''
     Install the passed package, add refresh=True to install with an -Sy
 
