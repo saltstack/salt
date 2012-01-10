@@ -76,7 +76,7 @@ class SMaster(object):
             return open(keyfile, 'r').read()
         else:
             key = salt.crypt.Crypticle.generate_key_string()
-            cumask = os.umask(191);
+            cumask = os.umask(191)
             open(keyfile, 'w+').write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
