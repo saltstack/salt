@@ -519,7 +519,7 @@ def managed(name,
         # Create the file, user-rw-only if mode will be set
         if mode:
           cumask = os.umask(384)
-        open(sfn, 'a')
+        open(name, 'a')
         if mode:
           os.umask(cumask)
         # Check permissions
