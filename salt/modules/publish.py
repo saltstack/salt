@@ -3,10 +3,10 @@ Publish a command from a minion to a target
 '''
 
 import zmq
+import ast
 
 import salt.crypt
 import salt.payload
-
 
 def _get_socket():
     '''
@@ -42,6 +42,8 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
         return {}
     if not arg:
         arg = []
+    elif isinstance(ast.literal_eval(arg), dict):
+        arg = [arg,]
     else:
         arg = arg.split(',')
     auth = salt.crypt.SAuth(__opts__)

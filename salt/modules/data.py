@@ -20,7 +20,7 @@ def load():
     try:
         fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "r")
         return serial.load(fn_)
-    except:
+    except (IOError, OSError):
         return {}
 
 def dump(new_data):
@@ -36,16 +36,16 @@ def dump(new_data):
             new_data = ast.literal_eval(new_data)
         else:
             return False
-    
+
     try:
         fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "w")
         
         serial = salt.payload.Serial(__opts__)
         serial.dump(new_data, fn_)
-
+        
         return True
 
-    except:
+    except (IOError, OSError):
         return False
 
 def update(key, value):
@@ -67,23 +67,21 @@ def getval(key):
 
     CLI Example::
         
-        salt '*' data.get_value <key>
-    
+        salt '*' data.getval <key>
     '''
     store = load()
     return store[key]
 
 def getvals(keys):
     '''
-    Get a value from the minion datastore
+    Get values from the minion datastore
 
     CLI Example::
         
-        salt '*' data.get_value <key>
-    
+        salt '*' data.getvals <key>
     '''
     store = load()
-    ret = []
+    ret = {}
     for key in keys:
         ret[key] = store[key]
     return ret
