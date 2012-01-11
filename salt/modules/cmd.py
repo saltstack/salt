@@ -103,8 +103,9 @@ def run_all(cmd, cwd=DEFAULT_CWD):
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
     ret = _run(cmd, cwd=cwd)
-    if not ret['retcode']:
+    if ret['retcode'] != 0:
         log.error('Command {0} failed'.format(cmd))
+        log.error('retcode: {0}'.format(ret['retcode']))
         log.error('stdout: {0}'.format(ret['stdout']))
         log.error('stderr: {0}'.format(ret['stderr']))
     else:
@@ -159,4 +160,6 @@ def exec_code(lang, code, cwd=DEFAULT_CWD):
     open(codefile, 'w+').write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
-    return run(cmd, cwd=cwd)
+    ret = run(cmd, cwd=cwd)
+    os.remove(codefile)
+    return ret

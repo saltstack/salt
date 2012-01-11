@@ -8,7 +8,6 @@
 ### BEGIN INIT INFO
 # Provides: salt-minion
 # Required-Start: network
-# Default-Start: 3 4 5
 # Short-Description: salt minion control daemon
 # Description: This is a daemon that controls the salt minions
 ### END INIT INFO

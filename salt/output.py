@@ -6,6 +6,11 @@ import json
 import pprint
 
 import yaml
+try:
+    yaml.Loader = yaml.CLoader
+    yaml.Dumper = yaml.CDumper
+except:
+    pass
 
 import salt.utils
 
