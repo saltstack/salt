@@ -78,14 +78,14 @@ def mounted(
     active = __salt__['mount.active']()
     if name not in active:
         # The mount is not present! Mount it
-            out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
-            if isinstance(out, basestring):
-                # Failed to remount, the state has failed!
-                ret['comment'] = out
-                ret['result'] = False
-            elif out == True:
-                # Remount worked!
-                ret['changes']['mount'] = True
+        out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
+        if isinstance(out, basestring):
+            # Failed to remount, the state has failed!
+            ret['comment'] = out
+            ret['result'] = False
+        elif out is True:
+            # Remount worked!
+            ret['changes']['mount'] = True
 
     if persist:
         # present, new, change, bad config

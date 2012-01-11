@@ -185,7 +185,7 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
     for ind in range(len(lst['crons'])):
         if cmd == lst['crons'][ind]['cmd']:
             rm_ = ind
-    if rm_ != None:
+    if rm_ is not None:
         lst['crons'].pop(rm_)
         ret = 'removed'
     comdat = _write_cron(user, _render_tab(lst))

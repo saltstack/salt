@@ -140,7 +140,7 @@ class Loader(object):
     used to only load specific functions from a directory, or to call modules
     in an arbitrary directory directly.
     '''
-    def __init__(self, module_dirs, opts={}):
+    def __init__(self, module_dirs, opts=dict()):
         self.module_dirs = module_dirs
         if 'grains' in opts:
             self.grains = opts['grains']
@@ -169,7 +169,7 @@ class Loader(object):
                 docs[fun] = funcs[fun].__doc__
         return docs
 
-    def call(self, fun, arg=[]):
+    def call(self, fun, arg=list()):
         '''
         Call a function in the load path.
         '''
@@ -280,7 +280,7 @@ class Loader(object):
                         func = getattr(mod, attr)
                         funcs[virtual + '.' + attr] = func
                         self._apply_outputter(func, mod)
-                    elif virtual == False:
+                    elif virtual is False:
                         pass
                     else:
                         func = getattr(mod, attr)
