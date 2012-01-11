@@ -423,29 +423,6 @@ def managed(name,
 
     # Check changes if the target file exists
     if os.path.isfile(name):
-        name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
-            'rb').read()).hexdigest()
-        # Check if file needs to be replaced
-        if source_sum['hsum'] != name_sum:
-            if not sfn:
-                sfn = __salt__['cp.cache_file'](source, __env__)
-            if not sfn:
-                ret['result'] = False
-                ret['comment'] = 'Source file {0} not found'.format(source)
-                return ret
-            # Check to see if the files are bins
-            if _is_bin(sfn) or _is_bin(name):
-                ret['changes']['diff'] = 'Replace binary file'
-            else:
-                slines = open(sfn, 'rb').readlines()
-                nlines = open(name, 'rb').readlines()
-                # Print a diff equivalent to diff -u old new
-                ret['changes']['diff'] = (''.join(difflib
-                                                    .unified_diff(nlines,
-                                                                  slines)))
-            # Pre requisites are met, and the file needs to be replaced, do it
-            if not __opts__['test']:
-                shutil.copy(sfn, name)
         # Check permissions
         perms = {}
         perms['luser'] = __salt__['file.get_user'](name)
@@ -487,6 +464,29 @@ def managed(name,
                                    .format(group))
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
+        name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
+            'rb').read()).hexdigest()
+        # Check if file needs to be replaced
+        if source_sum['hsum'] != name_sum:
+            if not sfn:
+                sfn = __salt__['cp.cache_file'](source, __env__)
+            if not sfn:
+                ret['result'] = False
+                ret['comment'] = 'Source file {0} not found'.format(source)
+                return ret
+            # Check to see if the files are bins
+            if _is_bin(sfn) or _is_bin(name):
+                ret['changes']['diff'] = 'Replace binary file'
+            else:
+                slines = open(sfn, 'rb').readlines()
+                nlines = open(name, 'rb').readlines()
+                # Print a diff equivalent to diff -u old new
+                ret['changes']['diff'] = (''.join(difflib
+                                                    .unified_diff(nlines,
+                                                                  slines)))
+            # Pre requisites are met, and the file needs to be replaced, do it
+            if not __opts__['test']:
+                shutil.copyfile(sfn, name)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
