@@ -4,8 +4,8 @@ specific to the minion
 '''
 
 import os
-
 import salt.payload
+
 
 def load():
     '''
@@ -18,8 +18,8 @@ def load():
     fn_ = os.path.join(__opts__['cachedir'], 'datastore')
     if not os.path.isfile(fn_):
         return {}
-    serial = Serial(__opts__)
-    return serial.load(fn_)
+    serial = salt.payload.Serial(__opts__)
+    return serial.load(open(fn_, "r"))
 
 def dump(new_data):
     '''
@@ -30,10 +30,13 @@ def dump(new_data):
         salt '*' data.dump '{'eggs': 'spam'}' 
     '''
     if not isinstance(new_data, dict):
-        return False
-    fn_ = os.path.join(__opts__['cachedir'], 'datastore')
-    serial = Serial(__opts__)
-    serial.dump(new_data)
+        if isinstance(eval(new_data, dict)):
+            new_data = eval(new_data)
+        else:
+            return False
+    fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "w")
+    serial = salt.payload.Serial(__opts__)
+    serial.dump(new_data, fn_)
     return True
 
 def update(key, value):
@@ -48,3 +51,15 @@ def update(key, value):
     store[key] = value
     dump(store)
     return True
+
+def get_value(key):
+    '''
+    Get a value from the minion datastore
+
+    CLI Example::
+        
+        salt '*' data.get_value <key>
+    
+    '''
+    store = load()
+    return store[key]
