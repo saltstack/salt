@@ -25,6 +25,7 @@ def __virtual__():
                'CentOS',
                'Fedora',
                'Gentoo',
+               'Windows',
               ]
     if __grains__['os'] in disable:
         return False
