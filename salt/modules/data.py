@@ -4,8 +4,8 @@ specific to the minion
 '''
 
 import os
-
 import salt.payload
+import ast
 
 def load():
     '''
@@ -15,11 +15,13 @@ def load():
 
         salt '*' data.load
     '''
-    fn_ = os.path.join(__opts__['cachedir'], 'datastore')
-    if not os.path.isfile(fn_):
+    serial = salt.payload.Serial(__opts__)
+
+    try:
+        fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "r")
+        return serial.load(fn_)
+    except:
         return {}
-    serial = Serial(__opts__)
-    return serial.load(fn_)
 
 def dump(new_data):
     '''
@@ -30,11 +32,21 @@ def dump(new_data):
         salt '*' data.dump '{'eggs': 'spam'}' 
     '''
     if not isinstance(new_data, dict):
+        if isinstance(ast.literal_eval(new_data), dict):
+            new_data = ast.literal_eval(new_data)
+        else:
+            return False
+    
+    try:
+        fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "w")
+        
+        serial = salt.payload.Serial(__opts__)
+        serial.dump(new_data, fn_)
+
+        return True
+
+    except:
         return False
-    fn_ = os.path.join(__opts__['cachedir'], 'datastore')
-    serial = Serial(__opts__)
-    serial.dump(new_data)
-    return True
 
 def update(key, value):
     '''
@@ -48,3 +60,30 @@ def update(key, value):
     store[key] = value
     dump(store)
     return True
+
+def getval(key):
+    '''
+    Get a value from the minion datastore
+
+    CLI Example::
+        
+        salt '*' data.get_value <key>
+    
+    '''
+    store = load()
+    return store[key]
+
+def getvals(keys):
+    '''
+    Get a value from the minion datastore
+
+    CLI Example::
+        
+        salt '*' data.get_value <key>
+    
+    '''
+    store = load()
+    ret = []
+    for key in keys:
+        ret[key] = store[key]
+    return ret
