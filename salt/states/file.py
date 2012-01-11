@@ -77,6 +77,15 @@ logger = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
+
+def __clean_tmp(sfn):
+    '''
+    Clean out a template temp file
+    '''
+    if not sfn.startswith(__opts__['cachedir']):
+        os.remove(sfn)
+
+
 def _makedirs(path):
     '''
     Ensure that the directory containing this path is available.
@@ -402,6 +411,7 @@ def managed(name,
         else:
             ret['result'] = False
             ret['comment'] = data['data']
+            __clean_tmp(sfn)
             return ret
     else:
         source_sum = __salt__['cp.hash_file'](source, __env__)
@@ -503,6 +513,7 @@ def managed(name,
                 else:
                     ret['result'] = False
                     ret['comment'] = 'Parent directory not present'
+                    __clean_tmp(sfn)
                     return ret
             shutil.copy(sfn, name)
         # Check permissions
@@ -554,6 +565,7 @@ def managed(name,
             ret['comment'] = 'File ' + name + ' not updated'
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File ' + name + ' is in the correct state'
+        __clean_tmp(sfn)
         return ret
 
 

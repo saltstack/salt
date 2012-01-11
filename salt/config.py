@@ -10,6 +10,12 @@ import sys
 
 # import third party libs
 import yaml
+try:
+    yaml.Loader = yaml.CLoader
+    yaml.Dumper = yaml.CDumper
+except:
+    pass
+
 
 # Import salt libs
 import salt.crypt

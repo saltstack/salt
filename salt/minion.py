@@ -604,6 +604,24 @@ class FileClient(object):
             raise MinionError('Unsupported path: {0}'.format(path))
         return path[7:]
 
+    def _file_local_list(self, dest):
+        '''
+        Helper util to return a list of files in a directory
+        '''
+        if os.path.isdir(dest):
+            destdir = dest
+        else:
+            destdir = os.path.dirname(dest)
+
+        filelist = []
+
+        for root, dirs, files in os.walk(destdir):
+            for name in files:
+                path = os.path.join(root, name)
+                filelist.append(path)
+
+        return filelist
+
     def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
         Get a single file from the salt-master
@@ -722,6 +740,20 @@ class FileClient(object):
                 ret.append(self.cache_file('salt://{0}'.format(fn_), env))
         return ret
 
+    def cache_local_file(self, path, **kwargs):
+        '''
+        Cache a local file on the minion in the localfiles cache
+        '''
+        dest = os.path.join(self.opts['cachedir'], 'localfiles',
+                path.lstrip('/'))
+        destdir = os.path.dirname(dest)
+
+        if not os.path.isdir(destdir):
+            os.makedirs(destdir)
+
+        shutil.copyfile(path, dest)
+        return dest
+
     def file_list(self, env='base'):
         '''
         List the files on the master
@@ -732,6 +764,33 @@ class FileClient(object):
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def file_local_list(self, env='base'):
+        '''
+        List files in the local minion files and localfiles caches
+        '''
+        filesdest = os.path.join(self.opts['cachedir'], 'files', env)
+        localfilesdest = os.path.join(self.opts['cachedir'], 'localfiles')
+
+        return sorted(self._file_local_list(filesdest) +
+                self._file_local_list(localfilesdest))
+
+    def is_cached(self, path, env='base'):
+        '''
+        Returns the full path to a file if it is cached locally on the minion
+        otherwise returns a blank string
+        '''
+        localsfilesdest = os.path.join(
+                self.opts['cachedir'], 'localfiles', path.lstrip('/'))
+        filesdest = os.path.join(
+                self.opts['cachedir'], 'files', env, path.lstrip('salt://'))
+
+        if os.path.exists(filesdest):
+            return filesdest
+        elif os.path.exists(localsfilesdest):
+            return localsfilesdest
+
+        return ''
 
     def hash_file(self, path, env='base'):
         '''
