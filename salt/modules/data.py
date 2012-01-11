@@ -81,7 +81,7 @@ def getvals(keys):
         salt '*' data.getvals <key>
     '''
     store = load()
-    ret = {}
+    ret = []
     for key in keys:
-        ret[key] = store[key]
+        ret.append(store[key])
     return ret
