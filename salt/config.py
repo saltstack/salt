@@ -35,7 +35,7 @@ def load_config(opts, path, env_var):
     if os.path.isfile(path):
         try:
             conf_opts = yaml.safe_load(open(path, 'r'))
-            if conf_opts == None:
+            if conf_opts is None:
                 # The config file is empty and the yaml.load returned None
                 conf_opts = {}
             else:
@@ -103,11 +103,7 @@ def minion_config(path):
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!
-    if opts['open_mode']:
-        if opts['open_mode'] == True:
-            opts['open_mode'] = True
-        else:
-            opts['open_mode'] = False
+    opts['open_mode'] = opts['open_mode'] is True
 
     opts['grains'] = salt.loader.grains(opts)
 
@@ -163,16 +159,8 @@ def master_config(path):
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!
-    if opts['open_mode']:
-        if opts['open_mode'] == True:
-            opts['open_mode'] = True
-        else:
-            opts['open_mode'] = False
-    if opts['auto_accept']:
-        if opts['auto_accept'] == True:
-            opts['auto_accept'] = True
-        else:
-            opts['auto_accept'] = False
+    opts['open_mode'] = opts['open_mode'] is True
+    opts['auto_accept'] = opts['auto_accept'] is True
     return opts
 
 
