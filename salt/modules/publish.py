@@ -40,12 +40,16 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
     if fun == 'publish.publish':
         # Need to log something here
         return {}
+
     if not arg:
         arg = []
-    elif isinstance(ast.literal_eval(arg), dict):
-        arg = [arg,]
-    else:
+
+    try:
+        if isinstance(ast.literal_eval(arg), dict):
+            arg = [arg,]
+    except:
         arg = arg.split(',')
+
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     payload = {'enc': 'aes'}
