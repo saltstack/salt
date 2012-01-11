@@ -20,7 +20,7 @@ def load():
     try:
         fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "r")
         return serial.load(fn_)
-    except IOError, OSError:
+    except (IOError, OSError):
         return {}
 
 def dump(new_data):
@@ -45,7 +45,7 @@ def dump(new_data):
         
         return True
 
-    except IOError, OSError:
+    except (IOError, OSError):
         return False
 
 def update(key, value):
