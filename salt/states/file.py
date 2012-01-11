@@ -428,7 +428,17 @@ def managed(name,
         perms['luser'] = __salt__['file.get_user'](name)
         perms['lgroup'] = __salt__['file.get_group'](name)
         perms['lmode'] = __salt__['file.get_mode'](name)
-        # Run through the perms and detect and apply the needed changes
+        # Mode changes if needed
+        if mode:
+            if mode != perms['lmode']:
+                if not __opts__['test']:
+                    __salt__['file.set_mode'](name, mode)
+                if mode != __salt__['file.get_mode'](name):
+                    ret['result'] = False
+                    ret['comment'] += 'Mode not changed '
+                else:
+                    ret['changes']['mode'] = mode
+        # user/group changes if needed, then check if it worked
         if user:
             if user != perms['luser']:
                 perms['cuser'] = user
@@ -442,15 +452,6 @@ def managed(name,
                         user,
                         group
                         )
-        if mode:
-            if mode != perms['lmode']:
-                if not __opts__['test']:
-                    __salt__['file.set_mode'](name, mode)
-                if mode != __salt__['file.get_mode'](name):
-                    ret['result'] = False
-                    ret['comment'] += 'Mode not changed '
-                else:
-                    ret['changes']['mode'] = mode
         if user:
             if user != __salt__['file.get_user'](name):
                 ret['result'] = False
@@ -515,7 +516,12 @@ def managed(name,
                     ret['comment'] = 'Parent directory not present'
                     __clean_tmp(sfn)
                     return ret
-            shutil.copy(sfn, name)
+        # Create the file, user-rw-only if mode will be set
+        if mode:
+          cumask = os.umask(384)
+        open(sfn, 'a')
+        if mode:
+          os.umask(cumask)
         # Check permissions
         perms = {}
         perms['luser'] = __salt__['file.get_user'](name)
@@ -557,6 +563,8 @@ def managed(name,
                 ret['comment'] += 'Group not changed '
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
+        # Now copy the file contents
+        shutil.copyfile(sfn, name)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
