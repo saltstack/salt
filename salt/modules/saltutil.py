@@ -36,10 +36,10 @@ def _sync(form, env):
             dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
             if srch != dsth:
                 # The downloaded file differes, replace!
-                shutil.copy(fn_, dest)
+                shutil.copyfile(fn_, dest)
                 ret.append('{0}.{1}'.format(form, os.path.basename(fn_)))
         else:
-            shutil.copy(fn_, dest)
+            shutil.copyfile(fn_, dest)
             ret.append('{0}.{1}'.format(form, os.path.basename(fn_)))
     if ret:
         open(os.path.join(__opts__['cachedir'], '.module_refresh'), 'w+').write()

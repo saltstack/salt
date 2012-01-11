@@ -756,12 +756,14 @@ def recurse(name,
             dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
             if srch != dsth:
                 # The downloaded file differes, replace!
-                shutil.copy(fn_, dest)
+                # FIXME: no metadata (ownership, permissions) available
+                shutil.copyfile(fn_, dest)
                 ret['changes'][dest] = 'updated'
         else:
             keep.add(dest)
             # The destination file is not present, make it
-            shutil.copy(fn_, dest)
+            # FIXME: no metadata (ownership, permissions) available
+            shutil.copyfile(fn_, dest)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
