@@ -29,11 +29,11 @@ def _enable(name, started):
 
     # Check to see if this minion supports enable
     if not 'service.enable' in __salt__:
-        if started == True:
+        if started is True:
             ret['comment'] = ('Enable is not available on this minion,'
                 ' service {0} started').format(name)
             return ret
-        elif started == None:
+        elif started is None:
             ret['comment'] = ('Enable is not available on this minion,'
                 ' service {0} is in the desired state').format(name)
             return ret
@@ -45,12 +45,12 @@ def _enable(name, started):
     # Service can be enabled
     if __salt__['service.enabled'](name):
         # Service is enabled
-        if started == True:
+        if started is True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
                 ' and is running').format(name)
             return ret
-        elif started == None:
+        elif started is None:
             ret['comment'] = ('Service {0} is already enabled,'
                 ' and is in the desired state').format(name)
             return ret
@@ -62,12 +62,12 @@ def _enable(name, started):
     # Service needs to be enabled
     if __salt__['service.enable'](name):
         # Service has been enabled
-        if started == True:
+        if started is True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is running').format(name)
             return ret
-        elif started == None:
+        elif started is None:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been enabled,'
                 ' and is in the desired state').format(name)
@@ -79,13 +79,13 @@ def _enable(name, started):
             return ret
 
     # Service failed to be enabled
-    if started == True:
+    if started is True:
         ret['changes'][name] = True
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
             ' but the service is running').format(name)
         return ret
-    elif started == None:
+    elif started is None:
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
             ' but the service was already running').format(name)
@@ -107,11 +107,11 @@ def _disable(name, started):
 
     # is enable/disable available?
     if not 'service.disable' in __salt__:
-        if started == True:
+        if started is True:
             ret['comment'] = ('Disable is not available on this minion,'
                 ' service {0} started').format(name)
             return ret
-        elif started == None:
+        elif started is None:
             ret['comment'] = ('Disable is not available on this minion,'
                 ' service {0} is in the desired state').format(name)
             return ret
@@ -123,12 +123,12 @@ def _disable(name, started):
     # Service can be disabled
     if __salt__['service.disabled'](name):
         # Service is disabled
-        if started == True:
+        if started is True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already disabled,'
                 ' and is running').format(name)
             return ret
-        elif started == None:
+        elif started is None:
             ret['comment'] = ('Service {0} is already disabled,'
                 ' and is in the desired state').format(name)
             return ret
@@ -140,12 +140,12 @@ def _disable(name, started):
     # Service needs to be disabled
     if __salt__['service.disable'](name):
         # Service has been disabled
-        if started == True:
+        if started is True:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is running').format(name)
             return ret
-        elif started == None:
+        elif started is None:
             ret['changes'][name] = True
             ret['comment'] = ('Service {0} has been disabled,'
                 ' and is in the desired state').format(name)
@@ -157,12 +157,12 @@ def _disable(name, started):
             return ret
 
     # Service failed to be disabled
-    if started == True:
+    if started is True:
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
             ' at boot, and is running').format(name)
         return ret
-    elif started == None:
+    elif started is None:
         ret['result'] = False
         ret['comment'] = ('Failed when setting service {0} to not start'
             ' at boot, but the service was already running').format(name)
@@ -196,9 +196,9 @@ def running(name, enable=None, sig=None):
            'comment': ''}
     if __salt__['service.status'](name, sig):
         ret['comment'] = 'The service {0} is already running'.format(name)
-        if enable == True:
+        if enable is True:
             return _enable(name, None)
-        elif enable == False:
+        elif enable is False:
             return _disable(name, None)
         else:
             return ret
@@ -208,16 +208,16 @@ def running(name, enable=None, sig=None):
     if not changes[name]:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
-        if enable == True:
+        if enable is True:
             return _enable(name, False)
-        elif enable == False:
+        elif enable is False:
             return _disable(name, False)
         else:
             return ret
 
-    if enable == True:
+    if enable is True:
         return _enable(name, True)
-    elif enable == False:
+    elif enable is False:
         return _disable(name, True)
     else:
         return ret
@@ -244,9 +244,9 @@ def dead(name, enable=None, sig=None):
            'comment': ''}
     if not __salt__['service.status'](name, sig):
         ret['comment'] = 'The service {0} is already dead'.format(name)
-        if enable == True:
+        if enable is True:
             return _enable(name, None)
-        elif enable == False:
+        elif enable is False:
             return _disable(name, None)
         else:
             return ret
@@ -256,16 +256,16 @@ def dead(name, enable=None, sig=None):
     if not changes[name]:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
-        if enable == True:
+        if enable is True:
             return _enable(name, True)
-        elif enable == False:
+        elif enable is False:
             return _disable(name, True)
         else:
             return ret
 
-    if enable == True:
+    if enable is True:
         return _enable(name, False)
-    elif enable == False:
+    elif enable is False:
         return _disable(name, False)
     else:
         return ret

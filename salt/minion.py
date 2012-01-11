@@ -195,8 +195,9 @@ class Minion(object):
         for ind in range(0, len(data['arg'])):
             try:
                 arg = eval(data['arg'][ind])
-                types = (int, str, dict, list)
-                if type(arg) in types:
+                if isinstance(arg, bool):
+                    data['arg'][ind] = str(data['arg'][ind])
+                elif isinstance(arg, (dict, int, list, str)):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
@@ -208,11 +209,13 @@ class Minion(object):
             try:
                 ret['return'] = self.functions[data['fun']](*data['arg'])
             except CommandExecutionError as exc:
-                log.error('A command in {0} had a problem: {1}'.format(function_name, str(exc)))
+                msg = 'A command in {0} had a problem: {1}'
+                log.error(msg.format(function_name, str(exc)))
                 ret['return'] = 'ERROR: {0}'.format(str(exc))
             except Exception as exc:
                 trb = traceback.format_exc()
-                log.warning('The minion function caused an exception: {0}'.format(exc))
+                msg = 'The minion function caused an exception: {0}'
+                log.warning(msg.format(exc))
                 ret['return'] = trb
         else:
             ret['return'] = '"{0}" is not available.'.format(function_name)
@@ -238,8 +241,9 @@ class Minion(object):
             for index in range(0, len(data['arg'][ind])):
                 try:
                     arg = eval(data['arg'][ind][index])
-                    types = (str, int, list, dict)
-                    if type(arg) in types:
+                    if isinstance(arg, bool):
+                        data['arg'][ind][index] = str(data['arg'][ind][index])
+                    elif isinstance(arg, (dict, int, list, str)):
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
