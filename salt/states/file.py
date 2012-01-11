@@ -423,6 +423,48 @@ def managed(name,
 
     # Check changes if the target file exists
     if os.path.isfile(name):
+        # Check permissions
+        perms = {}
+        perms['luser'] = __salt__['file.get_user'](name)
+        perms['lgroup'] = __salt__['file.get_group'](name)
+        perms['lmode'] = __salt__['file.get_mode'](name)
+        # Mode changes if needed
+        if mode:
+            if mode != perms['lmode']:
+                if not __opts__['test']:
+                    __salt__['file.set_mode'](name, mode)
+                if mode != __salt__['file.get_mode'](name):
+                    ret['result'] = False
+                    ret['comment'] += 'Mode not changed '
+                else:
+                    ret['changes']['mode'] = mode
+        # user/group changes if needed, then check if it worked
+        if user:
+            if user != perms['luser']:
+                perms['cuser'] = user
+        if group:
+            if group != perms['lgroup']:
+                perms['cgroup'] = group
+        if 'cuser' in perms or 'cgroup' in perms:
+            if not __opts__['test']:
+                __salt__['file.chown'](
+                        name,
+                        user,
+                        group
+                        )
+        if user:
+            if user != __salt__['file.get_user'](name):
+                ret['result'] = False
+                ret['comment'] = 'Failed to change user to {0} '.format(user)
+            elif 'cuser' in perms:
+                ret['changes']['user'] = user
+        if group:
+            if group != __salt__['file.get_group'](name):
+                ret['result'] = False
+                ret['comment'] += ('Failed to change group to {0} '
+                                   .format(group))
+            elif 'cgroup' in perms:
+                ret['changes']['group'] = group
         name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
             'rb').read()).hexdigest()
         # Check if file needs to be replaced
@@ -445,48 +487,7 @@ def managed(name,
                                                                   slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             if not __opts__['test']:
-                shutil.copy(sfn, name)
-        # Check permissions
-        perms = {}
-        perms['luser'] = __salt__['file.get_user'](name)
-        perms['lgroup'] = __salt__['file.get_group'](name)
-        perms['lmode'] = __salt__['file.get_mode'](name)
-        # Run through the perms and detect and apply the needed changes
-        if user:
-            if user != perms['luser']:
-                perms['cuser'] = user
-        if group:
-            if group != perms['lgroup']:
-                perms['cgroup'] = group
-        if 'cuser' in perms or 'cgroup' in perms:
-            if not __opts__['test']:
-                __salt__['file.chown'](
-                        name,
-                        user,
-                        group
-                        )
-        if mode:
-            if mode != perms['lmode']:
-                if not __opts__['test']:
-                    __salt__['file.set_mode'](name, mode)
-                if mode != __salt__['file.get_mode'](name):
-                    ret['result'] = False
-                    ret['comment'] += 'Mode not changed '
-                else:
-                    ret['changes']['mode'] = mode
-        if user:
-            if user != __salt__['file.get_user'](name):
-                ret['result'] = False
-                ret['comment'] = 'Failed to change user to {0} '.format(user)
-            elif 'cuser' in perms:
-                ret['changes']['user'] = user
-        if group:
-            if group != __salt__['file.get_group'](name):
-                ret['result'] = False
-                ret['comment'] += ('Failed to change group to {0} '
-                                   .format(group))
-            elif 'cgroup' in perms:
-                ret['changes']['group'] = group
+                shutil.copyfile(sfn, name)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -515,7 +516,12 @@ def managed(name,
                     ret['comment'] = 'Parent directory not present'
                     __clean_tmp(sfn)
                     return ret
-            shutil.copy(sfn, name)
+        # Create the file, user-rw-only if mode will be set
+        if mode:
+          cumask = os.umask(384)
+        open(name, 'a').close()
+        if mode:
+          os.umask(cumask)
         # Check permissions
         perms = {}
         perms['luser'] = __salt__['file.get_user'](name)
@@ -557,6 +563,8 @@ def managed(name,
                 ret['comment'] += 'Group not changed '
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
+        # Now copy the file contents
+        shutil.copyfile(sfn, name)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -748,12 +756,14 @@ def recurse(name,
             dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
             if srch != dsth:
                 # The downloaded file differes, replace!
-                shutil.copy(fn_, dest)
+                # FIXME: no metadata (ownership, permissions) available
+                shutil.copyfile(fn_, dest)
                 ret['changes'][dest] = 'updated'
         else:
             keep.add(dest)
             # The destination file is not present, make it
-            shutil.copy(fn_, dest)
+            # FIXME: no metadata (ownership, permissions) available
+            shutil.copyfile(fn_, dest)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
