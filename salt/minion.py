@@ -640,10 +640,13 @@ class FileClient(object):
                         data['dest']
                         )
                     destdir = os.path.dirname(dest)
+                    cumask = os.umask(191)
                     if not os.path.isdir(destdir):
                         os.makedirs(destdir)
                     if not os.path.exists(dest):
                         open(dest, 'w+').write(data['data'])
+                    os.chmod(dest, 384)
+                    os.umask(cumask)
                 break
             if not fn_:
                 dest = os.path.join(
@@ -653,9 +656,12 @@ class FileClient(object):
                     data['dest']
                     )
                 destdir = os.path.dirname(dest)
+                cumask = os.umask(191)
                 if not os.path.isdir(destdir):
                     os.makedirs(destdir)
                 fn_ = open(dest, 'w+')
+                os.chmod(dest, 384)
+                os.umask(cumask)
             fn_.write(data['data'])
         return dest
 

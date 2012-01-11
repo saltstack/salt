@@ -435,7 +435,7 @@ def managed(name,
                                                                   slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             if not __opts__['test']:
-                shutil.copy(sfn, name)
+                shutil.copyfile(sfn, name)
         # Check permissions
         perms = {}
         perms['luser'] = __salt__['file.get_user'](name)
@@ -504,7 +504,7 @@ def managed(name,
                     ret['result'] = False
                     ret['comment'] = 'Parent directory not present'
                     return ret
-            shutil.copy(sfn, name)
+            shutil.copyfile(sfn, name)
         # Check permissions
         perms = {}
         perms['luser'] = __salt__['file.get_user'](name)
@@ -736,12 +736,14 @@ def recurse(name,
             dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
             if srch != dsth:
                 # The downloaded file differes, replace!
-                shutil.copy(fn_, dest)
+                # FIXME: no metadata (ownership, permissions) available
+                shutil.copyfile(fn_, dest)
                 ret['changes'][dest] = 'updated'
         else:
             keep.add(dest)
             # The destination file is not present, make it
-            shutil.copy(fn_, dest)
+            # FIXME: no metadata (ownership, permissions) available
+            shutil.copyfile(fn_, dest)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
