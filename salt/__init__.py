@@ -25,9 +25,12 @@ def verify_env(dirs):
     for dir_ in dirs:
         if not os.path.isdir(dir_):
             try:
+                cumask = os.umask(191)
                 os.makedirs(dir_)
+                os.umask(cumask)
             except OSError, e:
                 print 'Failed to create directory path "%s" - %s' % (dir_, e)
+        os.chmod(dir_, 448)
     # Run the extra verification checks
     salt.utils.verify.run()
 
