@@ -85,7 +85,8 @@ def available_version(name):
         # on available, and only iterate though updates if we don't..
         for pkg in exactmatch:
             if pkg.arch == getBaseArch():
-                versions_list.append('-'.join([pkg.version, pkg.release]))
+                rel = pkg.release.rpartition('.')[0]
+                versions_list.append('-'.join([pkg.version, rel]))
 
     if len(versions_list) == 0:
         # if versions_list is empty return empty string.  It may make sense
@@ -128,12 +129,14 @@ def list_pkgs(*args):
     # if no args are passed in get all packages
     if len(args) == 0:
         for h in ts.dbMatch():
-            pkgs[h['name']] = '-'.join([h['version'],h['release']])
+            rel = h['release'].rpartition('.')[0]
+            pkgs[h['name']] = '-'.join([h['version'], rel])
     else:
         # get package version for each package in *args
         for arg in args:
             for h in ts.dbMatch('name', arg):
-                pkgs[h['name']] = '-'.join([h['version'],h['release']])
+                rel = h['release'].rpartition('.')[0]
+                pkgs[h['name']] = '-'.join([h['version'], rel])
 
     return pkgs
 
