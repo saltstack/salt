@@ -40,7 +40,7 @@ def fullversion():
 
     CLI Example::
 
-        salt '*' full.fullversion
+        salt '*' tomcat.fullversion
     '''
     cmd = __catalina_home() + '/bin/catalina.sh version'
     ret = {}
