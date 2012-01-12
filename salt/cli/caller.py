@@ -40,15 +40,15 @@ class Caller(object):
             else:
                 returner=None
             
-            if "uuid" in self.opts:
-                uuid=self.opts['uuid']
+            if "context" in self.opts:
+                context=self.opts['context']
             else:
-                uuid=None
+                context=None
 
             ret['return'] = self.minion.functions[self.opts['fun']](
                     *self.opts['arg'],
                     returner=returner,
-                    uuid=uuid
+                    context=context
                     )
         except (TypeError, CommandExecutionError) as exc:
             sys.stderr.write('Error running \'{0}\': {1}\n'.format(self.opts['fun'], str(exc)))

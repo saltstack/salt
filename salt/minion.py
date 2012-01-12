@@ -128,7 +128,7 @@ class Minion(object):
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
         if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
-           or 'arg' not in data or 'uuid' not in data:
+           or 'arg' not in data or 'context' not in data:
             return
         # Verify that the publication applies to this minion
         if 'tgt_type' in data:
@@ -222,7 +222,7 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
-        ret['uuid'] = data['uuid']
+        ret['context'] = data['context']
         if data['ret']:
             ret['id'] = self.opts['id']
             try:
