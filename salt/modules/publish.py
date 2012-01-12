@@ -4,6 +4,7 @@ Publish a command from a minion to a target
 
 import zmq
 import ast
+import time
 
 import salt.crypt
 import salt.payload
@@ -47,8 +48,9 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
     try:
         if isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
-    except:
-        arg = arg.split(',')
+    except (SyntaxError, ValueError):
+        if isinstance(arg, str):
+    	    arg = arg.split(',')
 
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
