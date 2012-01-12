@@ -534,7 +534,6 @@ class AESFuncs(object):
                 'tgt': clear_load['tgt'],
                 'jid': jid,
                 'ret': clear_load['ret'],
-                'context': clear_load['context']
                }
         if "context" in clear_load:
             load['context'] = clear_load['context']
