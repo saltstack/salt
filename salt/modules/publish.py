@@ -19,7 +19,7 @@ def _get_socket():
     return socket
 
 
-def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
+def publish(tgt, fun, arg=None, expr_form='glob', returner='', uuid=''):
     '''
     Publish a command from the minion out to other minions, publications need
     to be enabled on the Salt master and the minion needs to have permission
@@ -62,7 +62,8 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
             'tgt': tgt,
             'ret': returner,
             'tok': tok,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'uuid': uuid}
     payload['load'] = auth.crypticle.dumps(load)
     socket = _get_socket()
     socket.send(serial.dumps(payload))

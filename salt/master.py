@@ -500,7 +500,8 @@ class AESFuncs(object):
                 or 'tgt' not in clear_load\
                 or 'ret' not in clear_load\
                 or 'tok' not in clear_load\
-                or 'id' not in clear_load:
+                or 'id' not in clear_load\
+                or 'uuid' not in clear_load:
             return {}
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
@@ -534,6 +535,7 @@ class AESFuncs(object):
                 'tgt': clear_load['tgt'],
                 'jid': jid,
                 'ret': clear_load['ret'],
+                'uuid': clear_load['uuid']
                }
         expr_form = 'glob'
         timeout = 0
