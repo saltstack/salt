@@ -83,7 +83,9 @@ def __clean_tmp(sfn):
     Clean out a template temp file
     '''
     if not sfn.startswith(__opts__['cachedir']):
-        os.remove(sfn)
+        # Only clean up files that exist
+        if os.path.exists(sfn):
+            os.remove(sfn)
 
 
 def _makedirs(path):
@@ -323,7 +325,7 @@ def absent(name):
 
 
 def managed(name,
-        source,
+        source=None,
         user=None,
         group=None,
         mode=None,
@@ -343,7 +345,8 @@ def managed(name,
         The source file, this file is located on the salt master file server
         and is specified with the salt:// protocol. If the file is located on
         the master in the directory named spam, and is called eggs, the source
-        string is salt://spam/eggs
+        string is salt://spam/eggs. If source is left blank or None, the file
+        will be created as an empty file and the content will not be  managed
 
     user
         The user to own the file, this defaults to the user salt is running as
@@ -382,7 +385,10 @@ def managed(name,
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
-    if template:
+
+    # If the file is a template and the contents is managed
+    # then make sure to cpy it down and templatize  things.
+    if template and source:
         sfn = __salt__['cp.cache_file'](source, __env__)
         t_key = '_{0}'.format(template)
         if t_key in globals():
@@ -414,11 +420,13 @@ def managed(name,
             __clean_tmp(sfn)
             return ret
     else:
-        source_sum = __salt__['cp.hash_file'](source, __env__)
-        if not source_sum:
-            ret['result'] = False
-            ret['comment'] = 'Source file {0} not found'.format(source)
-            return ret
+        # Copy the file down if there is a source
+        if source:
+            source_sum = __salt__['cp.hash_file'](source, __env__)
+            if not source_sum:
+                ret['result'] = False
+                ret['comment'] = 'Source file {0} not found'.format(source)
+                return ret
     # If the source file is a template render it accordingly
 
     # Check changes if the target file exists
@@ -465,10 +473,14 @@ def managed(name,
                                    .format(group))
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
-        name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
+
+        # Only test the checksums on files with managed contents
+        if source:
+            name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
             'rb').read()).hexdigest()
+
         # Check if file needs to be replaced
-        if source_sum['hsum'] != name_sum:
+        if source and source_sum['hsum'] != name_sum:
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, __env__)
             if not sfn:
@@ -498,24 +510,29 @@ def managed(name,
             ret['comment'] = 'File {0} is in the correct state'.format(name)
         return ret
     else:
-        # It is a new file, set the diff accordingly
-        ret['changes']['diff'] = 'New file'
-        # Apply the new file
-        if not sfn:
-            sfn = __salt__['cp.cache_file'](source, __env__)
-        if not sfn:
-            ret['result'] = False
-            ret['comment'] = 'Source file {0} not found'.format(source)
-            return ret
-        if not __opts__['test']:
-            if not os.path.isdir(os.path.dirname(name)):
-                if makedirs:
-                    _makedirs(name)
-                else:
-                    ret['result'] = False
-                    ret['comment'] = 'Parent directory not present'
-                    __clean_tmp(sfn)
-                    return ret
+        # Only set the diff if the file contents is managed
+        if source:
+            # It is a new file, set the diff accordingly
+            ret['changes']['diff'] = 'New file'
+            # Apply the new file
+            if not sfn:
+                sfn = __salt__['cp.cache_file'](source, __env__)
+            if not sfn:
+                ret['result'] = False
+                ret['comment'] = 'Source file {0} not found'.format(source)
+                return ret
+            if not __opts__['test']:
+                if not os.path.isdir(os.path.dirname(name)):
+                    if makedirs:
+                        _makedirs(name)
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = 'Parent directory not present'
+                        __clean_tmp(sfn)
+                        return ret
+        else:
+            ret['changes']['new'] = 'file {0} created'.format(name)
+            ret['comment'] = 'Empty file'
         # Create the file, user-rw-only if mode will be set
         if mode:
           cumask = os.umask(384)
@@ -563,8 +580,10 @@ def managed(name,
                 ret['comment'] += 'Group not changed '
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
-        # Now copy the file contents
-        shutil.copyfile(sfn, name)
+
+        # Now copy the file contents if there is a source file
+        if sfn:
+            shutil.copyfile(sfn, name)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
