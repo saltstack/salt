@@ -65,11 +65,11 @@ something like this:
         - source: salt://code/flask
 '''
 
+import os
+import shutil
 import difflib
 import hashlib
 import logging
-import os
-import shutil
 import tempfile
 import traceback
 
@@ -962,4 +962,32 @@ def append(name, text):
 
     ret['comment'] = "Appended {0} lines".format(count)
     ret['result'] = True
+    return ret
+
+def touch(name, atime=None, mtime=None):
+    """
+    Replicate the 'nix "touch" command to create a new empty
+    file or update the atime and mtime of an existing  file.
+
+    Usage::
+
+        /var/log/httpd/logrotate.empty
+          file:
+            - touch
+
+    .. versionadded:: 0.9.5
+    """
+    ret = {
+        'name': name,
+        'changes': {},
+    }
+    exists = os.path.exists(name)
+    ret['result'] = __salt__['file.touch'](name, atime, mtime)
+
+    if not exists and ret['result']:
+        ret["comment"] = 'Created empty file {0}'.format(name)
+        ret["changes"]['new'] = name
+    elif exists and ret['result']:
+        ret["comment"] = 'Updated times on file {0}'.format(name)
+
     return ret
