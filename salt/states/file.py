@@ -244,13 +244,18 @@ def symlink(name, target, force=False, makedirs=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    if not os.path.isdir(os.path.dirname(name)):
+
+    pardir = os.path.abspath(os.path.join(name, os.pardir))
+
+    if not os.path.isdir(pardir):
         if makedirs:
-            _makedirs(name)
-        ret['result'] = False
-        ret['comment'] = ('Directory {0} for symlink is not present'
+            _makedirs(pardir)
+        else:
+            ret['result'] = False
+            ret['comment'] = ('Directory {0} for symlink is not present'
                           .format(os.path.dirname(name)))
-        return ret
+            return ret
+
     if os.path.islink(name):
         # The link exists, verify that it matches the target
         if not os.readlink(name) == target:
