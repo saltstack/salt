@@ -46,7 +46,9 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', context=''):
         arg = []
 
     try:
-        if isinstance(ast.literal_eval(arg), dict):
+        if isinstance(arg, dict):
+            arg = [arg,]
+        elif isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
     except (SyntaxError, ValueError):
         if isinstance(arg, str):
