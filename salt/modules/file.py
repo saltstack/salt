@@ -6,12 +6,19 @@ data
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
-import grp
-import hashlib
 import os
+import grp
 import pwd
+import time
+import hashlib
 
 import salt.utils.find
+from salt.exceptions import SaltInvocationError
+
+__outputter__ = {
+    'touch': 'txt',
+    'append': 'txt',
+}
 
 
 def gid_to_group(gid):
@@ -500,3 +507,42 @@ def append(path, *args):
             f.write('{0}\n'.format(line))
 
     return "Wrote {0} lines to '{1}'".format(len(args), path)
+
+def touch(name, atime=None, mtime=None):
+    '''
+    Just like 'nix's "touch" command, create a file if it
+    doesn't exist or simply update the atime and mtime if
+    it already does.
+
+    atime:
+        Access time in Unix epoch time
+    mtime:
+        Last modification in Unix epoch time
+
+    Usage::
+        salt '*' file.touch /var/log/emptyfile
+
+    .. versionadded:: 0.9.5
+    '''
+    if atime and atime.isdigit():
+        atime = int(atime)
+    if mtime and mtime.isdigit():
+        mtime = int(mtime)
+    try:
+        with open(name, "a"):
+            if not atime and not mtime:
+                times = None
+            elif not mtime and atime:
+                times = (atime, time.time())
+            elif not atime and mtime:
+                times = (time.time(), mtime)
+            else:
+                times = (atime, mtime)
+            os.utime(name, times)
+    except TypeError as exc:
+        msg = "atime and mtime must be integers"
+        raise SaltInvocationError(msg)
+    except (IOError, OSError) as exc:
+        return False
+
+    return os.path.exists(name)
