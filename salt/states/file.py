@@ -247,10 +247,11 @@ def symlink(name, target, force=False, makedirs=False):
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             _makedirs(name)
-        ret['result'] = False
-        ret['comment'] = ('Directory {0} for symlink is not present'
-                          .format(os.path.dirname(name)))
-        return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = ('Directory {0} for symlink is not present'
+                            .format(os.path.dirname(name)))
+            return ret
     if os.path.islink(name):
         # The link exists, verify that it matches the target
         if not os.readlink(name) == target:
