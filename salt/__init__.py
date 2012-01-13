@@ -4,9 +4,10 @@ Make me some salt!
 from salt.version import __version__
 
 # Import python libs
-import optparse
 import os
 import sys
+import stat
+import optparse
 
 # Import salt libs, the try block bypasses an issue at build time so that c
 # modules don't cause the build to fail
@@ -29,8 +30,14 @@ def verify_env(dirs):
                 os.makedirs(dir_)
                 os.umask(cumask)
             except OSError, e:
-                print 'Failed to create directory path "%s" - %s' % (dir_, e)
-        os.chmod(dir_, 448)
+                sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
+
+        mode = os.stat(dir_)
+        # TODO: Should this log if it can't set the permissions
+        #       to very secure for these PKI cert  directories?
+        if not stat.S_IMODE(mode.st_mode) == 448:
+            if os.access(dir_, os.W_OK):
+                os.chmod(dir_, 448)
     # Run the extra verification checks
     salt.utils.verify.run()
 
