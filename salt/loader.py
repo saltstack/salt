@@ -315,7 +315,7 @@ class Loader(object):
         '''
         List the functions
         '''
-        return funcs.keys()
+        return sorted(funcs.keys())
 
     def list_modules(self, funcs):
         '''
