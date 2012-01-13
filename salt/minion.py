@@ -24,7 +24,7 @@ import zmq
 
 # Import salt libs
 from salt.exceptions import AuthenticationError, MinionError, \
-    CommandExecutionError
+    CommandExecutionError, SaltInvocationError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -212,10 +212,14 @@ class Minion(object):
                 msg = 'A command in {0} had a problem: {1}'
                 log.error(msg.format(function_name, str(exc)))
                 ret['return'] = 'ERROR: {0}'.format(str(exc))
+            except SaltInvocationError as exc:
+                msg = 'Problem executing "{0}": {1}'
+                log.error(msg.format(function_name, str(exc)))
+                ret['return'] = 'ERROR executing {0}: {1}'.format(function_name, str(exc))
             except Exception as exc:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
-                log.warning(msg.format(exc))
+                log.warning(msg.format(trb))
                 ret['return'] = trb
         else:
             ret['return'] = '"{0}" is not available.'.format(function_name)
