@@ -99,6 +99,7 @@ class SaltCMD(object):
         parser.add_option('--return',
                 default='',
                 dest='return_',
+                metavar='RETURNER',
                 help=('Set an alternative return method. By default salt will '
                       'send the return data from the command back to the '
                       'master, but the return data can be redirected into '
