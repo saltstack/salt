@@ -2,6 +2,17 @@
 Module for gathering disk information
 '''
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+    # Disable on these platorms, specific service modules exist:
+    disable = [
+        'Windows',
+        ]
+    if __grains__['os'] in disable:
+        return False
+    return 'disk'
 
 def usage():
     '''
@@ -11,7 +22,6 @@ def usage():
 
         salt '*' disk.usage
     '''
-    # TODO: Windows support
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
     else:
