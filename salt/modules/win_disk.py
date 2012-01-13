@@ -7,7 +7,7 @@ try:
     import string
     import win32api
 except ImportError:
-    is_windows == False
+    is_windows = False
 
 def __virtual__():
     '''
