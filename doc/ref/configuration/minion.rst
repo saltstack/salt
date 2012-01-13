@@ -73,6 +73,19 @@ clusters.
 
     id: foo.bar.com
 
+.. conf_master:: sub_timeout
+
+``sub_timeout``
+---------------
+
+The minion connection to the master may be inturupted, the minion will
+verify the connection every so many seconds, to disable connection
+verification set this value to 0
+
+.. code-block:: yaml
+
+    sub_tiomeout: 60
+
 .. conf_minion:: cachedir
 
 ``cachedir``
