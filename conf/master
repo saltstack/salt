@@ -172,10 +172,9 @@
 # Logger levels can be used to tweak specific loggers logging levels.
 # Imagine you want to have the salt library at the 'warning' level, but, you
 # still wish to have 'salt.modules' at the 'debug' level:
-#   log_granular_levels: {
+#   log_granular_levels:
 #     'salt': 'warning',
 #     'salt.modules': 'debug'
-#   }
 #
 #log_granular_levels: {}
 
@@ -185,8 +184,7 @@
 # Node groups allow for logical groupings of minion nodes.
 # A group consists of a group name and a compound target.
 # 
-# nodegroups: {
+# nodegroups:
 #   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
 #   group2: 'G@os:Debian and foo.domain.com',
-# }
 
