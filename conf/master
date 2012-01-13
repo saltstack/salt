@@ -30,6 +30,15 @@
 # Set the directory used to hold unix sockets
 #sock_dir: /tmp/salt-unix
 
+# Set the acceptance level for serialization of messages. This should only be
+# set if the master is newer that 0.9.5 and the minion are older, this option
+# allows a 0.9.5 and newer master to communicate with minions 0.9.4 and
+# earlier. It is not recommended to keep this setting on if the minions are
+# all 0.9.5 or higher, as leaving pickle as the serialization medium is slow
+# and opens up security risks
+#
+#serial: msgpack
+
 #####        Security settings       #####
 ##########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
@@ -47,7 +56,7 @@
 # The state system uses a "top" file to tell the minions what environment to
 # use and what modules to use. The state_top file is defined relative to the
 # root of the base environment
-#state_top: top.yml
+#state_top: top.sls
 #
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
