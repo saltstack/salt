@@ -73,7 +73,7 @@ clusters.
 
     id: foo.bar.com
 
-.. conf_master:: sub_timeout
+.. conf_minion:: sub_timeout
 
 ``sub_timeout``
 ---------------
@@ -319,13 +319,13 @@ Minion Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/var/log/salt/master`
+Default: :file:`/var/log/salt/minion`
 
-The location of the master log file
+The location of the minion log file
 
 .. code-block:: yaml
 
-    log_file: /var/log/salt/master
+    log_file: /var/log/salt/minion
 
 .. conf_minion:: log_level
 
