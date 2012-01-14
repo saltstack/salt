@@ -16,6 +16,7 @@ import logging
 import MySQLdb
 import MySQLdb.cursors
 
+log = logging.getLogger(__name__)
 __opts__ = {}
 
 def __check_table(name, table):
