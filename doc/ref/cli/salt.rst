@@ -35,6 +35,10 @@ Options
 
     The timeout in seconds to wait for replies from the salt minions.
 
+.. option:: --version
+
+    Print the version of salt that is running.
+
 .. option:: -E, --pcre
 
     The target expression will be interpreted as a pcre regular expression
@@ -54,10 +58,25 @@ Options
 .. option:: -C, --compound
 
     Utilize many target definitions to make the call very granular. This option
-    takes a group of targets seperated by and or or. The default matcher is a
+    takes a group of targets separated by and or or. The default matcher is a
     glob as usual, if something other than a glob is used preface it with the
     letter denoting the type, example: 'webserv* and G@os:Debian or E@db.*'
-    make sure that the compount target is encapsultaed in quotes.
+    make sure that the compound target is encapsulated in quotes.
+
+.. option:: -X, --exsel
+
+    Instead of using shell globs use the return code of a function.
+
+.. option:: -N, --nodegroup
+
+    Use a predefined compound target defined in the salt master configuration
+    file
+
+.. option:: --return
+
+    Chose an alternative returner to call on the minion, if an alternative
+    returner is used then the return will not come back tot he command line
+    but will be sent to the specified return system.
 
 .. option:: -Q, --query
 
@@ -69,6 +88,25 @@ Options
     The location of the salt master configuration file, the salt master
     settings are required to know where the connections are;
     default=/etc/salt/master
+
+.. option::  --raw-out
+
+    Print the output from the salt command in raw python
+    form, this is suitable for re-reading the output into
+    an executing python script with eval.
+
+.. option::   --text-out         
+
+    Print the output from the salt command in the same
+    form the shell would.
+
+.. option::   --yaml-out
+
+    Print the output from the salt command in yaml.
+
+.. option::   --json-out
+
+    Print the output from the salt command in json.
 
 See also
 ========

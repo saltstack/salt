@@ -34,7 +34,7 @@ glob:
 
 .. code-block:: bash
 
-    salt '*foo.com' sys.doc
+    salt \*foo.com sys.doc
 
 
 Salt can also define the target minions with regular expressions:
@@ -111,6 +111,22 @@ The type of matcher defaults to glob, but can be specified with the
 corresponding letter followed by the @ symbol. In the above example a grain is
 used with G@ as well as a regular expression with E@. The webser* target does
 not need to be prefaced with a target type specifier because it is a glob.
+
+Node Group Targeting
+````````````````````
+
+.. versionadded:: 0.9.5
+
+Often the convenience of having a predefined group of minions to execute
+targets on is desired. This can be accomplished with the new nodegroups
+feature. Nodegroups allow for predefined compound targets to be declared in
+the master configuration file:
+
+.. code-block:: yaml
+
+    nodegroups:
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
 
 Calling the Function
 --------------------

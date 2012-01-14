@@ -42,19 +42,6 @@ The network port to set up the publication interface
 
     publish_port: 4505
 
-.. conf_master:: publish_pull_port
-
-``publish_pull_port``
----------------------
-
-Default: ``45055``
-
-The port used to communicate to the local publisher
-
-.. code-block:: yaml
-
-    publish_pull_port: 45055
-
 .. conf_master:: worker_threads
 
 ``worker_threads``
@@ -70,19 +57,6 @@ worker_threads value.
 
     worker_threads: 5
 
-``worker_start_port``
----------------------
-
-Default: ``5``
-
-The port to begin binding workers on, the workers will be created on
-increasingly higher ports
-
-
-.. code-block:: yaml
-
-    worker_start_port: 45056
-
 .. conf_master:: ret_port
 
 ``ret_port``
@@ -96,6 +70,20 @@ execution returns and command executions.
 .. code-block:: yaml
 
     ret_port: 4506
+
+.. conf_master:: root_dir
+
+``root_dir``
+------------
+
+Default: :file:`/`
+
+The system root direcotry to oporate from, change this to make Salt run from
+an alternative root
+
+.. code_block:: yaml
+
+    root_dir: /
 
 .. conf_master:: pki_dir
 
@@ -132,6 +120,16 @@ for executed salt commands.
 Default: ``24``
 
 Set the number of hours to keep old job information
+
+.. conf_master:: sock_dir
+
+``sock_dir``
+------------
+
+Default:: :file:`/tmp/salt-unix`
+
+Set the location to use for creating Unix sockets for master process
+communication
 
 Master Security Settings
 ------------------------
@@ -177,7 +175,7 @@ Master State System Settings
 ``state_top``
 -------------
 
-Default: ``top.yml``
+Default: ``top.sls``
 
 The state system uses a "top" file to tell the minions what environment to
 use and what modules to use. The state_top file is defined relative to the
@@ -185,7 +183,7 @@ root of the base environment
 
 .. code-block:: yaml
 
-    state_top: top.yml
+    state_top: top.sls
 
 .. conf_master:: renderer
 
@@ -199,6 +197,17 @@ The renderer to use on the minions to render the state data
 .. code-block:: yaml
 
     renderer: yaml_jinja
+
+.. conf_master:: failhard
+
+Default:: ``False``
+
+Set the global failhard flag, this informs all states to stop running states
+at the moment a single state fails
+
+.. code-block:: yaml
+
+    failhard: False
 
 Master File Server Settings
 ---------------------------
@@ -264,6 +273,99 @@ The buffer size in the file server in bytes
 
     file_buffer_size: 1048576
 
+Syndic Server Settings
+----------------------
+
+The Salt syndic is used to pass commands through a master from a higher
+master. Using the syndic is simple, if this is a master that will have
+syndic servers(s) below it set the "order_masters" setting to True, if this
+is a master that will be running a syndic daemon for passthrough the
+"syndic_master" setting needs to be set to the location of the master server
+to recieve commands from
+
+.. conf_master:: order_masters
+
+``order_masters``
+-----------------
+
+Default: ``False``
+
+Extra data needs to be sind with publications if the master os controlling a
+lower level master via a syndic minion. If this is the case the order_masters
+value must be set to True
+
+.. code-block:: yaml
+
+    order_masters: False
+
+.. conf_master:: syndic_master
+
+``syndic_master``
+-----------------
+
+Default: ``None``
+
+If this master will be running a salt-syndic to connect to a higher level
+master specify the higher level master with this configuration value
+
+.. code-block:: yaml
+
+    syndic_master: masterofmasters
+
+Peer Publish Settings
+---------------------
+
+Salt minions can send commands to other minions, but only if the minion is
+allowed to. By default "Peer Publication" is disabled, and when enabled it
+is enabled for specific minions and specific commands. This allows secure
+compartmentalization of commands based on individual minions.
+
+.. conf_master:: peer
+
+``peer``
+--------
+
+Default: ``{}``
+
+The configuration uses regular expressions to match minions and then a list
+of regular expressions to match functions, the following will allow the
+minion authenticated as foo.example.com to execute functions from the test
+and pkg modules
+
+.. code-block:: yaml
+
+    peer:
+      foo.example.com:
+          - test.*
+          - pkg.*
+
+This will allow all minions to execute all commands:
+
+.. code-block:: yaml
+
+    peer:
+      .*:
+          - .*
+
+This is not recomanded, since it would allow anyone who gets root on any
+single minion to instantly have root on all of the minions!
+
+Node Groups
+-----------
+
+.. conf_master:: nodegroups
+
+Default: ``{}``
+
+Node groups allow for logical groupings of minion nodes.
+A group consists of a group name and a compound target.
+
+.. code-block:: yaml
+
+    nodegroups:
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
+
 Master Logging Settings
 -----------------------
 
@@ -272,7 +374,7 @@ Master Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/etc/salt/pki`
+Default: :file:`/var/log/salt/master`
 
 The location of the master log file
 
@@ -307,7 +409,6 @@ still wish to have 'salt.modules' at the 'debug' level:
 
 .. code-block:: yaml
 
-  log_granular_levels: {
+  log_granular_levels:
     'salt': 'warning',
     'salt.modules': 'debug'
-  }

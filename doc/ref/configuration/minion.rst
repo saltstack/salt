@@ -73,6 +73,19 @@ clusters.
 
     id: foo.bar.com
 
+.. conf_minion:: sub_timeout
+
+``sub_timeout``
+---------------
+
+The minion connection to the master may be inturupted, the minion will
+verify the connection every so many seconds, to disable connection
+verification set this value to 0
+
+.. code-block:: yaml
+
+    sub_timeout: 60
+
 .. conf_minion:: cachedir
 
 ``cachedir``
@@ -85,6 +98,17 @@ The location for minion cache data.
 .. code-block:: yaml
 
     cachedir: /var/cache/salt
+
+.. conf_minion:: acceptance_wait_time
+
+Default: ``10``
+
+The number of seconds to wait until attempting to re-authenticate with the
+master.
+
+.. code-block:: yaml
+
+    acceptance_wait_time: 10
 
 Minion Module Management
 ------------------------
@@ -100,9 +124,163 @@ The event may occur in which the administrator desires that a minion should not
 be able to execute a certain module. The sys module is built into the minion
 and cannot be disabled.
 
+This setting can also tune the minion, as all modules are loaded into ram
+disabling modules will lover the minion's ram footprint.
+
 .. code-block:: yaml
 
-    disable_modules: [cmd, virt, test]
+    disable_modules:
+      - test
+      - solr
+
+.. conf_minion:: disable_returners
+
+``disable_returners``
+---------------------
+
+Default: ``[]`` (all returners are enabled by default)
+
+If certian returners should be disabled, this is the place
+
+.. code-block:: yaml
+
+    disable_returners:
+      - mongo_return
+
+.. conf_minion:: module_dirs
+
+``module_dirs``
+---------------
+
+Default: ``[]``
+
+A list of extra directories to search for salt modules
+
+.. code-block:: yaml
+
+    module_dirs:
+      - /var/lib/salt/modules
+
+.. conf_minion:: returner_dirs
+
+``returner_dirs``
+---------------
+
+Default: ``[]``
+
+A list of extra directories to search for salt returners
+
+.. code-block:: yaml
+
+    returners_dirs:
+      - /var/lib/salt/returners
+
+.. conf_minion:: states_dirs
+
+``states_dirs``
+---------------
+
+Default: ``[]``
+
+A list of extra directories to search for salt states
+
+.. code-block:: yaml
+
+    states_dirs:
+      - /var/lib/salt/states
+
+
+.. conf_minion:: render_dirs
+
+``render_dirs``
+---------------
+
+Default: ``[]``
+
+A list of extra directories to search for salt renderers
+
+.. code-block:: yaml
+
+    render_dirs:
+      - /var/lib/salt/renderers
+
+.. conf_minion:: cython_enable
+
+``cython_enable``
+-----------------
+
+Default: ``False``
+
+Set this value to true to enable auto loading and compiling of .pyx modules,
+This setting requires that gcc and cython are installed on the minion
+
+.. code-block:: yaml
+
+    cython_enable: False
+
+State Management Settings
+-------------------------
+
+.. conf_minion:: renderer
+
+``renderer``
+------------
+
+Default: ``yaml_jinja``
+
+The default renderer used for local state executions
+
+.. code-block:: renderer
+
+    renderer: yaml_jinja
+
+.. conf_minion:: state_verbose
+
+``state_verbose``
+-----------------
+
+Default: ``False``
+
+state_verbose allows for the data returned from the minion to be more
+verbose. Normaly only states that fail or states that have changes are
+returned, but setting state_verbose to True will return all states that
+were checked
+
+.. code-block:: state_verbose
+
+    state_verbose: True
+
+.. conf_minion:: autoload_dynamic_modules
+
+``autoload_dynamic_modules``
+----------------------------
+
+Default: ``True``
+
+autoload_dynamic_modules Turns on automatic loading of modules found in the
+environments on the master. This is turned on by default, to turn of
+autoloading modules when states run set this value to False
+
+.. code-block:: autoload_dynamic_modules
+
+    autoload_dynamic_modules: True
+
+.. conf_minion:: clean_dynamic_modules
+
+Default: ``True``
+
+clean_dynamic_modules keeps the dynamic modules on the minion in sync with
+the dynamic modules on the master, this means that if a dynamic module is
+not on the master it will be deleted from the minion. By default this is
+enabled and can be disabled by changing this value to False
+
+.. code-block:: clean_dynamic_modules
+
+    clean_dynamic_modules: True
+
+
+Security Settings
+------------------
 
 .. conf_minion:: open_mode
 
@@ -118,3 +296,64 @@ minion to clean the keys.
 .. code-block:: yaml
 
     open_mode: False
+
+Thread Settings
+---------------
+
+.. conf_minion:: multiprocessing
+
+Default: ``True``
+
+Disable multiprocessing support, by default when a minion receives a
+publication a new process is spawned and the command is executed therein.
+
+.. code-block:: yaml
+
+    multiprocessing: True
+
+Minion Logging Settings
+-----------------------
+
+.. conf_minion:: log_file
+
+``log_file``
+------------
+
+Default: :file:`/var/log/salt/minion`
+
+The location of the minion log file
+
+.. code-block:: yaml
+
+    log_file: /var/log/salt/minion
+
+.. conf_minion:: log_level
+
+``log_level``
+-------------
+
+Default: ``warning``
+
+The level of messages to send to the log file.
+One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+
+.. code-block:: yaml
+
+    log_level: warning
+
+.. conf_minion:: log_granular_levels
+
+``log_granular_levels``
+-----------------------
+
+Default: ``{}``
+
+Logger levels can be used to tweak specific loggers logging levels.
+Imagine you want to have the salt library at the 'warning' level, but, you
+still wish to have 'salt.modules' at the 'debug' level:
+
+.. code-block:: yaml
+
+  log_granular_levels:
+    'salt': 'warning',
+    'salt.modules': 'debug'
