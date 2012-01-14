@@ -1,5 +1,5 @@
 '''
-The Salt module is used to manage the state of the salt minion itself. It is
+The Saltutil module is used to manage the state of the salt minion itself. It is
 used to manage minion modules as well as automate updates to the salt minion
 '''
 
@@ -61,7 +61,7 @@ def sync_modules(env='base'):
 
     CLI Example::
 
-        salt '*' salt.sync_modules
+        salt '*' saltutil.sync_modules
     '''
     return _sync('modules', env)
 
@@ -75,7 +75,7 @@ def sync_states(env='base'):
 
     CLI Example::
 
-        salt '*' salt.sync_states
+        salt '*' saltutil.sync_states
     '''
     return _sync('states', env)
 
@@ -89,7 +89,7 @@ def sync_grains(env='base'):
 
     CLI Example::
 
-        salt '*' salt.sync_grains
+        salt '*' saltutil.sync_grains
     '''
     return _sync('grains', env)
 
@@ -103,7 +103,7 @@ def sync_renderers(env='base'):
 
     CLI Example::
 
-        salt '*' salt.sync_renderers
+        salt '*' saltutil.sync_renderers
     '''
     return _sync('renderers', env)
 
@@ -117,7 +117,7 @@ def sync_returners(env='base'):
 
     CLI Example::
 
-        salt '*' salt.sync_returners
+        salt '*' saltutil.sync_returners
     '''
     return _sync('returners', env)
 
@@ -129,7 +129,7 @@ def sync_all(env='base'):
 
     CLI Example::
 
-        salt '*' salt.sync_all
+        salt '*' saltutil.sync_all
     '''
     ret = []
     ret.append(sync_modules(env))
