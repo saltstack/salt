@@ -18,6 +18,36 @@ import MySQLdb.cursors
 
 __opts__ = {}
 
+def __check_table(name, table):
+    db = connect()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    query = "CHECK TABLE `%s`.`%s`" % (name,table,)
+    log.debug("Doing query: {0}".format(query,))
+    cur.execute(query)
+    results = cur.fetchall()
+    log.debug(results)
+    return results   
+    
+def __repair_table(name, table):
+    db = connect()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    query = "REPAIR TABLE `%s`.`%s`" % (name,table,)
+    log.debug("Doing query: {0}".format(query,))
+    cur.execute(query)
+    results = cur.fetchall()
+    log.debug(results)
+    return results
+    
+def __optimize_table(name, table):
+    db = connect()
+    cur = db.cursor(MySQLdb.cursors.DictCursor)
+    query = "OPTIMIZE TABLE `%s`.`%s`" % (name,table,)
+    log.debug("Doing query: {0}".format(query,))
+    cur.execute(query)
+    results = cur.fetchall()
+    log.debug(results)
+    return results
+
 def connect(**kwargs):
     '''
     wrap authentication credentials here
@@ -159,10 +189,35 @@ def db_list():
 
     log.debug(ret)
     return ret
+    
+def db_tables(name):
+    '''
+    Shows the tables in the given MySQL database (if exists)
 
+    CLI Example::
+
+        salt '*' mysqldb.db_tables 'database'
+    '''
+    if not db_exists(name):
+       log.info("Database '{0}' does not exist".format(name,))
+       return False
+
+    ret = []
+    db = connect()
+    cur = db.cursor()
+    query = "SHOW TABLES IN %s" % name
+    log.debug("Doing query: {0}".format(query,))
+
+    cur.execute(query)
+    results = cur.fetchall()
+    for table in results:
+       ret.append(table[0])
+    log.debug(ret)
+    return ret
+   
 def db_exists(name):
     '''
-    Checks if atabases exists on the  MySQL server.
+    Checks if a database exists on the MySQL server.
 
     CLI Example::
 
@@ -177,6 +232,7 @@ def db_exists(name):
     if cur.rowcount == 1:
        return True
     return False
+
     
 def db_create(name):
     '''
@@ -267,6 +323,7 @@ def user_exists(user,
     if cur.rowcount == 1:
        return True
     return False
+    
 def user_info(user,
               host='localhost'):
     '''
@@ -358,4 +415,70 @@ def user_remove(user,
        return True
 
     log.info("User '{0}'@'{1}' has NOT been removed".format(user,host,))
-    return False    
+    return False
+
+'''
+Maintenance
+'''   
+def db_check(name,
+              table=None):
+    '''
+    Repairs the full database or just a given table
+
+    CLI Example::
+
+        salt '*' mysqldb.db_check dbname
+    '''
+    ret = []
+    if table is None:
+        # we need to check all tables
+        tables = db_tables(name)
+        for table in tables:
+            log.info("Checking table '%s' in db '%s..'".format(name,table,))
+            ret.append( __check_table(name,table) )
+    else:
+        log.info("Checking table '%s' in db '%s'..".format(name,table,))
+        ret = __check_table(name,table)
+    return ret
+    
+def db_repair(name,
+              table=None):
+    '''
+    Repairs the full database or just a given table
+
+    CLI Example::
+
+        salt '*' mysqldb.db_repair dbname
+    '''
+    ret = []
+    if table is None:
+        # we need to repair all tables
+        tables = db_tables(name)
+        for table in tables:
+            log.info("Repairing table '%s' in db '%s..'".format(name,table,))
+            ret.append( __repair_table(name,table) )
+    else:
+        log.info("Repairing table '%s' in db '%s'..".format(name,table,))
+        ret = __repair_table(name,table)
+    return ret    
+    
+def db_optimize(name,
+              table=None):
+    '''
+    Optimizes the full database or just a given table
+
+    CLI Example::
+
+        salt '*' mysqldb.db_optimize dbname
+    '''
+    ret = []
+    if table is None:
+        # we need to optimize all tables
+        tables = db_tables(name)
+        for table in tables:
+            log.info("Optimizing table '%s' in db '%s..'".format(name,table,))
+            ret.append( __optimize_table(name,table) )
+    else:
+        log.info("Optimizing table '%s' in db '%s'..".format(name,table,))
+        ret = __optimize_table(name,table)
+    return ret
