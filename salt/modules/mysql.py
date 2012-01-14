@@ -364,7 +364,9 @@ def user_create(user,
        query = query + " IDENTIFIED BY '%s'" % password
 
     log.debug("Query: {0}".format(query,))
-    if cur.execute( query ):
+    cur.execute( query ):
+    
+    if user_exists(user,host):
        log.info("User '{0}'@'{1}' has been created".format(user,host,))
        return True
 
