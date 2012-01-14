@@ -374,7 +374,7 @@ Master Logging Settings
 ``log_file``
 ------------
 
-Default: :file:`/etc/salt/pki`
+Default: :file:`/var/log/salt/master`
 
 The location of the master log file
 
