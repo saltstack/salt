@@ -384,5 +384,5 @@ New Returners
 
 cassandra_returner
 ``````````````````
-A returnerer allowing Salt to send data to a cassandra server.
+A returner allowing Salt to send data to a cassandra server.
 Thanks to Byron Clark for contributing this returner
