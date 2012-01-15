@@ -48,7 +48,8 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
         if isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
     except:
-        arg = arg.split(',')
+        if isinstance(arg, str):
+            arg = arg.split(',')
 
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
