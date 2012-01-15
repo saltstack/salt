@@ -73,11 +73,11 @@ def getent():
 
 def chgid(name, gid):
     '''
-    Change the default shell of the user
+    Change the gid for a named group
 
     CLI Example::
 
-        salt '*' user.chshell foo /bin/zsh
+        salt '*' group.chgid foo 4376
     '''
     pre_gid = __salt__['file.group_to_gid'](name)
     if gid == pre_gid:

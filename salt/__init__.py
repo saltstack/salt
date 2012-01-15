@@ -1,18 +1,22 @@
 '''
 Make me some salt!
 '''
-
-__version_info__ = (0, 9, 4)
-__version__ = '.'.join(map(str, __version_info__))
+from salt.version import __version__
 
 # Import python libs
-import optparse
 import os
 import sys
+import stat
+import optparse
 
-# Import salt libs
-import salt.config
-
+# Import salt libs, the try block bypasses an issue at build time so that c
+# modules don't cause the build to fail
+try:
+    import salt.config
+    import salt.utils.verify
+except ImportError as e:
+    if e.message != 'No module named _msgpack':
+        raise
 
 def verify_env(dirs):
     '''
@@ -22,9 +26,20 @@ def verify_env(dirs):
     for dir_ in dirs:
         if not os.path.isdir(dir_):
             try:
+                cumask = os.umask(191)
                 os.makedirs(dir_)
+                os.umask(cumask)
             except OSError, e:
-                print 'Failed to create directory path "%s" - %s' % (dir_, e)
+                sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
+
+        mode = os.stat(dir_)
+        # TODO: Should this log if it can't set the permissions
+        #       to very secure for these PKI cert  directories?
+        if not stat.S_IMODE(mode.st_mode) == 448:
+            if os.access(dir_, os.W_OK):
+                os.chmod(dir_, 448)
+    # Run the extra verification checks
+    salt.utils.verify.run()
 
 
 class Master(object):
@@ -61,9 +76,9 @@ class Master(object):
                      'see the config file. Default: \'%%default\'.' %
                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
                 )
-
+        log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
         options, args = parser.parse_args()
-        salt.log.setup_console_logger(options.log_level)
+        salt.log.setup_console_logger(options.log_level, log_format=log_format)
 
         cli = {'daemon': options.daemon,
                'config': options.config}
@@ -87,6 +102,7 @@ class Master(object):
         for name, level in self.opts['log_granular_levels'].iteritems():
             salt.log.set_logger_level(name, level)
         import logging
+        log = logging.getLogger(__name__)
         # Late import so logging works correctly
         import salt.master
         master = salt.master.Master(self.opts)
@@ -132,7 +148,8 @@ class Minion(object):
                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
 
         options, args = parser.parse_args()
-        salt.log.setup_console_logger(options.log_level)
+        log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
+        salt.log.setup_console_logger(options.log_level, log_format=log_format)
         cli = {'daemon': options.daemon,
                'config': options.config}
 
@@ -142,8 +159,10 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
-        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
-                os.path.dirname(self.opts['log_file']),
+        verify_env([self.opts['pki_dir'],
+            self.opts['cachedir'],
+            self.opts['extension_modules'],
+            os.path.dirname(self.opts['log_file']),
                 ])
         import salt.log
         salt.log.setup_logfile_logger(
@@ -156,12 +175,17 @@ class Minion(object):
 
         # Late import so logging works correctly
         import salt.minion
-        if self.cli['daemon']:
-            # Late import so logging works correctly
-            import salt.utils
-            salt.utils.daemonize()
-        minion = salt.minion.Minion(self.opts)
-        minion.tune_in()
+        log = logging.getLogger(__name__)
+        try:
+            if self.cli['daemon']:
+                # Late import so logging works correctly
+                import salt.utils
+                salt.utils.daemonize()
+            minion = salt.minion.Minion(self.opts)
+            minion.tune_in()
+        except KeyboardInterrupt:
+            log.warn('Stopping the Salt Minion')
+            raise SystemExit('\nExiting on Ctrl-c')
 
 
 class Syndic(object):
@@ -253,9 +277,14 @@ class Syndic(object):
 
         # Late import so logging works correctly
         import salt.minion
-        syndic = salt.minion.Syndic(self.opts)
-        if self.cli['daemon']:
-            # Late import so logging works correctly
-            import salt.utils
-            salt.utils.daemonize()
-        syndic.tune_in()
+        log = logging.getLogger(__name__)
+        try:
+            syndic = salt.minion.Syndic(self.opts)
+            if self.cli['daemon']:
+                # Late import so logging works correctly
+                import salt.utils
+                salt.utils.daemonize()
+            syndic.tune_in()
+        except KeyboardInterrupt:
+            log.warn('Stopping the Salt Syndic Minion')
+            raise SystemExit('\nExiting on Ctrl-c')

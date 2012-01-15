@@ -5,11 +5,17 @@ This renderer will take a yaml file within a mako template and render it to a
 high data format for salt states.
 '''
 
+# Import Python Modules
 import os
 
 # Import Third Party libs
 from mako.template import Template
 import yaml
+try:
+    yaml.Loader = yaml.CLoader
+    yaml.Dumper = yaml.CDumper
+except:
+    pass
 
 
 def render(template, env='', sls=''):

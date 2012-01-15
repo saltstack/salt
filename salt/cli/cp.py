@@ -8,9 +8,7 @@ Salt-cp can be used to distribute configuration files
 # Import python modules
 import os
 import sys
-
-# Import third party libs
-import yaml
+import pprint
 
 # Import salt modules
 import salt.client
@@ -76,7 +74,9 @@ class SaltCP(object):
             args.append('list')
         elif self.opts['grain']:
             args.append('grain')
+        elif self.opts['nodegroup']:
+            args.append('nodegroup')
 
         ret = local.cmd(*args)
 
-        print yaml.dump(ret)
+        pprint.pprint(ret)

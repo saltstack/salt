@@ -4,13 +4,15 @@ minion modules.
 '''
 
 # Import python modules
-import pprint
+import sys
 
 # Import salt libs
 import salt
 import salt.loader
 import salt.minion
 
+# Custom exceptions
+from salt.exceptions import CommandExecutionError
 
 class Caller(object):
     '''
@@ -30,10 +32,15 @@ class Caller(object):
         '''
         ret = {}
         if self.opts['fun'] not in self.minion.functions:
-            print 'Function {0} is not available'.format(self.opts['fun'])
-        ret['return'] = self.minion.functions[self.opts['fun']](
-                *self.opts['arg']
-                )
+            sys.stderr.write('Function {0} is not available\n'.format(self.opts['fun']))
+            sys.exit(1)
+        try:
+            ret['return'] = self.minion.functions[self.opts['fun']](
+                    *self.opts['arg']
+                    )
+        except (TypeError, CommandExecutionError) as exc:
+            sys.stderr.write('Error running \'{0}\': {1}\n'.format(self.opts['fun'], str(exc)))
+            sys.exit(1)
         if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
             oput = self.minion.functions[self.opts['fun']].__outputter__
             if isinstance(oput, str):
@@ -58,7 +65,27 @@ class Caller(object):
         Print out the grains
         '''
         grains = salt.loader.grains(self.opts)
-        pprint.pprint(grains)
+        printout = self._get_outputter(out='yaml')
+        # If --json-out is specified, pretty print it
+        if 'json_out' in self.opts and self.opts['json_out']:
+            printout.indent = 2
+        printout(grains)
+
+    def _get_outputter(self, out=None):
+        get_outputter = salt.output.get_outputter
+        if self.opts['raw_out']:
+            printout = get_outputter('raw')
+        elif self.opts['json_out']:
+            printout = get_outputter('json')
+        elif self.opts['txt_out']:
+            printout = get_outputter('txt')
+        elif self.opts['yaml_out']:
+            printout = get_outputter('yaml')
+        elif out:
+            printout = get_outputter(out)
+        else:
+            printout = get_outputter(None)
+        return printout
 
     def run(self):
         '''
@@ -71,18 +98,11 @@ class Caller(object):
         else:
             ret = self.call()
             # Determine the proper output method and run it
-            get_outputter = salt.output.get_outputter
-            if self.opts['raw_out']:
-                printout = get_outputter('raw')
-            elif self.opts['json_out']:
-                printout = get_outputter('json')
-            elif self.opts['txt_out']:
-                printout = get_outputter('txt')
-            elif self.opts['yaml_out']:
-                printout = get_outputter('yaml')
-            elif 'out' in ret:
-                printout = get_outputter(ret['out'])
+            if 'out' in ret:
+                printout = self._get_outputter(ret['out'])
             else:
-                printout = get_outputter(None)
+                printout = self._get_outputter()
+            if 'json_out' in self.opts and self.opts['json_out']:
+                printout.indent = 2
 
             printout({'local': ret['return']}, color=self.opts['color'])

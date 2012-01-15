@@ -4,6 +4,11 @@ Manage the information in the hosts file
 
 import os
 
+def __get_hosts_filename():
+    if __grains__['kernel'].startswith('Windows'):
+        return 'C:\Windows\System32\drivers\etc\hosts'
+    else:
+        return '/etc/hosts'
 
 def list_hosts():
     '''
@@ -15,7 +20,7 @@ def list_hosts():
 
         salt '*' hosts.list_hosts
     '''
-    hfn = '/etc/hosts'
+    hfn = __get_hosts_filename()
     ret = {}
     if not os.path.isfile(hfn):
         return ret
@@ -26,7 +31,11 @@ def list_hosts():
         if line.startswith('#'):
             continue
         comps = line.split()
-        ret[comps[0]] = comps[1:]
+        if comps[0] in ret:
+            # maybe log a warning ?
+            ret[comps[0]].extend(comps[1:])
+        else:
+            ret[comps[0]] = comps[1:]
     return ret
 
 
@@ -42,7 +51,7 @@ def get_ip(host):
         return ''
     # Look for the op
     for addr in hosts:
-        if hosts[addr].count(host):
+        if host in hosts[addr]:
             return addr
     # ip not found
     return ''
@@ -71,20 +80,20 @@ def has_pair(ip, alias):
     hosts = list_hosts()
     if ip not in hosts:
         return False
-    if hosts[ip].count(alias):
+    if alias in hosts[ip]:
         return True
     return False
 
 
 def set_host(ip, alias):
     '''
-    Set the host entry in th hosts file for the given ip, this will overwrite
+    Set the host entry in the hosts file for the given ip, this will overwrite
     any previous entry for the given ip
 
     CLI Example::
         salt '*' hosts.set_host <ip> <alias>
     '''
-    hfn = '/etc/hosts'
+    hfn = __get_hosts_filename()
     ovr = False
     if not os.path.isfile(hfn):
         return False
@@ -97,9 +106,15 @@ def set_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            lines[ind] = ip + '\t\t' + alias + '\n'
-            ovr = True
+            if not ovr:
+                lines[ind] = ip + '\t\t' + alias + '\n'
+                ovr = True
+            else: # remove other entries
+                lines[ind] = ''
     if not ovr:
+        # make sure there is a newline
+        if lines and not lines[-1].endswith(('\n', '\r')):
+            lines[-1] = '%s\n' % lines[-1]
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
     open(hfn, 'w+').writelines(lines)
@@ -115,7 +130,7 @@ def rm_host(ip, alias):
     '''
     if not has_pair(ip, alias):
         return True
-    hfn = '/etc/hosts'
+    hfn = __get_hosts_filename()
     lines = open(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
@@ -146,7 +161,7 @@ def add_host(ip, alias):
     CLI Example::
         salt '*' hosts.add_host <ip> <alias>
     '''
-    hfn = '/etc/hosts'
+    hfn = __get_hosts_filename()
     ovr = False
     if not os.path.isfile(hfn):
         return False
@@ -165,7 +180,12 @@ def add_host(ip, alias):
             newline += '\t' + alias
             lines.append(newline)
             ovr = True
+            # leave any other matching entries alone
+            break
     if not ovr:
+        # make sure there is a newline
+        if lines and not lines[-1].endswith(('\n', '\r')):
+            lines[-1] = '%s\n' % lines[-1]
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
     open(hfn, 'w+').writelines(lines)

@@ -26,7 +26,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if type(groups) == type(str()):
+    if isinstance(groups, basestring):
         groups = groups.split(',')
     cmd = 'useradd -s {0} '.format(shell)
     if uid:
@@ -170,7 +170,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if type(groups) == type(str()):
+    if isinstance(groups, basestring):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
@@ -194,20 +194,29 @@ def info(name):
         salt '*' user.info root
     '''
     ret = {}
-    data = pwd.getpwnam(name)
-    ret['gid'] = data.pw_gid
-    ret['groups'] = list_groups(name)
-    ret['home'] = data.pw_dir
-    ret['name'] = data.pw_name
-    ret['passwd'] = data.pw_passwd
-    ret['shell'] = data.pw_shell
-    ret['uid'] = data.pw_uid
+    try:
+        data = pwd.getpwnam(name)
+        ret['gid'] = data.pw_gid
+        ret['groups'] = list_groups(name)
+        ret['home'] = data.pw_dir
+        ret['name'] = data.pw_name
+        ret['passwd'] = data.pw_passwd
+        ret['shell'] = data.pw_shell
+        ret['uid'] = data.pw_uid
+    except KeyError:
+        ret['gid'] = ''
+        ret['groups'] = ''
+        ret['home'] = ''
+        ret['name'] = ''
+        ret['passwd'] = ''
+        ret['shell'] = ''
+        ret['uid'] = ''
     return ret
 
 
 def list_groups(name):
     '''
-    Return a list of groups the named user belings to
+    Return a list of groups the named user belongs to
 
     CLI Example::
 

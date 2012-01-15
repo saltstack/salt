@@ -113,7 +113,7 @@ def set_fstab(
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
     # Fix the opts type if it is a list
-    if type(opts) == type(list()):
+    if isinstance(opts, list):
         opts = ','.join(opts)
     lines = []
     change = False
@@ -189,7 +189,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
-    if type(opts) == type(str()):
+    if isinstance(opts, basestring):
         opts = opts.split(',')
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
@@ -212,7 +212,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
-    if type(opts) == type(str()):
+    if isinstance(opts, basestring):
         opts = opts.split(',')
     mnts = active()
     if name in mnts:

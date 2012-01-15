@@ -40,45 +40,29 @@ running and the Salt :term:`minions <minion>` point to the master.
 Red Hat
 =======
 
-Fedora
-------
+We are working to get Salt packages into EPEL. In the meantime you can
+:command:`yum install salt-master salt-minion` via our Fedora People
+repository.
 
-Salt is currently being built for Fedora. The latest koji build pages can be
-found here:
+Red Hat Enterprise Linux 5 & 6 or CentOS 5 & 6
+----------------------------------------------
 
-* `Fedora 14 <https://koji.fedoraproject.org/koji/taskinfo?taskID=3358221>`_
-* `Fedora 15 <https://koji.fedoraproject.org/koji/taskinfo?taskID=3358223>`_
-* `Fedora Rawhide <https://koji.fedoraproject.org/koji/taskinfo?taskID=3358219>`_
+1.  Install the `EPEL`__ repository::
 
-Red Hat Enterprise Linux 6
---------------------------
+2.  Install our repository on FedoraPeople::
 
-Salt is being built for EPEL6. `Browse the latest builds.
-<https://koji.fedoraproject.org/koji/taskinfo?taskID=3358215>`_
+        wget -O /etc/yum.repos.d/epel-salt.repo \
+            http://repos.fedorapeople.org/repos/herlo/salt/epel-salt.repo
 
-The ZeroMQ packages in EPEL6 have been tested with this package, but if you
-still have issues these backports may help:
+.. __: http://fedoraproject.org/wiki/EPEL#How_can_I_use_these_extra_packages.3F
 
-* :download:`ZeroMQ backport <zeromq-2.1.7-1.el6.x86_64.rpm>`
-* :download:`pyzmq bindings backport <python-zmq-2.1.7-1.el6.src.rpm>`
-* `Package to set up EPEL repository
-  <http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-5.noarch.rpm>`_
-  (provided by the EPEL project)
-  
-Red Hat Enterprise Linux 5
---------------------------
+Fedora 15 & 16
+--------------
 
-Salt is being built for RHEL5, updates will be available soon!
+1.  Install our repository on FedoraPeople::
 
-Red Hat Enterprise Linux 5 requires more backports and the use of the Python
-2.6 stack provided in the EPEL repository. All of the listed packages need to
-be installed and the EPEL repository enabled to bring in the needed
-dependencies:
-
-* :download:`Salt rpm <salt-0.8.9-1.el5.noarch.rpm>`
-* :download:`YAML bindings for Python 2.6 <python26-PyYAML-3.08-4.el5.x86_64.rpm>`
-* :download:`ZeroMQ backport <zeromq-2.1.7-1.el5.x86_64.rpm>`
-* :download:`pyzmq bindings backport <python26-zmq-2.1.7-1.el5.x86_64.rpm>`
+        wget -O /etc/yum.repos.d/fedora-salt.repo \
+            http://repos.fedorapeople.org/repos/herlo/salt/fedora-salt.repo
 
 Arch Linux
 ==========
@@ -94,46 +78,68 @@ Debian / Ubuntu
 Ubuntu
 ------
 
-A PPA is available until we can get packages into apt::
+We are working to get Salt into apt. In the meantime we have a PPA available
+for Lucid::
 
     aptitude -y install python-software-properties
+    add-apt-repository ppa:chris-lea/libpgm
+    add-apt-repository ppa:chris-lea/zeromq
     add-apt-repository ppa:saltstack/salt
     aptitude update
     aptitude install salt
 
-.. admonition:: Installing ZeroMQ on Ubuntu Lucid (10.04 LTS)
-
-    The ZeroMQ package is available starting with Maverick but there are `PPA
-    packages available for Lucid`_ for both ZeroMQ and pyzmq. You will need to
-    also enable the following PPAs before running the commands above::
-
-        add-apt-repository ppa:chris-lea/libpgm
-        add-apt-repository ppa:chris-lea/zeromq
-
-.. _`PPA packages available for Lucid`: https://launchpad.net/~chris-lea/+archive/zeromq
-
 Debian
 ------
 
-`A deb package is currently in testing`__. Until that is accepted you can
-install Salt via :command:`easy_install` or :command:`pip`::
+`A deb package is currently in testing`__ for inclusion in apt. Until that is
+accepted you can install Salt by downloading the latest ``.deb`` in the
+`downloads section on GitHub`__ and installing that manually:
 
-    pip install salt
+.. parsed-literal::
+
+    dpkg -i salt-|version|.deb
 
 .. __: http://mentors.debian.net/package/salt
+.. __: https://github.com/saltstack/salt/downloads
 
 .. admonition:: Installing ZeroMQ on Squeeze (Debian 6)
 
-    ZeroMQ packages are available in squeeze-backports.
+    There is a `python-zmq`__ package available in Debian "wheezy (testing)".
+    If you don't have that repo enabled the best way to install Salt and pyzmq
+    is by using :command:`pip` (or :command:`easy_install`)::
 
-    1.  Add the following line to your :file:`/etc/apt/sources.list`::
+        pip install pyzmq salt
 
-            deb http://backports.debian.org/debian-backports squeeze-backports main
+.. __: http://packages.debian.org/search?keywords=python-zmq
 
-    2.  Run::
+Gentoo
+======
 
-            aptitude update
-            aptitude install libzmq1 python-zmq
+Salt can be easily installed on Gentoo::
+
+    emerge pyyaml m2crypto pycrypto jinja pyzmq
+
+Then download and install from source:
+
+1.  Download the latest source tarball from the GitHub downloads directory for
+    the Salt project: |latest|
+
+2.  Untar the tarball and run the :file:`setup.py` as root:
+
+.. parsed-literal::
+
+    tar xvf salt-|version|.tar.gz
+    cd salt-|version|
+    python2 setup.py install
+
+FreeBSD
+=======
+
+Salt is available in the FreeBSD ports tree::
+
+    cd /usr/ports/sysutils/salt && make install clean
+
+.. seealso:: :doc:`freebsd installation guide </topics/tutorials/freebsd>`
 
 Installing from source
 ======================

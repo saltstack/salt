@@ -26,13 +26,12 @@ The data structure needs to be:
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
 
-import cPickle as pickle
-import datetime
-import glob
 import os
 import re
 import sys
+import glob
 import time
+import datetime
 
 # Import zmq modules
 import zmq
@@ -40,6 +39,7 @@ import zmq
 # Import salt modules
 import salt.config
 import salt.payload
+from salt.exceptions import SaltClientError, SaltInvocationError
 
 
 def prep_jid(cachedir):
@@ -59,19 +59,13 @@ def prep_jid(cachedir):
     return jid
 
 
-class SaltClientError(Exception):
-    '''
-    Custom exception class.
-    '''
-    pass
-
-
 class LocalClient(object):
     '''
     Connect to the salt master via the local server and via root
     '''
     def __init__(self, c_path='/etc/salt/master'):
         self.opts = salt.config.master_config(c_path)
+        self.serial = salt.payload.Serial(self.opts)
         self.key = self.__read_master_key()
 
     def __read_master_key(self):
@@ -82,8 +76,8 @@ class LocalClient(object):
             keyfile = os.path.join(self.opts['cachedir'], '.root_key')
             key = open(keyfile, 'r').read()
             return key
-        except:
-            raise SaltClientError('Failed to read in the salt root key')
+        except (OSError, IOError):
+            raise SaltClientError('Problem reading the salt root key. Are you root?')
 
     def _check_glob_minions(self, expr):
         '''
@@ -200,7 +194,7 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret[fn_] = pickle.load(open(retp, 'r'))
+                            ret[fn_] = self.serial.load(open(retp, 'r'))
                         except:
                             pass
             if ret and start == 999999999999:
@@ -239,10 +233,10 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
-                            ret_data = pickle.load(open(retp, 'r'))
+                            ret_data = self.serial.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = pickle.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
                         except:
                             pass
             if ret and start == 999999999999:
@@ -269,7 +263,7 @@ class LocalClient(object):
             loadp = os.path.join(jid_dir, '.load.p')
             if os.path.isfile(loadp):
                 try:
-                    load = pickle.load(open(loadp, 'r'))
+                    load = self.serial.load(open(loadp, 'r'))
                     if load['fun'] == cmd:
                         # We found a match! Add the return values
                         ret[jid] = {}
@@ -278,7 +272,7 @@ class LocalClient(object):
                             retp = os.path.join(host_dir, 'return.p')
                             if not os.path.isfile(retp):
                                 continue
-                            ret[jid][host] = pickle.load(open(retp))
+                            ret[jid][host] = self.serial.load(open(retp))
                 except:
                     continue
             else:
@@ -297,6 +291,7 @@ class LocalClient(object):
                 'list': self._check_list_minions,
                 'grain': self._check_grain_minions,
                 'exsel': self._check_grain_minions,
+                'compound': self._check_grain_minions,
                 }[expr_form](expr)
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
@@ -322,6 +317,14 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
+        if expr_form == 'nodegroup':
+            if tgt not in self.opts['nodegroups']:
+                conf_file = self.opts.get('conf_file', 'the master config file')
+                err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
+                raise SaltInvocationError(err)
+            tgt = self.opts['nodegroups'][tgt]
+            expr_form = 'compound'
+
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module
@@ -330,6 +333,7 @@ class LocalClient(object):
         # send!
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
+
         if not minions:
             return {'jid': '',
                     'minions': minions}
@@ -369,7 +373,7 @@ class LocalClient(object):
         payload = None
         for ind in range(100):
             try:
-                payload = salt.payload.unpackage(
+                payload = self.serial.loads(
                         socket.recv(
                             zmq.NOBLOCK
                             )

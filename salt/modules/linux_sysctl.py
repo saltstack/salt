@@ -3,6 +3,11 @@ Module for viewing and modifying sysctl parameters
 '''
 
 import os
+from salt.exceptions import CommandExecutionError
+
+__outputter__ = {
+    'assign': 'txt',
+}
 
 
 def __virtual__():
@@ -24,9 +29,9 @@ def show():
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if not line.count(' '):
+        if not line:
             continue
-        if not line.count(' = '):
+        if ' = ' not in line:
             continue
         comps = line.split(' = ')
         ret[comps[0]] = comps[1]
@@ -53,6 +58,10 @@ def assign(name, value):
     CLI Example:
     salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
+    sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
+    if not os.path.exists(sysctl_file):
+        raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+
     cmd = 'sysctl -w {0}={1}'.format(name, value)
     ret = {}
     out = __salt__['cmd.run'](cmd).strip()
@@ -63,7 +72,7 @@ def assign(name, value):
 
 def persist(name, value, config='/etc/sysctl.conf'):
     '''
-    Assign and persist a simple sysctl paramater for this minion
+    Assign and persist a simple sysctl parameter for this minion
 
     CLI Example::
 
@@ -80,7 +89,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
         if line.startswith('#'):
             nlines.append(line)
             continue
-        if not line.count('='):
+        if '=' not in line:
             nlines.append(line)
             continue
         comps = line.split('=')

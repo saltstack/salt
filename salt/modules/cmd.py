@@ -9,6 +9,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import salt.utils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -19,15 +20,39 @@ DEFAULT_CWD = os.path.expanduser('~')
 
 # Set up the default outputters
 __outputter__ = {
-                 'run': 'txt'
-                 }
+    'run': 'txt',
+}
+def _run(cmd,
+        cwd=DEFAULT_CWD,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        quiet=False):
+    '''
+    Do the DRY thing and only call subprocess.Popen() once
+    '''
+    ret = {}
+    if not quiet:
+        log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
+    proc = subprocess.Popen(cmd,
+        cwd=cwd,
+        shell=True,
+        stdout=stdout,
+        stderr=stderr,
+    )
+    out = proc.communicate()
+    ret['stdout'] = out[0]
+    ret['stderr'] = out[1]
+    ret['retcode'] = proc.returncode
+    ret['pid'] = proc.pid
+
+    return ret
 
 
-def _is_exec(path):
+def _run_quiet(cmd, cwd=DEFAULT_CWD):
     '''
-    Return true if the passed path exists and is execuatable
+    Helper for running commands quietly for minion startup
     '''
-    return os.path.exists(path) and os.access(path, os.X_OK)
+    return _run(cmd, cwd, stderr=subprocess.STDOUT, quiet=True)['stdout']
 
 
 def run(cmd, cwd=DEFAULT_CWD):
@@ -36,14 +61,9 @@ def run(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    out = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT).communicate()[0]
+    out = _run(cmd, cwd=cwd, stderr=subprocess.STDOUT)['stdout']
     log.debug(out)
     return out
 
@@ -54,13 +74,9 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    stdout = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE).communicate()[0]
+    stdout = _run(cmd, cwd=cwd)["stdout"]
     log.debug(stdout)
     return stdout
 
@@ -71,13 +87,9 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    stderr = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stderr=subprocess.PIPE).communicate()[0]
+    stderr = _run(cmd, cwd=cwd)["stderr"]
     log.debug(stderr)
     return stderr
 
@@ -88,22 +100,12 @@ def run_all(cmd, cwd=DEFAULT_CWD):
 
     CLI Example::
 
-        salt '*' cmd.run_all "ls -l | grep foo | awk '{print $2}'"
+        salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    ret = {}
-    proc = subprocess.Popen(cmd,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-    out = proc.communicate()
-    ret['stdout'] = out[0]
-    ret['stderr'] = out[1]
-    ret['retcode'] = proc.returncode
-    ret['pid'] = proc.pid
-    if not ret['retcode']:
+    ret = _run(cmd, cwd=cwd)
+    if ret['retcode'] != 0:
         log.error('Command {0} failed'.format(cmd))
+        log.error('retcode: {0}'.format(ret['retcode']))
         log.error('stdout: {0}'.format(ret['stdout']))
         log.error('stderr: {0}'.format(ret['stderr']))
     else:
@@ -130,16 +132,19 @@ def has_exec(cmd):
 
     CLI Example::
 
-        salt '*' cat
+        salt '*' cmd.has_exec cat
     '''
-    if cmd.startswith('/'):
-        return _is_exec(cmd)
-    for path in os.environ['PATH'].split(os.pathsep):
-        fn_ = os.path.join(path, cmd)
-        if _is_exec(fn_):
-            return True
-    return False
+    return bool(salt.utils.which(cmd))
 
+def which(cmd):
+    '''
+    Returns the path of an executable available on the minion, None otherwise
+
+    CLI Example::
+
+        salt '*' cmd.which cat
+    '''
+    return salt.utils.which(cmd)
 
 def exec_code(lang, code, cwd=DEFAULT_CWD):
     '''
@@ -151,10 +156,10 @@ def exec_code(lang, code, cwd=DEFAULT_CWD):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    fd, cfn = tempfile.mkstemp()
-    open(cfn, 'w+').write(code)
-    return subprocess.Popen(lang + ' ' + cfn,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT).communicate()[0]
+    fd, codefile = tempfile.mkstemp()
+    open(codefile, 'w+').write(code)
+
+    cmd = '{0} {1}'.format(lang, codefile)
+    ret = run(cmd, cwd=cwd)
+    os.remove(codefile)
+    return ret

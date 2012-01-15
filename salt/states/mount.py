@@ -1,5 +1,5 @@
 '''
-Mount Managment
+Mount Management
 ===============
 Mount any type of mountable filesystem with the mounted function:
 
@@ -71,21 +71,21 @@ def mounted(
 
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
-    if type(opts) == type(str()):
+    if isinstance(opts, basestring):
         opts = opts.split(',')
 
     # Get the active data
     active = __salt__['mount.active']()
     if name not in active:
         # The mount is not present! Mount it
-            out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
-            if type(out) == type(str()):
-                # Failed to remount, the state has failed!
-                ret['comment'] = out
-                ret['result'] = False
-            elif out == True:
-                # Remount worked!
-                ret['changes']['mount'] = True
+        out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
+        if isinstance(out, basestring):
+            # Failed to remount, the state has failed!
+            ret['comment'] = out
+            ret['result'] = False
+        elif out is True:
+            # Remount worked!
+            ret['changes']['mount'] = True
 
     if persist:
         # present, new, change, bad config

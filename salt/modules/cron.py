@@ -3,6 +3,7 @@ Work with cron
 '''
 
 import tempfile
+import os
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 
@@ -41,12 +42,14 @@ def _render_tab(lst):
 
 def _write_cron(user, lines):
     '''
-    Takes a list of lines to be commited to a user's crontab and writes it
+    Takes a list of lines to be committed to a user's crontab and writes it
     '''
     tmpd, path = tempfile.mkstemp()
     open(path, 'w+').writelines(lines)
     cmd = 'crontab -u {0} {1}'.format(user, path)
-    return __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd)
+    os.remove(path)
+    return ret
 
 
 def raw_cron(user):
@@ -99,6 +102,9 @@ def list_tab(user):
         else:
             ret['pre'].append(line)
     return ret
+
+# For consistency's sake
+ls = list_tab
 
 
 def set_special(user, special, cmd):
@@ -180,7 +186,7 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
     for ind in range(len(lst['crons'])):
         if cmd == lst['crons'][ind]['cmd']:
             rm_ = ind
-    if rm_ != None:
+    if rm_ is not None:
         lst['crons'].pop(rm_)
         ret = 'removed'
     comdat = _write_cron(user, _render_tab(lst))
@@ -188,3 +194,5 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
         # Failed to commit, return the error
         return comdat['stderr']
     return ret
+
+rm = rm_job

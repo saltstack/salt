@@ -69,6 +69,39 @@ def daemonize():
     '''
     Daemonize a process
     '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            import ctypes
+            if ctypes.windll.shell32.IsUserAnAdmin() == 0:
+                import win32api
+                executablepath = sys.executable
+                pypath = executablepath.split('\\')
+                win32api.ShellExecute(
+                    0,
+                    'runas',
+                    executablepath, 
+                    os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
+                    os.path.join(pypath[0], os.sep, pypath[1]),
+                    0 )
+                sys.exit(0)
+            else:
+                import saltminionservice
+                import win32serviceutil
+                import win32service
+                import winerror
+                servicename = 'salt-minion'
+                try:
+                    status = win32serviceutil.QueryServiceStatus(servicename)
+                except win32service.error, details:
+                    if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
+                        saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
+                        sys.exit(0)
+                if status[1] == win32service.SERVICE_RUNNING:
+                    win32serviceutil.StopServiceWithDeps(servicename)
+                    win32serviceutil.StartService(servicename)
+                else:
+                    win32serviceutil.StartService(servicename)
+                sys.exit(0)
     try:
         pid = os.fork()
         if pid > 0:
@@ -99,18 +132,6 @@ def daemonize():
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
-def check_root():
-    '''
-    Most of the salt scripts need to run as root, this function will simply
-    verify that root is the user before the application discovers it.
-    '''
-    if os.getuid():
-        print ('Sorry, the salt must run as root, it needs to operate '
-               'in a privileged environment to do what it does.\n'
-               'http://xkcd.com/838/')
-        sys.exit(1)
-
-
 def profile_func(filename=None):
     '''
     Decorator for adding profiling to a nested function in Salt
@@ -131,3 +152,32 @@ def profile_func(filename=None):
             return retval
         return profiled_func
     return proffunc
+
+def which(exe=None):
+    '''
+    Python clone of POSIX's /usr/bin/which
+    '''
+    if exe:
+        (path, name) = os.path.split(exe)
+        if os.access(exe, os.X_OK):
+            return exe
+        for path in os.environ.get('PATH').split(os.pathsep):
+            full_path = os.path.join(path, exe)
+            if os.access(full_path, os.X_OK):
+                return full_path
+    return None
+
+def list_files(directory):
+    '''
+    Return a list of all files found under directory
+    '''
+    ret = set()
+    ret.add(directory)
+    for root, dirs, files in os.walk(directory):
+        for name in files:
+            ret.add(os.path.join(root, name))
+        for name in dirs:
+            ret.add(os.path.join(root, name))
+
+    return list(ret)
+

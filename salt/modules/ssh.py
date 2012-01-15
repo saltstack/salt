@@ -12,9 +12,9 @@ def _refine_enc(enc):
     '''
     rsa = ['r', 'rsa', 'ssh-rsa']
     dss = ['d', 'dsa', 'dss', 'ssh-dss']
-    if rsa.count(enc):
+    if enc in rsa:
         return 'ssh-rsa'
-    elif dss.count(enc):
+    elif enc in dss:
         return 'ssh-dss'
     else:
         return 'ssh-rsa'
@@ -86,7 +86,7 @@ def host_keys(keydir=None):
     # Set up the default keydir - needs to support sshd_config parsing in the
     # future
     if not keydir:
-        if __grains__['Linux']:
+        if __grains__['kernel'] == 'Linux':
             keydir = '/etc/ssh'
     keys = {}
     for fn_ in os.listdir(keydir):

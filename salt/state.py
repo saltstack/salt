@@ -7,7 +7,7 @@ The data sent to the state calls is as follows:
     { 'state': '<state module name>',
       'fun': '<state function name>',
       'name': '<the name argument passed to all states>'
-      'argn': '<arbitrairy argument, can have many of these>'
+      'argn': '<arbitrary argument, can have many of these>'
       }
 '''
 
@@ -24,24 +24,41 @@ import salt.minion
 log = logging.getLogger(__name__)
 
 
+def _getargs(func):
+    '''
+    A small wrapper around getargspec that also supports callable classes
+    '''
+    if not callable(func):
+        raise TypeError('{0} is not a callable'.format(func))
+
+    if inspect.isfunction(func):
+        aspec = inspect.getargspec(func)
+    elif isinstance(func, object):
+        aspec = inspect.getargspec(func.__call__)
+        del aspec.args[0] # self
+    else:
+        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+
+    return aspec
+
 def format_log(ret):
     '''
     Format the state into a log message
     '''
     msg = ''
-    if type(ret) == type(dict()):
+    if isinstance(ret, dict):
         # Looks like the ret may be a valid state return
         if 'changes' in ret:
             # Yep, looks like a valid state return
             chg = ret['changes']
             if not chg:
                 msg = 'No changes made for {0[name]}'.format(ret)
-            elif type(chg) == type(dict()):
+            elif isinstance(chg, dict):
                 if 'diff' in chg:
-                    if type(chg['diff']) == type(str()):
+                    if isinstance(chg['diff'], basestring):
                         msg = 'File changed:\n{0}'.format(
                                 chg['diff'])
-                if type(chg[chg.keys()[0]]) == type(dict()):
+                if isinstance(chg[chg.keys()[0]], dict):
                     if 'new' in chg[chg.keys()[0]]:
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
@@ -78,9 +95,60 @@ class State(object):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.load_modules()
+
+    def load_modules(self):
+        '''
+        Load the modules into the state
+        '''
+        log.info('Loading fresh modules for state activity')
         self.functions = salt.loader.minion_mods(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
+
+    def module_refresh(self, data):
+        '''
+        Check to see if the modules for this state instance need to be
+        updated, only update if the state is a file. If the function is
+        managed check to see if the file is a possible module type, eg a
+        python, pyx, or .so. Always refresh if the function is recuse, since
+        that can lay down anything.
+        '''
+        if not data['state'] == 'file':
+            return None
+        if data['fun'] == 'managed':
+            if any((data['name'].endswith('.py'),
+                    data['name'].endswith('.pyx'),
+                    data['name'].endswith('.pyo'),
+                    data['name'].endswith('.pyc'),
+                    data['name'].endswith('.so'))):
+                self.load_modules()
+                open(os.path.join(
+                    self.opts['cachedir'],
+                    '.module_refresh'),
+                    'w+').write('')
+        elif data['fun'] == 'recurse':
+            self.load_modules()
+            open(os.path.join(
+                self.opts['cachedir'],
+                '.module_refresh'),
+                'w+').write('')
+
+    def format_verbosity(self, returns):
+        '''
+        Check for the state_verbose option and strip out the result=True and
+        changes={} members of the state return list.
+        '''
+        if self.opts['state_verbose']:
+            return returns
+        rm_tags = []
+        for tag in returns:
+            if returns[tag]['result'] and not returns[tag]['changes']:
+                rm_tags.append(tag)
+        for tag in rm_tags:
+            returns.pop(tag)
+        return returns
+
 
     def verify_data(self, data):
         '''
@@ -111,8 +179,8 @@ class State(object):
                             )
                         )
         else:
-            # First verify that the paramaters are met
-            aspec = inspect.getargspec(self.states[full])
+            # First verify that the parameters are met
+            aspec = _getargs(self.states[full])
             arglen = 0
             deflen = 0
             if isinstance(aspec[0], list):
@@ -121,7 +189,7 @@ class State(object):
                 deflen = len(aspec[3])
             for ind in range(arglen - deflen):
                 if aspec[0][ind] not in data:
-                    errors.append('Missing paramater ' + aspec[0][ind]\
+                    errors.append('Missing parameter ' + aspec[0][ind]\
                                 + ' for state ' + full)
         # If this chunk has a recursive require, then it will cause a
         # recursive loop when executing, check for it
@@ -129,7 +197,13 @@ class State(object):
         if 'require' in data:
             reqdec = 'require'
         if 'watch' in data:
-            reqdec = 'watch'
+            # Check to see if the service has a watcher function, if it does
+            # not, then just require
+            if not '{0}.watcher'.format(data['state']) in self.states:
+                data['require'] = data.pop('watch')
+                reqdec = 'require'
+            else:
+                reqdec = 'watch'
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
@@ -148,12 +222,12 @@ class State(object):
         '''
         errors = []
         if not isinstance(high, dict):
-            errors.append('High data is not a dictonary and is invalid')
+            errors.append('High data is not a dictionary and is invalid')
         for name, body in high.items():
             if name.startswith('__'):
                 continue
             if not isinstance(body, dict):
-                err = ('The type {0} in {1} is not formated as a dictonary'
+                err = ('The type {0} in {1} is not formated as a dictionary'
                        .format(name, body['__sls__']))
                 errors.append(err)
                 continue
@@ -188,13 +262,13 @@ class State(object):
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
                                             ' in SLS {1} is not formed as a'
-                                            ' single key dictonary').format(
+                                            ' single key dictionary').format(
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
                             # Make sure that there is only one key in the dict
                             if len(arg.keys()) != 1:
-                                errors.append(('Multiple dictonaries defined'
+                                errors.append(('Multiple dictionaries defined'
                                 ' in argument of state {0} in sls {1}').format(
                                     name,
                                     body['__sls__']))
@@ -265,12 +339,12 @@ class State(object):
         ret = {}
         ret['full'] = '{0[state]}.{0[fun]}'.format(data)
         ret['args'] = []
-        aspec = inspect.getargspec(self.states[ret['full']])
+        aspec = _getargs(self.states[ret['full']])
         arglen = 0
         deflen = 0
-        if type(aspec[0]) == type(list()):
+        if isinstance(aspec[0], list):
             arglen = len(aspec[0])
-        if type(aspec[3]) == type(tuple()):
+        if isinstance(aspec[3], tuple):
             deflen = len(aspec[3])
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
@@ -309,10 +383,10 @@ class State(object):
                 funcs = set()
                 names = set()
                 for arg in run:
-                    if type(arg) == type(str()):
+                    if isinstance(arg, str):
                         funcs.add(arg)
                         continue
-                    if type(arg) == type(dict()):
+                    if isinstance(arg, dict):
                         for key, val in arg.items():
                             if key == 'names':
                                 names.update(val)
@@ -440,6 +514,7 @@ class State(object):
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
         format_log(ret)
+        self.module_refresh(data)
         return ret
 
     def call_chunks(self, chunks):
@@ -451,7 +526,7 @@ class State(object):
             if '__FAILHARD__' in running:
                 running.pop('__FAILHARD__')
                 return running
-            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
+            tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(low)
             if tag not in running:
                 running = self.call_chunk(low, running, chunks)
                 if self.check_failhard(low, running):
@@ -462,7 +537,7 @@ class State(object):
         '''
         Check if the low data chunk should send a failhard signal
         '''
-        tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
+        tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(low)
         if low.get('failhard', False) \
                 or self.opts['failhard'] \
                 and tag in running:
@@ -486,7 +561,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(req)
+            tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -514,7 +589,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = '{0[state]}.{0[name]}.{0[fun]}'.format(req)
+            tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -532,7 +607,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then the
         chunk
         '''
-        tag = '{0[state]}.{0[name]}.{0[fun]}'.format(low)
+        tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(low)
         if 'require' in low:
             status = self.check_requires(low, running, chunks)
             if status == 'unmet':
@@ -617,7 +692,8 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        return self.call_chunks(chunks)
+        ret = self.format_verbosity(self.call_chunks(chunks))
+        return ret
 
     def call_template(self, template):
         '''
@@ -642,7 +718,7 @@ class HighState(object):
     '''
     Generate and execute the salt "High State". The High State is the compound
     state derived from a group of template files stored on the salt master or
-    in a the local cache.
+    in the local cache.
     '''
     def __init__(self, opts):
         self.client = salt.minion.FileClient(opts)
@@ -664,7 +740,7 @@ class HighState(object):
                 return opts
         mopts = self.client.master_opts()
         opts['renderer'] = mopts['renderer']
-        opts['failhard'] = mopts['failhard']
+        opts['failhard'] = mopts.get('failhard', False)
         if mopts['state_top'].startswith('salt://'):
             opts['state_top'] = mopts['state_top']
         elif mopts['state_top'].startswith('/'):
@@ -737,7 +813,7 @@ class HighState(object):
             for env in pops:
                 if env in include:
                     include.pop(env)
-            
+
         return tops
 
     def merge_tops(self, tops):
@@ -794,9 +870,20 @@ class HighState(object):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
-                        if type(item) == type(str()):
+                        if isinstance(item, basestring):
                             matches[env].append(item)
         return matches
+
+    def load_dynamic(self, matches):
+        '''
+        If autoload_dynamic_modules is True then automatically load the
+        dynamic modules
+        '''
+        if not self.opts['autoload_dynamic_modules']:
+            return
+        self.state.functions['saltutil.sync_all'](matches.keys())
+        faux = {'state': 'file', 'fun': 'recurse'}
+        self.state.module_refresh(faux)
 
     def gather_states(self, matches):
         '''
@@ -812,11 +899,14 @@ class HighState(object):
 
     def render_state(self, sls, env, mods):
         '''
-        Render a state file and retrive all of the include states
+        Render a state file and retrieve all of the include states
         '''
         err = ''
         errors = []
         fn_ = self.client.get_state(sls, env)
+        if not fn_:
+            errors.append(('Specifed SLS {0} in environment {1} is not'
+                           ' available on the salt master').format(sls, env))
         state = None
         try:
             state = self.state.compile_template(fn_, env, sls)
@@ -827,7 +917,7 @@ class HighState(object):
         nstate = None
         if state:
             if not isinstance(state, dict):
-                errors.append(('SLS {0} does not render to a dictonary'
+                errors.append(('SLS {0} does not render to a dictionary'
                                .format(sls)))
             else:
                 if 'include' in state:
@@ -847,8 +937,8 @@ class HighState(object):
                     ext = state.pop('extend')
                     for name in ext:
                         if not isinstance(ext[name], dict):
-                            errors.append(('Extention name {0} in sls {1} is '
-                                           'not a dictonary'
+                            errors.append(('Extension name {0} in sls {1} is '
+                                           'not a dictionary'
                                            .format(name, sls)))
                             continue
                         if '__sls__' not in ext[name]:
@@ -863,7 +953,7 @@ class HighState(object):
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
                             continue
-                        errors.append(('Name {0} in sls {1} is not a dictonary'
+                        errors.append(('Name {0} in sls {1} is not a dictionary'
                                        .format(name, sls)))
                         continue
                     if '__sls__' not in state[name]:
@@ -895,6 +985,7 @@ class HighState(object):
         '''
         top = self.get_top()
         matches = self.top_matches(top)
+        self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
         if errors:
             return errors

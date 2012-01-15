@@ -28,6 +28,13 @@
 # Where cache data goes
 #cachedir: /var/cache/salt
 
+# When waiting for a master to accept the minion's public key, salt will
+# contiuously attempt to reconnect until successful. This is the time, in
+# seconds, between those reconnection attempts.
+# acceptance_wait_time = 10
+
+
+
 #####   Minion module management     #####
 ##########################################
 # Disable specific modules, this will allow the admin to limit the level os
@@ -59,8 +66,22 @@
 #
 #renderer: yaml_jinja
 #
-# Test allows for the state runs to only be test runs
-#test: False
+# state_verbose allows for the data returned from the minion to be more
+# verbose. Normaly only states that fail or states that have changes are
+# returned, but setting state_verbose to True will return all states that
+# were checked
+#state_verbose: False
+#
+# autoload_dynamic_modules Turns on automatic loading of modules found in the
+# environments on the master. This is turned on by default, to turn of
+# autoloading modules when states run set this value to False
+#autoload_dynamic_modules: True
+#
+# clean_dynamic_modules keeps the dynamic modules on the minion in sync with
+# the dynamic modules on the master, this means that if a dynamic module is
+# not on the master it will be deleted from the minion. By default this is
+# enabled and can be disabled by changing this value to False
+#clean_dynamic_modules: True
 
 ######        Security settings       #####
 ###########################################
@@ -95,7 +116,6 @@
 #   }
 #
 #log_granular_levels: {}
-
 
 ######      Module configuration      #####
 ###########################################

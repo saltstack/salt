@@ -3,11 +3,13 @@
 import sys, os
 
 docs_basepath = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+addtl_paths = (
+        os.pardir, # salt directory (for autodoc)
+        '_ext', # custom Sphinx extensions
+)
 
-sys.path.extend([
-    os.path.join(docs_basepath, '..'), # salt directory (for autodoc)
-    os.path.join(docs_basepath, '_ext'), # Sphinx extensions
-])
+for path in addtl_paths:
+    sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
 
 from salt import __version__
 

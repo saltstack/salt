@@ -4,11 +4,18 @@ All salt configuration loading and defaults should be in this module
 
 # Import python modules
 import os
+import tempfile
 import socket
 import sys
 
 # import third party libs
 import yaml
+try:
+    yaml.Loader = yaml.CLoader
+    yaml.Dumper = yaml.CDumper
+except:
+    pass
+
 
 # Import salt libs
 import salt.crypt
@@ -28,9 +35,13 @@ def load_config(opts, path, env_var):
     if os.path.isfile(path):
         try:
             conf_opts = yaml.safe_load(open(path, 'r'))
-            if conf_opts == None:
+            if conf_opts is None:
                 # The config file is empty and the yaml.load returned None
                 conf_opts = {}
+            else:
+                # allow using numeric ids: convert int to string
+                if 'id' in conf_opts:
+                    conf_opts['id'] = str(conf_opts['id'])
             opts.update(conf_opts)
             opts['conf_file'] = path
         except Exception, e:
@@ -45,8 +56,9 @@ def prepend_root_dir(opts, path_options):
     'root_dir' option.
     '''
     for path_option in path_options:
-        opts[path_option] = os.path.normpath(
-                os.sep.join([opts['root_dir'], opts[path_option]]))
+        if path_option in opts:
+            opts[path_option] = os.path.normpath(
+                    os.sep.join([opts['root_dir'], opts[path_option]]))
 
 
 def minion_config(path):
@@ -62,12 +74,14 @@ def minion_config(path):
             'conf_file': path,
             'renderer': 'yaml_jinja',
             'failhard': False,
+            'autoload_dynamic_modules': True,
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
             'returner_dirs': [],
             'states_dirs': [],
             'render_dirs': [],
+            'clean_dynamic_modules': True,
             'open_mode': False,
             'multiprocessing': True,
             'sub_timeout': 60,
@@ -76,6 +90,8 @@ def minion_config(path):
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
+            'state_verbose': False,
+            'acceptance_wait_time': 10,
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
@@ -87,17 +103,16 @@ def minion_config(path):
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!
-    if opts['open_mode']:
-        if opts['open_mode'] == True:
-            opts['open_mode'] = True
-        else:
-            opts['open_mode'] = False
+    opts['open_mode'] = opts['open_mode'] is True
 
     opts['grains'] = salt.loader.grains(opts)
 
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
 
+    # set up the extension_modules location from the cachedir
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+    
     return opts
 
 
@@ -108,7 +123,7 @@ def master_config(path):
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
             'worker_threads': 5,
-            'sock_dir': '/tmp/.salt-unix',
+            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',
             'keep_jobs': 24,
             'root_dir': '/',
@@ -116,7 +131,7 @@ def master_config(path):
             'cachedir': '/var/cache/salt',
             'file_roots': {
                 'base': ['/srv/salt'],
-                },
+            },
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
@@ -131,27 +146,21 @@ def master_config(path):
             'log_granular_levels': {},
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
-            }
+            'serial': 'msgpack',
+            'nodegroups': {},
+    }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir'])
 
     # Enabling open mode requires that the value be set to True, and nothing
     # else!
-    if opts['open_mode']:
-        if opts['open_mode'] == True:
-            opts['open_mode'] = True
-        else:
-            opts['open_mode'] = False
-    if opts['auto_accept']:
-        if opts['auto_accept'] == True:
-            opts['auto_accept'] = True
-        else:
-            opts['auto_accept'] = False
+    opts['open_mode'] = opts['open_mode'] is True
+    opts['auto_accept'] = opts['auto_accept'] is True
     return opts
 
 

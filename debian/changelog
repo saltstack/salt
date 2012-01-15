@@ -1,36 +1,6 @@
-salt (0.9.4-1) lucid; urgency=low
+salt (0.9.5+git20111227.g8182e48-1) unstable; urgency=low
 
-  * Build PPA for 0.9.4
+  * First package release. (Closes: #643789)
 
- -- Seth House <seth@eseth.com>  Sun, 27 Nov 2011 16:11:36 -0700
+ -- Corey Quinn <corey@sequestered.net>  Mon, 26 Dec 2011 13:55:22 -0800
 
-salt (0.9.4.pre-d353743-1) lucid; urgency=low
-
-  * Build PPA for Ubuntu (fixed?)
-
- -- Seth House <seth@eseth.com>  Wed, 25 Nov 2011 23:19:00 -0600
-
-salt (0.9.4.pre-6dd76f2-1) lucid; urgency=low
-
-  * Build PPA for Ubuntu (fixed?)
-
- -- Seth House <seth@eseth.com>  Wed, 25 Nov 2011 11:19:00 -0600
-
-salt (0.9.4.pre-1) lucid; urgency=low
-
-  * Build PPA for Ubuntu
-
- -- Seth House <seth@eseth.com>  Wed, 25 Nov 2011 11:19:00 -0600
-
-salt (0.9.2-2) unstable; urgency=low
-
-  * Fixed many lintian(1) warnings and errors
-
- -- Aaron Toponce <aaron.toponce@gmail.com>  Mon, 03 Oct 2011 21:34:25 -0600
-
-salt (0.9.2-1) unstable; urgency=low
-
-  * Initial release. (Closes: #643789)
-  * First Debian package
-
- -- Aaron Toponce <aaron.toponce@gmail.com>  Wed, 28 Sep 2011 01:21:48 -0600
