@@ -3,6 +3,7 @@ Work with cron
 '''
 
 import tempfile
+import os
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 
