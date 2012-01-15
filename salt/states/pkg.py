@@ -123,11 +123,10 @@ def removed(name):
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to remove'}
-        # FIXME: this block will never be reached
-        return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package ' + name + ' removed'}
+    return {'name': name,
+        'changes': changes,
+        'result': True,
+        'comment': 'Package ' + name + ' removed'}
 
 
 def purged(name):
