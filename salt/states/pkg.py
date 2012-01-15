@@ -150,8 +150,7 @@ def purged(name):
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to purge'}
-        # FIXME: this block will never be reached
-        return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package ' + name + ' purged'}
+    return {'name': name,
+        'changes': changes,
+        'result': True,
+        'comment': 'Package ' + name + ' purged'}
