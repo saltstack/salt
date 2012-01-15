@@ -13,8 +13,8 @@ def __detect_os():
     '''
     Apache commands and paths differ depending on packaging
     '''
-    httpd = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
-    apache2 = ('Ubuntu',)
+    httpd = ('CentOS', 'Scientific', 'RedHat', 'Fedora',)
+    apache2 = ('Ubuntu','Debian',)
     if __grains__['os'] in httpd:
         return 'apachectl'
     elif __grains__['os'] in apache2:
