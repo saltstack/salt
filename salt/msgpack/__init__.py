@@ -1,6 +1,6 @@
 # coding: utf-8
-from salt.msgpack.__version__ import *
-from salt.msgpack._msgpack import *
+from salt.msgpack.__version__ import version
+from salt.msgpack._msgpack import unpack, unpackb, pack, packb
 
 # alias for compatibility to simplejson/marshal/pickle.
 load = unpack

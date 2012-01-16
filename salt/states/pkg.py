@@ -42,7 +42,10 @@ def installed(name, repo='', skip_verify=False):
                 'changes': {},
                 'result': True,
                 'comment': 'Package ' + name + ' is already installed'}
-    changes = __salt__['pkg.install'](name, True, repo, skip_verify)
+    changes = __salt__['pkg.install'](name,
+                                      True,
+				      repo=repo,
+				      skip_verify=skip_verify)
     if not changes:
         return {'name': name,
                 'changes': changes,
@@ -87,7 +90,10 @@ def latest(name, repo='', skip_verify=False):
             return ret
 
     if has_newer:
-        ret['changes'] = __salt__['pkg.install'](name, True, repo, skip_verify)
+        ret['changes'] = __salt__['pkg.install'](name,
+	                                         True,
+						 repo=repo,
+						 skip_verify=skip_verify)
 
         if ret['changes']:
             ret['comment'] = 'Package {0} upgraded to latest'.format(name)
@@ -111,23 +117,23 @@ def removed(name):
     name
         The name of the package to be removed
     '''
+    changes = {}
     if not __salt__['pkg.version'](name):
         return {'name': name,
                 'changes': {},
                 'result': True,
                 'comment': 'Package ' + name + ' is not installed'}
     else:
-        changes = __salt__['pkg.remove'](name)
+        changes['removed'] = __salt__['pkg.remove'](name)
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to remove'}
-        # FIXME: this block will never be reached
-        return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package ' + name + ' removed'}
+    return {'name': name,
+        'changes': changes,
+        'result': True,
+        'comment': 'Package ' + name + ' removed'}
 
 
 def purged(name):
@@ -138,21 +144,21 @@ def purged(name):
     name
         The name of the package to be purged
     '''
+    changes = {}
     if not __salt__['pkg.version'](name):
         return {'name': name,
                 'changes': {},
                 'result': True,
                 'comment': 'Package ' + name + ' is not installed'}
     else:
-        changes = __salt__['pkg.purge'](name)
+        changes['removed'] = __salt__['pkg.purge'](name)
 
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to purge'}
-        # FIXME: this block will never be reached
-        return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package ' + name + ' purged'}
+    return {'name': name,
+        'changes': changes,
+        'result': True,
+        'comment': 'Package ' + name + ' purged'}

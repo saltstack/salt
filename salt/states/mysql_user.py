@@ -1,6 +1,6 @@
 '''
 MySQL User Management
-===============
+=====================
 The mysql_database module is used to create and manage MySQL databases, databases can be set
 as either absent or present
 
