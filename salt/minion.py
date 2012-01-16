@@ -722,7 +722,7 @@ class FileClient(object):
         Pull a file down from the file server and store it in the minion file
         cache
         '''
-        return self.get_url(path, '', True, env)
+        return self.get_file(path, '', True, env)
 
     def cache_files(self, paths, env='base'):
         '''
