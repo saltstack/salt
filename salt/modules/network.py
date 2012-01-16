@@ -4,6 +4,7 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 import socket
+import re
 import salt.utils
 
 __outputter__ = {
@@ -134,3 +135,120 @@ def isportopen(host, port):
     out = sock.connect_ex((_sanitize_host(host), int(port)))
 
     return out
+
+
+def _cidr_to_ipv4_netmask(cidr_bits):
+    '''
+    Returns an IPv4 netmask
+    '''
+    netmask = ''
+    for n in range(4):
+        if n:
+            netmask += '.'
+        if cidr_bits >= 8:
+            netmask += '255'
+            cidr_bits -= 8
+        else:
+            netmask += '%d' % (256-(2**(8-cidr_bits)))
+            cidr_bits = 0
+    return netmask
+
+
+def _interfaces():
+    '''
+    Returns interface info
+       
+    '''
+    ret = {}
+
+    out = __salt__['cmd.run']('ip addr show')
+    groups = re.compile('\r?\n\d').split(out)
+
+    for group in groups:
+        iface = None
+        up = False
+        for line in group.split('\n'):
+            if not ' ' in line:
+                continue
+            m = re.match('^\d*:\s+(\w+):\s+<(.+)>', line)
+            if m:
+                iface,attrs = m.groups()
+                if 'UP' in attrs.split(','):
+                    up = True
+                ipaddr = None
+                netmask = None
+                hwaddr = None
+            else:
+                cols = line.split()
+                if len(cols) >= 2:
+                    type,value = tuple(cols[0:2])
+                    if type == 'inet':
+                        ipaddr,cidr = tuple(value.split('/'))
+                        netmask = _cidr_to_ipv4_netmask(int(cidr))
+                    elif type.startswith('link'):
+                        hwaddr = value
+
+        if iface:
+            ret[iface] = (up,ipaddr,netmask,hwaddr)
+            del iface,up
+
+    return ret
+
+
+def up(interface):
+    '''
+    Returns True if interface is up, otherwise returns False
+
+    CLI Example::
+
+        salt '*' network.up eth0
+    '''
+    data = _interfaces().get(interface)
+    if data:
+        return data[0]
+    else:
+        return None
+
+def ipaddr(interface):
+    '''
+    Returns the IP address for a given interface
+
+    CLI Example::
+
+        salt '*' network.ipaddr eth0
+    '''
+    data = _interfaces().get(interface)
+    if data:
+        return data[1]
+    else:
+        return None
+
+def netmask(interface):
+    '''
+    Returns the netmask for a given interface
+
+    CLI Example::
+
+        salt '*' network.netmask eth0
+    '''
+    data = _interfaces().get(interface)
+    if data:
+        return data[2]
+    else:
+        return None
+
+def hwaddr(interface):
+    '''
+    Returns the hwaddr for a given interface
+
+    CLI Example::
+
+        salt '*' network.hwaddr eth0
+    '''
+    data = _interfaces().get(interface)
+    if data:
+        return data[3]
+    else:
+        return None
+
+
