@@ -122,7 +122,7 @@ Modules via States
 Now when salt modules are deployed to a minion via the state system as a file,
 then the modules will be automatically loaded into the active running minion
 - no restart required - and into the active running state. So custom state
-  modules can be deployed and used in the same state run.
+modules can be deployed and used in the same state run.
 
 Modules via Module Environment Directories
 ```````````````````````````````````````````
@@ -375,7 +375,7 @@ mysql_user
 The mysql_user state enables mysql user management.
 
 virtualenv
-`````````
+``````````
 The virtualenv state can manage the state of python virtual environments.
 Thanks to Whitinge for the virtualenv state
 
