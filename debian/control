@@ -59,6 +59,7 @@ Package: salt-master
 Architecture: all
 Depends:    ${python:Depends},
             ${misc:Depends},
+            python (>= 2.6),
             salt-common (= ${binary:Version})
 Description: This package provides a remote manager to administer servers via salt
  This package is a powerful remote execution manager that can be used
@@ -82,6 +83,7 @@ Package: salt-minion
 Architecture: all
 Depends:    ${python:Depends},
             ${misc:Depends},
+            python (>= 2.6),
             salt-common (= ${binary:Version})
 Description: This package represents the client package for salt
  This package is a powerful remote execution manager that can be used
@@ -105,6 +107,7 @@ Package: salt-syndic
 Architecture: all
 Depends:    ${python:Depends},
             ${misc:Depends},
+            python (>= 2.6),
             salt-master
 Description: The syndic component represents the master-of-masters for salt
  This package is a powerful remote execution manager that can be used
