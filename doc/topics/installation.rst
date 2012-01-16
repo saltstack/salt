@@ -47,7 +47,7 @@ repository.
 Red Hat Enterprise Linux 5 & 6 or CentOS 5 & 6
 ----------------------------------------------
 
-1.  Install the `EPEL`__ repository::
+1.  Install the `EPEL`__ repository.
 
 2.  Install our repository on FedoraPeople::
 
