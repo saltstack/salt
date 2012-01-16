@@ -30,7 +30,16 @@ def load_config(opts, path, env_var):
     '''
 
     if not path or not os.path.isfile(path):
-        path = os.environ.get(env_var, '')
+        path = os.environ.get(env_var, path)
+    # If the configuration file is missing, attempt to copy the template,
+    # after removing the first header line.
+    if not os.path.isfile(path):
+        template = "%s.template" % path
+        if os.path.isfile(template):
+            with open(path, 'w') as out:
+                with open(template, 'r') as f:
+                    f.readline() # skip first line
+                    out.write(f.read())
 
     if os.path.isfile(path):
         try:
@@ -112,7 +121,7 @@ def minion_config(path):
 
     # set up the extension_modules location from the cachedir
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
-    
+
     return opts
 
 
