@@ -29,6 +29,7 @@ class Mock(object):
 
 MOCK_MODULES = [
     # salt core
+    'yaml',
     'salt.msgpack._msgpack',
     'zmq',
     'Crypto',
