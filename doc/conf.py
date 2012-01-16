@@ -1,17 +1,71 @@
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys
+import os
 
-docs_basepath = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+class Mock(object):
+    '''
+    Mock out specified imports
+
+    This allows autodoc to do it's thing without having oodles of req'd
+    installed libs. This doesn't work with ``import *`` imports.
+
+    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return Mock()
+
+    @classmethod
+    def __getattr__(self, name):
+        if name in ('__file__', '__path__'):
+            return '/dev/null'
+        elif name[0] == name[0].upper():
+            return type(name, (), {})
+        else:
+            return Mock()
+
+MOCK_MODULES = [
+    # salt core
+    'salt.msgpack._msgpack',
+    'zmq',
+    'Crypto',
+    'Crypto.Cipher',
+    'M2Crypto',
+    # modules, renderers, states, returners, et al
+    'MySQLdb',
+    'MySQLdb.cursors',
+    'psutil',
+    'libvirt',
+    'yum',
+    'mako',
+    'mako.template',
+    'pymongo',
+    'redis',
+    'rpm',
+    'rpmUtils',
+    'rpmUtils.arch',
+]
+
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = Mock()
+
+
+# -- Add paths to PYTHONPATH ---------------------------------------------------
+
+docs_basepath = os.path.abspath(os.path.dirname(__file__))
 addtl_paths = (
-        os.pardir, # salt directory (for autodoc)
+        os.pardir, # salt itself (for autodoc)
         '_ext', # custom Sphinx extensions
 )
 
 for path in addtl_paths:
     sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, path)))
 
-from salt import __version__
+from salt.version import __version__
+
 
 # -- General configuration -----------------------------------------------------
 
