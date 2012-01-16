@@ -72,6 +72,7 @@ import hashlib
 import logging
 import tempfile
 import traceback
+import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -327,7 +328,7 @@ def absent(name):
 
 def managed(name,
         source=None,
-        source_hash=None,
+        source_hash='',
         user=None,
         group=None,
         mode=None,
@@ -433,7 +434,7 @@ def managed(name,
                     return ret
             else:
                 # This file is not on a salt file server
-                sum_file = __salt__['cp.cahe_file'](source_hash)
+                sum_file = __salt__['cp.cache_file'](source_hash)
                 if not sum_file:
                     ret['result'] = False
                     ret['comment'] = ('Checksum for source file {0} not'
