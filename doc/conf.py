@@ -47,6 +47,7 @@ MOCK_MODULES = [
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
+    'pycassa',
 ]
 
 for mod_name in MOCK_MODULES:
