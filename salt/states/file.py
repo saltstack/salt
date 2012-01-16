@@ -327,6 +327,7 @@ def absent(name):
 
 def managed(name,
         source=None,
+        source_hash=None,
         user=None,
         group=None,
         mode=None,
@@ -423,11 +424,30 @@ def managed(name,
     else:
         # Copy the file down if there is a source
         if source:
-            source_sum = __salt__['cp.hash_file'](source, __env__)
-            if not source_sum:
-                ret['result'] = False
-                ret['comment'] = 'Source file {0} not found'.format(source)
-                return ret
+            if urlparse.urlparse(source).scheme == 'salt':
+                source_sum = __salt__['cp.hash_file'](source, __env__)
+                if not source_sum:
+                    ret['result'] = False
+                    ret['comment'] = ('Checksum for source file {0} not'
+                                      ' found').format(source)
+                    return ret
+            else:
+                # This file is not on a salt file server
+                sum_file = __salt__['cp.cahe_file'](source_hash)
+                if not sum_file:
+                    ret['result'] = False
+                    ret['comment'] = ('Checksum for source file {0} not'
+                                      ' found').format(source)
+                    return ret
+                comps = open(sum_source, 'r').read().split('=')
+                if len(comps) < 2:
+                    ret['result'] = False
+                    ret['comment'] = ('Checksum for source file {0} not'
+                                      ' formatted properly').format(source)
+                    return ret
+                source_sum['hash_type'] = comps[0]
+                source_sum['hsum'] = comps[1]
+
     # If the source file is a template render it accordingly
 
     # Check changes if the target file exists
