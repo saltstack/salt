@@ -46,7 +46,9 @@ def get_file(path, dest, env='base'):
 def get_url(path, dest, env='base'):
     '''
     Used to get a single file from a URL.
-    For example,
+
+    For example::
+
         cp.get_url salt://my/file /tmp/mine
         cp.get_url http://www.slashdot.org /tmp/index.html
     '''

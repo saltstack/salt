@@ -164,7 +164,7 @@ A list of extra directories to search for salt modules
 .. conf_minion:: returner_dirs
 
 ``returner_dirs``
----------------
+-----------------
 
 Default: ``[]``
 
@@ -230,7 +230,7 @@ Default: ``yaml_jinja``
 
 The default renderer used for local state executions
 
-.. code-block:: renderer
+.. code-block:: yaml
 
     renderer: yaml_jinja
 
@@ -246,7 +246,7 @@ verbose. Normaly only states that fail or states that have changes are
 returned, but setting state_verbose to True will return all states that
 were checked
 
-.. code-block:: state_verbose
+.. code-block:: yaml
 
     state_verbose: True
 
@@ -261,7 +261,7 @@ autoload_dynamic_modules Turns on automatic loading of modules found in the
 environments on the master. This is turned on by default, to turn of
 autoloading modules when states run set this value to False
 
-.. code-block:: autoload_dynamic_modules
+.. code-block:: yaml
 
     autoload_dynamic_modules: True
 
@@ -274,7 +274,7 @@ the dynamic modules on the master, this means that if a dynamic module is
 not on the master it will be deleted from the minion. By default this is
 enabled and can be disabled by changing this value to False
 
-.. code-block:: clean_dynamic_modules
+.. code-block:: yaml
 
     clean_dynamic_modules: True
 

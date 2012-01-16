@@ -79,7 +79,7 @@ def stop(name):
 
     CLI Example::
 
-    salt '*' service.stop <service name>
+        salt '*' service.stop <service name>
     '''
     cmd = 'systemctl stop {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)

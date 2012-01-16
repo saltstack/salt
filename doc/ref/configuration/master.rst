@@ -81,7 +81,7 @@ Default: :file:`/`
 The system root direcotry to oporate from, change this to make Salt run from
 an alternative root
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     root_dir: /
 
