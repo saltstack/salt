@@ -99,7 +99,26 @@ The location for minion cache data.
 
     cachedir: /var/cache/salt
 
+.. conf_minion:: cache_jobs
+
+``cache_jobs``
+--------------
+
+Default: ``False``
+
+The minion can locally cache the return data from jobs sent to it, this
+can be a good way to keep track minion side of the jobs the minion has
+executed. By default this feature is disabled, to enable set cache_jobs
+to True
+
+.. code-block:: yaml
+
+    cache_jobs: False
+
 .. conf_minion:: acceptance_wait_time
+
+``acceptance_wait_time``
+------------------------
 
 Default: ``10``
 
