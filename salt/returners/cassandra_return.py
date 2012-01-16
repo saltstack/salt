@@ -2,14 +2,14 @@
 Return data to a Cassandra ColumFamily
 
 Here's an example Keyspace/ColumnFamily setup that works with this
-returner:
+returner::
 
-create keyspace salt;
-use salt;
-create column family returns
-  with key_validation_class='UTF8Type'
-  and comparator='UTF8Type'
-  and default_validation_class='UTF8Type';
+    create keyspace salt;
+    use salt;
+    create column family returns
+      with key_validation_class='UTF8Type'
+      and comparator='UTF8Type'
+      and default_validation_class='UTF8Type';
 '''
 
 import logging
