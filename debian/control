@@ -11,7 +11,6 @@ Build-Depends: debhelper (>= 7.0.50~),
                python-crypto,
                python-m2crypto,
                python-zmq (>= 2.1.9),
-               libzmq1 (>= 2.1.9),
                libzmq-dev (>= 2.1.9),
                python (>= 2.6),
                python-dev (>= 2.6),
@@ -24,8 +23,20 @@ Homepage: http://saltstack.org
 
 Package: salt-common
 Architecture: any
-Depends:    ${python:Depends},
-            ${misc:Depends}
+Depends:       ${python:Depends},
+               ${misc:Depends},
+               python-support,
+               cython,
+               python-yaml,
+               python-setuptools,
+               python-yaml,
+               python-crypto,
+               python-m2crypto,
+               python-zmq (>= 2.1.9),
+               libzmq-dev (>= 2.1.9),
+               python (>= 2.6),
+               python-dev (>= 2.6),
+               python-jinja2
 Description: Shared libraries that salt requires for all packages
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -41,15 +52,14 @@ Description: Shared libraries that salt requires for all packages
  Between the remote execution system, and state management Salt addresses
  the backbone of cloud and data center management.
  .
- This particular package provides shared libraries that salt-master, salt-minion,
- and salt-syndic require to function.
-
+ This particular package provides shared libraries that salt-master,
+ salt-minion, and salt-syndic require to function.
 
 Package: salt-master
 Architecture: all
 Depends:    ${python:Depends},
             ${misc:Depends},
-            salt-common
+            salt-common (= ${binary:Version})
 Description: This package provides a remote manager to administer servers via salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -72,7 +82,7 @@ Package: salt-minion
 Architecture: all
 Depends:    ${python:Depends},
             ${misc:Depends},
-            salt-common
+            salt-common (= ${binary:Version})
 Description: This package represents the client package for salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -96,7 +106,7 @@ Architecture: all
 Depends:    ${python:Depends},
             ${misc:Depends},
             salt-master
-Description: salt-syndic represents the master-of-masters for salt
+Description: The syndic component represents the master-of-masters for salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
  .
