@@ -42,7 +42,10 @@ def installed(name, repo='', skip_verify=False):
                 'changes': {},
                 'result': True,
                 'comment': 'Package ' + name + ' is already installed'}
-    changes = __salt__['pkg.install'](name, True, repo, skip_verify)
+    changes = __salt__['pkg.install'](name,
+                                      True,
+				      repo=repo,
+				      skip_verify=skip_verify)
     if not changes:
         return {'name': name,
                 'changes': changes,
@@ -87,7 +90,10 @@ def latest(name, repo='', skip_verify=False):
             return ret
 
     if has_newer:
-        ret['changes'] = __salt__['pkg.install'](name, True, repo, skip_verify)
+        ret['changes'] = __salt__['pkg.install'](name,
+	                                         True,
+						 repo=repo,
+						 skip_verify=skip_verify)
 
         if ret['changes']:
             ret['comment'] = 'Package {0} upgraded to latest'.format(name)
