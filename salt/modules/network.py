@@ -165,15 +165,15 @@ def _interfaces():
     groups = re.compile('\r?\n\d').split(out)
 
     for group in groups:
-	iface = None
-	up = False
+        iface = None
+        up = False
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
             m = re.match('^\d*:\s+(\w+):\s+<(.+)>', line)
             if m:
                 iface,attrs = m.groups()
-		if 'UP' in attrs.split(','):
+                if 'UP' in attrs.split(','):
                     up = True
                 ipaddr = None
                 netmask = None
