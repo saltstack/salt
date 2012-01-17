@@ -5,7 +5,7 @@ usr/share/man/man1/salt-master.1
 usr/share/man/man1/salt-syndic.1
 usr/share/man/man1/salt-cp.1
 usr/share/man/man1/salt.1
-salt/ /usr/share/salt/
+salt/ /usr/share/salt
 salt/runners /usr/share/salt/runners
 salt/renderers /usr/share/salt/renderers
 salt/returners /usr/share/salt/returners
