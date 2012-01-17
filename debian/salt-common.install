@@ -15,3 +15,4 @@ salt/grains /usr/share/salt/grains
 salt/cli /usr/share/salt/cli
 salt/states /usr/share/salt/states
 salt/utils /usr/share/salt/utils
+scripts /usr/share/salt
