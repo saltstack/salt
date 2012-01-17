@@ -2,7 +2,10 @@
 
 %:
 	dh $@
-
+override_dh_auto_build:
+	python setup.py build
+override_dh_auto_install:
+	python setup.py install
 #override_dh_installinit:
 #	dh_installinit --no-start --name="salt-master"
 #	dh_installinit --no-start --name="salt-minion"
