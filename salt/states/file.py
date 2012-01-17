@@ -144,7 +144,6 @@ def _clean_dir(root, keep):
                 if fn_ == '/':
                     break
     rm_files = []
-    print real_keep
     for roots, dirs, files in os.walk(root):
         for name in files:
             nfn = os.path.join(roots, name)
