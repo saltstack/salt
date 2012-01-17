@@ -21,3 +21,4 @@ salt/grains /usr/share/salt/
 salt/cli /usr/share/salt/
 salt/states /usr/share/salt/
 salt/utils /usr/share/salt/
+usr/lib/python2*/dist-packages/salt/msgpack
