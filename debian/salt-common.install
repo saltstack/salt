@@ -1,17 +1,9 @@
-usr/share/man/man1/salt-minion.1
-usr/share/man/man1/salt-call.1
-usr/share/man/man1/salt-key.1
-usr/share/man/man1/salt-master.1
-usr/share/man/man1/salt-syndic.1
-usr/share/man/man1/salt-cp.1
-usr/share/man/man1/salt.1
-salt/ /usr/share/salt
-salt/runners /usr/share/salt/runners
-salt/renderers /usr/share/salt/renderers
-salt/returners /usr/share/salt/returners
-salt/ext /usr/share/salt/ext
-salt/msgpack /usr/share/salt/msgpack
-salt/grains /usr/share/salt/grains
-salt/cli /usr/share/salt/cli
-salt/states /usr/share/salt/states
-salt/utils /usr/share/salt/utils
+salt/runners /usr/share/salt/
+salt/renderers /usr/share/salt/
+salt/returners /usr/share/salt/
+salt/ext /usr/share/salt/
+salt/msgpack /usr/share/salt/
+salt/grains /usr/share/salt/
+salt/cli /usr/share/salt/
+salt/states /usr/share/salt/
+salt/utils /usr/share/salt/
