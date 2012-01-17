@@ -7,7 +7,6 @@ Build-Depends: debhelper (>= 7.0.50~),
                cython,
                python-yaml,
                python-setuptools,
-               python-yaml,
                python-crypto,
                python-m2crypto,
                python-zmq (>= 2.1.9),
@@ -27,7 +26,6 @@ Depends: ${python:Depends},
          ${misc:Depends},
          python-support,
          cython,
-         python-yaml,
          python-setuptools,
          python-yaml,
          python-crypto,
@@ -106,7 +104,7 @@ Architecture: all
 Depends: ${misc:Depends},
          python (>= 2.6),
          salt-master (>= ${source:Version})
-Description: The syndic component represents the master-of-masters for salt
+Description: This package represents the master-of-masters for salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
  .
