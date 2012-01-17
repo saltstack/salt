@@ -59,7 +59,7 @@ Package: salt-master
 Architecture: all
 Depends:    ${misc:Depends},
             python (>= 2.6),
-            salt-common (= ${source:Version})
+            salt-common (>= ${source:Version})
 Description: This package provides a remote manager to administer servers via salt
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
@@ -121,5 +121,5 @@ Description: The syndic component represents the master-of-masters for salt
  Between the remote execution system, and state management Salt addresses
  the backbone of cloud and data center management.
  .
- This particular package provides the master of masters for salt-- it enables 
+ This particular package provides the master of masters for salt-- it enables
  the management of multiple masters at a time.
