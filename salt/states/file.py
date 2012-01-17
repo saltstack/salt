@@ -144,6 +144,7 @@ def _clean_dir(root, keep):
                 if fn_ == '/':
                     break
     rm_files = []
+    print real_keep
     for roots, dirs, files in os.walk(root):
         for name in files:
             nfn = os.path.join(roots, name)
@@ -428,26 +429,34 @@ def managed(name,
                 source_sum = __salt__['cp.hash_file'](source, __env__)
                 if not source_sum:
                     ret['result'] = False
-                    ret['comment'] = ('Checksum for source file {0} not'
-                                      ' found').format(source)
+                    ret['comment'] = 'Source file {0} not found'.format(source)
                     return ret
-            else:
-                # This file is not on a salt file server
-                sum_file = __salt__['cp.cache_file'](source_hash)
-                if not sum_file:
+            elif source_hash:
+                hash_fn = __salt__['cp.cache_file'](source_hash)
+                if not hash_fn:
                     ret['result'] = False
-                    ret['comment'] = ('Checksum for source file {0} not'
-                                      ' found').format(source)
+                    ret['comment'] = 'Source hash file {0} not found'.format(
+                         source_hash
+                         )
                     return ret
-                comps = open(sum_source, 'r').read().split('=')
+                comps = open(hash_fn, 'r').read().split('=')
                 if len(comps) < 2:
                     ret['result'] = False
-                    ret['comment'] = ('Checksum for source file {0} not'
-                                      ' formatted properly').format(source)
+                    ret['comment'] = ('Source hash file {0} contains an '
+                                      ' invalid hash format, it must be in '
+                                      ' the format <hash type>=<hash>').format(
+                                      source_hash
+                                      )
                     return ret
-                source_sum['hash_type'] = comps[0]
                 source_sum['hsum'] = comps[1]
-
+                source_sum['hash_type'] = comps[0]
+            else:
+                ret['result'] = False
+                ret['comment'] = ('Unable to determine upstream hash of'
+                                  ' source file {0}').format(
+                     source
+                     )
+                return ret
     # If the source file is a template render it accordingly
 
     # Check changes if the target file exists

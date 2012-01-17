@@ -567,7 +567,6 @@ class Matcher(object):
                 if not matcher:
                     # If an unknown matcher is called at any time, fail out
                     return False
-                print comps
                 results.append(
                         str(getattr(
                             self,
@@ -582,7 +581,6 @@ class Matcher(object):
                             )('@'.join(comps[1:]))
                         ))
 
-        print ' '.join(results)
         return eval(' '.join(results))
 
 class FileClient(object):
@@ -695,14 +693,28 @@ class FileClient(object):
         '''
         Get a single file from a URL.
         '''
-        if urlparse.urlparse(url).scheme == 'salt':
+        url_data = urlparse.urlparse(url)
+        if url_data.scheme == 'salt':
             return self.get_file(url, dest, makedirs, env)
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            if makedirs:
+        if dest:
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
+                if makedirs:
+                    os.makedirs(destdir)
+                else:
+                    return False
+        else:
+            dest = os.path.join(
+                self.opts['cachedir'],
+                'extrn_files',
+                env,
+                os.path.join(
+                    url_data.netloc,
+                    os.path.relpath(url_data.path, '/'))
+                )
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
                 os.makedirs(destdir)
-            else:
-                return False
         try:
             with contextlib.closing(urllib2.urlopen(url)) as srcfp:
                 with open(dest, 'wb') as destfp:
@@ -722,7 +734,7 @@ class FileClient(object):
         Pull a file down from the file server and store it in the minion file
         cache
         '''
-        return self.get_file(path, '', True, env)
+        return self.get_url(path, '', True, env)
 
     def cache_files(self, paths, env='base'):
         '''
