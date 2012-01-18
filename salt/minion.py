@@ -312,8 +312,21 @@ class Minion(object):
         except KeyError:
             pass
         payload['load'] = self.crypticle.dumps(load)
-        socket.send(self.serial.dumps(payload))
-        return socket.recv()
+        data = self.serial.dumps(payload)
+        socket.send(data)
+        ret = socket.recv()
+        if self.opts['cache_jobs']:
+            # Local job cache has been enabled
+            fn_ = os.path.join(
+                    self.opts['cachedir'],
+                    'minion_jobs',
+                    load['jid'],
+                    'return.p')
+            jdir = os.path.dirname(fn_)
+            if not os.path.isdir(jdir):
+                os.makedirs(jdir)
+            open(fn_, 'w+').write(load)
+        return ret
 
     def authenticate(self):
         '''
