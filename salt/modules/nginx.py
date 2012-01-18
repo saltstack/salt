@@ -28,7 +28,7 @@ def version():
 
         salt '*' nginx.version
     '''
-    cmd = 'nginx -v'
+    cmd = __detect_os() + ' -v'
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
     return ret[2]
@@ -51,7 +51,7 @@ def signal(signal=None):
         arguments = ' -s {0}'.format(signal)
     else:
         arguments = ' {0}'.format(signal)
-    cmd = 'nginx' + arguments
+    cmd = __detect_os() + arguments
     out = __salt__['cmd.run_all'](cmd)
 
     # A non-zero return code means fail
