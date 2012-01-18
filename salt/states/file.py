@@ -69,6 +69,7 @@ import os
 import shutil
 import difflib
 import hashlib
+import imp
 import logging
 import tempfile
 import traceback
@@ -223,6 +224,43 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
                 'data': trb}
 
 
+def _py(sfn, name, source, user, group, mode, env, context=None):
+    '''
+    Render a template from a python source file
+
+    Returns::
+
+        {'result': bool,
+         'data': <Error data or rendered file path>}
+    '''
+    if not os.path.isfile(sfn):
+        return {}
+
+    mod = imp.load_source(
+            os.path.basename(sfn).split('.')[0],
+            sfn
+            )
+    mod.salt = __salt__
+    mod.grains = __grains__
+    mod.name = name
+    mod.source = source
+    mod.user = user
+    mod.group = group
+    mod.mode = mode
+    mod.env = env
+    mod.context = context
+
+    try:
+        tgt = tempfile.mkstemp()[1]
+        open(tgt, 'w+').write(mod.run())
+        return {'result': True,
+                'data': tgt}
+    except:
+        trb = traceback.format_exc()
+        return {'result': False,
+                'data': trb}
+        
+
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
@@ -345,11 +383,21 @@ def managed(name,
         The location of the file to manage
 
     source
-        The source file, this file is located on the salt master file server
-        and is specified with the salt:// protocol. If the file is located on
+        The source file to download to the minion, this source file can be
+        hosted on either the salt master server, or on an http or ftp server.
+        For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None, the file
-        will be created as an empty file and the content will not be  managed
+        will be created as an empty file and the content will not be managed
+
+        If the file is hosted on a http or ftp server then the source_hash
+        argument is also required
+
+    source_hash:
+        This can be either a file which contains a source hash string for
+        the source, or a source hash string. The source hash string is the
+        hash algorithm followed by the hash of the file:
+        md5=e138491e9d5b97023cea823fe17bac22
 
     user
         The user to own the file, this defaults to the user salt is running as
@@ -429,26 +477,50 @@ def managed(name,
                 source_sum = __salt__['cp.hash_file'](source, __env__)
                 if not source_sum:
                     ret['result'] = False
-                    ret['comment'] = ('Checksum for source file {0} not'
-                                      ' found').format(source)
+                    ret['comment'] = 'Source file {0} not found'.format(source)
                     return ret
+            elif source_hash:
+                protos = ['salt', 'http', 'ftp']
+                if urlparse.urlparse(source_hash).scheme in protos:
+                    # The sourc_hash is a file on a server
+                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    if not hash_fn:
+                        ret['result'] = False
+                        ret['comment'] = 'Source hash file {0} not found'.format(
+                             source_hash
+                             )
+                        return ret
+                    comps = open(hash_fn, 'r').read().split('=')
+                    if len(comps) < 2:
+                        ret['result'] = False
+                        ret['comment'] = ('Source hash file {0} contains an '
+                                          ' invalid hash format, it must be in '
+                                          ' the format <hash type>=<hash>').format(
+                                          source_hash
+                                          )
+                        return ret
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+                else:
+                    # The source_hash is a hash string
+                    comps = source_hash.split('=')
+                    if len(comps) < 2:
+                        ret['result'] = False
+                        ret['comment'] = ('Source hash file {0} contains an '
+                                          ' invalid hash format, it must be in '
+                                          ' the format <hash type>=<hash>').format(
+                                          source_hash
+                                          )
+                        return ret
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
             else:
-                # This file is not on a salt file server
-                sum_file = __salt__['cp.cache_file'](source_hash)
-                if not sum_file:
-                    ret['result'] = False
-                    ret['comment'] = ('Checksum for source file {0} not'
-                                      ' found').format(source)
-                    return ret
-                comps = open(sum_source, 'r').read().split('=')
-                if len(comps) < 2:
-                    ret['result'] = False
-                    ret['comment'] = ('Checksum for source file {0} not'
-                                      ' formatted properly').format(source)
-                    return ret
-                source_sum['hash_type'] = comps[0]
-                source_sum['hsum'] = comps[1]
-
+                ret['result'] = False
+                ret['comment'] = ('Unable to determine upstream hash of'
+                                  ' source file {0}').format(
+                     source
+                     )
+                return ret
     # If the source file is a template render it accordingly
 
     # Check changes if the target file exists

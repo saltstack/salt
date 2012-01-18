@@ -80,6 +80,7 @@ def minion_config(path):
             'pki_dir': '/etc/salt/pki',
             'id': socket.getfqdn(),
             'cachedir': '/var/cache/salt',
+            'cache_jobs': False,
             'conf_file': path,
             'renderer': 'yaml_jinja',
             'failhard': False,
