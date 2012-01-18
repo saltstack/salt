@@ -231,7 +231,12 @@ class Minion(object):
             try:
                 self.returners[data['ret']](ret)
             except Exception as exc:
-                log.error('The return failed for job %s %s', data['jid'], exc)
+                log.error(
+                        'The return failed for job {0} {1}'.format(
+                            data['jid'],
+                            exc
+                            )
+                        )
         else:
             self._return_pub(ret)
 
@@ -259,7 +264,11 @@ class Minion(object):
                     = self.functions[data['fun'][ind]](*data['arg'][ind])
             except Exception as exc:
                 trb = traceback.format_exc()
-                log.warning('The minion function caused an exception: %s', exc)
+                log.warning(
+                        'The minion function caused an exception: {0}'.format(
+                            exc
+                            )
+                        )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
         if data['ret']:
@@ -267,7 +276,9 @@ class Minion(object):
             try:
                 self.returners[data['ret']](ret)
             except Exception as exc:
-                log.error('The return failed for job %s %s', data['jid'], exc)
+                log.error('The return failed for job {0} {1}'.format(
+                    data['jid'], exc
+                    ))
         else:
             self._return_pub(ret)
 
@@ -275,7 +286,7 @@ class Minion(object):
         '''
         Return the data from the executed command to the master server
         '''
-        log.info('Returning information for job: %(jid)s', ret)
+        log.info('Returning information for job: {0}'.format(ret['jid']))
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
