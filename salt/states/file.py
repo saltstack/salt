@@ -69,6 +69,7 @@ import os
 import shutil
 import difflib
 import hashlib
+import imp
 import logging
 import tempfile
 import traceback
@@ -222,6 +223,43 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         return {'result': False,
                 'data': trb}
 
+
+def _py(sfn, name, source, user, group, mode, env, context=None):
+    '''
+    Render a template from a python source file
+
+    Returns::
+
+        {'result': bool,
+         'data': <Error data or rendered file path>}
+    '''
+    if not os.path.isfile(sfn):
+        return {}
+
+    mod = imp.load_source(
+            os.path.basename(sfn).split('.')[0],
+            sfn
+            )
+    mod.salt = __salt__
+    mod.grains = __grains__
+    mod.name = name
+    mod.source = source
+    mod.user = user
+    mod.group = group
+    mod.mode = mode
+    mod.env = env
+    mod.context = context
+
+    try:
+        tgt = tempfile.mkstemp()[1]
+        open(tgt, 'w+').write(mod.run())
+        return {'result': True,
+                'data': tgt}
+    except:
+        trb = traceback.format_exc()
+        return {'result': False,
+                'data': trb}
+        
 
 def symlink(name, target, force=False, makedirs=False):
     '''
