@@ -22,3 +22,4 @@ salt/cli /usr/share/salt/
 salt/states /usr/share/salt/
 salt/utils /usr/share/salt/
 usr/lib/python2*/dist-packages/salt/msgpack
+debian/lintian-overrides /usr/share/lintian/overrides/salt-common
