@@ -228,16 +228,17 @@ class Minion(object):
         ret['fun'] = data['fun']
         self._return_pub(ret)
         if data['ret']:
-            ret['id'] = self.opts['id']
-            try:
-                self.returners[data['ret']](ret)
-            except Exception as exc:
-                log.error(
-                        'The return failed for job {0} {1}'.format(
-                            data['jid'],
-                            exc
+            for returner in set(data['ret'].split(',')):
+                ret['id'] = self.opts['id']
+                try:
+                    self.returners[returner](ret)
+                except Exception as exc:
+                    log.error(
+                            'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
                             )
-                        )
 
     def _thread_multi_return(self, data):
         '''
@@ -272,13 +273,17 @@ class Minion(object):
             ret['jid'] = data['jid']
         self._return_pub(ret)
         if data['ret']:
-            ret['id'] = self.opts['id']
-            try:
-                self.returners[data['ret']](ret)
-            except Exception as exc:
-                log.error('The return failed for job {0} {1}'.format(
-                    data['jid'], exc
-                    ))
+            for returner in set(data['ret'].split(',')):
+                ret['id'] = self.opts['id']
+                try:
+                    self.returners[returner](ret)
+                except Exception as exc:
+                    log.error(
+                            'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
+                            )
 
     def _return_pub(self, ret, ret_cmd='_return'):
         '''
