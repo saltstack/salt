@@ -2,9 +2,23 @@
 Support for nginx
 '''
 
+import salt.utils
+
 __outputter__ = {
     'signal': 'txt',
 }
+
+def __virtual__():
+    '''
+    Only load the module if nginx is installed
+    '''
+    cmd = __detect_os()
+    if salt.utils.which(cmd):
+        return 'nginx'
+    return False
+
+def __detect_os():
+    return 'nginx'
 
 def version():
     '''
