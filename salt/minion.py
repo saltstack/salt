@@ -314,7 +314,7 @@ class Minion(object):
         payload['load'] = self.crypticle.dumps(load)
         data = self.serial.dumps(payload)
         socket.send(data)
-        ret = socket.recv()
+        ret_val = socket.recv()
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
             fn_ = os.path.join(
@@ -325,8 +325,8 @@ class Minion(object):
             jdir = os.path.dirname(fn_)
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
-            self.serial.dump(load, fn_)
-        return ret
+            open(fn_, 'w+').write(self.serial.dumps(ret))
+        return ret_val
 
     def authenticate(self):
         '''
