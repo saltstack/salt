@@ -22,10 +22,10 @@ makes use of the jinja templating system would look like this:
         - mode: 644
         - template: jinja
         - context:
-          custom_var: "override"
+            custom_var: "override"
         - defaults:
-          custom_var: "default value"
-          other_var: 123
+            custom_var: "default value"
+            other_var: 123
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
