@@ -226,6 +226,7 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
+        self._return_pub(ret)
         if data['ret']:
             ret['id'] = self.opts['id']
             try:
@@ -237,8 +238,6 @@ class Minion(object):
                             exc
                             )
                         )
-        else:
-            self._return_pub(ret)
 
     def _thread_multi_return(self, data):
         '''
@@ -271,6 +270,7 @@ class Minion(object):
                         )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
+        self._return_pub(ret)
         if data['ret']:
             ret['id'] = self.opts['id']
             try:
@@ -279,8 +279,6 @@ class Minion(object):
                 log.error('The return failed for job {0} {1}'.format(
                     data['jid'], exc
                     ))
-        else:
-            self._return_pub(ret)
 
     def _return_pub(self, ret, ret_cmd='_return'):
         '''
