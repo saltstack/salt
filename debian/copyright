@@ -1,10 +1,10 @@
 Format: http://dep.debian.net/deps/dep5
 Upstream-Name: salt
-Upstream-Contact: Aaron Toponce <aaron.toponce@gmail.com>
-Source: http://github.com/thatch45/salt/
+Upstream-Contact: salt-users@googlegroups.com
+Source: https://github.com/downloads/saltstack/salt/salt-0.9.5.tar.gz
 
 Files: *
-Copyright: 2011 Thomas S Hatch <thatch45@gmail.com>
+Copyright: 2012 Thomas S Hatch <thatch45@gmail.com>
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
