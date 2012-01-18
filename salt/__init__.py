@@ -117,7 +117,8 @@ class Master(object):
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
 
         cli = {'daemon': options.daemon,
-               'config': options.config}
+               'config': options.config,
+               'user': options.user}
 
         return cli
 
@@ -306,7 +307,7 @@ class Syndic(object):
         cli = {'daemon': options.daemon,
                'minion_config': options.minion_config,
                'master_config': options.master_config,
-               }
+               'user': options.user}
 
         return cli
 
