@@ -79,7 +79,7 @@ def daemonize():
                 win32api.ShellExecute(
                     0,
                     'runas',
-                    executablepath, 
+                    executablepath,
                     os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
                     os.path.join(pypath[0], os.sep, pypath[1]),
                     0 )

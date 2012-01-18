@@ -7,6 +7,9 @@
 # The port used by the publisher
 #publish_port: 4505
 
+# The user to run salt
+#user: root
+
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
 # running slowly, increase the number of threads
