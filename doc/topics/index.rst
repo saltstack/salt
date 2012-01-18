@@ -45,9 +45,10 @@ contains a viable, and transparent, AMQ broker inside the daemon. Salt uses
 public keys for authentication with the master daemon, then uses faster AES
 encryption for payload communication, this means that authentication and
 encryption are also built into Salt. Salt takes advantage of communication via
-Python pickles, enabling fast and light network traffic.
+`msgpack`_, enabling fast and light network traffic.
 
 .. _`ZeroMQ`: http://www.zeromq.org/
+.. _`msgpack`: http://msgpack.org/
 
 Python client interface
 =======================
