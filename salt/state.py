@@ -989,6 +989,14 @@ class HighState(object):
         high, errors = self.render_highstate(matches)
         if errors:
             return errors
+        if not high:
+            return {'no.states': {
+                        'result': False,
+                        'comment': 'No states found for this minion',
+                        'name': 'No States',
+                        'changes': {}
+                        }
+                   }
         return self.state.call_high(high)
 
     def compile_highstate(self):
