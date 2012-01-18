@@ -442,24 +442,40 @@ def managed(name,
                     ret['comment'] = 'Source file {0} not found'.format(source)
                     return ret
             elif source_hash:
-                hash_fn = __salt__['cp.cache_file'](source_hash)
-                if not hash_fn:
-                    ret['result'] = False
-                    ret['comment'] = 'Source hash file {0} not found'.format(
-                         source_hash
-                         )
-                    return ret
-                comps = open(hash_fn, 'r').read().split('=')
-                if len(comps) < 2:
-                    ret['result'] = False
-                    ret['comment'] = ('Source hash file {0} contains an '
-                                      ' invalid hash format, it must be in '
-                                      ' the format <hash type>=<hash>').format(
-                                      source_hash
-                                      )
-                    return ret
-                source_sum['hsum'] = comps[1].strip()
-                source_sum['hash_type'] = comps[0].strip()
+                protos = ['salt', 'http', 'ftp']
+                if urlparse.urlparse(source_hash).scheme in protos:
+                    # The sourc_hash is a file on a server
+                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    if not hash_fn:
+                        ret['result'] = False
+                        ret['comment'] = 'Source hash file {0} not found'.format(
+                             source_hash
+                             )
+                        return ret
+                    comps = open(hash_fn, 'r').read().split('=')
+                    if len(comps) < 2:
+                        ret['result'] = False
+                        ret['comment'] = ('Source hash file {0} contains an '
+                                          ' invalid hash format, it must be in '
+                                          ' the format <hash type>=<hash>').format(
+                                          source_hash
+                                          )
+                        return ret
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+                else:
+                    # The source_hash is a hash string
+                    comps = source_hash.split('=')
+                    if len(comps) < 2:
+                        ret['result'] = False
+                        ret['comment'] = ('Source hash file {0} contains an '
+                                          ' invalid hash format, it must be in '
+                                          ' the format <hash type>=<hash>').format(
+                                          source_hash
+                                          )
+                        return ret
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
             else:
                 ret['result'] = False
                 ret['comment'] = ('Unable to determine upstream hash of'
