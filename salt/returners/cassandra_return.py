@@ -43,5 +43,5 @@ def returner(ret):
     else:
         columns['return'] = str(ret['return'])
 
-    log.debug(back)
+    log.debug(columns)
     cf.insert(ret['jid'], columns)
