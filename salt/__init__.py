@@ -8,6 +8,7 @@ import os
 import sys
 import stat
 import optparse
+import getpass
 
 # Import salt libs, the try block bypasses an issue at build time so that c
 # modules don't cause the build to fail
@@ -42,6 +43,34 @@ def verify_env(dirs):
     salt.utils.verify.run()
 
 
+def check_user(user, log):
+    '''
+    Check user and assign process uid/gid.
+    '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            return True
+    if user == getpass.getuser():
+        return True
+    import pwd  # after confirming not running Windows
+    try:
+        p = pwd.getpwnam(user)
+        try:
+            os.setgid(p.pw_gid)
+            os.setuid(p.pw_uid)
+        except OSError:
+            if user == 'root':
+                msg = 'Sorry, the salt must run as root.  http://xkcd.com/838'
+            else:
+                msg = 'Salt must be run from root or user "{0}"'.format(user)
+            log.critical(msg)
+            return False
+    except KeyError:
+        msg = 'User not found: "{0}"'.format(user)
+        log.critical(msg)
+        return False
+    return True
+
 class Master(object):
     '''
     Creates a master server
@@ -49,6 +78,9 @@ class Master(object):
     def __init__(self):
         self.cli = self.__parse_cli()
         self.opts = salt.config.master_config(self.cli['config'])
+        # command line overrides config
+        if self.cli['user']:
+            self.opts['user'] = self.cli['user']
 
     def __parse_cli(self):
         '''
@@ -67,6 +99,10 @@ class Master(object):
                 dest='config',
                 default='/etc/salt/master',
                 help='Pass in an alternative configuration file')
+        parser.add_option('-u',
+                '--user',
+                dest='user',
+                help='Specify user to run minion')
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -104,13 +140,14 @@ class Master(object):
         import logging
         log = logging.getLogger(__name__)
         # Late import so logging works correctly
-        import salt.master
-        master = salt.master.Master(self.opts)
-        if self.cli['daemon']:
-            # Late import so logging works correctly
-            import salt.utils
-            salt.utils.daemonize()
-        master.start()
+        if check_user(self.opts['user'], log):
+            import salt.master
+            master = salt.master.Master(self.opts)
+            if self.cli['daemon']:
+                # Late import so logging works correctly
+                import salt.utils
+                salt.utils.daemonize()
+            master.start()
 
 
 class Minion(object):
@@ -120,6 +157,9 @@ class Minion(object):
     def __init__(self):
         self.cli = self.__parse_cli()
         self.opts = salt.config.minion_config(self.cli['config'])
+        # command line overrides config
+        if self.cli['user']:
+            self.opts['user'] = self.cli['user']
 
     def __parse_cli(self):
         '''
@@ -138,6 +178,10 @@ class Minion(object):
                 dest='config',
                 default='/etc/salt/minion',
                 help='Pass in an alternative configuration file')
+        parser.add_option('-u',
+                '--user',
+                dest='user',
+                help='Specify user to run minion')
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -151,7 +195,8 @@ class Minion(object):
         log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
         cli = {'daemon': options.daemon,
-               'config': options.config}
+               'config': options.config,
+               'user': options.user}
 
         return cli
 
@@ -170,22 +215,21 @@ class Minion(object):
         )
         for name, level in self.opts['log_granular_levels'].iteritems():
             salt.log.set_logger_level(name, level)
-
         import logging
-
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
-        try:
-            if self.cli['daemon']:
-                # Late import so logging works correctly
-                import salt.utils
-                salt.utils.daemonize()
-            minion = salt.minion.Minion(self.opts)
-            minion.tune_in()
-        except KeyboardInterrupt:
-            log.warn('Stopping the Salt Minion')
-            raise SystemExit('\nExiting on Ctrl-c')
+        if check_user(self.opts['user'], log):
+            try:
+                if self.cli['daemon']:
+                    # Late import so logging works correctly
+                    import salt.utils
+                    salt.utils.daemonize()
+                minion = salt.minion.Minion(self.opts)
+                minion.tune_in()
+            except KeyboardInterrupt:
+                log.warn('Stopping the Salt Minion')
+                raise SystemExit('\nExiting on Ctrl-c')
 
 
 class Syndic(object):
@@ -195,6 +239,9 @@ class Syndic(object):
     def __init__(self):
         self.cli = self.__parse_cli()
         self.opts = self.__prep_opts()
+        # command line overrides config
+        if self.cli['user']:
+            self.opts['user'] = self.cli['user']
 
     def __prep_opts(self):
         '''
@@ -239,6 +286,10 @@ class Syndic(object):
                 dest='minion_config',
                 default='/etc/salt/minion',
                 help='Pass in an alternative minion configuration file')
+        parser.add_option('-u',
+                '--user',
+                dest='user',
+                help='Specify user to run minion')
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -278,13 +329,14 @@ class Syndic(object):
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
-        try:
-            syndic = salt.minion.Syndic(self.opts)
-            if self.cli['daemon']:
-                # Late import so logging works correctly
-                import salt.utils
-                salt.utils.daemonize()
-            syndic.tune_in()
-        except KeyboardInterrupt:
-            log.warn('Stopping the Salt Syndic Minion')
-            raise SystemExit('\nExiting on Ctrl-c')
+        if check_user(self.opts['user'], log):
+            try:
+                syndic = salt.minion.Syndic(self.opts)
+                if self.cli['daemon']:
+                    # Late import so logging works correctly
+                    import salt.utils
+                    salt.utils.daemonize()
+                syndic.tune_in()
+            except KeyboardInterrupt:
+                log.warn('Stopping the Salt Syndic Minion')
+                raise SystemExit('\nExiting on Ctrl-c')
