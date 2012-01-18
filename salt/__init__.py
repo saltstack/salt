@@ -26,7 +26,7 @@ def verify_env(dirs):
     for dir_ in dirs:
         if not os.path.isdir(dir_):
             try:
-                cumask = os.umask(191)
+                cumask = os.umask(63)  # 077
                 os.makedirs(dir_)
                 os.umask(cumask)
             except OSError, e:
