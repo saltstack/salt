@@ -325,7 +325,7 @@ class Minion(object):
             jdir = os.path.dirname(fn_)
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
-            open(fn_, 'w+').write(load)
+            self.serial.dump(load, fn_)
         return ret
 
     def authenticate(self):
