@@ -345,11 +345,21 @@ def managed(name,
         The location of the file to manage
 
     source
-        The source file, this file is located on the salt master file server
-        and is specified with the salt:// protocol. If the file is located on
+        The source file to download to the minion, this source file can be
+        hosted on either the salt master server, or on an http or ftp server.
+        For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None, the file
-        will be created as an empty file and the content will not be  managed
+        will be created as an empty file and the content will not be managed
+
+        If the file is hosted on a http or ftp server then the source_hash
+        argument is also required
+
+    source_hash:
+        This can be either a file which contains a source hash string for
+        the source, or a source hash string. The source hash string is the
+        hash algorithm followed by the hash of the file:
+        md5=e138491e9d5b97023cea823fe17bac22
 
     user
         The user to own the file, this defaults to the user salt is running as
