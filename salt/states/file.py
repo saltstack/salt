@@ -448,8 +448,8 @@ def managed(name,
                                       source_hash
                                       )
                     return ret
-                source_sum['hsum'] = comps[1]
-                source_sum['hash_type'] = comps[0]
+                source_sum['hsum'] = comps[1].strip()
+                source_sum['hash_type'] = comps[0].strip()
             else:
                 ret['result'] = False
                 ret['comment'] = ('Unable to determine upstream hash of'
