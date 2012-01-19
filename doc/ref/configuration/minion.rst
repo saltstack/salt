@@ -43,6 +43,19 @@ option on the salt master.
 
     master_port: 4506
 
+.. conf_minion:: user
+
+``user``
+----------------
+
+Default: ``root``
+
+The user to run the Salt processes
+
+.. code-block:: yaml
+
+    user: root
+
 .. conf_minion:: pki_dir
 
 ``pki_dir``
