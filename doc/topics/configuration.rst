@@ -34,12 +34,12 @@ Running Salt
 1.  Start the master in the foreground (to daemonize the process, pass the
     :option:`-d flag <salt-master -d>`)::
 
-        salt-master
+        # salt-master
 
 2.  Start the minion in the foreground (to daemonize the process, pass the
     :option:`-d flag <salt-minion -d>`)::
 
-        salt-minion
+        # salt-minion
 
 .. admonition:: Having trouble?
 
@@ -47,6 +47,12 @@ Running Salt
     the foreground with :option:`log level <salt-master -l>` set to ``debug``::
 
         salt-master --log-level=debug
+
+.. admonition:: Run as an unprivileged (non-root) user?
+
+    To run Salt as another user, specify ``--user`` in the command
+    line or assign ``user`` in the
+    :doc:`configuration file</ref/configuration/master>`.
 
 Manage Salt public keys
 =======================
