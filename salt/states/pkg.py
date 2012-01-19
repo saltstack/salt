@@ -117,23 +117,23 @@ def removed(name):
     name
         The name of the package to be removed
     '''
+    changes = {}
     if not __salt__['pkg.version'](name):
         return {'name': name,
                 'changes': {},
                 'result': True,
                 'comment': 'Package ' + name + ' is not installed'}
     else:
-        changes = __salt__['pkg.remove'](name)
+        changes['removed'] = __salt__['pkg.remove'](name)
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to remove'}
-        # FIXME: this block will never be reached
-        return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package ' + name + ' removed'}
+    return {'name': name,
+        'changes': changes,
+        'result': True,
+        'comment': 'Package ' + name + ' removed'}
 
 
 def purged(name):
@@ -144,21 +144,21 @@ def purged(name):
     name
         The name of the package to be purged
     '''
+    changes = {}
     if not __salt__['pkg.version'](name):
         return {'name': name,
                 'changes': {},
                 'result': True,
                 'comment': 'Package ' + name + ' is not installed'}
     else:
-        changes = __salt__['pkg.purge'](name)
+        changes['removed'] = __salt__['pkg.purge'](name)
 
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
                 'comment': 'Package ' + name + ' failed to purge'}
-        # FIXME: this block will never be reached
-        return {'name': name,
-            'changes': changes,
-            'result': True,
-            'comment': 'Package ' + name + ' purged'}
+    return {'name': name,
+        'changes': changes,
+        'result': True,
+        'comment': 'Package ' + name + ' purged'}

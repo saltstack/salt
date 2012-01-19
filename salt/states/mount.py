@@ -1,6 +1,7 @@
 '''
 Mount Management
-===============
+================
+
 Mount any type of mountable filesystem with the mounted function:
 
 .. code-block:: yaml

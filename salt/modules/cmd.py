@@ -123,7 +123,7 @@ def retcode(cmd, cwd=DEFAULT_CWD):
         salt '*' cmd.retcode "file /bin/bash"
     '''
     log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    return subprocess.call(cmd, shell=True, cwd=cwd)
+    return _run(cmd, cwd=cwd)['retcode']
 
 
 def has_exec(cmd):

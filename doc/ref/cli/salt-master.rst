@@ -30,3 +30,13 @@ Options
 .. option:: -c CONFIG, --config=CONFIG
 
     The master configuration file to use, the default is /etc/salt/master
+
+.. option:: -u USER, --user=USER
+
+    Specify user to run minion
+
+.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
+
+    Console log level. One of ``info``, ``none``, ``garbage``,
+    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
+    settings see the config file. Default: ``warning``.

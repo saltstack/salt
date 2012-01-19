@@ -30,7 +30,16 @@ def load_config(opts, path, env_var):
     '''
 
     if not path or not os.path.isfile(path):
-        path = os.environ.get(env_var, '')
+        path = os.environ.get(env_var, path)
+    # If the configuration file is missing, attempt to copy the template,
+    # after removing the first header line.
+    if not os.path.isfile(path):
+        template = "%s.template" % path
+        if os.path.isfile(template):
+            with open(path, 'w') as out:
+                with open(template, 'r') as f:
+                    f.readline() # skip first line
+                    out.write(f.read())
 
     if os.path.isfile(path):
         try:
@@ -67,10 +76,12 @@ def minion_config(path):
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'user': 'root',
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
             'id': socket.getfqdn(),
             'cachedir': '/var/cache/salt',
+            'cache_jobs': False,
             'conf_file': path,
             'renderer': 'yaml_jinja',
             'failhard': False,
@@ -112,7 +123,7 @@ def minion_config(path):
 
     # set up the extension_modules location from the cachedir
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
-    
+
     return opts
 
 
@@ -122,6 +133,7 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
+            'user': 'root',
             'worker_threads': 5,
             'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 '''
 This script is used to kick off a salt minion daemon
 '''

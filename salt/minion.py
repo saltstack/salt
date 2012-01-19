@@ -226,14 +226,19 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
+        self._return_pub(ret)
         if data['ret']:
-            ret['id'] = self.opts['id']
-            try:
-                self.returners[data['ret']](ret)
-            except Exception as exc:
-                log.error('The return failed for job %s %s', data['jid'], exc)
-        else:
-            self._return_pub(ret)
+            for returner in set(data['ret'].split(',')):
+                ret['id'] = self.opts['id']
+                try:
+                    self.returners[returner](ret)
+                except Exception as exc:
+                    log.error(
+                            'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
+                            )
 
     def _thread_multi_return(self, data):
         '''
@@ -259,23 +264,32 @@ class Minion(object):
                     = self.functions[data['fun'][ind]](*data['arg'][ind])
             except Exception as exc:
                 trb = traceback.format_exc()
-                log.warning('The minion function caused an exception: %s', exc)
+                log.warning(
+                        'The minion function caused an exception: {0}'.format(
+                            exc
+                            )
+                        )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
+        self._return_pub(ret)
         if data['ret']:
-            ret['id'] = self.opts['id']
-            try:
-                self.returners[data['ret']](ret)
-            except Exception as exc:
-                log.error('The return failed for job %s %s', data['jid'], exc)
-        else:
-            self._return_pub(ret)
+            for returner in set(data['ret'].split(',')):
+                ret['id'] = self.opts['id']
+                try:
+                    self.returners[returner](ret)
+                except Exception as exc:
+                    log.error(
+                            'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
+                            )
 
     def _return_pub(self, ret, ret_cmd='_return'):
         '''
         Return the data from the executed command to the master server
         '''
-        log.info('Returning information for job: %(jid)s', ret)
+        log.info('Returning information for job: {0}'.format(ret['jid']))
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
@@ -301,8 +315,21 @@ class Minion(object):
         except KeyError:
             pass
         payload['load'] = self.crypticle.dumps(load)
-        socket.send(self.serial.dumps(payload))
-        return socket.recv()
+        data = self.serial.dumps(payload)
+        socket.send(data)
+        ret_val = socket.recv()
+        if self.opts['cache_jobs']:
+            # Local job cache has been enabled
+            fn_ = os.path.join(
+                    self.opts['cachedir'],
+                    'minion_jobs',
+                    load['jid'],
+                    'return.p')
+            jdir = os.path.dirname(fn_)
+            if not os.path.isdir(jdir):
+                os.makedirs(jdir)
+            open(fn_, 'w+').write(self.serial.dumps(ret))
+        return ret_val
 
     def authenticate(self):
         '''
@@ -567,7 +594,6 @@ class Matcher(object):
                 if not matcher:
                     # If an unknown matcher is called at any time, fail out
                     return False
-                print comps
                 results.append(
                         str(getattr(
                             self,
@@ -582,7 +608,6 @@ class Matcher(object):
                             )('@'.join(comps[1:]))
                         ))
 
-        print ' '.join(results)
         return eval(' '.join(results))
 
 class FileClient(object):
@@ -695,14 +720,28 @@ class FileClient(object):
         '''
         Get a single file from a URL.
         '''
-        if urlparse.urlparse(url).scheme == 'salt':
+        url_data = urlparse.urlparse(url)
+        if url_data.scheme == 'salt':
             return self.get_file(url, dest, makedirs, env)
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            if makedirs:
+        if dest:
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
+                if makedirs:
+                    os.makedirs(destdir)
+                else:
+                    return False
+        else:
+            dest = os.path.join(
+                self.opts['cachedir'],
+                'extrn_files',
+                env,
+                os.path.join(
+                    url_data.netloc,
+                    os.path.relpath(url_data.path, '/'))
+                )
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
                 os.makedirs(destdir)
-            else:
-                return False
         try:
             with contextlib.closing(urllib2.urlopen(url)) as srcfp:
                 with open(dest, 'wb') as destfp:

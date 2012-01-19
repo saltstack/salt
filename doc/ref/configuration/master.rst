@@ -7,8 +7,8 @@ of the Salt system each have a respective configuration file. The
 :command:`salt-master` is configured via the master configuration file, and the
 :command:`salt-minion` is configured via the minion configuration file.
 
-.. seealso:: 
-    :ref:`example master configuration file <configuration-examples-master>` 
+.. seealso::
+    :ref:`example master configuration file <configuration-examples-master>`
 
 The configuration file for the salt-master is located at
 :file:`/etc/salt/master`. The available options are as follows:
@@ -41,6 +41,19 @@ The network port to set up the publication interface
 .. code-block:: yaml
 
     publish_port: 4505
+
+.. conf_master:: user
+
+``user``
+----------------
+
+Default: ``root``
+
+The user to run the Salt processes
+
+.. code-block:: yaml
+
+    user: root
 
 .. conf_master:: worker_threads
 
@@ -81,7 +94,7 @@ Default: :file:`/`
 The system root direcotry to oporate from, change this to make Salt run from
 an alternative root
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     root_dir: /
 

@@ -18,10 +18,13 @@ Full list of builtin modules
     cmd
     cp
     cron
+    data
     disk
     ebuild
     file
+    freebsdkmod
     freebsdpkg
+    gentoo_service
     grains
     groupadd
     hosts
@@ -33,11 +36,14 @@ Full list of builtin modules
     mysql
     network
     pacman
+    pip
     ps
     publish
     puppet
     pw_group
     pw_user
+    rh_service
+    saltutil
     selinux
     service
     shadow
@@ -45,8 +51,14 @@ Full list of builtin modules
     ssh
     state
     status
+    systemd
     test
     tomcat
     useradd
     virt
+    virtualenv
+    win_disk
+    win_service
+    win_useradd
     yumpkg
+    yumpkg5
