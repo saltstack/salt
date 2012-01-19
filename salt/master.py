@@ -646,6 +646,9 @@ class ClearFuncs(object):
         pubfn_pend = os.path.join(self.opts['pki_dir'],
                 'minions_pre',
                 load['id'])
+        pubfn_rejected = os.path.join(self.opts['pki_dir'],
+                'minions_rejected',
+                load['id'])
         if self.opts['open_mode']:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -661,6 +664,12 @@ class ClearFuncs(object):
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 return ret
+        elif os.path.isfile(pubfn_rejected):
+            # The key has been rejected, don't place it in pending
+            log.info('Public key rejected for %(id)s', load)
+            ret = {'enc': 'clear',
+                   'load': {'ret': False}}
+            return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre

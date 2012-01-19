@@ -128,6 +128,7 @@ class Master(object):
         '''
         verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
+                    os.path.join(self.opts['pki_dir'], 'minions_rejected'),
                     os.path.join(self.opts['cachedir'], 'jobs'),
                     os.path.dirname(self.opts['log_file']),
                     self.opts['sock_dir'],
