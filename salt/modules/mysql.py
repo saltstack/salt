@@ -10,6 +10,10 @@ might look like::
     mysql.user: 'root'
     mysql.pass: ''
     mysql.db: 'mysql'
+
+You can also use a defaults file::
+
+    mysql.default_file: '/etc/mysql/debian.cnf'
 '''
 
 import logging
@@ -53,20 +57,27 @@ def connect(**kwargs):
     '''
     wrap authentication credentials here
     '''
-    hostname = kwargs.get('host', __opts__['mysql.host'])
-    username = kwargs.get('user', __opts__['mysql.user'])
-    password = kwargs.get('pass', __opts__['mysql.pass'])
-    dbport = kwargs.get('port', __opts__['mysql.port'])
-    dbname = kwargs.get('db', __opts__['mysql.db'])
+    connargs = dict()
+    def _connarg(name, key=None):
+        '''
+        Add key to connargs, only if name exists in our
+        kwargs or as mysql.<name> in __opts__
+        '''
+        if key is None:
+            key = name
+        if name in kwargs:
+            connargs[key] = kwargs[name]
+        elif 'mysql.%s' % name in __opts__:
+            connargs[key] = __opts__['mysql.%s' % name]
 
-    db = MySQLdb.connect(
-        hostname,
-        username,
-        password,
-        dbname,
-        dbport,
-    )
+    _connarg('host')
+    _connarg('user')
+    _connarg('pass', 'passwd')
+    _connarg('port')
+    _connarg('db')
+    _connarg('default_file', 'read_default_file')
 
+    db = MySQLdb.connect(**connargs)
     db.autocommit(True)
     return db
 

@@ -76,6 +76,7 @@ def minion_config(path):
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'user': 'root',
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
             'id': socket.getfqdn(),
@@ -132,6 +133,7 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
+            'user': 'root',
             'worker_threads': 5,
             'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',
