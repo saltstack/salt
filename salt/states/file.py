@@ -914,14 +914,13 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # to look for ourselves
 
     # make sure the pattern(s) match
-    if not __salt__['file.contains'](name, before, limit):
-        if __salt__['file.contains'](name, after, limit):
-            ret['comment'] = "Edit already performed"
-            ret['result'] = True
-            return ret
-        else:
-            ret['comment'] = "Pattern not matched"
-            return ret
+    if __salt__['file.contains'](name, after, limit):
+        ret['comment'] = "Edit already performed"
+        ret['result'] = True
+        return ret
+    elif not __salt__['file.contains'](name, before, limit):
+        ret['comment'] = "Pattern not matched"
+        return ret
 
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
