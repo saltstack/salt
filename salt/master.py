@@ -42,7 +42,7 @@ def prep_jid(opts, load):
         os.makedirs(jid_dir)
         serial.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
     else:
-        return prep_jid(cachedir, load)
+        return prep_jid(opts['cachedir'], load)
     return jid
 
 
