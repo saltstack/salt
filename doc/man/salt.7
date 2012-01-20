@@ -2200,8 +2200,8 @@ salt \(aq*\(aq cmd.has_exec cat
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmd.retcode(cmd, cwd=\(aq/home/thatch\(aq)
-Execute a shell command and return the command\(aqs return code.
+.B salt.modules.cmd.retcode(cmd, runas=None, cwd=\(aq/home/thatch\(aq)
+Execute a shell command and return the command\(aqs return code
 .sp
 CLI Example:
 .sp
@@ -2213,7 +2213,7 @@ salt \(aq*\(aq cmd.retcode "file /bin/bash"
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmd.run(cmd, cwd=\(aq/home/thatch\(aq)
+.B salt.modules.cmd.run(cmd, runas=None, cwd=\(aq/home/thatch\(aq)
 Execute the passed command and return the output as a string
 .sp
 CLI Example:
@@ -2226,7 +2226,7 @@ salt \(aq*\(aq cmd.run "ls \-l | awk \(aq/foo/{print $2}\(aq"
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmd.run_all(cmd, cwd=\(aq/home/thatch\(aq)
+.B salt.modules.cmd.run_all(cmd, runas=None, cwd=\(aq/home/thatch\(aq)
 Execute the passed command and return a dict of return data
 .sp
 CLI Example:
@@ -2239,7 +2239,7 @@ salt \(aq*\(aq cmd.run_all "ls \-l | awk \(aq/foo/{print $2}\(aq"
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmd.run_stderr(cmd, cwd=\(aq/home/thatch\(aq)
+.B salt.modules.cmd.run_stderr(cmd, runas=None, cwd=\(aq/home/thatch\(aq)
 Execute a command and only return the standard error
 .sp
 CLI Example:
@@ -2252,7 +2252,7 @@ salt \(aq*\(aq cmd.run_stderr "ls \-l | awk \(aq/foo/{print $2}\(aq"
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.cmd.run_stdout(cmd, cwd=\(aq/home/thatch\(aq)
+.B salt.modules.cmd.run_stdout(cmd, runas=None, cwd=\(aq/home/thatch\(aq)
 Execute a command, and only return the standard out
 .sp
 CLI Example:
