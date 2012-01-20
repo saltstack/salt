@@ -138,9 +138,6 @@ setup(
                 ('share/man/man7',
                     ['doc/man/salt.7',
                     ]),
-                (mod_path,
-                    ['salt/modules/cytest.pyx',
-                    ]),
                 (doc_path,
                     [
                     ]),
