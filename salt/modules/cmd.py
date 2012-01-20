@@ -44,7 +44,7 @@ def _run(cmd,
         try:
             p = pwd.getpwnam(runas)
         except KeyError:
-            stderr_str = 'The user %s is not available' % runas
+            stderr_str = 'The user {0} is not available'.format(runas)
             if stderr == subprocess.STDOUT:
                 ret['stdout'] = stderr_str
             else:
@@ -79,7 +79,7 @@ def _run(cmd,
         ret['retcode'] = proc.returncode
         ret['pid'] = proc.pid
     except OSError:
-        stderr_str = 'Unable to change to user %s: permission denied' % runas 
+        stderr_str = 'Unable to change to user {0}: permission denied'.format(runas)
         if stderr == subprocess.STDOUT:
             ret['stdout'] = stderr_str
         else:
@@ -89,14 +89,14 @@ def _run(cmd,
     return ret
 
 
-def _run_quiet(cmd, runas=None, cwd=DEFAULT_CWD):
+def _run_quiet(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Helper for running commands quietly for minion startup
     '''
     return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT, quiet=True)['stdout']
 
 
-def run(cmd, runas=None, cwd=DEFAULT_CWD):
+def run(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute the passed command and return the output as a string
 
@@ -109,7 +109,7 @@ def run(cmd, runas=None, cwd=DEFAULT_CWD):
     return out
 
 
-def run_stdout(cmd, runas=None, cwd=DEFAULT_CWD):
+def run_stdout(cmd, cwd=DEFAULT_CWD,  runas=None):
     '''
     Execute a command, and only return the standard out
 
@@ -122,7 +122,7 @@ def run_stdout(cmd, runas=None, cwd=DEFAULT_CWD):
     return stdout
 
 
-def run_stderr(cmd, runas=None, cwd=DEFAULT_CWD):
+def run_stderr(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute a command and only return the standard error
 
@@ -135,7 +135,7 @@ def run_stderr(cmd, runas=None, cwd=DEFAULT_CWD):
     return stderr
 
 
-def run_all(cmd, runas=None, cwd=DEFAULT_CWD):
+def run_all(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute the passed command and return a dict of return data
 
@@ -155,7 +155,7 @@ def run_all(cmd, runas=None, cwd=DEFAULT_CWD):
     return ret
 
 
-def retcode(cmd, runas=None, cwd=DEFAULT_CWD):
+def retcode(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute a shell command and return the command's return code.
 
