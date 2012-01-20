@@ -139,7 +139,9 @@ setup(
                     ['doc/man/salt.7',
                     ]),
                 (doc_path,
-                    [
+                    ['LICENSE',
+                     'AUTHORS',
+                     'README.rst',
                     ]),
                  ],
      )
