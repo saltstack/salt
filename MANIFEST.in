@@ -1,1 +1,3 @@
-include salt/msgpack/*.h
+include AUTHORS
+include LICENSE
+include README.rst

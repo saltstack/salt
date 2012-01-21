@@ -32,20 +32,11 @@ class TestCommand(Command):
         )
         test_process.communicate()
 
-try:
-    from Cython.Distutils import build_ext
-    import Cython.Compiler.Main as cython_compiler
-    have_cython = True
-except ImportError:
-    from distutils.command.build_ext import build_ext
-    have_cython = False
-
-
 NAME = 'salt'
 VER = __version__
 DESC = ('Portable, distributed, remote execution and '
         'configuration management system')
-mod_path = os.path.join(get_python_lib(), 'salt/modules')
+mod_path = os.path.join(get_python_lib(1), 'salt/modules')
 doc_path = os.path.join(PREFIX, 'share/doc', NAME + '-' + VER)
 example_path = os.path.join(doc_path, 'examples')
 template_path = os.path.join(example_path, 'templates')
@@ -55,27 +46,7 @@ if 'SYSCONFDIR' in os.environ:
 else:
     etc_path = os.path.join(os.path.dirname(PREFIX), 'etc')
 
-# take care of extension modules.
-if have_cython:
-    sources = ['salt/msgpack/_msgpack.pyx']
-
-    class Sdist(sdist):
-        def __init__(self, *args, **kwargs):
-            for src in glob('salt/msgpack/*.pyx'):
-                cython_compiler.compile(glob('msgpack/*.pyx'),
-                                        cython_compiler.default_options)
-            sdist.__init__(self, *args, **kwargs)
-else:
-    sources = ['salt/msgpack/_msgpack.c']
-
-    Sdist = sdist
-
 libraries = ['ws2_32'] if sys.platform == 'win32' else []
-
-msgpack_mod = Extension('salt.msgpack._msgpack',
-                        sources=sources,
-                        libraries=libraries,
-                        )
 
 setup(
       name=NAME,
@@ -84,8 +55,7 @@ setup(
       author='Thomas S Hatch',
       author_email='thatch45@gmail.com',
       url='http://saltstack.org',
-      ext_modules=[msgpack_mod],
-      cmdclass={'build_ext': build_ext, 'sdist': Sdist, 'test': TestCommand},
+      cmdclass={'test': TestCommand},
       classifiers=[
           'Programming Language :: Python',
           'Programming Language :: Cython',
@@ -111,7 +81,6 @@ setup(
                 'salt.runners',
                 'salt.states',
                 'salt.utils',
-                'salt.msgpack',
                 ],
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
@@ -137,12 +106,6 @@ setup(
                     ]),
                 ('share/man/man7',
                     ['doc/man/salt.7',
-                    ]),
-                (mod_path,
-                    ['salt/modules/cytest.pyx',
-                    ]),
-                (doc_path,
-                    [
                     ]),
                  ],
      )

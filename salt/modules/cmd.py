@@ -10,6 +10,7 @@ import os
 import subprocess
 import tempfile
 import salt.utils
+import pwd
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -26,36 +27,76 @@ def _run(cmd,
         cwd=DEFAULT_CWD,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        quiet=False):
+        quiet=False,
+        runas=None):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
     ret = {}
-    if not quiet:
-        log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    proc = subprocess.Popen(cmd,
-        cwd=cwd,
-        shell=True,
-        stdout=stdout,
-        stderr=stderr,
-    )
-    out = proc.communicate()
-    ret['stdout'] = out[0]
-    ret['stderr'] = out[1]
-    ret['retcode'] = proc.returncode
-    ret['pid'] = proc.pid
+    uid = os.getuid()
+    euid = os.geteuid()
 
+    def su():
+        os.setuid(runas_uid)
+        os.seteuid(runas_uid)
+
+    if runas:
+        try:
+            p = pwd.getpwnam(runas)
+        except KeyError:
+            stderr_str = 'The user {0} is not available'.format(runas)
+            if stderr == subprocess.STDOUT:
+                ret['stdout'] = stderr_str
+            else:
+                ret['stdout'] = ''
+                ret['stderr'] = stderr_str
+            ret['retcode'] = 1
+            return ret
+        runas_uid = p.pw_uid
+        preexec = su
+    else:
+        preexec = None
+
+    if not quiet:
+        if runas:
+            log.info('Executing command {0} as user {1} in directory {2}'.format(
+                    cmd, runas, cwd))
+        else:
+            log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
+
+    try:
+        proc = subprocess.Popen(cmd,
+            cwd=cwd,
+            shell=True,
+            stdout=stdout,
+            stderr=stderr,
+            preexec_fn=preexec
+        )
+
+        out = proc.communicate()
+        ret['stdout'] = out[0]
+        ret['stderr'] = out[1]
+        ret['retcode'] = proc.returncode
+        ret['pid'] = proc.pid
+    except OSError:
+        stderr_str = 'Unable to change to user {0}: permission denied'.format(runas)
+        if stderr == subprocess.STDOUT:
+            ret['stdout'] = stderr_str
+        else:
+            ret['stdout'] = ''
+            ret['stderr'] = stderr_str
+        ret['retcode'] = 2
     return ret
 
 
-def _run_quiet(cmd, cwd=DEFAULT_CWD):
+def _run_quiet(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Helper for running commands quietly for minion startup
     '''
-    return _run(cmd, cwd, stderr=subprocess.STDOUT, quiet=True)['stdout']
+    return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT, quiet=True)['stdout']
 
 
-def run(cmd, cwd=DEFAULT_CWD):
+def run(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute the passed command and return the output as a string
 
@@ -63,12 +104,12 @@ def run(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
     '''
-    out = _run(cmd, cwd=cwd, stderr=subprocess.STDOUT)['stdout']
+    out = _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT)['stdout']
     log.debug(out)
     return out
 
 
-def run_stdout(cmd, cwd=DEFAULT_CWD):
+def run_stdout(cmd, cwd=DEFAULT_CWD,  runas=None):
     '''
     Execute a command, and only return the standard out
 
@@ -76,12 +117,12 @@ def run_stdout(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
     '''
-    stdout = _run(cmd, cwd=cwd)["stdout"]
+    stdout = _run(cmd, runas=runas, cwd=cwd)["stdout"]
     log.debug(stdout)
     return stdout
 
 
-def run_stderr(cmd, cwd=DEFAULT_CWD):
+def run_stderr(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute a command and only return the standard error
 
@@ -89,12 +130,12 @@ def run_stderr(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
     '''
-    stderr = _run(cmd, cwd=cwd)["stderr"]
+    stderr = _run(cmd, runas=runas, cwd=cwd)["stderr"]
     log.debug(stderr)
     return stderr
 
 
-def run_all(cmd, cwd=DEFAULT_CWD):
+def run_all(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute the passed command and return a dict of return data
 
@@ -102,7 +143,7 @@ def run_all(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
-    ret = _run(cmd, cwd=cwd)
+    ret = _run(cmd, runas=runas, cwd=cwd)
     if ret['retcode'] != 0:
         log.error('Command {0} failed'.format(cmd))
         log.error('retcode: {0}'.format(ret['retcode']))
@@ -114,7 +155,7 @@ def run_all(cmd, cwd=DEFAULT_CWD):
     return ret
 
 
-def retcode(cmd, cwd=DEFAULT_CWD):
+def retcode(cmd, cwd=DEFAULT_CWD, runas=None):
     '''
     Execute a shell command and return the command's return code.
 
@@ -122,8 +163,7 @@ def retcode(cmd, cwd=DEFAULT_CWD):
 
         salt '*' cmd.retcode "file /bin/bash"
     '''
-    log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-    return _run(cmd, cwd=cwd)['retcode']
+    return _run(cmd, runas=runas, cwd=cwd)['retcode']
 
 
 def has_exec(cmd):

@@ -116,13 +116,13 @@ def minion_config(path):
     # else!
     opts['open_mode'] = opts['open_mode'] is True
 
+    # set up the extension_modules location from the cachedir
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+
     opts['grains'] = salt.loader.grains(opts)
 
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
-
-    # set up the extension_modules location from the cachedir
-    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
 
     return opts
 
