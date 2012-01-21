@@ -36,7 +36,7 @@ Options
 
 .. option:: -E, --pcre
 
-    The target expresion will be interpereted as a pcre regular expression
+    The target expression will be interpereted as a pcre regular expression
     rather than a shell glob.
 
 .. option:: -L, --list
@@ -47,8 +47,8 @@ Options
 .. option:: -G, --grain
 
     The target expression matches values returned by the salt grains system on
-    the minions. The target expresion is in the format of '<grain value>:<pcre
-    regular expresion>'; example: 'os:Arch.*'
+    the minions. The target expression is in the format of '<grain value>:<pcre
+    regular expression>'; example: 'os:Arch.*'
 
 .. option:: -Q, --query
 

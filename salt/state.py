@@ -526,7 +526,7 @@ class State(object):
             if '__FAILHARD__' in running:
                 running.pop('__FAILHARD__')
                 return running
-            tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(low)
+            tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
             if tag not in running:
                 running = self.call_chunk(low, running, chunks)
                 if self.check_failhard(low, running):
@@ -537,7 +537,7 @@ class State(object):
         '''
         Check if the low data chunk should send a failhard signal
         '''
-        tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(low)
+        tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
         if low.get('failhard', False) \
                 or self.opts['failhard'] \
                 and tag in running:
@@ -561,7 +561,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(req)
+            tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -589,7 +589,7 @@ class State(object):
                         reqs.append(chunk)
         fun_stats = []
         for req in reqs:
-            tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(req)
+            tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(req)
             if tag not in running:
                 fun_stats.append('unmet')
             else:
@@ -607,7 +607,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then the
         chunk
         '''
-        tag = '{0[state]}.{0[__id__]}.{0[fun]}'.format(low)
+        tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
         if 'require' in low:
             status = self.check_requires(low, running, chunks)
             if status == 'unmet':
@@ -989,6 +989,14 @@ class HighState(object):
         high, errors = self.render_highstate(matches)
         if errors:
             return errors
+        if not high:
+            return {'no.states': {
+                        'result': False,
+                        'comment': 'No states found for this minion',
+                        'name': 'No States',
+                        'changes': {}
+                        }
+                   }
         return self.state.call_high(high)
 
     def compile_highstate(self):

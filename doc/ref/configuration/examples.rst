@@ -11,7 +11,7 @@ Configuration file examples
 Example master configuration file
 =================================
 
-.. literalinclude:: ../../../conf/master
+.. literalinclude:: ../../../conf/master.template
     :language: ini
     :linenos:
 
@@ -20,6 +20,6 @@ Example master configuration file
 Example minion configuration file
 =================================
 
-.. literalinclude:: ../../../conf/minion
+.. literalinclude:: ../../../conf/minion.template
     :language: ini
     :linenos:

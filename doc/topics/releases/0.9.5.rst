@@ -8,6 +8,11 @@ Salt 0.9.5 is one of the largest steps forward in the development of Salt.
 developers grow out to an international team of 46 code contributors and has
 many feature additions, feature enhancements, bug fixes and speed improvements.
 
+.. warning::
+
+    Be sure to :ref:`read the upgrade instructions <v0.9.5-msgpack>` about the
+    switch to msgpack before upgrading!
+
 Community
 =========
 
@@ -20,35 +25,35 @@ expandability of Salt is as exponential as I originally intended.
 commiters. The following individuals have contributed to the development of
 0.9.5:
 
-Aaron Bull Schaefer 
-Antti Kaihola 
-Bas Tichelaar 
-Brad Barden 
-Brian Wagner 
-Byron Clark 
-Chris Scheller 
-Christer Edwards 
-Clint Savage 
-Corey Quinn 
-David Boucha 
-Eivind Uggedal 
-Eric Poelke
-Evan Borgstrom 
-Jed Glazner 
-Jeff Schroeder 
-Jeffrey C. Ollie 
-Jonas Buckner 
-Kent Tenney 
-Martin Schnabel 
-Maxim Burgerhout 
-Mitch Anderson 
-Nathaniel Whiteinge 
-Seth House 
-Thomas S Hatch 
-Thomas Schreiber 
-Tor Hveem 
-lzyeval 
-syphernl 
+* Aaron Bull Schaefer
+* Antti Kaihola
+* Bas Tichelaar
+* Brad Barden
+* Brian Wagner
+* Byron Clark
+* Chris Scheller
+* Christer Edwards
+* Clint Savage
+* Corey Quinn
+* David Boucha
+* Eivind Uggedal
+* Eric Poelke
+* Evan Borgstrom
+* Jed Glazner
+* Jeff Schroeder
+* Jeffrey C. Ollie
+* Jonas Buckner
+* Kent Tenney
+* Martin Schnabel
+* Maxim Burgerhout
+* Mitch Anderson
+* Nathaniel Whiteinge
+* Seth House
+* Thomas S Hatch
+* Thomas Schreiber
+* Tor Hveem
+* lzyeval
+* syphernl
 
 This makes 21 new developers since 0.9.4 was released!
 
@@ -58,6 +63,8 @@ Salt on Github, and get coding (https://github.com/saltstack/salt)!
 
 Major Features
 ==============
+
+.. _v0.9.5-msgpack:
 
 SPEED! Pickle to msgpack
 ------------------------
@@ -75,20 +82,24 @@ This move introduces a few changes to Salt. First off, Salt is no longer a
 "noarch" package, since the msgpack lib is written in C. Salt 0.9.5 will also
 have compatibility issues with 0.9.4 with the default configuration.
 
-We have gone through great lengths to avoid backwards compatibility issues
-with Salt, but changing the serialization medium was going to create issues
-regardless. Salt 0.9.5 is somewhat backwards compatible with earlier minions.
-A 0.9.5 master can command older minions, but only if the ?serial? config
-value in the master is set to ?pickle?. This will tell the master to publish
-messages in pickle format and will allow the master to receive messages in
-both msgpack and pickle formats.
+We have gone through great lengths to avoid backwards compatibility issues with
+Salt, but changing the serialization medium was going to create issues
+regardless. Salt 0.9.5 is somewhat backwards compatible with earlier minions. A
+0.9.5 master can command older minions, but only if the :conf_master:`serial`
+config value in the master is set to ``pickle``. This will tell the master to
+publish messages in pickle format and will allow the master to receive messages
+in both msgpack and pickle formats.
 
-Therefore the suggested methods for upgrading are either to just upgrade
-everything at once, or to upgrade the master to 0.9.5, set "serial: pickle" in
-the master config, upgrade the minions, and then remove the serial option from
-the config. Since pickles can be used as a security exploit the ability for a
-master to accept pickles from minions at all will be removed in a future
-release.
+Therefore **the suggested methods for upgrading** are either to just upgrade
+everything at once, or:
+
+1.  Upgrade the master to 0.9.5
+2.  Set :conf_master:`serial` to ``pickle`` in the master config
+3.  Upgrade the minions
+4.  Remove the ``serial`` option from the master config
+
+Since pickles can be used as a security exploit the ability for a master to
+accept pickles from minions at all will be removed in a future release.
 
 C Bindings for YAML
 --------------------
@@ -129,14 +140,15 @@ Modules via Module Environment Directories
 Under the file_roots each environment can now have directories that are used
 to deploy large groups of modules. These directories sync modules at the
 beginning of a state run on the minion, or can be manually synced via the Salt
-module "saltutil.sync_all".
+module :mod:`salt.modules.saltutil.sync_all`.
 
 The directories are named:
-_modules
-_states
-_grains
-_renderers
-_returners
+
+* ``_modules``
+* ``_states``
+* ``_grains``
+* ``_renderers``
+* ``_returners``
 
 The modules are pushed to their respective scopes on the minions.
 
@@ -144,7 +156,7 @@ Module Reloading
 ----------------
 
 Modules can now be reloaded without restarting the minion, this is done by
-calling the sys.reload_modules function.
+calling the :mod:`salt.modules.sys.reload_modules` function.
 
 But wait, there's more! Now when a salt module of any type is added via
 states the modules will be automatically reloaded, allowing for modules to be
@@ -160,9 +172,9 @@ A great deal of demand has existed for adding the capability to set services
 to be started at boot in the service module. This feature also comes with an
 overhaul of the service modules and initial systemd support.
 
-This means that the service state can now accept "- enable: True" to make sure
-a service is enabled at boot, and "- enable: False" to make sure it is
-disabled.
+This means that the :mod:`service state <salt.states.service.running>` can now
+accept ``- enable: True`` to make sure a service is enabled at boot, and ``-
+enable: False`` to make sure it is disabled.
 
 Compound Target
 ---------------
@@ -172,12 +184,12 @@ previous versions the desired minions could only be targeted via a single
 specific target type, but now many target specifications can be declared.
 
 These targets can also be separated by and/or operators, so certain properties
-can be used to omit a node:
+can be used to omit a node::
 
-salt -C 'webserv* and G@os:Debian or E@db.*' test.ping
+    salt -C 'webserv* and G@os:Debian or E@db.*' test.ping
 
 will match all minions with ids starting with webserv via a glob and minions
-matching the os:Debian grain. Or minions that match the "db.*" regular
+matching the ``os:Debian`` grain. Or minions that match the ``db.*`` regular
 expression.
 
 
@@ -187,15 +199,15 @@ Node Groups
 Often the convenience of having a predefined group of minions to execute
 targets on is desired. This can be accomplished with the new nodegroups
 feature. Nodegroups allow for predefined compound targets to be declared in
-the master configuration file:
+the master configuration file::
 
-nodegroups:
-  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
-  group2: 'G@os:Debian and foo.domain.com'
+    nodegroups:
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
 
-And then used via the -N option:
+And then used via the ``-N`` option::
 
-salt -N group1 test.ping
+    salt -N group1 test.ping
 
 Minion Side Data Store
 -----------------------
@@ -219,8 +231,8 @@ Salt -Q is Useful Now
 In the past the salt query system, which would display the data from recent
 executions would be displayed in pure python, and it was unreadable.
 
-0.9.5 has added the outputter system to the -Q option, thus enabling the salt
-query system to return readable output.
+0.9.5 has added the outputter system to the ``-Q`` option, thus enabling the
+salt query system to return readable output.
 
 Packaging Updates
 =================
@@ -255,9 +267,10 @@ Ubuntu and the package data that has been prepared is being pushed through
 the needed channels for inclusion.
 
 These packages have been prepared with the help of:
-Corey
-Aaron Toponce
-and`
+
+* Corey
+* Aaron Toponce
+* and`
 
 More to Come
 ------------
@@ -291,67 +304,68 @@ This allows Salt to give much more granular error information.
 New Modules
 -----------
 
-data
-````
+:mod:`data <salt.modules.data>`
+```````````````````````````````
 The new data module manages a persistent datastore on the minion.
 Big thanks to bastichelaar for his help refining this module
 
-freebsdkmod
-````````````
+:mod:`freebsdkmod <salt.modules.freebsdkmod>`
+`````````````````````````````````````````````
 FreeBSD kernel modules can now be managed in the same way Salt handles Linux
 kernel modules.
+
 This module was contributed thanks to the efforts of Christer Edwards
 
-gentoo_service
-``````````````
+:mod:`gentoo_service <salt.modules.gentoo_service>`
+```````````````````````````````````````````````````
 Support has been added for managing services in Gentoo. Now Gentoo services
 can be started, stopped, restarted, enabled, disabled and viewed.
 
-pip
-````
+:mod:`pip <salt.modules.pip>`
+`````````````````````````````
 The pip module introduces management for pip installed applications.
 Thanks goes to whitinge for the addition of the pip module
 
-rh_service
-``````````
+:mod:`rh_service <salt.modules.rh_service>`
+```````````````````````````````````````````
 The rh_service module enables Red Hat and Fedora specific service management.
 Now Red Hat like systems come with extensive management of the classic init
 system used by Red Hat
 
-saltutil
-````````
+:mod:`saltutil <salt.modules.saltutil>`
+```````````````````````````````````````
 The saltutil module has been added as a place to hold functions used in the
 maintenance and management of salt itself. Saltutil is used to salt the salt
 minion. The saltutil module is presently used only to sync extension modules
 from the master server.
 
-systemd
-````````
+:mod:`systemd <salt.modules.systemd>`
+`````````````````````````````````````
 Systemd support has been added to Salt, now systems using this next generation
 init system are supported on systems running systemd.
 
-virtualenv
-``````````
+:mod:`virtualenv <salt.modules.virtualenv>`
+```````````````````````````````````````````
 The virtualenv module has been added to allow salt to create virtual python
 environments.
 Thanks goes to whitinge for the addition of the virtualenv module
 
-win_disk
-````````
+:mod:`win_disk <salt.modules.win_disk>`
+```````````````````````````````````````
 Support for gathering disk information on Microsoft Windows minions
 The windows modules come courtesy of Utah_Dave
 
-win_service
-```````````
+:mod:`win_service <salt.modules.win_service>`
+`````````````````````````````````````````````
 The win_service module adds service support to Salt for Microsoft Windows
 services
 
-win_useradd
-````````````
+:mod:`win_useradd <salt.modules.win_useradd>`
+`````````````````````````````````````````````
 Salt can now manage local users on Microsoft Windows Systems
 
-yumpkg5
-```````
+:mod:`yumpkg5 <salt.modules.yumpkg5>`
+`````````````````````````````````````
 The yumpkg module introduces in 0.9.4 uses the yum api to interact with the
 yum package manager. Unfortunately, on Red Hat 5 systems salt does not have
 access to the yum api because the yum api is running under python 2.4 and Salt
@@ -363,26 +377,27 @@ the yum api is not available.
 New States
 -----------
 
-mysql_database
-``````````````
+:mod:`mysql_database <salt.states.mysql_database>`
+``````````````````````````````````````````````````
 The new mysql_database state adds the ability to systems running a mysql
 server to manage the existence of mysql databases.
 
 The mysql states are thanks to syphernl
 
-mysql_user
-```````````
+:mod:`mysql_user <salt.states.mysql_user>`
+``````````````````````````````````````````
 The mysql_user state enables mysql user management.
 
-virtualenv
-``````````
+:mod:`virtualenv <salt.states.virtualenv>`
+``````````````````````````````````````````
 The virtualenv state can manage the state of python virtual environments.
 Thanks to Whitinge for the virtualenv state
 
 New Returners
 -------------
 
-cassandra_returner
-``````````````````
+:mod:`cassandra_returner <salt.returners.cassandra_return>`
+```````````````````````````````````````````````````````````
+
 A returner allowing Salt to send data to a cassandra server.
 Thanks to Byron Clark for contributing this returner

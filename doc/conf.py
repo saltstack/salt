@@ -29,7 +29,8 @@ class Mock(object):
 
 MOCK_MODULES = [
     # salt core
-    'salt.msgpack._msgpack',
+    'yaml',
+    'msgpack',
     'zmq',
     'Crypto',
     'Crypto.Cipher',
@@ -67,6 +68,8 @@ for path in addtl_paths:
 
 from salt.version import __version__
 
+
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # -- General configuration -----------------------------------------------------
 
@@ -107,14 +110,18 @@ extlinks = {
 
 
 ### HTML options
-html_theme = 'default'
+if on_rtd:
+    html_theme = 'default'
+else:
+    html_theme = 'saltstack'
+
+html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = 'salt.png'
+html_logo = 'salt-vert.png'
 html_favicon = 'favicon.ico'
-html_style = ['base-salt.css']
 html_use_smartypants = False
 
 html_additional_pages = {

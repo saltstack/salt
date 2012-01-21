@@ -1,3 +1,4 @@
+# DO NOT MODIFY THIS FILE.  Copy it to: /etc/salt/master
 ##### Primary configuration settings #####
 ##########################################
 # The address of the interface to bind to
@@ -5,6 +6,9 @@
 
 # The port used by the publisher
 #publish_port: 4505
+
+# The user to run salt
+#user: root
 
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
@@ -85,9 +89,9 @@
 #   prod:
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
-# 
+#
 # Default:
-#file_roots: 
+#file_roots:
 #  base:
 #    - /srv/salt
 
@@ -183,7 +187,7 @@
 ##########################################
 # Node groups allow for logical groupings of minion nodes.
 # A group consists of a group name and a compound target.
-# 
+#
 # nodegroups:
 #   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
 #   group2: 'G@os:Debian and foo.domain.com',
