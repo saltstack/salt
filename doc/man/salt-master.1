@@ -1,4 +1,4 @@
-.TH "SALT-MASTER" "1" "January 14, 2012" "0.9.5" "Salt"
+.TH "SALT-MASTER" "1" "January 20, 2012" "0.9.6" "Salt"
 .SH NAME
 salt-master \- salt-master Documentation
 .
@@ -53,6 +53,18 @@ Run the salt master as a daemon
 .TP
 .B \-c CONFIG, \-\-config=CONFIG
 The master configuration file to use, the default is /etc/salt/master
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-u USER, \-\-user=USER
+Specify user to run minion
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-l LOG_LEVEL, \-\-log\-level=LOG_LEVEL
+Console log level. One of \fBinfo\fP, \fBnone\fP, \fBgarbage\fP,
+\fBtrace\fP, \fBwarning\fP, \fBerror\fP, \fBdebug\fP. For the logfile
+settings see the config file. Default: \fBwarning\fP.
 .UNINDENT
 .SH AUTHOR
 Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file
