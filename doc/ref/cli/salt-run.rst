@@ -14,7 +14,7 @@ Synopsis
 Description
 ===========
 
-Salt run is the frontend command for executing ``Salt Runners``.
+salt-run is the frontend command for executing ``Salt Runners``.
 Salt runners are simple modules used to execute convenience functions on the
 master
 
