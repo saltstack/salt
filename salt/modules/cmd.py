@@ -10,7 +10,10 @@ import os
 import subprocess
 import tempfile
 import salt.utils
-import pwd
+try:
+    import pwd
+except:
+    pass
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -33,8 +36,11 @@ def _run(cmd,
     Do the DRY thing and only call subprocess.Popen() once
     '''
     ret = {}
-    uid = os.getuid()
-    euid = os.geteuid()
+    try:
+        uid = os.getuid()
+        euid = os.geteuid()
+    except:
+        pass
 
     def su():
         os.setuid(runas_uid)
