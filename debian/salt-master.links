@@ -1,5 +1,5 @@
-usr/share/salt/salt /usr/bin/salt
-usr/share/salt/salt-master /usr/bin/salt-master
-usr/share/salt/salt-cp /usr/bin/salt-cp
-usr/share/salt/salt-key /usr/bin/salt-key
-usr/share/salt/salt-run /usr/bin/salt-run
+usr/lib/python2*/dist-packages/salt/salt /usr/bin/salt
+usr/lib/python2*/dist-packages/salt/salt-master /usr/bin/salt-master
+usr/lib/python2*/dist-packages/salt/salt-cp /usr/bin/salt-cp
+usr/lib/python2*/dist-packages/salt/salt-key /usr/bin/salt-key
+usr/lib/python2*/dist-packages/salt/salt-run /usr/bin/salt-run
