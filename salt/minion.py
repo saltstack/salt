@@ -24,7 +24,7 @@ import zmq
 
 # Import salt libs
 from salt.exceptions import AuthenticationError, MinionError, \
-    CommandExecutionError, SaltInvocationError
+    CommandExecutionError, CommandNotFoundError, SaltInvocationError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -208,6 +208,10 @@ class Minion(object):
         if function_name in self.functions:
             try:
                 ret['return'] = self.functions[data['fun']](*data['arg'])
+            except CommandNotFoundError as exc:
+                msg = 'Command not found in \'{0}\': {1}'
+                log.debug(msg.format(function_name, str(exc)))
+                ret['return'] = msg.format(function_name, str(exc))
             except CommandExecutionError as exc:
                 msg = 'A command in {0} had a problem: {1}'
                 log.error(msg.format(function_name, str(exc)))
