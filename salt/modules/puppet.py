@@ -4,6 +4,11 @@ Execute puppet routines
 
 from salt.exceptions import CommandNotFoundError
 
+__outputter__ = {
+    'run':  'txt',
+    'noop': 'txt',
+}
+
 def _check_puppet():
     '''
     Checks if puppet is installed
