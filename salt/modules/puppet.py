@@ -2,6 +2,7 @@
 Execute puppet routines
 '''
 
+from salt.exceptions import CommandNotFoundError
 
 def _check_puppet():
     '''
@@ -10,7 +11,7 @@ def _check_puppet():
     # I thought about making this a virtual module, but then I realized that I
     # would require the minion to restart if puppet was installed after the
     # minion was started, and that would be rubbish
-    return __salt__['cmd.has_exec']('puppet')
+    return __salt__['cmd.has_exec']('puppetd')
 
 
 def run():
@@ -25,4 +26,18 @@ def run():
     if _check_puppet():
         return __salt__['cmd.run_all']('puppetd --test')
     else:
-        return {}
+        raise CommandNotFoundError("puppetd not available")
+
+def noop():
+    '''
+    Execute a puppet noop run and return a dict with the stderr,stdout,return code
+    etc.
+
+    CLI Example::
+
+        salt '*' puppet.noop
+    '''
+    if _check_puppet():
+        return __salt__['cmd.run_all']('puppetd --test --noop')
+    else:
+        raise CommandNotFoundError("puppetd not available")
