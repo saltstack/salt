@@ -4,9 +4,10 @@ All salt configuration loading and defaults should be in this module
 
 # Import python modules
 import os
-import tempfile
-import socket
 import sys
+import socket
+import logging
+import tempfile
 
 # import third party libs
 import yaml
@@ -21,6 +22,8 @@ except:
 import salt.crypt
 import salt.loader
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def load_config(opts, path, env_var):
@@ -54,9 +57,10 @@ def load_config(opts, path, env_var):
             opts.update(conf_opts)
             opts['conf_file'] = path
         except Exception, e:
-            print 'Error parsing configuration file: {0} - {1}'.format(path, e)
+            msg = 'Error parsing configuration file: {0} - {1}'
+            log.warn(msg.format(path, e))
     else:
-        print 'Missing configuration file: {0}'.format(path)
+        log.debug('Missing configuration file: {0}'.format(path))
 
 
 def prepend_root_dir(opts, path_options):
