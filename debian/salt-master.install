@@ -1,6 +1,1 @@
 conf/master.template /etc/salt/master
-scripts/salt-key /usr/share/salt
-scripts/salt /usr/share/salt
-scripts/salt-run /usr/share/salt
-scripts/salt-cp /usr/share/salt
-scripts/salt-master /usr/share/salt
