@@ -44,6 +44,21 @@ log = logging.getLogger(__name__)
 # 6. handle publications
 
 
+def get_proc_dir(cachedir):
+    '''
+    Return the directory that process data is stored in
+    '''
+    fn_ = os.path.join(cachedir, 'proc')
+    if not os.path.isdir(fn_):
+        # proc_dir is not present, create it
+        os.makedirs(fn_)
+    else:
+        # proc_dir is present, clean out old proc files
+        for proc_fn in os.listdir(fn_):
+            os.remove(os.path.join(fn_, proc_fn))
+    return fn_
+
+
 class SMinion(object):
     '''
     Create an object that has loaded all of the minion module functions,
@@ -81,6 +96,7 @@ class Minion(object):
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
+        self.proc_dir = get_proc_dir(opts['cachedir'])
         if hasattr(self,'_syndic') and self._syndic:
             log.warn('Starting the Salt Syndic Minion')
         else:
@@ -191,6 +207,9 @@ class Minion(object):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
+        if self.opts['multiprocessing']:
+            fn_ = os.path.join(self.proc_dir, str(os.getpid()))
+            open(fn_, 'w+').write(self.serial.dumps(data))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -293,6 +312,10 @@ class Minion(object):
         '''
         Return the data from the executed command to the master server
         '''
+        if self.opts['multiprocessing']:
+            fn_ = os.path.join(self.proc_dir, str(os.getpid()))
+            if os.path.isfile(fn_):
+                os.remove(fn_)
         log.info('Returning information for job: {0}'.format(ret['jid']))
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
