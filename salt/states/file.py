@@ -145,7 +145,6 @@ def _clean_dir(root, keep):
                 if fn_ == '/':
                     break
     rm_files = []
-    print real_keep
     for roots, dirs, files in os.walk(root):
         for name in files:
             nfn = os.path.join(roots, name)
@@ -259,7 +258,7 @@ def _py(sfn, name, source, user, group, mode, env, context=None):
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
-        
+
 
 def symlink(name, target, force=False, makedirs=False):
     '''
