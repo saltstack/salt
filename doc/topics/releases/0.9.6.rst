@@ -22,7 +22,7 @@ Allow Multiple Returners
 ------------------------
 
 Now the returner interface can define multiple returners, and will also return
-data back tot he master, making the process lees ambiguous.
+data back to the master, making the process less ambiguous.
 
 Minion Memory Improvements
 --------------------------
@@ -45,5 +45,3 @@ Pure Python Template Support For file.managed
 Templates in the file.managed state can now be defined in a python script.
 This script needs to have a run function that returns the string that needs to
 be in the named file.
-
-

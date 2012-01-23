@@ -15,6 +15,7 @@ try:
 except:
     pass
 
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -31,22 +32,19 @@ def _run(cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         quiet=False,
-        runas=None):
+        runas=None,
+        with_env=True):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
+    # Don't use runas in Windows
+    disable_runas = [
+        'Windows',
+    ]
+
     ret = {}
-    try:
-        uid = os.getuid()
-        euid = os.geteuid()
-    except:
-        pass
 
-    def su():
-        os.setuid(runas_uid)
-        os.seteuid(runas_uid)
-
-    if runas:
+    if runas and __grains__['os'] not in disable_runas:
         try:
             p = pwd.getpwnam(runas)
         except KeyError:
@@ -58,40 +56,31 @@ def _run(cmd,
                 ret['stderr'] = stderr_str
             ret['retcode'] = 1
             return ret
-        runas_uid = p.pw_uid
-        preexec = su
-    else:
-        preexec = None
+        cmd_prefix = 'su '
+        if with_env:
+            cmd_prefix += '- '
+        cmd_prefix += runas + ' -c'
+        cmd = '%s "%s"' % (cmd_prefix, cmd)
 
     if not quiet:
-        if runas:
+        if runas and __grains__['os'] not in disable_runas:
             log.info('Executing command {0} as user {1} in directory {2}'.format(
                     cmd, runas, cwd))
         else:
             log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
 
-    try:
-        proc = subprocess.Popen(cmd,
-            cwd=cwd,
-            shell=True,
-            stdout=stdout,
-            stderr=stderr,
-            preexec_fn=preexec
-        )
+    proc = subprocess.Popen(cmd,
+        cwd=cwd,
+        shell=True,
+        stdout=stdout,
+        stderr=stderr
+    )
 
-        out = proc.communicate()
-        ret['stdout'] = out[0]
-        ret['stderr'] = out[1]
-        ret['retcode'] = proc.returncode
-        ret['pid'] = proc.pid
-    except OSError:
-        stderr_str = 'Unable to change to user {0}: permission denied'.format(runas)
-        if stderr == subprocess.STDOUT:
-            ret['stdout'] = stderr_str
-        else:
-            ret['stdout'] = ''
-            ret['stderr'] = stderr_str
-        ret['retcode'] = 2
+    out = proc.communicate()
+    ret['stdout'] = out[0]
+    ret['stderr'] = out[1]
+    ret['retcode'] = proc.returncode
+    ret['pid'] = proc.pid
     return ret
 
 
