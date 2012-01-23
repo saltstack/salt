@@ -241,6 +241,9 @@ def _virtual(osdata):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl)).strip()
+            jail  = __salt__['cmd.run']('{0} security.jail.jailed'.format(sysctl)).strip()
+            if jail:
+                grains['virtual_subtype'] = 'jail'
         if 'QEMU Virtual CPU' in model:
             grains['virtual'] = 'kvm'
     return grains
