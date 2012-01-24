@@ -127,8 +127,8 @@ install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
 
 install -p %{SOURCE7} .
 
-install -p -m 0640 %{_sysconfdir}/minion.template $RPM_BUILD_ROOT%{_sysconfdir}/minion
-install -p -m 0640 %{_sysconfdir}/master.template $RPM_BUILD_ROOT%{_sysconfdir}/master
+install -p -m 0640 $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
+install -p -m 0640 $RPM_BUILD_ROOT%{_sysconfdir}/salt/master.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
  
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -155,6 +155,7 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %config(noreplace) %{_sysconfdir}/salt/minion
+%config %{_sysconfdir}/salt/minion.template
 
 %files -n salt-master
 %defattr(-,root,root)
@@ -178,6 +179,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_unitdir}/salt-syndic.service
 %endif
 %config(noreplace) %{_sysconfdir}/salt/master
+%config %{_sysconfdir}/salt/master.template
 
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 
