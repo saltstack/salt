@@ -19,30 +19,47 @@ def _check_puppet():
     return __salt__['cmd.has_exec']('puppetd')
 
 
-def run():
+def run(tags=None):
     '''
-    Execute a puppet run and return a dict with the stderr,stdout,return code
-    etc.
+    Execute a puppet run and return a dict with the stderr, stdout,
+    return code, etc. If an argument is specified, it is treated as
+    a comma separated list of tags passed to puppetd --test --tags:
+    http://projects.puppetlabs.com/projects/1/wiki/Using_Tags
 
-    CLI Example::
+    CLI Examples::
 
         salt '*' puppet.run
-    '''
-    if _check_puppet():
-        return __salt__['cmd.run_all']('puppetd --test')
-    else:
-        raise CommandNotFoundError("puppetd not available")
 
-def noop():
+        salt '*' puppet.run basefiles::edit,apache::server
     '''
-    Execute a puppet noop run and return a dict with the stderr,stdout,return code
-    etc.
+    if not tags:
+        cmd = 'puppetd --test'
+    else:
+        cmd = 'puppetd --test --tags "{0}"'.format(tags)
+
+    if _check_puppet():
+        return __salt__['cmd.run_all'](cmd)
+    else:
+        raise CommandNotFoundError('puppetd not available')
+
+def noop(tags=None):
+    '''
+    Execute a puppet noop run and return a dict with the stderr, stdout,
+    return code, etc. If an argument is specified, it is  treated  as  a
+    comma separated list of tags passed to puppetd --test --noop   --tags
 
     CLI Example::
 
         salt '*' puppet.noop
+
+        salt '*' puppet.noop web::server,django::base
     '''
-    if _check_puppet():
-        return __salt__['cmd.run_all']('puppetd --test --noop')
+    if not tags:
+        cmd = 'puppetd --test --noop'
     else:
-        raise CommandNotFoundError("puppetd not available")
+        cmd = 'puppetd --test --tags "{0}" --noop'.format(tags)
+
+    if _check_puppet():
+        return __salt__['cmd.run_all'](cmd)
+    else:
+        raise CommandNotFoundError('puppetd not available')
