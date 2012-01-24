@@ -28,8 +28,8 @@ Options
 
 .. option:: -L, --list-all
 
-    List all public keys on this salt master, both accepted and pending
-    acceptance.
+    List all public keys on this salt master: accepted, pending,
+    and rejected.
 
 .. option:: -a ACCEPT, --accept=ACCEPT
 
@@ -38,6 +38,14 @@ Options
 .. option:: -A, --accept-all
 
     Accepts all pending public keys.
+
+.. option:: -r REJECT, --reject=REJECT
+
+    Reject the named minion public key.
+
+.. option:: -R, --reject-all
+
+    Rejects all pending public keys.
 
 .. option:: -c CONFIG, --config=CONFIG
 
