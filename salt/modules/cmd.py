@@ -10,6 +10,7 @@ import os
 import subprocess
 import tempfile
 import salt.utils
+from salt.exceptions import CommandExecutionError
 try:
     import pwd
 except:
@@ -19,16 +20,12 @@ except:
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Set the default working directory to the home directory
-# of the user salt-minion is running as.  Default:  /root
-DEFAULT_CWD = os.path.expanduser('~')
-
 # Set up the default outputters
 __outputter__ = {
     'run': 'txt',
 }
 def _run(cmd,
-        cwd=DEFAULT_CWD,
+        cwd=None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         quiet=False,
@@ -37,38 +34,49 @@ def _run(cmd,
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
-    # Don't use runas in Windows
+    # Set the default working directory to the home directory
+    # of the user salt-minion is running as.  Default:  /root
+    if not cwd:
+        cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
+
+    # TODO: Figure out the proper way to do this in windows
     disable_runas = [
         'Windows',
     ]
 
     ret = {}
 
-    if runas and __grains__['os'] not in disable_runas:
+    if runas and __grains__['os'] in disable_runas:
+        msg = 'Sorry, {0} does not support runas functionality'
+        raise CommandExecutionError(msg.format(__grains__['os']))
+
+    if runas:
+        # Save the original command before munging it
+        orig_cmd = cmd
         try:
             p = pwd.getpwnam(runas)
         except KeyError:
-            stderr_str = 'The user {0} is not available'.format(runas)
-            if stderr == subprocess.STDOUT:
-                ret['stdout'] = stderr_str
-            else:
-                ret['stdout'] = ''
-                ret['stderr'] = stderr_str
-            ret['retcode'] = 1
-            return ret
-        cmd_prefix = 'su '
+            msg = 'User \'{0}\' is not available'.format(runas)
+            raise CommandExecutionError(msg)
+
+        cmd_prefix = 'su'
+
+        # Load the 'nix environment
         if with_env:
-            cmd_prefix += '- '
+            cmd_prefix += ' - '
+
         cmd_prefix += runas + ' -c'
-        cmd = '%s "%s"' % (cmd_prefix, cmd)
+        cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
 
     if not quiet:
-        if runas and __grains__['os'] not in disable_runas:
-            log.info('Executing command {0} as user {1} in directory {2}'.format(
-                    cmd, runas, cwd))
-        else:
+        # Put the most common case first
+        if not runas:
             log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
+        else:
+            log.info('Executing command {0} as user {1} in directory {2}'.format(
+                    orig_cmd, runas, cwd))
 
+    # This is where the magic happens
     proc = subprocess.Popen(cmd,
         cwd=cwd,
         shell=True,
@@ -77,21 +85,21 @@ def _run(cmd,
     )
 
     out = proc.communicate()
-    ret['stdout'] = out[0]
-    ret['stderr'] = out[1]
+    ret['stdout']  = out[0]
+    ret['stderr']  = out[1]
+    ret['pid']     = proc.pid
     ret['retcode'] = proc.returncode
-    ret['pid'] = proc.pid
     return ret
 
 
-def _run_quiet(cmd, cwd=DEFAULT_CWD, runas=None):
+def _run_quiet(cmd, cwd=None, runas=None):
     '''
     Helper for running commands quietly for minion startup
     '''
     return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT, quiet=True)['stdout']
 
 
-def run(cmd, cwd=DEFAULT_CWD, runas=None):
+def run(cmd, cwd=None, runas=None):
     '''
     Execute the passed command and return the output as a string
 
@@ -104,7 +112,7 @@ def run(cmd, cwd=DEFAULT_CWD, runas=None):
     return out
 
 
-def run_stdout(cmd, cwd=DEFAULT_CWD,  runas=None):
+def run_stdout(cmd, cwd=None,  runas=None):
     '''
     Execute a command, and only return the standard out
 
@@ -117,7 +125,7 @@ def run_stdout(cmd, cwd=DEFAULT_CWD,  runas=None):
     return stdout
 
 
-def run_stderr(cmd, cwd=DEFAULT_CWD, runas=None):
+def run_stderr(cmd, cwd=None, runas=None):
     '''
     Execute a command and only return the standard error
 
@@ -130,7 +138,7 @@ def run_stderr(cmd, cwd=DEFAULT_CWD, runas=None):
     return stderr
 
 
-def run_all(cmd, cwd=DEFAULT_CWD, runas=None):
+def run_all(cmd, cwd=None, runas=None):
     '''
     Execute the passed command and return a dict of return data
 
@@ -150,7 +158,7 @@ def run_all(cmd, cwd=DEFAULT_CWD, runas=None):
     return ret
 
 
-def retcode(cmd, cwd=DEFAULT_CWD, runas=None):
+def retcode(cmd, cwd=None, runas=None):
     '''
     Execute a shell command and return the command's return code.
 
@@ -181,7 +189,7 @@ def which(cmd):
     '''
     return salt.utils.which(cmd)
 
-def exec_code(lang, code, cwd=DEFAULT_CWD):
+def exec_code(lang, code, cwd=None):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
