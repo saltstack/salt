@@ -10,12 +10,10 @@ def __virtual__():
     Only works on systems which default to upstart
     '''
     enable = [
-               'Debian',
                'Ubuntu',
-               'Fedora',
               ]
     if __grains__['os'] in enable:
-        return 'upstart'
+        return 'service'
     return False
 
 def get_enabled():
@@ -24,7 +22,7 @@ def get_enabled():
 
     CLI Example::
 
-        salt '*' upstart.get_enabled
+        salt '*' service.get_enabled
     '''
     ret = []
     for serv in get_all():
@@ -39,7 +37,7 @@ def get_disabled():
 
     CLI Example::
 
-        salt '*' upstart.get_disabled
+        salt '*' service.get_disabled
     '''
     ret = []
     for serv in get_all():
@@ -54,7 +52,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' upstart.get_all
+        salt '*' service.get_all
     '''
     cmd = 'initctl list'
     ret = __salt__['cmd.run'](cmd)
@@ -69,14 +67,14 @@ def get_all():
 
 def reload_config():
     '''
-    Reload the upstart configuration
+    Reload the service.configuration
 
     CLI Example::
 
-        salt '*' upstart.reload_config
+        salt '*' service.reload_config
     '''
     cmd = 'initctl start {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)d
+    return not __salt__['cmd.retcode'](cmd)
 
 def start(name):
     '''
@@ -84,7 +82,7 @@ def start(name):
 
     CLI Example::
 
-        salt '*' upstart.start <upstart.name>
+        salt '*' service.start <service.name>
     '''
     cmd = 'initctl start {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -96,7 +94,7 @@ def stop(name):
 
     CLI Example::
 
-    salt '*' upstart.stop <upstart.name>
+    salt '*' service.stop <service.name>
     '''
     cmd = 'initctl stop {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -108,7 +106,7 @@ def restart(name):
 
     CLI Example::
 
-        salt '*' upstart.restart <upstart.name>
+        salt '*' service.restart <service.name>
     '''
     cmd = 'initctl restart {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -119,7 +117,7 @@ def reload(name):
 
     CLI Example::
 
-        salt '*' upstart.reload <upstart.name>
+        salt '*' service.reload <service.name>
     ''' 
     cmd = 'initctl reload {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -133,7 +131,7 @@ def status(name, sig=None):
 
     CLI Example::
 
-        salt '*' upstart.status <upstart.name>
+        salt '*' service.status <service.name>
     '''
     cmd = 'initctl status {0}'.format(name)
     ret = __salt__['cmd.run'](cmd)
@@ -152,12 +150,11 @@ def enabled(name):
     
     CLI Example::
 
-        salt '*' upstart.enabled <upstart.name>
+        salt '*' service.enabled <service.name>
     '''
     enabled = status(name)
     if enabled:
         return True
-    return False
 
 def disabled(name):
     '''
@@ -165,9 +162,8 @@ def disabled(name):
 
     CLI Example::
 
-        salt '*' upstart.disabled <upstart.name>
+        salt '*' service.disabled <service.name>
     '''
     enabled = status(name)
     if not enabled:
         return True
-    return False
