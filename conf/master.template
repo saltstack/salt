@@ -1,3 +1,4 @@
+# DO NOT MODIFY THIS FILE.  Copy it to: /etc/salt/master
 ##### Primary configuration settings #####
 ##########################################
 # The address of the interface to bind to
@@ -5,6 +6,9 @@
 
 # The port used by the publisher
 #publish_port: 4505
+
+# The user to run salt
+#user: root
 
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
@@ -14,7 +18,8 @@
 # The port used by the communication interface
 #ret_port: 4506
 
-# The root directory prepended to these options: pki_dir, cachedir, log_file.
+# The root directory prepended to these options: pki_dir, cachedir,
+# sock_dir, log_file.
 #root_dir: /
 
 # Directory used to store public key data
@@ -28,6 +33,15 @@
 
 # Set the directory used to hold unix sockets
 #sock_dir: /tmp/salt-unix
+
+# Set the acceptance level for serialization of messages. This should only be
+# set if the master is newer that 0.9.5 and the minion are older, this option
+# allows a 0.9.5 and newer master to communicate with minions 0.9.4 and
+# earlier. It is not recommended to keep this setting on if the minions are
+# all 0.9.5 or higher, as leaving pickle as the serialization medium is slow
+# and opens up security risks
+#
+#serial: msgpack
 
 #####        Security settings       #####
 ##########################################
@@ -46,7 +60,7 @@
 # The state system uses a "top" file to tell the minions what environment to
 # use and what modules to use. The state_top file is defined relative to the
 # root of the base environment
-#state_top: top.yml
+#state_top: top.sls
 #
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
@@ -75,9 +89,9 @@
 #   prod:
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
-# 
+#
 # Default:
-#file_roots: 
+#file_roots:
 #  base:
 #    - /srv/salt
 
@@ -162,10 +176,9 @@
 # Logger levels can be used to tweak specific loggers logging levels.
 # Imagine you want to have the salt library at the 'warning' level, but, you
 # still wish to have 'salt.modules' at the 'debug' level:
-#   log_granular_levels: {
+#   log_granular_levels:
 #     'salt': 'warning',
 #     'salt.modules': 'debug'
-#   }
 #
 #log_granular_levels: {}
 
@@ -174,9 +187,8 @@
 ##########################################
 # Node groups allow for logical groupings of minion nodes.
 # A group consists of a group name and a compound target.
-# 
-# nodegroups: {
+#
+# nodegroups:
 #   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
 #   group2: 'G@os:Debian and foo.domain.com',
-# }
 

@@ -28,6 +28,8 @@ class Key(object):
         subdir = ''
         if key_type == 'pre':
             subdir = 'minions_pre'
+        elif key_type == 'rej':
+            subdir = 'minions_rejected'
         elif key_type == 'acc':
             subdir = 'minions'
         dir_ = os.path.join(self.opts['pki_dir'], subdir)
@@ -60,12 +62,21 @@ class Key(object):
         for key in sorted(self._keys('acc')):
             print utils.GREEN + key + utils.ENDC
 
+    def _list_rejected(self):
+        '''
+        List the unaccepted keys
+        '''
+        print utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC
+        for key in sorted(self._keys('rej')):
+            print utils.BLUE + key + utils.ENDC
+
     def _list_all(self):
         '''
         List all keys
         '''
         self._list_pre()
         self._list_accepted()
+        self._list_rejected()
 
     def _print_key(self, name):
         '''
@@ -88,74 +99,94 @@ class Key(object):
         for key in sorted(self._keys('acc', True)):
             print '  ' + utils.GREEN + os.path.basename(key) + utils.ENDC
             print open(key, 'r').read()
+        print utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC
+        for key in sorted(self._keys('pre', True)):
+            print '  ' + utils.BLUE + os.path.basename(key) + utils.ENDC
+            print open(key, 'r').read()
 
     def _accept(self, key):
         '''
         Accept a specified host's public key
         '''
-        pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
-        minions = os.path.join(self.opts['pki_dir'], 'minions')
-        if not os.path.isdir(minions):
-            err = ('The minions directory is not present, ensure that the '
-                   'master server has been started')
-            sys.stderr.write(err + '\n')
-            sys.exit(42)
-        if not os.path.isdir(pre_dir):
-            err = ('The minions_pre directory is not present, ensure '
-                   'that the master server has been started')
-            sys.stderr.write(err + '\n')
-            sys.exit(42)
-        pre = os.listdir(pre_dir)
+        (minions_accepted,
+         minions_pre,
+         minions_rejected) = self._check_minions_directories()
+        pre = os.listdir(minions_pre)
         if not pre.count(key):
             err = ('The named host is unavailable, please accept an '
                    'available key')
             sys.stderr.write(err + '\n')
             sys.exit(43)
-        shutil.move(os.path.join(pre_dir, key), os.path.join(minions, key))
+        shutil.move(os.path.join(minions_pre, key),
+                    os.path.join(minions_accepted, key))
 
     def _accept_all(self):
         '''
         Accept all keys in pre
         '''
-        pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
-        minions = os.path.join(self.opts['pki_dir'], 'minions')
-        if not os.path.isdir(minions):
-            err = ('The minions directory is not present, ensure that the '
-                   'master server has been started')
-            sys.stderr.write(err + '\n')
-            sys.exit(42)
-        if not os.path.isdir(pre_dir):
-            err = ('The minions_pre directory is not present, ensure that the '
-                   'master server has been started')
-            sys.stderr.write(err + '\n')
-            sys.exit(42)
-        for key in os.listdir(pre_dir):
+        (minions_accepted,
+         minions_pre,
+         minions_rejected) = self._check_minions_directories()
+        for key in os.listdir(minions_pre):
             self._accept(key)
 
     def _delete_key(self):
         '''
         Delete a key
         '''
-        pre_dir = os.path.join(self.opts['pki_dir'], 'minions_pre')
-        minions = os.path.join(self.opts['pki_dir'], 'minions')
-        if not os.path.isdir(minions):
-            err = ('The minions directory is not present, ensure that the '
-                   'master server has been started')
-            sys.stderr.write(err + '\n')
-            sys.exit(42)
-        if not os.path.isdir(pre_dir):
-            err = ('The minions_pre directory is not present, ensure that the '
-                   'master server has been started')
-            sys.stderr.write(err + '\n')
-            sys.exit(42)
-        pre = os.path.join(pre_dir, self.opts['delete'])
-        acc = os.path.join(minions, self.opts['delete'])
+        (minions_accepted,
+         minions_pre,
+         minions_rejected) = self._check_minions_directories()
+        pre = os.path.join(minions_pre, self.opts['delete'])
+        acc = os.path.join(minions_accepted, self.opts['delete'])
+        rej= os.path.join(minions_rejected, self.opts['delete'])
         if os.path.exists(pre):
             os.remove(pre)
             print 'Removed pending key %s' % self.opts['delete']
         if os.path.exists(acc):
             os.remove(acc)
             print 'Removed accepted key %s' % self.opts['delete']
+        if os.path.exists(rej):
+            os.remove(rej)
+            print 'Removed rejected key %s' % self.opts['delete']
+
+    def _reject(self, key):
+        '''
+        Reject a specified host's public key
+        '''
+        (minions_accepted,
+         minions_pre,
+         minions_rejected) = self._check_minions_directories()
+        pre = os.listdir(minions_pre)
+        if not pre.count(key):
+            err = ('The named host is unavailable, please accept an '
+                   'available key')
+            sys.stderr.write(err + '\n')
+            sys.exit(43)
+        shutil.move(os.path.join(minions_pre, key),
+                    os.path.join(minions_rejected, key))
+
+    def _reject_all(self):
+        '''
+        Reject all keys in pre
+        '''
+        (minions_accepted,
+         minions_pre,
+         minions_rejected) = self._check_minions_directories()
+        for key in os.listdir(minions_pre):
+            self._reject(key)
+
+    def _check_minions_directories(self):
+        minions_accepted = os.path.join(self.opts['pki_dir'], 'minions')
+        minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
+        minions_rejected = os.path.join(self.opts['pki_dir'], 'minions_rejected')
+        for dir in [minions_accepted, minions_pre, minions_rejected]:
+            if not os.path.isdir(dir):
+                err = ('The minions directory {0} is not present, ensure '
+                       'that the master server has been started'.format(dir))
+                sys.stderr.write(err + '\n')
+                sys.exit(42)
+        return minions_accepted, minions_pre, minions_rejected
 
     def run(self):
         '''
@@ -179,6 +210,10 @@ class Key(object):
             self._accept(self.opts['accept'])
         elif self.opts['accept_all']:
             self._accept_all()
+        elif self.opts['reject']:
+            self._reject(self.opts['reject'])
+        elif self.opts['reject_all']:
+            self._reject_all()
         elif self.opts['delete']:
             self._delete_key()
         else:

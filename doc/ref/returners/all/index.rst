@@ -11,5 +11,6 @@ Full list of builtin returners
     :template: autosummary.rst.tmpl
 
     local
+    cassandra_return
     mongo_return
     redis_return

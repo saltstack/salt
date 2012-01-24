@@ -1,0 +1,6 @@
+Jinja2
+pyzmq
+msgpack-python
+M2Crypto
+pycrypto
+PyYAML

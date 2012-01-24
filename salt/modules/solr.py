@@ -59,10 +59,14 @@ verbose : True
     Get verbose output
 '''
 
+# Import Python Libs
 import urllib2
 import json
 import socket
 import os
+
+# Import Salt libs
+import salt.utils
 
 #sane defaults
 __opts__ = {'solr.cores': [],
@@ -86,16 +90,11 @@ def __virtual__():
     Solr needs to be installed to use this.
 
     Return: str/bool::
-
-    TODO:// currently __salt__ is not available to call in this method because
-    all the salt modules have not been loaded yet. Use a grains module?
     '''
-    return 'solr'
-    names = ['solr', 'apache-solr']
-    for name in names:
-        if __salt__['pkg.version'](name):
-            return 'solr'
-
+    if salt.utils.which('solr'):
+        return 'solr'
+    if salt.utils.which('apache-solr'):
+        return 'solr'
     return False
 
 def _get_none_or_value(value):
@@ -801,9 +800,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
         salt '*' solr.backup music
     '''
     path = __opts__['solr.backup_path']
-    print path
     numBackups = __opts__['solr.num_backups']
-    print numBackups
     if path is not None:
         if not path.endswith(os.path.sep):
             path += os.path.sep
@@ -1028,7 +1025,6 @@ def core_status(host=None, core_name=None):
         return ret
     extra = ['action=STATUS', 'core={0}'.format(core_name)]
     url = _format_url('admin/cores', host=host, core_name=None, extra=extra)
-    print url
     return _http_request(url)
 
 ################### DIH (Direct Import Handler) COMMANDS #####################

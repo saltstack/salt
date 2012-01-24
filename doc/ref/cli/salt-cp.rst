@@ -36,19 +36,19 @@ Options
 
 .. option:: -E, --pcre
 
-    The target expresion will be interpereted as a pcre regular expression
+    The target expression will be interpreted as a pcre regular expression
     rather than a shell glob.
 
 .. option:: -L, --list
 
-    The target expression will be interpereted as a comma delimited list,
+    The target expression will be interpreted as a comma delimited list,
     example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 
 .. option:: -G, --grain
 
     The target expression matches values returned by the salt grains system on
-    the minions. The target expresion is in the format of '<grain value>:<pcre
-    regular expresion>'; example: 'os:Arch.*'
+    the minions. The target expression is in the format of '<grain value>:<pcre
+    regular expression>'; example: 'os:Arch.*'
 
 .. option:: -Q, --query
 
