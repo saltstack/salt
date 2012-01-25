@@ -153,6 +153,7 @@ def running():
 
         salt '*' saltutil.running
     '''
+    procs = __salt__['status.procs']()
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
@@ -162,6 +163,11 @@ def running():
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
         data = serial.loads(open(path, 'rb').read())
+        if not procs.get(str(data['pid'])):
+            # The process is no longer running, clear out the file and
+            # continue
+            os.remove(path)
+            continue
         if data.get('pid') == pid:
             continue
         ret.append(data)
