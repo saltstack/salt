@@ -203,7 +203,8 @@ def signal_job(jid, sig):
                 path = os.path.join(__opts__['cachedir'], 'proc', str(jid))
                 if os.path.isfile(path):
                     os.remove(path)
-                return 'Job {0} was not running and job data has been cleaned up'.format()
+                return ('Job {0} was not running and job data has been '
+                        ' cleaned up').format(jid)
     return ''
 
 
