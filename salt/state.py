@@ -125,13 +125,13 @@ class State(object):
                 self.load_modules()
                 open(os.path.join(
                     self.opts['cachedir'],
-                    '.module_refresh'),
+                    'module_refresh'),
                     'w+').write('')
         elif data['fun'] == 'recurse':
             self.load_modules()
             open(os.path.join(
                 self.opts['cachedir'],
-                '.module_refresh'),
+                'module_refresh'),
                 'w+').write('')
 
     def format_verbosity(self, returns):

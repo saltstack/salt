@@ -383,19 +383,10 @@ class Minion(object):
         Check to see if the salt refresh file has been laid down, if it has,
         refresh the functions and returners.
         '''
-        if os.path.isfile(
-                os.path.join(
-                    self.opts['cachedir'],
-                    '.module_refresh'
-                    )
-                ):
+        fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
+        if os.path.isfile(fn_):
+            os.remove(fn_)
             self.functions, self.returners = self.__load_modules()
-            os.remove(
-                    os.path.join(
-                        self.opts['cachedir'],
-                        '.module_refresh'
-                        )
-                    )
 
     def tune_in(self):
         '''
