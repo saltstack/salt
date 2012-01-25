@@ -208,8 +208,10 @@ class Minion(object):
         minion side execution.
         '''
         if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, str(os.getpid()))
-            open(fn_, 'w+').write(self.serial.dumps(data))
+            fn_ = os.path.join(self.proc_dir, data['jid'])
+            sdata = {'pid': os.getpid()}
+            sdata.update(data)
+            open(fn_, 'w+').write(self.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -313,7 +315,7 @@ class Minion(object):
         Return the data from the executed command to the master server
         '''
         if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, str(os.getpid()))
+            fn_ = os.path.join(self.proc_dir, ret['jid'])
             if os.path.isfile(fn_):
                 os.remove(fn_)
         log.info('Returning information for job: {0}'.format(ret['jid']))
