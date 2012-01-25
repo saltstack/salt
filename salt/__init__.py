@@ -154,7 +154,7 @@ class Master(object):
                     os.path.dirname(self.opts['log_file']),
                     self.opts['sock_dir'],
                     ])
-        set_pidfile(cli['pidfile'])
+        set_pidfile(self.cli['pidfile'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
