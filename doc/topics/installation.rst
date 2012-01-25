@@ -16,6 +16,7 @@ running and the Salt :term:`minions <minion>` point to the master.
     * `pyzmq`_ >= 2.1.9 — ZeroMQ Python bindings
     * `M2Crypto`_ — Python OpenSSL wrapper
     * `PyCrypto`_ — The Python cryptography toolkit
+    * `msgpack-python`_ — High-performance message interchange format
     * `YAML`_ — Python YAML bindings
 
     Optional Dependencies:
