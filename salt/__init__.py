@@ -32,6 +32,7 @@ def set_pidfile(pidfile):
     except IOError:
         err = ('Failed to commit the pid file to location {0}, please verify'
               ' that the location is available').format(pidfile)
+        log.error(err)
 
 
 def verify_env(dirs):
@@ -121,8 +122,8 @@ class Master(object):
         parser.add_option('--pid-file',
                 dest='pidfile',
                 default='/var/run/salt-master.pid',
-                help=('Specify the location of the pidfile, default is'
-                      ' /var/run/salt-master.pid'))
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -154,7 +155,6 @@ class Master(object):
                     os.path.dirname(self.opts['log_file']),
                     self.opts['sock_dir'],
                     ])
-        set_pidfile(self.cli['pidfile'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
@@ -166,6 +166,7 @@ class Master(object):
         # Late import so logging works correctly
         if check_user(self.opts['user'], log):
             import salt.master
+            set_pidfile(self.cli['pidfile'])
             master = salt.master.Master(self.opts)
             if self.cli['daemon']:
                 # Late import so logging works correctly
