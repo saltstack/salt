@@ -3,10 +3,14 @@ The Saltutil module is used to manage the state of the salt minion itself. It is
 used to manage minion modules as well as automate updates to the salt minion
 '''
 
+# Import Python libs
 import os
 import hashlib
 import shutil
 import logging
+
+# Import Salt libs
+import salt.payload
 
 log = logging.getLogger(__name__)
 
@@ -138,3 +142,38 @@ def sync_all(env='base'):
     ret.append(sync_renderers(env))
     ret.append(sync_returners(env))
     return ret
+
+def running():
+    '''
+    Return the data on all running processes salt on the minion
+
+    CLI Example::
+
+        salt '*' saltutil.running
+    '''
+    ret = []
+    serial = salt.payload.Serial(__opts__)
+    pid = os.getpid()
+    proc_dir = os.path.join(__opts__['cachedir'], 'proc')
+    if not os.path.isdir(proc_dir):
+        return []
+    for fn_ in os.listdir(proc_dir):
+        path = os.path.join(proc_dir, fn_)
+        data = serial.loads(open(path, 'rb').read())
+        if data.get('pid') == pid:
+            continue
+        ret.append(data)
+    return ret
+
+def find_job(jid):
+    '''
+    Return the data for a specific job id
+
+    CLI Example::
+
+        salt '*' saltutil.find_job <job id>
+    '''
+    for data in running():
+        if data['jid'] == jid:
+            return data
+    return {}
