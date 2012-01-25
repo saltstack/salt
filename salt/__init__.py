@@ -19,6 +19,21 @@ except ImportError as e:
     if e.message != 'No module named _msgpack':
         raise
 
+
+def set_pidfile(pidfile):
+    '''
+    Save the pidfile
+    '''
+    pdir = os.path.dirname(pidfile)
+    if not os.path.isdir(pdir):
+        os.makedirs(pdir)
+    try:
+        open(pidfile, 'w+').write(str(os.getpid()))
+    except IOError:
+        err = ('Failed to commit the pid file to location {0}, please verify'
+              ' that the location is available').format(pidfile)
+
+
 def verify_env(dirs):
     '''
     Verify that the named directories are in place and that the environment
@@ -103,6 +118,11 @@ class Master(object):
                 '--user',
                 dest='user',
                 help='Specify user to run minion')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-master.pid',
+                help=('Specify the location of the pidfile, default is'
+                      ' /var/run/salt-master.pid'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -118,7 +138,8 @@ class Master(object):
 
         cli = {'daemon': options.daemon,
                'config': options.config,
-               'user': options.user}
+               'user': options.user,
+               'pidfile': options.pidfile}
 
         return cli
 
@@ -133,6 +154,7 @@ class Master(object):
                     os.path.dirname(self.opts['log_file']),
                     self.opts['sock_dir'],
                     ])
+        set_pidfile(cli['pidfile'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
