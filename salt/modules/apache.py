@@ -3,18 +3,29 @@ Support for Apache
 '''
 
 import re
+import salt.utils
 
 __outputter__ = {
     'signal': 'txt',
 }
 
 
+def __virtual__():
+    '''
+    Only load the module if apache is installed
+    '''
+    cmd = __detect_os()
+    if salt.utils.which(cmd):
+        return 'apache'
+    return False
+
+
 def __detect_os():
     '''
     Apache commands and paths differ depending on packaging
     '''
-    httpd = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
-    apache2 = ('Ubuntu',)
+    httpd = ('CentOS', 'Scientific', 'RedHat', 'Fedora',)
+    apache2 = ('Ubuntu','Debian',)
     if __grains__['os'] in httpd:
         return 'apachectl'
     elif __grains__['os'] in apache2:

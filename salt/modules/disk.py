@@ -2,6 +2,22 @@
 Module for gathering disk information
 '''
 
+import logging
+
+log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+    # Disable on these platorms, specific service modules exist:
+    disable = [
+        'Windows',
+        ]
+    if __grains__['os'] in disable:
+        return False
+    return 'disk'
 
 def usage():
     '''
@@ -11,7 +27,6 @@ def usage():
 
         salt '*' disk.usage
     '''
-    # TODO: Windows support
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
     else:
@@ -24,13 +39,17 @@ def usage():
         if line.startswith('Filesystem'):
             continue
         comps = line.split()
-        ret[comps[5]] = {
-            'filesystem': comps[0],
-            '1K-blocks':  comps[1],
-            'used':       comps[2],
-            'available':  comps[3],
-            'capacity':   comps[4],
-        }
+        try:
+            ret[comps[5]] = {
+                'filesystem': comps[0],
+                '1K-blocks':  comps[1],
+                'used':       comps[2],
+                'available':  comps[3],
+                'capacity':   comps[4],
+            }
+        except IndexError:
+            log.warn("Problem parsing disk usage information")
+            ret = {}
     return ret
 
 def inodeusage():
@@ -61,5 +80,6 @@ def inodeusage():
                 'filesystem': comps[0],
             }
         except IndexError:
-            print "DEBUG: comps='%s'" % comps
+            log.warn("Problem parsing inode usage information")
+            ret = {}
     return ret

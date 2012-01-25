@@ -1,4 +1,4 @@
-.TH "SALT" "1" "November 27, 2011" "0.9.4" "Salt"
+.TH "SALT" "1" "January 20, 2012" "0.9.6" "Salt"
 .SH NAME
 salt \- salt
 .
@@ -39,6 +39,8 @@ salt \-E \(aq.*\(aq [ options ] sys.doc cmd
 .sp
 salt \-G \(aqos:Arch.*\(aq [ options ] test.ping
 .sp
+salt \-C \fI\%'G@os\fP:Arch.* and webserv* or \fI\%G@kernel\fP:FreeBSD\(aq [ options ] test.ping
+.sp
 salt \-Q test.ping
 .UNINDENT
 .UNINDENT
@@ -57,6 +59,11 @@ Print a usage message briefly summarizing these command\-line options
 .TP
 .B \-t TIMEOUT, \-\-timeout=TIMEOUT
 The timeout in seconds to wait for replies from the salt minions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-version
+Print the version of salt that is running.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -79,8 +86,35 @@ regular expression>\(aq; example: \(aqos:Arch.*\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-C, \-\-compound
+Utilize many target definitions to make the call very granular. This option
+takes a group of targets separated by and or or. The default matcher is a
+glob as usual, if something other than a glob is used preface it with the
+letter denoting the type, example: \(aqwebserv* and \fI\%G@os\fP:Debian or \fI\%E@db.*\fP\(aq
+make sure that the compound target is encapsulated in quotes.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-X, \-\-exsel
+Instead of using shell globs use the return code of a function.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-N, \-\-nodegroup
+Use a predefined compound target defined in the salt master configuration
+file
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-return
+Chose an alternative returner to call on the minion, if an alternative
+returner is used then the return will not come back tot he command line
+but will be sent to the specified return system.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-Q, \-\-query
-Execute a salt command query, this can be used to find the results os a
+Execute a salt command query, this can be used to find the results of a
 previous function call: \-Q test.echo\(aq)
 .UNINDENT
 .INDENT 0.0
@@ -89,6 +123,29 @@ previous function call: \-Q test.echo\(aq)
 The location of the salt master configuration file, the salt master
 settings are required to know where the connections are;
 default=/etc/salt/master
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-raw\-out
+Print the output from the salt command in raw python
+form, this is suitable for re\-reading the output into
+an executing python script with eval.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-text\-out
+Print the output from the salt command in the same
+form the shell would.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-yaml\-out
+Print the output from the salt command in yaml.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-json\-out
+Print the output from the salt command in json.
 .UNINDENT
 .SH SEE ALSO
 .sp

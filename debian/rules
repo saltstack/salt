@@ -1,8 +1,7 @@
 #!/usr/bin/make -f
-
+#export DH_VERBOSE=1
 %:
-	dh $@
-
+	dh $@ --buildsystem=python_distutils
 #override_dh_installinit:
 #	dh_installinit --no-start --name="salt-master"
 #	dh_installinit --no-start --name="salt-minion"

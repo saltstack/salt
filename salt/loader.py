@@ -100,9 +100,13 @@ def grains(opts):
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
+    extra_dirs = [
+            os.path.join(opts['extension_modules'],
+                'grains')
+            ]
     module_dirs = [
         os.path.join(salt_base_path, 'grains'),
-        ]
+        ] + extra_dirs
     load = Loader(module_dirs, opts)
     grains = load.gen_grains()
     if 'grains' in opts:
@@ -315,7 +319,7 @@ class Loader(object):
         '''
         List the functions
         '''
-        return funcs.keys()
+        return sorted(funcs.keys())
 
     def list_modules(self, funcs):
         '''

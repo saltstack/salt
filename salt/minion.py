@@ -24,7 +24,7 @@ import zmq
 
 # Import salt libs
 from salt.exceptions import AuthenticationError, MinionError, \
-    CommandExecutionError
+    CommandExecutionError, CommandNotFoundError, SaltInvocationError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -42,6 +42,21 @@ log = logging.getLogger(__name__)
 # 4. Store the aes key
 # 5. connect to the publisher
 # 6. handle publications
+
+
+def get_proc_dir(cachedir):
+    '''
+    Return the directory that process data is stored in
+    '''
+    fn_ = os.path.join(cachedir, 'proc')
+    if not os.path.isdir(fn_):
+        # proc_dir is not present, create it
+        os.makedirs(fn_)
+    else:
+        # proc_dir is present, clean out old proc files
+        for proc_fn in os.listdir(fn_):
+            os.remove(os.path.join(fn_, proc_fn))
+    return fn_
 
 
 class SMinion(object):
@@ -81,6 +96,7 @@ class Minion(object):
         self.mod_opts = self.__prep_mod_opts()
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
+        self.proc_dir = get_proc_dir(opts['cachedir'])
         if hasattr(self,'_syndic') and self._syndic:
             log.warn('Starting the Salt Syndic Minion')
         else:
@@ -191,6 +207,11 @@ class Minion(object):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
+        if self.opts['multiprocessing']:
+            fn_ = os.path.join(self.proc_dir, data['jid'])
+            sdata = {'pid': os.getpid()}
+            sdata.update(data)
+            open(fn_, 'w+').write(self.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -208,30 +229,42 @@ class Minion(object):
         if function_name in self.functions:
             try:
                 ret['return'] = self.functions[data['fun']](*data['arg'])
+            except CommandNotFoundError as exc:
+                msg = 'Command not found in \'{0}\': {1}'
+                log.debug(msg.format(function_name, str(exc)))
+                ret['return'] = msg.format(function_name, str(exc))
             except CommandExecutionError as exc:
                 msg = 'A command in {0} had a problem: {1}'
                 log.error(msg.format(function_name, str(exc)))
                 ret['return'] = 'ERROR: {0}'.format(str(exc))
+            except SaltInvocationError as exc:
+                msg = 'Problem executing "{0}": {1}'
+                log.error(msg.format(function_name, str(exc)))
+                ret['return'] = 'ERROR executing {0}: {1}'.format(function_name, str(exc))
             except Exception as exc:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
-                log.warning(msg.format(exc))
+                log.warning(msg.format(trb))
                 ret['return'] = trb
         else:
             ret['return'] = '"{0}" is not available.'.format(function_name)
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
-        if "context" in data:
-            ret['context'] = data['context']
+        self._return_pub(ret)
+        
         if data['ret']:
-            ret['id'] = self.opts['id']
-            try:
-                self.returners[data['ret']](ret)
-            except Exception as exc:
-                log.error('The return failed for job %s %s', data['jid'], exc)
-        else:
-            self._return_pub(ret)
+            for returner in set(data['ret'].split(',')):
+                ret['id'] = self.opts['id']
+                try:
+                    self.returners[returner](ret)
+                except Exception as exc:
+                    log.error(
+                            'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
+                            )
 
     def _thread_multi_return(self, data):
         '''
@@ -257,23 +290,36 @@ class Minion(object):
                     = self.functions[data['fun'][ind]](*data['arg'][ind])
             except Exception as exc:
                 trb = traceback.format_exc()
-                log.warning('The minion function caused an exception: %s', exc)
+                log.warning(
+                        'The minion function caused an exception: {0}'.format(
+                            exc
+                            )
+                        )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
+        self._return_pub(ret)
         if data['ret']:
-            ret['id'] = self.opts['id']
-            try:
-                self.returners[data['ret']](ret)
-            except Exception as exc:
-                log.error('The return failed for job %s %s', data['jid'], exc)
-        else:
-            self._return_pub(ret)
+            for returner in set(data['ret'].split(',')):
+                ret['id'] = self.opts['id']
+                try:
+                    self.returners[returner](ret)
+                except Exception as exc:
+                    log.error(
+                            'The return failed for job {0} {1}'.format(
+                                data['jid'],
+                                exc
+                                )
+                            )
 
     def _return_pub(self, ret, ret_cmd='_return'):
         '''
         Return the data from the executed command to the master server
         '''
-        log.info('Returning information for job: %(jid)s', ret)
+        if self.opts['multiprocessing']:
+            fn_ = os.path.join(self.proc_dir, ret['jid'])
+            if os.path.isfile(fn_):
+                os.remove(fn_)
+        log.info('Returning information for job: {0}'.format(ret['jid']))
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])
@@ -299,8 +345,21 @@ class Minion(object):
         except KeyError:
             pass
         payload['load'] = self.crypticle.dumps(load)
-        socket.send(self.serial.dumps(payload))
-        return socket.recv()
+        data = self.serial.dumps(payload)
+        socket.send(data)
+        ret_val = socket.recv()
+        if self.opts['cache_jobs']:
+            # Local job cache has been enabled
+            fn_ = os.path.join(
+                    self.opts['cachedir'],
+                    'minion_jobs',
+                    load['jid'],
+                    'return.p')
+            jdir = os.path.dirname(fn_)
+            if not os.path.isdir(jdir):
+                os.makedirs(jdir)
+            open(fn_, 'w+').write(self.serial.dumps(ret))
+        return ret_val
 
     def authenticate(self):
         '''
@@ -327,19 +386,10 @@ class Minion(object):
         Check to see if the salt refresh file has been laid down, if it has,
         refresh the functions and returners.
         '''
-        if os.path.isfile(
-                os.path.join(
-                    self.opts['cachedir'],
-                    '.module_refresh'
-                    )
-                ):
+        fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
+        if os.path.isfile(fn_):
+            os.remove(fn_)
             self.functions, self.returners = self.__load_modules()
-            os.remove(
-                    os.path.join(
-                        self.opts['cachedir'],
-                        '.module_refresh'
-                        )
-                    )
 
     def tune_in(self):
         '''
@@ -565,7 +615,6 @@ class Matcher(object):
                 if not matcher:
                     # If an unknown matcher is called at any time, fail out
                     return False
-                print comps
                 results.append(
                         str(getattr(
                             self,
@@ -580,7 +629,6 @@ class Matcher(object):
                             )('@'.join(comps[1:]))
                         ))
 
-        print ' '.join(results)
         return eval(' '.join(results))
 
 class FileClient(object):
@@ -693,14 +741,28 @@ class FileClient(object):
         '''
         Get a single file from a URL.
         '''
-        if urlparse.urlparse(url).scheme == 'salt':
+        url_data = urlparse.urlparse(url)
+        if url_data.scheme == 'salt':
             return self.get_file(url, dest, makedirs, env)
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            if makedirs:
+        if dest:
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
+                if makedirs:
+                    os.makedirs(destdir)
+                else:
+                    return False
+        else:
+            dest = os.path.join(
+                self.opts['cachedir'],
+                'extrn_files',
+                env,
+                os.path.join(
+                    url_data.netloc,
+                    os.path.relpath(url_data.path, '/'))
+                )
+            destdir = os.path.dirname(dest)
+            if not os.path.isdir(destdir):
                 os.makedirs(destdir)
-            else:
-                return False
         try:
             with contextlib.closing(urllib2.urlopen(url)) as srcfp:
                 with open(dest, 'wb') as destfp:
@@ -720,7 +782,7 @@ class FileClient(object):
         Pull a file down from the file server and store it in the minion file
         cache
         '''
-        return self.get_file(path, '', True, env)
+        return self.get_url(path, '', True, env)
 
     def cache_files(self, paths, env='base'):
         '''

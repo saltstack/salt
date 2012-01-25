@@ -79,7 +79,7 @@ def daemonize():
                 win32api.ShellExecute(
                     0,
                     'runas',
-                    executablepath, 
+                    executablepath,
                     os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
                     os.path.join(pypath[0], os.sep, pypath[1]),
                     0 )
@@ -107,8 +107,9 @@ def daemonize():
         if pid > 0:
             # exit first parent
             sys.exit(0)
-    except OSError, e:
-        print >> sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
+    except OSError as exc:
+        msg = 'fork #1 failed: {0} ({1})'.format(e.errno, e.strerror)
+        log.error(msg)
         sys.exit(1)
 
     # decouple from parent environment
@@ -120,10 +121,10 @@ def daemonize():
     try:
         pid = os.fork()
         if pid > 0:
-            # print "Daemon PID %d" % pid
             sys.exit(0)
-    except OSError, e:
-        print >> sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
+    except OSError as exc:
+        msg = 'fork #2 failed: {0} ({1})'
+        log.error(msg.format(e.errno, e.strerror))
         sys.exit(1)
 
     dev_null = open('/dev/null', 'rw')

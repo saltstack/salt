@@ -16,6 +16,7 @@ running and the Salt :term:`minions <minion>` point to the master.
     * `pyzmq`_ >= 2.1.9 — ZeroMQ Python bindings
     * `M2Crypto`_ — Python OpenSSL wrapper
     * `PyCrypto`_ — The Python cryptography toolkit
+    * `msgpack-python`_ — High-performance message interchange format
     * `YAML`_ — Python YAML bindings
 
     Optional Dependencies:
@@ -47,7 +48,7 @@ repository.
 Red Hat Enterprise Linux 5 & 6 or CentOS 5 & 6
 ----------------------------------------------
 
-1.  Install the `EPEL`__ repository::
+1.  Install the `EPEL`__ repository.
 
 2.  Install our repository on FedoraPeople::
 

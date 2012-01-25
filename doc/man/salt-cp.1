@@ -1,4 +1,4 @@
-.TH "SALT-CP" "1" "November 27, 2011" "0.9.4" "Salt"
+.TH "SALT-CP" "1" "January 20, 2012" "0.9.6" "Salt"
 .SH NAME
 salt-cp \- salt-cp Documentation
 .
@@ -61,7 +61,7 @@ The timeout in seconds to wait for replies from the salt minions.
 .INDENT 0.0
 .TP
 .B \-E, \-\-pcre
-The target expresion will be interpereted as a pcre regular expression
+The target expression will be interpereted as a pcre regular expression
 rather than a shell glob.
 .UNINDENT
 .INDENT 0.0
@@ -74,13 +74,13 @@ example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 .TP
 .B \-G, \-\-grain
 The target expression matches values returned by the salt grains system on
-the minions. The target expresion is in the format of \(aq<grain value>:<pcre
-regular expresion>\(aq; example: \(aqos:Arch.*\(aq
+the minions. The target expression is in the format of \(aq<grain value>:<pcre
+regular expression>\(aq; example: \(aqos:Arch.*\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-Q, \-\-query
-Execute a salt command query, this can be used to find the results os a
+Execute a salt command query, this can be used to find the results of a
 previous function call: \-Q test.echo\(aq)
 .UNINDENT
 .INDENT 0.0

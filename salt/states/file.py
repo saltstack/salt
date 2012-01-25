@@ -22,10 +22,10 @@ makes use of the jinja templating system would look like this:
         - mode: 644
         - template: jinja
         - context:
-          custom_var: "override"
+            custom_var: "override"
         - defaults:
-          custom_var: "default value"
-          other_var: 123
+            custom_var: "default value"
+            other_var: 123
 
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
@@ -65,13 +65,15 @@ something like this:
         - source: salt://code/flask
 '''
 
-import difflib
-import hashlib
-import logging
 import os
 import shutil
+import difflib
+import hashlib
+import imp
+import logging
 import tempfile
 import traceback
+import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +85,9 @@ def __clean_tmp(sfn):
     Clean out a template temp file
     '''
     if not sfn.startswith(__opts__['cachedir']):
-        os.remove(sfn)
+        # Only clean up files that exist
+        if os.path.exists(sfn):
+            os.remove(sfn)
 
 
 def _makedirs(path):
@@ -141,7 +145,6 @@ def _clean_dir(root, keep):
                 if fn_ == '/':
                     break
     rm_files = []
-    print real_keep
     for roots, dirs, files in os.walk(root):
         for name in files:
             nfn = os.path.join(roots, name)
@@ -220,6 +223,43 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
                 'data': trb}
 
 
+def _py(sfn, name, source, user, group, mode, env, context=None):
+    '''
+    Render a template from a python source file
+
+    Returns::
+
+        {'result': bool,
+         'data': <Error data or rendered file path>}
+    '''
+    if not os.path.isfile(sfn):
+        return {}
+
+    mod = imp.load_source(
+            os.path.basename(sfn).split('.')[0],
+            sfn
+            )
+    mod.salt = __salt__
+    mod.grains = __grains__
+    mod.name = name
+    mod.source = source
+    mod.user = user
+    mod.group = group
+    mod.mode = mode
+    mod.env = env
+    mod.context = context
+
+    try:
+        tgt = tempfile.mkstemp()[1]
+        open(tgt, 'w+').write(mod.run())
+        return {'result': True,
+                'data': tgt}
+    except:
+        trb = traceback.format_exc()
+        return {'result': False,
+                'data': trb}
+
+
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
@@ -247,10 +287,11 @@ def symlink(name, target, force=False, makedirs=False):
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             _makedirs(name)
-        ret['result'] = False
-        ret['comment'] = ('Directory {0} for symlink is not present'
-                          .format(os.path.dirname(name)))
-        return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = ('Directory {0} for symlink is not present'
+                            .format(os.path.dirname(name)))
+            return ret
     if os.path.islink(name):
         # The link exists, verify that it matches the target
         if not os.readlink(name) == target:
@@ -323,7 +364,8 @@ def absent(name):
 
 
 def managed(name,
-        source,
+        source=None,
+        source_hash='',
         user=None,
         group=None,
         mode=None,
@@ -340,10 +382,21 @@ def managed(name,
         The location of the file to manage
 
     source
-        The source file, this file is located on the salt master file server
-        and is specified with the salt:// protocol. If the file is located on
+        The source file to download to the minion, this source file can be
+        hosted on either the salt master server, or on an http or ftp server.
+        For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
-        string is salt://spam/eggs
+        string is salt://spam/eggs. If source is left blank or None, the file
+        will be created as an empty file and the content will not be managed
+
+        If the file is hosted on a http or ftp server then the source_hash
+        argument is also required
+
+    source_hash:
+        This can be either a file which contains a source hash string for
+        the source, or a source hash string. The source hash string is the
+        hash algorithm followed by the hash of the file:
+        md5=e138491e9d5b97023cea823fe17bac22
 
     user
         The user to own the file, this defaults to the user salt is running as
@@ -382,7 +435,10 @@ def managed(name,
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
-    if template:
+
+    # If the file is a template and the contents is managed
+    # then make sure to cpy it down and templatize  things.
+    if template and source:
         sfn = __salt__['cp.cache_file'](source, __env__)
         t_key = '_{0}'.format(template)
         if t_key in globals():
@@ -414,11 +470,56 @@ def managed(name,
             __clean_tmp(sfn)
             return ret
     else:
-        source_sum = __salt__['cp.hash_file'](source, __env__)
-        if not source_sum:
-            ret['result'] = False
-            ret['comment'] = 'Source file {0} not found'.format(source)
-            return ret
+        # Copy the file down if there is a source
+        if source:
+            if urlparse.urlparse(source).scheme == 'salt':
+                source_sum = __salt__['cp.hash_file'](source, __env__)
+                if not source_sum:
+                    ret['result'] = False
+                    ret['comment'] = 'Source file {0} not found'.format(source)
+                    return ret
+            elif source_hash:
+                protos = ['salt', 'http', 'ftp']
+                if urlparse.urlparse(source_hash).scheme in protos:
+                    # The sourc_hash is a file on a server
+                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    if not hash_fn:
+                        ret['result'] = False
+                        ret['comment'] = 'Source hash file {0} not found'.format(
+                             source_hash
+                             )
+                        return ret
+                    comps = open(hash_fn, 'r').read().split('=')
+                    if len(comps) < 2:
+                        ret['result'] = False
+                        ret['comment'] = ('Source hash file {0} contains an '
+                                          ' invalid hash format, it must be in '
+                                          ' the format <hash type>=<hash>').format(
+                                          source_hash
+                                          )
+                        return ret
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+                else:
+                    # The source_hash is a hash string
+                    comps = source_hash.split('=')
+                    if len(comps) < 2:
+                        ret['result'] = False
+                        ret['comment'] = ('Source hash file {0} contains an '
+                                          ' invalid hash format, it must be in '
+                                          ' the format <hash type>=<hash>').format(
+                                          source_hash
+                                          )
+                        return ret
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+            else:
+                ret['result'] = False
+                ret['comment'] = ('Unable to determine upstream hash of'
+                                  ' source file {0}').format(
+                     source
+                     )
+                return ret
     # If the source file is a template render it accordingly
 
     # Check changes if the target file exists
@@ -465,10 +566,14 @@ def managed(name,
                                    .format(group))
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
-        name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
+
+        # Only test the checksums on files with managed contents
+        if source:
+            name_sum = getattr(hashlib, source_sum['hash_type'])(open(name,
             'rb').read()).hexdigest()
+
         # Check if file needs to be replaced
-        if source_sum['hsum'] != name_sum:
+        if source and source_sum['hsum'] != name_sum:
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, __env__)
             if not sfn:
@@ -498,24 +603,29 @@ def managed(name,
             ret['comment'] = 'File {0} is in the correct state'.format(name)
         return ret
     else:
-        # It is a new file, set the diff accordingly
-        ret['changes']['diff'] = 'New file'
-        # Apply the new file
-        if not sfn:
-            sfn = __salt__['cp.cache_file'](source, __env__)
-        if not sfn:
-            ret['result'] = False
-            ret['comment'] = 'Source file {0} not found'.format(source)
-            return ret
-        if not __opts__['test']:
-            if not os.path.isdir(os.path.dirname(name)):
-                if makedirs:
-                    _makedirs(name)
-                else:
-                    ret['result'] = False
-                    ret['comment'] = 'Parent directory not present'
-                    __clean_tmp(sfn)
-                    return ret
+        # Only set the diff if the file contents is managed
+        if source:
+            # It is a new file, set the diff accordingly
+            ret['changes']['diff'] = 'New file'
+            # Apply the new file
+            if not sfn:
+                sfn = __salt__['cp.cache_file'](source, __env__)
+            if not sfn:
+                ret['result'] = False
+                ret['comment'] = 'Source file {0} not found'.format(source)
+                return ret
+            if not __opts__['test']:
+                if not os.path.isdir(os.path.dirname(name)):
+                    if makedirs:
+                        _makedirs(name)
+                    else:
+                        ret['result'] = False
+                        ret['comment'] = 'Parent directory not present'
+                        __clean_tmp(sfn)
+                        return ret
+        else:
+            ret['changes']['new'] = 'file {0} created'.format(name)
+            ret['comment'] = 'Empty file'
         # Create the file, user-rw-only if mode will be set
         if mode:
           cumask = os.umask(384)
@@ -563,8 +673,10 @@ def managed(name,
                 ret['comment'] += 'Group not changed '
             elif 'cgroup' in perms:
                 ret['changes']['group'] = group
-        # Now copy the file contents
-        shutil.copyfile(sfn, name)
+
+        # Now copy the file contents if there is a source file
+        if sfn:
+            shutil.copyfile(sfn, name)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -801,14 +913,13 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # to look for ourselves
 
     # make sure the pattern(s) match
-    if not __salt__['file.contains'](name, before, limit):
-        if __salt__['file.contains'](name, after, limit):
-            ret['comment'] = "Edit already performed"
-            ret['result'] = True
-            return ret
-        else:
-            ret['comment'] = "Pattern not matched"
-            return ret
+    if __salt__['file.contains'](name, after, limit):
+        ret['comment'] = "Edit already performed"
+        ret['result'] = True
+        return ret
+    elif not __salt__['file.contains'](name, before, limit):
+        ret['comment'] = "Pattern not matched"
+        return ret
 
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
@@ -962,4 +1073,32 @@ def append(name, text):
 
     ret['comment'] = "Appended {0} lines".format(count)
     ret['result'] = True
+    return ret
+
+def touch(name, atime=None, mtime=None):
+    """
+    Replicate the 'nix "touch" command to create a new empty
+    file or update the atime and mtime of an existing  file.
+
+    Usage::
+
+        /var/log/httpd/logrotate.empty
+          file:
+            - touch
+
+    .. versionadded:: 0.9.5
+    """
+    ret = {
+        'name': name,
+        'changes': {},
+    }
+    exists = os.path.exists(name)
+    ret['result'] = __salt__['file.touch'](name, atime, mtime)
+
+    if not exists and ret['result']:
+        ret["comment"] = 'Created empty file {0}'.format(name)
+        ret["changes"]['new'] = name
+    elif exists and ret['result']:
+        ret["comment"] = 'Updated times on file {0}'.format(name)
+
     return ret

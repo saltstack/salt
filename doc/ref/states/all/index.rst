@@ -17,8 +17,11 @@ Full list of builtin states
     host
     kmod
     mount
+    mysql_database
+    mysql_user
     pkg
     service
     ssh_auth
     sysctl
     user
+    virtualenv

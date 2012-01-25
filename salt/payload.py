@@ -5,7 +5,7 @@ encrypted keys to general payload dynamics and packaging, these happen in here
 
 import cPickle as pickle
 
-import salt.msgpack as msgpack
+import msgpack
 
 
 def package(payload):
