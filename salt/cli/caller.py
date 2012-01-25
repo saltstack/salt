@@ -43,7 +43,7 @@ class Caller(object):
                     )
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
-            sys.stderr.write(msg.format(yellow, end, fun, str(exc)))
+            sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)
         except CommandNotFoundError as exc:
             msg = 'Command not found in \'{0}\': {1}\n'

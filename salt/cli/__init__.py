@@ -447,6 +447,19 @@ class SaltKey(object):
                 action='store_true',
                 help='Accept all pending keys')
 
+        parser.add_option('-r',
+                '--reject',
+                dest='reject',
+                default='',
+                help='Reject the specified public key')
+
+        parser.add_option('-R',
+                '--reject-all',
+                dest='reject_all',
+                default=False,
+                action='store_true',
+                help='Reject all pending keys')
+
         parser.add_option('-p',
                 '--print',
                 dest='print_',
@@ -500,6 +513,8 @@ class SaltKey(object):
         opts['list_all'] = options.list_all
         opts['accept'] = options.accept
         opts['accept_all'] = options.accept_all
+        opts['reject'] = options.reject
+        opts['reject_all'] = options.reject_all
         opts['print'] = options.print_
         opts['print_all'] = options.print_all
         opts['delete'] = options.delete
