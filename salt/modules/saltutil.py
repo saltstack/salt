@@ -7,6 +7,7 @@ used to manage minion modules as well as automate updates to the salt minion
 import os
 import hashlib
 import shutil
+import signal
 import logging
 
 # Import Salt libs
@@ -143,6 +144,7 @@ def sync_all(env='base'):
     ret.append(sync_returners(env))
     return ret
 
+
 def running():
     '''
     Return the data on all running processes salt on the minion
@@ -165,6 +167,7 @@ def running():
         ret.append(data)
     return ret
 
+
 def find_job(jid):
     '''
     Return the data for a specific job id
@@ -177,3 +180,50 @@ def find_job(jid):
         if data['jid'] == jid:
             return data
     return {}
+
+
+def signal_job(jid, sig):
+    '''
+    Sends a signal to the named salt job's process
+
+    CLI Example::
+
+        salt '*' saltutil.signal_job <job id> 15
+    '''
+    for data in running():
+        if data['jid'] == jid:
+            try:
+                os.kill(int(data['pid']), sig)
+                return 'Signal {0} sent to job {1} at pid {2}'.format(
+                        int(sig),
+                        jid,
+                        data['pid']
+                        )
+            except OSError:
+                path = os.path.join(__opts__['cachedir'], 'proc', str(jid))
+                if os.path.isfile(path):
+                    os.remove(path)
+                return 'Job {0} was not running and job data has been cleaned up'.format()
+    return ''
+
+
+def term_job(jid):
+    '''
+    Sends a termination signal (SIGTERM 15) to the named salt job's process
+
+    CLI Example::
+
+        salt '*' saltutil.term_job <job id>
+    '''
+    return signal_job(jid, signal.SIGTERM)
+
+
+def kill_job(jid):
+    '''
+    Sends a termination signal (SIGTERM 15) to the named salt job's process
+
+    CLI Example::
+
+        salt '*' saltutil.kill_job <job id>
+    '''
+    return signal_job(jid, signal.SIGKILL)
