@@ -26,6 +26,40 @@ def _number(text):
             return text
 
 
+def procs():
+    '''
+    Return the process data
+
+    CLI Example::
+
+        salt '*' status.procs
+    '''
+    # Get the user, pid and cmd
+    ret = {}
+    uind = 0
+    pind = 0
+    cind = 0
+    plines = __salt__['cmd.run'](__grains__['ps']).split('\n')
+    guide = plines.pop(0).split()
+    if 'USER' in guide:
+        uind = guide.index('USER')
+    elif 'UID' in guide:
+        uind = guide.index('UID')
+    if 'PID' in guide:
+        pind = guide.index('PID')
+    if 'COMMAND' in guide:
+        cind = guide.index('COMMAND')
+    elif 'CMD' in guide:
+        cind = guide.index('CMD')
+    for line in plines:
+        if not line:
+            continue
+        comps = line.split()
+        ret[comps[pind]] = {'user': comps[uind],
+                            'cmd': ' '.join(comps[cind:])}
+    return ret
+
+
 def custom():
     '''
     Return a custom composite of status data and info for this minon,
