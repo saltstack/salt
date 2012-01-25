@@ -16,9 +16,11 @@ class Key(object):
     '''
     The object that encapsulates saltkey actions
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, stdout, stderr):
         self.opts = opts
-
+        self.stdout = stdout
+        self.stderr = stderr
+        
     def _keys(self, key_type, full_path=False):
         '''
         Safely return the names of the unaccepted keys, pass True to return
@@ -36,7 +38,7 @@ class Key(object):
         if not os.path.isdir(dir_):
             err = ('The ' + subdir + ' directory is not present, ensure that '
                    'the master server has been started')
-            sys.stderr.write(err + '\n')
+            self.stderr.write(err + '\n')
             sys.exit(42)
         keys = os.listdir(dir_)
         if full_path:
@@ -50,25 +52,27 @@ class Key(object):
         '''
         List the unaccepted keys
         '''
-        print utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC
+        self.stdout.write(utils.LIGHT_RED + 'Unaccepted Keys:' + 
+                          utils.ENDC + '\n')
         for key in sorted(self._keys('pre')):
-            print utils.RED + key + utils.ENDC
+            self.stdout.write(utils.RED + key + utils.ENDC + '\n')
 
     def _list_accepted(self):
         '''
         List the accepted public keys
         '''
-        print utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC
+        self.stdout.write(utils.LIGHT_GREEN + 'Accepted Keys:' + 
+                          utils.ENDC + '\n')
         for key in sorted(self._keys('acc')):
-            print utils.GREEN + key + utils.ENDC
+            self.stdout.write(utils.GREEN + key + utils.ENDC + '\n')
 
     def _list_rejected(self):
         '''
         List the unaccepted keys
         '''
-        print utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC
+        self.stdout.write(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC + '\n')
         for key in sorted(self._keys('rej')):
-            print utils.BLUE + key + utils.ENDC
+            self.stdout.write(utils.BLUE + key + utils.ENDC + '\n')
 
     def _list_all(self):
         '''
@@ -85,24 +89,30 @@ class Key(object):
         keys = self._keys('pre', True).union(self._keys('acc', True))
         for key in sorted(keys):
             if key.endswith(name):
-                print open(key, 'r').read()
+                self.stdout.write(open(key, 'r').read() + '\n')
 
     def _print_all(self):
         '''
         Print out the public keys, all of em'
         '''
-        print utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC
+        self.stdout.write(utils.LIGHT_RED + 'Unaccepted keys:' + 
+                          utils.ENDC + '\n')
         for key in sorted(self._keys('pre', True)):
-            print '  ' + utils.RED + os.path.basename(key) + utils.ENDC
-            print open(key, 'r').read()
-        print utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC
+            self.stdout.write('  ' + utils.RED + os.path.basename(key) + 
+                              utils.ENDC + '\n')
+            self.stdout.write(open(key, 'r').read() + '\n')
+        self.stdout.write(utils.LIGHT_GREEN + 'Accepted keys:' + 
+                          utils.ENDC + '\n')
         for key in sorted(self._keys('acc', True)):
-            print '  ' + utils.GREEN + os.path.basename(key) + utils.ENDC
-            print open(key, 'r').read()
-        print utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC
+            self.stdout.write('  ' + utils.GREEN + os.path.basename(key) + 
+                              utils.ENDC + '\n')
+            self.stdout.write(open(key, 'r').read() + '\n')
+        self.stdout.write(utils.LIGHT_BLUE + 'Rejected keys:' + 
+                          utils.ENDC + '\n')
         for key in sorted(self._keys('pre', True)):
-            print '  ' + utils.BLUE + os.path.basename(key) + utils.ENDC
-            print open(key, 'r').read()
+            self.stdout.write('  ' + utils.BLUE + os.path.basename(key) + 
+                              utils.ENDC + '\n')
+            self.stdout.write(open(key, 'r').read() + '\n')
 
     def _accept(self, key):
         '''
@@ -115,7 +125,7 @@ class Key(object):
         if not pre.count(key):
             err = ('The named host is unavailable, please accept an '
                    'available key')
-            sys.stderr.write(err + '\n')
+            self.stderr.write(err + '\n')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_accepted, key))
@@ -142,13 +152,16 @@ class Key(object):
         rej= os.path.join(minions_rejected, self.opts['delete'])
         if os.path.exists(pre):
             os.remove(pre)
-            print 'Removed pending key %s' % self.opts['delete']
+            self.stdout.write('Removed pending key %s\n' 
+                              % self.opts['delete'])
         if os.path.exists(acc):
             os.remove(acc)
-            print 'Removed accepted key %s' % self.opts['delete']
+            self.stdout.write('Removed accepted key %s\n' 
+                              % self.opts['delete'])
         if os.path.exists(rej):
             os.remove(rej)
-            print 'Removed rejected key %s' % self.opts['delete']
+            self.stdout.write('Removed rejected key %s\n' 
+                              % self.opts['delete'])
 
     def _reject(self, key):
         '''
@@ -161,7 +174,7 @@ class Key(object):
         if not pre.count(key):
             err = ('The named host is unavailable, please accept an '
                    'available key')
-            sys.stderr.write(err + '\n')
+            self.stderr.write(err + '\n')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_rejected, key))
@@ -184,7 +197,7 @@ class Key(object):
             if not os.path.isdir(dir):
                 err = ('The minions directory {0} is not present, ensure '
                        'that the master server has been started'.format(dir))
-                sys.stderr.write(err + '\n')
+                self.stderr.write(err + '\n')
                 sys.exit(42)
         return minions_accepted, minions_pre, minions_rejected
 

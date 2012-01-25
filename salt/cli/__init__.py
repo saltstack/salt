@@ -411,8 +411,10 @@ class SaltKey(object):
     '''
     Initialize the Salt key manager
     '''
-    def __init__(self):
+    def __init__(self, stdout=sys.stdout, stderr=sys.stderr):
         self.opts = self.__parse()
+        self.stdout = stdout
+        self.stderr = stderr
 
     def __parse(self):
         '''
@@ -533,7 +535,7 @@ class SaltKey(object):
         '''
         Execute saltkey
         '''
-        key = salt.cli.key.Key(self.opts)
+        key = salt.cli.key.Key(self.opts, self.stdout, self.stderr)
         key.run()
 
 
