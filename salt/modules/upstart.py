@@ -11,8 +11,10 @@ def __virtual__():
     '''
     enable = [
                'Ubuntu',
+               'Fedora',
+               'Debian',
               ]
-    if __grains__['os'] in enable:
+    if __grains__['os'] in enable and os.path.isfile('/sbin/initctl'):
         return 'service'
     return False
 

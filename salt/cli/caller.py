@@ -45,7 +45,7 @@ class Caller(object):
             
             ret['return'] = self.minion.functions[self.opts['fun']](
                     *self.opts['arg'],
-                    returner=returner,
+                    returner=returner
                     )
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
