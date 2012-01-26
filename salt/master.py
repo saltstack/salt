@@ -464,6 +464,19 @@ class AESFuncs(object):
                         )
         return ret
 
+    def _file_list_emptydirs(self, load):
+        '''
+        Return a list of all empty directories on the master
+        '''
+        ret = []
+        if load['env'] not in self.opts['file_roots']:
+            return ret
+        for path in self.opts['file_roots'][load['env']]:
+            for root, dirs, files in os.walk(path):
+                if len(dirs)==0 and len(files)==0:
+                    ret.append(os.path.relpath(root,path))
+        return ret
+
     def _master_opts(self, load):
         '''
         Return the master options to the minion
