@@ -199,6 +199,8 @@ met.
 \fI\%PyCrypto\fP — The Python cryptography toolkit
 .IP \(bu 2
 \fI\%YAML\fP — Python YAML bindings
+.IP \(bu 2
+\fI\%py-msgpack\fP — MessagePack (de)serializer for Python
 .UNINDENT
 .sp
 Optional Dependencies:
@@ -868,8 +870,8 @@ Verify that Apache is now serving your custom HTML.
 .IP "\fBrequire\fP vs. \fBwatch\fP"
 .sp
 There are two \fIrequisite declarations\fP,
-“require” and “watch”. Not every state supports “watch”. The \fBservice
-state\fP does support “watch” and will restart a
+require and watch. Not every state supports watch. The \fBservice
+state\fP does support watch and will restart a
 service based on the watch condition.
 .sp
 For example, if you use Salt to install an Apache virtual host
@@ -940,7 +942,7 @@ moe:
 larry:
   user:
     \- present
-currly:
+curly:
   user:
     \- present
 .ft P
@@ -12168,7 +12170,7 @@ understand and work with but also scales well and just works (tm).
 Let\(aqs start using it!
 .SS 2.0.0
 .sp
-2.0.0 will require a number of serious additions and overhauls. We wand to make
+2.0.0 will require a number of serious additions and overhauls. We want to make
 the transport layer much cleaner and clean up the crypto dependencies.
 Figure out how to get more speed out of Salt and make it more memory
 efficient. The security system needs some additions to make it more
@@ -12213,7 +12215,7 @@ Since the state system is based on data structures we can generate them from
 a uniform API, this needs to be available in renderer modules.
 .SS Separate out the File Server
 .sp
-Te built in file server should be less built in. We will make a standalone file
+The built in file server should be less built in. We will make a standalone file
 server from the existing built in one that is more powerful and can be used
 with and without encryption and authentication. The updated file server should
 also be faster, so that large files can be downloaded more quickly.
