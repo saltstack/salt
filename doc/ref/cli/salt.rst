@@ -5,11 +5,13 @@
 Synopsis
 ========
 
-    salt '*' [ options ] sys.doc
+    salt '*' [ options ] test.ping
 
-    salt -E '.*' [ options ] sys.doc cmd
+    salt -E '.*' [ options ] test.ping
 
     salt -G 'os:Arch.*' [ options ] test.ping
+
+    salt -L server1,server2,server3 [ options ] test.ping
 
     salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
 

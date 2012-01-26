@@ -33,11 +33,13 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .SH SYNOPSIS
 .INDENT 0.0
 .INDENT 3.5
-salt \(aq*\(aq [ options ] sys.doc
+salt \(aq*\(aq [ options ] test.ping
 .sp
-salt \-E \(aq.*\(aq [ options ] sys.doc cmd
+salt \-E \(aq.*\(aq [ options ] test.ping
 .sp
 salt \-G \(aqos:Arch.*\(aq [ options ] test.ping
+.sp
+salt \-L \(aqserver1,server2,server3\(aq [ options ] test.ping
 .sp
 salt \-C \fI\%'G@os\fP:Arch.* and webserv* or \fI\%G@kernel\fP:FreeBSD\(aq [ options ] test.ping
 .sp
