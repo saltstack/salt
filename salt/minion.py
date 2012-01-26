@@ -12,6 +12,7 @@ import hashlib
 import os
 import re
 import shutil
+import string
 import tempfile
 import threading
 import time
@@ -736,6 +737,43 @@ class FileClient(object):
             fn_.write(data['data'])
         return dest
 
+    def get_dir(self, path, dest='', env='base'):
+        '''
+        Get a directory recursively from the salt-master
+        '''
+        ret = []
+        # Strip trailing slash
+        path = string.rstrip(self._check_proto(path), '/')
+        # Break up the path into a list conaining the bottom-level directory
+        # (the one being recursively copied) and the directories preceding it
+        separated = string.rsplit(path,'/',1)
+        if len(separated) != 2:
+            # No slashes in path. (This means all files in env will be copied)
+            prefix = ''
+        else:
+            prefix = separated[0]
+
+        # Copy files from master
+        for fn_ in self.file_list(env):
+            if fn_.startswith(path):
+                # Remove the leading directories from path to derive
+                # the relative path on the minion.
+                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
+                ret.append(self.get_file('salt://{0}'.format(fn_),
+                                         '%s/%s' % (dest,minion_relpath),
+                                         True, env))
+        # Replicate empty dirs from master
+        for fn_ in self.file_list_emptydirs(env):
+            if fn_.startswith(path):
+                # Remove the leading directories from path to derive
+                # the relative path on the minion.
+                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
+                minion_mkdir = '%s/%s' % (dest,minion_relpath)
+                os.makedirs(minion_mkdir)
+                ret.append(minion_mkdir)
+        ret.sort()
+        return ret
+
     def get_url(self, url, dest, makedirs=False, env='base'):
         '''
         Get a single file from a URL.
@@ -834,6 +872,17 @@ class FileClient(object):
         payload = {'enc': 'aes'}
         load = {'env': env,
                 'cmd': '_file_list'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def file_list_emptydirs(self, env='base'):
+        '''
+        List the empty dirs on the master
+        '''
+        payload = {'enc': 'aes'}
+        load = {'env': env,
+                'cmd': '_file_list_emptydirs'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
