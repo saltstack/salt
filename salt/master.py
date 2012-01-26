@@ -383,7 +383,7 @@ class AESFuncs(object):
         if not self.opts['external_nodes']:
             return {}
         if not salt.utils.which(self.opts['external_nodes']):
-            log.erorr(('Specified external nodes controller {0} is not') 
+            log.erorr(('Specified external nodes controller {0} is not' 
                        ' available, please verify that it is installed'
                        '').format(self.opts['external_nodes']))
             return {}
