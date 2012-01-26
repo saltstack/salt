@@ -207,6 +207,11 @@ class Minion(object):
                 '--user',
                 dest='user',
                 help='Specify user to run minion')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-minion.pid',
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -221,7 +226,8 @@ class Minion(object):
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
         cli = {'daemon': options.daemon,
                'config': options.config,
-               'user': options.user}
+               'user': options.user,
+               'pidfile': options.pidfile}
 
         return cli
 
@@ -243,6 +249,7 @@ class Minion(object):
         import logging
         # Late import so logging works correctly
         import salt.minion
+        set_pidfile(self.cli['pidfile'])
         log = logging.getLogger(__name__)
         if check_user(self.opts['user'], log):
             try:
@@ -315,6 +322,11 @@ class Syndic(object):
                 '--user',
                 dest='user',
                 help='Specify user to run minion')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-syndic.pid',
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -353,6 +365,7 @@ class Syndic(object):
 
         # Late import so logging works correctly
         import salt.minion
+        set_pidfile(self.cli['pidfile'])
         log = logging.getLogger(__name__)
         if check_user(self.opts['user'], log):
             try:
