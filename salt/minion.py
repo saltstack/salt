@@ -926,3 +926,15 @@ class FileClient(object):
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def ext_nodes(self):
+        '''
+        Return the metadata derived from the external nodes system on the
+        master.
+        '''
+        payload = {'enc': 'aes'}
+        load = {'cmd': '_enc_nodes',
+                'id': self.opts['id']}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
