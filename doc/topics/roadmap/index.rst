@@ -112,7 +112,7 @@ Let's start using it!
 2.0.0
 =====
 
-2.0.0 will require a number of serious additions and overhauls. We wand to make
+2.0.0 will require a number of serious additions and overhauls. We want to make
 the transport layer much cleaner and clean up the crypto dependencies.
 Figure out how to get more speed out of Salt and make it more memory
 efficient. The security system needs some additions to make it more
@@ -173,7 +173,7 @@ a uniform API, this needs to be available in renderer modules.
 Separate out the File Server
 ----------------------------
 
-Te built in file server should be less built in. We will make a standalone file
+The built in file server should be less built in. We will make a standalone file
 server from the existing built in one that is more powerful and can be used
 with and without encryption and authentication. The updated file server should
 also be faster, so that large files can be downloaded more quickly.

@@ -41,7 +41,7 @@ This templated sls file once generated will look like this:
     larry:
       user:
         - present
-    currly:
+    curly:
       user:
         - present
 
