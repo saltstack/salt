@@ -45,7 +45,7 @@ def get_file(path, dest, env='base'):
 
 def get_dir(path, dest, env='base'):
     '''
-    Used to get a single file from the salt master
+    Used to recursively copy a directory from the salt master
     '''
     client = salt.minion.FileClient(__opts__)
     return client.get_dir(path, dest, env)
