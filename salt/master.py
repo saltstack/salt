@@ -372,6 +372,44 @@ class AESFuncs(object):
                   .format(id_))
         return False
 
+    def _ext_nodes(self, load):
+        '''
+        Return the results from an external node classifier if one is
+        specified
+        '''
+        if not 'id' in load:
+            log.error('Recieved call for external nodes without an id')
+            return {}
+        if not self.opts['external_nodes']:
+            return {}
+        if not salt.utils.which(self.opts['external_nodes']):
+            log.erorr(('Specified external nodes controller {0} is not' 
+                       ' available, please verify that it is installed'
+                       '').format(self.opts['external_nodes']))
+            return {}
+        cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
+        ndata = yaml.safe_loads(
+                subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE
+                    ).communicate()[0])
+        ret = {}
+        if 'environment' in ndata:
+            env = ndata['environment']
+        else:
+            env = 'base'
+        
+        if 'classes' in ndata:
+            if isinstance(ndata['classes'], dict):
+                ret[env] = ndata['classes'].keys()
+            elif isinstance(ndata['classes'], list):
+                ret[env] = ndata['classes']
+            else:
+                return ret
+        return ret
+
+
     def _serve_file(self, load):
         '''
         Return a chunk from a file based on the data received

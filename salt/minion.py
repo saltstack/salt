@@ -560,7 +560,7 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
-        return bool(tgt in self.opts['id'])
+        return bool(self.opts['id'] in tgt)
 
     def grain_match(self, tgt):
         '''
@@ -923,6 +923,18 @@ class FileClient(object):
         '''
         payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def ext_nodes(self):
+        '''
+        Return the metadata derived from the external nodes system on the
+        master.
+        '''
+        payload = {'enc': 'aes'}
+        load = {'cmd': '_ext_nodes',
+                'id': self.opts['id']}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))

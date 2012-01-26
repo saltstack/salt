@@ -156,6 +156,7 @@ def master_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'state_top': 'top.sls',
+            'external_nodes': '',
             'order_masters': False,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
