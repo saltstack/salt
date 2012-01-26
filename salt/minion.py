@@ -933,7 +933,7 @@ class FileClient(object):
         master.
         '''
         payload = {'enc': 'aes'}
-        load = {'cmd': '_enc_nodes',
+        load = {'cmd': '_ext_nodes',
                 'id': self.opts['id']}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))

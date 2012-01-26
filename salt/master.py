@@ -372,7 +372,7 @@ class AESFuncs(object):
                   .format(id_))
         return False
 
-    def _ext_node(self, load):
+    def _ext_nodes(self, load):
         '''
         Return the results from an external node classifier if one is
         specified
