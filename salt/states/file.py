@@ -203,6 +203,9 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         return {'result': False,
                 'data': 'Failed to import jinja'}
     try:
+        newline = False
+        if open(sfn, 'rb').read().endswith('\n'):
+            newline = True
         tgt = tempfile.mkstemp()[1]
         passthrough = context if context else {}
         passthrough['salt'] = __salt__
@@ -215,6 +218,8 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         passthrough['env'] = env
         template = get_template(sfn, __opts__, env)
         open(tgt, 'w+').write(template.render(**passthrough))
+        if newline:
+            open(tgt, 'a').write('\n')
         return {'result': True,
                     'data': tgt}
     except:
