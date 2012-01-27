@@ -848,6 +848,8 @@ def recurse(name,
             return ret
         os.makedirs(name)
     for fn_ in __salt__['cp.cache_dir'](source, __env__):
+        if not fn_.strip():
+            continue
         dest = os.path.join(name,
                 os.path.relpath(
                     fn_,

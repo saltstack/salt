@@ -12,6 +12,7 @@ import hashlib
 import os
 import re
 import shutil
+import string
 import tempfile
 import threading
 import time
@@ -560,7 +561,7 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
-        return bool(tgt in self.opts['id'])
+        return bool(self.opts['id'] in tgt)
 
     def grain_match(self, tgt):
         '''
@@ -736,6 +737,43 @@ class FileClient(object):
             fn_.write(data['data'])
         return dest
 
+    def get_dir(self, path, dest='', env='base'):
+        '''
+        Get a directory recursively from the salt-master
+        '''
+        ret = []
+        # Strip trailing slash
+        path = string.rstrip(self._check_proto(path), '/')
+        # Break up the path into a list conaining the bottom-level directory
+        # (the one being recursively copied) and the directories preceding it
+        separated = string.rsplit(path,'/',1)
+        if len(separated) != 2:
+            # No slashes in path. (This means all files in env will be copied)
+            prefix = ''
+        else:
+            prefix = separated[0]
+
+        # Copy files from master
+        for fn_ in self.file_list(env):
+            if fn_.startswith(path):
+                # Remove the leading directories from path to derive
+                # the relative path on the minion.
+                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
+                ret.append(self.get_file('salt://{0}'.format(fn_),
+                                         '%s/%s' % (dest,minion_relpath),
+                                         True, env))
+        # Replicate empty dirs from master
+        for fn_ in self.file_list_emptydirs(env):
+            if fn_.startswith(path):
+                # Remove the leading directories from path to derive
+                # the relative path on the minion.
+                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
+                minion_mkdir = '%s/%s' % (dest,minion_relpath)
+                os.makedirs(minion_mkdir)
+                ret.append(minion_mkdir)
+        ret.sort()
+        return ret
+
     def get_url(self, url, dest, makedirs=False, env='base'):
         '''
         Get a single file from a URL.
@@ -749,7 +787,7 @@ class FileClient(object):
                 if makedirs:
                     os.makedirs(destdir)
                 else:
-                    return False
+                    return ''
         else:
             dest = os.path.join(
                 self.opts['cachedir'],
@@ -774,7 +812,7 @@ class FileClient(object):
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
         except urllib2.URLError, ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
-        return False
+        return ''
 
     def cache_file(self, path, env='base'):
         '''
@@ -810,7 +848,10 @@ class FileClient(object):
         path = self._check_proto(path)
         for fn_ in self.file_list(env):
             if fn_.startswith(path):
-                ret.append(self.cache_file('salt://{0}'.format(fn_), env))
+                local = self.cache_file('salt://{0}'.format(fn_), env)
+                if not fn_.strip():
+                    continue
+                ret.append(local)
         return ret
 
     def cache_local_file(self, path, **kwargs):
@@ -834,6 +875,17 @@ class FileClient(object):
         payload = {'enc': 'aes'}
         load = {'env': env,
                 'cmd': '_file_list'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def file_list_emptydirs(self, env='base'):
+        '''
+        List the empty dirs on the master
+        '''
+        payload = {'enc': 'aes'}
+        load = {'env': env,
+                'cmd': '_file_list_emptydirs'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
@@ -923,6 +975,18 @@ class FileClient(object):
         '''
         payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def ext_nodes(self):
+        '''
+        Return the metadata derived from the external nodes system on the
+        master.
+        '''
+        payload = {'enc': 'aes'}
+        load = {'cmd': '_ext_nodes',
+                'id': self.opts['id']}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))

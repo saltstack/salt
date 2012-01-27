@@ -166,12 +166,12 @@ class Master(object):
         # Late import so logging works correctly
         if check_user(self.opts['user'], log):
             import salt.master
-            set_pidfile(self.cli['pidfile'])
             master = salt.master.Master(self.opts)
             if self.cli['daemon']:
                 # Late import so logging works correctly
                 import salt.utils
                 salt.utils.daemonize()
+            set_pidfile(self.cli['pidfile'])
             master.start()
 
 
@@ -207,6 +207,11 @@ class Minion(object):
                 '--user',
                 dest='user',
                 help='Specify user to run minion')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-minion.pid',
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -221,7 +226,8 @@ class Minion(object):
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
         cli = {'daemon': options.daemon,
                'config': options.config,
-               'user': options.user}
+               'user': options.user,
+               'pidfile': options.pidfile}
 
         return cli
 
@@ -250,6 +256,7 @@ class Minion(object):
                     # Late import so logging works correctly
                     import salt.utils
                     salt.utils.daemonize()
+                set_pidfile(self.cli['pidfile'])
                 minion = salt.minion.Minion(self.opts)
                 minion.tune_in()
             except KeyboardInterrupt:
@@ -315,6 +322,11 @@ class Syndic(object):
                 '--user',
                 dest='user',
                 help='Specify user to run minion')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-syndic.pid',
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -361,6 +373,7 @@ class Syndic(object):
                     # Late import so logging works correctly
                     import salt.utils
                     salt.utils.daemonize()
+                set_pidfile(self.cli['pidfile'])
                 syndic.tune_in()
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Syndic Minion')
