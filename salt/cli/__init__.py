@@ -390,6 +390,10 @@ class SaltCP(object):
         opts['nodegroup'] = options.nodegroup
         opts['conf_file'] = options.conf_file
 
+        if len(args) <= 1:
+            parser.print_help()
+            parser.exit()
+
         if opts['list']:
             opts['tgt'] = args[0].split(',')
         else:
