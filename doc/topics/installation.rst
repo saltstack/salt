@@ -83,8 +83,6 @@ We are working to get Salt into apt. In the meantime we have a PPA available
 for Lucid::
 
     aptitude -y install python-software-properties
-    add-apt-repository ppa:chris-lea/libpgm
-    add-apt-repository ppa:chris-lea/zeromq
     add-apt-repository ppa:saltstack/salt
     aptitude update
     aptitude install salt
