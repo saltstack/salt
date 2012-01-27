@@ -289,6 +289,11 @@ def symlink(name, target, force=False, makedirs=False):
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             _makedirs(name)
@@ -344,6 +349,11 @@ def absent(name):
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if os.path.isfile(name) or os.path.islink(name):
         try:
             os.remove(name)
@@ -437,6 +447,11 @@ def managed(name,
            'comment': '',
            'name': name,
            'result': True}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
@@ -735,6 +750,11 @@ def directory(name,
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if os.path.isfile(name):
         ret['result'] = False
         ret['comment'] = ('Specified location {0} exists and is a file'
@@ -842,6 +862,11 @@ def recurse(name,
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     keep = set()
     # Verify the target directory
     if not os.path.isdir(name):
@@ -912,6 +937,11 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if not os.path.exists(name):
         ret['comment'] = "File '{0}' not found".format(name)
         return ret
@@ -954,6 +984,12 @@ def comment(name, regex, char='#', backup='.bak'):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
 
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
@@ -1002,6 +1038,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     unanchor_regex = regex.lstrip('^')
 
     if not os.path.exists(name):
@@ -1064,6 +1105,12 @@ def append(name, text):
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
+
     if isinstance(text, basestring):
         text = (text,)
 
@@ -1099,6 +1146,11 @@ def touch(name, atime=None, mtime=None):
         'name': name,
         'changes': {},
     }
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     exists = os.path.exists(name)
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
