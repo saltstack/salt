@@ -6,8 +6,6 @@ The management of salt command line utilities are stored in here
 import optparse
 import os
 import sys
-import yaml
-import json
 
 # Import salt components
 import salt.cli.caller
