@@ -28,17 +28,33 @@ def present(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Grant {0} for {1}@{2} on {3} is already present'.format(grant,user,host,database,)}
+           'comment': 'Grant {0} for {1}@{2} on {3} is already present'.format(
+               grant,
+               user,
+               host,
+               database
+               )
+           }
     # check if grant exists
     if __salt__['mysql.grant_exists'](grant,database,user,host):
         return ret        
 
     # The grant is not present, make it!
-    if __salt__['mysql.grant_add'](grant,database,user,host)
-        ret['comment'] = 'Grant {0} for {1}@{2} on {3} has been added'.format(grant,user,host,database,)
+    if __salt__['mysql.grant_add'](grant,database,user,host):
+        ret['comment'] = 'Grant {0} for {1}@{2} on {3} has been added'.format(
+                grant,
+                user,
+                host,
+                database
+                )
         ret['changes'][name] = 'Present'
     else:
-        ret['comment'] = 'Failed to grant {0} for {1}@{2} on {3}'.format(grant,user,host,database,)
+        ret['comment'] = 'Failed to grant {0} for {1}@{2} on {3}'.format(
+                grant,
+                user,
+                host,
+                database
+                )
         ret['result'] = False
     return ret
 
@@ -62,10 +78,22 @@ def absent(name,
     #check if db exists and remove it
     if __salt__['mysql.grant_exists'](grant,database,user,host,):
         if __salt__['mysql.grant_revoke'](grant,database,user,host):
-            ret['comment'] = 'Grant {0} for {1}@{2} on {3} has been revoked'.format(grant,user,host,database,)
+            ret['comment'] = ('Grant {0} for {1}@{2} on {3} has been'
+                              ' revoked').format(
+                                      grant,
+                                      user,
+                                      host,
+                                      database
+                                      )
             ret['changes'][name] = 'Absent'
             return ret
         
     # fallback
-    ret['comment'] = 'Grant {0} for {1}@{2} on {3} is not present, so it cannot be revoked'.format(grant,user,host,database,)
+    ret['comment'] = ('Grant {0} for {1}@{2} on {3} is not present, so it'
+                      ' cannot be revoked').format(
+                              grant,
+                              user,
+                              host,
+                              database
+                              )
     return ret
