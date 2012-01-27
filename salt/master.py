@@ -13,10 +13,14 @@ import hashlib
 import tempfile
 import datetime
 import multiprocessing
+import subprocess
 
 # Import zeromq
 import zmq
 from M2Crypto import RSA
+
+# Import Third Party Libs
+import yaml
 
 # Import salt modules
 import salt.crypt
@@ -378,12 +382,12 @@ class AESFuncs(object):
         specified
         '''
         if not 'id' in load:
-            log.error('Recieved call for external nodes without an id')
+            log.error('Received call for external nodes without an id')
             return {}
         if not self.opts['external_nodes']:
             return {}
         if not salt.utils.which(self.opts['external_nodes']):
-            log.erorr(('Specified external nodes controller {0} is not' 
+            log.error(('Specified external nodes controller {0} is not' 
                        ' available, please verify that it is installed'
                        '').format(self.opts['external_nodes']))
             return {}
