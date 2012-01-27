@@ -45,30 +45,38 @@ class Key(object):
         else:
             ret = set(keys)
         return ret
+    
+    def _output(self, output):
+        if self.opts['outfile']:
+            file = open(self.opts['outfile'], 'a')
+            file.write(output + '\n')
+            file.close()
+        if not self.opts['quiet']:
+            print output
 
     def _list_pre(self):
         '''
         List the unaccepted keys
         '''
-        print utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC
+        self._output(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('pre')):
-            print utils.RED + key + utils.ENDC
+            self._output(utils.RED + key + utils.ENDC)
 
     def _list_accepted(self):
         '''
         List the accepted public keys
         '''
-        print utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC
+        self._output(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('acc')):
-            print utils.GREEN + key + utils.ENDC
+            self._output(utils.GREEN + key + utils.ENDC)
 
     def _list_rejected(self):
         '''
         List the unaccepted keys
         '''
-        print utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC
+        self._output(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
         for key in sorted(self._keys('rej')):
-            print utils.BLUE + key + utils.ENDC
+            self._output(utils.BLUE + key + utils.ENDC)
 
     def _list_all(self):
         '''
@@ -85,24 +93,26 @@ class Key(object):
         keys = self._keys('pre', True).union(self._keys('acc', True))
         for key in sorted(keys):
             if key.endswith(name):
-                print open(key, 'r').read()
+                self._output(open(key, 'r').read())
 
     def _print_all(self):
         '''
         Print out the public keys, all of em'
         '''
-        print utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC
+        self._output(utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
-            print '  ' + utils.RED + os.path.basename(key) + utils.ENDC
-            print open(key, 'r').read()
-        print utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC
+            self._output('  ' + utils.RED + os.path.basename(key) + utils.ENDC)
+            self._output(open(key, 'r').read())
+        self._output(utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC)
         for key in sorted(self._keys('acc', True)):
-            print '  ' + utils.GREEN + os.path.basename(key) + utils.ENDC
-            print open(key, 'r').read()
-        print utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC
+            self._output('  ' + utils.GREEN + os.path.basename(key) + 
+                         utils.ENDC)
+            self._output(open(key, 'r').read())
+        self._output(utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
-            print '  ' + utils.BLUE + os.path.basename(key) + utils.ENDC
-            print open(key, 'r').read()
+            self._output('  ' + utils.BLUE + os.path.basename(key) + 
+                         utils.ENDC)
+            self._output(open(key, 'r').read())
 
     def _accept(self, key):
         '''
@@ -142,13 +152,13 @@ class Key(object):
         rej= os.path.join(minions_rejected, self.opts['delete'])
         if os.path.exists(pre):
             os.remove(pre)
-            print 'Removed pending key %s' % self.opts['delete']
+            self._output('Removed pending key %s' % self.opts['delete'])
         if os.path.exists(acc):
             os.remove(acc)
-            print 'Removed accepted key %s' % self.opts['delete']
+            self._output('Removed accepted key %s' % self.opts['delete'])
         if os.path.exists(rej):
             os.remove(rej)
-            print 'Removed rejected key %s' % self.opts['delete']
+            self._output('Removed rejected key %s' % self.opts['delete'])
 
     def _reject(self, key):
         '''
@@ -179,7 +189,8 @@ class Key(object):
     def _check_minions_directories(self):
         minions_accepted = os.path.join(self.opts['pki_dir'], 'minions')
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
-        minions_rejected = os.path.join(self.opts['pki_dir'], 'minions_rejected')
+        minions_rejected = os.path.join(self.opts['pki_dir'], 
+                                        'minions_rejected')
         for dir in [minions_accepted, minions_pre, minions_rejected]:
             if not os.path.isdir(dir):
                 err = ('The minions directory {0} is not present, ensure '

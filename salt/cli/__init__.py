@@ -480,6 +480,18 @@ class SaltKey(object):
                 dest='delete',
                 default='',
                 help='Delete the named key')
+        
+        parser.add_option('-q',
+                '--quiet',
+                dest='quiet',
+                default=False,
+                action='store_true',
+                help='Supress output')
+        
+        parser.add_option('--outfile',
+                dest='outfile',
+                default=None,
+                help='Send all output to a file.')
 
         parser.add_option('--gen-keys',
                 dest='gen_keys',
@@ -510,7 +522,9 @@ class SaltKey(object):
         options, args = parser.parse_args()
 
         opts = {}
-
+        
+        opts['quiet'] = options.quiet
+        opts['outfile'] = options.outfile
         opts['list'] = options.list_
         opts['list_all'] = options.list_all
         opts['accept'] = options.accept
