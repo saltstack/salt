@@ -76,7 +76,7 @@ def available_version(name):
     # here we can, but for now its exact match only.
     versions_list = []
     for pkgtype in ['available', 'updates']:
-
+        
         pl = yb.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(pl, [name])
         # build a list of available packages from either available or updates
@@ -94,7 +94,6 @@ def available_version(name):
         # already and return a message saying 'up to date' or something along
         # those lines.
         return ''
-
     # remove the duplicate items from the list and return the first one
     return list(set(versions_list))[0]
 
@@ -205,7 +204,11 @@ def install(pkgs, refresh=False, repo='', skip_verify=False):
 
     if repo:
         yb.repos.enableRepo(repo)
-
+    for opt in opts:
+        if '--nogpgcheck' in opt:
+            setattr(yb.conf, 'gpgcheck', False)
+        if opt.startswith('--enablerepo'):
+            yb.repos.enableRepo(arg.split('=')[1])
     for pkg in pkgs:
         try:
             yb.install(name=pkg)
