@@ -787,7 +787,7 @@ class FileClient(object):
                 if makedirs:
                     os.makedirs(destdir)
                 else:
-                    return False
+                    return ''
         else:
             dest = os.path.join(
                 self.opts['cachedir'],
@@ -812,7 +812,7 @@ class FileClient(object):
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
         except urllib2.URLError, ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
-        return False
+        return ''
 
     def cache_file(self, path, env='base'):
         '''
@@ -848,7 +848,10 @@ class FileClient(object):
         path = self._check_proto(path)
         for fn_ in self.file_list(env):
             if fn_.startswith(path):
-                ret.append(self.cache_file('salt://{0}'.format(fn_), env))
+                local = self.cache_file('salt://{0}'.format(fn_), env)
+                if not fn_.strip():
+                    continue
+                ret.append(local)
         return ret
 
     def cache_local_file(self, path, **kwargs):
