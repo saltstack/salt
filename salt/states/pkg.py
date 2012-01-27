@@ -77,13 +77,16 @@ def latest(name, repo='', skip_verify=False):
     version = __salt__['pkg.version'](name)
     avail = __salt__['pkg.available_version'](name)
 
-    try:
-        has_newer = LooseVersion(avail) > LooseVersion(version)
-    except AttributeError:
-        # Not yet installed
-        if not version:
-            has_newer = True
-        else:
+    if not version:
+        # Net yet installed
+        has_newer = True
+    elif not avail:
+        # Already at latest
+        has_newer = False
+    else:
+        try:
+            has_newer = LooseVersion(avail) > LooseVersion(version)
+        except AttributeError:
             logger.debug("Error comparing versions for '%s' (%s > %s)",
                     name, avail, version)
             ret['comment'] = "No version could be retrieved for '{0}'".format(name)
