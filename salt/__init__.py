@@ -166,12 +166,12 @@ class Master(object):
         # Late import so logging works correctly
         if check_user(self.opts['user'], log):
             import salt.master
-            set_pidfile(self.cli['pidfile'])
             master = salt.master.Master(self.opts)
             if self.cli['daemon']:
                 # Late import so logging works correctly
                 import salt.utils
                 salt.utils.daemonize()
+            set_pidfile(self.cli['pidfile'])
             master.start()
 
 
@@ -249,7 +249,6 @@ class Minion(object):
         import logging
         # Late import so logging works correctly
         import salt.minion
-        set_pidfile(self.cli['pidfile'])
         log = logging.getLogger(__name__)
         if check_user(self.opts['user'], log):
             try:
@@ -257,6 +256,7 @@ class Minion(object):
                     # Late import so logging works correctly
                     import salt.utils
                     salt.utils.daemonize()
+                set_pidfile(self.cli['pidfile'])
                 minion = salt.minion.Minion(self.opts)
                 minion.tune_in()
             except KeyboardInterrupt:
@@ -365,7 +365,6 @@ class Syndic(object):
 
         # Late import so logging works correctly
         import salt.minion
-        set_pidfile(self.cli['pidfile'])
         log = logging.getLogger(__name__)
         if check_user(self.opts['user'], log):
             try:
@@ -374,6 +373,7 @@ class Syndic(object):
                     # Late import so logging works correctly
                     import salt.utils
                     salt.utils.daemonize()
+                set_pidfile(self.cli['pidfile'])
                 syndic.tune_in()
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Syndic Minion')
