@@ -16,11 +16,9 @@ class Key(object):
     '''
     The object that encapsulates saltkey actions
     '''
-    def __init__(self, opts, stdout, stderr):
+    def __init__(self, opts):
         self.opts = opts
-        self.stdout = stdout
-        self.stderr = stderr
-        
+
     def _keys(self, key_type, full_path=False):
         '''
         Safely return the names of the unaccepted keys, pass True to return
@@ -38,7 +36,7 @@ class Key(object):
         if not os.path.isdir(dir_):
             err = ('The ' + subdir + ' directory is not present, ensure that '
                    'the master server has been started')
-            self.stderr.write(err + '\n')
+            sys.stderr.write(err + '\n')
             sys.exit(42)
         keys = os.listdir(dir_)
         if full_path:
@@ -47,32 +45,38 @@ class Key(object):
         else:
             ret = set(keys)
         return ret
+    
+    def _output(self, output):
+        if self.opts['outfile']:
+            file = open(self.opts['outfile'], 'a')
+            file.write(output + '\n')
+            file.close()
+        if not self.opts['quiet']:
+            print output
 
     def _list_pre(self):
         '''
         List the unaccepted keys
         '''
-        self.stdout.write(utils.LIGHT_RED + 'Unaccepted Keys:' + 
-                          utils.ENDC + '\n')
+        self._output(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('pre')):
-            self.stdout.write(utils.RED + key + utils.ENDC + '\n')
+            self._output(utils.RED + key + utils.ENDC)
 
     def _list_accepted(self):
         '''
         List the accepted public keys
         '''
-        self.stdout.write(utils.LIGHT_GREEN + 'Accepted Keys:' + 
-                          utils.ENDC + '\n')
+        self._output(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('acc')):
-            self.stdout.write(utils.GREEN + key + utils.ENDC + '\n')
+            self._output(utils.GREEN + key + utils.ENDC)
 
     def _list_rejected(self):
         '''
         List the unaccepted keys
         '''
-        self.stdout.write(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC + '\n')
+        self._output(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
         for key in sorted(self._keys('rej')):
-            self.stdout.write(utils.BLUE + key + utils.ENDC + '\n')
+            self._output(utils.BLUE + key + utils.ENDC)
 
     def _list_all(self):
         '''
@@ -89,30 +93,26 @@ class Key(object):
         keys = self._keys('pre', True).union(self._keys('acc', True))
         for key in sorted(keys):
             if key.endswith(name):
-                self.stdout.write(open(key, 'r').read() + '\n')
+                self._output(open(key, 'r').read())
 
     def _print_all(self):
         '''
         Print out the public keys, all of em'
         '''
-        self.stdout.write(utils.LIGHT_RED + 'Unaccepted keys:' + 
-                          utils.ENDC + '\n')
+        self._output(utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
-            self.stdout.write('  ' + utils.RED + os.path.basename(key) + 
-                              utils.ENDC + '\n')
-            self.stdout.write(open(key, 'r').read() + '\n')
-        self.stdout.write(utils.LIGHT_GREEN + 'Accepted keys:' + 
-                          utils.ENDC + '\n')
+            self._output('  ' + utils.RED + os.path.basename(key) + utils.ENDC)
+            self._output(open(key, 'r').read())
+        self._output(utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC)
         for key in sorted(self._keys('acc', True)):
-            self.stdout.write('  ' + utils.GREEN + os.path.basename(key) + 
-                              utils.ENDC + '\n')
-            self.stdout.write(open(key, 'r').read() + '\n')
-        self.stdout.write(utils.LIGHT_BLUE + 'Rejected keys:' + 
-                          utils.ENDC + '\n')
+            self._output('  ' + utils.GREEN + os.path.basename(key) + 
+                         utils.ENDC)
+            self._output(open(key, 'r').read())
+        self._output(utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
-            self.stdout.write('  ' + utils.BLUE + os.path.basename(key) + 
-                              utils.ENDC + '\n')
-            self.stdout.write(open(key, 'r').read() + '\n')
+            self._output('  ' + utils.BLUE + os.path.basename(key) + 
+                         utils.ENDC)
+            self._output(open(key, 'r').read())
 
     def _accept(self, key):
         '''
@@ -125,7 +125,7 @@ class Key(object):
         if not pre.count(key):
             err = ('The named host is unavailable, please accept an '
                    'available key')
-            self.stderr.write(err + '\n')
+            sys.stderr.write(err + '\n')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_accepted, key))
@@ -152,16 +152,13 @@ class Key(object):
         rej= os.path.join(minions_rejected, self.opts['delete'])
         if os.path.exists(pre):
             os.remove(pre)
-            self.stdout.write('Removed pending key %s\n' 
-                              % self.opts['delete'])
+            self._output('Removed pending key %s' % self.opts['delete'])
         if os.path.exists(acc):
             os.remove(acc)
-            self.stdout.write('Removed accepted key %s\n' 
-                              % self.opts['delete'])
+            self._output('Removed accepted key %s' % self.opts['delete'])
         if os.path.exists(rej):
             os.remove(rej)
-            self.stdout.write('Removed rejected key %s\n' 
-                              % self.opts['delete'])
+            self._output('Removed rejected key %s' % self.opts['delete'])
 
     def _reject(self, key):
         '''
@@ -174,7 +171,7 @@ class Key(object):
         if not pre.count(key):
             err = ('The named host is unavailable, please accept an '
                    'available key')
-            self.stderr.write(err + '\n')
+            sys.stderr.write(err + '\n')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_rejected, key))
@@ -192,12 +189,13 @@ class Key(object):
     def _check_minions_directories(self):
         minions_accepted = os.path.join(self.opts['pki_dir'], 'minions')
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
-        minions_rejected = os.path.join(self.opts['pki_dir'], 'minions_rejected')
+        minions_rejected = os.path.join(self.opts['pki_dir'], 
+                                        'minions_rejected')
         for dir in [minions_accepted, minions_pre, minions_rejected]:
             if not os.path.isdir(dir):
                 err = ('The minions directory {0} is not present, ensure '
                        'that the master server has been started'.format(dir))
-                self.stderr.write(err + '\n')
+                sys.stderr.write(err + '\n')
                 sys.exit(42)
         return minions_accepted, minions_pre, minions_rejected
 
