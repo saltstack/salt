@@ -239,6 +239,7 @@ def set_auth_key(
         if not os.path.isfile(fconfig):
             open(fconfig, 'a+').write('\n{0}'.format(auth_line))
             os.chown(fconfig, uinfo['uid'], uinfo['gid'])
+            os.chmod(fconfig, 384)
         else:
             open(fconfig, 'a+').write('\n{0}'.format(auth_line))
         return 'new'
