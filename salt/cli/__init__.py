@@ -592,7 +592,7 @@ class SaltCall(object):
                       'for all modules if none are specified'))
         parser.add_option('-l',
                 '--log-level',
-                default='warn',
+                default='info',
                 dest='log_level',
                 help='Set the output level for salt-call')
         parser.add_option('--raw-out',
