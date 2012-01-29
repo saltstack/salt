@@ -923,6 +923,12 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     '''
     Maintain a simple edit to a file
 
+    The file will be searched for the ``before`` pattern before making the edit
+    and then searched for the ``after`` pattern to verify the edit was
+    successful using :mod:`salt.modules.file.contains`. In general the
+    ``limit`` pattern should be as specific as possible and ``before`` and
+    ``after`` should contain the minimal text to be changed.
+
     Usage::
 
         # Disable the epel repo by default
@@ -932,6 +938,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
             - before: 1
             - after: 0
             - limit: ^enabled=
+
+        # Remove ldap from nsswitch
+        /etc/nsswitch.conf:
+        file:
+            - sed
+            - before: 'ldap'
+            - after: ''
+            - limit: '^passwd:'
 
     .. versionadded:: 0.9.5
     '''
@@ -949,8 +963,9 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
 
-    # make sure the pattern(s) match
+    # Look for the pattern before attempting the edit
     if not __salt__['file.contains'](name, before, limit):
+        # Pattern not found; try to guess why
         if __salt__['file.contains'](name, after, limit):
             ret['comment'] = "Edit already performed"
             ret['result'] = True
