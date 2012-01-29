@@ -1,14 +1,24 @@
-import unittest
 from salt.modules.hosts import list_hosts, get_ip, get_alias, has_pair, add_host,\
     set_host, rm_host
 from os import path
 import os
 import shutil
+import sys
+
+# support python < 2.7 via unittest2
+if sys.version_info[0:2] < (2,7):
+    try:
+        from unittest2 import TestCase, expectedFailure
+    except ImportError:
+        print "You need to install unittest2 to run the salt tests"
+        sys.exit(1)
+else:
+    from unittest import TestCase, expectedFailure
 
 TEMPLATES_DIR = path.dirname(path.abspath(__file__))
 
 monkey_pathed = (list_hosts, set_host, add_host, rm_host)
-class HostsModuleTest(unittest.TestCase):
+class HostsModuleTest(TestCase):
     def setUp(self):
         self._hfn = [f.hosts_filename for f in monkey_pathed]
         self.files = path.join(TEMPLATES_DIR, 'files')
