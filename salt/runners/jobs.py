@@ -47,3 +47,36 @@ def active():
                     ret[jid]['returned'].append(minion)
     print yaml.dump(ret)
 
+
+def lookup_jid(jid):
+    '''
+    Return the printout from a previousely executed job
+    '''
+
+    def _format_ret(self, full_ret):
+        '''
+        Take the full return data and format it to simple output
+        '''
+        ret = {}
+        out = ''
+        for key, data in full_ret.items():
+            ret[key] = data['ret']
+            if 'out' in data:
+                out = data['out']
+            return ret, out
+
+    client = salt.client.LocalClient(__opts__['config'])
+    full_ret = client.get_full_returns(jid, [], 0)
+    ret, out = _format_ret(full_ret)
+    # Determine the proper output method and run it
+    get_outputter = salt.output.get_outputter
+    if isinstance(ret, list) or isinstance(ret, dict):
+        if out:
+            printout = get_outputter(out)
+        else:
+            printout = get_outputter(None)
+    # Pretty print any salt exceptions
+    elif isinstance(ret, SaltException):
+        printout = get_outputter("txt")
+    printout(ret)
+    return ret
