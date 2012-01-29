@@ -480,14 +480,14 @@ class SaltKey(object):
                 dest='delete',
                 default='',
                 help='Delete the named key')
-        
+
         parser.add_option('-q',
                 '--quiet',
                 dest='quiet',
                 default=False,
                 action='store_true',
                 help='Supress output')
-        
+
         parser.add_option('--outfile',
                 dest='outfile',
                 default=None,
@@ -522,7 +522,7 @@ class SaltKey(object):
         options, args = parser.parse_args()
 
         opts = {}
-        
+
         opts['quiet'] = options.quiet
         opts['outfile'] = options.outfile
         opts['list'] = options.list_
@@ -592,7 +592,7 @@ class SaltCall(object):
                       'for all modules if none are specified'))
         parser.add_option('-l',
                 '--log-level',
-                default='info',
+                default='warn',
                 dest='log_level',
                 help='Set the output level for salt-call')
         parser.add_option('--raw-out',
