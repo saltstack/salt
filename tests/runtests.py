@@ -4,9 +4,20 @@ Discover all instances of unittest.TestCase in this directory.
 
 The current working directory must be set to the build of the salt you want to test.
 '''
-from unittest import TestLoader, TextTestRunner
 from os.path import dirname, abspath, relpath, splitext, normpath
 import sys, os, fnmatch
+
+# Since all the salt tests are written under python 2.7 they take
+# advantage of all the new functionality that was added in that
+# version. We need to use the unittest2 module on python < 2.7
+if sys.version_info[0:2] < (2,7):
+    try:
+        from unittest2 import TestLoader, TextTestRunner
+    except ImportError:
+        print "You need to install unittest2 to run the salt tests"
+        sys.exit(1)
+else:
+    from unittest import TestLoader, TextTestRunner
 
 TEST_DIR = dirname(normpath(abspath(__file__)))
 SALT_BUILD = os.getcwd()
