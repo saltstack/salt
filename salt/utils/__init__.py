@@ -30,6 +30,19 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
+months = {'01': 'Jan',
+          '02': 'Feb',
+          '03': 'Mar',
+          '04': 'Apr',
+          '05': 'May',
+          '06': 'Jun',
+          '07': 'Jul',
+          '08': 'Aug',
+          '09': 'Sep',
+          '10': 'Oct',
+          '11': 'Nov',
+          '12': 'Dec'}
+
 
 def get_colors(use=True):
     '''
@@ -182,3 +195,28 @@ def list_files(directory):
 
     return list(ret)
 
+def jid_to_time(jid):
+    '''
+    Convert a salt job id into the time when the job was invoked
+    '''
+    jid = str(jid)
+    if not len(jid) == 20:
+        return ''
+    year = jid[:4]
+    month = jid[4:6]
+    day = jid[6:8]
+    hour = jid[8:10]
+    minute = jid[10:12]
+    second = jid[12:14]
+    micro = jid[14:]
+
+    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(
+            year,
+            months[month],
+            day,
+            hour,
+            minute,
+            second,
+            micro
+            )
+    return ret
