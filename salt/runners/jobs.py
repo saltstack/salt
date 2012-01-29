@@ -7,6 +7,8 @@ import os
 
 # Import Salt Modules
 import salt.client
+import salt.payload
+import salt.utils
 
 # Import Third party libs
 import yaml
@@ -25,12 +27,12 @@ def active():
             continue
         for job in data:
             if not job['jid'] in ret:
-                ret[job['jid']] = {'running': [],
-                                   'returned': [],
-                                   'function': job['fun'],
-                                   'arguments': list(job['arg']),
-                                   'target': job['tgt'],
-                                   'target-type': job['tgt_type']}
+                ret[job['jid']] = {'Running': [],
+                                   'Returned': [],
+                                   'Function': job['fun'],
+                                   'Arguments': list(job['arg']),
+                                   'Target': job['tgt'],
+                                   'Target-type': job['tgt_type']}
             else:
                 ret[job['jid']]['running'].append({minion: job['pid']})
     if os.path.isdir(job_dir):
@@ -80,3 +82,23 @@ def lookup_jid(jid):
         printout = get_outputter("txt")
     printout(ret)
     return ret
+
+def list_jobs():
+    '''
+    List all detectable jobs and associated functions
+    '''
+    serial = salt.payload.Serial(__opts__)
+    ret = {}
+    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
+    for jid in os.listdir(job_dir):
+        loadpath = os.path.join(job_dir, jid, '.load.p')
+        if not os.path.isfile(loadpath):
+            continue
+        load = serial.load(open(loadpath, 'rb'))
+        ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
+                    'Function': load['fun'],
+                    'Arguments': list(load['arg']),
+                    'Target': load['tgt'],
+                    'Target-type': load['tgt_type']}
+    print yaml.dump(ret)
+
