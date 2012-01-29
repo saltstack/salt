@@ -53,7 +53,7 @@ def lookup_jid(jid):
     Return the printout from a previousely executed job
     '''
 
-    def _format_ret(self, full_ret):
+    def _format_ret(full_ret):
         '''
         Take the full return data and format it to simple output
         '''
