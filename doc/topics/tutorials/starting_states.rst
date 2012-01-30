@@ -149,7 +149,8 @@ directly.
 But with more than a single SLS file, more components can be added to the
 toolkit, consider this ssh example:
 
-/ssh/init.sls
+``/ssh/init.sls``
+
 .. code-block:: yaml
     
     openssh-client:
@@ -166,7 +167,8 @@ toolkit, consider this ssh example:
         - require:
           - pkg: openssh-client
 
-/ssh/server.sls
+``/ssh/server.sls``
+
 .. code-block:: yaml
 
     include:
@@ -231,7 +233,8 @@ needs to be placed.
 
 These examples will add more watchers to apache and change the ssh banner.
 
-/ssh/custom-server.sls
+``/ssh/custom-server.sls``
+
 .. code-block:: yaml
 
     include:
@@ -242,7 +245,8 @@ These examples will add more watchers to apache and change the ssh banner.
         file:
           - source: salt://ssh/custom-banner
 
-/python/mod_python.sls
+``/python/mod_python.sls``
+
 .. code-block:: yaml
 
     include:
@@ -301,7 +305,8 @@ available, ``salt`` and ``grains``. The salt object allows for any salt
 function to be called from within the template, and grains allows for the
 grains to be accessed from within the template. A few examples are in order:
 
-/apache/init.sls
+``/apache/init.sls``
+
 .. code-block:: yaml
 
     apache:
@@ -347,7 +352,8 @@ Red Hat, then the name of the apache package and service needs to be httpd.
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
 
-/moosefs/chunk.sls
+``/moosefs/chunk.sls``
+
 .. code-block:: yaml
 
     include:
@@ -421,7 +427,7 @@ but a SLS file set to use another renderer can be easily added to the tree.
 
 This example shows a very basic python SLS file:
 
-/python/django.sls
+``/python/django.sls``
 
 .. code-block:: python
 
