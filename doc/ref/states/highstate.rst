@@ -63,7 +63,7 @@ ID declaration
         unpredictable.
 
         Must be unique across entire state tree. If the same ID declaration is
-        used twice, only the first one matched will be used, all subsequent
+        used twice, only the first one matched will be used. All subsequent
         ID declarations with the same name will be ignored.
 
 Extend declaration
