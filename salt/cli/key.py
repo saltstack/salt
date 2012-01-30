@@ -6,11 +6,12 @@ The actual saltkey functional code
 import os
 import shutil
 import sys
-
+import logging
 # Import salt modules
 import salt.crypt
 import salt.utils as utils
 
+log = logging.getLogger(__name__)
 
 class Key(object):
     '''
@@ -36,7 +37,7 @@ class Key(object):
         if not os.path.isdir(dir_):
             err = ('The ' + subdir + ' directory is not present, ensure that '
                    'the master server has been started')
-            sys.stderr.write(err + '\n')
+            self._output(err, level='error')
             sys.exit(42)
         keys = os.listdir(dir_)
         if full_path:
@@ -46,11 +47,10 @@ class Key(object):
             ret = set(keys)
         return ret
     
-    def _output(self, output):
-        if self.opts['outfile']:
-            file = open(self.opts['outfile'], 'a')
-            file.write(output + '\n')
-            file.close()
+    def _output(self, output, level=None):
+        log_output = getattr(log, level, None)
+        if log_output:
+            log_output(output)
         if not self.opts['quiet']:
             print output
 
@@ -60,7 +60,8 @@ class Key(object):
         '''
         self._output(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('pre')):
-            self._output(utils.RED + key + utils.ENDC)
+            output = utils.RED + key + utils.ENDC
+            self._output(output)
 
     def _list_accepted(self):
         '''
@@ -123,12 +124,14 @@ class Key(object):
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
         if not pre.count(key):
-            err = ('The named host is unavailable, please accept an '
-                   'available key')
-            sys.stderr.write(err + '\n')
+            err = ('The key named %s does not exist, please accept an '
+                   'available key' %(key))
+            #log.error(err)
+            self._output(err, level='error')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_accepted, key))
+        self._output('Key for %s accepted.' %(key), level='info')
 
     def _accept_all(self):
         '''
@@ -152,13 +155,16 @@ class Key(object):
         rej= os.path.join(minions_rejected, self.opts['delete'])
         if os.path.exists(pre):
             os.remove(pre)
-            self._output('Removed pending key %s' % self.opts['delete'])
+            self._output('Removed pending key %s' % self.opts['delete'], 
+                         level='info')
         if os.path.exists(acc):
             os.remove(acc)
-            self._output('Removed accepted key %s' % self.opts['delete'])
+            self._output('Removed accepted key %s' % self.opts['delete'], 
+                         level='info')
         if os.path.exists(rej):
             os.remove(rej)
-            self._output('Removed rejected key %s' % self.opts['delete'])
+            self._output('Removed rejected key %s' % self.opts['delete'], 
+                         level='info')
 
     def _reject(self, key):
         '''
@@ -169,12 +175,13 @@ class Key(object):
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
         if not pre.count(key):
-            err = ('The named host is unavailable, please accept an '
-                   'available key')
-            sys.stderr.write(err + '\n')
+            err = ('The host named %s is unavailable, please accept an '
+                   'available key' %(key))
+            self._output(err, level='error')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_rejected, key))
+        self._output('%s key rejected.' %(key), level='info')
 
     def _reject_all(self):
         '''
@@ -195,7 +202,7 @@ class Key(object):
             if not os.path.isdir(dir):
                 err = ('The minions directory {0} is not present, ensure '
                        'that the master server has been started'.format(dir))
-                sys.stderr.write(err + '\n')
+                self._output(err, level='error')
                 sys.exit(42)
         return minions_accepted, minions_pre, minions_rejected
 
