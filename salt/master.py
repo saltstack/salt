@@ -591,7 +591,7 @@ class AESFuncs(object):
                 'ret': clear_load['ret'],
                }
         expr_form = 'glob'
-        timeout = 0
+        timeout = 5
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
