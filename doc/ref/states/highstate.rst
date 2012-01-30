@@ -62,6 +62,10 @@ ID declaration
         Must **not** contain a dot, otherwise highstate summary output will be
         unpredictable.
 
+        Must be unique across entire state tree. If the same ID declaration is
+        used twice, only the first one matched will be used. All subsequent
+        ID declarations with the same name will be ignored.
+
 Extend declaration
 ------------------
 
