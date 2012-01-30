@@ -62,6 +62,8 @@ ID declaration
         Must **not** contain a dot, otherwise highstate summary output will be
         unpredictable.
 
+        Must be unique within the same ``sls module``.
+
 Extend declaration
 ------------------
 
