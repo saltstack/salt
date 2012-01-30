@@ -59,6 +59,9 @@ ID declaration
 
         Occurs on the top level or under the :term:`extend declaration`.
 
+        Must **not** contain a dot, otherwise highstate summary output will be
+        unpredictable.
+
 Extend declaration
 ------------------
 
