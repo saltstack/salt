@@ -125,13 +125,13 @@ class State(object):
                 self.load_modules()
                 open(os.path.join(
                     self.opts['cachedir'],
-                    '.module_refresh'),
+                    'module_refresh'),
                     'w+').write('')
         elif data['fun'] == 'recurse':
             self.load_modules()
             open(os.path.join(
                 self.opts['cachedir'],
-                '.module_refresh'),
+                'module_refresh'),
                 'w+').write('')
 
     def format_verbosity(self, returns):
@@ -266,12 +266,12 @@ class State(object):
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
-                            # Make sure that there is only one key in the dict
-                            if len(arg.keys()) != 1:
-                                errors.append(('Multiple dictionaries defined'
-                                ' in argument of state {0} in sls {1}').format(
-                                    name,
-                                    body['__sls__']))
+                                # Make sure that there is only one key in the dict
+                                if len(arg.keys()) != 1:
+                                    errors.append(('Multiple dictionaries defined'
+                                    ' in argument of state {0} in sls {1}').format(
+                                        name,
+                                        body['__sls__']))
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue

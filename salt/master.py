@@ -13,10 +13,14 @@ import hashlib
 import tempfile
 import datetime
 import multiprocessing
+import subprocess
 
 # Import zeromq
 import zmq
 from M2Crypto import RSA
+
+# Import Third Party Libs
+import yaml
 
 # Import salt modules
 import salt.crypt
@@ -42,7 +46,7 @@ def prep_jid(opts, load):
         os.makedirs(jid_dir)
         serial.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
     else:
-        return prep_jid(cachedir, load)
+        return prep_jid(opts['cachedir'], load)
     return jid
 
 
@@ -372,6 +376,44 @@ class AESFuncs(object):
                   .format(id_))
         return False
 
+    def _ext_nodes(self, load):
+        '''
+        Return the results from an external node classifier if one is
+        specified
+        '''
+        if not 'id' in load:
+            log.error('Received call for external nodes without an id')
+            return {}
+        if not self.opts['external_nodes']:
+            return {}
+        if not salt.utils.which(self.opts['external_nodes']):
+            log.error(('Specified external nodes controller {0} is not' 
+                       ' available, please verify that it is installed'
+                       '').format(self.opts['external_nodes']))
+            return {}
+        cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
+        ndata = yaml.safe_loads(
+                subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE
+                    ).communicate()[0])
+        ret = {}
+        if 'environment' in ndata:
+            env = ndata['environment']
+        else:
+            env = 'base'
+        
+        if 'classes' in ndata:
+            if isinstance(ndata['classes'], dict):
+                ret[env] = ndata['classes'].keys()
+            elif isinstance(ndata['classes'], list):
+                ret[env] = ndata['classes']
+            else:
+                return ret
+        return ret
+
+
     def _serve_file(self, load):
         '''
         Return a chunk from a file based on the data received
@@ -424,6 +466,19 @@ class AESFuncs(object):
                             path
                             )
                         )
+        return ret
+
+    def _file_list_emptydirs(self, load):
+        '''
+        Return a list of all empty directories on the master
+        '''
+        ret = []
+        if load['env'] not in self.opts['file_roots']:
+            return ret
+        for path in self.opts['file_roots'][load['env']]:
+            for root, dirs, files in os.walk(path):
+                if len(dirs)==0 and len(files)==0:
+                    ret.append(os.path.relpath(root,path))
         return ret
 
     def _master_opts(self, load):
@@ -646,6 +701,9 @@ class ClearFuncs(object):
         pubfn_pend = os.path.join(self.opts['pki_dir'],
                 'minions_pre',
                 load['id'])
+        pubfn_rejected = os.path.join(self.opts['pki_dir'],
+                'minions_rejected',
+                load['id'])
         if self.opts['open_mode']:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -661,6 +719,12 @@ class ClearFuncs(object):
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 return ret
+        elif os.path.isfile(pubfn_rejected):
+            # The key has been rejected, don't place it in pending
+            log.info('Public key rejected for %(id)s', load)
+            ret = {'enc': 'clear',
+                   'load': {'ret': False}}
+            return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre

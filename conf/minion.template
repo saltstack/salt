@@ -5,7 +5,7 @@
 # resolved, then the minion will fail to start
 #master: salt
 
-# Set the post used by the master reply and authentication server
+# Set the port used by the master reply and authentication server
 #master_port: 4506
 
 # The user to run salt

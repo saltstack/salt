@@ -800,9 +800,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
         salt '*' solr.backup music
     '''
     path = __opts__['solr.backup_path']
-    print path
     numBackups = __opts__['solr.num_backups']
-    print numBackups
     if path is not None:
         if not path.endswith(os.path.sep):
             path += os.path.sep
@@ -1027,7 +1025,6 @@ def core_status(host=None, core_name=None):
         return ret
     extra = ['action=STATUS', 'core={0}'.format(core_name)]
     url = _format_url('admin/cores', host=host, core_name=None, extra=extra)
-    print url
     return _http_request(url)
 
 ################### DIH (Direct Import Handler) COMMANDS #####################

@@ -6,8 +6,6 @@ The management of salt command line utilities are stored in here
 import optparse
 import os
 import sys
-import yaml
-import json
 
 # Import salt components
 import salt.cli.caller
@@ -390,6 +388,10 @@ class SaltCP(object):
         opts['nodegroup'] = options.nodegroup
         opts['conf_file'] = options.conf_file
 
+        if len(args) <= 1:
+            parser.print_help()
+            parser.exit()
+
         if opts['list']:
             opts['tgt'] = args[0].split(',')
         else:
@@ -447,6 +449,19 @@ class SaltKey(object):
                 action='store_true',
                 help='Accept all pending keys')
 
+        parser.add_option('-r',
+                '--reject',
+                dest='reject',
+                default='',
+                help='Reject the specified public key')
+
+        parser.add_option('-R',
+                '--reject-all',
+                dest='reject_all',
+                default=False,
+                action='store_true',
+                help='Reject all pending keys')
+
         parser.add_option('-p',
                 '--print',
                 dest='print_',
@@ -465,6 +480,19 @@ class SaltKey(object):
                 dest='delete',
                 default='',
                 help='Delete the named key')
+
+        parser.add_option('-q',
+                '--quiet',
+                dest='quiet',
+                default=False,
+                action='store_true',
+                help='Supress output')
+        
+        parser.add_option('--logfile',
+                dest='logfile',
+                default='/var/log/salt/key.log',
+                help=('Send all output to a file. '
+                      'Default is /var/log/salt/key.log'))
 
         parser.add_option('--gen-keys',
                 dest='gen_keys',
@@ -496,15 +524,23 @@ class SaltKey(object):
 
         opts = {}
 
+        opts['quiet'] = options.quiet
+        opts['logfile'] = options.logfile
+        # I decided to always set this to info, since it really all is info or
+        # error.
+        opts['loglevel'] = 'info'
         opts['list'] = options.list_
         opts['list_all'] = options.list_all
         opts['accept'] = options.accept
         opts['accept_all'] = options.accept_all
+        opts['reject'] = options.reject
+        opts['reject_all'] = options.reject_all
         opts['print'] = options.print_
         opts['print_all'] = options.print_all
         opts['delete'] = options.delete
         opts['gen_keys'] = options.gen_keys
         opts['gen_keys_dir'] = options.gen_keys_dir
+        opts['outfile'] = 'turd'
         if options.keysize < 2048:
             opts['keysize'] = 2048
         else:
@@ -518,6 +554,9 @@ class SaltKey(object):
         '''
         Execute saltkey
         '''
+        import salt.log
+        salt.log.setup_logfile_logger(self.opts['logfile'], 
+                                      self.opts['loglevel'])
         key = salt.cli.key.Key(self.opts)
         key.run()
 

@@ -35,8 +35,6 @@ def _format_auth_line(
     return line
 
 
-# FIXME: mutable types as default parameter values, NO!
-# http://goo.gl/ToU2z
 def _replace_auth_key(
         user,
         key,
@@ -188,8 +186,6 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     return 'Key not present'
 
 
-# FIXME: mutable types as default parameter values, NO!
-# http://goo.gl/ToU2z
 def set_auth_key(
         user,
         key,
@@ -205,7 +201,6 @@ def set_auth_key(
         salt '*' ssh.set_auth_key <user> <key> dsa '[]' .ssh/authorized_keys
     '''
     enc = _refine_enc(enc)
-    ret = ''           # FIXME: where is ret used?
     replace = False
     uinfo = __salt__['user.info'](user)
     current = auth_keys(user, config)
@@ -236,6 +231,15 @@ def set_auth_key(
                     options)
         fconfig = os.path.join(uinfo['home'], config)
         if not os.path.isdir(os.path.dirname(fconfig)):
-            os.makedirs(os.path.dirname(fconfig))
-        open(fconfig, 'a+').write('\n{0}'.format(auth_line))
+            dpath = os.path.dirname(fconfig)
+            os.makedirs(dpath)
+            os.chown(dpath, uinfo['uid'], uinfo['gid'])
+            os.chmod(dpath, 448)
+            
+        if not os.path.isfile(fconfig):
+            open(fconfig, 'a+').write('\n{0}'.format(auth_line))
+            os.chown(fconfig, uinfo['uid'], uinfo['gid'])
+            os.chmod(fconfig, 384)
+        else:
+            open(fconfig, 'a+').write('\n{0}'.format(auth_line))
         return 'new'

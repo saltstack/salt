@@ -247,6 +247,10 @@ class Loader(object):
                 log.debug(('Failed to import module {0}, this is most likely'
                            ' NOT a problem: {1}').format(name, exc))
                 continue
+            except Exception as exc:
+                log.warning(('Failed to import module {0}, this is due most'
+                    ' likely to a syntax error: {1}').format(name, exc))
+                continue
             modules.append(mod)
         for mod in modules:
             virtual = ''
