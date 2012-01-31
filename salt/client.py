@@ -369,6 +369,8 @@ class LocalClient(object):
                     self.opts
                     )
                 )
+        log.info(('Publishing job: #{0[jid]}, func: "{0[fun]}", args:'
+                  ' "{0[args]}", target: "{0[tgt]}"').format(load))
         socket.send(package)
         payload = None
         for ind in range(100):
