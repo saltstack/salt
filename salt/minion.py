@@ -185,7 +185,7 @@ class Minion(object):
                 self.functions, self.returners = self.__load_modules()
 
         if self.opts['multiprocessing']:
-            if isinstance(data['fun'], list):
+            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 multiprocessing.Process(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
@@ -194,7 +194,7 @@ class Minion(object):
                     target=lambda: self._thread_return(data)
                 ).start()
         else:
-            if isinstance(data['fun'], list):
+            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 threading.Thread(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
