@@ -574,7 +574,7 @@ class Matcher(object):
         if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
-        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
+        return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
 
     def exsel_match(self, tgt):
         '''
