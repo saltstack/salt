@@ -77,7 +77,8 @@ class LocalClient(object):
             key = open(keyfile, 'r').read()
             return key
         except (OSError, IOError):
-            raise SaltClientError('Problem reading the salt root key. Are you root?')
+            raise SaltClientError(('Problem reading the salt root key. Are'
+                                   ' you root?'))
 
     def _check_glob_minions(self, expr):
         '''
