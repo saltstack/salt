@@ -90,6 +90,7 @@ def minion_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
+            'environment': None,
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],

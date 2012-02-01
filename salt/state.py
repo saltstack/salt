@@ -766,18 +766,29 @@ class HighState(object):
         include = {}
         done = {}
         # Gather initial top files
-        for env in self._get_envs():
-            if not env in tops:
-                tops[env] = []
-            tops[env].append(
+        if self.opts['environment']:
+            tops[self.opts['environment']] = [
                     self.state.compile_template(
                         self.client.cache_file(
                             self.opts['state_top'],
-                            env
+                            self.opts['environment']
                             ),
-                        env
+                        self.opts['environment']
                         )
-                    )
+                    ]
+        else:
+            for env in self._get_envs():
+                if not env in tops:
+                    tops[env] = []
+                tops[env].append(
+                        self.state.compile_template(
+                            self.client.cache_file(
+                                self.opts['state_top'],
+                                env
+                                ),
+                            env
+                            )
+                        )
         # Search initial top files for includes
         for env, ctops in tops.items():
             for ctop in ctops:
