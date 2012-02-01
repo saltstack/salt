@@ -789,6 +789,7 @@ class HighState(object):
                             env
                             )
                         )
+
         # Search initial top files for includes
         for env, ctops in tops.items():
             for ctop in ctops:
@@ -939,7 +940,11 @@ class HighState(object):
                     else:
                         for sub_sls in state.pop('include'):
                             if not list(mods).count(sub_sls):
-                                nstate, mods, err = self.render_state(sub_sls, env, mods)
+                                nstate, mods, err = self.render_state(
+                                        sub_sls,
+                                        env,
+                                        mods
+                                        )
                             if nstate:
                                 state.update(nstate)
                             if err:
