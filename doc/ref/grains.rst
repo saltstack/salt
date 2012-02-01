@@ -40,4 +40,6 @@ the salt minion and the principal example of how to write grains:
 Syncing Grains
 --------------
 
-Currently grains can only be reloaded by restarting the minion.
+Syncing grains can be done a number of ways, they are automatically synced when
+state.highstate is called, or the grains can be synced and reloaded by calling
+the saltutil.sync_grains or saltutil.sync_all functions.
