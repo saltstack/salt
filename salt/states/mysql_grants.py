@@ -1,17 +1,42 @@
 '''
 MySQL Grant Management
 =====================
-The mysql_grants module is used to grant and revoke MySQL permissions
+The mysql_grants module is used to grant and revoke MySQL permissions.
+
+The ``name`` you pass in purely symbolic and does not have anything to do
+with the grant itself.
+
+The ``database`` parameter needs to specify a 'priv_level' in the same
+specification as defined in the MySQL documentation:
+ - *
+ - *.*
+ - db_name.*
+ - db_name.tbl_name
+ - etc...
 
 .. code-block:: yaml
 
    frank_exampledb:
-      mysql_user:
+      mysql_grants:
        - present
        - grant: select,insert,update
-       - database: exampledb
+       - database: exampledb.*
        - user: frank
        - host: localhost
+   
+   frank_otherdb:
+     mysql_grants:
+       - present
+       - grant: all privileges
+       - database: otherdb.*
+       - user: frank
+
+   restricted_singletable:
+     mysql_grants:
+       - present
+       - grant: select
+       - database: somedb.sometable
+       - user: joe
 '''
 
 def present(name,
@@ -24,6 +49,18 @@ def present(name,
 
     name
         The name (key) of the grant to add
+
+    grant
+        The grant priv_type (ie. select,insert,update OR all privileges)
+
+    database
+        The database priv_level (ie. db.tbl OR db.*)
+
+    user
+        The user to apply the grant to
+
+    host
+        The MySQL server
     '''    
     ret = {'name': name,
            'changes': {},
@@ -68,7 +105,19 @@ def absent(name,
     Ensure that the grant is absent
 
     name
-        The name (key) of the grant to revoke
+        The name (key) of the grant to add
+
+    grant
+        The grant priv_type (ie. select,insert,update OR all privileges)
+
+    database
+        The database priv_level (ie. db.tbl OR db.*)
+
+    user
+        The user to apply the grant to
+
+    host
+        The MySQL server
     '''
     ret = {'name': name,
            'changes': {},
