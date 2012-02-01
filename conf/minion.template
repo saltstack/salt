@@ -92,6 +92,12 @@
 # not on the master it will be deleted from the minion. By default this is
 # enabled and can be disabled by changing this value to False
 #clean_dynamic_modules: True
+#
+# Normally the minion is not isolated to any single environment on the master
+# when running states, but the environment can be isolated on the minion side
+# by statically setting it. Remember that the recommended way to manage
+# environments is to issolate via the top file.
+#environment: None
 
 ######        Security settings       #####
 ###########################################

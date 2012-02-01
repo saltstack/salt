@@ -164,14 +164,13 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
-        log.info('Starting the Salt Publisher on %s', pub_uri)
+        log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
 
         try:
             while True:
                 package = pull_sock.recv()
-                log.info('Publishing command')
                 pub_sock.send(package)
         except KeyboardInterrupt:
             pub_sock.close()
@@ -606,6 +605,8 @@ class AESFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
+        log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
+                  ' "{0[args]}", target: "{0[tgt]}"').format(load))
         pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method
         return self.local.get_returns(

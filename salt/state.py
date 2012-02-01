@@ -766,18 +766,30 @@ class HighState(object):
         include = {}
         done = {}
         # Gather initial top files
-        for env in self._get_envs():
-            if not env in tops:
-                tops[env] = []
-            tops[env].append(
+        if self.opts['environment']:
+            tops[self.opts['environment']] = [
                     self.state.compile_template(
                         self.client.cache_file(
                             self.opts['state_top'],
-                            env
+                            self.opts['environment']
                             ),
-                        env
+                        self.opts['environment']
                         )
-                    )
+                    ]
+        else:
+            for env in self._get_envs():
+                if not env in tops:
+                    tops[env] = []
+                tops[env].append(
+                        self.state.compile_template(
+                            self.client.cache_file(
+                                self.opts['state_top'],
+                                env
+                                ),
+                            env
+                            )
+                        )
+
         # Search initial top files for includes
         for env, ctops in tops.items():
             for ctop in ctops:
@@ -865,6 +877,9 @@ class HighState(object):
         '''
         matches = {}
         for env, body in top.items():
+            if self.opts['environment']:
+                if not env == self.opts['environment']:
+                    continue
             for match, data in body.items():
                 if self.matcher.confirm_top(match, data):
                     if env not in matches:
@@ -928,7 +943,11 @@ class HighState(object):
                     else:
                         for sub_sls in state.pop('include'):
                             if not list(mods).count(sub_sls):
-                                nstate, mods, err = self.render_state(sub_sls, env, mods)
+                                nstate, mods, err = self.render_state(
+                                        sub_sls,
+                                        env,
+                                        mods
+                                        )
                             if nstate:
                                 state.update(nstate)
                             if err:

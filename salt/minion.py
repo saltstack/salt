@@ -119,6 +119,7 @@ class Minion(object):
         '''
         Return the functions and the returners loaded up from the loader module
         '''
+        self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts)
         return functions, returners
@@ -574,7 +575,7 @@ class Matcher(object):
         if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
-        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
+        return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
 
     def exsel_match(self, tgt):
         '''
