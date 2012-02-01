@@ -224,3 +224,23 @@ def boot_time():
         salt '*' ps.boot_time
     '''
     return psutil.BOOT_TIME
+
+def network_io_counters():
+    '''
+    Return network I/O statisitics.
+
+    CLI Example::
+
+        salt '*' ps.network_io_counters
+    '''
+    return dict(psutil.network_io_counters()._asdict())
+
+def disk_io_counters():
+    '''
+    Return disk I/O statisitics.
+
+    CLI Example::
+
+        salt '*' ps.disk_io_counters
+    '''
+    return dict(psutil.disk_io_counters()._asdict())
