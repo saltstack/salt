@@ -4,9 +4,9 @@ Ordering States
 
 When creating salt sls files, it is often important to ensure that they run in
 a specific order. While states will always execute in the same order, that
-order is not nessisarily defined the way you want it.
+order is not necessarily defined the way you want it.
 
-A few tools exist in Salt to set up the corect state ordering, these tools
+A few tools exist in Salt to set up the correct state ordering. These tools
 consist of requisite declarations and order options.
 
 The Order Option
@@ -33,8 +33,8 @@ Any state declared without an order option will be executed after all states
 with order options are executed.
 
 But this construct can only handle ordering states from the beggining.
-Sometimes you may want to send a state to the end of the line, to do this
-set the order to last:
+Sometimes you may want to send a state to the end of the line. To do this,
+set the order to ``last``:
 
 .. code-block:: yaml
 
