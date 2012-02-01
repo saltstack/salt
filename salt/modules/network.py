@@ -29,7 +29,7 @@ def ping(host):
 
     CLI Example::
 
-        salt '*' network.ping archlinux.org -c 4
+        salt '*' network.ping archlinux.org
     '''
     cmd = 'ping -c 4 %s' % _sanitize_host(host)
     return __salt__['cmd.run'](cmd)
