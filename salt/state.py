@@ -877,6 +877,9 @@ class HighState(object):
         '''
         matches = {}
         for env, body in top.items():
+            if self.opts['environment']:
+                if not env == self.opts['environment']:
+                    continue
             for match, data in body.items():
                 if self.matcher.confirm_top(match, data):
                     if env not in matches:
