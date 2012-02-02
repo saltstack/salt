@@ -48,8 +48,8 @@ class Key(object):
         return ret
     
     def _output(self, output, level=None):
-        log_output = getattr(log, level, None)
-        if log_output:
+        if level:
+            log_output = getattr(log, level, None)
             log_output(output)
         if not self.opts['quiet']:
             print output
