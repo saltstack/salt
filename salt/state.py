@@ -569,11 +569,15 @@ class State(object):
         for r_state in reqs.keys():
             if r_state in low:
                 for req in low[r_state]:
+                    found = False
                     for chunk in chunks:
                         if chunk['__id__'] == req[req.keys()[0]] or \
                                 chunk['name'] == req[req.keys()[0]]:
                             if chunk['state'] == req.keys()[0]:
+                                found = True
                                 reqs[r_state].append(chunk)
+                    if not found:
+                        return 'unmet'
         fun_stats = set()
         for r_state, chunks in reqs.items():
             for chunk in chunks:
@@ -605,21 +609,35 @@ class State(object):
         '''
         tag = _gen_tag(low)
         requisites = ('require', 'watch')
-        import pprint
-        pprint.pprint(low)
         status = self.check_requisite(low, running, chunks)
-        print status
         if status == 'unmet':
+            lost = {'require': [],
+                    'watch': []}
             reqs = []
             for requisite in requisites:
                 if not requisite in low:
                     continue
                 for req in low[requisite]:
+                    found = False
                     for chunk in chunks:
                         if chunk['name'] == req[req.keys()[0]] \
                                 or chunk['__id__'] == req[req.keys()[0]]:
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
+                                found = True
+                    if not found:
+                        lost[requisite].append(req)
+            if lost['require'] or lost['watch']:
+                comment = 'The following requisites were not found:\n'
+                for requisite, lreqs in lost.items():
+                    for lreq in lreqs:
+                        comment += '{0}{1}: {2}\n'.format(' '*19,
+                                requisite,
+                                lreq)
+                running[tag] = {'changes': {},
+                                'result': False,
+                                'comment': comment}
+                return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
                 # it has not been run already
