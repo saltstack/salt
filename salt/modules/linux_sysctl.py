@@ -65,6 +65,8 @@ def assign(name, value):
     cmd = 'sysctl -w {0}={1}'.format(name, value)
     ret = {}
     out = __salt__['cmd.run'](cmd).strip()
+    if ' = ' not in out:
+        raise CommandExecutionError('sysctl -w failed: {0}'.format(out))
     comps = out.split(' = ')
     ret[comps[0]] = comps[1]
     return ret
