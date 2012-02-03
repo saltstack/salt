@@ -4,6 +4,7 @@ Publish a command from a minion to a target
 
 import zmq
 import ast
+import time
 
 import salt.crypt
 import salt.payload
@@ -18,7 +19,7 @@ def _get_socket():
     return socket
 
 
-def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
+def publish(tgt, fun, arg=None, expr_form='glob', returner='', context=''):
     '''
     Publish a command from the minion out to other minions, publications need
     to be enabled on the Salt master and the minion needs to have permission
@@ -45,11 +46,13 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
         arg = []
 
     try:
-        if isinstance(ast.literal_eval(arg), dict):
+        if isinstance(arg, dict):
             arg = [arg,]
-    except:
+        elif isinstance(ast.literal_eval(arg), dict):
+            arg = [arg,]
+    except (SyntaxError, ValueError):
         if isinstance(arg, str):
-            arg = arg.split(',')
+    	    arg = arg.split(',')
 
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
@@ -61,7 +64,8 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner=''):
             'tgt': tgt,
             'ret': returner,
             'tok': tok,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'context': context}
     payload['load'] = auth.crypticle.dumps(load)
     socket = _get_socket()
     socket.send(serial.dumps(payload))

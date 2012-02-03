@@ -38,8 +38,14 @@ class Caller(object):
             sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(1)
         try:
-            ret['return'] = self.minion.functions[fun](
-                    *self.opts['arg']
+            if "returner" in self.opts:
+                returner=self.opts['returner']
+            else:
+                returner=None
+            
+            ret['return'] = self.minion.functions[self.opts['fun']](
+                    *self.opts['arg'],
+                    returner=returner
                     )
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'

@@ -589,6 +589,8 @@ class AESFuncs(object):
                 'jid': jid,
                 'ret': clear_load['ret'],
                }
+        if "context" in clear_load:
+            load['context'] = clear_load['context']
         expr_form = 'glob'
         timeout = 5
         if 'tgt_type' in clear_load:

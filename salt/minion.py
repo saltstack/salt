@@ -254,6 +254,7 @@ class Minion(object):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         self._return_pub(ret)
+        
         if data['ret']:
             for returner in set(data['ret'].split(',')):
                 ret['id'] = self.opts['id']

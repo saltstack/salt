@@ -242,6 +242,8 @@ class State(object):
                 if state.startswith('__'):
                     continue
                 if not isinstance(body[state], list):
+                    if isinstance(body[state], tuple):
+                        continue
                     err = ('The state {0} in sls {1} is not formed as a list'
                            .format(name, body['__sls__']))
                     errors.append(err)
