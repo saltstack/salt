@@ -65,6 +65,7 @@ something like this:
         - source: salt://code/flask
 '''
 
+import codecs
 import os
 import shutil
 import difflib
@@ -217,7 +218,10 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         passthrough['mode'] = mode
         passthrough['env'] = env
         template = get_template(sfn, __opts__, env)
-        open(tgt, 'w+').write(template.render(**passthrough))
+        try:
+            open(tgt, 'w+').write(template.render(**passthrough))
+        except UnicodeEncodeError:
+            codecs.open(tgt, encoding='utf-8', mode='w+').write(template.render(**passthrough))
         if newline:
             open(tgt, 'a').write('\n')
         return {'result': True,
