@@ -24,6 +24,8 @@ def __virtual__():
         if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) <= 5:
                 return 'pkg'
+            else:
+                return False
         else:
             return False
 
