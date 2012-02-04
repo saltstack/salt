@@ -49,7 +49,7 @@ just the state tree, then the file_roots option can be expanded:
 
 Then our top file could reference the environments:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     dev:
       'webserver*dev*':
@@ -74,7 +74,7 @@ environment, and many environments can be crossed together. For instance,
 a separate global state tree could be added to the base environment if
 it suits your deployment:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     base:
       '*':
@@ -104,9 +104,10 @@ nothing to do with states can be defined and used to distribute other files.
 
 A clean and recommended setup for multiple environments would look like this:
 
-master file_roots configuration
+
 .. code-block:: yaml
 
+    # Master file_roots configuration:
     file_roots:
       base:
         - /srv/salt/base
@@ -121,7 +122,7 @@ Then only place state trees in the dev, qa and prod environments, leaving
 the base environment open for generic file transfers. Then the top.sls file
 would look something like this:
     
-.. code_block:: yaml
+.. code-block:: yaml
 
     dev:
       'webserver*dev*':
