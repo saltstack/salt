@@ -540,7 +540,6 @@ class SaltKey(object):
         opts['delete'] = options.delete
         opts['gen_keys'] = options.gen_keys
         opts['gen_keys_dir'] = options.gen_keys_dir
-        opts['outfile'] = 'turd'
         if options.keysize < 2048:
             opts['keysize'] = 2048
         else:
