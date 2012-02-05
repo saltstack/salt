@@ -116,8 +116,8 @@ class State(object):
             self.mod_init.add(low['state'])
         else:
             return
-        if mod_init in self.states:
-            self.states[mod_init]()
+        if minit in self.states:
+            self.states[minit]()
 
     def load_modules(self):
         '''
