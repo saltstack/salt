@@ -41,7 +41,7 @@ def installed(name, repo='', skip_verify=False):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package ' + name + ' is already installed'}
+                'comment': 'Package {0} is already installed'.format(name)}
     changes = __salt__['pkg.install'](name,
                                       True,
 				      repo=repo,
@@ -50,11 +50,11 @@ def installed(name, repo='', skip_verify=False):
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package ' + name + ' failed to install'}
+                'comment': 'Package {0} failed to install'.format(name)}
     return {'name': name,
             'changes': changes,
             'result': True,
-            'comment': 'Package ' + name + ' installed'}
+            'comment': 'Package {0} installed'.format(name)}
 
 
 def latest(name, repo='', skip_verify=False):
@@ -125,18 +125,18 @@ def removed(name):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package ' + name + ' is not installed'}
+                'comment': 'Package {0} is not installed'.format(name)}
     else:
         changes['removed'] = __salt__['pkg.remove'](name)
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package ' + name + ' failed to remove'}
+                'comment': 'Package {0} failed to remove'.format(name)}
     return {'name': name,
         'changes': changes,
         'result': True,
-        'comment': 'Package ' + name + ' removed'}
+        'comment': 'Package {0} removed'.format(name)}
 
 
 def purged(name):
@@ -152,7 +152,7 @@ def purged(name):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package ' + name + ' is not installed'}
+                'comment': 'Package {0} is not installed'.format(name)}
     else:
         changes['removed'] = __salt__['pkg.purge'](name)
 
@@ -160,8 +160,8 @@ def purged(name):
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package ' + name + ' failed to purge'}
+                'comment': 'Package {0} failed to purge'.format(name)}
     return {'name': name,
         'changes': changes,
         'result': True,
-        'comment': 'Package ' + name + ' purged'}
+        'comment': 'Package {0} purged'.format(name)}
