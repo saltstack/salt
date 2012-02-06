@@ -608,7 +608,7 @@ class AESFuncs(object):
             )
         pub_sock.connect(pull_uri)
         log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
-                  ' "{0[args]}", target: "{0[tgt]}"').format(load))
+                  ' "{0[arg]}", target: "{0[tgt]}"').format(load))
         pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method
         return self.local.get_returns(
