@@ -23,6 +23,15 @@ import MySQLdb.cursors
 log = logging.getLogger(__name__)
 __opts__ = {}
 
+def __virtual__():
+    '''
+    Only load this module if the mysql config is set
+    '''
+    if 'mysql' in __opts__:
+        return 'mysql'
+    return False
+
+
 def __check_table(name, table):
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
@@ -598,3 +607,4 @@ def grant_revoke(grant,
        log.info("Grant '{0}' revoked")
        return True
     return False
+
