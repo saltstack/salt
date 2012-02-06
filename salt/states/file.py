@@ -459,6 +459,36 @@ def managed(name,
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
+    
+    # If the source is a list then find which file exists
+    if isinstance(source, list):
+        # get the master file list
+        mfiles = __salt__['cp.list_master'](__env__)
+        for single in source:
+            if isinstance(single, dict):
+                # check the proto, if it is http or ftp then download the file
+                # to check, if it is salt then check the master list
+                if len(single) != 1:
+                    continue
+                single_src = single[single.keys()[0]]
+                single_hash = single[single_src]
+                proto = urlparse.urlparse(single_src).scheme
+                if proto == 'salt':
+                    if single_src in mfiles:
+                        source = single_src
+                        break
+                elif proto.startswith('http') or proto == 'ftp':
+                    dest = temptile.mkstemp()[1]
+                    fn_ = __salt__['cp.get_url'](single_src, dest)
+                    os.remove(fn_)
+                    if fn_:
+                        source = single_src
+                        source_hash = single_hash
+                        break
+            elif isinstance(single, str):
+                if single in mfiles:
+                    source = single
+                    break
 
     # If the file is a template and the contents is managed
     # then make sure to cpy it down and templatize  things.
