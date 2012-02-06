@@ -31,7 +31,7 @@ def _format_auth_line(
     line = ''
     if options:
         line += '{0} '.format(','.join(options))
-    line += '{0} {1} {2}'.format(enc, key, comment)
+    line += '{0} {1} {2}\n'.format(enc, key, comment)
     return line
 
 
@@ -237,9 +237,9 @@ def set_auth_key(
             os.chmod(dpath, 448)
             
         if not os.path.isfile(fconfig):
-            open(fconfig, 'a+').write('\n{0}'.format(auth_line))
+            open(fconfig, 'a+').write('{0}'.format(auth_line))
             os.chown(fconfig, uinfo['uid'], uinfo['gid'])
             os.chmod(fconfig, 384)
         else:
-            open(fconfig, 'a+').write('\n{0}'.format(auth_line))
+            open(fconfig, 'a+').write('{0}'.format(auth_line))
         return 'new'

@@ -12,11 +12,12 @@ declarations are typically rather simple:
         - installed
 '''
 import logging
+import os
 from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)
 
-def installed(name, repo='', skip_verify=False):
+def installed(name, refresh=False, repo='', skip_verify=False):
     '''
     Verify that the package is installed, and only that it is installed. This
     state will not upgrade an existing package and only verify that it is
@@ -37,27 +38,35 @@ def installed(name, repo='', skip_verify=False):
           - repo: mycustomrepo
           - skip_verify: True
     '''
+    rtag = __gen_rtag()
     if __salt__['pkg.version'](name):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package ' + name + ' is already installed'}
-    changes = __salt__['pkg.install'](name,
-                                      True,
-				      repo=repo,
-				      skip_verify=skip_verify)
+                'comment': 'Package {0} is already installed'.format(name)}
+    if refresh or os.path.isfile(rtag):
+        changes = __salt__['pkg.install'](name,
+                          True,
+                          repo=repo,
+                          skip_verify=skip_verify)
+        if os.path.isfile(rtag):
+            os.remove(rtag)
+    else:
+        changes = __salt__['pkg.install'](name,
+                          repo=repo,
+                          skip_verify=skip_verify)
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package ' + name + ' failed to install'}
+                'comment': 'Package {0} failed to install'.format(name)}
     return {'name': name,
             'changes': changes,
             'result': True,
-            'comment': 'Package ' + name + ' installed'}
+            'comment': 'Package {0} installed'.format(name)}
 
 
-def latest(name, repo='', skip_verify=False):
+def latest(name, refresh=False, repo='', skip_verify=False):
     '''
     Verify that the named package is installed and the latest available
     package. If the package can be updated this state function will update
@@ -72,6 +81,7 @@ def latest(name, repo='', skip_verify=False):
     skip_verify : False
         Skip the GPG verification check for the package to be installed
     '''
+    rtag = __gen_rtag()
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     version = __salt__['pkg.version'](name)
@@ -93,10 +103,18 @@ def latest(name, repo='', skip_verify=False):
             return ret
 
     if has_newer:
-        ret['changes'] = __salt__['pkg.install'](name,
-	                                         True,
-						 repo=repo,
-						 skip_verify=skip_verify)
+        if refresh or os.path.isfile(rtag):
+            ret['changes'] = __salt__['pkg.install'](name,
+                             True,
+                             repo=repo,
+                             skip_verify=skip_verify)
+            if os.path.isfile(rtag):
+                os.remove(rtag)
+
+        else:
+            ret['changes'] = __salt__['pkg.install'](name,
+                             repo=repo,
+                             skip_verify=skip_verify)
 
         if ret['changes']:
             ret['comment'] = 'Package {0} upgraded to latest'.format(name)
@@ -125,18 +143,18 @@ def removed(name):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package ' + name + ' is not installed'}
+                'comment': 'Package {0} is not installed'.format(name)}
     else:
         changes['removed'] = __salt__['pkg.remove'](name)
     if not changes:
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package ' + name + ' failed to remove'}
+                'comment': 'Package {0} failed to remove'.format(name)}
     return {'name': name,
         'changes': changes,
         'result': True,
-        'comment': 'Package ' + name + ' removed'}
+        'comment': 'Package {0} removed'.format(name)}
 
 
 def purged(name):
@@ -152,7 +170,7 @@ def purged(name):
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package ' + name + ' is not installed'}
+                'comment': 'Package {0} is not installed'.format(name)}
     else:
         changes['removed'] = __salt__['pkg.purge'](name)
 
@@ -160,8 +178,27 @@ def purged(name):
         return {'name': name,
                 'changes': changes,
                 'result': False,
-                'comment': 'Package ' + name + ' failed to purge'}
+                'comment': 'Package {0} failed to purge'.format(name)}
     return {'name': name,
         'changes': changes,
         'result': True,
-        'comment': 'Package ' + name + ' purged'}
+        'comment': 'Package {0} purged'.format(name)}
+
+
+def mod_init(low):
+    '''
+    Refresh the package database here so that it only needs to happen once
+    '''
+    if low['fun'] == 'installed' or low['fun'] == 'latest':
+        rtag = __gen_rtag()
+        if not os.path.exists(rtag):
+            open(rtag, 'w+').write('')
+        return True
+    else:
+        return False
+
+def __gen_rtag():
+    '''
+    Return the location of the refresh tag
+    '''
+    return os.path.join(__opts__['cachedir'], 'pkg_refresh')

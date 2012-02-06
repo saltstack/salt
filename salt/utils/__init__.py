@@ -167,6 +167,7 @@ def profile_func(filename=None):
         return profiled_func
     return proffunc
 
+
 def which(exe=None):
     '''
     Python clone of POSIX's /usr/bin/which
@@ -181,6 +182,7 @@ def which(exe=None):
                 return full_path
     return None
 
+
 def list_files(directory):
     '''
     Return a list of all files found under directory
@@ -194,6 +196,7 @@ def list_files(directory):
             ret.add(os.path.join(root, name))
 
     return list(ret)
+
 
 def jid_to_time(jid):
     '''
@@ -220,3 +223,18 @@ def jid_to_time(jid):
             micro
             )
     return ret
+
+
+def gen_mac(prefix='52:54:'):
+    '''
+    Generates a mac addr with the defined prefix
+    '''
+    src = ['1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f']
+    mac = prefix
+    while len(mac) < 18:
+        if len(mac) < 3:
+            mac = random.choice(src) + random.choice(src) + ':'
+        if mac.endswith(':'):
+            mac += random.choice(src) + random.choice(src) + ':'
+    return mac[:-1]
+

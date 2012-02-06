@@ -142,6 +142,7 @@ def master_config(path):
             'worker_threads': 5,
             'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',
+            'timeout': 5,
             'keep_jobs': 24,
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',

@@ -39,8 +39,7 @@ class SaltCMD(object):
 
         parser.add_option('-t',
                 '--timeout',
-                default=5,
-                type=int,
+                default=None,
                 dest='timeout',
                 help=('Set the return timeout for batch jobs; '
                       'default=5 seconds'))
@@ -144,7 +143,8 @@ class SaltCMD(object):
 
         opts = {}
 
-        opts['timeout'] = options.timeout
+        if not options.timeout is None:
+            opts['timeout'] = int(options.timeout)
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
@@ -157,10 +157,6 @@ class SaltCMD(object):
         opts['txt_out'] = options.txt_out
         opts['yaml_out'] = options.yaml_out
         opts['json_out'] = options.json_out
-
-        if opts['return']:
-            if opts['timeout'] == 5:
-                opts['timeout'] = 0
 
         if options.query:
             opts['query'] = options.query
@@ -229,6 +225,8 @@ class SaltCMD(object):
                     print ''
 
         else:
+            if not 'timeout' in self.opts:
+                self.opts['timeout'] = local.opts['timeout']
             args = [self.opts['tgt'],
                     self.opts['fun'],
                     self.opts['arg'],
@@ -540,7 +538,6 @@ class SaltKey(object):
         opts['delete'] = options.delete
         opts['gen_keys'] = options.gen_keys
         opts['gen_keys_dir'] = options.gen_keys_dir
-        opts['outfile'] = 'turd'
         if options.keysize < 2048:
             opts['keysize'] = 2048
         else:

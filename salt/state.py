@@ -103,6 +103,21 @@ class State(object):
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.load_modules()
+        self.mod_init = set()
+
+    def _mod_init(self, low):
+        '''
+        Check the module initilization function, if this is the first run of
+        a state package that has a mod_init function, then execute the
+        mod_init function in the state module.
+        '''
+        minit = '{0}.mod_init'.format(low['state'])
+        if not low['state'] in self.mod_init:
+            if minit in self.states:
+                mret = self.states[minit](low)
+                if not mret:
+                    return
+                self.mod_init.add(low['state'])
 
     def load_modules(self):
         '''
@@ -607,6 +622,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then the
         chunk
         '''
+        self._mod_init(low)
         tag = _gen_tag(low)
         requisites = ('require', 'watch')
         status = self.check_requisite(low, running, chunks)
