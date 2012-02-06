@@ -143,7 +143,8 @@ class SaltCMD(object):
 
         opts = {}
 
-        opts['timeout'] = options.timeout
+        if not options.timeout is None:
+            opts['timeout'] = int(options.timeout)
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
