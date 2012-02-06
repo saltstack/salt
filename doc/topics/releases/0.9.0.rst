@@ -24,8 +24,8 @@ Here is the md5sum:
 
 9a925da04981e65a0f237f2e77ddab37
 
-For instructions on how to set up Salt please see the :doc:`installation
-instructions </topics/installation>`.
+For instructions on how to set up Salt please see the `installation`_
+instructions.
 
 New Features
 ------------

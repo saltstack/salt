@@ -13,7 +13,7 @@ Learn about the various parts of Salt in five minute increments (or less).
   :doc:`Overview <topics/index>`
   | :doc:`Community </topics/community>`
 * **The basics:**
-  :doc:`Installation <topics/installation>`
+  `Installation`_
   | :doc:`Configuration <topics/configuration>`
   | |vid| `Watch the screencast <http://blip.tv/saltstack/salt-installation-configuration-and-remote-execution-5713423>`_
 * **Remote execution:**
