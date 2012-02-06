@@ -6,8 +6,6 @@ Full Table of Contents
     :maxdepth: 3
     :glob:
 
-    home
-
     topics/index
     topics/configuration
     topics/tutorials/modules
