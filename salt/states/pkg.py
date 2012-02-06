@@ -11,13 +11,14 @@ declarations are typically rather simple:
       pkg:
         - installed
 '''
+# Import python ilbs
 import logging
 import os
 from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)
 
-def installed(name, refresh=False, repo='', skip_verify=False):
+def installed(name, version=None, refresh=False, repo='', skip_verify=False):
     '''
     Verify that the package is installed, and only that it is installed. This
     state will not upgrade an existing package and only verify that it is
@@ -39,7 +40,15 @@ def installed(name, refresh=False, repo='', skip_verify=False):
           - skip_verify: True
     '''
     rtag = __gen_rtag()
-    if __salt__['pkg.version'](name):
+    cver = __salt__['pkg.version'](name)
+    if cver == version:
+        # The package is installed and is the correct version
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'Package {0} is already installed and is the correct version'.format(name)}
+    elif cver:
+        # The package is installed
         return {'name': name,
                 'changes': {},
                 'result': True,
@@ -47,12 +56,14 @@ def installed(name, refresh=False, repo='', skip_verify=False):
     if refresh or os.path.isfile(rtag):
         changes = __salt__['pkg.install'](name,
                           True,
+                          version=version,
                           repo=repo,
                           skip_verify=skip_verify)
         if os.path.isfile(rtag):
             os.remove(rtag)
     else:
         changes = __salt__['pkg.install'](name,
+                          version=version,
                           repo=repo,
                           skip_verify=skip_verify)
     if not changes:
