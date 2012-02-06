@@ -31,6 +31,10 @@
 # Set the number of hours to keep old job information
 #keep_jobs: 24
 
+# Set the default timeout for the salt command and api, the default is 5
+# seconds
+#timeout: 5
+
 # Set the directory used to hold unix sockets
 #sock_dir: /tmp/salt-unix
 
