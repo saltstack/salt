@@ -591,6 +591,8 @@ class AESFuncs(object):
                }
         expr_form = 'glob'
         timeout = 5
+        if 'tmo' in clear_load:
+            timeout = int(clear_load['tmo'])
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
