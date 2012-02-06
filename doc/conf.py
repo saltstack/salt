@@ -110,12 +110,8 @@ extlinks = {
 
 
 ### HTML options
-if on_rtd:
-    html_theme = 'default'
-else:
-    html_theme = 'saltstack'
+html_theme = 'default'
 
-html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
 
