@@ -132,12 +132,14 @@ class LocalClient(object):
         tgt,
         fun,
         arg=(),
-        timeout=5,
+        timeout=None,
         expr_form='glob',
         ret=''):
         '''
         Execute a salt command and return.
         '''
+        if timeout is None:
+            timeout = self.opts['timeout']
         jid = prep_jid(self.opts['cachedir'])
         pub_data = self.pub(
             tgt,
