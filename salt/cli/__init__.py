@@ -158,10 +158,6 @@ class SaltCMD(object):
         opts['yaml_out'] = options.yaml_out
         opts['json_out'] = options.json_out
 
-        if opts['return']:
-            if opts['timeout'] == 5:
-                opts['timeout'] = 0
-
         if options.query:
             opts['query'] = options.query
             if len(args) < 1:
