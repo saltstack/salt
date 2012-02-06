@@ -31,6 +31,12 @@ This does issue the burden, that function names, state names and function
 arguments should be very human readable inside state modules, since they
 directly define the user interface.
 
+Using Custom State Modules
+==========================
+
+Place your custom state modules inside a ``_states`` directory within the 
+``file_roots`` specified by the master config file. 
+
 Cross Calling Modules
 =====================
 
