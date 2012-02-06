@@ -9,7 +9,6 @@ Full Table of Contents
     home
 
     topics/index
-    topics/installation
     topics/configuration
     topics/tutorials/modules
     topics/tutorials/states*
