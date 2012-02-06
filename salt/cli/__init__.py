@@ -225,6 +225,8 @@ class SaltCMD(object):
                     print ''
 
         else:
+            if not 'timeout' in self.opts:
+                self.opts['timeout'] = local.opts['timeout']
             args = [self.opts['tgt'],
                     self.opts['fun'],
                     self.opts['arg'],
