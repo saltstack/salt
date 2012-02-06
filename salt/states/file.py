@@ -470,7 +470,7 @@ def managed(name,
                 # to check, if it is salt then check the master list
                 if len(single) != 1:
                     continue
-                single_src = single[single.keys()[0]]
+                single_src = single.keys()[0]
                 single_hash = single[single_src]
                 proto = urlparse.urlparse(single_src).scheme
                 if proto == 'salt':
@@ -478,7 +478,7 @@ def managed(name,
                         source = single_src
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    dest = temptile.mkstemp()[1]
+                    dest = tempfile.mkstemp()[1]
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
