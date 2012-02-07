@@ -81,6 +81,10 @@ In this case it defines the name of the package to be installed. **NOTE:** the
 package name for the Apache httpd web server may differ on your OS or distro —
 for example, on Fedora it is ``httpd`` but on Debian/Ubuntu it is ``apache2``.
 
+Additionally, an ID declaration should not contain a dot, as this will produce
+unpredictable output in the summary returned from a call to
+:func:`state.highstate <salt.modules.state.highstate>`.
+
 The second line, called the :term:`state declaration`, defines which of the
 Salt States we are using. In this example, we are using the :mod:`pkg state
 <salt.states.pkg>` to ensure that a given package is installed.

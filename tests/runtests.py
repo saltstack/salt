@@ -4,7 +4,7 @@ Discover all instances of unittest.TestCase in this directory.
 
 The current working directory must be set to the build of the salt you want to test.
 '''
-from unittest import TestLoader, TextTestRunner
+from saltunittest import TestLoader, TextTestRunner
 from os.path import dirname, abspath, relpath, splitext, normpath
 import sys, os, fnmatch
 

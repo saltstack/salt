@@ -1,14 +1,15 @@
-import unittest
 from salt.modules.hosts import list_hosts, get_ip, get_alias, has_pair, add_host,\
     set_host, rm_host
 from os import path
 import os
 import shutil
+import sys
+import saltunittest
 
 TEMPLATES_DIR = path.dirname(path.abspath(__file__))
 
 monkey_pathed = (list_hosts, set_host, add_host, rm_host)
-class HostsModuleTest(unittest.TestCase):
+class HostsModuleTest(saltunittest.TestCase):
     def setUp(self):
         self._hfn = [f.hosts_filename for f in monkey_pathed]
         self.files = path.join(TEMPLATES_DIR, 'files')

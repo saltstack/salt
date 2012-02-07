@@ -5,16 +5,16 @@ authenticating peers
 '''
 
 # Import python libs
-import hashlib
-import hmac
-import logging
 import os
 import sys
+import hmac
+import hashlib
+import logging
 import tempfile
 
 # Import Cryptography libs
-from Crypto.Cipher import AES
 from M2Crypto import RSA
+from Crypto.Cipher import AES
 
 # Import zeromq libs
 import zmq
@@ -320,8 +320,8 @@ class SAuth(Auth):
         '''
         creds = self.sign_in()
         if creds == 'retry':
-            print 'Failed to authenticate with the master, verify that this'\
-                + ' minion\'s public key has been accepted on the salt master'
+            log.error('Failed to authenticate with the master, verify that this'\
+                + ' minion\'s public key has been accepted on the salt master')
             sys.exit(2)
         return Crypticle(self.opts, creds['aes'])
 

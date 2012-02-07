@@ -4,9 +4,10 @@ All salt configuration loading and defaults should be in this module
 
 # Import python modules
 import os
-import tempfile
-import socket
 import sys
+import socket
+import logging
+import tempfile
 
 # import third party libs
 import yaml
@@ -21,6 +22,8 @@ except:
 import salt.crypt
 import salt.loader
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def load_config(opts, path, env_var):
@@ -54,9 +57,10 @@ def load_config(opts, path, env_var):
             opts.update(conf_opts)
             opts['conf_file'] = path
         except Exception, e:
-            print 'Error parsing configuration file: {0} - {1}'.format(path, e)
+            msg = 'Error parsing configuration file: {0} - {1}'
+            log.warn(msg.format(path, e))
     else:
-        print 'Missing configuration file: {0}'.format(path)
+        log.debug('Missing configuration file: {0}'.format(path))
 
 
 def prepend_root_dir(opts, path_options):
@@ -76,6 +80,7 @@ def minion_config(path):
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'user': 'root',
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
             'id': socket.getfqdn(),
@@ -85,6 +90,7 @@ def minion_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
+            'environment': None,
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
@@ -115,13 +121,13 @@ def minion_config(path):
     # else!
     opts['open_mode'] = opts['open_mode'] is True
 
+    # set up the extension_modules location from the cachedir
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+
     opts['grains'] = salt.loader.grains(opts)
 
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
-
-    # set up the extension_modules location from the cachedir
-    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
 
     return opts
 
@@ -132,9 +138,11 @@ def master_config(path):
     '''
     opts = {'interface': '0.0.0.0',
             'publish_port': '4505',
+            'user': 'root',
             'worker_threads': 5,
             'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',
+            'timeout': 5,
             'keep_jobs': 24,
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
@@ -150,6 +158,7 @@ def master_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'state_top': 'top.sls',
+            'external_nodes': '',
             'order_masters': False,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',

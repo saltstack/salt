@@ -1,0 +1,7 @@
+# pip requirements file for Salt
+Jinja2
+M2Crypto
+msgpack-python
+PyCrypto
+PyYAML
+pyzmq >= 2.1.9

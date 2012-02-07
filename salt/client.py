@@ -77,7 +77,8 @@ class LocalClient(object):
             key = open(keyfile, 'r').read()
             return key
         except (OSError, IOError):
-            raise SaltClientError('Problem reading the salt root key. Are you root?')
+            raise SaltClientError(('Problem reading the salt root key. Are'
+                                   ' you root?'))
 
     def _check_glob_minions(self, expr):
         '''
@@ -131,12 +132,14 @@ class LocalClient(object):
         tgt,
         fun,
         arg=(),
-        timeout=5,
+        timeout=None,
         expr_form='glob',
         ret=''):
         '''
         Execute a salt command and return.
         '''
+        if timeout is None:
+            timeout = self.opts['timeout']
         jid = prep_jid(self.opts['cachedir'])
         pub_data = self.pub(
             tgt,
@@ -153,12 +156,14 @@ class LocalClient(object):
         tgt,
         fun,
         arg=(),
-        timeout=5,
+        timeout=None,
         expr_form='glob',
         ret=''):
         '''
         Execute a salt command and return
         '''
+        if timeout is None:
+            timeout = self.opts['timeout']
         jid = prep_jid(self.opts['cachedir'])
         pub_data = self.pub(
             tgt,
@@ -171,11 +176,13 @@ class LocalClient(object):
         return (self.get_full_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
 
-    def get_returns(self, jid, minions, timeout=5):
+    def get_returns(self, jid, minions, timeout=None):
         '''
         This method starts off a watcher looking at the return data for a
         specified jid
         '''
+        if timeout is None:
+            timeout = self.opts['timeout']
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = 999999999999
         gstart = int(time.time())
@@ -209,11 +216,13 @@ class LocalClient(object):
                 return ret
             time.sleep(0.02)
 
-    def get_full_returns(self, jid, minions, timeout=5):
+    def get_full_returns(self, jid, minions, timeout=None):
         '''
         This method starts off a watcher looking at the return data for a
         specified jid, it returns all of the information for the jid
         '''
+        if timeout is None:
+            timeout = self.opts['timeout']
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = 999999999999
         gstart = int(time.time())
