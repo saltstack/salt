@@ -78,6 +78,18 @@ def get_colors(use=True):
     return colors
 
 
+def append_pid(pidfile):
+    '''
+    Save the pidfile
+    '''
+    try:
+        open(pidfile, 'a').write('\n{0}'.format(str(os.getpid())))
+    except IOError:
+        err = ('Failed to commit the pid to location {0}, please verify'
+              ' that the location is available').format(pidfile)
+        log.error(err)
+
+
 def daemonize():
     '''
     Daemonize a process
