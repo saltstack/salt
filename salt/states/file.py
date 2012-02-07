@@ -401,7 +401,7 @@ def managed(name,
         The location of the file to manage
 
     source
-        The source file to download to the minion. This source file can be
+        The source file to download to the minion, this source file can be
         hosted on either the salt master server, or on an http or ftp server.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
@@ -411,7 +411,7 @@ def managed(name,
         If the file is hosted on a http or ftp server then the source_hash
         argument is also required
 
-    source_hash
+    source_hash:
         This can be either a file which contains a source hash string for
         the source, or a source hash string. The source hash string is the
         hash algorithm followed by the hash of the file:
@@ -444,11 +444,6 @@ def managed(name,
 
     defaults
         Default context passed to the template.
-
-    __env__
-        Specify a file environment from file_roots. Defaults to "base". Note
-        that you must use the double underscores in the option name in your sls
-        files.
     '''
     if mode:
         mode = str(mode)
@@ -884,7 +879,7 @@ def recurse(name,
     over to the specified path.
 
     name
-        The directory in which to set the recursion
+        The directory to set the recursion in
 
     source
         The source directory, this directory is located on the salt master file
@@ -896,11 +891,6 @@ def recurse(name,
         Make sure that only files that are set up by salt and required by this
         function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
-
-    __env__
-        Specify a file environment from file_roots. Defaults to "base". Note
-        that you must use the double underscores in the option name in your sls
-        files.
     '''
     ret = {'name': name,
            'changes': {},
