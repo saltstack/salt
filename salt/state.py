@@ -1035,6 +1035,7 @@ class HighState(object):
         '''
         top = self.get_top()
         matches = self.top_matches(top)
+        self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
 
         if errors:
@@ -1047,9 +1048,9 @@ class HighState(object):
         Compile the highstate but don't run it, return the low chunks to see
         exactly what the highstate will execute
         '''
-        err = []
         top = self.get_top()
         matches = self.top_matches(top)
+        self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
 
         # If there is extension data reconcile it
