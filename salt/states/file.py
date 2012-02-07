@@ -1165,7 +1165,15 @@ def append(name, text):
         text = (text,)
 
     for chunk in text:
-        for line in chunk.split('\n'):
+        try:
+            lines = chunk.split('\n')
+        except AttributeError:
+            logger.debug("Error appending text to %s; given object is: %s",
+                    name, type(chunk))
+            ret['comment'] = "Given text is not a string"
+            return ret
+
+        for line in lines:
             if __salt__['file.contains'](name, line):
                 continue
             else:
