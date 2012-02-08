@@ -26,6 +26,17 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def _validate_file_roots(file_roots):
+    '''
+    If the file_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    for env, dirs in file_roots.items():
+        if not isinstance(dirs, list) and not isinstance(dirs, tuple):
+            file_roots[env] = []
+    return file_roots
+
+
 def load_config(opts, path, env_var):
     '''
     Attempts to update ``opts`` dict by parsing either the file described by
@@ -180,6 +191,7 @@ def master_config(path):
     # else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
+    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
 
 
