@@ -1025,7 +1025,7 @@ class HighState(object):
         if errors:
             return errors
         if not high:
-            return {'no.states': {
+            return {'no_|-states_|-states_|-nono': {
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',
