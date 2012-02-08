@@ -31,6 +31,10 @@ def _validate_file_roots(file_roots):
     If the file_roots option has a key that is None then we will error out,
     just replace it with an empty list
     '''
+    if not isinstance(file_roots, dict):
+        log.warning(('The file_roots parameter is not properly formatted,'
+            ' using defaults'))
+        return {'base': ['/srv/salt']}
     for env, dirs in file_roots.items():
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             file_roots[env] = []
