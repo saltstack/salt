@@ -22,8 +22,8 @@ Or from PiPy:
 
 http://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz
 
-For instructions on how to set up Salt please see the :doc:`installation
-instructions </topics/installation>`.
+For instructions on how to set up Salt please see the `installation`_
+instructions.
 
 New Features
 ------------
