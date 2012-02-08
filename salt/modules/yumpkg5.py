@@ -24,6 +24,8 @@ def __virtual__():
         if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) <= 5:
                 return 'pkg'
+            else:
+                return False
         else:
             return False
 
@@ -68,7 +70,7 @@ def available_version(name):
 
         salt '*' pkg.available_version <package name>
     '''
-    out = _parse_yum('list {0}'.format(name))
+    out = _parse_yum('list updates {0}'.format(name))
     return out[0].version if out else ''
 
 

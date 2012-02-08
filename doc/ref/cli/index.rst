@@ -82,14 +82,14 @@ Targeting with Executions
 `````````````````````````
 
 As of 0.8.8 targeting with executions is still under heavy development and this
-documentation is written to refernce the behavior of execution matching in the
+documentation is written to reference the behavior of execution matching in the
 future.
 
 Execution matching allows for a primary function to be executed, and then based
 on the return of the primary function the main function is executed.
 
-Execution matching allows for matching minions based on any arbitrairy running
-data on tne minions.
+Execution matching allows for matching minions based on any arbitrary running
+data on the minions.
 
 Compound Targeting
 ``````````````````
@@ -104,13 +104,14 @@ is well defined with an example:
 
     salt -C 'G@os:Debian and webser* or E@db.*' test.ping
 
-in this example any minion who's id starts with webser and is running Debian,
-or any minion who's id starts with db will be matched.
+In this example any minion who's id starts with ``webser`` and is running
+Debian, or any minion who's id starts with db will be matched.
 
 The type of matcher defaults to glob, but can be specified with the
-corresponding letter followed by the @ symbol. In the above example a grain is
-used with G@ as well as a regular expression with E@. The webser* target does
-not need to be prefaced with a target type specifier because it is a glob.
+corresponding letter followed by the ``@`` symbol. In the above example a grain
+is used with ``G@`` as well as a regular expression with ``E@``. The
+``webser*`` target does not need to be prefaced with a target type specifier
+because it is a glob.
 
 Node Group Targeting
 ````````````````````

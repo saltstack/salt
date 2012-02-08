@@ -23,4 +23,4 @@ def run():
     for func in __all__:
         if func == "run": continue
         if not globals().get(func)():
-            sys.exit(1)
+            continue

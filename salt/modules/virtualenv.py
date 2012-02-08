@@ -1,9 +1,18 @@
 '''
 Create virtualenv environments
 '''
+import salt.utils
+
 __opts__ = {
     'venv_bin': 'virtualenv',
 }
+
+def __virtual__():
+    '''
+    Only load the module if virtualenv is installed
+    '''
+    cmd = __opts__.get('venv_bin', 'virtualenv')
+    return 'virtualenv' if salt.utils.which(cmd) else False
 
 def create(path,
         venv_bin='',

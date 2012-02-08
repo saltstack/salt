@@ -8,11 +8,12 @@ import sys
 
 # Import salt libs
 import salt
+import salt.utils
 import salt.loader
 import salt.minion
 
 # Custom exceptions
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 class Caller(object):
     '''
@@ -31,18 +32,25 @@ class Caller(object):
         Call the module
         '''
         ret = {}
-        if self.opts['fun'] not in self.minion.functions:
-            sys.stderr.write('Function {0} is not available\n'.format(self.opts['fun']))
+        fun = self.opts['fun']
+
+        if fun not in self.minion.functions:
+            sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(1)
         try:
-            ret['return'] = self.minion.functions[self.opts['fun']](
+            ret['return'] = self.minion.functions[fun](
                     *self.opts['arg']
                     )
         except (TypeError, CommandExecutionError) as exc:
-            sys.stderr.write('Error running \'{0}\': {1}\n'.format(self.opts['fun'], str(exc)))
+            msg = 'Error running \'{0}\': {1}\n'
+            sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)
-        if hasattr(self.minion.functions[self.opts['fun']], '__outputter__'):
-            oput = self.minion.functions[self.opts['fun']].__outputter__
+        except CommandNotFoundError as exc:
+            msg = 'Command not found in \'{0}\': {1}\n'
+            sys.stderr.write(msg.format(fun, str(exc)))
+            sys.exit(1)
+        if hasattr(self.minion.functions[fun], '__outputter__'):
+            oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, str):
                 ret['out'] = oput
         return ret

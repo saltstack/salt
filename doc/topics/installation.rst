@@ -16,6 +16,7 @@ running and the Salt :term:`minions <minion>` point to the master.
     * `pyzmq`_ >= 2.1.9 — ZeroMQ Python bindings
     * `M2Crypto`_ — Python OpenSSL wrapper
     * `PyCrypto`_ — The Python cryptography toolkit
+    * `msgpack-python`_ — High-performance message interchange format
     * `YAML`_ — Python YAML bindings
 
     Optional Dependencies:
@@ -82,8 +83,6 @@ We are working to get Salt into apt. In the meantime we have a PPA available
 for Lucid::
 
     aptitude -y install python-software-properties
-    add-apt-repository ppa:chris-lea/libpgm
-    add-apt-repository ppa:chris-lea/zeromq
     add-apt-repository ppa:saltstack/salt
     aptitude update
     aptitude install salt

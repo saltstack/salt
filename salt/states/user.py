@@ -59,7 +59,6 @@ def present(
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
 
-    print password
     if __grains__['os'] != 'FreeBSD':
         lshad = __salt__['shadow.info'](name)
 

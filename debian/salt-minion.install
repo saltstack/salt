@@ -1,1 +1,3 @@
-conf/minion.template /etc/salt/minion
+conf/minion.template /etc/salt
+scripts/salt-minion /usr/bin
+scripts/salt-call /usr/bin

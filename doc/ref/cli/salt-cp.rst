@@ -36,12 +36,12 @@ Options
 
 .. option:: -E, --pcre
 
-    The target expression will be interpereted as a pcre regular expression
+    The target expression will be interpreted as a pcre regular expression
     rather than a shell glob.
 
 .. option:: -L, --list
 
-    The target expression will be interpereted as a comma delimited list,
+    The target expression will be interpreted as a comma delimited list,
     example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 
 .. option:: -G, --grain

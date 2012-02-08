@@ -149,7 +149,7 @@ vhosts file is changed:
       - apache
 
     extend:
-      apache
+      apache:
         service:
           - watch:
             - file: /etc/httpd/extra/httpd-vhosts.conf
