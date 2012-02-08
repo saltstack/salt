@@ -3,7 +3,6 @@ Section: admin
 Priority: optional
 Maintainer: Corey Quinn <corey@sequestered.net>
 Build-Depends: debhelper (>= 7.0.50~),
-               python-support,
                cython,
                python-yaml,
                python-setuptools,
@@ -24,7 +23,6 @@ Architecture: any
 Depends: ${python:Depends},
          ${misc:Depends},
          ${shlibs:Depends},
-         python-support,
          cython,
          python-setuptools,
          python-yaml,
