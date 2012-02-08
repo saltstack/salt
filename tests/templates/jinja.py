@@ -1,7 +1,8 @@
-import unittest
 from os import path
 from salt.utils.jinja import SaltCacheLoader, get_template
 from jinja2 import Environment
+
+from saltunittest import TestCase
 
 TEMPLATES_DIR = path.dirname(path.abspath(__file__))
 
@@ -20,7 +21,7 @@ class MockFileClient(object):
             'env': env
         })
 
-class TestSaltCacheLoader(unittest.TestCase):
+class TestSaltCacheLoader(TestCase):
     def test_searchpath(self):
         '''
         The searchpath is based on the cachedir option and the env parameter
@@ -77,7 +78,7 @@ class TestSaltCacheLoader(unittest.TestCase):
         result = jinja.get_template('hello_include').render(a='Hi', b='Salt')
         self.assertEqual(result, 'Hey world !Hi Salt !')
 
-class TestGetTemplate(unittest.TestCase):
+class TestGetTemplate(TestCase):
     def test_fallback(self):
         '''
         A Template without loader is returned as fallback 

@@ -1,8 +1,8 @@
-import unittest
+from saltunittest import TestCase, expectedFailure
 
-class SimpleTest(unittest.TestCase):
+class SimpleTest(TestCase):
     def test_success(self):
         assert True
-    @unittest.expectedFailure
+    @expectedFailure
     def test_fail(self):
         assert False

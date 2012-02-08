@@ -1,25 +1,2 @@
-salt/exceptions.py /usr/share/salt
-salt/loader.py /usr/share/salt
-salt/master.py /usr/share/salt
-salt/client.py /usr/share/salt
-salt/runner.py /usr/share/salt
-salt/output.py /usr/share/salt
-salt/minion.py /usr/share/salt
-salt/version.py /usr/share/salt
-salt/config.py /usr/share/salt
-salt/state.py /usr/share/salt
-salt/log.py /usr/share/salt
-salt/__init__.py /usr/share/salt
-salt/payload.py /usr/share/salt
-salt/crypt.py /usr/share/salt
-salt/runners /usr/share/salt/
-salt/renderers /usr/share/salt/
-salt/returners /usr/share/salt/
-salt/ext /usr/share/salt/
-salt/msgpack /usr/share/salt/
-salt/grains /usr/share/salt/
-salt/cli /usr/share/salt/
-salt/states /usr/share/salt/
-salt/utils /usr/share/salt/
-usr/lib/python2*/dist-packages/salt/msgpack
+usr/lib/python2*/dist-packages/salt/
 debian/lintian-overrides /usr/share/lintian/overrides/salt-common

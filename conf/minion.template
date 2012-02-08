@@ -2,10 +2,10 @@
 ##### Primary configuration settings #####
 ##########################################
 # Set the location of the salt master server, if the master server cannot be
-# resolved, then the minion will fail to start
+# resolved, then the minion will fail to start.
 #master: salt
 
-# Set the post used by the master reply and authentication server
+# Set the port used by the master reply and authentication server
 #master_port: 4506
 
 # The user to run salt
@@ -24,18 +24,19 @@
 # clusters.
 #id:
 
-# The minion connection to the master may be inturupted, the minion will
-# verify the connection every so many seconds, to disable connection
-# verification set this value to 0
+# If the the connection to the server is interrupted, the minion will
+# attempt to reconnect. sub_timeout allows you to control the rate
+# of reconnection attempts (in seconds). To disable reconnects, set
+# this value to 0.
 #sub_timeout: 60
 
 # Where cache data goes
 #cachedir: /var/cache/salt
 
 # The minion can locally cache the return data from jobs sent to it, this
-# can be a good way to keep track minion side of the jobs the minion has
-# executed. By default this feature is disabled, to enable set cache_jobs
-# to True
+# can be a good way to keep track of jobs the minion has executed
+# (on the minion side). By default this feature is disabled, to enable
+# set cache_jobs to True
 #cache_jobs: False
 
 # When waiting for a master to accept the minion's public key, salt will
@@ -47,18 +48,20 @@
 
 #####   Minion module management     #####
 ##########################################
-# Disable specific modules, this will allow the admin to limit the level os
+# Disable specific modules. This allows the admin to limit the level of
 # access the master has to the minion
 #disable_modules: [cmd,test]
 #disable_returners: []
-# Modules can be loaded from arbitrary paths, this enables the easy deployment
-# of third party modules, modules for returners and minions can be loaded.
+#
+# Modules can be loaded from arbitrary paths. This enables the easy deployment
+# of third party modules. Modules for returners and minions can be loaded.
 # Specify a list of extra directories to search for minion modules and
 # returners. These paths must be fully qualified!
 #module_dirs: []
 #returner_dirs: []
 #states_dirs: []
 #render_dirs: []
+#
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
 
@@ -92,6 +95,12 @@
 # not on the master it will be deleted from the minion. By default this is
 # enabled and can be disabled by changing this value to False
 #clean_dynamic_modules: True
+#
+# Normally the minion is not isolated to any single environment on the master
+# when running states, but the environment can be isolated on the minion side
+# by statically setting it. Remember that the recommended way to manage
+# environments is to issolate via the top file.
+#environment: None
 
 ######        Security settings       #####
 ###########################################
@@ -112,14 +121,15 @@
 ###########################################
 # The location of the minion log file
 #log_file: /var/log/salt/minion
+#
 # The level of messages to send to the log file.
 # One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 # Default: 'warning'
 #log_level: warning
 #
 # Logger levels can be used to tweak specific loggers logging levels.
-# Imagine you want to have the salt library at the 'warning' level, but, you
-# still wish to have 'salt.modules' at the 'debug' level:
+# For example, if you want to have the salt library at the 'warning' level,
+# but you still wish to have 'salt.modules' at the 'debug' level:
 #   log_granular_levels: {
 #     'salt': 'warning',
 #     'salt.modules': 'debug'
@@ -133,7 +143,7 @@
 # passed here in valid yaml format will be passed on to the salt minion modules
 # for use. It is STRONGLY recommended that a naming convention be used in which
 # the module name is followed by a . and then the value. Also, all top level
-# data must be allied via the yaml dict construct, some examples:
+# data must be applied via the yaml dict construct, some examples:
 #
 # A simple value for the test module:
 #test.foo: foo

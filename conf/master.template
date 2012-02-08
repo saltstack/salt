@@ -31,11 +31,15 @@
 # Set the number of hours to keep old job information
 #keep_jobs: 24
 
+# Set the default timeout for the salt command and api, the default is 5
+# seconds
+#timeout: 5
+
 # Set the directory used to hold unix sockets
 #sock_dir: /tmp/salt-unix
 
 # Set the acceptance level for serialization of messages. This should only be
-# set if the master is newer that 0.9.5 and the minion are older, this option
+# set if the master is newer than 0.9.5 and the minion are older. This option
 # allows a 0.9.5 and newer master to communicate with minions 0.9.4 and
 # earlier. It is not recommended to keep this setting on if the minions are
 # all 0.9.5 or higher, as leaving pickle as the serialization medium is slow
@@ -59,8 +63,14 @@
 ##########################################
 # The state system uses a "top" file to tell the minions what environment to
 # use and what modules to use. The state_top file is defined relative to the
-# root of the base environment
+# root of the base environment.
 #state_top: top.sls
+#
+# The external_nodes option allows Salt to gather data that would normally be
+# placed in a top file. The external_nodes option is the executable that will
+# return the ENC data. Remember that Salt will look for external nodes AND top
+# files and combine the results if both are enabled!
+#external_nodes: None
 #
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
@@ -78,7 +88,7 @@
 # The file server works on environments passed to the master, each environment
 # can have multiple root directories, the subdirectories in the multiple file
 # roots cannot match, otherwise the downloaded files will not be able to be
-# reliably ensured. A base environment is required to house the top file
+# reliably ensured. A base environment is required to house the top file.
 # Example:
 # file_roots:
 #   base:
@@ -110,15 +120,14 @@
 # syndic servers(s) below it set the "order_masters" setting to True, if this
 # is a master that will be running a syndic daemon for passthrough the
 # "syndic_master" setting needs to be set to the location of the master server
-# to recieve commands from
+# to recieve commands from.
 #
 # Set the order_masters setting to True if this master will command lower
-# masters' syndic interfaces
+# masters' syndic interfaces.
 #order_masters: False
 #
-# If this master will be running a salt syndic daemon, then the syndic needs
-# to know where the master it is recieving commands from is, set it with the
-# syndic_master value
+# If this master will be running a salt syndic daemon, syndic_master tells
+# this master where to recieve commands from.
 #syndic_master: masterofmaster
 
 #####      Peer Publish settings     #####
@@ -129,9 +138,9 @@
 # compartmentalization of commands based on individual minions.
 #
 # The configuration uses regular expressions to match minions and then a list
-# of regular expressions to match functions, the following will allow the
+# of regular expressions to match functions. The following will allow the
 # minion authenticated as foo.example.com to execute functions from the test
-# and pkg modules
+# and pkg modules.
 # peer:
 #   foo.example.com:
 #       - test.*
@@ -149,7 +158,7 @@
 ##########################################
 # Salt supports automatic clustering, salt creates a single ip address which
 # is shared among the individual salt components using ucarp. The private key
-# and all of the minion keys are maintained across the defined cluster masters
+# and all of the minion keys are maintained across the defined cluster masters.
 # The failover service is automatically managed via these settings
 
 # List the identifiers for the other cluster masters in this manner:
@@ -168,14 +177,15 @@
 ##########################################
 # The location of the master log file
 #log_file: /var/log/salt/master
+#
 # The level of messages to send to the log file.
 # One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 # Default: 'warning'
 #log_level: warning
 #
 # Logger levels can be used to tweak specific loggers logging levels.
-# Imagine you want to have the salt library at the 'warning' level, but, you
-# still wish to have 'salt.modules' at the 'debug' level:
+# For example, if you want to have the salt library at the 'warning' level,
+# but you still wish to have 'salt.modules' at the 'debug' level:
 #   log_granular_levels:
 #     'salt': 'warning',
 #     'salt.modules': 'debug'

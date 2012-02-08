@@ -211,7 +211,7 @@ def _virtual(osdata):
                 if grains.get('productname', '') == 'HVM domU':
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
-                elif os.path.isfile('/proc/xen/capabilities'):
+                elif os.path.isfile('/proc/xen/capabilities') and os.access('/proc/xen/capabilities', os.R_OK):
                     caps = open('/proc/xen/capabilities')
                     if 'control_d' not in caps.read():
                         # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
@@ -495,6 +495,14 @@ def saltpath():
     path = os.path.abspath(os.path.join(__file__, os.path.pardir))
     return {'saltpath': os.path.dirname(path)}
 
+def saltversion():
+    '''
+    Return the version of salt
+    '''
+    # Provides:
+    #   saltversion
+    from salt import __version__
+    return {'saltversion': __version__}
 
 # Relatively complex mini-algorithm to iterate over the various
 # sections of dmidecode output and return matches for  specific

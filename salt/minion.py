@@ -12,6 +12,7 @@ import hashlib
 import os
 import re
 import shutil
+import string
 import tempfile
 import threading
 import time
@@ -28,8 +29,6 @@ from salt.exceptions import AuthenticationError, MinionError, \
 import salt.client
 import salt.crypt
 import salt.loader
-import salt.modules
-import salt.returners
 import salt.utils
 import salt.payload
 
@@ -118,6 +117,7 @@ class Minion(object):
         '''
         Return the functions and the returners loaded up from the loader module
         '''
+        self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts)
         return functions, returners
@@ -184,7 +184,7 @@ class Minion(object):
                 self.functions, self.returners = self.__load_modules()
 
         if self.opts['multiprocessing']:
-            if isinstance(data['fun'], list):
+            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 multiprocessing.Process(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
@@ -193,7 +193,7 @@ class Minion(object):
                     target=lambda: self._thread_return(data)
                 ).start()
         else:
-            if isinstance(data['fun'], list):
+            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 threading.Thread(
                     target=lambda: self._thread_multi_return(data)
                 ).start()
@@ -208,8 +208,10 @@ class Minion(object):
         minion side execution.
         '''
         if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, str(os.getpid()))
-            open(fn_, 'w+').write(self.serial.dumps(data))
+            fn_ = os.path.join(self.proc_dir, data['jid'])
+            sdata = {'pid': os.getpid()}
+            sdata.update(data)
+            open(fn_, 'w+').write(self.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -313,7 +315,7 @@ class Minion(object):
         Return the data from the executed command to the master server
         '''
         if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, str(os.getpid()))
+            fn_ = os.path.join(self.proc_dir, ret['jid'])
             if os.path.isfile(fn_):
                 os.remove(fn_)
         log.info('Returning information for job: {0}'.format(ret['jid']))
@@ -519,7 +521,7 @@ class Matcher(object):
         else:
             self.functions = functions
 
-    def confirm_top(self, match, data):
+    def confirm_top(self, match, data, nodegroups=None):
         '''
         Takes the data passed to a top file environment and determines if the
         data matches this minion
@@ -530,9 +532,13 @@ class Matcher(object):
                 if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
+            if matcher == 'nodegroup':
+                return getattr(self, '{0}_match'.format(matcher))(match, nodegroups)
             return getattr(self, '{0}_match'.format(matcher))(match)
         else:
-            log.error('Attempting to match with unknown matcher: %s', matcher)
+            log.error('Attempting to match with unknown matcher: {0}'.format(
+                matcher
+                ))
             return False
 
     def glob_match(self, tgt):
@@ -558,7 +564,7 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
-        return bool(tgt in self.opts['id'])
+        return bool(self.opts['id'] in tgt)
 
     def grain_match(self, tgt):
         '''
@@ -571,7 +577,7 @@ class Matcher(object):
         if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
-        return bool(re.match(comps[1], self.opts['grains'][comps[0]]))
+        return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
 
     def exsel_match(self, tgt):
         '''
@@ -627,6 +633,17 @@ class Matcher(object):
                         ))
 
         return eval(' '.join(results))
+
+    def nodegroup_match(self, tgt, nodegroups):
+        '''
+        This is a compatability matcher and is NOT called when using
+        nodegroups for remote execution, but is called when the nodegroups
+        matcher is used in states
+        '''
+        if tgt in nodegroups:
+            return self.compound_match(nodegroups[tgt])
+        return False
+
 
 class FileClient(object):
     '''
@@ -734,6 +751,43 @@ class FileClient(object):
             fn_.write(data['data'])
         return dest
 
+    def get_dir(self, path, dest='', env='base'):
+        '''
+        Get a directory recursively from the salt-master
+        '''
+        ret = []
+        # Strip trailing slash
+        path = string.rstrip(self._check_proto(path), '/')
+        # Break up the path into a list conaining the bottom-level directory
+        # (the one being recursively copied) and the directories preceding it
+        separated = string.rsplit(path,'/',1)
+        if len(separated) != 2:
+            # No slashes in path. (This means all files in env will be copied)
+            prefix = ''
+        else:
+            prefix = separated[0]
+
+        # Copy files from master
+        for fn_ in self.file_list(env):
+            if fn_.startswith(path):
+                # Remove the leading directories from path to derive
+                # the relative path on the minion.
+                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
+                ret.append(self.get_file('salt://{0}'.format(fn_),
+                                         '%s/%s' % (dest,minion_relpath),
+                                         True, env))
+        # Replicate empty dirs from master
+        for fn_ in self.file_list_emptydirs(env):
+            if fn_.startswith(path):
+                # Remove the leading directories from path to derive
+                # the relative path on the minion.
+                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
+                minion_mkdir = '%s/%s' % (dest,minion_relpath)
+                os.makedirs(minion_mkdir)
+                ret.append(minion_mkdir)
+        ret.sort()
+        return ret
+
     def get_url(self, url, dest, makedirs=False, env='base'):
         '''
         Get a single file from a URL.
@@ -747,7 +801,7 @@ class FileClient(object):
                 if makedirs:
                     os.makedirs(destdir)
                 else:
-                    return False
+                    return ''
         else:
             dest = os.path.join(
                 self.opts['cachedir'],
@@ -772,7 +826,7 @@ class FileClient(object):
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
         except urllib2.URLError, ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
-        return False
+        return ''
 
     def cache_file(self, path, env='base'):
         '''
@@ -808,7 +862,10 @@ class FileClient(object):
         path = self._check_proto(path)
         for fn_ in self.file_list(env):
             if fn_.startswith(path):
-                ret.append(self.cache_file('salt://{0}'.format(fn_), env))
+                local = self.cache_file('salt://{0}'.format(fn_), env)
+                if not fn_.strip():
+                    continue
+                ret.append(local)
         return ret
 
     def cache_local_file(self, path, **kwargs):
@@ -832,6 +889,17 @@ class FileClient(object):
         payload = {'enc': 'aes'}
         load = {'env': env,
                 'cmd': '_file_list'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def file_list_emptydirs(self, env='base'):
+        '''
+        List the empty dirs on the master
+        '''
+        payload = {'enc': 'aes'}
+        load = {'env': env,
+                'cmd': '_file_list_emptydirs'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
@@ -921,6 +989,18 @@ class FileClient(object):
         '''
         payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+
+    def ext_nodes(self):
+        '''
+        Return the metadata derived from the external nodes system on the
+        master.
+        '''
+        payload = {'enc': 'aes'}
+        load = {'cmd': '_ext_nodes',
+                'id': self.opts['id']}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
         return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))

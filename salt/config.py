@@ -26,6 +26,21 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def _validate_file_roots(file_roots):
+    '''
+    If the file_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    if not isinstance(file_roots, dict):
+        log.warning(('The file_roots parameter is not properly formatted,'
+            ' using defaults'))
+        return {'base': ['/srv/salt']}
+    for env, dirs in file_roots.items():
+        if not isinstance(dirs, list) and not isinstance(dirs, tuple):
+            file_roots[env] = []
+    return file_roots
+
+
 def load_config(opts, path, env_var):
     '''
     Attempts to update ``opts`` dict by parsing either the file described by
@@ -90,6 +105,7 @@ def minion_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
+            'environment': None,
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
@@ -141,6 +157,7 @@ def master_config(path):
             'worker_threads': 5,
             'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',
+            'timeout': 5,
             'keep_jobs': 24,
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
@@ -156,6 +173,7 @@ def master_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'state_top': 'top.sls',
+            'external_nodes': '',
             'order_masters': False,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
@@ -177,6 +195,7 @@ def master_config(path):
     # else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
+    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
 
 
