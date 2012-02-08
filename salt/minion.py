@@ -29,8 +29,6 @@ from salt.exceptions import AuthenticationError, MinionError, \
 import salt.client
 import salt.crypt
 import salt.loader
-import salt.modules
-import salt.returners
 import salt.utils
 import salt.payload
 
