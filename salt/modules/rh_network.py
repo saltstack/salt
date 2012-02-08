@@ -4,6 +4,7 @@ The networking module for RHEL/Fedora based distros
 
 import os
 import logging
+from fnmatch import fnmatch
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -18,6 +19,17 @@ def __virtual__():
         return 'network'
     return False
 
+def _read_file(path):
+    '''
+    Reads and returns the contents of a file
+    '''
+    try:
+        with open(path, 'rb') as contents:
+            return contents.readline().strip()
+    except:
+        return ''
+        
+    
 # Setup networking attributes
 _ETHTOOL_CONFIG_OPTS = [ 'autoneg', 'speed', 'duplex', 'rx', 'tx', 'sg', 'tso', 'ufo', 'gso', 'gro', 'lro' ]
 _RH_CONFIG_OPTS = [ 'domain', 'peerdns', 'defaultroute', 'mtu', 'static-routes' ]
@@ -25,7 +37,7 @@ _RH_CONFIG_BONDING_OPTS = [ 'mode', 'miimon', 'arp_interval', 'arp_ip_target', '
 _CONFIG_TRUE = [ 'yes', 'on', 'true', '1']
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0']
 
-def interface_settings(opts, iftype, iface):
+def _generate_if_settings(opts, iftype, iface):
     
     if iftype in ['eth', 'lo', 'br']:
         config = {}
@@ -39,26 +51,26 @@ def interface_settings(opts, iftype, iface):
             elif opts['autoneg'] in _CONFIG_FALSE:
                 config.update( {'autoneg':'off'} )
             else:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, opts['autoneg'], '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
+                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, 'autoneg', '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
         
         if opts.has_key('duplex'):
             if opts['duplex'] in ['full', 'half']:
                 config.update( {'duplex':opts['duplex']} )
             else:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [full|half]' % (iface, opts['duplex']))
+                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [full|half]' % (iface, 'duplex'))
                 
         if opts.has_key('mtu'):
             try:
                 int(opts['mtu'])
                 config.update( {'mtu': opts['mtu']} )
             except:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, opts['mtu']))
+                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, 'mtu'))
                 
         if opts.has_key('speed'):
             if opts['speed'] in ['10', '100', '1000']:
                 config.update( {'speed':opts['speed']} )
             else:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [10|100|1000]' % (iface, opts['speed']))
+                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [10|100|1000]' % (iface, 'speed'))
         
         # Offload settings
         for option in ('rx', 'tx', 'sg', 'tso', 'ufo', 'gso', 'gro', 'lro'):
@@ -68,7 +80,7 @@ def interface_settings(opts, iftype, iface):
                 elif opts[option] in _CONFIG_FALSE:
                     offload.update( {option:'off'} )
                 else:
-                    log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, opts[option], '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
+                    log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, option, '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
                     
         return config, offload
         
@@ -293,10 +305,38 @@ def interface_settings(opts, iftype, iface):
             else:
                 log.info('Invalid option -- Interface: %s Option: %s. Expecting: [0|1|2|3|4|5|6|balance-rr|active-backup|balance-xor|broadcast|802.3ad|balance-tlb|balance-alb]' % (iface, 'mode'))
     
-
         return bond
 
+def _get_iface_settings(device):
+    dev = {}
+    _iface_vars = [
+        'mtu', 'operstate', 'carrier', 'address', 'addr_len', 'addr_assign_type', 'broadcast', 'dev_id', 'dormant'
+        'duplex', 'features', 'flags', 'ifalias', 'ifindex', 'iflink', 'link_mode', 'speed', 'tx_queue_len', 'type'
+    ]
+    
+    if device.startswith('bond'):
+        if os.path.exists('/sys/class/net/%s' % device):
+            dev.update( {'slaves':[]} )
+            for file os.listdir('/sys/class/net/%s' % device):
+                if file.startswith('slave'):
+                    dev['slaves'].append(file.split('_')[1])
+# TODO This is where I'm at right now.                
 
+
+    def _add_var(path, var):
+        if os.path.exists(path):
+            return dev.update( {var: _read_file(path)} )
+    
+    for var in _iface_vars:
+        _add_var('/sys/class/net/%s/%s' % (device, var,), var)
+        
+    return dev
+    
+    
+    
+    
+    
+    
 
 
 
