@@ -1,4 +1,3 @@
-scripts/salt-minion /usr/share/salt
-scripts/salt-call /usr/share/salt
-salt/modules /usr/share/salt/modules
-conf/minion.template /etc/salt/minion
+conf/minion.template /etc/salt
+scripts/salt-minion /usr/bin
+scripts/salt-call /usr/bin
