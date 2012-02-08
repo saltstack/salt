@@ -1,5 +1,0 @@
-usr/share/salt/salt /usr/bin/salt
-usr/share/salt/salt-master /usr/bin/salt-master
-usr/share/salt/salt-cp /usr/bin/salt-cp
-usr/share/salt/salt-key /usr/bin/salt-key
-usr/share/salt/salt-run /usr/bin/salt-run
