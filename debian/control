@@ -34,7 +34,8 @@ Depends: ${python:Depends},
          libzmq-dev (>= 2.1.9),
          python,
          python-dev,
-         python-jinja2
+         python-jinja2,
+         msgpack-python
 Description: Shared libraries that salt requires for all packages
  This package is a powerful remote execution manager that can be used
  to administer servers in a fast and efficient way.
