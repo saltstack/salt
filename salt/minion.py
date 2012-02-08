@@ -636,6 +636,17 @@ class Matcher(object):
 
         return eval(' '.join(results))
 
+    def nodegroup_match(self, tgt, nodegroups):
+        '''
+        This is a compatability matcher and is NOT called when using
+        nodegroups for reomte execution, but is called when the nodegroups
+        matcher is used in states
+        '''
+        if tgt in nodegroups:
+            return self.compound_match(nodegroups[tgt])
+        return False
+
+
 class FileClient(object):
     '''
     Interact with the salt master file server.
