@@ -2,10 +2,10 @@
 #export DH_VERBOSE=1
 %:
 	dh $@ #--with python2
-#dh_override_auto_build:
+dh_override_auto_build:
 	python setup.py build #--install-layout=deb build
 get-orig-source:
 	git clone https://github.com/saltstack/salt.git
-	mv salt salt-0.9.6
-	tar -zcvf salt_0.9.6.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.6
-	rm -rf salt-0.9.6
+	mv salt salt-0.9.7
+	tar -zcvf salt_0.9.7.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.7
+	rm -rf salt-0.9.7
