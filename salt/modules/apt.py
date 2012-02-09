@@ -77,7 +77,7 @@ def refresh_db():
     return servers
 
 
-def install(pkg, refresh=False, repo='', skip_verify=False):
+def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Install the passed package
 

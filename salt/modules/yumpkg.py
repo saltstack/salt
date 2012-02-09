@@ -165,7 +165,7 @@ def clean_metadata():
     return refresh_db()
 
 
-def install(pkgs, refresh=False, repo='', skip_verify=False):
+def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Install the passed package(s)
 
