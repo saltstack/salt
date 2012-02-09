@@ -29,8 +29,6 @@ from salt.exceptions import AuthenticationError, MinionError, \
 import salt.client
 import salt.crypt
 import salt.loader
-import salt.modules
-import salt.returners
 import salt.utils
 import salt.payload
 
@@ -523,7 +521,7 @@ class Matcher(object):
         else:
             self.functions = functions
 
-    def confirm_top(self, match, data):
+    def confirm_top(self, match, data, nodegroups=None):
         '''
         Takes the data passed to a top file environment and determines if the
         data matches this minion
@@ -534,9 +532,13 @@ class Matcher(object):
                 if 'match' in item:
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
+            if matcher == 'nodegroup':
+                return getattr(self, '{0}_match'.format(matcher))(match, nodegroups)
             return getattr(self, '{0}_match'.format(matcher))(match)
         else:
-            log.error('Attempting to match with unknown matcher: %s', matcher)
+            log.error('Attempting to match with unknown matcher: {0}'.format(
+                matcher
+                ))
             return False
 
     def glob_match(self, tgt):
@@ -631,6 +633,17 @@ class Matcher(object):
                         ))
 
         return eval(' '.join(results))
+
+    def nodegroup_match(self, tgt, nodegroups):
+        '''
+        This is a compatability matcher and is NOT called when using
+        nodegroups for remote execution, but is called when the nodegroups
+        matcher is used in states
+        '''
+        if tgt in nodegroups:
+            return self.compound_match(nodegroups[tgt])
+        return False
+
 
 class FileClient(object):
     '''

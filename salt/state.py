@@ -758,6 +758,7 @@ class HighState(object):
             opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+        opts['nodegroups'] = mopts.get('nodegroups', {})
         return opts
 
     def _get_envs(self):
@@ -892,7 +893,11 @@ class HighState(object):
                 if not env == self.opts['environment']:
                     continue
             for match, data in body.items():
-                if self.matcher.confirm_top(match, data):
+                if self.matcher.confirm_top(
+                        match,
+                        data,
+                        self.opts['nodegroups']
+                        ):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
@@ -1020,7 +1025,7 @@ class HighState(object):
         if errors:
             return errors
         if not high:
-            return {'no.states': {
+            return {'no_|-states_|-states_|-None': {
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',
