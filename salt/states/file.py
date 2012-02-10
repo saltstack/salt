@@ -1198,7 +1198,7 @@ def append(name, text):
     ret['result'] = True
     return ret
 
-def touch(name, atime=None, mtime=None):
+def touch(name, atime=None, mtime=None, makedirs=False):
     """
     Replicate the 'nix "touch" command to create a new empty
     file or update the atime and mtime of an existing  file.
@@ -1219,6 +1219,12 @@ def touch(name, atime=None, mtime=None):
         ret['result'] = False
         ret['comment'] = ('Specified file {0} is not an absolute'
                           ' path').format(name)
+        return ret
+    if makedirs:
+        _makedirs(name)
+    if not os.path.isdir():
+        ret['result'] = False
+        ret['comment'] = 'Failed to create directory {0}'.format(name)
         return ret
     exists = os.path.exists(name)
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
