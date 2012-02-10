@@ -1222,9 +1222,11 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         return ret
     if makedirs:
         _makedirs(name)
-    if not os.path.isdir():
+    if not os.path.isdir(os.path.dirname(name)):
         ret['result'] = False
-        ret['comment'] = 'Failed to create directory {0}'.format(name)
+        ret['comment'] = 'Direcotry not present to touch file {0}'.format(
+                name
+                )
         return ret
     exists = os.path.exists(name)
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
