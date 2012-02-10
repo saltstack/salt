@@ -111,7 +111,7 @@ class Master(object):
                 dest='daemon',
                 default=False,
                 action='store_true',
-                help='Run the master in a daemon')
+                help='Run the master as a daemon')
         parser.add_option('-c',
                 '--config',
                 dest='config',
@@ -120,7 +120,7 @@ class Master(object):
         parser.add_option('-u',
                 '--user',
                 dest='user',
-                help='Specify user to run minion')
+                help='Specify user to run master')
         parser.add_option('--pid-file',
                 dest='pidfile',
                 default='/var/run/salt-master.pid',
@@ -302,7 +302,7 @@ class Syndic(object):
 
     def __parse_cli(self):
         '''
-        Parse the cli for options passed to a master daemon
+        Parse the cli for options passed to a syndic daemon
         '''
         import salt.log
         parser = optparse.OptionParser(version="%%prog %s" % __version__)
@@ -311,7 +311,7 @@ class Syndic(object):
                 dest='daemon',
                 default=False,
                 action='store_true',
-                help='Run the master in a daemon')
+                help='Run the syndic as a daemon')
         parser.add_option('--master-config',
                 dest='master_config',
                 default='/etc/salt/master',
@@ -323,7 +323,7 @@ class Syndic(object):
         parser.add_option('-u',
                 '--user',
                 dest='user',
-                help='Specify user to run minion')
+                help='Specify user to run syndic')
         parser.add_option('--pid-file',
                 dest='pidfile',
                 default='/var/run/salt-syndic.pid',
