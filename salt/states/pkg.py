@@ -34,10 +34,10 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False):
     Usage::
 
         httpd:
-          - pkg
-          - installed
-          - repo: mycustomrepo
-          - skip_verify: True
+          pkg:
+            - installed
+            - repo: mycustomrepo
+            - skip_verify: True
     '''
     rtag = __gen_rtag()
     cver = __salt__['pkg.version'](name)
