@@ -136,7 +136,9 @@ class State(object):
         python, pyx, or .so. Always refresh if the function is recuse, since
         that can lay down anything.
         '''
-        if not data['state'] == 'file' and not data['state'] == 'pkg':
+        if not data['state'] == 'file':
+            return None
+        elif not data['state'] == 'pkg':
             return None
         if data['fun'] == 'managed':
             if any((data['name'].endswith('.py'),
