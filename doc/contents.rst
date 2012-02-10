@@ -6,10 +6,7 @@ Full Table of Contents
     :maxdepth: 3
     :glob:
 
-    home
-
     topics/index
-    topics/installation
     topics/configuration
     topics/tutorials/modules
     topics/tutorials/states*

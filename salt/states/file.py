@@ -81,6 +81,19 @@ logger = logging.getLogger(__name__)
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
 
+def __manage_mode(mode):
+    '''
+    Convert the mode into something usable
+    '''
+    if mode:
+        mode = str(mode).lstrip('0')
+        if not mode:
+            return '0'
+        else:
+            return mode
+    return mode
+
+
 def __clean_tmp(sfn):
     '''
     Clean out a template temp file
@@ -445,8 +458,7 @@ def managed(name,
     defaults
         Default context passed to the template.
     '''
-    if mode:
-        mode = str(mode)
+    mode = __manage_mode(mode)
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -778,8 +790,7 @@ def directory(name,
         function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
     '''
-    if mode:
-        mode = str(mode)
+    mode = __manage_mode(mode)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -1165,7 +1176,15 @@ def append(name, text):
         text = (text,)
 
     for chunk in text:
-        for line in chunk.split('\n'):
+        try:
+            lines = chunk.split('\n')
+        except AttributeError:
+            logger.debug("Error appending text to %s; given object is: %s",
+                    name, type(chunk))
+            ret['comment'] = "Given text is not a string"
+            return ret
+
+        for line in lines:
             if __salt__['file.contains'](name, line):
                 continue
             else:

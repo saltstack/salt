@@ -211,7 +211,7 @@ def _virtual(osdata):
                 if grains.get('productname', '') == 'HVM domU':
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
-                elif os.path.isfile('/proc/xen/capabilities'):
+                elif os.path.isfile('/proc/xen/capabilities') and os.access('/proc/xen/capabilities', os.R_OK):
                     caps = open('/proc/xen/capabilities')
                     if 'control_d' not in caps.read():
                         # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
