@@ -108,8 +108,8 @@ def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
 
     cmd = '{nonint} apt-get -q -y {confold}{verify}{target} install {pkg}'.format(
             nonint='DEBIAN_FRONTEND=noninteractive',
-            confold='-o DPkg::Options::=--force-confold',
-            verify='--allow-unauthenticated' if skip_verify else '',
+            confold=' -o DPkg::Options::=--force-confold',
+            verify=' --allow-unauthenticated' if skip_verify else '',
             target=' -t {0}'.format(repo) if repo else '',
             pkg=pkg)
 
