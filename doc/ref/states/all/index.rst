@@ -19,6 +19,7 @@ Full list of builtin states
     mount
     mysql_database
     mysql_user
+    network
     pkg
     service
     ssh_auth

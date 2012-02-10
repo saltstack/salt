@@ -74,7 +74,7 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # -- General configuration -----------------------------------------------------
 
 project = u'Salt'
-copyright = u'2011, Thomas S. Hatch'
+copyright = u'2012, Thomas S. Hatch'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -188,7 +188,7 @@ man_pages = [
 epub_title = u'Salt Documentation'
 epub_author = u'Thomas S. Hatch'
 epub_publisher = epub_author
-epub_copyright = u'2011, Thomas S. Hatch'
+epub_copyright = u'2012, Thomas S. Hatch'
 
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.org/'

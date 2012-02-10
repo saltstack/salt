@@ -4,7 +4,6 @@ The networking module for RHEL/Fedora based distros
 
 import os
 import logging
-from fnmatch import fnmatch
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -34,10 +33,16 @@ def _read_file(path):
 _ETHTOOL_CONFIG_OPTS = [ 'autoneg', 'speed', 'duplex', 'rx', 'tx', 'sg', 'tso', 'ufo', 'gso', 'gro', 'lro' ]
 _RH_CONFIG_OPTS = [ 'domain', 'peerdns', 'defaultroute', 'mtu', 'static-routes' ]
 _RH_CONFIG_BONDING_OPTS = [ 'mode', 'miimon', 'arp_interval', 'arp_ip_target', 'downdelay', 'updelay', 'use_carrier', 'lacp_rate', 'hashing-algorithm' ]
-_CONFIG_TRUE = [ 'yes', 'on', 'true', '1']
-_CONFIG_FALSE = [ 'no', 'off', 'false', '0']
+_CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
+_CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
+_IFACE_TYPES = ['ethernet', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
 
 def _generate_if_settings(opts, iftype, iface):
+    '''
+    Fiters given options and outputs valid settings for requested operation.
+    If an option has a value that is not expected, this fuction will log what
+    the Interface, Setting and what it was expecting. 
+    '''
     
     if iftype in ['eth', 'lo', 'br']:
         config = {}
@@ -221,7 +226,13 @@ def _generate_if_settings(opts, iftype, iface):
             elif opts['mode'] in ['802.3ad', '4']:
                 bond.update( {'mode':'4'} )
                 for bo in ['miimon', 'downdelay', 'updelay', 'lacp_rate']:
+
                     if opts.has_key(bo):
+                        if bo == 'lacp_rate':
+                            if opts[bo] == 'fast':
+                                opts.update( {op:'1'} )
+                            if opts[bo] == 'slow':
+                                opts.update( {op:'0'} )
                         try:
                             int(opts[bo])
                             bond.update( {bo:opts[bo]} )
@@ -229,6 +240,7 @@ def _generate_if_settings(opts, iftype, iface):
                             log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, bo))
                             log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
                             bond.update( {bo:bond_def[bo]} )
+                        
                     else:
                         log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
                         bond.update( {bo:bond_def[bo]} )
@@ -307,36 +319,9 @@ def _generate_if_settings(opts, iftype, iface):
     
         return bond
 
-def _get_iface_settings(device):
-    dev = {}
-    _iface_vars = [
-        'mtu', 'operstate', 'carrier', 'address', 'addr_len', 'addr_assign_type', 'broadcast', 'dev_id', 'dormant'
-        'duplex', 'features', 'flags', 'ifalias', 'ifindex', 'iflink', 'link_mode', 'speed', 'tx_queue_len', 'type'
-    ]
-    
-    if device.startswith('bond'):
-        if os.path.exists('/sys/class/net/%s' % device):
-            dev.update( {'slaves':[]} )
-            for file os.listdir('/sys/class/net/%s' % device):
-                if file.startswith('slave'):
-                    dev['slaves'].append(file.split('_')[1])
-# TODO This is where I'm at right now.                
-
-
-    def _add_var(path, var):
-        if os.path.exists(path):
-            return dev.update( {var: _read_file(path)} )
-    
-    for var in _iface_vars:
-        _add_var('/sys/class/net/%s/%s' % (device, var,), var)
-        
-    return dev
-    
-    
-    
-    
-    
-    
-
-
+def build(iface, ip, type, settings):
+    if type in _IFACE_TYPES:
+        _generate_if_settings(opts=settings, iftype=type, iface=iface)
+        pass
+    pass
 

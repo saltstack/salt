@@ -43,6 +43,7 @@ Full list of builtin modules
     pw_group
     pw_user
     rh_service
+    rh_network
     saltutil
     selinux
     service
