@@ -136,7 +136,7 @@ class State(object):
         python, pyx, or .so. Always refresh if the function is recuse, since
         that can lay down anything.
         '''
-        if not data['state'] == 'file':
+        if not data['state'] == 'file' and not data['state'] == 'pkg':
             return None
         if data['fun'] == 'managed':
             if any((data['name'].endswith('.py'),
@@ -155,6 +155,13 @@ class State(object):
                 self.opts['cachedir'],
                 'module_refresh'),
                 'w+').write('')
+        if data['state'] == 'pkg':
+            self.load_modules()
+            open(os.path.join(
+                self.opts['cachedir'],
+                'module_refresh'),
+                'w+').write('')
+
 
     def format_verbosity(self, returns):
         '''
