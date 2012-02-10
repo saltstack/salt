@@ -229,6 +229,8 @@ def set_auth_key(
                     enc,
                     comment,
                     options)
+        if not os.path.isdir(uinfo['home']):
+            return 'fail'
         fconfig = os.path.join(uinfo['home'], config)
         if not os.path.isdir(os.path.dirname(fconfig)):
             dpath = os.path.dirname(fconfig)
