@@ -11,7 +11,6 @@ import imp
 import logging
 import os
 import salt
-import random
 from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
@@ -207,7 +206,7 @@ class Loader(object):
                              "modules.")
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
-    def gen_functions(self, pack=None):
+    def gen_functions(self, pack=None, virtual_enable=True):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -285,9 +284,10 @@ class Loader(object):
                     except TypeError:
                         pass
 
-            if hasattr(mod, '__virtual__'):
-                if callable(mod.__virtual__):
-                    virtual = mod.__virtual__()
+            if virtual_enable:
+                if hasattr(mod, '__virtual__'):
+                    if callable(mod.__virtual__):
+                        virtual = mod.__virtual__()
 
             for attr in dir(mod):
                 if attr.startswith('_'):
