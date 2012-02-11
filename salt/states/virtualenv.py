@@ -39,6 +39,11 @@ def manage(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
+    if not 'virtualenv.create' in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'Virtualenv was not detected on this system'
+        return ret
+
     venv_py = os.path.join(name, 'bin', 'python')
     venv_exists = os.path.exists(venv_py)
 
