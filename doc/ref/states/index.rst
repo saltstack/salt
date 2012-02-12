@@ -104,32 +104,32 @@ Here is an example of a Salt State:
 .. code-block:: yaml
 
     vim:
-        pkg:
-            - installed
+      pkg:
+        - installed
 
     salt:
-        pkg:
-            - latest
-        service:
-            - running
-            - require:
-                - file: /etc/salt/minion
-                - pkg: salt
-            - names:
-                - salt-master
-                - salt-minion
-            - watch:
-                - file: /etc/salt/minion
+      pkg:
+        - latest
+      service:
+        - running
+        - require:
+          - file: /etc/salt/minion
+          - pkg: salt
+        - names:
+          - salt-master
+          - salt-minion
+        - watch:
+          - file: /etc/salt/minion
                 
     /etc/salt/minion:
-        file:
-            - managed
-            - source: salt://salt/minion
-            - user: root
-            - group: root
-            - mode: 644
-            - require:
-                - pkg: salt
+      file:
+        - managed
+        - source: salt://salt/minion
+        - user: root
+        - group: root
+        - mode: 644
+        - require:
+          - pkg: salt
 
 This short stanza will ensure that vim is installed, salt is installed and up
 to date, the salt-master and salt-minion daemons are running and the Salt
@@ -150,13 +150,13 @@ lists of Salt states sent to the matching minions:
 .. code-block:: yaml
 
     base:
-        '*':
-            - salt
-            - users
-            - users.admin
-        'saltmaster.*':
-            - match: pcre
-            - salt.master
+      '*':
+        - salt
+        - users
+        - users.admin
+      'saltmaster.*':
+        - match: pcre
+        - salt.master
 
 This simple example uses the base environment, which is built into the default
 salt setup, and then all minions will have the modules salt, users and

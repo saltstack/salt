@@ -13,8 +13,14 @@ The Salt State Tree
 
         Configurable via :conf_master:`state_top`.
 
+        .. seealso:: :doc:`A detailed description of the top file </ref/states/top>`
+        
+.. glossary::
+
     State tree
-        A collection of ``sls`` files.
+        A collection of ``sls`` files that live under the directory specified
+        in :conf_master:`file_roots`. A state tree can be organized into
+        :term:`sls modules`.
 
 Include declaration
 -------------------
@@ -27,13 +33,13 @@ Include declaration
 
         Occurs only in the top level of the highstate structure.
 
-        Example:
+Example:
 
-        .. code-block:: yaml
+.. code-block:: yaml
 
-            include:
-              - edit.vim
-              - http.server
+    include:
+      - edit.vim
+      - http.server
 
 Module reference
 ----------------
@@ -59,6 +65,8 @@ ID declaration
 
         Occurs on the top level or under the :term:`extend declaration`.
 
+.. note:: Naming gotchas
+
         Must **not** contain a dot, otherwise highstate summary output will be
         unpredictable.
 
@@ -72,13 +80,35 @@ Extend declaration
 .. glossary::
 
     Extend declaration
-        Used to extend a :term:`name declaration` from an included ``sls
-        module``. The keys of the extend declaration always define existing
-        :term:`ID declarations <ID declaration>` which have been defined in
-        included ``sls modules``.
+        Extends a :term:`name declaration` from an included ``sls module``. The
+        keys of the extend declaration always define existing :term:`ID
+        declarations <ID declaration>` which have been defined in included
+        ``sls modules``.
 
         Occurs only in the top level and defines a dictionary.
 
+Extend declarations are useful for adding-to or overriding parts of a
+:term:`state declaration` that is defined in another ``sls`` files. In the
+following contrived example, the shown ``mywebsite.sls`` file is ``include``
+-ing and ``extend`` -ing the ``apache.sls`` module in order to add a ``watch``
+declaration that will restart Apache whenever the Apache configuration file,
+``mywebsite`` changes.
+
+.. code-block:: yaml
+
+    include:
+      - apache
+    
+    extend:
+      apache:
+        service:
+          - watch:
+            - file: mywebsite
+
+    mywebsite:
+      file:
+        - managed
+    
 State declaration
 -----------------
 
@@ -129,8 +159,17 @@ Function declaration
 .. glossary::
 
     Function declaration
-        The name of the function to call within the state. Any given state
-        declaration can only have a single function.
+        The name of the function to call within the state. A state declaration
+        can contain only a single function declaration.
+
+        For example, the following state declaration calls the :mod:`installed
+        <salt.states.pkg.installed>` function in the ``pkg`` state module:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg:
+                - installed
 
         Occurs as the only index in the :term:`state declaration` list.
 
@@ -146,16 +185,75 @@ Function arg declaration
 
         Occurs under a :term:`function declaration`.
 
+For example in the following state declaration ``user``, ``group``, and
+``mode`` are passed as arguments to the :mod:`managed
+<salt.states.file.managed>` function in the ``file`` state module:
+
+.. code-block:: yaml
+
+    /etc/http/conf/http.conf:
+      file:
+        - managed
+        - user: root
+        - group: root
+        - mode: 644
+
 Name declaration
 ----------------
 
 .. glossary::
 
     Name declaration
-        Used to override the name argument relative the :term:`state
-        declaration`. If the name is not specified then the :term:`ID
-        declaration` satisfies the name argument. The name is always a single
-        key dictionary referencing a string.
+        Overrides the ``name`` argument of a :term:`state declaration`. If
+        ``name`` is not specified the :term:`ID declaration` satisfies the
+        ``name`` argument.
+
+        The name is always a single key dictionary referencing a string.
+
+Overriding ``name`` is useful for a variety of scenarios.
+
+For example, avoiding clashing ID declarations. The following two state
+declarations cannot both have ``/etc/motd`` as the ID declaration:
+
+.. code-block:: yaml
+
+    motd_perms:
+      file:
+        - managed
+        - name: /etc/motd
+        - mode: 644
+
+    motd_quote:
+      file:
+        - append
+        - name: /etc/motd
+        - text: "Of all smells, bread; of all tastes, salt."
+
+Another common reason to override ``name`` is if the ID declaration is long and
+needs to be referenced in multiple places. In the example below it is much
+easier to specify ``mywebsite`` than to specify
+``/etc/apache2/sites-available/mywebsite.com`` multiple times:
+
+.. code-block:: yaml
+
+    mywebsite:
+      file:
+        - managed
+        - name: /etc/apache2/sites-available/mywebsite.com
+        - source: salt://mywebsite.com
+
+    a2ensite mywebsite.com:
+      cmd:
+        - wait
+        - unless: test -L /etc/apache2/sites-enabled/mywebsite.com
+        - watch:
+          - file: mywebsite
+
+    apache2:
+      service:
+        - running
+        - watch:
+          - file: mywebsite
 
 Names declaration
 -----------------
@@ -163,20 +261,37 @@ Names declaration
 .. glossary::
 
     Names declaration
-        Used to apply the contents of the :term:`state declaration` to multiple
-        states, each with its own name.
+        Expands the contents of the containing :term:`state declaration` into
+        multiple state declarations, each with its own name.
 
-        Example:
+For example, given the following state declaration:
 
-        .. code-block:: yaml
+.. code-block:: yaml
 
-            python-pkgs:
-              pkg:
-                - installed
-                - names:
-                  - python-django
-                  - python-crypto
-                  - python-yaml
+    python-pkgs:
+      pkg:
+        - installed
+        - names:
+          - python-django
+          - python-crypto
+          - python-yaml
+
+Once converted into the :term:`lowstate` data structure the above state
+declaration will be expaneded into the following three state declarations:
+
+.. code-block:: yaml
+
+      python-django:
+        pkg:
+          - installed
+
+      python-crypto:
+        pkg:
+          - installed
+
+      python-yaml:
+        pkg:
+          - installed
 
 Large example
 =============
@@ -189,40 +304,22 @@ components.
     <Include Declaration>:
       - <Module Reference>
       - <Module Reference>
+
     <Extend Declaration>:
       <ID Declaration>:
-        <State Declaration>:
-          - <Function>
-          - <Function Arg>
-          - <Function Arg>
-          - <Function Arg>
-          - <Name>: <name>
-          - <Requisite Declaration>:
-            - <Requisite Reference>
-            - <Requisite Reference>
-      <ID Declaration>:
-        <State Declaration>:
-          - <Function>
-          - <Function Arg>
-          - <Function Arg>
-          - <Function Arg>
-          - <Names>:
-            - <name>
-            - <name>
-            - <name>
-          - <Requisite Declaration>:
-            - <Requisite Reference>
-            - <Requisite Reference>
+        [<overrides>]
+
     <ID Declaration>:
       <State Declaration>:
         - <Function>
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
-        - <Name>
+        - <Name>: <name>
         - <Requisite Declaration>:
           - <Requisite Reference>
           - <Requisite Reference>
+
     <ID Declaration>:
       <State Declaration>:
         - <Function>
