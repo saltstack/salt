@@ -5,9 +5,9 @@ Test the hosts module
 import os
 
 # Import Salt libs
-import daemon
+import saltunittest
 
-class HostsModuleTest(daemon.ModuleCase):
+class HostsModuleTest(saltunittest.ModuleCase):
     def setUp(self):
         self._hfn = [f.hosts_filename for f in monkey_pathed]
         self.files = os.path.join(TEMPLATES_DIR, 'files')

@@ -49,7 +49,6 @@ class TestDaemon(object):
         '''
         master_opts = salt.config.master_config(os.path.join(TEST_DIR, 'files/conf/master'))
         minion_opts = salt.config.minion_config(os.path.join(TEST_DIR, 'files/conf/minion'))
-        print minion_opts
         salt.verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
