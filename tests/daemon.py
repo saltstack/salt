@@ -4,10 +4,11 @@ Classes used to set up the main components
 # Import python libs
 import multiprocessing
 import os
+import sys
 
 # Set up paths
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-SALT_LIBS = os.path.join(os.path.dirname(TEST_DIR), 'salt')
+SALT_LIBS = os.path.dirname(TEST_DIR)
 
 sys.path.insert(0, TEST_DIR)
 sys.path.insert(0, SALT_LIBS)
@@ -20,23 +21,24 @@ import salt.master
 import salt.minion
 
 
-class DaemonCase(TestCase):
+class DaemonCase(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    def setUp(self):
+    def __init__(self):
         '''
         Start a master and minion
         '''
-        master_opts = salt.config.master_config('files/conf/master')
-        minion_opts = salt.config.minion_config('files/conf/minion')
-        salt.verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
-                    os.path.join(self.opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.opts['pki_dir'], 'minions_rejected'),
-                    os.path.join(self.opts['cachedir'], 'jobs'),
-                    os.path.dirname(self.opts['log_file']),
-                    self.opts['extension_modules'],
-                    self.opts['sock_dir'],
+        master_opts = salt.config.master_config(os.path.join(TEST_DIR, 'files/conf/master'))
+        minion_opts = salt.config.minion_config(os.path.join(TEST_DIR, 'files/conf/minion'))
+        print minion_opts
+        salt.verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
+                    os.path.join(master_opts['pki_dir'], 'minions_pre'),
+                    os.path.join(master_opts['pki_dir'], 'minions_rejected'),
+                    os.path.join(master_opts['cachedir'], 'jobs'),
+                    os.path.dirname(master_opts['log_file']),
+                    minion_opts['extension_modules'],
+                    master_opts['sock_dir'],
                     ])
         # Start the master
         master = salt.master.Master(master_opts)
@@ -60,14 +62,14 @@ class ModuleCase(TestCase):
         '''
         Generate the tools to test a module
         '''
-        self.client = salt.client.LocalClient(master_opts, 'files/conf/master')
+        self.client = salt.client.LocalClient('files/conf/master')
 
-    def run_function(self, function):
+    def run_function(self, function, arg=()):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd(function)
+        orig = self.client.cmd('minion', function, arg)
         return orig['minion']
 
 

@@ -47,7 +47,6 @@ def load_config(opts, path, env_var):
     Attempts to update ``opts`` dict by parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
     '''
-
     if not path or not os.path.isfile(path):
         path = os.environ.get(env_var, path)
     # If the configuration file is missing, attempt to copy the template,

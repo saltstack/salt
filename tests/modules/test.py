@@ -1,6 +1,6 @@
 import daemon
 
-class TestModuleTest(ModuleCase):
+class TestModuleTest(daemon.ModuleCase):
     '''
     Validate the test module
     '''
