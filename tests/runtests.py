@@ -46,40 +46,5 @@ def get_test_name(root, name):
     return "".join((prefix, splitext(name)[0]))
 
 
-class DaemonCase(TestCase):
-    '''
-    Set up the master and minion daemons, and run related cases
-    '''
-    def setUp():
-        '''
-        Start a master and minion
-        '''
-        master_opts = salt.config.master_config('files/conf/master')
-        minion_opts = salt.config.minion_config('files/conf/minion')
-        salt.verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
-                    os.path.join(self.opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.opts['pki_dir'], 'minions_rejected'),
-                    os.path.join(self.opts['cachedir'], 'jobs'),
-                    os.path.dirname(self.opts['log_file']),
-                    self.opts['extension_modules'],
-                    self.opts['sock_dir'],
-                    ])
-        # Start the master
-        master = salt.master.Master(master_opts)
-        multiprocessing.Process(target=master.start).start()
-        # Start the minion
-        minion = salt.minion.Minion(minion_opts)
-        multiprocessing.Process(target=minion.tune_in).start()
-        
-    def tearDown():
-        '''
-        Kill the minion and master processes
-        '''
-        pass
-
-
-
-
-
 if __name__ == "__main__":
     main()
