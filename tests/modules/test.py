@@ -1,6 +1,6 @@
-import daemon
+import saltunittest
 
-class TestModuleTest(daemon.ModuleCase):
+class TestModuleTest(saltunittest.ModuleCase):
     '''
     Validate the test module
     '''
@@ -9,3 +9,9 @@ class TestModuleTest(daemon.ModuleCase):
         test.ping
         '''
         self.assertTrue(self.run_function('test.ping'))
+
+    def test_echo(self):
+        '''
+        test.echo
+        '''
+        self.assertEqual(self.run_function('test.echo', ['text']), 'text')
