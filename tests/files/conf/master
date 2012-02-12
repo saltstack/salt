@@ -1,0 +1,9 @@
+publish_port: 94505
+ret_port: 94506
+worker_threads: 1
+root_dir: /tmp/salttest
+pki_dir: /tmp/salttest/pki
+cachedir: /tmp/salttest/cache
+timeout: 1
+sock_dir: /tmp/salttest/.salt-unix
+open_mode: True
