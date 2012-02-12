@@ -37,6 +37,7 @@ Full list of builtin modules
     network
     pacman
     pip
+    pkg
     ps
     publish
     puppet
