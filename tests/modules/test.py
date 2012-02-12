@@ -1,7 +1,11 @@
-from modules import run_module
-import saltunittest
+import daemon
 
-class TestModuleTest(saltunittest.TestCase):
+class TestModuleTest(ModuleCase):
+    '''
+    Validate the test module
+    '''
     def test_ping(self):
-        ret = run_module('test.ping')
-        assert ret == {'return': True}
+        '''
+        test.ping
+        '''
+        self.assertTrue(self.run_function('test.ping'))

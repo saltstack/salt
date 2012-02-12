@@ -13,7 +13,7 @@ sys.path.insert(0, TEST_DIR)
 sys.path.insert(0, SALT_LIBS)
 
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner, TestCase
+from saltunittest import TestLoader, TextTestRunner, TestCase, TestSuite
 import salt
 import salt.config
 import salt.master
