@@ -68,7 +68,7 @@ ID declaration
 .. note:: Naming gotchas
 
         Must **not** contain a dot, otherwise highstate summary output will be
-        unpredictable.
+        unpredictable. (This has been fixed in versions 0.9.7 and above)
 
         Must be unique across entire state tree. If the same ID declaration is
         used twice, only the first one matched will be used. All subsequent
