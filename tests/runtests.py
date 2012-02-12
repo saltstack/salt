@@ -11,12 +11,6 @@ import sys
 import os
 import fnmatch
 
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner, TestCase
-import salt
-import salt.config
-import salt.master
-import salt.minion
 
 TEST_DIR = dirname(normpath(abspath(__file__)))
 SALT_BUILD = os.getcwd()
@@ -25,10 +19,19 @@ TEST_FILES = '*.py'
 sys.path.insert(0, TEST_DIR)
 sys.path.insert(0, SALT_BUILD)
 
+# Import salt libs
+from saltunittest import TestLoader, TextTestRunner, TestCase
+import daemon
+import salt
+import salt.config
+import salt.master
+import salt.minion
+
 def main():
     names = find_tests()
     tests = TestLoader().loadTestsFromNames(names)
     TextTestRunner(verbosity=1).run(tests)
+
 
 def find_tests():
     names = []
@@ -39,6 +42,8 @@ def find_tests():
                 module = get_test_name(root, name)
                 if module: names.append(module)
     return names
+
+
 def get_test_name(root, name):
     if name.startswith("_"): return None
     rel = relpath(root, TEST_DIR).lstrip(".")
@@ -47,4 +52,7 @@ def get_test_name(root, name):
 
 
 if __name__ == "__main__":
-    main()
+    daemon.DaemonCase()
+    loader = TestLoader()
+    tests = loader.discover(os.path.join(TEST_DIR, 'modules'))
+    TextTestRunner(verbosity=1).run(tests)
