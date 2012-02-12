@@ -52,6 +52,7 @@ Full list of builtin modules
     ssh
     state
     status
+    sys
     systemd
     test
     tomcat
