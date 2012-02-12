@@ -12,7 +12,7 @@ TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 def main():
     saltunittest.TestDaemon()
     loader = saltunittest.TestLoader()
-    tests = loader.discover(os.path.join(TEST_DIR, 'modules'))
+    tests = loader.discover(os.path.join(TEST_DIR, 'modules'), '*.py')
     saltunittest.TextTestRunner(verbosity=1).run(tests)
 
 
