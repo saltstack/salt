@@ -49,6 +49,17 @@ class TestModuleTest(saltunittest.ModuleCase):
                 opts['cachedir']
                 )
 
+    def test_cross_test(self):
+        '''
+        test.cross_test
+        '''
+        self.assertTrue(
+                self.run_function(
+                    'test.cross_test',
+                    ['test.ping']
+                    )
+                )
+
     def test_fib(self):
         '''
         test.fib
