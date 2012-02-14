@@ -882,7 +882,8 @@ class HighState(object):
         '''
         Returns the high data derived from the top file
         '''
-        tops = self.get_tops()
+        tops = self.client.ext_nodes()
+        tops.update(self.get_tops())
         return self.merge_tops(tops)
 
     def top_matches(self, top):
