@@ -3,86 +3,109 @@ Test the hosts module
 '''
 # Import python libs
 import os
+import shutil
 
 # Import Salt libs
 import saltunittest
 
+HFN = os.path.join(saltunittest.TMP, 'hosts')
+
 class HostsModuleTest(saltunittest.ModuleCase):
-    def setUp(self):
-        self._hfn = [f.hosts_filename for f in monkey_pathed]
-        self.files = os.path.join(TEMPLATES_DIR, 'files')
-        self.hostspath = os.path.join(self.files, 'hosts')
-        self.not_found = os.path.join(self.files, 'not_found')
-        self.tmpfiles = []
+    '''
+    Test the hosts module
+    '''
+    def __clean_hosts(self):
+        '''
+        Clean out the hosts file
+        '''
+        shutil.copyfile(os.path.join(saltunittest.FILES, 'hosts'), HFN)
+
+    def __clear_hosts(self):
+        '''
+        Delete the tmp hosts file
+        '''
+        if os.path.isfile(HFN):
+            os.remove(HFN)
 
     def tearDown(self):
-        for i, f in enumerate(monkey_pathed):
-            f.hosts_filename = self._hfn[i]
-        for tmp in self.tmpfiles:
-            os.remove(tmp)
-
-    def tmp_hosts_file(self, src):
-        tmpfile = path.join(self.files, 'tmp')
-        self.tmpfiles.append(tmpfile)
-        shutil.copy(src, tmpfile)
-        return tmpfile
+        '''
+        Make sure the tmp hosts file is gone
+        '''
+        self.__clear_hosts()
 
     def test_list_hosts(self):
-        list_hosts.hosts_filename = self.hostspath
-        hosts = list_hosts()
+        '''
+        hosts.list_hosts
+        '''
+        self.__clean_hosts()
+        hosts = self.run_function('hosts.list_hosts')
         self.assertEqual(len(hosts), 6)
-        self.assertEqual(hosts['::1'], ['ip6-localhost', 'ip6-loopback'])
-        self.assertEqual(hosts['127.0.0.1'], ['localhost', 'myname'])
+        self.assertEqual(hosts['::1'], ('ip6-localhost', 'ip6-loopback'))
+        self.assertEqual(hosts['127.0.0.1'], ('localhost', 'myname'))
 
     def test_list_hosts_nofile(self):
-        list_hosts.hosts_filename = self.not_found
-        hosts = list_hosts()
+        '''
+        hosts.list_hosts
+        without a hosts file
+        '''
+        if os.path.isfile(HFN):
+            os.remove(HFN)
+        hosts = self.run_function('hosts.list_hosts')
         self.assertEqual(hosts, {})
 
     def test_get_ip(self):
-        list_hosts.hosts_filename = self.hostspath
-        self.assertEqual(get_ip('myname'), '127.0.0.1')
-        self.assertEqual(get_ip('othername'), '')
-        list_hosts.hosts_filename = self.not_found
-        self.assertEqual(get_ip('othername'), '')
+        '''
+        hosts.get_ip
+        '''
+        self.__clean_hosts()
+        self.assertEqual(self.run_function('hosts.get_ip', ['myname']), '127.0.0.1')
+        self.assertEqual(self.run_function('hosts.get_ip', ['othername']), '')
+        self.__clear_hosts()
+        self.assertEqual(self.run_function('hosts.get_ip', ['othername']), '')
 
     def test_get_alias(self):
-        list_hosts.hosts_filename = self.hostspath
-        self.assertEqual(get_alias('127.0.0.1'), ['localhost', 'myname'])
-        self.assertEqual(get_alias('127.0.0.2'), [])
-        list_hosts.hosts_filename = self.not_found
-        self.assertEqual(get_alias('127.0.0.1'), [])
+        '''
+        hosts.get_alias
+        '''
+        self.__clean_hosts()
+        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), ('localhost', 'myname'))
+        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.2']), ())
+        self.__clear_hosts()
+        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), ())
 
     def test_has_pair(self):
-        list_hosts.hosts_filename = self.hostspath
-        self.assertTrue(has_pair('127.0.0.1', 'myname'))
-        self.assertFalse(has_pair('127.0.0.1', 'othername'))
+        '''
+        hosts.has_pair
+        '''
+        self.__clean_hosts()
+        self.assertTrue(self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']))
+        self.assertFalse(self.run_function('hosts.has_pair', ['127.0.0.1', 'othername']))
 
     def test_set_host(self):
-        tmp = self.tmp_hosts_file(self.hostspath)
-        list_hosts.hosts_filename = tmp
-        set_host.hosts_filename = tmp
-        assert set_host('192.168.1.123', 'newip')
-        self.assertTrue(has_pair('192.168.1.123', 'newip'))
-        self.assertEqual(len(list_hosts()), 7)
-        assert set_host('127.0.0.1', 'localhost')
-        self.assertFalse(has_pair('127.0.0.1', 'myname'), 'should remove second entry')
+        '''
+        hosts.set_hosts
+        '''
+        self.__clean_hosts()
+        assert self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
+        self.assertTrue(self.run_function('hosts.has_pair', ['192.168.1.123', 'newip']))
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
+        assert self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
+        self.assertFalse(self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']), 'should remove second entry')
 
     def test_add_host(self):
-        tmp = self.tmp_hosts_file(self.hostspath)
-        list_hosts.hosts_filename = tmp
-        add_host.hosts_filename = tmp
-        assert add_host('192.168.1.123', 'newip')
-        self.assertTrue(has_pair('192.168.1.123', 'newip'))
-        self.assertEqual(len(list_hosts()), 7)
-        assert add_host('127.0.0.1', 'othernameip')
-        self.assertEqual(len(list_hosts()), 7)
+        '''
+        hosts.add_host
+        '''
+        self.__clean_hosts()
+        assert self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
+        self.assertTrue(self.run_function('hosts.has_pair', ['192.168.1.123', 'newip']))
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
+        assert self.run_function('hosts.add_host', ['127.0.0.1', 'othernameip'])
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
 
     def test_rm_host(self):
-        tmp = self.tmp_hosts_file(self.hostspath)
-        list_hosts.hosts_filename = tmp
-        rm_host.hosts_filename = tmp
-        assert has_pair('127.0.0.1', 'myname')
-        assert rm_host('127.0.0.1', 'myname')
-        assert not has_pair('127.0.0.1', 'myname')
-        assert rm_host('127.0.0.1', 'unknown')
+        self.__clean_hosts()
+        assert self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        assert self.run_function('hosts.rm_host', ['127.0.0.1', 'myname'])
+        assert not self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        assert self.run_function('hosts.rm_host', ['127.0.0.1', 'unknown'])
