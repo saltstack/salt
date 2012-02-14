@@ -271,7 +271,7 @@ def db_create(name):
     # db doesnt exist, proceed
     db = connect()
     cur = db.cursor()
-    query = "CREATE DATABASE %s;" % name
+    query = "CREATE DATABASE `%s`;" % name
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
        log.info("DB '{0}' created".format(name,))
@@ -298,7 +298,7 @@ def db_remove(name):
     # db doesnt exist, proceed
     db = connect()
     cur = db.cursor()
-    query = "DROP DATABASE %s;" % name
+    query = "DROP DATABASE `%s`;" % name
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
 
