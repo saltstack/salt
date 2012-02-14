@@ -586,7 +586,6 @@ def managed(name,
                      source
                      )
                 return ret
-    # If the source file is a template render it accordingly
 
     # Check changes if the target file exists
     if os.path.isfile(name):
@@ -659,6 +658,7 @@ def managed(name,
             # Pre requisites are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copyfile(sfn, name)
+                __clean_tmp(sfn)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -667,6 +667,7 @@ def managed(name,
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
+        __clean_tmp(sfn)
         return ret
     else:
         # Only set the diff if the file contents is managed
@@ -743,6 +744,7 @@ def managed(name,
         # Now copy the file contents if there is a source file
         if sfn:
             shutil.copyfile(sfn, name)
+            __clean_tmp(sfn)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
