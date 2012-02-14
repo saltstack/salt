@@ -16,6 +16,26 @@ information in grains is unchanging, therefore the nature of the data is
 static. So grains information are things like the running kernel, or the
 operating system.
 
+Grains in the Minion Config
+===========================
+
+Grains can also be statically assigned within the minion configuration file.
+Just add the option ``grains`` and pass options to it:
+
+.. code-block:: yaml
+
+    grains:
+      roles: 
+        - webserver
+        - memcache
+      deployment: datacenter4
+      cabinet: 13
+      cab_u: 14-15
+
+Then statis data specific to your servers can be retrived via Salt, or used
+inside of the state system for matching. It also makes targeting, in the case
+of the example above, simply based on specific data about your deployment.
+
 Writing Grains
 ==============
 

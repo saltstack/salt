@@ -27,7 +27,7 @@ def _gen_tag(low):
     '''
     Generate the running dict tag string from the low data structure
     '''
-    return '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
+    return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
 def _getargs(func):
@@ -138,6 +138,8 @@ class State(object):
         '''
         if not data['state'] == 'file':
             return None
+        elif not data['state'] == 'pkg':
+            return None
         if data['fun'] == 'managed':
             if any((data['name'].endswith('.py'),
                     data['name'].endswith('.pyx'),
@@ -155,6 +157,13 @@ class State(object):
                 self.opts['cachedir'],
                 'module_refresh'),
                 'w+').write('')
+        if data['state'] == 'pkg':
+            self.load_modules()
+            open(os.path.join(
+                self.opts['cachedir'],
+                'module_refresh'),
+                'w+').write('')
+
 
     def format_verbosity(self, returns):
         '''
@@ -758,6 +767,7 @@ class HighState(object):
             opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+        opts['nodegroups'] = mopts.get('nodegroups', {})
         return opts
 
     def _get_envs(self):
@@ -892,7 +902,11 @@ class HighState(object):
                 if not env == self.opts['environment']:
                     continue
             for match, data in body.items():
-                if self.matcher.confirm_top(match, data):
+                if self.matcher.confirm_top(
+                        match,
+                        data,
+                        self.opts['nodegroups']
+                        ):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
@@ -1020,7 +1034,7 @@ class HighState(object):
         if errors:
             return errors
         if not high:
-            return {'no.states': {
+            return {'no_|-states_|-states_|-None': {
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',

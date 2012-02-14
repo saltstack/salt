@@ -17,6 +17,35 @@ anything. This means that the Salt states could be managed by xml files, html
 files, puppet files, or any format that can be translated into the data
 structure used by the state system.
 
+Multiple Renderers
+------------------
+
+When deploying a state tree a default renderer is selected in the master
+configuration file with the renderer option. But multiple renderers can be
+used inside the same state tree.
+
+When rendering sls files Salt checks for the presence of a salt specific
+shebang line. The shebang line syntax was chosen because it is familiar to
+the target audience, the systems admin and systems engineer.
+
+The shebang line directly calls the name of the renderer as it is specified
+within Salt. One of the most common reasons to use multiple renderers in to
+use the python or ``py`` renderer:
+
+.. code-block:: python
+
+    #!py
+
+    def run():
+        '''
+        Install the python-mako package
+        '''
+        return {'include': ['python'],
+                'python-mako': {'pkg': ['installed']}}
+
+The first line is a shebang that references the ``py`` renderer.
+
+
 Writing Renderers
 -----------------
 

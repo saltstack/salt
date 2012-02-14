@@ -155,12 +155,13 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
-    mode = str(mode)
+    mode = str(mode).lstrip('0')
+    if not mode:
+        mode = '0'
     if not os.path.exists(path):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
-    # FIXME: don't use a catch-all, be more specific...
     except:
         return 'Invalid Mode ' + mode
     return get_mode(path)

@@ -310,6 +310,21 @@ enabled and can be disabled by changing this value to False
 
     clean_dynamic_modules: True
 
+.. conf_minion:: environment
+
+``environment``
+---------------
+
+Default: ``None``
+
+Normally the minion is not isolated to any single environment on the master
+when running states, but the environment can be isolated on the minion side
+by statically setting it. Remember that the recommended way to manage
+environments is to isolate via the top file.
+
+.. code-block:: yaml
+
+    environment: None
 
 Security Settings
 ------------------
