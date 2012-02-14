@@ -882,8 +882,7 @@ class HighState(object):
         '''
         Returns the high data derived from the top file
         '''
-        tops = self.client.ext_nodes()
-        tops.update(self.get_tops())
+        tops = self.get_tops()
         return self.merge_tops(tops)
 
     def top_matches(self, top):
@@ -910,6 +909,12 @@ class HighState(object):
                     for item in data:
                         if isinstance(item, basestring):
                             matches[env].append(item)
+        ext_matches = self.client.ext_nodes()
+        for env in ext_matches:
+            if env in matches:
+                matches[env] = list(set(ext_matches[env]).union(matches[env]))
+            else:
+                matches[env] = ext_matches[env]
         return matches
 
     def load_dynamic(self, matches):
