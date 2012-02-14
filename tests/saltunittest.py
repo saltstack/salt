@@ -91,4 +91,24 @@ class ModuleCase(TestCase):
         orig = self.client.cmd('minion', function, arg)
         return orig['minion']
 
+    def minion_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return salt.config.minion_config(
+                os.path.join(
+                    TEST_DIR,
+                    'files/conf/minion'
+                    )
+                )
 
+    def master_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return salt.config.minion_config(
+                os.path.join(
+                    TEST_DIR,
+                    'files/conf/master'
+                    )
+                )
