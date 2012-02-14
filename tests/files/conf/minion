@@ -1,3 +1,4 @@
+# basic config
 master: localhost
 master_port: 94506
 root_dir: /tmp/salttest
@@ -7,5 +8,11 @@ cachedir: /tmp/salttest/cachedir
 acceptance_wait_time: = 1
 open_mode: True
 log_file: /tmp/salttest/minion
+
+# module extension
 test.foo: baz
 hosts.file: tmp/hosts
+
+# Grains addons
+grains:
+  test_grain: cheese
