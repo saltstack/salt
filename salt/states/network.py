@@ -7,74 +7,73 @@ all interfaces are ignored unless specified.
 
 .. code-block:: yaml
 
-
 eth0:
-    network:
-        - managed
-        - enabled: True
-        - ip:
-            v4:
-                proto: none
-                ipaddress: 10.1.0.1
-                netmask: 255.255.255.0
-                dns:
-                    - 8.8.8.8
-                    - 8.8.4.4
-eth1:
-    network:
-        - managed
-        - interface:
-            type: ethernet
-            settings:
-                mtu: 1500
-                duplex: half
-                offload:
-                    tso: off
-                    gso: on
+  network:
+    - managed
+    - enabled: True
+    - type: eth
+    - ipv4:
+      - proto: none
+      - ipaddress: 10.1.0.1
+      - netmask: 255.255.255.0
+      - dns:
+        - 8.8.8.8
+        - 8.8.4.4
+eth2:
+  network:
+    - managed
+    - type: slave
+    
+eth3:
+  network:
+    - managed
+    - type: slave
 
 bond0:
-    network:
-        - managed
-        - ip:
-            v4:
-                ipaddress: 10.1.0.1
-                netmask: 255.255.255.0
-                dns:
-                    - 8.8.8.8
-                    - 8.8.4.4
-        
-        - interface:
-            type: bond
-            bond:
-                slaves:
-                    eth2
-                    eth3
-                options:
-                    mode: 802.3ad
-                    miimon: 100
-                    arp_interval: 250
-                    downdelay: 200
-                    lacp_rate: fast
-                    max_bonds: 1
-                    updelay: 0
-                    use_carrier: on
-                    xmit_hash_policy: layer2
-                    
-            settings:
-                mtu: 9000
-                autoneg: on
-                speed: 1000
-                duplex: full
-                offload:
-                    rx: on
-                    tx: off
-                    sg: on
-                    tso: off
-                    ufo: off
-                    gso: off
-                    gro: off
-                    lro: off
-                
+  network:
+    - managed
+    - type: bond
+    - ipv4:
+      - ipaddress: 10.1.0.1
+      - netmask: 255.255.255.0
+      - dns:
+        - 8.8.8.8
+        - 8.8.4.4
+    - ipv6:
+    - enabled: False
+    - watch:
+      - network: eth2
+      - network: eth3
+    - slaves:
+      - eth2
+      - eth3
+    - mode: 802.3ad
+    - miimon: 100
+    - arp_interval: 250
+    - downdelay: 200
+    - lacp_rate: fast
+    - max_bonds: 1
+    - updelay: 0
+    - use_carrier: on
+    - xmit_hash_policy: layer2
+    - mtu: 9000
+    - autoneg: on
+    - speed: 1000
+    - duplex: full
+    - offload:
+      - rx: on
+      - tx: off
+      - sg: on
+      - tso: off
+      - ufo: off
+      - gso: off
+      - gro: off
+      - lro: off
+    - vlans:
+      - 2
+      - 3
+      - 10
+      - 12                
 '''
 
 def managed(
