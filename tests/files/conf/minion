@@ -8,3 +8,4 @@ acceptance_wait_time: = 1
 open_mode: True
 log_file: /tmp/salttest/minion
 test.foo: baz
+hosts.file: tmp/hosts
