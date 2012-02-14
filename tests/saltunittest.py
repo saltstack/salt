@@ -28,6 +28,8 @@ else:
 # Set up paths
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 SALT_LIBS = os.path.dirname(TEST_DIR)
+TMP = os.path.join(TEST_DIR, 'tmp')
+FILES = os.path.join(TEST_DIR, 'files')
 
 sys.path.insert(0, TEST_DIR)
 sys.path.insert(0, SALT_LIBS)
