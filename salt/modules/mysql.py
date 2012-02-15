@@ -23,6 +23,15 @@ import MySQLdb.cursors
 log = logging.getLogger(__name__)
 __opts__ = {}
 
+def __virtual__():
+    '''
+    Only load this module if the mysql config is set
+    '''
+    if 'mysql' in __opts__:
+        return 'mysql'
+    return False
+
+
 def __check_table(name, table):
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
@@ -120,7 +129,7 @@ def slave_lag():
     '''
     Return the number of seconds that a slave SQL server is lagging behind the
     master, if the host is not a slave it will return -1.  If the server is
-    configured to be a slave but replication but slave IO is not running then
+    configured to be a slave for replication but slave IO is not running then
     -2 will be returned.
 
     CLI Example::
@@ -189,7 +198,7 @@ def db_list():
 
     CLI Example::
 
-        salt '*' mysqldb.db_list
+        salt '*' mysql.db_list
     '''
     ret = []
     db = connect()
@@ -208,7 +217,7 @@ def db_tables(name):
 
     CLI Example::
 
-        salt '*' mysqldb.db_tables 'database'
+        salt '*' mysql.db_tables 'database'
     '''
     if not db_exists(name):
        log.info("Database '{0}' does not exist".format(name,))
@@ -233,7 +242,7 @@ def db_exists(name):
 
     CLI Example::
 
-        salt '*' mysqldb.db_exists 'dbname'
+        salt '*' mysql.db_exists 'dbname'
     '''
     db = connect()
     cur = db.cursor()
@@ -252,7 +261,7 @@ def db_create(name):
 
     CLI Example::
 
-        salt '*' mysqldb.db_create 'dbname'
+        salt '*' mysql.db_create 'dbname'
     '''
     # check if db exists
     if db_exists(name):
@@ -262,7 +271,7 @@ def db_create(name):
     # db doesnt exist, proceed
     db = connect()
     cur = db.cursor()
-    query = "CREATE DATABASE %s;" % name
+    query = "CREATE DATABASE `%s`;" % name
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
        log.info("DB '{0}' created".format(name,))
@@ -275,7 +284,7 @@ def db_remove(name):
 
     CLI Example::
 
-        salt '*' mysqldb.db_remove 'dbname'
+        salt '*' mysql.db_remove 'dbname'
     '''
     # check if db exists
     if not db_exists(name):
@@ -289,7 +298,7 @@ def db_remove(name):
     # db doesnt exist, proceed
     db = connect()
     cur = db.cursor()
-    query = "DROP DATABASE %s;" % name
+    query = "DROP DATABASE `%s`;" % name
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
 
@@ -309,7 +318,7 @@ def user_list():
 
     CLI Example::
 
-        salt '*' mysqldb.user_list
+        salt '*' mysql.user_list
     '''
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
@@ -325,7 +334,7 @@ def user_exists(user,
 
     CLI Example::
 
-        salt '*' mysqldb.user_exists 'username' 'hostname'
+        salt '*' mysql.user_exists 'username' 'hostname'
     '''
     db = connect()
     cur = db.cursor()
@@ -343,7 +352,7 @@ def user_info(user,
 
     CLI Example::
 
-        salt '*' mysqldb.user_info root localhost
+        salt '*' mysql.user_info root localhost
     '''
     db = connect()
     cur = db.cursor (MySQLdb.cursors.DictCursor)
@@ -362,7 +371,7 @@ def user_create(user,
 
     CLI Example::
 
-        salt '*' mysqldb.user_create 'username' 'hostname' 'password'
+        salt '*' mysql.user_create 'username' 'hostname' 'password'
     '''
     if user_exists(user,host):
        log.info("User '{0}'@'{1}' already exists".format(user,host,))
@@ -392,7 +401,7 @@ def user_chpass(user,
 
     CLI Example::
 
-        salt '*' mysqldb.user_chpass frank localhost newpassword
+        salt '*' mysql.user_chpass frank localhost newpassword
     '''
     if password is None:
        log.error('No password provided')
@@ -410,13 +419,13 @@ def user_chpass(user,
     return False
 
 def user_remove(user,
-               host='localhost'):
+                host='localhost'):
     '''
     Delete MySQL user
 
     CLI Example::
 
-        salt '*' mysqldb.user_remove frank localhost
+        salt '*' mysql.user_remove frank localhost
     '''
     db = connect()
     cur = db.cursor ()
@@ -441,7 +450,7 @@ def db_check(name,
 
     CLI Example::
 
-        salt '*' mysqldb.db_check dbname
+        salt '*' mysql.db_check dbname
     '''
     ret = []
     if table is None:
@@ -462,7 +471,7 @@ def db_repair(name,
 
     CLI Example::
 
-        salt '*' mysqldb.db_repair dbname
+        salt '*' mysql.db_repair dbname
     '''
     ret = []
     if table is None:
@@ -483,7 +492,7 @@ def db_optimize(name,
 
     CLI Example::
 
-        salt '*' mysqldb.db_optimize dbname
+        salt '*' mysql.db_optimize dbname
     '''
     ret = []
     if table is None:
@@ -496,3 +505,106 @@ def db_optimize(name,
         log.info("Optimizing table '%s' in db '%s'..".format(name,table,))
         ret = __optimize_table(name,table)
     return ret
+
+'''
+Grants
+'''
+def __grant_generate(grant, 
+                    database, 
+                    user, 
+                    host='localhost'):
+    # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
+    grant = grant.replace(',', ', ').upper()
+    
+    db_part = database.rpartition('.')
+    db = db_part[0]
+    table = db_part[2]
+    
+    query = "GRANT %s ON `%s`.`%s` TO '%s'@'%s'" % (grant, db, table, user, host,)
+    log.debug("Query generated: {0}".format(query,))
+    return query      
+    
+def user_grants(user, 
+                host='localhost'):
+    '''
+    Shows the grants for the given MySQL user (if it exists)
+
+    CLI Example::
+
+        salt '*' mysql.user_grants 'frank' 'localhost'
+    '''
+    if not user_exists(user):
+       log.info("User '{0}' does not exist".format(user,))
+       return False
+
+    ret = []
+    db = connect()
+    cur = db.cursor()
+    query = "SHOW GRANTS FOR '%s'@'%s'" % (user,host,)
+    log.debug("Doing query: {0}".format(query,))
+
+    cur.execute(query)
+    results = cur.fetchall()
+    for grant in results:
+       ret.append(grant[0])
+    log.debug(ret)
+    return ret
+
+def grant_exists(grant, 
+                database, 
+                user, 
+                host='localhost'):
+    # todo: This function is a bit tricky, since it requires the ordering to be exactly the same.
+    # perhaps should be replaced/reworked with a better/cleaner solution.
+    target = __grant_generate(grant, database, user, host)
+    
+    if target in user_grants(user, host):
+        log.debug("Grant exists.")
+        return True       
+    
+    log.debug("Grant does not exist, or is perhaps not ordered properly?")
+    return False   
+
+def grant_add(grant,
+              database, 
+              user, 
+              host='localhost'):
+    '''
+    Adds a grant to the MySQL server.
+
+    CLI Example::
+
+        salt '*' mysql.grant_add 'SELECT|INSERT|UPDATE|...' 'database.*' 'frank' 'localhost'
+    '''
+    # todo: validate grant
+    db = connect()
+    cur = db.cursor()
+    
+    query = __grant_generate(grant, database, user, host)
+    log.debug("Query: {0}".format(query,))
+    if cur.execute( query ):
+       log.info("Grant '{0}' created")
+       return True
+    return False
+
+def grant_revoke(grant, 
+                 database, 
+                 user, 
+                 host='localhost'):
+    '''
+    Removes a grant from the MySQL server.
+
+    CLI Example::
+
+        salt '*' mysql.grant_revoke 'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
+    '''
+    # todo: validate grant
+    db = connect() 
+    cur = db.cursor()     
+    query = "REVOKE %s ON %s FROM '%s'@'%s';" % (grant, database, user, host,)
+    log.debug("Query: {0}".format(query,))
+    if cur.execute( query ):
+       log.info("Grant '{0}' revoked")
+       return True
+    return False
+
