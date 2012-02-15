@@ -512,15 +512,22 @@ Grants
 def __grant_generate(grant, 
                     database, 
                     user, 
-                    host='localhost'):
+                    host='localhost',
+                    grant_option=False,
+                    escape=True):
     # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = grant.replace(',', ', ').upper()
     
     db_part = database.rpartition('.')
     db = db_part[0]
     table = db_part[2]
-    
-    query = "GRANT %s ON `%s`.`%s` TO '%s'@'%s'" % (grant, db, table, user, host,)
+
+    if escape:
+        db = "`%s`" % db
+        table = "`%s`" % table
+    query = "GRANT %s ON %s.%s TO '%s'@'%s'" % (grant, db, table, user, host,)
+    if grant_option:
+        query += " WITH GRANT OPTION"
     log.debug("Query generated: {0}".format(query,))
     return query      
     
@@ -553,10 +560,12 @@ def user_grants(user,
 def grant_exists(grant, 
                 database, 
                 user, 
-                host='localhost'):
+                host='localhost',
+                grant_option=False,
+                escape=True):
     # todo: This function is a bit tricky, since it requires the ordering to be exactly the same.
     # perhaps should be replaced/reworked with a better/cleaner solution.
-    target = __grant_generate(grant, database, user, host)
+    target = __grant_generate(grant, database, user, host, grant_option, escape)
     
     if target in user_grants(user, host):
         log.debug("Grant exists.")
@@ -568,7 +577,9 @@ def grant_exists(grant,
 def grant_add(grant,
               database, 
               user, 
-              host='localhost'):
+              host='localhost',
+              grant_option=False,
+              escape=True):
     '''
     Adds a grant to the MySQL server.
 
@@ -580,7 +591,7 @@ def grant_add(grant,
     db = connect()
     cur = db.cursor()
     
-    query = __grant_generate(grant, database, user, host)
+    query = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
        log.info("Grant '{0}' created")
@@ -590,7 +601,8 @@ def grant_add(grant,
 def grant_revoke(grant, 
                  database, 
                  user, 
-                 host='localhost'):
+                 host='localhost',
+                 grant_option=False):
     '''
     Removes a grant from the MySQL server.
 
@@ -600,7 +612,10 @@ def grant_revoke(grant,
     '''
     # todo: validate grant
     db = connect() 
-    cur = db.cursor()     
+    cur = db.cursor()
+
+    if grant_option:
+        grant += ", GRANT OPTION"
     query = "REVOKE %s ON %s FROM '%s'@'%s';" % (grant, database, user, host,)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
