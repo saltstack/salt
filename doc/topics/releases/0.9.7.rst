@@ -28,7 +28,7 @@ system allows clear introspection into the active running state of the,
 running Salt interface.
 
 The Jobs interface is centered in the new minion side proc system. The
-minions now store a msgpack serialized file under ``cachedir``/proc. These
+minions now store a msgpack serialized file under /var/cache/salt/proc. These
 files keep track of the active state of processes on the minion.
 
 Functions in the saltutil Module
