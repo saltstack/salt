@@ -136,25 +136,31 @@ class State(object):
         python, pyx, or .so. Always refresh if the function is recuse, since
         that can lay down anything.
         '''
-        if not data['state'] == 'file':
-            return None
-        if data['fun'] == 'managed':
-            if any((data['name'].endswith('.py'),
-                    data['name'].endswith('.pyx'),
-                    data['name'].endswith('.pyo'),
-                    data['name'].endswith('.pyc'),
-                    data['name'].endswith('.so'))):
+        if data['state'] == 'file':
+            if data['fun'] == 'managed':
+                if any((data['name'].endswith('.py'),
+                        data['name'].endswith('.pyx'),
+                        data['name'].endswith('.pyo'),
+                        data['name'].endswith('.pyc'),
+                        data['name'].endswith('.so'))):
+                    self.load_modules()
+                    open(os.path.join(
+                        self.opts['cachedir'],
+                        'module_refresh'),
+                        'w+').write('')
+            elif data['fun'] == 'recurse':
                 self.load_modules()
                 open(os.path.join(
                     self.opts['cachedir'],
                     'module_refresh'),
                     'w+').write('')
-        elif data['fun'] == 'recurse':
+        elif data['state'] == 'pkg':
             self.load_modules()
             open(os.path.join(
                 self.opts['cachedir'],
                 'module_refresh'),
                 'w+').write('')
+
 
     def format_verbosity(self, returns):
         '''
@@ -903,6 +909,12 @@ class HighState(object):
                     for item in data:
                         if isinstance(item, basestring):
                             matches[env].append(item)
+        ext_matches = self.client.ext_nodes()
+        for env in ext_matches:
+            if env in matches:
+                matches[env] = list(set(ext_matches[env]).union(matches[env]))
+            else:
+                matches[env] = ext_matches[env]
         return matches
 
     def load_dynamic(self, matches):
@@ -912,7 +924,9 @@ class HighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        self.state.functions['saltutil.sync_all'](matches.keys())
+        syncd = self.state.functions['saltutil.sync_all'](matches.keys())
+        if syncd[2]:
+            self.opts['grains'] = salt.loader.grains(self.opts)
         faux = {'state': 'file', 'fun': 'recurse'}
         self.state.module_refresh(faux)
 

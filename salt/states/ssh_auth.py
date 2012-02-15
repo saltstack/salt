@@ -69,6 +69,10 @@ def present(
         ret['changes'][name] = 'New'
         ret['comment'] = ('The authorized host key {0} for user {1} was added'
                           .format(name, user))
+    elif data == 'fail':
+        ret['result'] = False
+        ret['comment'] = ('Failed to add the ssh key, is the home directory'
+                          ' available?')
 
     return ret
 

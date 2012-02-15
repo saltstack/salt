@@ -10,7 +10,6 @@ Build-Depends: debhelper (>= 7.0.50~),
                python-m2crypto,
                python-zmq (>= 2.1.9),
                libzmq-dev (>= 2.1.9),
-               python-all-dev,
                python-jinja2
 Standards-Version: 3.9.2
 Homepage: http://saltstack.org
@@ -19,19 +18,15 @@ Homepage: http://saltstack.org
 
 
 Package: salt-common
-Architecture: any
+Architecture: all
 Depends: ${python:Depends},
          ${misc:Depends},
          ${shlibs:Depends},
-         cython,
-         python-setuptools,
          python-yaml,
          python-crypto,
          python-m2crypto,
          python-zmq (>= 2.1.9),
-         libzmq-dev (>= 2.1.9),
          python,
-         python-dev,
          python-jinja2,
          msgpack-python
 Description: Shared libraries that salt requires for all packages

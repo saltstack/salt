@@ -3,6 +3,7 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python modules
+import glob
 import os
 import sys
 import socket
@@ -46,13 +47,12 @@ def load_config(opts, path, env_var):
     Attempts to update ``opts`` dict by parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
     '''
-
     if not path or not os.path.isfile(path):
         path = os.environ.get(env_var, path)
     # If the configuration file is missing, attempt to copy the template,
     # after removing the first header line.
     if not os.path.isfile(path):
-        template = "%s.template" % path
+        template = '{0}.template'.format(path)
         if os.path.isfile(template):
             with open(path, 'w') as out:
                 with open(template, 'r') as f:
@@ -76,6 +76,34 @@ def load_config(opts, path, env_var):
             log.warn(msg.format(path, e))
     else:
         log.debug('Missing configuration file: {0}'.format(path))
+
+
+def include_config(opts, orig_path):
+    '''
+    Parses an extra configuration file specified in an include list in the
+    main config file.
+    '''
+    include = opts.get('include', [])
+    if isinstance(include, basestring):
+        include = [include]
+    for path in include:
+        if not os.path.isabs(path):
+            path = os.path.join(os.path.dirname(orig_path), path)
+        for fn_ in glob.glob(path):
+            try:
+                conf_opts = yaml.safe_load(open(fn_, 'r'))
+                if conf_opts is None:
+                    # The config file is empty and the yaml.load returned None
+                    conf_opts = {}
+                else:
+                    # allow using numeric ids: convert int to string
+                    if 'id' in conf_opts:
+                        conf_opts['id'] = str(conf_opts['id'])
+                opts.update(conf_opts)
+            except Exception, e:
+                msg = 'Error parsing configuration file: {0} - {1}'
+                log.warn(msg.format(fn_, e))
+    return opts
 
 
 def prepend_root_dir(opts, path_options):
@@ -126,6 +154,9 @@ def minion_config(path):
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
+
+    if 'include' in opts:
+        opts = include_config(opts, path)
 
     opts['master_ip'] = dns_check(opts['master'])
 
@@ -185,6 +216,9 @@ def master_config(path):
     }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
+
+    if 'include' in opts:
+        opts = include_config(opts, path)
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 

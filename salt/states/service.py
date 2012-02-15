@@ -312,3 +312,23 @@ def watcher(name, sig=None):
             'changes': {},
             'result': True,
             'comment': 'Service {0} started'.format(name)}
+
+
+def enabled(name):
+    '''
+    Verify that the service is enabled on boot
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _enable(name, None)
+
+
+def disabled(name):
+    '''
+    Verify that the service is disabled on boot
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _disable(name, None)

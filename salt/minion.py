@@ -607,10 +607,13 @@ class Matcher(object):
             elif match == 'or':
                 results.append('or')
                 continue
+            elif match == 'not':
+                results.append('not')
+                continue
             # If we are here then it is not a boolean operator, check if the
             # last member of the result list is a boolean, if no, append and
             if results:
-                if results[-1] != 'and' or results[-1] != 'or':
+                if results[-1] != 'and' or results[-1] != 'or' or results[-1] != 'not':
                     results.append('and')
             if match[1] == '@':
                 comps = match.split('@')

@@ -81,6 +81,19 @@ logger = logging.getLogger(__name__)
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
 
+def __manage_mode(mode):
+    '''
+    Convert the mode into something usable
+    '''
+    if mode:
+        mode = str(mode).lstrip('0')
+        if not mode:
+            return '0'
+        else:
+            return mode
+    return mode
+
+
 def __clean_tmp(sfn):
     '''
     Clean out a template temp file
@@ -445,8 +458,7 @@ def managed(name,
     defaults
         Default context passed to the template.
     '''
-    if mode:
-        mode = str(mode)
+    mode = __manage_mode(mode)
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -574,7 +586,6 @@ def managed(name,
                      source
                      )
                 return ret
-    # If the source file is a template render it accordingly
 
     # Check changes if the target file exists
     if os.path.isfile(name):
@@ -647,6 +658,7 @@ def managed(name,
             # Pre requisites are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copyfile(sfn, name)
+                __clean_tmp(sfn)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -655,6 +667,7 @@ def managed(name,
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
+        __clean_tmp(sfn)
         return ret
     else:
         # Only set the diff if the file contents is managed
@@ -731,6 +744,7 @@ def managed(name,
         # Now copy the file contents if there is a source file
         if sfn:
             shutil.copyfile(sfn, name)
+            __clean_tmp(sfn)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -778,8 +792,7 @@ def directory(name,
         function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
     '''
-    if mode:
-        mode = str(mode)
+    mode = __manage_mode(mode)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -1187,7 +1200,7 @@ def append(name, text):
     ret['result'] = True
     return ret
 
-def touch(name, atime=None, mtime=None):
+def touch(name, atime=None, mtime=None, makedirs=False):
     """
     Replicate the 'nix "touch" command to create a new empty
     file or update the atime and mtime of an existing  file.
@@ -1208,6 +1221,14 @@ def touch(name, atime=None, mtime=None):
         ret['result'] = False
         ret['comment'] = ('Specified file {0} is not an absolute'
                           ' path').format(name)
+        return ret
+    if makedirs:
+        _makedirs(name)
+    if not os.path.isdir(os.path.dirname(name)):
+        ret['result'] = False
+        ret['comment'] = 'Direcotry not present to touch file {0}'.format(
+                name
+                )
         return ret
     exists = os.path.exists(name)
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
