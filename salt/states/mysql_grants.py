@@ -23,7 +23,7 @@ specification as defined in the MySQL documentation:
        - database: exampledb.*
        - user: frank
        - host: localhost
-   
+
    frank_otherdb:
      mysql_grants:
        - present
@@ -40,10 +40,12 @@ specification as defined in the MySQL documentation:
 '''
 
 def present(name,
-		    grant=None,
-			database=None,
-			user=None,
-			host='localhost'):
+            grant=None,
+            database=None,
+            user=None,
+            host='localhost',
+            grant_option=False,
+            escape=True):
     '''
     Ensure that the grant is present with the specified properties
 
@@ -61,7 +63,13 @@ def present(name,
 
     host
         The MySQL server
-    '''    
+
+    grant_option
+        Adds the WITH GRANT OPTION to the defined grant. default: False
+
+    excape
+        Defines if the database value gets escaped or not. default: True
+    '''
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -73,11 +81,11 @@ def present(name,
                )
            }
     # check if grant exists
-    if __salt__['mysql.grant_exists'](grant,database,user,host):
-        return ret        
+    if __salt__['mysql.grant_exists'](grant, database, user, host, grant_option, escape):
+        return ret
 
     # The grant is not present, make it!
-    if __salt__['mysql.grant_add'](grant,database,user,host):
+    if __salt__['mysql.grant_add'](grant, database, user, host, grant_option, escape):
         ret['comment'] = 'Grant {0} for {1}@{2} on {3} has been added'.format(
                 grant,
                 user,
@@ -97,10 +105,12 @@ def present(name,
 
 
 def absent(name,
-		   grant=None,
-		   database=None,
-		   user=None,
-           host='localhost'):
+           grant=None,
+           database=None,
+           user=None,
+           host='localhost',
+           grant_option=False,
+           escape=True):
     '''
     Ensure that the grant is absent
 
@@ -125,8 +135,8 @@ def absent(name,
            'comment': ''}
 
     #check if db exists and remove it
-    if __salt__['mysql.grant_exists'](grant,database,user,host,):
-        if __salt__['mysql.grant_revoke'](grant,database,user,host):
+    if __salt__['mysql.grant_exists'](grant, database, user, host, grant_option, escape):
+        if __salt__['mysql.grant_revoke'](grant, database, user, host, grant_option):
             ret['comment'] = ('Grant {0} for {1}@{2} on {3} has been'
                               ' revoked').format(
                                       grant,
@@ -136,7 +146,7 @@ def absent(name,
                                       )
             ret['changes'][name] = 'Absent'
             return ret
-        
+
     # fallback
     ret['comment'] = ('Grant {0} for {1}@{2} on {3} is not present, so it'
                       ' cannot be revoked').format(

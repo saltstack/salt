@@ -924,7 +924,9 @@ class HighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        self.state.functions['saltutil.sync_all'](matches.keys())
+        syncd = self.state.functions['saltutil.sync_all'](matches.keys())
+        if syncd[2]:
+            self.opts['grains'] = salt.loader.grains(self.opts)
         faux = {'state': 'file', 'fun': 'recurse'}
         self.state.module_refresh(faux)
 

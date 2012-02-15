@@ -30,9 +30,7 @@ def set_pidfile(pidfile):
     try:
         open(pidfile, 'w+').write(str(os.getpid()))
     except IOError:
-        err = ('Failed to commit the pid file to location {0}, please verify'
-              ' that the location is available').format(pidfile)
-        log.error(err)
+        pass
 
 
 def verify_env(dirs):
