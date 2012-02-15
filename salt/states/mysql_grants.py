@@ -43,7 +43,8 @@ def present(name,
             grant=None,
             database=None,
             user=None,
-            host='localhost'):
+            host='localhost',
+            grant_option=False):
     '''
     Ensure that the grant is present with the specified properties
 
@@ -73,11 +74,11 @@ def present(name,
                )
            }
     # check if grant exists
-    if __salt__['mysql.grant_exists'](grant,database,user,host):
+    if __salt__['mysql.grant_exists'](grant, database, user, host, grant_option):
         return ret
 
     # The grant is not present, make it!
-    if __salt__['mysql.grant_add'](grant,database,user,host):
+    if __salt__['mysql.grant_add'](grant, database, user, host, grant_option):
         ret['comment'] = 'Grant {0} for {1}@{2} on {3} has been added'.format(
                 grant,
                 user,
@@ -100,7 +101,8 @@ def absent(name,
            grant=None,
            database=None,
            user=None,
-           host='localhost'):
+           host='localhost',
+           grant_option=False):
     '''
     Ensure that the grant is absent
 
@@ -125,8 +127,8 @@ def absent(name,
            'comment': ''}
 
     #check if db exists and remove it
-    if __salt__['mysql.grant_exists'](grant,database,user,host,):
-        if __salt__['mysql.grant_revoke'](grant,database,user,host):
+    if __salt__['mysql.grant_exists'](grant, database, user, host, grant_option):
+        if __salt__['mysql.grant_revoke'](grant, database, user, host, grant_option):
             ret['comment'] = ('Grant {0} for {1}@{2} on {3} has been'
                               ' revoked').format(
                                       grant,
