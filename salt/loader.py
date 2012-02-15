@@ -30,7 +30,7 @@ def minion_mods(opts):
     module_dirs = [
         os.path.join(salt_base_path, 'modules'),
         ] + extra_dirs
-    load = Loader(module_dirs, opts)
+    load = Loader(module_dirs, opts, 'module')
     return load.apply_introspection(load.gen_functions())
 
 
@@ -47,7 +47,7 @@ def returners(opts):
     module_dirs = [
         os.path.join(salt_base_path, 'returners'),
         ] + extra_dirs
-    load = Loader(module_dirs, opts)
+    load = Loader(module_dirs, opts, 'returner')
     return load.filter_func('returner')
 
 
@@ -64,7 +64,7 @@ def states(opts, functions):
     module_dirs = [
         os.path.join(salt_base_path, 'states'),
         ] + extra_dirs
-    load = Loader(module_dirs, opts)
+    load = Loader(module_dirs, opts, 'state')
     pack = {'name': '__salt__',
             'value': functions}
     return load.gen_functions(pack)
@@ -83,7 +83,7 @@ def render(opts, functions):
     module_dirs = [
         os.path.join(salt_base_path, 'renderers'),
         ] + extra_dirs
-    load = Loader(module_dirs, opts)
+    load = Loader(module_dirs, opts, 'render')
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)
@@ -107,7 +107,7 @@ def grains(opts):
     module_dirs = [
         os.path.join(salt_base_path, 'grains'),
         ] + extra_dirs
-    load = Loader(module_dirs, opts)
+    load = Loader(module_dirs, opts, 'grain')
     grains = load.gen_grains()
     if 'grains' in opts:
         grains.update(opts['grains'])
@@ -144,8 +144,11 @@ class Loader(object):
     used to only load specific functions from a directory, or to call modules
     in an arbitrary directory directly.
     '''
-    def __init__(self, module_dirs, opts=dict()):
+    def __init__(self, module_dirs, opts=dict(), tag='module'):
         self.module_dirs = module_dirs
+        if '_' in tag:
+            raise LoaderError('Cannot tag loader with an "_"')
+        self.tag = tag
         if 'grains' in opts:
             self.grains = opts['grains']
         else:
@@ -203,7 +206,7 @@ class Loader(object):
                              "modules.")
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
-    def gen_functions(self, pack=None):
+    def gen_functions(self, pack=None, virtual_enable=True):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
@@ -242,10 +245,19 @@ class Loader(object):
                     mod = pyximport.load_module(name, names[name], '/tmp')
                 else:
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
-                    mod = imp.load_module(name, fn_, path, desc)
+                    mod = imp.load_module(
+                            '{0}_{1}'.format(name, self.tag),
+                            fn_,
+                            path,
+                            desc
+                            )
             except ImportError as exc:
                 log.debug(('Failed to import module {0}, this is most likely'
                            ' NOT a problem: {1}').format(name, exc))
+                continue
+            except Exception as exc:
+                log.warning(('Failed to import module {0}, this is due most'
+                    ' likely to a syntax error: {1}').format(name, exc))
                 continue
             modules.append(mod)
         for mod in modules:
@@ -272,9 +284,10 @@ class Loader(object):
                     except TypeError:
                         pass
 
-            if hasattr(mod, '__virtual__'):
-                if callable(mod.__virtual__):
-                    virtual = mod.__virtual__()
+            if virtual_enable:
+                if hasattr(mod, '__virtual__'):
+                    if callable(mod.__virtual__):
+                        virtual = mod.__virtual__()
 
             for attr in dir(mod):
                 if attr.startswith('_'):
@@ -288,7 +301,11 @@ class Loader(object):
                         pass
                     else:
                         func = getattr(mod, attr)
-                        funcs[mod.__name__ + '.' + attr] = func
+                        funcs[
+                                '{0}.{1}'.format(
+                                    mod.__name__[:mod.__name__.rindex('_')],
+                                    attr)
+                                ] = func
                         self._apply_outputter(func, mod)
         for mod in modules:
             if not hasattr(mod, '__salt__'):

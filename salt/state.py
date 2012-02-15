@@ -23,6 +23,12 @@ import salt.minion
 
 log = logging.getLogger(__name__)
 
+def _gen_tag(low):
+    '''
+    Generate the running dict tag string from the low data structure
+    '''
+    return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
+
 
 def _getargs(func):
     '''
@@ -40,6 +46,7 @@ def _getargs(func):
         raise TypeError("Cannot inspect argument list for '{0}'".format(func))
 
     return aspec
+
 
 def format_log(ret):
     '''
@@ -96,6 +103,21 @@ class State(object):
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.load_modules()
+        self.mod_init = set()
+
+    def _mod_init(self, low):
+        '''
+        Check the module initilization function, if this is the first run of
+        a state package that has a mod_init function, then execute the
+        mod_init function in the state module.
+        '''
+        minit = '{0}.mod_init'.format(low['state'])
+        if not low['state'] in self.mod_init:
+            if minit in self.states:
+                mret = self.states[minit](low)
+                if not mret:
+                    return
+                self.mod_init.add(low['state'])
 
     def load_modules(self):
         '''
@@ -114,25 +136,31 @@ class State(object):
         python, pyx, or .so. Always refresh if the function is recuse, since
         that can lay down anything.
         '''
-        if not data['state'] == 'file':
-            return None
-        if data['fun'] == 'managed':
-            if any((data['name'].endswith('.py'),
-                    data['name'].endswith('.pyx'),
-                    data['name'].endswith('.pyo'),
-                    data['name'].endswith('.pyc'),
-                    data['name'].endswith('.so'))):
+        if data['state'] == 'file':
+            if data['fun'] == 'managed':
+                if any((data['name'].endswith('.py'),
+                        data['name'].endswith('.pyx'),
+                        data['name'].endswith('.pyo'),
+                        data['name'].endswith('.pyc'),
+                        data['name'].endswith('.so'))):
+                    self.load_modules()
+                    open(os.path.join(
+                        self.opts['cachedir'],
+                        'module_refresh'),
+                        'w+').write('')
+            elif data['fun'] == 'recurse':
                 self.load_modules()
                 open(os.path.join(
                     self.opts['cachedir'],
-                    '.module_refresh'),
+                    'module_refresh'),
                     'w+').write('')
-        elif data['fun'] == 'recurse':
+        elif data['state'] == 'pkg':
             self.load_modules()
             open(os.path.join(
                 self.opts['cachedir'],
-                '.module_refresh'),
+                'module_refresh'),
                 'w+').write('')
+
 
     def format_verbosity(self, returns):
         '''
@@ -266,12 +294,12 @@ class State(object):
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
-                            # Make sure that there is only one key in the dict
-                            if len(arg.keys()) != 1:
-                                errors.append(('Multiple dictionaries defined'
-                                ' in argument of state {0} in sls {1}').format(
-                                    name,
-                                    body['__sls__']))
+                                # Make sure that there is only one key in the dict
+                                if len(arg.keys()) != 1:
+                                    errors.append(('Multiple dictionaries defined'
+                                    ' in argument of state {0} in sls {1}').format(
+                                        name,
+                                        body['__sls__']))
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue
@@ -526,7 +554,7 @@ class State(object):
             if '__FAILHARD__' in running:
                 running.pop('__FAILHARD__')
                 return running
-            tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
+            tag = _gen_tag(low)
             if tag not in running:
                 running = self.call_chunk(low, running, chunks)
                 if self.check_failhard(low, running):
@@ -537,7 +565,7 @@ class State(object):
         '''
         Check if the low data chunk should send a failhard signal
         '''
-        tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
+        tag = _gen_tag(low)
         if low.get('failhard', False) \
                 or self.opts['failhard'] \
                 and tag in running:
@@ -545,129 +573,118 @@ class State(object):
                 return True
         return False
 
-    def check_requires(self, low, running, chunks):
+    def check_requisite(self, low, running, chunks):
         '''
-        Look into the running data to see if the requirement has been met
+        Look into the running data to check the status of all requisite states
         '''
-        if 'require' not in low:
+        present = False
+        if 'watch' in low:
+            present = True
+        if 'require' in low:
+            present = True
+        if not present:
             return 'met'
-        reqs = []
+        reqs = {'require': [],
+                'watch': []}
         status = 'unmet'
-        for req in low['require']:
+        for r_state in reqs.keys():
+            if r_state in low:
+                for req in low[r_state]:
+                    found = False
+                    for chunk in chunks:
+                        if chunk['__id__'] == req[req.keys()[0]] or \
+                                chunk['name'] == req[req.keys()[0]]:
+                            if chunk['state'] == req.keys()[0]:
+                                found = True
+                                reqs[r_state].append(chunk)
+                    if not found:
+                        return 'unmet'
+        fun_stats = set()
+        for r_state, chunks in reqs.items():
             for chunk in chunks:
-                if chunk['__id__'] == req[req.keys()[0]] or \
-                        chunk['name'] == req[req.keys()[0]]:
-                    if chunk['state'] == req.keys()[0]:
-                        reqs.append(chunk)
-        fun_stats = []
-        for req in reqs:
-            tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(req)
-            if tag not in running:
-                fun_stats.append('unmet')
-            else:
-                fun_stats.append('met' if running[tag]['result'] else 'fail')
-        for stat in fun_stats:
-            if stat == 'unmet':
-                return stat
-            elif stat == 'fail':
-                return stat
-        return 'met'
+                tag = _gen_tag(chunk)
+                if tag not in running:
+                    fun_stats.add('unmet')
+                    continue
+                if not running[tag]['result']:
+                    fun_stats.add('fail')
+                    continue
+                if r_state == 'watch' and running[tag]['changes']:
+                    fun_stats.add('change')
+                    continue
+                else:
+                    fun_stats.add('met')
 
-    def check_watchers(self, low, running, chunks):
-        '''
-        Look into the running data to see if the watched states have been run
-        '''
-        if 'watch' not in low:
-            return 'nochange'
-        reqs = []
-        status = 'unmet'
-        for req in low['watch']:
-            for chunk in chunks:
-                if chunk['__id__'] == req[req.keys()[0]] or \
-                        chunk['name'] == req[req.keys()[0]]:
-                    if chunk['state'] == req.keys()[0]:
-                        reqs.append(chunk)
-        fun_stats = []
-        for req in reqs:
-            tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(req)
-            if tag not in running:
-                fun_stats.append('unmet')
-            else:
-                (fun_stats.append('change' if running[tag]['changes']
-                                           else 'nochange'))
-        for stat in fun_stats:
-            if stat == 'change':
-                return stat
-            elif stat == 'unmet':
-                return stat
-        return 'nochange'
+        if 'unmet' in fun_stats:
+            return 'unmet'
+        elif 'fail' in fun_stats:
+            return 'fail'
+        elif 'change' in fun_stats:
+            return 'change'
+        return 'met'
 
     def call_chunk(self, low, running, chunks):
         '''
         Check if a chunk has any requires, execute the requires and then the
         chunk
         '''
-        tag = '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
-        if 'require' in low:
-            status = self.check_requires(low, running, chunks)
-            if status == 'unmet':
-                reqs = []
-                for req in low['require']:
+        self._mod_init(low)
+        tag = _gen_tag(low)
+        requisites = ('require', 'watch')
+        status = self.check_requisite(low, running, chunks)
+        if status == 'unmet':
+            lost = {'require': [],
+                    'watch': []}
+            reqs = []
+            for requisite in requisites:
+                if not requisite in low:
+                    continue
+                for req in low[requisite]:
+                    found = False
                     for chunk in chunks:
                         if chunk['name'] == req[req.keys()[0]] \
                                 or chunk['__id__'] == req[req.keys()[0]]:
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
-                for chunk in reqs:
-                    # Check to see if the chunk has been run, only run it if
-                    # it has not been run already
-                    if (chunk['state'] + '.' + chunk['name'] +
-                        '.' + chunk['fun'] not in running):
-                        running = self.call_chunk(chunk, running, chunks)
-                        if self.check_failhard(chunk, running):
-                            running['__FAILHARD__'] = True
-                            return running
-                running = self.call_chunk(low, running, chunks)
-                if self.check_failhard(chunk, running):
-                    running['__FAILHARD__'] = True
-                    return running
-            elif status == 'met':
-                running[tag] = self.call(low)
-            elif status == 'fail':
+                                found = True
+                    if not found:
+                        lost[requisite].append(req)
+            if lost['require'] or lost['watch']:
+                comment = 'The following requisites were not found:\n'
+                for requisite, lreqs in lost.items():
+                    for lreq in lreqs:
+                        comment += '{0}{1}: {2}\n'.format(' '*19,
+                                requisite,
+                                lreq)
                 running[tag] = {'changes': {},
                                 'result': False,
-                                'comment': 'One or more require failed'}
-        elif 'watch' in low:
-            status = self.check_watchers(low, running, chunks)
-            if status == 'unmet':
-                reqs = []
-                for req in low['watch']:
-                    for chunk in chunks:
-                        if chunk['name'] == req[req.keys()[0]] \
-                                or chunk['__id__'] == req[req.keys()[0]]:
-                            if chunk['state'] == req.keys()[0]:
-                                reqs.append(chunk)
-                for chunk in reqs:
-                    # Check to see if the chunk has been run, only run it if
-                    # it has not been run already
-                    if (chunk['state'] + '.' + chunk['name'] +
-                        '.' + chunk['fun'] not in running):
-                        running = self.call_chunk(chunk, running, chunks)
-                        if self.check_failhard(chunk, running):
-                            running['__FAILHARD__'] = True
-                            return running
-                running = self.call_chunk(low, running, chunks)
-                if self.check_failhard(chunk, running):
-                    running['__FAILHARD__'] = True
-                    return running
-            elif status == 'nochange':
-                running[tag] = self.call(low)
-            elif status == 'change':
+                                'comment': comment}
+                return running
+            for chunk in reqs:
+                # Check to see if the chunk has been run, only run it if
+                # it has not been run already
+                ctag = _gen_tag(chunk)
+                if ctag not in running:
+                    running = self.call_chunk(chunk, running, chunks)
+                    if self.check_failhard(chunk, running):
+                        running['__FAILHARD__'] = True
+                        return running
+            running = self.call_chunk(low, running, chunks)
+            if self.check_failhard(chunk, running):
+                running['__FAILHARD__'] = True
+                return running
+        elif status == 'met':
+            running[tag] = self.call(low)
+        elif status == 'fail':
+            running[tag] = {'changes': {},
+                            'result': False,
+                            'comment': 'One or more requisite failed'}
+        elif status == 'change':
+            ret = self.call(low)
+            if not ret['changes']:
+                low['fun'] = 'watcher'
                 ret = self.call(low)
-                if not ret['changes']:
-                    low['fun'] = 'watcher'
-                    ret = self.call(low)
-                running[tag] = ret
+            running[tag] = ret
         else:
             running[tag] = self.call(low)
         return running
@@ -747,6 +764,7 @@ class HighState(object):
             opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+        opts['nodegroups'] = mopts.get('nodegroups', {})
         return opts
 
     def _get_envs(self):
@@ -766,18 +784,30 @@ class HighState(object):
         include = {}
         done = {}
         # Gather initial top files
-        for env in self._get_envs():
-            if not env in tops:
-                tops[env] = []
-            tops[env].append(
+        if self.opts['environment']:
+            tops[self.opts['environment']] = [
                     self.state.compile_template(
                         self.client.cache_file(
                             self.opts['state_top'],
-                            env
+                            self.opts['environment']
                             ),
-                        env
+                        self.opts['environment']
                         )
-                    )
+                    ]
+        else:
+            for env in self._get_envs():
+                if not env in tops:
+                    tops[env] = []
+                tops[env].append(
+                        self.state.compile_template(
+                            self.client.cache_file(
+                                self.opts['state_top'],
+                                env
+                                ),
+                            env
+                            )
+                        )
+
         # Search initial top files for includes
         for env, ctops in tops.items():
             for ctop in ctops:
@@ -865,13 +895,26 @@ class HighState(object):
         '''
         matches = {}
         for env, body in top.items():
+            if self.opts['environment']:
+                if not env == self.opts['environment']:
+                    continue
             for match, data in body.items():
-                if self.matcher.confirm_top(match, data):
+                if self.matcher.confirm_top(
+                        match,
+                        data,
+                        self.opts['nodegroups']
+                        ):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
                         if isinstance(item, basestring):
                             matches[env].append(item)
+        ext_matches = self.client.ext_nodes()
+        for env in ext_matches:
+            if env in matches:
+                matches[env] = list(set(ext_matches[env]).union(matches[env]))
+            else:
+                matches[env] = ext_matches[env]
         return matches
 
     def load_dynamic(self, matches):
@@ -881,7 +924,9 @@ class HighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        self.state.functions['saltutil.sync_all'](matches.keys())
+        syncd = self.state.functions['saltutil.sync_all'](matches.keys())
+        if syncd[2]:
+            self.opts['grains'] = salt.loader.grains(self.opts)
         faux = {'state': 'file', 'fun': 'recurse'}
         self.state.module_refresh(faux)
 
@@ -928,7 +973,11 @@ class HighState(object):
                     else:
                         for sub_sls in state.pop('include'):
                             if not list(mods).count(sub_sls):
-                                nstate, mods, err = self.render_state(sub_sls, env, mods)
+                                nstate, mods, err = self.render_state(
+                                        sub_sls,
+                                        env,
+                                        mods
+                                        )
                             if nstate:
                                 state.update(nstate)
                             if err:
@@ -990,7 +1039,7 @@ class HighState(object):
         if errors:
             return errors
         if not high:
-            return {'no.states': {
+            return {'no_|-states_|-states_|-None': {
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',

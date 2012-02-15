@@ -1,3 +1,21 @@
+salt (0.9.7~pre2-0ppa1) lucid; urgency=low
+
+  * Fix arch and deps issue
+
+ -- Corey Quinn <corey@sequestered.net>  Wed, 08 Feb 2012 17:22:47 -0800
+
+salt (0.9.7~pre1-0ppa1) lucid; urgency=low
+
+  * Version bump, fixed a few issues
+
+ -- Corey Quinn <corey@sequestered.net>  Wed, 08 Feb 2012 16:35:59 -0800
+
+salt (0.9.6-1) lucid; urgency=low
+
+  *  Bump version; time to upgrade
+
+ -- Corey Quinn <corey@sequestered.net>  Tue, 07 Feb 2012 18:15:20 -0800
+
 salt (0.9.5-1) unstable; urgency=low
 
   * First package release. (Closes: #643789)

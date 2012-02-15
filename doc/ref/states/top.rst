@@ -1,0 +1,143 @@
+============
+The Top File
+============
+
+The top file is used to map what sls modules get loaded onto what minions via
+the state system. The top file creates a few general abstractions. First it
+maps what nodes should pull from which environments, next it defines which
+matches systems should draw from.
+
+Environments
+============
+
+The environments in the top file corresponds with the environments defined in
+the file_roots variable. In a simple, single environment setup you only have
+the base environment, and therefore only one state tree. Here is a simple
+example of file_roots in the master configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt
+
+This means that the top file will only have one environment to pull from,
+here is a simple, single environment top file:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - core
+        - edit
+
+This also means that /srv/salt has a state tree. But if you want to use
+multiple environments, or partition the file server to serve more than
+just the state tree, then the file_roots option can be expanded:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt/base
+      dev:
+        - /srv/salt/dev
+      qa:
+        - /srv/salt/qa
+      prod:
+        - /srv/salt/prod
+
+Then our top file could reference the environments:
+
+.. code-block:: yaml
+
+    dev:
+      'webserver*dev*':
+        - webserver
+      'db*dev*':
+        - db
+    qa:
+      'webserver*qa*':
+        - webserver
+      'db*qa*':
+        - db
+    prod:
+      'webserver*prod*':
+        - webserver
+      'db*prod*':
+        - db
+
+In this setup we have state trees in 3 of the 4 environments, and no state
+tree in the base environment. Notice that the targets for the minions
+specify environment data. In Salt the master determines who is in what
+environment, and many environments can be crossed together. For instance,
+a separate global state tree could be added to the base environment if
+it suits your deployment:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - global
+    dev:
+      'webserver*dev*':
+        - webserver
+      'db*dev*':
+        - db
+    qa:
+      'webserver*qa*':
+        - webserver
+      'db*qa*':
+        - db
+    prod:
+      'webserver*prod*':
+        - webserver
+      'db*prod*':
+        - db
+
+In this setup all systems will pull the global sls from the base environment,
+as well as pull from their respective environments.
+
+Remember, that since everything is a file in salt, the environments are
+primarily file server environments, this means that environments that have
+nothing to do with states can be defined and used to distribute other files.
+
+A clean and recommended setup for multiple environments would look like this:
+
+
+.. code-block:: yaml
+
+    # Master file_roots configuration:
+    file_roots:
+      base:
+        - /srv/salt/base
+      dev:
+        - /srv/salt/dev
+      qa:
+        - /srv/salt/qa
+      prod:
+        - /srv/salt/prod
+
+Then only place state trees in the dev, qa and prod environments, leaving
+the base environment open for generic file transfers. Then the top.sls file
+would look something like this:
+    
+.. code-block:: yaml
+
+    dev:
+      'webserver*dev*':
+        - webserver
+      'db*dev*':
+        - db
+    qa:
+      'webserver*qa*':
+        - webserver
+      'db*qa*':
+        - db
+    prod:
+      'webserver*prod*':
+        - webserver
+      'db*prod*':
+        - db
+
+

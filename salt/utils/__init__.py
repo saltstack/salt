@@ -30,6 +30,19 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
+months = {'01': 'Jan',
+          '02': 'Feb',
+          '03': 'Mar',
+          '04': 'Apr',
+          '05': 'May',
+          '06': 'Jun',
+          '07': 'Jul',
+          '08': 'Aug',
+          '09': 'Sep',
+          '10': 'Oct',
+          '11': 'Nov',
+          '12': 'Dec'}
+
 
 def get_colors(use=True):
     '''
@@ -63,6 +76,18 @@ def get_colors(use=True):
             colors[color] = ''
 
     return colors
+
+
+def append_pid(pidfile):
+    '''
+    Save the pidfile
+    '''
+    try:
+        open(pidfile, 'a').write('\n{0}'.format(str(os.getpid())))
+    except IOError:
+        err = ('Failed to commit the pid to location {0}, please verify'
+              ' that the location is available').format(pidfile)
+        log.error(err)
 
 
 def daemonize():
@@ -107,8 +132,9 @@ def daemonize():
         if pid > 0:
             # exit first parent
             sys.exit(0)
-    except OSError, e:
-        print >> sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
+    except OSError as exc:
+        msg = 'fork #1 failed: {0} ({1})'.format(e.errno, e.strerror)
+        log.error(msg)
         sys.exit(1)
 
     # decouple from parent environment
@@ -120,10 +146,10 @@ def daemonize():
     try:
         pid = os.fork()
         if pid > 0:
-            # print "Daemon PID %d" % pid
             sys.exit(0)
-    except OSError, e:
-        print >> sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
+    except OSError as exc:
+        msg = 'fork #2 failed: {0} ({1})'
+        log.error(msg.format(e.errno, e.strerror))
         sys.exit(1)
 
     dev_null = open('/dev/null', 'rw')
@@ -153,6 +179,7 @@ def profile_func(filename=None):
         return profiled_func
     return proffunc
 
+
 def which(exe=None):
     '''
     Python clone of POSIX's /usr/bin/which
@@ -167,6 +194,7 @@ def which(exe=None):
                 return full_path
     return None
 
+
 def list_files(directory):
     '''
     Return a list of all files found under directory
@@ -180,4 +208,45 @@ def list_files(directory):
             ret.add(os.path.join(root, name))
 
     return list(ret)
+
+
+def jid_to_time(jid):
+    '''
+    Convert a salt job id into the time when the job was invoked
+    '''
+    jid = str(jid)
+    if not len(jid) == 20:
+        return ''
+    year = jid[:4]
+    month = jid[4:6]
+    day = jid[6:8]
+    hour = jid[8:10]
+    minute = jid[10:12]
+    second = jid[12:14]
+    micro = jid[14:]
+
+    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(
+            year,
+            months[month],
+            day,
+            hour,
+            minute,
+            second,
+            micro
+            )
+    return ret
+
+
+def gen_mac(prefix='52:54:'):
+    '''
+    Generates a mac addr with the defined prefix
+    '''
+    src = ['1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f']
+    mac = prefix
+    while len(mac) < 18:
+        if len(mac) < 3:
+            mac = random.choice(src) + random.choice(src) + ':'
+        if mac.endswith(':'):
+            mac += random.choice(src) + random.choice(src) + ':'
+    return mac[:-1]
 

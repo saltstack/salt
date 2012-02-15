@@ -4,7 +4,7 @@ Returners
 
 By default the return values of the commands sent to the salt minions are
 returned to the salt-master. But since the commands executed on the salt
-minions are detatched from the call on the salt master, there is no need for
+minions are detached from the call on the salt master, there is no need for
 the minion to return the data to the salt master.
 
 This is where the returner interface comes in. Returners are modules called
@@ -16,6 +16,30 @@ a MongoDB server, a MySQL server, or any system!
 
 .. seealso:: :ref:`Full list of builtin returners <all-salt.returners>`
 
+Using Returners
+===============
+
+All commands will return the command data back to the master. Adding more
+returners will ensure that the data is also sent to the specified returner
+interfaces.
+
+Specifying what returners to use is done when the command is invoked:
+
+.. code-block:: bash
+
+    salt '*' test.ping --return redis_return
+
+This command will ensure that the redis_return returner is used.
+
+It is also possible to specify multiple returners:
+
+.. code-block:: bash
+
+    salt '*' test.ping --return mongo_return,redis_return,cassandra_return
+
+In this scenario all three returners will be called and the data from the
+test.ping command will be sent out to the three named returers.
+
 Writing a Returner
 ==================
 
@@ -24,7 +48,7 @@ function must accept a single argument. this argument is the return data from
 the called minion function. So if the minion function ``test.ping`` is called
 the value of the argument will be ``True``.
 
-A simple returner is implimented here:
+A simple returner is implemented here:
 
 .. code-block:: python
 
@@ -51,5 +75,5 @@ serializes the data as json and sets it in redis.
 Examples
 --------
 
-The collection of builtin salt returners can be found here:
+The collection of built-in salt returners can be found here:
 :blob:`salt/returners`

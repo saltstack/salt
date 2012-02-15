@@ -19,6 +19,22 @@ except ImportError as e:
     if e.message != 'No module named _msgpack':
         raise
 
+
+def set_pidfile(pidfile):
+    '''
+    Save the pidfile
+    '''
+    pdir = os.path.dirname(pidfile)
+    if not os.path.isdir(pdir):
+        os.makedirs(pdir)
+    try:
+        open(pidfile, 'w+').write(str(os.getpid()))
+    except IOError:
+        err = ('Failed to commit the pid file to location {0}, please verify'
+              ' that the location is available').format(pidfile)
+        log.error(err)
+
+
 def verify_env(dirs):
     '''
     Verify that the named directories are in place and that the environment
@@ -81,6 +97,8 @@ class Master(object):
         # command line overrides config
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
+        # Send the pidfile location to the opts
+        self.opts['pidfile'] = self.cli['pidfile']
 
     def __parse_cli(self):
         '''
@@ -93,7 +111,7 @@ class Master(object):
                 dest='daemon',
                 default=False,
                 action='store_true',
-                help='Run the master in a daemon')
+                help='Run the master as a daemon')
         parser.add_option('-c',
                 '--config',
                 dest='config',
@@ -102,7 +120,12 @@ class Master(object):
         parser.add_option('-u',
                 '--user',
                 dest='user',
-                help='Specify user to run minion')
+                help='Specify user to run master')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-master.pid',
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -118,7 +141,8 @@ class Master(object):
 
         cli = {'daemon': options.daemon,
                'config': options.config,
-               'user': options.user}
+               'user': options.user,
+               'pidfile': options.pidfile}
 
         return cli
 
@@ -128,6 +152,7 @@ class Master(object):
         '''
         verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
+                    os.path.join(self.opts['pki_dir'], 'minions_rejected'),
                     os.path.join(self.opts['cachedir'], 'jobs'),
                     os.path.dirname(self.opts['log_file']),
                     self.opts['sock_dir'],
@@ -148,6 +173,7 @@ class Master(object):
                 # Late import so logging works correctly
                 import salt.utils
                 salt.utils.daemonize()
+            set_pidfile(self.cli['pidfile'])
             master.start()
 
 
@@ -183,6 +209,11 @@ class Minion(object):
                 '--user',
                 dest='user',
                 help='Specify user to run minion')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-minion.pid',
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -197,7 +228,8 @@ class Minion(object):
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
         cli = {'daemon': options.daemon,
                'config': options.config,
-               'user': options.user}
+               'user': options.user,
+               'pidfile': options.pidfile}
 
         return cli
 
@@ -226,6 +258,7 @@ class Minion(object):
                     # Late import so logging works correctly
                     import salt.utils
                     salt.utils.daemonize()
+                set_pidfile(self.cli['pidfile'])
                 minion = salt.minion.Minion(self.opts)
                 minion.tune_in()
             except KeyboardInterrupt:
@@ -269,7 +302,7 @@ class Syndic(object):
 
     def __parse_cli(self):
         '''
-        Parse the cli for options passed to a master daemon
+        Parse the cli for options passed to a syndic daemon
         '''
         import salt.log
         parser = optparse.OptionParser(version="%%prog %s" % __version__)
@@ -278,7 +311,7 @@ class Syndic(object):
                 dest='daemon',
                 default=False,
                 action='store_true',
-                help='Run the master in a daemon')
+                help='Run the syndic as a daemon')
         parser.add_option('--master-config',
                 dest='master_config',
                 default='/etc/salt/master',
@@ -290,7 +323,12 @@ class Syndic(object):
         parser.add_option('-u',
                 '--user',
                 dest='user',
-                help='Specify user to run minion')
+                help='Specify user to run syndic')
+        parser.add_option('--pid-file',
+                dest='pidfile',
+                default='/var/run/salt-syndic.pid',
+                help=('Specify the location of the pidfile. Default'
+                      ' %default'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
@@ -337,6 +375,7 @@ class Syndic(object):
                     # Late import so logging works correctly
                     import salt.utils
                     salt.utils.daemonize()
+                set_pidfile(self.cli['pidfile'])
                 syndic.tune_in()
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Syndic Minion')

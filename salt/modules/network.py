@@ -29,7 +29,7 @@ def ping(host):
 
     CLI Example::
 
-        salt '*' network.ping archlinux.org -c 4
+        salt '*' network.ping archlinux.org
     '''
     cmd = 'ping -c 4 %s' % _sanitize_host(host)
     return __salt__['cmd.run'](cmd)
@@ -154,10 +154,14 @@ def _cidr_to_ipv4_netmask(cidr_bits):
     return netmask
 
 
-def _interfaces():
+def interfaces():
     '''
-    Returns interface info
-       
+    Returns a dictionary of interfaces with various information about each
+    (up/down state, ip address, netmask, and hwaddr)
+
+    CLI Example::
+
+        salt '*' network.interfaces
     '''
     ret = {}
 
@@ -187,11 +191,13 @@ def _interfaces():
                         netmask = _cidr_to_ipv4_netmask(int(cidr))
                     elif type.startswith('link'):
                         hwaddr = value
-
         if iface:
-            ret[iface] = (up,ipaddr,netmask,hwaddr)
+            ret[iface] = {}
+            ret[iface]['up'] = up
+            ret[iface]['ipaddr'] = ipaddr
+            ret[iface]['netmask'] = netmask
+            ret[iface]['hwaddr'] = hwaddr
             del iface,up
-
     return ret
 
 
@@ -203,9 +209,9 @@ def up(interface):
 
         salt '*' network.up eth0
     '''
-    data = _interfaces().get(interface)
+    data = interfaces().get(interface)
     if data:
-        return data[0]
+        return data['up']
     else:
         return None
 
@@ -217,9 +223,9 @@ def ipaddr(interface):
 
         salt '*' network.ipaddr eth0
     '''
-    data = _interfaces().get(interface)
+    data = interfaces().get(interface)
     if data:
-        return data[1]
+        return data['ipaddr']
     else:
         return None
 
@@ -231,9 +237,9 @@ def netmask(interface):
 
         salt '*' network.netmask eth0
     '''
-    data = _interfaces().get(interface)
+    data = interfaces().get(interface)
     if data:
-        return data[2]
+        return data['netmask']
     else:
         return None
 
@@ -245,10 +251,9 @@ def hwaddr(interface):
 
         salt '*' network.hwaddr eth0
     '''
-    data = _interfaces().get(interface)
+    data = interfaces().get(interface)
     if data:
-        return data[3]
+        return data['hwaddr']
     else:
         return None
-
 

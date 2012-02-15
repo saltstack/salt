@@ -23,7 +23,6 @@ def echo(text):
 
         salt '*' test.echo 'foo bar baz quo qux'
     '''
-    print 'Echo got called!'
     return text
 
 
@@ -76,8 +75,9 @@ def get_opts():
 # FIXME: mutable types as default parameter values
 def cross_test(func, args=[]):
     '''
-    Execute a minion function via the __salt__ object in the test module, used
-    to verify that the minion functions can be called via the __salt__module
+    Execute a minion function via the __salt__ object in the test
+    module, used to verify that the minion functions can be called
+    via the __salt__ module.
 
     CLI Example::
 
@@ -88,13 +88,14 @@ def cross_test(func, args=[]):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the time it took
-    to compute in seconds. Used for performance tests
+    Return a Fibonacci sequence up to the passed number, and the
+    timeit took to compute in seconds. Used for performance tests
 
     CLI Example::
 
         salt '*' test.fib 3
     '''
+    num = int(num)
     start = time.time()
     a, b = 0, 1
     ret = [0]
@@ -106,13 +107,15 @@ def fib(num):
 
 def collatz(start):
     '''
-    Execute the collatz conjecture from the passed starting number, returns
-    the sequence and the time it took to compute. Used for performance tests.
+    Execute the collatz conjecture from the passed starting number,
+    returns the sequence and the time it took to compute. Used for
+    performance tests.
 
     CLI Example::
 
         salt '*' test.collatz 3
     '''
+    start = int(start)
     begin = time.time()
     steps = []
     while start != 1:

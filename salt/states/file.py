@@ -65,6 +65,7 @@ something like this:
         - source: salt://code/flask
 '''
 
+import codecs
 import os
 import shutil
 import difflib
@@ -78,6 +79,19 @@ import urlparse
 logger = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
+
+
+def __manage_mode(mode):
+    '''
+    Convert the mode into something usable
+    '''
+    if mode:
+        mode = str(mode).lstrip('0')
+        if not mode:
+            return '0'
+        else:
+            return mode
+    return mode
 
 
 def __clean_tmp(sfn):
@@ -145,7 +159,6 @@ def _clean_dir(root, keep):
                 if fn_ == '/':
                     break
     rm_files = []
-    print real_keep
     for roots, dirs, files in os.walk(root):
         for name in files:
             nfn = os.path.join(roots, name)
@@ -204,6 +217,9 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         return {'result': False,
                 'data': 'Failed to import jinja'}
     try:
+        newline = False
+        if open(sfn, 'rb').read().endswith('\n'):
+            newline = True
         tgt = tempfile.mkstemp()[1]
         passthrough = context if context else {}
         passthrough['salt'] = __salt__
@@ -215,7 +231,12 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         passthrough['mode'] = mode
         passthrough['env'] = env
         template = get_template(sfn, __opts__, env)
-        open(tgt, 'w+').write(template.render(**passthrough))
+        try:
+            open(tgt, 'w+').write(template.render(**passthrough))
+        except UnicodeEncodeError:
+            codecs.open(tgt, encoding='utf-8', mode='w+').write(template.render(**passthrough))
+        if newline:
+            open(tgt, 'a').write('\n')
         return {'result': True,
                     'data': tgt}
     except:
@@ -259,7 +280,7 @@ def _py(sfn, name, source, user, group, mode, env, context=None):
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
-        
+
 
 def symlink(name, target, force=False, makedirs=False):
     '''
@@ -285,6 +306,11 @@ def symlink(name, target, force=False, makedirs=False):
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             _makedirs(name)
@@ -340,6 +366,11 @@ def absent(name):
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if os.path.isfile(name) or os.path.islink(name):
         try:
             os.remove(name)
@@ -427,15 +458,49 @@ def managed(name,
     defaults
         Default context passed to the template.
     '''
-    if mode:
-        mode = str(mode)
+    mode = __manage_mode(mode)
     ret = {'changes': {},
            'comment': '',
            'name': name,
            'result': True}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
+    
+    # If the source is a list then find which file exists
+    if isinstance(source, list):
+        # get the master file list
+        mfiles = __salt__['cp.list_master'](__env__)
+        for single in source:
+            if isinstance(single, dict):
+                # check the proto, if it is http or ftp then download the file
+                # to check, if it is salt then check the master list
+                if len(single) != 1:
+                    continue
+                single_src = single.keys()[0]
+                single_hash = single[single_src]
+                proto = urlparse.urlparse(single_src).scheme
+                if proto == 'salt':
+                    if single_src in mfiles:
+                        source = single_src
+                        break
+                elif proto.startswith('http') or proto == 'ftp':
+                    dest = tempfile.mkstemp()[1]
+                    fn_ = __salt__['cp.get_url'](single_src, dest)
+                    os.remove(fn_)
+                    if fn_:
+                        source = single_src
+                        source_hash = single_hash
+                        break
+            elif isinstance(single, str):
+                if single in mfiles:
+                    source = single
+                    break
 
     # If the file is a template and the contents is managed
     # then make sure to cpy it down and templatize  things.
@@ -521,7 +586,6 @@ def managed(name,
                      source
                      )
                 return ret
-    # If the source file is a template render it accordingly
 
     # Check changes if the target file exists
     if os.path.isfile(name):
@@ -594,6 +658,7 @@ def managed(name,
             # Pre requisites are met, and the file needs to be replaced, do it
             if not __opts__['test']:
                 shutil.copyfile(sfn, name)
+                __clean_tmp(sfn)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -602,6 +667,7 @@ def managed(name,
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
+        __clean_tmp(sfn)
         return ret
     else:
         # Only set the diff if the file contents is managed
@@ -678,6 +744,7 @@ def managed(name,
         # Now copy the file contents if there is a source file
         if sfn:
             shutil.copyfile(sfn, name)
+            __clean_tmp(sfn)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -725,12 +792,16 @@ def directory(name,
         function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
     '''
-    if mode:
-        mode = str(mode)
+    mode = __manage_mode(mode)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if os.path.isfile(name):
         ret['result'] = False
         ret['comment'] = ('Specified location {0} exists and is a file'
@@ -838,6 +909,11 @@ def recurse(name,
            'changes': {},
            'result': True,
            'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     keep = set()
     # Verify the target directory
     if not os.path.isdir(name):
@@ -849,6 +925,8 @@ def recurse(name,
             return ret
         os.makedirs(name)
     for fn_ in __salt__['cp.cache_dir'](source, __env__):
+        if not fn_.strip():
+            continue
         dest = os.path.join(name,
                 os.path.relpath(
                     fn_,
@@ -892,6 +970,12 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     '''
     Maintain a simple edit to a file
 
+    The file will be searched for the ``before`` pattern before making the edit
+    and then searched for the ``after`` pattern to verify the edit was
+    successful using :mod:`salt.modules.file.contains`. In general the
+    ``limit`` pattern should be as specific as possible and ``before`` and
+    ``after`` should contain the minimal text to be changed.
+
     Usage::
 
         # Disable the epel repo by default
@@ -902,10 +986,23 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
             - after: 0
             - limit: ^enabled=
 
+        # Remove ldap from nsswitch
+        /etc/nsswitch.conf:
+        file:
+            - sed
+            - before: 'ldap'
+            - after: ''
+            - limit: '^passwd:'
+
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     if not os.path.exists(name):
         ret['comment'] = "File '{0}' not found".format(name)
         return ret
@@ -913,14 +1010,16 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
 
-    # make sure the pattern(s) match
-    if __salt__['file.contains'](name, after, limit):
-        ret['comment'] = "Edit already performed"
-        ret['result'] = True
-        return ret
-    elif not __salt__['file.contains'](name, before, limit):
-        ret['comment'] = "Pattern not matched"
-        return ret
+    # Look for the pattern before attempting the edit
+    if not __salt__['file.contains'](name, before, limit):
+        # Pattern not found; try to guess why
+        if __salt__['file.contains'](name, after, limit):
+            ret['comment'] = "Edit already performed"
+            ret['result'] = True
+            return ret
+        else:
+            ret['comment'] = "Pattern not matched"
+            return ret
 
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
@@ -948,6 +1047,12 @@ def comment(name, regex, char='#', backup='.bak'):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
 
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
@@ -996,6 +1101,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
     unanchor_regex = regex.lstrip('^')
 
     if not os.path.exists(name):
@@ -1058,11 +1168,25 @@ def append(name, text):
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
+
     if isinstance(text, basestring):
         text = (text,)
 
     for chunk in text:
-        for line in chunk.split('\n'):
+        try:
+            lines = chunk.split('\n')
+        except AttributeError:
+            logger.debug("Error appending text to %s; given object is: %s",
+                    name, type(chunk))
+            ret['comment'] = "Given text is not a string"
+            return ret
+
+        for line in lines:
             if __salt__['file.contains'](name, line):
                 continue
             else:
@@ -1076,7 +1200,7 @@ def append(name, text):
     ret['result'] = True
     return ret
 
-def touch(name, atime=None, mtime=None):
+def touch(name, atime=None, mtime=None, makedirs=False):
     """
     Replicate the 'nix "touch" command to create a new empty
     file or update the atime and mtime of an existing  file.
@@ -1093,6 +1217,19 @@ def touch(name, atime=None, mtime=None):
         'name': name,
         'changes': {},
     }
+    if not os.path.isabs(name):
+        ret['result'] = False
+        ret['comment'] = ('Specified file {0} is not an absolute'
+                          ' path').format(name)
+        return ret
+    if makedirs:
+        _makedirs(name)
+    if not os.path.isdir(os.path.dirname(name)):
+        ret['result'] = False
+        ret['comment'] = 'Direcotry not present to touch file {0}'.format(
+                name
+                )
+        return ret
     exists = os.path.exists(name)
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 

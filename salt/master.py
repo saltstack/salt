@@ -13,10 +13,14 @@ import hashlib
 import tempfile
 import datetime
 import multiprocessing
+import subprocess
 
 # Import zeromq
 import zmq
 from M2Crypto import RSA
+
+# Import Third Party Libs
+import yaml
 
 # Import salt modules
 import salt.crypt
@@ -42,7 +46,7 @@ def prep_jid(opts, load):
         os.makedirs(jid_dir)
         serial.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
     else:
-        return prep_jid(cachedir, load)
+        return prep_jid(opts['cachedir'], load)
     return jid
 
 
@@ -97,6 +101,7 @@ class Master(SMaster):
         '''
         Clean out the old jobs
         '''
+        salt.utils.append_pid(self.opts['pidfile'])
         while True:
             cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
@@ -153,6 +158,7 @@ class Publisher(multiprocessing.Process):
         '''
         Bind to the interface specified in the configuration file
         '''
+        salt.utils.append_pid(self.opts['pidfile'])
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         pull_sock = context.socket(zmq.PULL)
@@ -160,14 +166,13 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
-        log.info('Starting the Salt Publisher on %s', pub_uri)
+        log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
 
         try:
             while True:
                 package = pull_sock.recv()
-                log.info('Publishing command')
                 pub_sock.send(package)
         except KeyboardInterrupt:
             pub_sock.close()
@@ -228,6 +233,7 @@ class ReqServer(object):
         '''
         Start up the ReqServer
         '''
+        salt.utils.append_pid(self.opts['pidfile'])
         self.__bind()
 
 
@@ -316,6 +322,7 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
+        salt.utils.append_pid(self.opts['pidfile'])
         self.__bind()
 
 
@@ -372,6 +379,44 @@ class AESFuncs(object):
                   .format(id_))
         return False
 
+    def _ext_nodes(self, load):
+        '''
+        Return the results from an external node classifier if one is
+        specified
+        '''
+        if not 'id' in load:
+            log.error('Received call for external nodes without an id')
+            return {}
+        if not self.opts['external_nodes']:
+            return {}
+        if not salt.utils.which(self.opts['external_nodes']):
+            log.error(('Specified external nodes controller {0} is not'
+                       ' available, please verify that it is installed'
+                       '').format(self.opts['external_nodes']))
+            return {}
+        cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
+        ndata = yaml.safe_load(
+                subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE
+                    ).communicate()[0])
+        ret = {}
+        if 'environment' in ndata:
+            env = ndata['environment']
+        else:
+            env = 'base'
+
+        if 'classes' in ndata:
+            if isinstance(ndata['classes'], dict):
+                ret[env] = ndata['classes'].keys()
+            elif isinstance(ndata['classes'], list):
+                ret[env] = ndata['classes']
+            else:
+                return ret
+        return ret
+
+
     def _serve_file(self, load):
         '''
         Return a chunk from a file based on the data received
@@ -424,6 +469,19 @@ class AESFuncs(object):
                             path
                             )
                         )
+        return ret
+
+    def _file_list_emptydirs(self, load):
+        '''
+        Return a list of all empty directories on the master
+        '''
+        ret = []
+        if load['env'] not in self.opts['file_roots']:
+            return ret
+        for path in self.opts['file_roots'][load['env']]:
+            for root, dirs, files in os.walk(path):
+                if len(dirs)==0 and len(files)==0:
+                    ret.append(os.path.relpath(root,path))
         return ret
 
     def _master_opts(self, load):
@@ -536,7 +594,9 @@ class AESFuncs(object):
                 'ret': clear_load['ret'],
                }
         expr_form = 'glob'
-        timeout = 0
+        timeout = 5
+        if 'tmo' in clear_load:
+            timeout = int(clear_load['tmo'])
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
@@ -551,6 +611,8 @@ class AESFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
+        log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
+                  ' "{0[arg]}", target: "{0[tgt]}"').format(load))
         pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method
         return self.local.get_returns(
@@ -646,6 +708,9 @@ class ClearFuncs(object):
         pubfn_pend = os.path.join(self.opts['pki_dir'],
                 'minions_pre',
                 load['id'])
+        pubfn_rejected = os.path.join(self.opts['pki_dir'],
+                'minions_rejected',
+                load['id'])
         if self.opts['open_mode']:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -661,6 +726,12 @@ class ClearFuncs(object):
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 return ret
+        elif os.path.isfile(pubfn_rejected):
+            # The key has been rejected, don't place it in pending
+            log.info('Public key rejected for %(id)s', load)
+            ret = {'enc': 'clear',
+                   'load': {'ret': False}}
+            return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre

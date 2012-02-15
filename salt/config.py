@@ -3,10 +3,12 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python modules
+import glob
 import os
-import tempfile
-import socket
 import sys
+import socket
+import logging
+import tempfile
 
 # import third party libs
 import yaml
@@ -22,19 +24,35 @@ import salt.crypt
 import salt.loader
 import salt.utils
 
+log = logging.getLogger(__name__)
+
+
+def _validate_file_roots(file_roots):
+    '''
+    If the file_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    if not isinstance(file_roots, dict):
+        log.warning(('The file_roots parameter is not properly formatted,'
+            ' using defaults'))
+        return {'base': ['/srv/salt']}
+    for env, dirs in file_roots.items():
+        if not isinstance(dirs, list) and not isinstance(dirs, tuple):
+            file_roots[env] = []
+    return file_roots
+
 
 def load_config(opts, path, env_var):
     '''
     Attempts to update ``opts`` dict by parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
     '''
-
     if not path or not os.path.isfile(path):
         path = os.environ.get(env_var, path)
     # If the configuration file is missing, attempt to copy the template,
     # after removing the first header line.
     if not os.path.isfile(path):
-        template = "%s.template" % path
+        template = '{0}.template'.format(path)
         if os.path.isfile(template):
             with open(path, 'w') as out:
                 with open(template, 'r') as f:
@@ -54,9 +72,38 @@ def load_config(opts, path, env_var):
             opts.update(conf_opts)
             opts['conf_file'] = path
         except Exception, e:
-            print 'Error parsing configuration file: {0} - {1}'.format(path, e)
+            msg = 'Error parsing configuration file: {0} - {1}'
+            log.warn(msg.format(path, e))
     else:
-        print 'Missing configuration file: {0}'.format(path)
+        log.debug('Missing configuration file: {0}'.format(path))
+
+
+def include_config(opts, orig_path):
+    '''
+    Parses an extra configuration file specified in an include list in the
+    main config file.
+    '''
+    include = opts.get('include', [])
+    if isinstance(include, basestring):
+        include = [include]
+    for path in include:
+        if not os.path.isabs(path):
+            path = os.path.join(os.path.dirname(orig_path), path)
+        for fn_ in glob.glob(path):
+            try:
+                conf_opts = yaml.safe_load(open(fn_, 'r'))
+                if conf_opts is None:
+                    # The config file is empty and the yaml.load returned None
+                    conf_opts = {}
+                else:
+                    # allow using numeric ids: convert int to string
+                    if 'id' in conf_opts:
+                        conf_opts['id'] = str(conf_opts['id'])
+                opts.update(conf_opts)
+            except Exception, e:
+                msg = 'Error parsing configuration file: {0} - {1}'
+                log.warn(msg.format(fn_, e))
+    return opts
 
 
 def prepend_root_dir(opts, path_options):
@@ -86,6 +133,7 @@ def minion_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
+            'environment': None,
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
@@ -106,6 +154,9 @@ def minion_config(path):
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
+
+    if 'include' in opts:
+        opts = include_config(opts, path)
 
     opts['master_ip'] = dns_check(opts['master'])
 
@@ -137,6 +188,7 @@ def master_config(path):
             'worker_threads': 5,
             'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'ret_port': '4506',
+            'timeout': 5,
             'keep_jobs': 24,
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
@@ -152,6 +204,7 @@ def master_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'state_top': 'top.sls',
+            'external_nodes': '',
             'order_masters': False,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
@@ -164,6 +217,9 @@ def master_config(path):
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 
+    if 'include' in opts:
+        opts = include_config(opts, path)
+
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     # Prepend root_dir to other paths
@@ -173,6 +229,7 @@ def master_config(path):
     # else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
+    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
 
 

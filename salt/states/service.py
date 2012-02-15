@@ -18,6 +18,25 @@ def __virtual__():
     return 'service'
 
 
+def _get_stat(name, sig):
+    '''
+    Return the status of a service based on signature and status, if the
+    signature is used then the status option will be ignored
+    '''
+    stat = False
+    if sig:
+        if sig == 'detect':
+            cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
+                        __grains__, name)
+        else:
+            cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
+                        __grains__, sig)
+        stat = bool(__salt__['cmd.run'](cmd))
+    else:
+        stat = __salt__['service.status'](name)
+    return stat
+
+
 def _enable(name, started):
     '''
     Enable the service
@@ -95,7 +114,8 @@ def _enable(name, started):
         ret['comment'] = ('Failed when setting service {0} to start at boot,'
             ' and the service is dead').format(name)
         return ret
-    
+
+
 def _disable(name, started):
     '''
     Disable the service
@@ -194,7 +214,7 @@ def running(name, enable=None, sig=None):
            'changes': {},
            'result': True,
            'comment': ''}
-    if __salt__['service.status'](name, sig):
+    if _get_stat(name, sig):
         ret['comment'] = 'The service {0} is already running'.format(name)
         if enable is True:
             return _enable(name, None)
@@ -242,7 +262,7 @@ def dead(name, enable=None, sig=None):
            'changes': {},
            'result': True,
            'comment': ''}
-    if not __salt__['service.status'](name, sig):
+    if not _get_stat(name, sig):
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True:
             return _enable(name, None)
@@ -292,3 +312,23 @@ def watcher(name, sig=None):
             'changes': {},
             'result': True,
             'comment': 'Service {0} started'.format(name)}
+
+
+def enabled(name):
+    '''
+    Verify that the service is enabled on boot
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _enable(name, None)
+
+
+def disabled(name):
+    '''
+    Verify that the service is disabled on boot
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _disable(name, None)

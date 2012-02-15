@@ -1,6 +1,6 @@
-conf/master.template /etc/salt/master
-scripts/salt-key /usr/share/salt
-scripts/salt /usr/share/salt
-scripts/salt-run /usr/share/salt
-scripts/salt-cp /usr/share/salt
-scripts/salt-master /usr/share/salt
+conf/master.template /etc/salt
+scripts/salt-master /usr/bin
+scripts/salt-cp /usr/bin
+scripts/salt-run /usr/bin
+scripts/salt-key /usr/bin
+scripts/salt /usr/bin

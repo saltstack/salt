@@ -126,7 +126,6 @@ def run(name,
         ret['comment'] = 'Desired working directory is not available'
         return ret
 
-    puid = os.geteuid()
     pgid = os.getegid()
 
     if group:
@@ -136,19 +135,17 @@ def run(name,
         except KeyError:
             ret['comment'] = 'The group ' + group + ' is not available'
             return ret
-    if user:
-        try:
-            euid = pwd.getpwnam(user).pw_uid
-            os.seteuid(euid)
-        except KeyError:
-            ret['comment'] = 'The user ' + user + ' is not available'
-            return ret
+
     # Wow, we passed the test, run this sucker!
-    cmd_all = __salt__['cmd.run_all'](name, cwd)
+    try:
+        cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user)
+    except CommandExecutionError as e:
+        ret['comment'] = e
+        return ret
+
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])
     ret['comment'] = 'Command "' + name + '" run'
-    os.seteuid(puid)
     os.setegid(pgid)
     return ret
 

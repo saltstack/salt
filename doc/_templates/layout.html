@@ -1,6 +1,6 @@
 {% extends "!layout.html" %}
 
-{% block rootrellink %}
-    <li><a href="{{ pathto('index') }}">Salt home</a>&nbsp;|&nbsp;</li>
-    <li><a href="{{ pathto('home') }}">Documentation</a> &raquo;</li>
-{% endblock %}
+{%- block rootrellink %}
+    <li><a href="http://saltstack.org">&laquo; SaltStack.org</a>&nbsp;|&nbsp;</li>
+    <li><a href="{{ pathto('index') }}">Documentation home</a></li>
+{%- endblock %}

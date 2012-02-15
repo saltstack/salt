@@ -1,14 +1,11 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE=1
 %:
-	dh $@ --buildsystem=python_distutils
-#override_dh_installinit:
-#	dh_installinit --no-start --name="salt-master"
-#	dh_installinit --no-start --name="salt-minion"
-#	dh_installinit --no-start --name="salt-syndic"
-
+	dh $@ #--with python2
+dh_override_auto_build:
+	python setup.py build #--install-layout=deb build
 get-orig-source:
 	git clone https://github.com/saltstack/salt.git
-	mv salt salt-0.9.5
-	tar -zcvf salt_0.9.5.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.5
-	rm -rf salt-0.9.5
+	mv salt salt-0.9.7
+	tar -zcvf salt_0.9.7.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.7
+	rm -rf salt-0.9.7
