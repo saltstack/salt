@@ -10,7 +10,7 @@ as either absent or present
       mysql_user:
         - present
         - host: localhost
-		- password: bobcat
+        - password: bobcat
 '''
 
 def present(name,
