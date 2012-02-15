@@ -23,7 +23,7 @@ specification as defined in the MySQL documentation:
        - database: exampledb.*
        - user: frank
        - host: localhost
-   
+
    frank_otherdb:
      mysql_grants:
        - present
@@ -40,10 +40,10 @@ specification as defined in the MySQL documentation:
 '''
 
 def present(name,
-		    grant=None,
-			database=None,
-			user=None,
-			host='localhost'):
+            grant=None,
+            database=None,
+            user=None,
+            host='localhost'):
     '''
     Ensure that the grant is present with the specified properties
 
@@ -61,7 +61,7 @@ def present(name,
 
     host
         The MySQL server
-    '''    
+    '''
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -74,7 +74,7 @@ def present(name,
            }
     # check if grant exists
     if __salt__['mysql.grant_exists'](grant,database,user,host):
-        return ret        
+        return ret
 
     # The grant is not present, make it!
     if __salt__['mysql.grant_add'](grant,database,user,host):
@@ -97,9 +97,9 @@ def present(name,
 
 
 def absent(name,
-		   grant=None,
-		   database=None,
-		   user=None,
+           grant=None,
+           database=None,
+           user=None,
            host='localhost'):
     '''
     Ensure that the grant is absent
@@ -136,7 +136,7 @@ def absent(name,
                                       )
             ret['changes'][name] = 'Absent'
             return ret
-        
+
     # fallback
     ret['comment'] = ('Grant {0} for {1}@{2} on {3} is not present, so it'
                       ' cannot be revoked').format(
