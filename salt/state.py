@@ -235,7 +235,8 @@ class State(object):
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
-                    if data['name'] == req[req.keys()[0]]:
+                    if data['name'] == req[req.keys()[0]] \
+                            or data['__id__'] == req[req.keys()[0]]:
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
