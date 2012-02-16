@@ -20,7 +20,7 @@ def unpackage(package_):
     '''
     Unpackages a payload
     '''
-    return msgpack.loads(package_)
+    return msgpack.loads(package_, use_list=True)
 
 
 def format_payload(enc, **kwargs):
@@ -49,12 +49,12 @@ class Serial(object):
         Run the correct loads serialization format
         '''
         if self.serial == 'msgpack':
-            return msgpack.loads(msg)
+            return msgpack.loads(msg, use_list=True)
         elif self.serial == 'pickle':
             try:
                 return pickle.loads(msg)
             except:
-                return msgpack.loads(msg)
+                return msgpack.loads(msg, use_list=True)
 
     def load(self, fn_):
         '''
