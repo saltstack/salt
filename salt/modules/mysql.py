@@ -206,7 +206,7 @@ def db_list():
     cur.execute('SHOW DATABASES')
     results = cur.fetchall()
     for dbs in results:
-       ret.append(dbs[0])
+        ret.append(dbs[0])
 
     log.debug(ret)
     return ret
@@ -220,8 +220,8 @@ def db_tables(name):
         salt '*' mysql.db_tables 'database'
     '''
     if not db_exists(name):
-       log.info("Database '{0}' does not exist".format(name,))
-       return False
+        log.info("Database '{0}' does not exist".format(name,))
+        return False
 
     ret = []
     db = connect()
@@ -232,7 +232,7 @@ def db_tables(name):
     cur.execute(query)
     results = cur.fetchall()
     for table in results:
-       ret.append(table[0])
+        ret.append(table[0])
     log.debug(ret)
     return ret
    
@@ -251,7 +251,7 @@ def db_exists(name):
     cur.execute( query )
     result_set = cur.fetchall()
     if cur.rowcount == 1:
-       return True
+        return True
     return False
 
     
@@ -274,8 +274,8 @@ def db_create(name):
     query = "CREATE DATABASE `%s`;" % name
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("DB '{0}' created".format(name,))
-       return True
+        log.info("DB '{0}' created".format(name,))
+        return True
     return False
 
 def db_remove(name):
@@ -303,8 +303,8 @@ def db_remove(name):
     cur.execute( query )
 
     if not db_exists(name):
-       log.info("Database '{0}' has been removed".format(name,))
-       return True
+        log.info("Database '{0}' has been removed".format(name,))
+        return True
 
     log.info("Database '{0}' has not been removed".format(name,))
     return False
@@ -342,7 +342,7 @@ def user_exists(user,
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
     if cur.rowcount == 1:
-       return True
+        return True
     return False
     
 def user_info(user,
@@ -365,7 +365,8 @@ def user_info(user,
 
 def user_create(user,
                 host='localhost',
-                password=None):
+                password=None,
+                password_hash=None):
     '''
     Creates a MySQL user.
 
@@ -381,21 +382,24 @@ def user_create(user,
     cur = db.cursor ()
     query = "CREATE USER '%s'@'%s'" % (user, host,)
     if password is not None:
-       query = query + " IDENTIFIED BY '%s'" % password
+        query = query + " IDENTIFIED BY '%s'" % password
+    elif password_hash is not None:
+        query = query + " IDENTIFIED BY PASSWORD '%s'" % password_hash
 
     log.debug("Query: {0}".format(query,))
     cur.execute( query )
     
     if user_exists(user,host):
-       log.info("User '{0}'@'{1}' has been created".format(user,host,))
-       return True
+        log.info("User '{0}'@'{1}' has been created".format(user,host,))
+        return True
 
     log.info("User '{0}'@'{1}' is not created".format(user,host,))
     return False
 
 def user_chpass(user,
                 host='localhost',
-                password=None):
+                password=None,
+                password_hash=None):
     '''
     Change password for MySQL user
 
@@ -403,17 +407,21 @@ def user_chpass(user,
 
         salt '*' mysql.user_chpass frank localhost newpassword
     '''
-    if password is None:
-       log.error('No password provided')
-       return False
+    if password is None or password_hash is None:
+        log.error('No password provided')
+        return False
+    elif password is not None:
+        password_sql = "PASSWORD(\"%s\")" % password
+    elif password_hash is not None:
+        password_sql = "\"%s\"" % password_hash
 
     db = connect()
     cur = db.cursor ()
-    query = "UPDATE mysql.user SET password=PASSWORD(\"%s\") WHERE User='%s' AND Host = '%s';" % (password,user,host,)
+    query = "UPDATE mysql.user SET password=%s WHERE User='%s' AND Host = '%s';" % (password_sql,user,host,)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("Password for user '{0}'@'{1}' has been changed".format(user,host,))
-       return True
+        log.info("Password for user '{0}'@'{1}' has been changed".format(user,host,))
+        return True
 
     log.info("Password for user '{0}'@'{1}' is not changed".format(user,host,))
     return False
@@ -434,8 +442,8 @@ def user_remove(user,
     cur.execute(query)
     result = cur.fetchone()
     if not user_exists(user,host):
-       log.info("User '{0}'@'{1}' has been removed".format(user,host,))
-       return True
+        log.info("User '{0}'@'{1}' has been removed".format(user,host,))
+        return True
 
     log.info("User '{0}'@'{1}' has NOT been removed".format(user,host,))
     return False
@@ -483,7 +491,7 @@ def db_repair(name,
     else:
         log.info("Repairing table '%s' in db '%s'..".format(name,table,))
         ret = __repair_table(name,table)
-    return ret    
+    return ret
     
 def db_optimize(name,
               table=None):
@@ -529,7 +537,7 @@ def __grant_generate(grant,
     if grant_option:
         query += " WITH GRANT OPTION"
     log.debug("Query generated: {0}".format(query,))
-    return query      
+    return query
     
 def user_grants(user, 
                 host='localhost'):
@@ -553,7 +561,7 @@ def user_grants(user,
     cur.execute(query)
     results = cur.fetchall()
     for grant in results:
-       ret.append(grant[0])
+        ret.append(grant[0])
     log.debug(ret)
     return ret
 
@@ -569,10 +577,10 @@ def grant_exists(grant,
     
     if target in user_grants(user, host):
         log.debug("Grant exists.")
-        return True       
+        return True
     
     log.debug("Grant does not exist, or is perhaps not ordered properly?")
-    return False   
+    return False
 
 def grant_add(grant,
               database, 
@@ -594,8 +602,8 @@ def grant_add(grant,
     query = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("Grant '{0}' created")
-       return True
+        log.info("Grant '{0}' created")
+        return True
     return False
 
 def grant_revoke(grant, 
@@ -619,7 +627,7 @@ def grant_revoke(grant,
     query = "REVOKE %s ON %s FROM '%s'@'%s';" % (grant, database, user, host,)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("Grant '{0}' revoked")
-       return True
+        log.info("Grant '{0}' revoked")
+        return True
     return False
 
