@@ -15,7 +15,8 @@ as either absent or present
 
 def present(name,
             host='localhost',
-            password=None):
+            password=None,
+            password_hash=None):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -28,10 +29,10 @@ def present(name,
            'comment': 'User {0}@{1} is already present'.format(name,host,)}
     # check if user exists
     if __salt__['mysql.user_exists'](name,host):
-        return ret        
+        return ret
 
     # The user is not present, make it!
-    if __salt__['mysql.user_create'](name,host,password,):
+    if __salt__['mysql.user_create'](name,host,password,password_hash):
         ret['comment'] = 'The user {0}@{1} has been added'.format(name,host,)
         ret['changes'][name] = 'Present'
     else:
@@ -60,7 +61,7 @@ def absent(name,
             ret['comment'] = 'User {0}@{1} has been removed'.format(name,host,)
             ret['changes'][name] = 'Absent'
             return ret
-        
+
     # fallback
     ret['comment'] = 'User {0}@{1} is not present, so it cannot be removed'.format(name,host,)
     return ret
