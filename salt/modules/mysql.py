@@ -384,7 +384,7 @@ def user_create(user,
     if password is not None:
         query = query + " IDENTIFIED BY '%s'" % password
     elif password_hash is not None:
-        query = query + " IDENTIFIED BY PASSWORD '%'" % password_hash
+        query = query + " IDENTIFIED BY PASSWORD '%s'" % password_hash
 
     log.debug("Query: {0}".format(query,))
     cur.execute( query )
