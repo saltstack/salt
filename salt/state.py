@@ -16,6 +16,7 @@ import inspect
 import logging
 import os
 import tempfile
+from collections import defaultdict
 
 import salt.loader
 import salt.minion
@@ -781,9 +782,9 @@ class HighState(object):
         '''
         Gather the top files
         '''
-        tops = {}
-        include = {}
-        done = {}
+        tops = defaultdict(list)
+        include = defaultdict(list)
+        done = defaultdict(list)
         # Gather initial top files
         if self.opts['environment']:
             tops[self.opts['environment']] = [
@@ -797,8 +798,6 @@ class HighState(object):
                     ]
         else:
             for env in self._get_envs():
-                if not env in tops:
-                    tops[env] = []
                 tops[env].append(
                         self.state.compile_template(
                             self.client.cache_file(
@@ -814,8 +813,6 @@ class HighState(object):
             for ctop in ctops:
                 if not 'include' in ctop:
                     continue
-                if not env in include:
-                    include[env] = []
                 for sls in ctop['include']:
                     include[env].append(sls)
                 ctop.pop('include')
@@ -823,8 +820,6 @@ class HighState(object):
         while include:
             pops = []
             for env, states in include.items():
-                if not env in done:
-                    done[env] = []
                 pops.append(env)
                 if not states:
                     continue
@@ -851,14 +846,12 @@ class HighState(object):
         '''
         Cleanly merge the top files
         '''
-        top = {}
+        top = defaultdict(dict)
         for sourceenv, ctops in tops.items():
             for ctop in ctops:
                 for env, targets in ctop.items():
                     if env == 'include':
                         continue
-                    if not env in top:
-                        top[env] = {}
                     for tgt in targets:
                         if not tgt in top[env]:
                             top[env][tgt] = ctop[env][tgt]
