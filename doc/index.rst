@@ -1,6 +1,7 @@
 .. _contents:
 
 .. |vid| image:: /_static/film_link.png
+    :class: math
 
 Get started with Salt
 =====================
