@@ -107,6 +107,7 @@ extlinks = {
 
 ### HTML options
 html_theme = 'default'
+html_style = None
 
 html_title = None
 html_short_title = 'Salt'
