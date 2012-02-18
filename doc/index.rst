@@ -56,6 +56,11 @@ Setting up and using Salt is a simple task but it's capabilities run much, much
 deeper. Gaining a better understanding of how Salt works will allow you to
 truly make it work for you.
 
+.. sidebar:: More tutorials!
+
+    * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
+    * :doc:`Installing Salt on FreeBSD <topics/tutorials/freebsd>`
+
 .. contents:: The components of Salt
     :local:
     :depth: 2
