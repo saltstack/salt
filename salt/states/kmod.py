@@ -33,7 +33,7 @@ def present(name):
                               .format(name))
             return ret
     # Module is not loaded, verify availability
-    if not __salt__['kmod.available']().count(name):
+    if name not in __salt__['kmod.available']():
         ret['comment'] = 'Kernel module {0} is unavailable'.format(name)
         ret['result'] = False
         return ret

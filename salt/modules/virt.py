@@ -511,7 +511,4 @@ def is_kvm_hyper():
         return False
     if 'kvm_' not in open('/proc/modules').read():
         return False
-    libvirt_ret = __salt__['cmd.run'](__grains__['ps']).count('libvirtd')
-    if not libvirt_ret:
-        return False
-    return True
+    return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
