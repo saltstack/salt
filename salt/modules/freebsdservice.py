@@ -43,7 +43,7 @@ def get_disabled():
     '''
     en_ = get_enabled()
     all_ = get_all()
-    return sorted(set(all_).difference(set(en_)))
+    return sorted(set(all_) - set(en_))
 
 
 def get_all():
@@ -57,8 +57,7 @@ def get_all():
     for srv in ret:
         if srv.isupper():
             rm_.add(srv)
-    ret.difference(rm_)
-    return sorted(ret)
+    return sorted(ret - rm_)
 
 
 def start(name):
