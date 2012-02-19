@@ -123,7 +123,7 @@ class Key(object):
          minions_pre,
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
-        if not pre.count(key):
+        if key not in pre:
             err = ('The key named %s does not exist, please accept an '
                    'available key' %(key))
             #log.error(err)
@@ -174,7 +174,7 @@ class Key(object):
          minions_pre,
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
-        if not pre.count(key):
+        if key not in pre:
             err = ('The host named %s is unavailable, please accept an '
                    'available key' %(key))
             self._log(err, level='error')

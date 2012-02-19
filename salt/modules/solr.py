@@ -132,10 +132,7 @@ def _check_for_cores():
 
         True if one or more cores defined in __opts__['solr.cores']
     '''
-    if len(__opts__['solr.cores']) > 0:
-        return True
-    else:
-        return False
+    return len(__opts__['solr.cores']) > 0
 
 def _get_return_dict(success=True, data={}, errors=[], warnings=[]):
     '''
@@ -313,9 +310,7 @@ def _is_master():
     Return: boolean::
         True if __opts__['solr.type'] = master
     '''
-    if __opts__['solr.type'] == 'master':
-        return True
-    return False
+    return __opts__['solr.type'] == 'master'
 
 def _merge_options(options):
     '''

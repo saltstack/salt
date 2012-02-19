@@ -83,11 +83,7 @@ def has_pair(ip, alias):
         salt '*' hosts.has_pair <ip> <alias>
     '''
     hosts = list_hosts()
-    if ip not in hosts:
-        return False
-    if alias in hosts[ip]:
-        return True
-    return False
+    return ip in hosts and alias in hosts[ip]
 
 
 def set_host(ip, alias):

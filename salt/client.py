@@ -102,8 +102,8 @@ class LocalClient(object):
         '''
         ret = []
         for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
-            if expr.count(fn_):
-                if not ret.count(fn_):
+            if fn_ in expr:
+                if fn_ not in ret:
                     ret.append(fn_)
         return ret
 
