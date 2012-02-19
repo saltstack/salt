@@ -394,16 +394,10 @@ def set_autostart(name):
     dom = _get_dom(name)
 
     if state == 'on':
-        if dom.setAutostart(1) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(1) == 0
 
     elif state == 'off':
-        if dom.setAutostart(0) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(0) == 0
 
     else:
         # return False if state is set to something other then on or off

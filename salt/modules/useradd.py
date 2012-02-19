@@ -92,8 +92,7 @@ def chuid(name, uid):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
-        if post_info['uid'] == uid:
-            return True
+        return post_info['uid'] == uid
     return False
 
 
@@ -112,8 +111,7 @@ def chgid(name, gid):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['gid'] != pre_info['gid']:
-        if post_info['gid'] == gid:
-            return True
+        return post_info['gid'] == gid
     return False
 
 
@@ -132,8 +130,7 @@ def chshell(name, shell):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
-        if post_info['shell'] == shell:
-            return True
+        return post_info['shell'] == shell
     return False
 
 
@@ -156,8 +153,7 @@ def chhome(name, home, persist=False):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
-        if post_info['home'] == home:
-            return True
+        return post_info['home'] == home
     return False
 
 
@@ -180,9 +176,7 @@ def chgroups(name, groups, append=False):
         cmd += '-a'
     __salt__['cmd.run'](cmd)
     agrps = set(list_groups(name))
-    if ugrps.difference(agrps):
-        return True
-    return False
+    return len(ugrps - agrps) == 0
 
 
 def info(name):

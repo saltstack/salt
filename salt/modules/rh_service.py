@@ -163,9 +163,7 @@ def enabled(name):
 
         salt '*' service.enabled <service name>
     '''
-    if name in get_enabled():
-        return True
-    return False
+    return name in get_enabled()
 
 
 def disabled(name):
@@ -176,6 +174,4 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    if name in get_disabled():
-        return True
-    return False
+    return name in get_disabled()

@@ -571,8 +571,7 @@ class State(object):
         if low.get('failhard', False) \
                 or self.opts['failhard'] \
                 and tag in running:
-            if not running[tag]['result']:
-                return True
+            return not running[tag]['result']
         return False
 
     def check_requisite(self, low, running, chunks):
