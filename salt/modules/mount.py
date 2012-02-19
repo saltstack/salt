@@ -217,7 +217,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     mnts = active()
     if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
-        if not opts.count('remount'):
+        if 'remount' not in opts:
             opts.append('remount')
         lopts = ','.join(opts)
         cmd = 'mount -o {0} {1} {2} '.format(lopts, device, name)
@@ -246,6 +246,6 @@ def is_fuse_exec(cmd):
             continue
         out = __salt__['cmd.run']('ldd {0}'.format(path))
         for line in out.split('\n'):
-            if line.count('libfuse'):
+            if 'libfuse' in line:
                 return True
     return False

@@ -992,7 +992,7 @@ class FileClient(object):
         Get a state file from the master and store it in the local minion cache
         return the location of the file
         '''
-        if sls.count('.'):
+        if '.' in sls:
             sls = sls.replace('.', '/')
         for path in ['salt://' + sls + '.sls',
                      os.path.join('salt://', sls, 'init.sls')]:

@@ -571,8 +571,7 @@ class State(object):
         if low.get('failhard', False) \
                 or self.opts['failhard'] \
                 and tag in running:
-            if not running[tag]['result']:
-                return True
+            return not running[tag]['result']
         return False
 
     def check_requisite(self, low, running, chunks):
@@ -824,7 +823,7 @@ class HighState(object):
                 if not states:
                     continue
                 for sls in states:
-                    if done[env].count(sls):
+                    if sls in done[env]:
                         continue
                     tops[env].append(
                             self.state.compile_template(
@@ -966,7 +965,7 @@ class HighState(object):
                         errors.append(err)
                     else:
                         for sub_sls in state.pop('include'):
-                            if not list(mods).count(sub_sls):
+                            if sub_sls not in mods:
                                 nstate, mods, err = self.render_state(
                                         sub_sls,
                                         env,

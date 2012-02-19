@@ -40,7 +40,6 @@ def __virtual__():
         return False
     if 'kvm_' not in open('/proc/modules').read():
         return False
-    #libvirt_ret = __salt__['cmd.run'](__grains__['ps']).count('libvirtd')
     try:
         libvirt_conn = libvirt.open('qemu:///system')
         libvirt_conn.close()
@@ -395,16 +394,10 @@ def set_autostart(name):
     dom = _get_dom(name)
 
     if state == 'on':
-        if dom.setAutostart(1) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(1) == 0
 
     elif state == 'off':
-        if dom.setAutostart(0) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(0) == 0
 
     else:
         # return False if state is set to something other then on or off

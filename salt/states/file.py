@@ -117,9 +117,8 @@ def _is_bin(path):
     Return True if a file is a bin, just checks for NULL char, this should be
     expanded to reflect how git checks for bins
     '''
-    if open(path, 'rb').read(2048).count('\0'):
-        return True
-    return False
+    with open(path, 'rb') as f:
+        return '\0' in f.read(2048)
 
 
 def _gen_keep_files(name, require):
