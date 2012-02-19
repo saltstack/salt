@@ -250,9 +250,7 @@ def db_exists(name):
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
     result_set = cur.fetchall()
-    if cur.rowcount == 1:
-        return True
-    return False
+    return cur.rowcount == 1
 
     
 def db_create(name):
@@ -341,9 +339,7 @@ def user_exists(user,
     query = "SELECT User,Host FROM mysql.user WHERE User = '%s' AND Host = '%s'" % (user, host,)
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
-    if cur.rowcount == 1:
-        return True
-    return False
+    return cur.rowcount == 1
     
 def user_info(user,
               host='localhost'):
