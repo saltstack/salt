@@ -966,7 +966,7 @@ class HighState(object):
                         errors.append(err)
                     else:
                         for sub_sls in state.pop('include'):
-                            if not list(mods).count(sub_sls):
+                            if sub_sls not in mods:
                                 nstate, mods, err = self.render_state(
                                         sub_sls,
                                         env,
