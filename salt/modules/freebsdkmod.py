@@ -66,10 +66,7 @@ def check_available(mod):
 
         salt '*' kmod.check_available kvm
     '''
-    if mod in available():
-        # the module is available, return True
-        return True
-    return False
+    return mod in available()
 
 
 def lsmod():
