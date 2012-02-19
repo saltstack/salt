@@ -40,7 +40,6 @@ def __virtual__():
         return False
     if 'kvm_' not in open('/proc/modules').read():
         return False
-    #libvirt_ret = __salt__['cmd.run'](__grains__['ps']).count('libvirtd')
     try:
         libvirt_conn = libvirt.open('qemu:///system')
         libvirt_conn.close()

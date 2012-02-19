@@ -214,6 +214,6 @@ def list_groups(name):
     '''
     ugrp = set()
     for group in grp.getgrall():
-        if group.gr_mem.count(name):
+        if name in group.gr_mem:
             ugrp.add(group.gr_name)
     return sorted(list(ugrp))

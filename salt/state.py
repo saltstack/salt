@@ -824,7 +824,7 @@ class HighState(object):
                 if not states:
                     continue
                 for sls in states:
-                    if done[env].count(sls):
+                    if sls in done[env]:
                         continue
                     tops[env].append(
                             self.state.compile_template(
