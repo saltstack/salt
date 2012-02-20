@@ -149,4 +149,4 @@ def run(name,
     os.setegid(pgid)
     return ret
 
-watcher = run
+mod_watch = run
