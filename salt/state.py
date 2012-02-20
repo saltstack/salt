@@ -16,7 +16,7 @@ import inspect
 import logging
 import os
 import tempfile
-from collections import defaultdict
+import collections
 
 import salt.loader
 import salt.minion
@@ -108,6 +108,7 @@ class State(object):
         self.opts = opts
         self.load_modules()
         self.mod_init = set()
+        self.__run_num = 0
 
     def _mod_init(self, low):
         '''
@@ -553,6 +554,8 @@ class State(object):
                 )
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
+        ret['__run_num__'] = self.__run_num
+        self.__run_num += 1
         format_log(ret)
         self.module_refresh(data)
         return ret
@@ -791,9 +794,9 @@ class HighState(object):
         '''
         Gather the top files
         '''
-        tops = defaultdict(list)
-        include = defaultdict(list)
-        done = defaultdict(list)
+        tops = collections.defaultdict(list)
+        include = collections.defaultdict(list)
+        done = collections.defaultdict(list)
         # Gather initial top files
         if self.opts['environment']:
             tops[self.opts['environment']] = [
@@ -855,7 +858,7 @@ class HighState(object):
         '''
         Cleanly merge the top files
         '''
-        top = defaultdict(dict)
+        top = collections.defaultdict(dict)
         for sourceenv, ctops in tops.items():
             for ctop in ctops:
                 for env, targets in ctop.items():
