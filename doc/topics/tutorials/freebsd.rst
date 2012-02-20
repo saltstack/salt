@@ -4,7 +4,7 @@ Introduction
 ============
 
 Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 8.2 and 9.0RC
+<christer.edwards@gmail.com>. It has been tested on FreeBSD 8.2 and 9.0
 releases.
 
 Salt is dependent on the following additional ports. These will be installed as
@@ -13,6 +13,7 @@ dependencies of the ``sysutils/salt`` port::
    /devel/py-yaml
    /devel/py-pyzmq
    /devel/py-Jinja2
+   /devel/py-msgpack
    /security/py-pycrypto
    /security/py-m2crypto
 
@@ -70,30 +71,6 @@ By default the Salt master listens on ports 4505 and 4506 on all interfaces
    - #interface: 0.0.0.0
    + interface: 10.0.0.1
 
-**pki_dir**
-
-Salt is primarily developed on Linux, and as such carries some Linux-isms in
-its development and configuration. These are all very easily remedied to more
-seamlessly fit into FreeBSD. One such configuration option is the *pki_dir:*
-directive. To ensure all of Salts files end up where you expect, you'll likely
-want to update this line as seen here::
-
-   - #pki_dir: /etc/salt/pki
-   + pki_dir: /usr/local/etc/salt/pki
-
-**file_roots**
-
-Finally, if you plan on using Salts state-management features, you'll want to
-update the *file_roots:* directive. This directive defines the location of the
-state files. I suggest updating this directive as seen here::
-
-   - #file_roots:
-   - #  base:
-   - #    - /srv/salt
-   + file_roots:
-   +   base:
-   +     - /usr/local/etc/salt/states
-
 **rc.conf**
 
 Last but not least you'll need to activate the Salt Master in your rc.conf
@@ -138,17 +115,6 @@ configuration file and update the "master" entry as seen here::
 Simply update the master directive to the IP or hostname of your Salt Master.
 Save your changes and you're ready to start your Salt Minion. Advanced
 configuration options are covered in another chapter.
-
-**pki_dir**
-
-Salt is primarily developed on Linux, and as such carries some Linux-isms in
-its development and configuration. These are all very easily remedied to more
-seamlessly fit into FreeBSD. One such configuration option is the *pki_dir:*
-directive. To ensure all of Salts files end up where you expect, you'll likely
-want to update this line as seen here::
-
-   - #pki_dir: /etc/salt/pki
-   + pki_dir: /usr/local/etc/salt/pki
 
 **rc.conf**
 
@@ -230,7 +196,7 @@ minions. If all of your minions are properly communicating with your Master,
 you should "True" responses from each of them. See the example below to send
 the ``test.ping`` remote command::
 
-   [root@avon ~]# salt '*' test.ping
+   [root@master ~]# salt '*' test.ping
    {'avon': True}
 
 .. _where_do_i_go_from_here:
