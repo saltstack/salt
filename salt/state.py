@@ -24,8 +24,6 @@ import salt.minion
 
 log = logging.getLogger(__name__)
 
-RESTRICTED_FUNCS = ('mod_init', 'watcher')
-
 
 def _gen_tag(low):
     '''
@@ -196,7 +194,7 @@ class State(object):
             errors.append('Missing "name" data')
         if errors:
             return errors
-        if data['fun'] in RESTRICTED_FUNCS:
+        if data['fun'].startswith('mod_'):
             errors.append(
                     'State {0} in sls {1} uses an invalid function {2}'.format(
                         data['state'],
@@ -237,9 +235,9 @@ class State(object):
         if 'require' in data:
             reqdec = 'require'
         if 'watch' in data:
-            # Check to see if the service has a watcher function, if it does
+            # Check to see if the service has a mod_watch function, if it does
             # not, then just require
-            if not '{0}.watcher'.format(data['state']) in self.states:
+            if not '{0}.mod_watch'.format(data['state']) in self.states:
                 data['require'] = data.pop('watch')
                 reqdec = 'require'
             else:
@@ -696,7 +694,7 @@ class State(object):
         elif status == 'change':
             ret = self.call(low)
             if not ret['changes']:
-                low['fun'] = 'watcher'
+                low['fun'] = 'mod_watch'
                 ret = self.call(low)
             running[tag] = ret
         else:
