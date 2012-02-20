@@ -18,6 +18,14 @@ from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)
 
+
+def __gen_rtag():
+    '''
+    Return the location of the refresh tag
+    '''
+    return os.path.join(__opts__['cachedir'], 'pkg_refresh')
+
+
 def installed(name, version=None, refresh=False, repo='', skip_verify=False):
     '''
     Verify that the package is installed, and only that it is installed. This
@@ -206,9 +214,3 @@ def mod_init(low):
             open(rtag, 'w+').write('')
         return True
     return False
-
-def __gen_rtag():
-    '''
-    Return the location of the refresh tag
-    '''
-    return os.path.join(__opts__['cachedir'], 'pkg_refresh')
