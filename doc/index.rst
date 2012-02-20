@@ -22,8 +22,8 @@ fast and efficient using **msgpack**; and extensible using small and simple
 
 Read the :doc:`Salt overview <topics/index>` for a more thorough description.
 
-Step 1: Remote execution
-------------------------
+Tutorial 1: Remote execution
+----------------------------
 
 .. sidebar:: |vid| Screencasts
 
@@ -39,8 +39,8 @@ execution` — executing commands on remote hosts.
 2.  :doc:`Configure the minion <topics/configuration>`
 3.  :doc:`Run remote commands <topics/tutorials/modules>`
 
-Step 2: Configuration management
---------------------------------
+Tutorial 2: Configuration management
+------------------------------------
 
 Now that you have the basics out of the way, learn to use Salt to configure
 your servers. This is widely known as :term:`configuration management` —
