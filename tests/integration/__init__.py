@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import signal
 
 import salt
 import salt.config
@@ -49,8 +50,18 @@ class TestDaemon(object):
         Kill the minion and master processes
         '''
         self.minion_process.terminate()
+        self.stop_master_processes()
         self.master_process.terminate()
 
+
+    def stop_master_processes(self):
+        with open(self.master_opts['pidfile']) as pidfile:
+            for pid in pidfile.readlines():
+                if len(pid.strip()):
+                    try:
+                        os.kill(int(pid.strip()), signal.SIGTERM)
+                    except OSError:
+                        pass
 
 
 class ModuleCase(TestCase):
