@@ -45,7 +45,8 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    def __init__(self):
+
+    def __enter__(self):
         '''
         Start a master and minion
         '''
@@ -59,18 +60,24 @@ class TestDaemon(object):
                     minion_opts['extension_modules'],
                     master_opts['sock_dir'],
                     ])
-        # Start the master
+
         master = salt.master.Master(master_opts)
-        multiprocessing.Process(target=master.start).start()
-        # Start the minion
+        self.master_process = multiprocessing.Process(target=master.start)
+        self.master_process.start()
+
         minion = salt.minion.Minion(minion_opts)
-        multiprocessing.Process(target=minion.tune_in).start()
+        self.minion_process = multiprocessing.Process(target=minion.tune_in)
+        self.minion_process.start()
+
+        return self
+
         
-    def tearDown(self):
+    def __exit__(self, type, value, traceback):
         '''
         Kill the minion and master processes
         '''
-        pass
+        self.minion_process.terminate()
+        self.master_process.terminate()
 
 
 class ModuleCase(TestCase):
