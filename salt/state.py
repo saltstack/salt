@@ -670,7 +670,9 @@ class State(object):
                                 lreq)
                 running[tag] = {'changes': {},
                                 'result': False,
-                                'comment': comment}
+                                'comment': comment,
+                                '__run_num__': self.__run_num}
+                self.__run_num += 1
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -690,7 +692,9 @@ class State(object):
         elif status == 'fail':
             running[tag] = {'changes': {},
                             'result': False,
-                            'comment': 'One or more requisite failed'}
+                            'comment': 'One or more requisite failed',
+                            '__run_num__': self.run_num}
+            self.__run_num += 1
         elif status == 'change':
             ret = self.call(low)
             if not ret['changes']:
