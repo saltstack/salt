@@ -85,7 +85,7 @@ def refresh_db():
         __salt__['cmd.run']('portsnap update')
 
 
-def install(name, **kwargs):
+def install(name, *args, **kwargs):
     '''
     Install the passed package
 
