@@ -24,6 +24,9 @@ import salt.minion
 
 log = logging.getLogger(__name__)
 
+RESTRICTED_FUNCS = ('mod_init', 'watcher')
+
+
 def _gen_tag(low):
     '''
     Generate the running dict tag string from the low data structure
@@ -192,6 +195,13 @@ class State(object):
             errors.append('Missing "name" data')
         if errors:
             return errors
+        if data['fun'] in RESTRICTED_FUNCS:
+            errors.append(
+                    'State {0} in sls {1} uses an invalid function {2}'.format(
+                        data['state'],
+                        data['__sls__'],
+                        data['fun'])
+                    )
         full = data['state'] + '.' + data['fun']
         if full not in self.states:
             if '__sls__' in data:
