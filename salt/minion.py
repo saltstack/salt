@@ -117,6 +117,21 @@ class Minion(object):
         '''
         Return the functions and the returners loaded up from the loader module
         '''
+        pre_opts = {}
+        salt.config.load_config(
+                pre_opts,
+                self.opts['conf_file'],
+                'SALT_MINION_CONFIG'
+                )
+        if 'include' in pre_opts:
+            pre_opts = salt.config.include_config(
+                    pre_opts,
+                    self.opts['conf_file']
+                    )
+        if 'grains' in pre_opts:
+            self.opts['grains'] = pre_opts['grains']
+        else:
+            self.opts['grains'] = {}
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts)
@@ -977,7 +992,7 @@ class FileClient(object):
         Get a state file from the master and store it in the local minion cache
         return the location of the file
         '''
-        if sls.count('.'):
+        if '.' in sls:
             sls = sls.replace('.', '/')
         for path in ['salt://' + sls + '.sls',
                      os.path.join('salt://', sls, 'init.sls')]:

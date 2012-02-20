@@ -205,8 +205,7 @@ def mod_init(low):
         if not os.path.exists(rtag):
             open(rtag, 'w+').write('')
         return True
-    else:
-        return False
+    return False
 
 def __gen_rtag():
     '''

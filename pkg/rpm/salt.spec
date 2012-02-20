@@ -93,7 +93,6 @@ Requires: salt = %{version}-%{release}
 
 %description -n salt-master 
 The Salt master is the central server to which all minions connect.
-Summary: 
 
 %package -n salt-minion
 Summary: Client component for salt, a parallel remote execution system 

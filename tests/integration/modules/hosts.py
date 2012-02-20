@@ -6,11 +6,11 @@ import os
 import shutil
 
 # Import Salt libs
-import saltunittest
+import integration
 
-HFN = os.path.join(saltunittest.TMP, 'hosts')
+HFN = os.path.join(integration.TMP, 'hosts')
 
-class HostsModuleTest(saltunittest.ModuleCase):
+class HostsModuleTest(integration.ModuleCase):
     '''
     Test the hosts module
     '''
@@ -18,7 +18,7 @@ class HostsModuleTest(saltunittest.ModuleCase):
         '''
         Clean out the hosts file
         '''
-        shutil.copyfile(os.path.join(saltunittest.FILES, 'hosts'), HFN)
+        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFN)
 
     def __clear_hosts(self):
         '''
@@ -40,8 +40,8 @@ class HostsModuleTest(saltunittest.ModuleCase):
         self.__clean_hosts()
         hosts = self.run_function('hosts.list_hosts')
         self.assertEqual(len(hosts), 6)
-        self.assertEqual(hosts['::1'], ('ip6-localhost', 'ip6-loopback'))
-        self.assertEqual(hosts['127.0.0.1'], ('localhost', 'myname'))
+        self.assertEqual(hosts['::1'], ['ip6-localhost', 'ip6-loopback'])
+        self.assertEqual(hosts['127.0.0.1'], ['localhost', 'myname'])
 
     def test_list_hosts_nofile(self):
         '''
@@ -68,10 +68,10 @@ class HostsModuleTest(saltunittest.ModuleCase):
         hosts.get_alias
         '''
         self.__clean_hosts()
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), ('localhost', 'myname'))
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.2']), ())
+        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), ['localhost', 'myname'])
+        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.2']), [])
         self.__clear_hosts()
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), ())
+        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), [])
 
     def test_has_pair(self):
         '''

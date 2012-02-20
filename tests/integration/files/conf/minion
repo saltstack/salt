@@ -11,7 +11,7 @@ log_file: /tmp/salttest/minion
 
 # module extension
 test.foo: baz
-hosts.file: tmp/hosts
+hosts.file: integration/tmp/hosts
 
 # Grains addons
 grains:

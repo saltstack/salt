@@ -23,7 +23,7 @@ def _new_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(post.difference(pre))
+    return list(post - pre)
 
 
 def _rm_mods(pre_mods, post_mods):
@@ -37,7 +37,7 @@ def _rm_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(pre.difference(post))
+    return list(pre - post)
 
 
 def available():
@@ -66,10 +66,7 @@ def check_available(mod):
 
         salt '*' kmod.check_available kvm
     '''
-    if mod in available():
-        # the module is available, return True
-        return True
-    return False
+    return mod in available()
 
 
 def lsmod():

@@ -16,12 +16,16 @@ import inspect
 import logging
 import os
 import tempfile
+from collections import defaultdict
 
 import salt.loader
 import salt.minion
 
 
 log = logging.getLogger(__name__)
+
+RESTRICTED_FUNCS = ('mod_init', 'watcher')
+
 
 def _gen_tag(low):
     '''
@@ -191,6 +195,13 @@ class State(object):
             errors.append('Missing "name" data')
         if errors:
             return errors
+        if data['fun'] in RESTRICTED_FUNCS:
+            errors.append(
+                    'State {0} in sls {1} uses an invalid function {2}'.format(
+                        data['state'],
+                        data['__sls__'],
+                        data['fun'])
+                    )
         full = data['state'] + '.' + data['fun']
         if full not in self.states:
             if '__sls__' in data:
@@ -235,7 +246,8 @@ class State(object):
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
-                    if data['name'] == req[req.keys()[0]]:
+                    if data['name'] == req[req.keys()[0]] \
+                            or data['__id__'] == req[req.keys()[0]]:
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -569,8 +581,7 @@ class State(object):
         if low.get('failhard', False) \
                 or self.opts['failhard'] \
                 and tag in running:
-            if not running[tag]['result']:
-                return True
+            return not running[tag]['result']
         return False
 
     def check_requisite(self, low, running, chunks):
@@ -780,9 +791,9 @@ class HighState(object):
         '''
         Gather the top files
         '''
-        tops = {}
-        include = {}
-        done = {}
+        tops = defaultdict(list)
+        include = defaultdict(list)
+        done = defaultdict(list)
         # Gather initial top files
         if self.opts['environment']:
             tops[self.opts['environment']] = [
@@ -796,8 +807,6 @@ class HighState(object):
                     ]
         else:
             for env in self._get_envs():
-                if not env in tops:
-                    tops[env] = []
                 tops[env].append(
                         self.state.compile_template(
                             self.client.cache_file(
@@ -813,8 +822,6 @@ class HighState(object):
             for ctop in ctops:
                 if not 'include' in ctop:
                     continue
-                if not env in include:
-                    include[env] = []
                 for sls in ctop['include']:
                     include[env].append(sls)
                 ctop.pop('include')
@@ -822,13 +829,11 @@ class HighState(object):
         while include:
             pops = []
             for env, states in include.items():
-                if not env in done:
-                    done[env] = []
                 pops.append(env)
                 if not states:
                     continue
                 for sls in states:
-                    if done[env].count(sls):
+                    if sls in done[env]:
                         continue
                     tops[env].append(
                             self.state.compile_template(
@@ -850,14 +855,12 @@ class HighState(object):
         '''
         Cleanly merge the top files
         '''
-        top = {}
+        top = defaultdict(dict)
         for sourceenv, ctops in tops.items():
             for ctop in ctops:
                 for env, targets in ctop.items():
                     if env == 'include':
                         continue
-                    if not env in top:
-                        top[env] = {}
                     for tgt in targets:
                         if not tgt in top[env]:
                             top[env][tgt] = ctop[env][tgt]
@@ -972,7 +975,7 @@ class HighState(object):
                         errors.append(err)
                     else:
                         for sub_sls in state.pop('include'):
-                            if not list(mods).count(sub_sls):
+                            if sub_sls not in mods:
                                 nstate, mods, err = self.render_state(
                                         sub_sls,
                                         env,

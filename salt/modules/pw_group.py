@@ -86,6 +86,5 @@ def chgid(name, gid):
     __salt__['cmd.run'](cmd)
     post_gid = __salt__['file.group_to_gid'](name)
     if post_gid != pre_gid:
-        if post_gid == gid:
-            return True
+        return post_gid == gid
     return False

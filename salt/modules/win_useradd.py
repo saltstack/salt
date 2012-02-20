@@ -108,8 +108,7 @@ def chhome(name, home):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
-        if post_info['home'] == home:
-            return True
+        return post_info['home'] == home
     return False
 
 
@@ -130,8 +129,7 @@ def chprofile(name, profile):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['profile'] != pre_info['profile']:
-        if post_info['profile'] == profile:
-            return True
+        return post_info['profile'] == profile
     return False
 
 def info(name):
