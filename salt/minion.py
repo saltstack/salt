@@ -361,7 +361,14 @@ class Minion(object):
         payload['load'] = self.crypticle.dumps(load)
         data = self.serial.dumps(payload)
         socket.send(data)
-        ret_val = socket.recv()
+        ret_val = self.serial.loads(socket.recv())
+        if isinstance(ret_val, str) and not ret_val:
+            # The master AES key has changed, reauth
+            self.authenticate()
+            payload['load'] = self.crypticle.dumps(load)
+            data = self.serial.dumps(payload)
+            socket.send(data)
+            ret_val = self.serial.loads(socket.recv())
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
             fn_ = os.path.join(
