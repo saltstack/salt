@@ -1032,6 +1032,17 @@ class HighState(object):
             mods = set()
             for sls in states:
                 state, mods, err = self.render_state(sls, env, mods)
+                for id_ in state:
+                    if id_ in highstate:
+                        if highstate[id_] != state[id_]:
+                            errors.append(('Detected conflicting IDs, SLS IDs'
+                            ' need to be globally unique.\n    The'
+                            ' conflicting ID is "{0}" and is found in SLS'
+                            ' "{1}" and SLS "{2}"').format(
+                                    id_,
+                                    highstate[id_]['__sls__'],
+                                    state[id_]['__sls__'])
+                            )
                 if state:
                     highstate.update(state)
                 if err:
