@@ -293,7 +293,10 @@ def dead(name, enable=None, sig=None):
 
 def enabled(name):
     '''
-    Verify that the service is enabled on boot
+    Verify that the service is enabled on boot, only use this state if you
+    don't want to manage the running process, remember that if you want to
+    enable a running service to use the enable: True option for the running
+    or dead function.
 
     name
         The name of the init or rc script used to manage the service
@@ -303,7 +306,10 @@ def enabled(name):
 
 def disabled(name):
     '''
-    Verify that the service is disabled on boot
+    Verify that the service is disabled on boot, only use this state if you
+    don't want to manage the running process, remember that if you want to
+    disable a service to use the enable: False option for the running or dead
+    function.
 
     name
         The name of the init or rc script used to manage the service
