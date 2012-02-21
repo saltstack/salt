@@ -23,6 +23,7 @@ def __virtual__():
     disable = [
                'RedHat',
                'CentOS',
+               'Scientific',
                'Fedora',
                'Gentoo',
                'FreeBSD',

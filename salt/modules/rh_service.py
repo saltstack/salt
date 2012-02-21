@@ -14,6 +14,7 @@ def __virtual__():
     enable = [
                'RedHat',
                'CentOS',
+               'Scientific',
                'Fedora',
               ]
     if __grains__['os'] in enable:

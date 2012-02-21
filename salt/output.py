@@ -64,7 +64,8 @@ class HighStateOutputter(Outputter):
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
                 # Everything rendered as it should display the output
-                for tname, ret in data[host].items():
+                for tname in sorted(data[host], key=lambda k: data[host][k]['__run_num__']):
+                    ret = data[host][tname]
                     tcolor = colors['GREEN']
                     if ret['changes']:
                         tcolor = colors['CYAN']

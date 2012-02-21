@@ -13,18 +13,17 @@ The data sent to the state calls is as follows:
 
 import copy
 import inspect
+import fnmatch
 import logging
 import os
 import tempfile
-from collections import defaultdict
+import collections
 
 import salt.loader
 import salt.minion
 
 
 log = logging.getLogger(__name__)
-
-RESTRICTED_FUNCS = ('mod_init', 'watcher')
 
 
 def _gen_tag(low):
@@ -108,6 +107,7 @@ class State(object):
         self.opts = opts
         self.load_modules()
         self.mod_init = set()
+        self.__run_num = 0
 
     def _mod_init(self, low):
         '''
@@ -195,7 +195,7 @@ class State(object):
             errors.append('Missing "name" data')
         if errors:
             return errors
-        if data['fun'] in RESTRICTED_FUNCS:
+        if data['fun'].startswith('mod_'):
             errors.append(
                     'State {0} in sls {1} uses an invalid function {2}'.format(
                         data['state'],
@@ -236,9 +236,9 @@ class State(object):
         if 'require' in data:
             reqdec = 'require'
         if 'watch' in data:
-            # Check to see if the service has a watcher function, if it does
+            # Check to see if the service has a mod_watch function, if it does
             # not, then just require
-            if not '{0}.watcher'.format(data['state']) in self.states:
+            if not '{0}.mod_watch'.format(data['state']) in self.states:
                 data['require'] = data.pop('watch')
                 reqdec = 'require'
             else:
@@ -246,8 +246,8 @@ class State(object):
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
-                    if data['name'] == req[req.keys()[0]] \
-                            or data['__id__'] == req[req.keys()[0]]:
+                    if fnmatch.fnmatch(data['name'], req[req.keys()[0]]) \
+                            or fnmatch.fnmatch(data['__id__'], req[req.keys()[0]]):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -553,6 +553,8 @@ class State(object):
                 )
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
+        ret['__run_num__'] = self.__run_num
+        self.__run_num += 1
         format_log(ret)
         self.module_refresh(data)
         return ret
@@ -603,8 +605,8 @@ class State(object):
                 for req in low[r_state]:
                     found = False
                     for chunk in chunks:
-                        if chunk['__id__'] == req[req.keys()[0]] or \
-                                chunk['name'] == req[req.keys()[0]]:
+                        if fnmatch.fnmatch(chunk['__id__'], req[req.keys()[0]]) or \
+                                fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]):
                             if chunk['state'] == req.keys()[0]:
                                 found = True
                                 reqs[r_state].append(chunk)
@@ -653,8 +655,9 @@ class State(object):
                 for req in low[requisite]:
                     found = False
                     for chunk in chunks:
-                        if chunk['name'] == req[req.keys()[0]] \
-                                or chunk['__id__'] == req[req.keys()[0]]:
+                        if fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]) \
+                                or fnmatch.fnmatch(chunk['__id__'],
+                                        req[req.keys()[0]]):
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                                 found = True
@@ -669,7 +672,9 @@ class State(object):
                                 lreq)
                 running[tag] = {'changes': {},
                                 'result': False,
-                                'comment': comment}
+                                'comment': comment,
+                                '__run_num__': self.__run_num}
+                self.__run_num += 1
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -689,11 +694,13 @@ class State(object):
         elif status == 'fail':
             running[tag] = {'changes': {},
                             'result': False,
-                            'comment': 'One or more requisite failed'}
+                            'comment': 'One or more requisite failed',
+                            '__run_num__': self.__run_num}
+            self.__run_num += 1
         elif status == 'change':
             ret = self.call(low)
             if not ret['changes']:
-                low['fun'] = 'watcher'
+                low['fun'] = 'mod_watch'
                 ret = self.call(low)
             running[tag] = ret
         else:
@@ -791,9 +798,9 @@ class HighState(object):
         '''
         Gather the top files
         '''
-        tops = defaultdict(list)
-        include = defaultdict(list)
-        done = defaultdict(list)
+        tops = collections.defaultdict(list)
+        include = collections.defaultdict(list)
+        done = collections.defaultdict(list)
         # Gather initial top files
         if self.opts['environment']:
             tops[self.opts['environment']] = [
@@ -855,7 +862,7 @@ class HighState(object):
         '''
         Cleanly merge the top files
         '''
-        top = defaultdict(dict)
+        top = collections.defaultdict(dict)
         for sourceenv, ctops in tops.items():
             for ctop in ctops:
                 for env, targets in ctop.items():
