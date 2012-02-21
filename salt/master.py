@@ -508,6 +508,15 @@ class AESFuncs(object):
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
+        # Otherwise the minion has already returned this jid and it should
+        # be dropped
+        else:
+            log.error(
+                    ('An extra return was detected from minion {0}, please'
+                    ' verify the minion, this could be a replay'
+                    ' attack').format(load['id'])
+                    )
+            return False
         self.serial.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
         if 'out' in load:
