@@ -208,7 +208,7 @@ def freecpu():
 
     CLI Example::
 
-        salt '*' virt.freemem
+        salt '*' virt.freecpu
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
