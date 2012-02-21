@@ -13,6 +13,7 @@ The data sent to the state calls is as follows:
 
 import copy
 import inspect
+import fnmatch
 import logging
 import os
 import tempfile
@@ -245,8 +246,8 @@ class State(object):
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
-                    if data['name'] == req[req.keys()[0]] \
-                            or data['__id__'] == req[req.keys()[0]]:
+                    if fnmatch.fnmatch(data['name'], req[req.keys()[0]]) \
+                            or fnmatch.fnmatch(data['__id__'], req[req.keys()[0]]):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -604,8 +605,8 @@ class State(object):
                 for req in low[r_state]:
                     found = False
                     for chunk in chunks:
-                        if chunk['__id__'] == req[req.keys()[0]] or \
-                                chunk['name'] == req[req.keys()[0]]:
+                        if fnmatch.fnmatch(chunk['__id__'], req[req.keys()[0]]) or \
+                                fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]):
                             if chunk['state'] == req.keys()[0]:
                                 found = True
                                 reqs[r_state].append(chunk)
@@ -654,8 +655,9 @@ class State(object):
                 for req in low[requisite]:
                     found = False
                     for chunk in chunks:
-                        if chunk['name'] == req[req.keys()[0]] \
-                                or chunk['__id__'] == req[req.keys()[0]]:
+                        if fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]) \
+                                or fnmatch.fnmatch(chunk['__id__'],
+                                        req[req.keys()[0]]):
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                                 found = True
@@ -693,7 +695,7 @@ class State(object):
             running[tag] = {'changes': {},
                             'result': False,
                             'comment': 'One or more requisite failed',
-                            '__run_num__': self.run_num}
+                            '__run_num__': self.__run_num}
             self.__run_num += 1
         elif status == 'change':
             ret = self.call(low)
