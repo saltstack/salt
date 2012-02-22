@@ -151,6 +151,33 @@ class LocalClient(object):
             timeout=timeout)
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
 
+    def cmd_iter(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        expr_form='glob',
+        ret=''):
+        '''
+        Execute a salt command and return
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
+        jid = prep_jid(self.opts['cachedir'])
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout)
+        for fn_ret in self.get_iter_returns(pub_data['jid'],
+                pub_data['minions'],
+                timeout):
+            yield fn_ret
+
     def cmd_full_return(
         self,
         tgt,
@@ -175,6 +202,53 @@ class LocalClient(object):
             timeout=timeout)
         return (self.get_full_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
+
+    def get_iter_returns(self, jid, minions, timeout=None):
+        '''
+        This method starts off a watcher looking at the return data for a
+        specified jid, it returns all of the information for the jid
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
+        start = 999999999999
+        gstart = int(time.time())
+        found = set()
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            yield {}
+        # Wait for the hosts to check in
+        while True:
+            ret = {}
+            for fn_ in os.listdir(jid_dir):
+                if fn_.startswith('.'):
+                    continue
+                if fn_ not in found:
+                    retp = os.path.join(jid_dir, fn_, 'return.p')
+                    outp = os.path.join(jid_dir, fn_, 'out.p')
+                    if not os.path.isfile(retp):
+                        continue
+                    while fn_ not in ret:
+                        try:
+                            ret_data = self.serial.load(open(retp, 'r'))
+                            ret[fn_] = {'ret': ret_data}
+                            if os.path.isfile(outp):
+                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                        except:
+                            pass
+                    found.add(fn_)
+                    yield ret
+            if ret and start == 999999999999:
+                start = int(time.time())
+            if len(ret) >= len(minions):
+                break
+            if int(time.time()) > start + timeout:
+                break
+            if int(time.time()) > gstart + timeout and not ret:
+                # No minions have replied within the specified global timeout,
+                # return an empty dict
+                break
+            time.sleep(0.02)
 
     def get_returns(self, jid, minions, timeout=None):
         '''
