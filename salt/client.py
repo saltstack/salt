@@ -219,8 +219,8 @@ class LocalClient(object):
             yield {}
         # Wait for the hosts to check in
         while True:
-            ret = {}
             for fn_ in os.listdir(jid_dir):
+                ret = {}
                 if fn_.startswith('.'):
                     continue
                 if fn_ not in found:
