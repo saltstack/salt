@@ -1,33 +1,27 @@
 '''
-Manage information about files on the minion, set/read user, group, and mode
+Manage information about files on the minion, set/read user, group
 data
 '''
 
-# TODO: We should add the capability to do u+r type operations here
-# some time in the future
-
 import os
-import grp
-import pwd
+import os.path
 import time
 import hashlib
+import win32api
+import win32con
+import win32security
+import ntsecuritycon as con
 
-import salt.utils.find
+#import salt.utils.find
 from salt.exceptions import SaltInvocationError
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only works on Windows systems
     '''
-
-    # Disable on these platforms, specific file modules exist:
-    disable = [
-            'Windows',
-            ]
-    if __grains__['os'] in disable:
-        return False
-    return 'file'
-    
+    if __grains__['os'] == 'Windows':
+        return 'file'
+    return False
 
 __outputter__ = {
     'touch': 'txt',
@@ -41,12 +35,11 @@ def gid_to_group(gid):
 
     CLI Example::
 
-        salt '*' file.gid_to_group 0
+        salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     '''
-    try:
-        return grp.getgrgid(gid).gr_name
-    except KeyError:
-        return ''
+    sid = win32security.GetBinarySid(gid)
+    name, domain, type = win32security.LookupAccountSid (None, sid)
+    return name
 
 
 def group_to_gid(group):
@@ -55,12 +48,10 @@ def group_to_gid(group):
 
     CLI Example::
 
-        salt '*' file.group_to_gid root
+        salt '*' file.group_to_gid administrators
     '''
-    try:
-        return grp.getgrnam(group).gr_gid
-    except KeyError:
-        return ''
+    sid, domain, type = win32security.LookupAccountName (None, group)
+    return win32security.ConvertSidToStringSid(sid)
 
 
 def get_gid(path):
@@ -69,11 +60,13 @@ def get_gid(path):
 
     CLI Example::
 
-        salt '*' file.get_gid /etc/passwd
+        salt '*' file.get_gid c:\\temp\\test.txt
     '''
     if not os.path.exists(path):
-        return -1
-    return os.stat(path).st_gid
+        return False 
+    secdesc = win32security.GetFileSecurity (path, win32security.OWNER_SECURITY_INFORMATION)
+    owner_sid = secdesc.GetSecurityDescriptorOwner()
+    return win32security.ConvertSidToStringSid(owner_sid)
 
 
 def get_group(path):
@@ -82,12 +75,14 @@ def get_group(path):
 
     CLI Example::
 
-        salt '*' file.get_group /etc/passwd
+        salt '*' file.get_group c:\\temp\\test.txt
     '''
-    gid = get_gid(path)
-    if gid == -1:
+    if not os.path.exists(path):
         return False
-    return gid_to_group(gid)
+    secdesc = win32security.GetFileSecurity (path, win32security.OWNER_SECURITY_INFORMATION)
+    owner_sid = secdesc.GetSecurityDescriptorOwner()
+    name, domain, type = win32security.LookupAccountSid (None, owner_sid)
+    return name
 
 
 def uid_to_user(uid):
@@ -96,12 +91,11 @@ def uid_to_user(uid):
 
     CLI Example::
 
-        salt '*' file.uid_to_user 0
+        salt '*' file.uid_to_user S-1-5-21-626487655-2533044672-482107328-1010
     '''
-    try:
-        return pwd.getpwuid(uid).pw_name
-    except KeyError:
-        return ''
+    sid = win32security.GetBinarySid(uid)
+    name, domain, type = win32security.LookupAccountSid (None, sid)
+    return name
 
 
 def user_to_uid(user):
@@ -110,12 +104,10 @@ def user_to_uid(user):
 
     CLI Example::
 
-        salt '*' file.user_to_uid root
+        salt '*' file.user_to_uid myusername 
     '''
-    try:
-        return pwd.getpwnam(user).pw_uid
-    except KeyError:
-        return ''
+    sid, domain, type = win32security.LookupAccountName (None, user)
+    return win32security.ConvertSidToStringSid(sid)
 
 
 def get_uid(path):
@@ -124,11 +116,13 @@ def get_uid(path):
 
     CLI Example::
 
-        salt '*' file.get_uid /etc/passwd
+        salt '*' file.get_uid c:\\temp\\test.txt
     '''
     if not os.path.exists(path):
         return False
-    return os.stat(path).st_uid
+    secdesc = win32security.GetFileSecurity (path, win32security.OWNER_SECURITY_INFORMATION)
+    owner_sid = secdesc.GetSecurityDescriptorOwner()
+    return win32security.ConvertSidToStringSid(owner_sid)
 
 
 def get_user(path):
@@ -137,48 +131,12 @@ def get_user(path):
 
     CLI Example::
 
-        salt '*' file.get_user /etc/passwd
+        salt '*' file.get_user c:\\temp\\test.txt
     '''
-    uid = get_uid(path)
-    if uid == -1:
-        return False
-    return uid_to_user(uid)
-
-
-def get_mode(path):
-    '''
-    Return the mode of a file
-
-    CLI Example::
-
-        salt '*' file.get_mode /etc/passwd
-    '''
-    if not os.path.exists(path):
-        return -1
-    mode = str(oct(os.stat(path).st_mode)[-4:])
-    if mode.startswith('0'):
-        return mode[1:]
-    return mode
-
-
-def set_mode(path, mode):
-    '''
-    Set the mode of a file
-
-    CLI Example::
-
-        salt '*' file.set_mode /etc/passwd 0644
-    '''
-    mode = str(mode).lstrip('0')
-    if not mode:
-        mode = '0'
-    if not os.path.exists(path):
-        return 'File not found'
-    try:
-        os.chmod(path, int(mode, 8))
-    except:
-        return 'Invalid Mode ' + mode
-    return get_mode(path)
+    secdesc = win32security.GetFileSecurity (path, win32security.OWNER_SECURITY_INFORMATION)
+    owner_sid = secdesc.GetSecurityDescriptorOwner()
+    name, domain, type = win32security.LookupAccountSid (None, owner_sid)
+    return name
 
 
 def chown(path, user, group):
@@ -187,8 +145,10 @@ def chown(path, user, group):
 
     CLI Example::
 
-        salt '*' file.chown /etc/passwd root root
+        salt '*' file.chown c:\\temp\\test.txt myusername administrators
     '''
+    # I think this function isn't working correctly yet
+    sd = win32security.GetFileSecurity (path, win32security.DACL_SECURITY_INFORMATION)
     uid = user_to_uid(user)
     gid = group_to_gid(group)
     err = ''
@@ -200,7 +160,12 @@ def chown(path, user, group):
         err += 'File not found'
     if err:
         return err
-    return os.chown(path, uid, gid)
+
+    dacl = win32security.ACL ()
+    dacl.AddAccessAllowedAce (win32security.ACL_REVISION, con.FILE_ALL_ACCESS, win32security.GetBinarySid(uid))
+    dacl.AddAccessAllowedAce (win32security.ACL_REVISION, con.FILE_ALL_ACCESS, win32security.GetBinarySid(gid))
+    sd.SetSecurityDescriptorDacl (1, dacl, 0)
+    return win32security.SetFileSecurity (path, win32security.DACL_SECURITY_INFORMATION, sd)
 
 
 def chgrp(path, group):
@@ -209,8 +174,9 @@ def chgrp(path, group):
 
     CLI Example::
 
-        salt '*' file.chgrp /etc/passwd root
+        salt '*' file.chgrp c:\\temp\\test.txt administrators
     '''
+    # I think this function isn't working correctly yet
     gid = group_to_gid(group)
     err = ''
     if gid == '':
