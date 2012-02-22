@@ -123,12 +123,27 @@ class State(object):
                     return
                 self.mod_init.add(low['state'])
 
-    def load_modules(self):
+    def load_modules(self, data=None):
         '''
         Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
         self.functions = salt.loader.minion_mods(self.opts)
+        if isinstance(data, dict):
+            if data.get('redirect', False):
+                redirect = {}
+                if isinstance(data['redirect'], str):
+                    redirects = [{data['state']: data['redirect']}]
+                elif isinstance(data['redirect'], list):
+                    redirects = data['redirect']
+                for redirect in redirects:
+                    for mod in redirect:
+                        funcs = salt.loader.raw_mod(self.opts,
+                                redirect[mod],
+                                self.functions)
+                        if funcs:
+                            for func in funcs:
+                                self.functions['{0}{1}'.format(mod, func[func.rindex('.'):])] = funcs[func]
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
 
@@ -551,12 +566,15 @@ class State(object):
                     data
                     )
                 )
+        if 'redirect' in data:
+            self.load_modules(data)
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
-        self.module_refresh(data)
+        if 'redirect' in data:
+            self.load_modules()
         return ret
 
     def call_chunks(self, chunks):
@@ -856,6 +874,8 @@ class HighState(object):
                 if env in include:
                     include.pop(env)
 
+        import pprint
+        pprint.pprint(tops)
         return tops
 
     def merge_tops(self, tops):
