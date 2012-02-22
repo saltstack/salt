@@ -143,7 +143,11 @@ class State(object):
                                 self.functions)
                         if funcs:
                             for func in funcs:
-                                self.functions['{0}{1}'.format(mod, func[func.rindex('.'):])] = funcs[func]
+                                f_key = '{0}{1}'.format(
+                                        mod,
+                                        func[func.rindex('.'):]
+                                        )
+                                self.functions[f_key] = funcs[func]
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
 
@@ -874,8 +878,6 @@ class HighState(object):
                 if env in include:
                     include.pop(env)
 
-        import pprint
-        pprint.pprint(tops)
         return tops
 
     def merge_tops(self, tops):
