@@ -50,7 +50,7 @@ def _sync(form, env):
         open(os.path.join(__opts__['cachedir'], 'module_refresh'), 'w+').write('')
     if __opts__.get('clean_dynamic_modules', True):
         current = set(os.listdir(mod_dir))
-        for fn_ in current.difference(remote):
+        for fn_ in current - remote:
             full = os.path.join(mod_dir, fn_)
             if os.path.isfile(full):
                 os.remove(full)

@@ -34,6 +34,23 @@ def minion_mods(opts):
     return load.apply_introspection(load.gen_functions())
 
 
+def raw_mod(opts, name, functions):
+    '''
+    Returns a single module loaded raw and bypassing the __virtual__ function
+    '''
+    extra_dirs = [
+            os.path.join(opts['extension_modules'],
+                'modules')
+            ]
+    if 'module_dirs' in opts:
+        extra_dirs.extend(opts['module_dirs'])
+    module_dirs = [
+        os.path.join(salt_base_path, 'modules'),
+        ] + extra_dirs
+    load = Loader(module_dirs, opts, 'rawmodule')
+    return load.gen_module(name, functions)
+
+
 def returners(opts):
     '''
     Returns the returner modules
@@ -205,6 +222,79 @@ class Loader(object):
                              "present in the system path. Skipping Cython "
                              "modules.")
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
+
+    def gen_module(self, name, functions, pack=None):
+        '''
+        Load a single module and pack it with the functions passed
+        '''
+        full = ''
+        mod = None
+        for mod_dir in self.module_dirs:
+            if not os.path.isabs(mod_dir):
+                continue
+            if not os.path.isdir(mod_dir):
+                continue
+            fn_ = os.path.join(mod_dir, name)
+            for ext in ('.py', '.pyo', '.pyc', '.so'):
+                full_test = '{0}{1}'.format(fn_, ext)
+                if os.path.isfile(full_test):
+                    full = full_test
+        if not full:
+            return None
+        try:
+            if full.endswith('.pyx') and self.opts['cython_enable']:
+                mod = pyximport.load_module(name, full, '/tmp')
+            else:
+                fn_, path, desc = imp.find_module(name, self.module_dirs)
+                mod = imp.load_module(
+                        '{0}_{1}'.format(name, self.tag),
+                        fn_,
+                        path,
+                        desc
+                        )
+        except ImportError as exc:
+            log.debug(('Failed to import module {0}: {1}').format(name, exc))
+            return mod
+        except Exception as exc:
+            log.warning(('Failed to import module {0}, this is due most'
+                ' likely to a syntax error: {1}').format(name, exc))
+            return mod
+        if hasattr(mod, '__opts__'):
+            mod.__opts__.update(self.opts)
+        else:
+            mod.__opts__ = self.opts
+
+        mod.__grains__ = self.grains
+
+        if pack:
+            if isinstance(pack, list):
+                for chunk in pack:
+                    setattr(mod, chunk['name'], chunk['value'])
+            else:
+                setattr(mod, pack['name'], pack['value'])
+
+        # Call a module's initialization method if it exists
+        if hasattr(mod, '__init__'):
+            if callable(mod.__init__):
+                try:
+                    mod.__init__()
+                except TypeError:
+                    pass
+        funcs = {}
+        for attr in dir(mod):
+            if attr.startswith('_'):
+                continue
+            if callable(getattr(mod, attr)):
+                func = getattr(mod, attr)
+                funcs[
+                        '{0}.{1}'.format(
+                            mod.__name__[:mod.__name__.rindex('_')],
+                            attr)
+                        ] = func
+                self._apply_outputter(func, mod)
+        if not hasattr(mod, '__salt__'):
+            mod.__salt__ = functions
+        return funcs
 
     def gen_functions(self, pack=None, virtual_enable=True):
         '''

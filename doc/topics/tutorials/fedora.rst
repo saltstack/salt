@@ -3,32 +3,28 @@
 Introduction
 ============
 
-Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 8.2 and 9.0
-releases.
-
-Salt is dependent on the following additional ports. These will be installed as
-dependencies of the ``sysutils/salt`` port::
-
-   /devel/py-yaml
-   /devel/py-pyzmq
-   /devel/py-Jinja2
-   /devel/py-msgpack
-   /security/py-pycrypto
-   /security/py-m2crypto
+Beginning with version 0.9.4, Salt has been available in the primary Fedora
+repositories and is available for installation using yum. Fedora will have more
+up to date versions of Salt than other members of the Red Hat family, which
+makes it a great place to help improve Salt!
 
 .. _installation:
 
 Installation
 ============
 
-To install Salt from the FreeBSD ports tree, use the command::
+Salt can be installed using ``yum`` and is available in the standard Fedora
+repositories.
 
-   cd /usr/ports/sysutils/salt && make install clean
+Stable Release
+--------------
 
-Once the port is installed you'll need to make a few configuration changes.
-These include defining the IP to bind to (optional), and some configuration
-path changes to make salt fit more natively into the FreeBSD filesystem tree.
+Salt is packaged separately for the minion and the master. You'll only need to
+install the appropriate package for the role you need the machine to play. This
+means you're going to want one master and a whole bunch of minions!::
+
+    yum install salt-master
+    yum install salt-minion
 
 .. _configuration:
 
@@ -37,20 +33,6 @@ Configuration
 
 In the sections below I'll outline configuration options for both the Salt
 Master and Salt Minions.
-
-The Salt port installs two sample configuration files, salt/master.sample and
-salt/minion.sample (these should be installed in /usr/local/etc/, unless you use a
-different %%PREFIX%%). You'll need to copy these .sample files into place and
-make a few edits. First, copy them into place as seen here::
-
-   cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
-   cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
-
-Note: You'll only need to copy the config for the service you're going to run.
-
-Once you've copied the config into place you'll need to make changes specific
-to your setup. Below I'll outline suggested configuration changes to the
-Master, after which I'll outline configuring the Minion.
 
 .. _master_configuration:
 
@@ -71,20 +53,18 @@ By default the Salt master listens on ports 4505 and 4506 on all interfaces
    - #interface: 0.0.0.0
    + interface: 10.0.0.1
 
-**rc.conf**
+**Enable the Master**
 
-Last but not least you'll need to activate the Salt Master in your rc.conf
-file. Using your favorite editor, open /etc/rc.conf or /etc/rc.conf.local and
-add this line::
+You'll also likely want to activate the Salt Master in systemd, configuring the
+Salt Master to start automatically at boot.::
 
-   + salt_master_enable="YES"
+    systemctl enable salt-master.service
 
 Once you've completed all of these steps you're ready to start your Salt
-Master. The Salt port installs an rc script which should be used to manage your
-Salt Master. You should be able to start your Salt Master now using the command
+Master. You should be able to start your Salt Master now using the command
 seen here::
 
-   service salt_master start
+    systemctl start salt-master.service
 
 If your Salt Master doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
@@ -116,20 +96,18 @@ Simply update the master directive to the IP or hostname of your Salt Master.
 Save your changes and you're ready to start your Salt Minion. Advanced
 configuration options are covered in another chapter.
 
-**rc.conf**
+**Enable the Minion**
 
-Before you're able to start the Salt Minion you'll need to update your rc.conf
-file. Using your favorite editor open /etc/rc.conf or /etc/rc.conf.local and
-add this line::
+You'll need to configure the minion to auto-start at boot. You can toggle
+that option through systemd.::
 
-   + salt_minion_enable="YES"
+    systemctl enable salt-minion.service
 
 Once you've completed all of these steps you're ready to start your Salt
-Minion. The Salt port installs an rc script which should be used to manage your
-Salt Minion. You should be able to start your Salt Minion now using the command
-seen here::
+Minion. You should be able to start your Salt Minion now using the command
+here::
 
-   service salt_minion start
+    systemctl start salt-minion.service
 
 If your Salt Minion doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
@@ -154,7 +132,7 @@ Minion. This ensures that the commands you send to your Minions (your cloud)
 can not be tampered with, and that communication between Master and Minion is
 only done through trusted, accepted keys.
 
-Before you'll be able to do any remote execution or state management you'll
+Before you'll be able to do any remote execution or configuration management you'll
 need to accept any pending keys on the Master. Run the ``salt-key`` command to
 list the keys known to the Salt Master::
 

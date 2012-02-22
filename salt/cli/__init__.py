@@ -177,7 +177,7 @@ class SaltCMD(object):
             else:
                 opts['tgt'] = args[0]
 
-            if args[1].count(','):
+            if ',' in args[1]:
                 opts['fun'] = args[1].split(',')
                 opts['arg'] = []
                 for comp in ' '.join(args[2:]).split(','):

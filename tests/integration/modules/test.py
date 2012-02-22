@@ -2,9 +2,9 @@
 import os
 
 # Import salt libs
-import saltunittest
+import integration
 
-class TestModuleTest(saltunittest.ModuleCase):
+class TestModuleTest(integration.ModuleCase):
     '''
     Validate the test module
     '''
@@ -40,7 +40,7 @@ class TestModuleTest(saltunittest.ModuleCase):
         import salt.config
         opts = salt.config.minion_config(
                 os.path.join(
-                    saltunittest.TEST_DIR,
+                    integration.INTEGRATION_TEST_DIR,
                     'files/conf/minion'
                     )
                 )

@@ -36,7 +36,7 @@ syslog if there is no disk space:
 import grp
 import os
 import pwd
-
+from salt.exceptions import CommandExecutionError
 
 def wait(name,
         onlyif=None,
@@ -149,4 +149,4 @@ def run(name,
     os.setegid(pgid)
     return ret
 
-watcher = run
+mod_watch = run

@@ -6,15 +6,22 @@ Discover all instances of unittest.TestCase in this directory.
 import os
 # Import salt libs
 import saltunittest
+from integration import TestDaemon
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
-def main():
-    saltunittest.TestDaemon()
+def run_integration_tests():
+    with TestDaemon():
+        loader = saltunittest.TestLoader()
+        tests = loader.discover(os.path.join(TEST_DIR, 'integration', 'modules'), '*.py')
+        saltunittest.TextTestRunner(verbosity=1).run(tests)
+
+def run_unit_tests():
     loader = saltunittest.TestLoader()
-    tests = loader.discover(os.path.join(TEST_DIR, 'modules'), '*.py')
+    tests = loader.discover(os.path.join(TEST_DIR, 'unit', 'templates'), '*.py')
     saltunittest.TextTestRunner(verbosity=1).run(tests)
 
 
 if __name__ == "__main__":
-    main()
+    run_integration_tests()
+    run_unit_tests()

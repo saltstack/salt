@@ -63,6 +63,4 @@ def set_password(name, password):
         lines.append('{0}\n'.format(line))
     open(s_file, 'w+').writelines(lines)
     uinfo = info(name)
-    if uinfo['pwd'] == password:
-        return True
-    return False
+    return uinfo['pwd'] == password

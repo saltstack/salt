@@ -3,32 +3,81 @@
 Introduction
 ============
 
-Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 8.2 and 9.0
-releases.
+Salt has primarily been developed on Arch Linux, meaning it is known to work
+very well on that distribution. The lead developer, Thomas S. Hatch (thatch45) has
+been a TU (Trusted User) for the Arch Linux distribution, and has written a
+number of Arch-specific tools in the past.
 
-Salt is dependent on the following additional ports. These will be installed as
-dependencies of the ``sysutils/salt`` port::
-
-   /devel/py-yaml
-   /devel/py-pyzmq
-   /devel/py-Jinja2
-   /devel/py-msgpack
-   /security/py-pycrypto
-   /security/py-m2crypto
+Salt, while not Arch-specific, is packaged for and works well on Arch Linux.
 
 .. _installation:
 
 Installation
 ============
 
-To install Salt from the FreeBSD ports tree, use the command::
+Salt is currently available via the Arch User Repository (AUR). There are
+currently stable and -git packages available.
 
-   cd /usr/ports/sysutils/salt && make install clean
+Stable Release
+--------------
 
-Once the port is installed you'll need to make a few configuration changes.
-These include defining the IP to bind to (optional), and some configuration
-path changes to make salt fit more natively into the FreeBSD filesystem tree.
+To install Salt stable releases from the Arch Linux AUR, use the commands::
+
+    wget https://aur.archlinux.org/packages/sa/salt/salt.tar.gz
+    tar xf salt.tar.gz
+    cd salt/
+    makepkg -is
+
+A few of Salt's dependencies are currently only found within the AUR, so you'll
+need to download and run ``makepkg -is`` on these as well. As a reference, Salt
+currently relies on the following packages only available via the AUR:
+
+* https://aur.archlinux.org/packages/py/python2-msgpack/python2-msgpack.tar.gz
+* https://aur.archlinux.org/packages/py/python2-psutil/python2-psutil.tar.gz
+
+.. note:: yaourt
+
+    If you chose to use a tool such as Yaourt_ the dependencies will be
+    gathered and built for you automatically.
+
+    The command to install salt using the yaourt tool is:
+
+    .. code-block:: none
+
+        yaourt salt
+
+.. _Yaourt: https://aur.archlinux.org/packages.php?ID=5863
+
+Tracking develop
+----------------
+
+To install the bleeding edge version of Salt (**may include bugs!**), you can use
+the -git package. Installing the -git package can be done using the commands::
+
+    wget https://aur.archlinux.org/packages/sa/salt-git/salt-git.tar.gz
+    tar xf salt-git.tar.gz
+    cd salt-git/
+    makepkg -is
+
+A few of Salt's dependencies are currently only found within the AUR, so you'll
+need to download and run ``makepkg -is`` on these as well. As a reference, Salt
+currently relies on the following packages only available via the AUR:
+
+* https://aur.archlinux.org/packages/py/python2-msgpack/python2-msgpack.tar.gz
+* https://aur.archlinux.org/packages/py/python2-psutil/python2-psutil.tar.gz
+
+.. note:: yaourt
+
+    If you chose to use a tool such as Yaourt_ the dependencies will be
+    gathered and built for you automatically.
+
+    The command to install salt using the yaourt tool is:
+
+    .. code-block:: none
+
+        yaourt salt-git
+
+.. _Yaourt: https://aur.archlinux.org/packages.php?ID=5863
 
 .. _configuration:
 
@@ -38,13 +87,12 @@ Configuration
 In the sections below I'll outline configuration options for both the Salt
 Master and Salt Minions.
 
-The Salt port installs two sample configuration files, salt/master.sample and
-salt/minion.sample (these should be installed in /usr/local/etc/, unless you use a
-different %%PREFIX%%). You'll need to copy these .sample files into place and
+The Salt package installs two template configuration files, /etc/salt/master.template and
+/etc/salt/minion.template. You'll need to copy these .template files into place and
 make a few edits. First, copy them into place as seen here::
 
-   cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
-   cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
+   cp /etc/salt/master.template /etc/salt/master
+   cp /etc/salt/minion.template /etc/salt/minion
 
 Note: You'll only need to copy the config for the service you're going to run.
 
@@ -74,17 +122,16 @@ By default the Salt master listens on ports 4505 and 4506 on all interfaces
 **rc.conf**
 
 Last but not least you'll need to activate the Salt Master in your rc.conf
-file. Using your favorite editor, open /etc/rc.conf or /etc/rc.conf.local and
-add this line::
+file. Using your favorite editor, open /etc/rc.conf and add the salt-master::
 
-   + salt_master_enable="YES"
+    -DAEMONS=(syslog-ng network crond)
+    +DAEMONS=(syslog-ng network crond @salt-master)
 
 Once you've completed all of these steps you're ready to start your Salt
-Master. The Salt port installs an rc script which should be used to manage your
-Salt Master. You should be able to start your Salt Master now using the command
+Master. You should be able to start your Salt Master now using the command
 seen here::
 
-   service salt_master start
+    rc.d start salt-master
 
 If your Salt Master doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
@@ -122,14 +169,14 @@ Before you're able to start the Salt Minion you'll need to update your rc.conf
 file. Using your favorite editor open /etc/rc.conf or /etc/rc.conf.local and
 add this line::
 
-   + salt_minion_enable="YES"
+    -DAEMONS=(syslog-ng network crond)
+    +DAEMONS=(syslog-ng network crond @salt-minion)
 
 Once you've completed all of these steps you're ready to start your Salt
-Minion. The Salt port installs an rc script which should be used to manage your
-Salt Minion. You should be able to start your Salt Minion now using the command
+Minion. You should be able to start your Salt Minion now using the command
 seen here::
 
-   service salt_minion start
+    rc.d start salt-minion
 
 If your Salt Minion doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
@@ -154,7 +201,7 @@ Minion. This ensures that the commands you send to your Minions (your cloud)
 can not be tampered with, and that communication between Master and Minion is
 only done through trusted, accepted keys.
 
-Before you'll be able to do any remote execution or state management you'll
+Before you'll be able to do any remote execution or configuration management you'll
 need to accept any pending keys on the Master. Run the ``salt-key`` command to
 list the keys known to the Salt Master::
 

@@ -1,6 +1,7 @@
 .. _contents:
 
 .. |vid| image:: /_static/film_link.png
+    :class: math
 
 Get started with Salt
 =====================
@@ -56,132 +57,146 @@ Setting up and using Salt is a simple task but it's capabilities run much, much
 deeper. Gaining a better understanding of how Salt works will allow you to
 truly make it work for you.
 
-.. contents:: Overview
+.. sidebar:: More tutorials!
+
+    * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
+    * :doc:`Installing Salt on FreeBSD <topics/tutorials/freebsd>`
+
+.. contents:: The components of Salt
     :local:
     :depth: 2
 
-**Remote execution**
-    Remote execution is the core functionality of Salt. Running pre-defined or
-    arbitrary commands on remote hosts.
+Remote execution
+----------------
 
-    **Modules**
-        Salt modules are the core of remote execution. They provide
-        functionality such as installing a package, restarting a service,
-        running a remote command, transferring a file — and the list goes on.
+Remote execution is the core functionality of Salt. Running pre-defined or
+arbitrary commands on remote hosts.
 
-        :doc:`Full list of modules </ref/modules/all/index>`
-            The giant list of core modules that ship with Salt
-            (And there are even more in the `salt-contrib`_ repository!)
+**Modules**
+    Salt modules are the core of remote execution. They provide
+    functionality such as installing a package, restarting a service,
+    running a remote command, transferring a file — and the list goes on.
 
-        :doc:`Writing modules <ref/modules/index>`
-            A guide on how to write Salt modules
+    :doc:`Full list of modules </ref/modules/all/index>`
+        The giant list of core modules that ship with Salt
+        (And there are even more in the `salt-contrib`_ repository!)
 
-    **Targeting**
-        Specify which hosts should run commands or manage configuration.
+    :doc:`Writing modules <ref/modules/index>`
+        A guide on how to write Salt modules
 
-        :doc:`Targeting <ref/targeting/index>`
-            Hostnames, lists, regular expressions, or define groups.
+**Targeting**
+    Specify which hosts should run commands or manage configuration.
 
-        :doc:`Grains <ref/grains>`
-            Bits of static information about a minion such as OS, version,
-            virtualization, CPU, memory, and much more.
+    :doc:`Targeting <ref/targeting/index>`
+        Hostnames, lists, regular expressions, or define groups.
 
-    **Returners**
-        Salt returners allow saving minion responses in various datastores or
-        to various locations in addition to display at the CLI.
+    :doc:`Grains <ref/grains>`
+        Bits of static information about a minion such as OS, version,
+        virtualization, CPU, memory, and much more.
 
-        :doc:`Full list of returners </ref/returners/all/index>`
-            Store minion responses in Redis, Mongo, Cassandra or more.
+**Returners**
+    Salt returners allow saving minion responses in various datastores or
+    to various locations in addition to display at the CLI.
 
-        :doc:`Writing returners <ref/returners/index>`
-            If we're missing your favorite storage backend, webservice, or you
-            need a custom endpoint returners are *tiny* and simple to write.
+    :doc:`Full list of returners </ref/returners/all/index>`
+        Store minion responses in Redis, Mongo, Cassandra or more.
 
-**Configuration management**
-    Building on the remote execution core is a robust and flexible config
-    management framework. Execution happens on the minions allowing
-    effortless, simultaneous configuration of thousands of hosts.
+    :doc:`Writing returners <ref/returners/index>`
+        If we're missing your favorite storage backend, webservice, or you
+        need a custom endpoint returners are *tiny* and simple to write.
 
-    **States**
-        Express the state of a host using small, easy to read, easy to
-        understand configuration files. No programming required (unless you
-        want to).
+Configuration management
+------------------------
 
-        :doc:`Full list of states <ref/states/all/index>`
-            Install packages, create users, transfer files, start services, and
-            more and more.
+Building on the remote execution core is a robust and flexible config
+management framework. Execution happens on the minions allowing
+effortless, simultaneous configuration of thousands of hosts.
 
-        :doc:`Using states <ref/states/index>`
-            You've seen the big list of available states, now learn how to call
-            them.
+**States**
+    Express the state of a host using small, easy to read, easy to
+    understand configuration files. No programming required (unless you
+    want to).
 
-        :doc:`Highstate data structure <ref/states/highstate>`
-            A dry, vocabulary and technical representation of the configuration
-            format that states represent.
+    :doc:`Full list of states <ref/states/all/index>`
+        Install packages, create users, transfer files, start services, and
+        more and more.
 
-    **Renderers**
-        Write state configuration files in the language, templating engine, or
-        file type of your choice. The world doesn't need yet another DSL.
+    :doc:`Using states <ref/states/index>`
+        You've seen the big list of available states, now learn how to call
+        them.
 
-        :doc:`Full list of renderers <ref/renderers/all/index>`
-            YAML? JSON? Jinja? Mako? Python? We got you covered. (And if we
-            don't, new renderers are *tiny* and easy to write.)
+    :doc:`Highstate data structure <ref/states/highstate>`
+        A dry, vocabulary and technical representation of the configuration
+        format that states represent.
 
-        :doc:`Renderers <ref/renderers/index>`
-            Salt states are only concerned with the ultimate highstate data
-            structure. How you create that data structure isn't our business.
-            Tweak a config option and use whatever you're most comfortable
-            with.
+**Renderers**
+    Write state configuration files in the language, templating engine, or
+    file type of your choice. The world doesn't need yet another DSL.
 
-**Miscellaneous topics**
-    Salt is a many splendid thing.
+    :doc:`Full list of renderers <ref/renderers/all/index>`
+        YAML? JSON? Jinja? Mako? Python? We got you covered. (And if we
+        don't, new renderers are *tiny* and easy to write.)
 
-    :doc:`File Server <ref/file_server/index>`
-        Salt can easily and quickly transfer files (in fact, that's how Salt
-        States work). Even under load, files are chunked and served.
+    :doc:`Renderers <ref/renderers/index>`
+        Salt states are only concerned with the ultimate highstate data
+        structure. How you create that data structure isn't our business.
+        Tweak a config option and use whatever you're most comfortable
+        with.
 
-    :doc:`Syndic <ref/syndic>`
-        A seamless master of masters. Scale Salt to thousands of hosts or
-        across many different networks.
+Miscellaneous topics
+--------------------
 
-    :doc:`Peer communication <ref/peer>`
-        Allow minions to communicate amongst themselves. For example, configure
-        one minion by querying live data from all the others. With great power
-        comes great responsibility.
+Salt is a many splendid thing.
 
-    :doc:`Network topology <ref/topology>`
-        At it's core, Salt is a highly scalable communication layer built on
-        top of ZeroMQ that enables remote execution and configuration
-        management. The possibilities are endless and Salt's future looks
-        bright.
+:doc:`File Server <ref/file_server/index>`
+    Salt can easily and quickly transfer files (in fact, that's how Salt
+    States work). Even under load, files are chunked and served.
 
-    :doc:`Python API interface <ref/python-api>`
-        Use Salt programmatically from your own scripts and programs easily and
-        simply via ``import salt``.
+:doc:`Syndic <ref/syndic>`
+    A seamless master of masters. Scale Salt to thousands of hosts or
+    across many different networks.
 
-**Reference**
-    :doc:`Command-line interface <ref/cli/index>`
-        Read the Salt manpages.
+:doc:`Peer communication <ref/peer>`
+    Allow minions to communicate amongst themselves. For example, configure
+    one minion by querying live data from all the others. With great power
+    comes great responsibility.
 
-    :doc:`Full list of master settings <ref/configuration/master>`
-        Read through the heavily-commented master configuration file.
+:doc:`Network topology <ref/topology>`
+    At it's core, Salt is a highly scalable communication layer built on
+    top of ZeroMQ that enables remote execution and configuration
+    management. The possibilities are endless and Salt's future looks
+    bright.
 
-    :doc:`Full list of minion settings <ref/configuration/minion>`
-        Read through the heavily-commented minion configuration file.
+:doc:`Python API interface <ref/python-api>`
+    Use Salt programmatically from your own scripts and programs easily and
+    simply via ``import salt``.
 
-    :doc:`Full table of contents </contents>`
-        Dense but complete.
+Reference
+---------
 
-**More information about the project**
+:doc:`Command-line interface <ref/cli/index>`
+    Read the Salt manpages.
 
-    :doc:`Roadmap </topics/roadmap/index>`
-        Where we're headed.
+:doc:`Full list of master settings <ref/configuration/master>`
+    Read through the heavily-commented master configuration file.
 
-    :doc:`Release notes </topics/releases/index>`
-        Where we've been.
+:doc:`Full list of minion settings <ref/configuration/minion>`
+    Read through the heavily-commented minion configuration file.
 
-    :doc:`Community </topics/community>`
-        How you can get involved.
+:doc:`Full table of contents </contents>`
+    Dense but complete.
+
+More information about the project
+----------------------------------
+
+:doc:`Roadmap </topics/roadmap/index>`
+    Where we're headed.
+
+:doc:`Release notes </topics/releases/index>`
+    Where we've been.
+
+:doc:`Community </topics/community>`
+    How you can get involved.
 
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib
 .. _`salt-states`: https://github.com/saltstack/salt-states
