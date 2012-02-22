@@ -478,6 +478,13 @@ class SaltKey(object):
                 dest='delete',
                 default='',
                 help='Delete the named key')
+        
+        parser.add_option('-D',
+                '--delete-all',
+                dest='delete_all',
+                default=False,
+                action='store_true',
+                help='Delete all keys')
 
         parser.add_option('-q',
                 '--quiet',
@@ -536,6 +543,7 @@ class SaltKey(object):
         opts['print'] = options.print_
         opts['print_all'] = options.print_all
         opts['delete'] = options.delete
+        opts['delete_all'] = options.delete_all
         opts['gen_keys'] = options.gen_keys
         opts['gen_keys_dir'] = options.gen_keys_dir
         if options.keysize < 2048:
