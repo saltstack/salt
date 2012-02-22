@@ -7,27 +7,22 @@ data
 # some time in the future
 
 import os
-import grp
-import pwd
 import time
 import hashlib
+import win32api
+import win32con
+import win32security
 
-import salt.utils.find
+#import salt.utils.find
 from salt.exceptions import SaltInvocationError
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only works on Windows systems
     '''
-
-    # Disable on these platforms, specific file modules exist:
-    disable = [
-            'Windows',
-            ]
-    if __grains__['os'] in disable:
-        return False
-    return 'file'
-    
+    if __grains__['os'] == 'Windows':
+        return 'file'
+    return False
 
 __outputter__ = {
     'touch': 'txt',
@@ -43,10 +38,9 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group 0
     '''
-    try:
-        return grp.getgrgid(gid).gr_name
-    except KeyError:
-        return ''
+    sid = win32security.GetBinarySid(gid)
+    name, domain, type = win32security.LookupAccountSid (None, sid)
+    return name
 
 
 def group_to_gid(group):
@@ -57,10 +51,8 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid root
     '''
-    try:
-        return grp.getgrnam(group).gr_gid
-    except KeyError:
-        return ''
+    sid, domain, type = win32security.LookupAccountName (None, group)
+    return win32security.ConvertSidToStringSid(sid)
 
 
 def get_gid(path):
@@ -73,7 +65,9 @@ def get_gid(path):
     '''
     if not os.path.exists(path):
         return -1
-    return os.stat(path).st_gid
+    secdesc = win32security.GetFileSecurity (path, win32security.OWNER_SECURITY_INFORMATION)
+    owner_sid = secdesc.GetSecurityDescriptorOwner()
+    return win32security.ConvertSidToStringSid(owner_sid)
 
 
 def get_group(path):
@@ -84,10 +78,11 @@ def get_group(path):
 
         salt '*' file.get_group /etc/passwd
     '''
-    gid = get_gid(path)
-    if gid == -1:
-        return False
-    return gid_to_group(gid)
+    #groupname = win32api.GetGroupNameEx(win32con.NameSamCompatible).split('\\')
+    #if groupname[1]:
+        #return groupname[1]
+    #return False
+    return 'agroup'
 
 
 def uid_to_user(uid):
@@ -139,10 +134,10 @@ def get_user(path):
 
         salt '*' file.get_user /etc/passwd
     '''
-    uid = get_uid(path)
-    if uid == -1:
-        return False
-    return uid_to_user(uid)
+    username = win32api.GetUserNameEx(win32con.NameSamCompatible).split('\\')
+    if username[1]:
+        return username[1]
+    return False
 
 
 def get_mode(path):
@@ -169,13 +164,12 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
-    mode = str(mode).lstrip('0')
-    if not mode:
-        mode = '0'
+    mode = str(mode)
     if not os.path.exists(path):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
+    # FIXME: don't use a catch-all, be more specific...
     except:
         return 'Invalid Mode ' + mode
     return get_mode(path)
