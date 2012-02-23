@@ -170,25 +170,59 @@ def interfaces():
 
     for group in groups:
         iface = None
+        parent = None
         up = False
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+(\w+):\s+<(.+)>', line)
+            m = re.match('^\d*:\s+(\w+)(@\w+)?:\s+<(.+)>', line)
             if m:
-                iface,attrs = m.groups()
+                iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
                     up = True
                 ipaddr = None
+                secondary = []
                 netmask = None
+                broadcast = None
                 hwaddr = None
             else:
                 cols = line.split()
                 if len(cols) >= 2:
                     type,value = tuple(cols[0:2])
-                    if type == 'inet':
-                        ipaddr,cidr = tuple(value.split('/'))
-                        netmask = _cidr_to_ipv4_netmask(int(cidr))
+                    if type.startswith('inet'):
+                        def parse_network(iface):
+                            """
+                            Return a tuple of ip, netmask, broadcast
+                            based on the current set of cols
+
+                            This is so we can handle secondary addresses
+                            with the same logic as primary
+                            """
+                            ip,cidr = tuple(value.split('/'))
+                            if type == 'inet':
+                                mask = _cidr_to_ipv4_netmask(int(cidr))
+                            elif type == 'inet6':
+                                mask = cidr
+                            else:
+                                raise RuntimeError("Don't know how to handle netmask for interface type %s on %s" % (type, iface))
+
+                            try:
+                                brd = cols[cols.index('brd')+1]
+                            except ValueError:
+                                brd = None
+
+                            return (ip, mask, brd)
+
+                        if 'secondary' not in cols:
+                            ipaddr, netmask, broadcast = parse_network(iface)
+                        else:
+                            ip, mask, brd = parse_network(iface)
+                            secondary.append({
+                                'ipaddr': ip,
+                                'netmask': mask,
+                                'broadcast': brd
+                                })
+                            del ip, mask, brd
                     elif type.startswith('link'):
                         hwaddr = value
         if iface:
@@ -196,7 +230,12 @@ def interfaces():
             ret[iface]['up'] = up
             ret[iface]['ipaddr'] = ipaddr
             ret[iface]['netmask'] = netmask
+            ret[iface]['broadcast'] = broadcast
             ret[iface]['hwaddr'] = hwaddr
+            if parent is not None:
+                ret[iface]['parent'] = parent
+            if len(secondary) > 0:
+                ret[iface]['secondary'] = secondary
             del iface,up
     return ret
 
