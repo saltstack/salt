@@ -14,7 +14,8 @@ you can specify what ruby version and gemset to target.
         - ruby: jruby@jgemset
 """
 
-def installed(name, ruby = None, runas = None):
+
+def installed(name, ruby=None, runas=None):
     """
     Make sure that a gem is installed.
 
@@ -26,12 +27,12 @@ def installed(name, ruby = None, runas = None):
         The user to run gem as.
     """
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name in __salt__["gem.list"](name, ruby, runas = runas):
+    if name in __salt__["gem.list"](name, ruby, runas=runas):
         ret["result"] = True
         ret["comment"] = "Gem is already installed."
         return ret
-    
-    if __salt__["gem.install"](name, ruby, runas = runas):
+
+    if __salt__["gem.install"](name, ruby, runas=runas):
         ret["result"] = True
         ret["changes"][name] = "Installed"
         ret["comment"] = "Gem was successfully installed"
@@ -41,7 +42,8 @@ def installed(name, ruby = None, runas = None):
 
     return ret
 
-def removed(name, ruby = None, runas = None):
+
+def removed(name, ruby=None, runas=None):
     """
     Make sure that a gem is not installed.
 
@@ -53,12 +55,12 @@ def removed(name, ruby = None, runas = None):
         The user to run gem as.
     """
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name not in __salt__["gem.list"](name, ruby, runas = runas):
+    if name not in __salt__["gem.list"](name, ruby, runas=runas):
         ret["result"] = True
         ret["comment"] = "Gem is not installed."
         return ret
 
-    if __salt__["gem.uninstall"](name, ruby, runas = runas):
+    if __salt__["gem.uninstall"](name, ruby, runas=runas):
         ret["result"] = True
         ret["changes"][name] = "Removed"
         ret["comment"] = "Gem was successfully removed."
@@ -66,5 +68,3 @@ def removed(name, ruby = None, runas = None):
         ret["result"] = False
         ret["comment"] = "Could not remove gem."
     return ret
-    
-
