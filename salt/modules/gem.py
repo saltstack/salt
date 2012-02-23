@@ -8,20 +8,22 @@ __opts__ = {
 
 import re
 
-def _gem(command, ruby = None, runas = None):
-    cmdline = "gem {command}".format(command = command)
-    if __salt__["rvm.is_installed"]:
-        return __salt__["rvm.do"](ruby, cmdline, runas = runas)
 
-    ret = __salt__["cmd.run_all"](cmdline, runas = runas or __opts__["rvm.runas"])
+def _gem(command, ruby=None, runas=None):
+    cmdline = "gem {command}".format(command=command)
+    if __salt__["rvm.is_installed"]:
+        return __salt__["rvm.do"](ruby, cmdline, runas=runas)
+
+    ret = __salt__["cmd.run_all"](
+        cmdline, runas=runas or __opts__["rvm.runas"])
 
     if ret["retcode"] == 0:
         return ret["stdout"]
     else:
         return False
-    
 
-def install(gems, ruby = None, runas = None):
+
+def install(gems, ruby=None, runas=None):
     """
     Installs one or several gems.
 
@@ -32,9 +34,10 @@ def install(gems, ruby = None, runas = None):
     runas : None
         The user to run gem as.
     """
-    return _gem("install {gems}".format(gems = gems), ruby, runas = runas)
+    return _gem("install {gems}".format(gems=gems), ruby, runas=runas)
 
-def uninstall(gems, ruby = None, runas = None):
+
+def uninstall(gems, ruby=None, runas=None):
     """
     Uninstall one or several gems.
 
@@ -45,9 +48,10 @@ def uninstall(gems, ruby = None, runas = None):
     runas : None
         The user to run gem as.
     """
-    return _gem("uninstall {gems}".format(gems = gems), ruby, runas = runas)
+    return _gem("uninstall {gems}".format(gems=gems), ruby, runas=runas)
 
-def update(gems, ruby = None, runas = None):
+
+def update(gems, ruby=None, runas=None):
     """
     Update one or several gems.
 
@@ -58,9 +62,10 @@ def update(gems, ruby = None, runas = None):
     runas : None
         The user to run gem as.
     """
-    return _gem("update {gems}".format(gems = gems), ruby, runas = runas)
+    return _gem("update {gems}".format(gems=gems), ruby, runas=runas)
 
-def update_system(version = "", ruby = None, runas = None):
+
+def update_system(version="", ruby=None, runas=None):
     """
     Update rubygems.
 
@@ -71,13 +76,15 @@ def update_system(version = "", ruby = None, runas = None):
     runas : None
         The user to run gem as.
     """
-    return _gem("update --system {version}".format(version = version), ruby, runas = runas)
+    return _gem("update --system {version}".
+                format(version=version), ruby, runas=runas)
 
-def list(prefix = "", ruby = None, runas = None):
+
+def list(prefix="", ruby=None, runas=None):
     """
     List locally installed gems.
 
-    prefix : 
+    prefix :
         Only list gems when the name matches this prefix.
     ruby : None
         If RVM is installed, the ruby version and gemset to use.
@@ -85,7 +92,8 @@ def list(prefix = "", ruby = None, runas = None):
         The user to run gem as.
     """
     gems = {}
-    for line in _gem("list {prefix}".format(prefix = prefix), ruby, runas = runas).splitlines():
+    for line in _gem("list {prefix}".format(prefix=prefix),
+                     ruby, runas=runas).splitlines():
         m = re.match("^([^ ]+) \((.+)\)", line)
         if m:
             gem = m.group(1)
@@ -93,7 +101,8 @@ def list(prefix = "", ruby = None, runas = None):
             gems[gem] = versions
     return gems
 
-def sources_add(source_uri, ruby = None, runas = None):
+
+def sources_add(source_uri, ruby=None, runas=None):
     """
     Add a gem source.
 
@@ -104,9 +113,11 @@ def sources_add(source_uri, ruby = None, runas = None):
     runas : None
         The user to run gem as.
     """
-    return _gem("sources --add {source_uri}".format(source_uri = source_uri), ruby, runas = runas)
+    return _gem("sources --add {source_uri}".
+                format(source_uri=source_uri), ruby, runas=runas)
 
-def sources_remove(source_uri, ruby = None, runas = None):
+
+def sources_remove(source_uri, ruby=None, runas=None):
     """
     Remove a gem source.
 
@@ -117,9 +128,11 @@ def sources_remove(source_uri, ruby = None, runas = None):
     runas : None
         The user to run gem as.
     """
-    return _gem("sources --remove {source_uri}".format(source_uri = source_uri), ruby, runas = runas)
+    return _gem("sources --remove {source_uri}".
+                format(source_uri=source_uri), ruby, runas=runas)
 
-def sources_list(ruby = None, runas = None):
+
+def sources_list(ruby=None, runas=None):
     """
     List the configured gem sources.
 
@@ -128,4 +141,4 @@ def sources_list(ruby = None, runas = None):
     runas : None
         The user to run gem as.
     """
-    return _gem("sources", ruby, runas = runas).splitlines()[2:]
+    return _gem("sources", ruby, runas=runas).splitlines()[2:]
