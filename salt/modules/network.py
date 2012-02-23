@@ -170,73 +170,62 @@ def interfaces():
 
     for group in groups:
         iface = None
-        parent = None
-        up = False
+        data = {}
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+(\w+)(@\w+)?:\s+<(.+)>', line)
+            m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
                 iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
-                    up = True
-                ipaddr = None
-                secondary = []
-                netmask = None
-                broadcast = None
-                hwaddr = None
+                    data['up'] = True
+                if parent:
+                    data['parent'] = parent
             else:
                 cols = line.split()
                 if len(cols) >= 2:
                     type,value = tuple(cols[0:2])
-                    if type.startswith('inet'):
-                        def parse_network(iface):
+                    if type in ('inet', 'inet6'):
+                        def parse_network():
                             """
                             Return a tuple of ip, netmask, broadcast
                             based on the current set of cols
-
-                            This is so we can handle secondary addresses
-                            with the same logic as primary
                             """
+                            brd = None
                             ip,cidr = tuple(value.split('/'))
                             if type == 'inet':
                                 mask = _cidr_to_ipv4_netmask(int(cidr))
+                                if 'brd' in cols:
+                                    brd = cols[cols.index('brd')+1]
                             elif type == 'inet6':
                                 mask = cidr
-                            else:
-                                raise RuntimeError("Don't know how to handle netmask for interface type %s on %s" % (type, iface))
-
-                            try:
-                                brd = cols[cols.index('brd')+1]
-                            except ValueError:
-                                brd = None
-
                             return (ip, mask, brd)
 
                         if 'secondary' not in cols:
-                            ipaddr, netmask, broadcast = parse_network(iface)
+                            ipaddr, netmask, broadcast = parse_network()
+                            if type == 'inet':
+                                data['ipaddr'] = ipaddr
+                                data['netmask'] = netmask
+                                data['broadcast'] = broadcast
+                            elif type == 'inet6':
+                                data['ipaddr6'] = ipaddr
+                                data['netmask6'] = netmask
                         else:
-                            ip, mask, brd = parse_network(iface)
-                            secondary.append({
+                            if 'secondary' not in data:
+                                data['secondary'] = []
+                            ip, mask, brd = parse_network()
+                            data['secondary'].append({
+                                'type': type,
                                 'ipaddr': ip,
                                 'netmask': mask,
                                 'broadcast': brd
                                 })
                             del ip, mask, brd
                     elif type.startswith('link'):
-                        hwaddr = value
+                        data['hwaddr'] = value
         if iface:
-            ret[iface] = {}
-            ret[iface]['up'] = up
-            ret[iface]['ipaddr'] = ipaddr
-            ret[iface]['netmask'] = netmask
-            ret[iface]['broadcast'] = broadcast
-            ret[iface]['hwaddr'] = hwaddr
-            if parent is not None:
-                ret[iface]['parent'] = parent
-            if len(secondary) > 0:
-                ret[iface]['secondary'] = secondary
-            del iface,up
+            ret[iface] = data
+            del iface, data
     return ret
 
 
