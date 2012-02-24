@@ -5,6 +5,19 @@ Manage the shadow file
 import os
 import spwd
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+
+    # Disable on these platforms, specific file modules exist:
+    disable = [
+            'Windows',
+            ]
+    if __grains__['os'] in disable:
+        return False
+    return 'file'
+
 
 def info(name):
     '''
