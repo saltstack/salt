@@ -1,5 +1,6 @@
-Introduction
-============
+=======
+FreeBSD
+=======
 
 Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
 <christer.edwards@gmail.com>. It has been tested on FreeBSD 8.2 and 9.0

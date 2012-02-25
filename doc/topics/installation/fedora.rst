@@ -1,5 +1,6 @@
-Introduction
-============
+==================================
+Fedora & CentOS / Enterprise Linux
+==================================
 
 Beginning with version 0.9.4, Salt has been available in the primary Fedora
 repositories and is available for installation using yum. Fedora will have more

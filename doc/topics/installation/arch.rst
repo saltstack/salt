@@ -1,5 +1,6 @@
-Introduction
-============
+==========
+Arch Linux
+==========
 
 Salt has primarily been developed on Arch Linux, meaning it is known to work
 very well on that distribution. The lead developer, Thomas S. Hatch (thatch45) has
