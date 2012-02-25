@@ -43,8 +43,11 @@ def get_file(path, dest, env='base'):
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
     '''
-    client = salt.minion.FileClient(__opts__)
-    return client.get_file(path, dest, False, env)
+    if not hash_file(path,env):
+        return ''
+    else:
+        client = salt.minion.FileClient(__opts__)
+        return client.get_file(path, dest, False, env)
 
 
 def get_dir(path, dest, env='base'):
