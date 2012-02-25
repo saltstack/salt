@@ -17,7 +17,6 @@ Full Table of Contents
     ref/index
     ref/modules/*
     ref/modules/all/index
-    ref/grains
     ref/returners/*
     ref/returners/all/index
     ref/states/*
