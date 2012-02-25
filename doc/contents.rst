@@ -7,6 +7,7 @@ Full Table of Contents
     :glob:
 
     topics/index
+    topics/installation/index
     topics/configuration
     topics/targeting/index
     topics/tutorials/modules

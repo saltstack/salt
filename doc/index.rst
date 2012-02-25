@@ -35,7 +35,7 @@ The quickest way to see Salt in action is to run a command on a :term:`minion`
 host from the :term:`master` host. This is widely known as :term:`remote
 execution` — executing commands on remote hosts.
 
-1.  `Installation`_
+1.  :doc:`Installation </topics/installation/index>`
 2.  :doc:`Configure the minion <topics/configuration>`
 3.  :doc:`Run remote commands <topics/tutorials/modules>`
 
