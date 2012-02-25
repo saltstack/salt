@@ -58,7 +58,7 @@ def get_disabled():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_disabled
     '''
     rlevel = _runlevel()
     ret = set()
@@ -78,7 +78,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
 
@@ -120,13 +120,12 @@ def restart(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Return the status for a service, returns a bool whether the service is
+    running.
 
     CLI Example::
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
     '''
     cmd = 'service {0} status'.format(name)
     return not __salt__['cmd.retcode'](cmd)
