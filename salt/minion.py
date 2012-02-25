@@ -5,10 +5,10 @@ Routines to set up a minion
 # Import python libs
 import BaseHTTPServer
 import contextlib
-import glob
 import logging
 import multiprocessing
 import hashlib
+import fnmatch
 import os
 import re
 import shutil
@@ -567,14 +567,7 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
-        tmp_dir = tempfile.mkdtemp()
-        cwd = os.getcwd()
-        os.chdir(tmp_dir)
-        open(self.opts['id'], 'w+').write('salt')
-        ret = bool(glob.glob(tgt))
-        os.chdir(cwd)
-        shutil.rmtree(tmp_dir)
-        return ret
+        return fnmatch.fnmatch(tgt, self.opts['id'])
 
     def pcre_match(self, tgt):
         '''
