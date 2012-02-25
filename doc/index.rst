@@ -22,8 +22,8 @@ fast and efficient using **msgpack**; and extensible using small and simple
 
 Read the :doc:`Salt overview <topics/index>` for a more thorough description.
 
-Step 1: Remote execution
-------------------------
+Tutorial 1: Remote execution
+----------------------------
 
 .. sidebar:: |vid| Screencasts
 
@@ -39,8 +39,8 @@ execution` — executing commands on remote hosts.
 2.  :doc:`Configure the minion <topics/configuration>`
 3.  :doc:`Run remote commands <topics/tutorials/modules>`
 
-Step 2: Configuration management
---------------------------------
+Tutorial 2: Configuration management
+------------------------------------
 
 Now that you have the basics out of the way, learn to use Salt to configure
 your servers. This is widely known as :term:`configuration management` —
@@ -66,6 +66,25 @@ truly make it work for you.
     :local:
     :depth: 2
 
+:doc:`Targeting </topics/targeting/index>`
+------------------------------------------
+
+Targeting is specifying which minions should execute commands or manage server
+configuration.
+
+:doc:`Globbing and regex </topics/targeting/globbing>`
+    Match minions using globbing and regular expresssions.
+
+:doc:`Grains </topics/targeting/grains>`
+    Match minions using bits of static information about the minion such as
+    OS, software versions, virtualization, CPU, memory, and much more.
+
+:doc:`Node groups </topics/targeting/nodegroups>`
+    Statically define groups of minions.
+
+:doc:`Compound matchers </topics/targeting/compound>`
+    Combine the above matchers as a single target.
+
 Remote execution
 ----------------
 
@@ -83,16 +102,6 @@ arbitrary commands on remote hosts.
 
     :doc:`Writing modules <ref/modules/index>`
         A guide on how to write Salt modules
-
-**Targeting**
-    Specify which hosts should run commands or manage configuration.
-
-    :doc:`Targeting <ref/targeting/index>`
-        Hostnames, lists, regular expressions, or define groups.
-
-    :doc:`Grains <ref/grains>`
-        Bits of static information about a minion such as OS, version,
-        virtualization, CPU, memory, and much more.
 
 **Returners**
     Salt returners allow saving minion responses in various datastores or
