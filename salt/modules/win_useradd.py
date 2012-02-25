@@ -132,6 +132,32 @@ def chprofile(name, profile):
         return post_info['profile'] == profile
     return False
 
+
+def chgroups(name, groups, append=False):
+    '''
+    Change the groups this user belongs to, add append to append the specified
+    groups
+
+    CLI Example::
+
+        salt '*' user.chgroups foo wheel,root True
+    '''
+    if isinstance(groups, basestring):
+        groups = groups.split(',')
+    ugrps = set(list_groups(name))
+    if ugrps == set(groups):
+        return True
+    if not append:
+        for group in list_groups(name):
+            cmd = 'net localgroup {0} {1} /delete'.format(group, name)
+            __salt__['cmd.run'](cmd)
+    for group in groups:
+        cmd = 'net localgroup {0} {1} /add'.format(group, name)
+        __salt__['cmd.run'](cmd)
+    agrps = set(list_groups(name))
+    return len(ugrps - agrps) == 0
+
+
 def info(name):
     '''
     Return user information
