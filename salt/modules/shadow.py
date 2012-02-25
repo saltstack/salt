@@ -10,11 +10,8 @@ def __virtual__():
     Only work on posix-like systems
     '''
 
-    # Disable on these platforms, specific file modules exist:
-    disable = [
-            'Windows',
-            ]
-    if __grains__['os'] in disable:
+    # Disable on Windows, a specific file module exists:
+    if __grains__['os'] == 'Windows':
         return False
     return 'file'
 

@@ -128,7 +128,7 @@ def get_mode(path):
     '''
     Return the mode of a file
 
-    Right now we're just returning 0777
+    Right now we're just returning 777
     because Windows' doesn't have a mode
     like Linux
 
@@ -138,7 +138,7 @@ def get_mode(path):
     '''
     if not os.path.exists(path):
         return -1
-    mode = 0777
+    mode = 777
     return mode
 
 
