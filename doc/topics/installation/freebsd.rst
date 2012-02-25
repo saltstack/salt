@@ -1,5 +1,3 @@
-.. _introduction:
-
 Introduction
 ============
 
@@ -17,8 +15,6 @@ dependencies of the ``sysutils/salt`` port::
    /security/py-pycrypto
    /security/py-m2crypto
 
-.. _installation:
-
 Installation
 ============
 
@@ -29,8 +25,6 @@ To install Salt from the FreeBSD ports tree, use the command::
 Once the port is installed you'll need to make a few configuration changes.
 These include defining the IP to bind to (optional), and some configuration
 path changes to make salt fit more natively into the FreeBSD filesystem tree.
-
-.. _configuration:
 
 Configuration
 =============
@@ -51,8 +45,6 @@ Note: You'll only need to copy the config for the service you're going to run.
 Once you've copied the config into place you'll need to make changes specific
 to your setup. Below I'll outline suggested configuration changes to the
 Master, after which I'll outline configuring the Minion.
-
-.. _master_configuration:
 
 Master Configuration
 ====================
@@ -89,8 +81,6 @@ seen here::
 If your Salt Master doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
-
-.. _ minion_configuration:
 
 Minion Configuration
 ====================
@@ -134,8 +124,6 @@ seen here::
 If your Salt Minion doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
-
-.. _tying_it_all_together:
 
 Tying It All Together
 ======================
@@ -183,8 +171,6 @@ The ``salt-key`` command allows for signing keys individually or in bulk. The
 example above, using ``-A`` bulk-accepts all pending keys. To accept keys
 individually use the lowercase of the same option, ``-a keyname``.
 
-.. _sending_commands:
-
 Sending Commands
 ================
 
@@ -198,8 +184,6 @@ the ``test.ping`` remote command::
 
    [root@master ~]# salt '*' test.ping
    {'avon': True}
-
-.. _where_do_i_go_from_here:
 
 Where Do I Go From Here
 ========================
