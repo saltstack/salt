@@ -594,7 +594,7 @@ class Matcher(object):
             return False
         if isinstance(self.opts['grains'][comps[0]], list):
             # We are matching a single component to a single list member
-            for member in self.opts['grains'][comps[0]:
+            for member in self.opts['grains'][comps[0]]:
                 if re.match(comps[1], str(member)):
                     return True
             return False
