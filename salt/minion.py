@@ -567,7 +567,7 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
-        return fnmatch.fnmatch(tgt, self.opts['id'])
+        return fnmatch.fnmatch(self.opts['id'], tgt)
 
     def pcre_match(self, tgt):
         '''
