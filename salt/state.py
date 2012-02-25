@@ -1086,7 +1086,8 @@ class HighState(object):
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',
-                        'changes': {}
+                        'changes': {},
+                        '__run_num__': 0,
                         }
                    }
         return self.state.call_high(high)
