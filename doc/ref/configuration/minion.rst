@@ -69,7 +69,7 @@ The directory used to store the minion's public and private keys.
 
     pki_dir: /etc/salt/pki
 
-.. conf_minion:: hostname
+.. conf_minion:: id
 
 ``id``
 ------------

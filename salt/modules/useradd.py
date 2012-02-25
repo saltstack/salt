@@ -17,8 +17,8 @@ def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=False,
-        shell='/bin/false'):
+        home=True,
+        shell=None):
     '''
     Add a user to the minion
 
@@ -28,7 +28,9 @@ def add(name,
     '''
     if isinstance(groups, basestring):
         groups = groups.split(',')
-    cmd = 'useradd -s {0} '.format(shell)
+    cmd = 'useradd '
+    if shell:
+        cmd += '-s {0} '.format(shell)
     if uid:
         cmd += '-u {0} '.format(uid)
     if gid:
@@ -36,7 +38,10 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home:
-        cmd += '-m -d {0} '.format(home)
+        if home is True:
+            cmd += '-m '
+        else:
+            cmd += '-m -d {0} '.format(home)
     cmd += name
     ret = __salt__['cmd.run_all'](cmd)
 

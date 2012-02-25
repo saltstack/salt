@@ -27,7 +27,7 @@ def present(
         groups=None,
         home=False,
         password=None,
-        shell='/bin/bash'
+        shell=None
         ):
     '''
     Ensure that the named user is present with the specified properties
@@ -52,7 +52,7 @@ def present(
         A password hash to set for the user
 
     shell
-        The login shell, defaults to /bin/bash
+        The login shell, defaults to the system default shell
     '''
     ret = {'name': name,
            'changes': {},

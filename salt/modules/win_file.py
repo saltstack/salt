@@ -124,6 +124,23 @@ def get_uid(path):
     owner_sid = secdesc.GetSecurityDescriptorOwner()
     return win32security.ConvertSidToStringSid(owner_sid)
 
+def get_mode(path):
+    '''
+    Return the mode of a file
+
+    Right now we're just returning 777
+    because Windows' doesn't have a mode
+    like Linux
+
+    CLI Example::
+
+        salt '*' file.get_mode /etc/passwd
+    '''
+    if not os.path.exists(path):
+        return -1
+    mode = 777
+    return mode
+
 
 def get_user(path):
     '''

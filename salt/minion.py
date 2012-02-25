@@ -5,10 +5,10 @@ Routines to set up a minion
 # Import python libs
 import BaseHTTPServer
 import contextlib
-import glob
 import logging
 import multiprocessing
 import hashlib
+import fnmatch
 import os
 import re
 import shutil
@@ -567,14 +567,7 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
-        tmp_dir = tempfile.mkdtemp()
-        cwd = os.getcwd()
-        os.chdir(tmp_dir)
-        open(self.opts['id'], 'w+').write('salt')
-        ret = bool(glob.glob(tgt))
-        os.chdir(cwd)
-        shutil.rmtree(tmp_dir)
-        return ret
+        return fnmatch.fnmatch(self.opts['id'], tgt)
 
     def pcre_match(self, tgt):
         '''
@@ -598,6 +591,12 @@ class Matcher(object):
             return False
         if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
+            return False
+        if isinstance(self.opts['grains'][comps[0]], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['grains'][comps[0]]:
+                if re.match(comps[1], str(member)):
+                    return True
             return False
         return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
 
