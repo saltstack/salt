@@ -599,6 +599,12 @@ class Matcher(object):
         if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
+        if isinstance(self.opts['grains'][comps[0], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['grains'][comps[0]:
+                if re.match(comps[1], str(self.opts['grains'][comps[0]])):
+                    return True
+            return False
         return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
 
     def exsel_match(self, tgt):
