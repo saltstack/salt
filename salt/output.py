@@ -64,21 +64,20 @@ class HighStateOutputter(Outputter):
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
                 # Everything rendered as it should display the output
-                for tname, ret in data[host].items():
+                for tname in sorted(data[host], key=lambda k: data[host][k]['__run_num__']):
+                    ret = data[host][tname]
                     tcolor = colors['GREEN']
                     if ret['changes']:
                         tcolor = colors['CYAN']
                     if not ret['result']:
                         hcolor = colors['RED']
                         tcolor = colors['RED']
-                    comps = tname.split('.')
+                    comps = tname.split('_|-')
                     hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                                   .format(tcolor, comps[0], colors)))
-                    # FIXME: string formating below should match the
-                    # style above
                     hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
                         tcolor,
-                        '.'.join(comps[2:-1]),
+                        comps[2],
                         colors
                         ))
                     hstrs.append('    {0}Function:  {1}{2[ENDC]}'.format(

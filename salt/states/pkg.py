@@ -18,6 +18,14 @@ from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)
 
+
+def __gen_rtag():
+    '''
+    Return the location of the refresh tag
+    '''
+    return os.path.join(__opts__['cachedir'], 'pkg_refresh')
+
+
 def installed(name, version=None, refresh=False, repo='', skip_verify=False):
     '''
     Verify that the package is installed, and only that it is installed. This
@@ -34,10 +42,10 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False):
     Usage::
 
         httpd:
-          - pkg
-          - installed
-          - repo: mycustomrepo
-          - skip_verify: True
+          pkg:
+            - installed
+            - repo: mycustomrepo
+            - skip_verify: True
     '''
     rtag = __gen_rtag()
     cver = __salt__['pkg.version'](name)
@@ -205,11 +213,4 @@ def mod_init(low):
         if not os.path.exists(rtag):
             open(rtag, 'w+').write('')
         return True
-    else:
-        return False
-
-def __gen_rtag():
-    '''
-    Return the location of the refresh tag
-    '''
-    return os.path.join(__opts__['cachedir'], 'pkg_refresh')
+    return False

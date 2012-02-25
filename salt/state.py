@@ -13,9 +13,11 @@ The data sent to the state calls is as follows:
 
 import copy
 import inspect
+import fnmatch
 import logging
 import os
 import tempfile
+import collections
 
 import salt.loader
 import salt.minion
@@ -23,11 +25,12 @@ import salt.minion
 
 log = logging.getLogger(__name__)
 
+
 def _gen_tag(low):
     '''
     Generate the running dict tag string from the low data structure
     '''
-    return '{0[state]}.{0[__id__]}.{0[name]}.{0[fun]}'.format(low)
+    return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
 def _getargs(func):
@@ -104,6 +107,7 @@ class State(object):
         self.opts = opts
         self.load_modules()
         self.mod_init = set()
+        self.__run_num = 0
 
     def _mod_init(self, low):
         '''
@@ -119,12 +123,31 @@ class State(object):
                     return
                 self.mod_init.add(low['state'])
 
-    def load_modules(self):
+    def load_modules(self, data=None):
         '''
         Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
         self.functions = salt.loader.minion_mods(self.opts)
+        if isinstance(data, dict):
+            if data.get('redirect', False):
+                redirect = {}
+                if isinstance(data['redirect'], str):
+                    redirects = [{data['state']: data['redirect']}]
+                elif isinstance(data['redirect'], list):
+                    redirects = data['redirect']
+                for redirect in redirects:
+                    for mod in redirect:
+                        funcs = salt.loader.raw_mod(self.opts,
+                                redirect[mod],
+                                self.functions)
+                        if funcs:
+                            for func in funcs:
+                                f_key = '{0}{1}'.format(
+                                        mod,
+                                        func[func.rindex('.'):]
+                                        )
+                                self.functions[f_key] = funcs[func]
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
 
@@ -136,25 +159,31 @@ class State(object):
         python, pyx, or .so. Always refresh if the function is recuse, since
         that can lay down anything.
         '''
-        if not data['state'] == 'file':
-            return None
-        if data['fun'] == 'managed':
-            if any((data['name'].endswith('.py'),
-                    data['name'].endswith('.pyx'),
-                    data['name'].endswith('.pyo'),
-                    data['name'].endswith('.pyc'),
-                    data['name'].endswith('.so'))):
+        if data['state'] == 'file':
+            if data['fun'] == 'managed':
+                if any((data['name'].endswith('.py'),
+                        data['name'].endswith('.pyx'),
+                        data['name'].endswith('.pyo'),
+                        data['name'].endswith('.pyc'),
+                        data['name'].endswith('.so'))):
+                    self.load_modules()
+                    open(os.path.join(
+                        self.opts['cachedir'],
+                        'module_refresh'),
+                        'w+').write('')
+            elif data['fun'] == 'recurse':
                 self.load_modules()
                 open(os.path.join(
                     self.opts['cachedir'],
                     'module_refresh'),
                     'w+').write('')
-        elif data['fun'] == 'recurse':
+        elif data['state'] == 'pkg':
             self.load_modules()
             open(os.path.join(
                 self.opts['cachedir'],
                 'module_refresh'),
                 'w+').write('')
+
 
     def format_verbosity(self, returns):
         '''
@@ -185,6 +214,13 @@ class State(object):
             errors.append('Missing "name" data')
         if errors:
             return errors
+        if data['fun'].startswith('mod_'):
+            errors.append(
+                    'State {0} in sls {1} uses an invalid function {2}'.format(
+                        data['state'],
+                        data['__sls__'],
+                        data['fun'])
+                    )
         full = data['state'] + '.' + data['fun']
         if full not in self.states:
             if '__sls__' in data:
@@ -219,9 +255,9 @@ class State(object):
         if 'require' in data:
             reqdec = 'require'
         if 'watch' in data:
-            # Check to see if the service has a watcher function, if it does
+            # Check to see if the service has a mod_watch function, if it does
             # not, then just require
-            if not '{0}.watcher'.format(data['state']) in self.states:
+            if not '{0}.mod_watch'.format(data['state']) in self.states:
                 data['require'] = data.pop('watch')
                 reqdec = 'require'
             else:
@@ -229,7 +265,8 @@ class State(object):
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
-                    if data['name'] == req[req.keys()[0]]:
+                    if fnmatch.fnmatch(data['name'], req[req.keys()[0]]) \
+                            or fnmatch.fnmatch(data['__id__'], req[req.keys()[0]]):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -533,10 +570,15 @@ class State(object):
                     data
                     )
                 )
+        if 'redirect' in data:
+            self.load_modules(data)
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
+        ret['__run_num__'] = self.__run_num
+        self.__run_num += 1
         format_log(ret)
-        self.module_refresh(data)
+        if 'redirect' in data:
+            self.load_modules()
         return ret
 
     def call_chunks(self, chunks):
@@ -563,8 +605,7 @@ class State(object):
         if low.get('failhard', False) \
                 or self.opts['failhard'] \
                 and tag in running:
-            if not running[tag]['result']:
-                return True
+            return not running[tag]['result']
         return False
 
     def check_requisite(self, low, running, chunks):
@@ -586,8 +627,8 @@ class State(object):
                 for req in low[r_state]:
                     found = False
                     for chunk in chunks:
-                        if chunk['__id__'] == req[req.keys()[0]] or \
-                                chunk['name'] == req[req.keys()[0]]:
+                        if fnmatch.fnmatch(chunk['__id__'], req[req.keys()[0]]) or \
+                                fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]):
                             if chunk['state'] == req.keys()[0]:
                                 found = True
                                 reqs[r_state].append(chunk)
@@ -636,8 +677,9 @@ class State(object):
                 for req in low[requisite]:
                     found = False
                     for chunk in chunks:
-                        if chunk['name'] == req[req.keys()[0]] \
-                                or chunk['__id__'] == req[req.keys()[0]]:
+                        if fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]) \
+                                or fnmatch.fnmatch(chunk['__id__'],
+                                        req[req.keys()[0]]):
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                                 found = True
@@ -652,7 +694,9 @@ class State(object):
                                 lreq)
                 running[tag] = {'changes': {},
                                 'result': False,
-                                'comment': comment}
+                                'comment': comment,
+                                '__run_num__': self.__run_num}
+                self.__run_num += 1
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -672,11 +716,13 @@ class State(object):
         elif status == 'fail':
             running[tag] = {'changes': {},
                             'result': False,
-                            'comment': 'One or more requisite failed'}
+                            'comment': 'One or more requisite failed',
+                            '__run_num__': self.__run_num}
+            self.__run_num += 1
         elif status == 'change':
             ret = self.call(low)
             if not ret['changes']:
-                low['fun'] = 'watcher'
+                low['fun'] = 'mod_watch'
                 ret = self.call(low)
             running[tag] = ret
         else:
@@ -758,6 +804,7 @@ class HighState(object):
             opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
         else:
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+        opts['nodegroups'] = mopts.get('nodegroups', {})
         return opts
 
     def _get_envs(self):
@@ -773,9 +820,9 @@ class HighState(object):
         '''
         Gather the top files
         '''
-        tops = {}
-        include = {}
-        done = {}
+        tops = collections.defaultdict(list)
+        include = collections.defaultdict(list)
+        done = collections.defaultdict(list)
         # Gather initial top files
         if self.opts['environment']:
             tops[self.opts['environment']] = [
@@ -789,8 +836,6 @@ class HighState(object):
                     ]
         else:
             for env in self._get_envs():
-                if not env in tops:
-                    tops[env] = []
                 tops[env].append(
                         self.state.compile_template(
                             self.client.cache_file(
@@ -806,8 +851,6 @@ class HighState(object):
             for ctop in ctops:
                 if not 'include' in ctop:
                     continue
-                if not env in include:
-                    include[env] = []
                 for sls in ctop['include']:
                     include[env].append(sls)
                 ctop.pop('include')
@@ -815,13 +858,11 @@ class HighState(object):
         while include:
             pops = []
             for env, states in include.items():
-                if not env in done:
-                    done[env] = []
                 pops.append(env)
                 if not states:
                     continue
                 for sls in states:
-                    if done[env].count(sls):
+                    if sls in done[env]:
                         continue
                     tops[env].append(
                             self.state.compile_template(
@@ -843,14 +884,12 @@ class HighState(object):
         '''
         Cleanly merge the top files
         '''
-        top = {}
+        top = collections.defaultdict(dict)
         for sourceenv, ctops in tops.items():
             for ctop in ctops:
                 for env, targets in ctop.items():
                     if env == 'include':
                         continue
-                    if not env in top:
-                        top[env] = {}
                     for tgt in targets:
                         if not tgt in top[env]:
                             top[env][tgt] = ctop[env][tgt]
@@ -892,12 +931,22 @@ class HighState(object):
                 if not env == self.opts['environment']:
                     continue
             for match, data in body.items():
-                if self.matcher.confirm_top(match, data):
+                if self.matcher.confirm_top(
+                        match,
+                        data,
+                        self.opts['nodegroups']
+                        ):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
                         if isinstance(item, basestring):
                             matches[env].append(item)
+        ext_matches = self.client.ext_nodes()
+        for env in ext_matches:
+            if env in matches:
+                matches[env] = list(set(ext_matches[env]).union(matches[env]))
+            else:
+                matches[env] = ext_matches[env]
         return matches
 
     def load_dynamic(self, matches):
@@ -907,7 +956,9 @@ class HighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        self.state.functions['saltutil.sync_all'](matches.keys())
+        syncd = self.state.functions['saltutil.sync_all'](matches.keys())
+        if syncd[2]:
+            self.opts['grains'] = salt.loader.grains(self.opts)
         faux = {'state': 'file', 'fun': 'recurse'}
         self.state.module_refresh(faux)
 
@@ -953,7 +1004,7 @@ class HighState(object):
                         errors.append(err)
                     else:
                         for sub_sls in state.pop('include'):
-                            if not list(mods).count(sub_sls):
+                            if sub_sls not in mods:
                                 nstate, mods, err = self.render_state(
                                         sub_sls,
                                         env,
@@ -1003,6 +1054,17 @@ class HighState(object):
             mods = set()
             for sls in states:
                 state, mods, err = self.render_state(sls, env, mods)
+                for id_ in state:
+                    if id_ in highstate:
+                        if highstate[id_] != state[id_]:
+                            errors.append(('Detected conflicting IDs, SLS IDs'
+                            ' need to be globally unique.\n    The'
+                            ' conflicting ID is "{0}" and is found in SLS'
+                            ' "{1}" and SLS "{2}"').format(
+                                    id_,
+                                    highstate[id_]['__sls__'],
+                                    state[id_]['__sls__'])
+                            )
                 if state:
                     highstate.update(state)
                 if err:
@@ -1020,7 +1082,7 @@ class HighState(object):
         if errors:
             return errors
         if not high:
-            return {'no.states': {
+            return {'no_|-states_|-states_|-None': {
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',

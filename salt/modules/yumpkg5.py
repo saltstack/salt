@@ -42,9 +42,8 @@ def _parse_yum(arg):
 
     for line in out.split('\n'):
         if len(line.split()) == 3:
-            namearchstr, versionstr, pkgstatus = line.split()
+            namearchstr, pkgver, pkgstatus = line.split()
             pkgname = namearchstr.rpartition('.')[0]
-            pkgver = versionstr.rpartition('.')[0]
 
             results.append(YumOut(pkgname, pkgver, pkgstatus))
 
@@ -116,7 +115,7 @@ def refresh_db():
     return True
 
 
-def install(pkg, refresh=False, repo='', skip_verify=False):
+def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Install the passed package
 

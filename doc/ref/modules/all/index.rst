@@ -37,6 +37,7 @@ Full list of builtin modules
     network
     pacman
     pip
+    pkg
     ps
     publish
     puppet
@@ -51,6 +52,7 @@ Full list of builtin modules
     ssh
     state
     status
+    sys
     systemd
     test
     tomcat

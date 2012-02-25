@@ -15,6 +15,20 @@ import hashlib
 import salt.utils.find
 from salt.exceptions import SaltInvocationError
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+
+    # Disable on these platforms, specific file modules exist:
+    disable = [
+            'Windows',
+            ]
+    if __grains__['os'] in disable:
+        return False
+    return 'file'
+    
+
 __outputter__ = {
     'touch': 'txt',
     'append': 'txt',
@@ -155,12 +169,13 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
-    mode = str(mode)
+    mode = str(mode).lstrip('0')
+    if not mode:
+        mode = '0'
     if not os.path.exists(path):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
-    # FIXME: don't use a catch-all, be more specific...
     except:
         return 'Invalid Mode ' + mode
     return get_mode(path)

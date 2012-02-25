@@ -206,7 +206,7 @@ def db_list():
     cur.execute('SHOW DATABASES')
     results = cur.fetchall()
     for dbs in results:
-       ret.append(dbs[0])
+        ret.append(dbs[0])
 
     log.debug(ret)
     return ret
@@ -220,8 +220,8 @@ def db_tables(name):
         salt '*' mysql.db_tables 'database'
     '''
     if not db_exists(name):
-       log.info("Database '{0}' does not exist".format(name,))
-       return False
+        log.info("Database '{0}' does not exist".format(name,))
+        return False
 
     ret = []
     db = connect()
@@ -232,7 +232,7 @@ def db_tables(name):
     cur.execute(query)
     results = cur.fetchall()
     for table in results:
-       ret.append(table[0])
+        ret.append(table[0])
     log.debug(ret)
     return ret
    
@@ -250,9 +250,7 @@ def db_exists(name):
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
     result_set = cur.fetchall()
-    if cur.rowcount == 1:
-       return True
-    return False
+    return cur.rowcount == 1
 
     
 def db_create(name):
@@ -271,11 +269,11 @@ def db_create(name):
     # db doesnt exist, proceed
     db = connect()
     cur = db.cursor()
-    query = "CREATE DATABASE %s;" % name
+    query = "CREATE DATABASE `%s`;" % name
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("DB '{0}' created".format(name,))
-       return True
+        log.info("DB '{0}' created".format(name,))
+        return True
     return False
 
 def db_remove(name):
@@ -298,13 +296,13 @@ def db_remove(name):
     # db doesnt exist, proceed
     db = connect()
     cur = db.cursor()
-    query = "DROP DATABASE %s;" % name
+    query = "DROP DATABASE `%s`;" % name
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
 
     if not db_exists(name):
-       log.info("Database '{0}' has been removed".format(name,))
-       return True
+        log.info("Database '{0}' has been removed".format(name,))
+        return True
 
     log.info("Database '{0}' has not been removed".format(name,))
     return False
@@ -341,9 +339,7 @@ def user_exists(user,
     query = "SELECT User,Host FROM mysql.user WHERE User = '%s' AND Host = '%s'" % (user, host,)
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
-    if cur.rowcount == 1:
-       return True
-    return False
+    return cur.rowcount == 1
     
 def user_info(user,
               host='localhost'):
@@ -365,7 +361,8 @@ def user_info(user,
 
 def user_create(user,
                 host='localhost',
-                password=None):
+                password=None,
+                password_hash=None):
     '''
     Creates a MySQL user.
 
@@ -381,21 +378,24 @@ def user_create(user,
     cur = db.cursor ()
     query = "CREATE USER '%s'@'%s'" % (user, host,)
     if password is not None:
-       query = query + " IDENTIFIED BY '%s'" % password
+        query = query + " IDENTIFIED BY '%s'" % password
+    elif password_hash is not None:
+        query = query + " IDENTIFIED BY PASSWORD '%s'" % password_hash
 
     log.debug("Query: {0}".format(query,))
     cur.execute( query )
     
     if user_exists(user,host):
-       log.info("User '{0}'@'{1}' has been created".format(user,host,))
-       return True
+        log.info("User '{0}'@'{1}' has been created".format(user,host,))
+        return True
 
     log.info("User '{0}'@'{1}' is not created".format(user,host,))
     return False
 
 def user_chpass(user,
                 host='localhost',
-                password=None):
+                password=None,
+                password_hash=None):
     '''
     Change password for MySQL user
 
@@ -403,17 +403,21 @@ def user_chpass(user,
 
         salt '*' mysql.user_chpass frank localhost newpassword
     '''
-    if password is None:
-       log.error('No password provided')
-       return False
+    if password is None or password_hash is None:
+        log.error('No password provided')
+        return False
+    elif password is not None:
+        password_sql = "PASSWORD(\"%s\")" % password
+    elif password_hash is not None:
+        password_sql = "\"%s\"" % password_hash
 
     db = connect()
     cur = db.cursor ()
-    query = "UPDATE mysql.user SET password=PASSWORD(\"%s\") WHERE User='%s' AND Host = '%s';" % (password,user,host,)
+    query = "UPDATE mysql.user SET password=%s WHERE User='%s' AND Host = '%s';" % (password_sql,user,host,)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("Password for user '{0}'@'{1}' has been changed".format(user,host,))
-       return True
+        log.info("Password for user '{0}'@'{1}' has been changed".format(user,host,))
+        return True
 
     log.info("Password for user '{0}'@'{1}' is not changed".format(user,host,))
     return False
@@ -434,8 +438,8 @@ def user_remove(user,
     cur.execute(query)
     result = cur.fetchone()
     if not user_exists(user,host):
-       log.info("User '{0}'@'{1}' has been removed".format(user,host,))
-       return True
+        log.info("User '{0}'@'{1}' has been removed".format(user,host,))
+        return True
 
     log.info("User '{0}'@'{1}' has NOT been removed".format(user,host,))
     return False
@@ -483,7 +487,7 @@ def db_repair(name,
     else:
         log.info("Repairing table '%s' in db '%s'..".format(name,table,))
         ret = __repair_table(name,table)
-    return ret    
+    return ret
     
 def db_optimize(name,
               table=None):
@@ -512,17 +516,24 @@ Grants
 def __grant_generate(grant, 
                     database, 
                     user, 
-                    host='localhost'):
+                    host='localhost',
+                    grant_option=False,
+                    escape=True):
     # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = grant.replace(',', ', ').upper()
     
-    db_part = database.partition('.')
+    db_part = database.rpartition('.')
     db = db_part[0]
     table = db_part[2]
-    
-    query = "GRANT %s ON `%s`.`%s` TO '%s'@'%s'" % (grant, db, table, user, host,)
+
+    if escape:
+        db = "`%s`" % db
+        table = "`%s`" % table
+    query = "GRANT %s ON %s.%s TO '%s'@'%s'" % (grant, db, table, user, host,)
+    if grant_option:
+        query += " WITH GRANT OPTION"
     log.debug("Query generated: {0}".format(query,))
-    return query      
+    return query
     
 def user_grants(user, 
                 host='localhost'):
@@ -546,29 +557,33 @@ def user_grants(user,
     cur.execute(query)
     results = cur.fetchall()
     for grant in results:
-       ret.append(grant[0])
+        ret.append(grant[0])
     log.debug(ret)
     return ret
 
 def grant_exists(grant, 
                 database, 
                 user, 
-                host='localhost'):
+                host='localhost',
+                grant_option=False,
+                escape=True):
     # todo: This function is a bit tricky, since it requires the ordering to be exactly the same.
     # perhaps should be replaced/reworked with a better/cleaner solution.
-    target = __grant_generate(grant, database, user, host)
+    target = __grant_generate(grant, database, user, host, grant_option, escape)
     
     if target in user_grants(user, host):
         log.debug("Grant exists.")
-        return True       
+        return True
     
     log.debug("Grant does not exist, or is perhaps not ordered properly?")
-    return False   
+    return False
 
 def grant_add(grant,
               database, 
               user, 
-              host='localhost'):
+              host='localhost',
+              grant_option=False,
+              escape=True):
     '''
     Adds a grant to the MySQL server.
 
@@ -580,17 +595,18 @@ def grant_add(grant,
     db = connect()
     cur = db.cursor()
     
-    query = __grant_generate(grant, database, user, host)
+    query = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("Grant '{0}' created")
-       return True
+        log.info("Grant '{0}' created")
+        return True
     return False
 
 def grant_revoke(grant, 
                  database, 
                  user, 
-                 host='localhost'):
+                 host='localhost',
+                 grant_option=False):
     '''
     Removes a grant from the MySQL server.
 
@@ -600,11 +616,14 @@ def grant_revoke(grant,
     '''
     # todo: validate grant
     db = connect() 
-    cur = db.cursor()     
+    cur = db.cursor()
+
+    if grant_option:
+        grant += ", GRANT OPTION"
     query = "REVOKE %s ON %s FROM '%s'@'%s';" % (grant, database, user, host,)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
-       log.info("Grant '{0}' revoked")
-       return True
+        log.info("Grant '{0}' revoked")
+        return True
     return False
 

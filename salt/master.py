@@ -390,12 +390,12 @@ class AESFuncs(object):
         if not self.opts['external_nodes']:
             return {}
         if not salt.utils.which(self.opts['external_nodes']):
-            log.error(('Specified external nodes controller {0} is not' 
+            log.error(('Specified external nodes controller {0} is not'
                        ' available, please verify that it is installed'
                        '').format(self.opts['external_nodes']))
             return {}
         cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-        ndata = yaml.safe_loads(
+        ndata = yaml.safe_load(
                 subprocess.Popen(
                     cmd,
                     shell=True,
@@ -406,7 +406,7 @@ class AESFuncs(object):
             env = ndata['environment']
         else:
             env = 'base'
-        
+
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
                 ret[env] = ndata['classes'].keys()
@@ -508,6 +508,15 @@ class AESFuncs(object):
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
+        # Otherwise the minion has already returned this jid and it should
+        # be dropped
+        else:
+            log.error(
+                    ('An extra return was detected from minion {0}, please'
+                    ' verify the minion, this could be a replay'
+                    ' attack').format(load['id'])
+                    )
+            return False
         self.serial.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
         if 'out' in load:

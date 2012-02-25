@@ -1,2 +1,0 @@
-usr/share/salt/salt-minion /usr/bin/salt-minion
-usr/share/salt/salt-call /usr/bin/salt-call

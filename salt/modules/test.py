@@ -95,6 +95,7 @@ def fib(num):
 
         salt '*' test.fib 3
     '''
+    num = int(num)
     start = time.time()
     a, b = 0, 1
     ret = [0]
@@ -114,6 +115,7 @@ def collatz(start):
 
         salt '*' test.collatz 3
     '''
+    start = int(start)
     begin = time.time()
     steps = []
     while start != 1:

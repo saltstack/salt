@@ -43,6 +43,13 @@ class SaltCMD(object):
                 dest='timeout',
                 help=('Set the return timeout for batch jobs; '
                       'default=5 seconds'))
+        parser.add_option('-i',
+                '--iter',
+                '--iter-return',
+                default=False,
+                dest='iter_',
+                action='store_true',
+                help='Return the data from minions as the data is returned')
         parser.add_option('-E',
                 '--pcre',
                 default=False,
@@ -145,6 +152,7 @@ class SaltCMD(object):
 
         if not options.timeout is None:
             opts['timeout'] = int(options.timeout)
+        opts['iter'] = options.iter_
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
@@ -177,7 +185,7 @@ class SaltCMD(object):
             else:
                 opts['tgt'] = args[0]
 
-            if args[1].count(','):
+            if ',' in args[1]:
                 opts['fun'] = args[1].split(',')
                 opts['arg'] = []
                 for comp in ' '.join(args[2:]).split(','):
@@ -252,39 +260,45 @@ class SaltCMD(object):
             try:
                 # local will be None when there was an error
                 if local:
-                    full_ret = local.cmd_full_return(*args)
-                    ret, out = self._format_ret(full_ret)
+                    if self.opts['iter']:
+                        for full_ret in local.cmd_iter(*args):
+                            ret, out = self._format_ret(full_ret)
+                            self._output_ret(ret, out)
+                    else:
+                        full_ret = local.cmd_full_return(*args)
+                        ret, out = self._format_ret(full_ret)
+                        self._output_ret(ret, out)
             except SaltInvocationError as exc:
                 ret = exc
                 out = ''
 
-            # Handle special case commands
-            if self.opts['fun'] == 'sys.doc':
-                self._print_docs(ret)
-            else:
-                # Determine the proper output method and run it
-                get_outputter = salt.output.get_outputter
-                if isinstance(ret, list) or isinstance(ret, dict):
-                    if self.opts['raw_out']:
-                        printout = get_outputter('raw')
-                    elif self.opts['json_out']:
-                        printout = get_outputter('json')
-                    elif self.opts['txt_out']:
-                        printout = get_outputter('txt')
-                    elif self.opts['yaml_out']:
-                        printout = get_outputter('yaml')
-                    elif out:
-                        printout = get_outputter(out)
-                    else:
-                        printout = get_outputter(None)
-                # Pretty print any salt exceptions
-                elif isinstance(ret, SaltException):
-                    printout = get_outputter("txt")
-                printout(ret)
-
-            # Always exit with a return code of 1 on issues
-            if isinstance(ret, Exception):
-                sys.exit(1)
+    def _output_ret(self, ret, out):
+        '''
+        Print the output from a single return to the terminal
+        '''
+        # Handle special case commands
+        if self.opts['fun'] == 'sys.doc':
+            self._print_docs(ret)
+        else:
+            # Determine the proper output method and run it
+            get_outputter = salt.output.get_outputter
+            if isinstance(ret, list) or isinstance(ret, dict):
+                if self.opts['raw_out']:
+                    printout = get_outputter('raw')
+                elif self.opts['json_out']:
+                    printout = get_outputter('json')
+                elif self.opts['txt_out']:
+                    printout = get_outputter('txt')
+                elif self.opts['yaml_out']:
+                    printout = get_outputter('yaml')
+                elif out:
+                    printout = get_outputter(out)
+                else:
+                    printout = get_outputter(None)
+            # Pretty print any salt exceptions
+            elif isinstance(ret, SaltException):
+                printout = get_outputter("txt")
+            printout(ret)
 
     def _format_ret(self, full_ret):
         '''
@@ -478,6 +492,13 @@ class SaltKey(object):
                 dest='delete',
                 default='',
                 help='Delete the named key')
+        
+        parser.add_option('-D',
+                '--delete-all',
+                dest='delete_all',
+                default=False,
+                action='store_true',
+                help='Delete all keys')
 
         parser.add_option('-q',
                 '--quiet',
@@ -536,6 +557,7 @@ class SaltKey(object):
         opts['print'] = options.print_
         opts['print_all'] = options.print_all
         opts['delete'] = options.delete
+        opts['delete_all'] = options.delete_all
         opts['gen_keys'] = options.gen_keys
         opts['gen_keys_dir'] = options.gen_keys_dir
         if options.keysize < 2048:
