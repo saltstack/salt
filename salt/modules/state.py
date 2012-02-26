@@ -89,7 +89,7 @@ def sls(mods, env='base'):
         salt '*' state.sls core,edit.vim dev
     '''
     st_ = salt.state.HighState(__opts__)
-    if isinstance(mods, str):
+    if isinstance(mods, basestring):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
     if errors:

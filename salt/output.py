@@ -97,7 +97,7 @@ class HighStateOutputter(Outputter):
                         ))
                     changes = '        Changes:   '
                     for key in ret['changes']:
-                        if isinstance(ret['changes'][key], str):
+                        if isinstance(ret['changes'][key], basestring):
                             changes += (key + ': ' + ret['changes'][key] +
                                         '\n                   ')
                         elif isinstance(ret['changes'][key], dict):

@@ -194,7 +194,7 @@ class Minion(object):
         Override this method if you wish to handle the decoded
         data differently.
         '''
-        if isinstance(data['fun'], str):
+        if isinstance(data['fun'], basestring):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
 
@@ -233,7 +233,7 @@ class Minion(object):
                 arg = eval(data['arg'][ind])
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, str)):
+                elif isinstance(arg, (dict, int, list, basestring)):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
@@ -292,7 +292,7 @@ class Minion(object):
                     arg = eval(data['arg'][ind][index])
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, str)):
+                    elif isinstance(arg, (dict, int, list, basestring)):
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
@@ -354,7 +354,7 @@ class Minion(object):
         try:
             if hasattr(self.functions[ret['fun']], '__outputter__'):
                 oput = self.functions[ret['fun']].__outputter__
-                if isinstance(oput, str):
+                if isinstance(oput, basestring):
                     load['out'] = oput
         except KeyError:
             pass
@@ -362,7 +362,7 @@ class Minion(object):
         data = self.serial.dumps(payload)
         socket.send(data)
         ret_val = self.serial.loads(socket.recv())
-        if isinstance(ret_val, str) and not ret_val:
+        if isinstance(ret_val, basestring) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
             payload['load'] = self.crypticle.dumps(load)
@@ -613,7 +613,7 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, str):
+        if not isinstance(tgt, basestring):
             log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',
