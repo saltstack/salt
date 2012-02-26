@@ -13,7 +13,7 @@ def __virtual__():
     # Disable on Windows, a specific file module exists:
     if __grains__['os'] == 'Windows':
         return False
-    return 'file'
+    return 'shadow'
 
 
 def info(name):
