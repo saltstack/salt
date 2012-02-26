@@ -124,6 +124,22 @@ def grains(opts):
     module_dirs = [
         os.path.join(salt_base_path, 'grains'),
         ] + extra_dirs
+    if not 'grains' in opts:
+        pre_opts = {}
+        salt.config.load_config(
+                pre_opts,
+                opts['conf_file'],
+                'SALT_MINION_CONFIG'
+                )
+        if 'include' in pre_opts:
+            pre_opts = salt.config.include_config(
+                    pre_opts,
+                    opts['conf_file']
+                    )
+        if 'grains' in pre_opts:
+            opts['grains'] = pre_opts['grains']
+        else:
+            opts['grains'] = {}
     load = Loader(module_dirs, opts, 'grain')
     grains = load.gen_grains()
     if 'grains' in opts:
