@@ -1054,12 +1054,9 @@ class HighState(object):
             mods = set()
             for sls in states:
                 state, mods, err = self.render_state(sls, env, mods)
-                if '__extend__' in state:
-                    ext = state.pop('__extend__')
-                    if '__extend__' in highstate:
-                        highstate['__extend__'].extend(ext)
-                    else:
-                        highstate['__extend__'] = ext
+                # The extend members can not be treated as globally unique:
+                if '__extend__' in state and '__extend__' in highstate:
+                    highstate['__extend__'].extend(state.pop('__extend__'))
                 for id_ in state:
                     if id_ in highstate:
                         if highstate[id_] != state[id_]:
