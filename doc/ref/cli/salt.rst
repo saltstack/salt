@@ -80,6 +80,10 @@ Options
 
 .. option:: -Q, --query
 
+    The -Q option is being deprecated and will be removed in a future release,
+    Use the salt jobs interface instead, for documentation on the salt jobs
+    interface execute the command "salt-run -d jobs"
+
     Execute a salt command query, this can be used to find the results of a
     previous function call: -Q test.echo')
 
