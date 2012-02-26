@@ -41,8 +41,24 @@ look like this:
         - mode: 755
         - makedirs: True
 
+If you need to enforce user and/or group ownership recursively on the
+directory's contents, you can do so by adding a ``recurse`` directive:
+
+.. code-block:: yaml
+
+    /srv/stuff/substuf:
+      file:
+        - directory
+        - user: fred
+        - group: users
+        - mode: 755
+        - makedirs: True
+        - recurse:
+          - user
+          - group
+
 Symlinks can be easily created, the symlink function is very simple and only
-takes a few arguments
+takes a few arguments:
 
 .. code-block:: yaml
 
@@ -75,6 +91,7 @@ import logging
 import tempfile
 import traceback
 import urlparse
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -759,6 +776,7 @@ def managed(name,
 def directory(name,
         user=None,
         group=None,
+        recurse=[],
         mode=None,
         makedirs=False,
         clean=False,
@@ -776,6 +794,9 @@ def directory(name,
     group
         The group ownership set for the directory, this defaults to the group
         salt is running as on the minion
+
+    recurse
+        Enforce user/group ownership of directory recursively
 
     mode
         The permissions to set on this directory, aka 755
@@ -863,6 +884,86 @@ def directory(name,
             ret['comment'] += 'Failed to change group to {0} '.format(group)
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
+
+    if recurse:
+        if not set(['user','group']) >= set(recurse):
+            ret['result'] = False
+            ret['comment'] = 'Types for "recurse" limited to "user" and ' \
+                             '"group"'
+        else:
+            targets = copy.copy(recurse)
+            if 'user' in targets:
+                if user:
+                    uid = __salt__['file.user_to_uid'](user)
+                    # file.user_to_uid returns '' if user does not exist. Above
+                    # check for user is not fatal, so we need to be sure user
+                    # exists.
+                    if type(uid).__name__ == 'str':
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to enforce ownership for ' \
+                                         'user {0} (user does not ' \
+                                         'exist)'.format(user)
+                        # Remove 'user' from list of recurse targets
+                        targets = filter(lambda x: x != 'user', targets)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'user not specified, but configured as ' \
+                             'a target for recursive ownership management'
+                    # Remove 'user' from list of recurse targets
+                    targets = filter(lambda x: x != 'user', targets)
+            if 'group' in targets:
+                if group:
+                    gid = __salt__['file.group_to_gid'](group)
+                    # As above with user, we need to make sure group exists.
+                    if type(gid).__name__ == 'str':
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to enforce group ownership ' \
+                                         'for group {0}'.format(group,user)
+                        # Remove 'group' from list of recurse targets
+                        targets = filter(lambda x: x != 'group', targets)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'group not specified, but configured ' \
+                             'as a target for recursive ownership management'
+                    # Remove 'group' from list of recurse targets
+                    targets = filter(lambda x: x != 'group', targets)
+
+            needs_fixed = {}
+            if targets:
+                file_tree = __salt__['file.find'](name)
+                for path in file_tree:
+                    fstat = os.stat(path)
+                    if 'user' in targets and fstat.st_uid != uid:
+                            needs_fixed['user'] = True
+                            if needs_fixed.get('group'): break
+                    if 'group' in targets and fstat.st_gid != gid:
+                            needs_fixed['group'] = True
+                            if needs_fixed.get('user'): break
+
+            if needs_fixed.get('user'):
+                # Make sure the 'recurse' subdict exists
+                ret['changes'].setdefault('recurse',{})
+                if 'user' in targets:
+                    if __salt__['cmd.retcode']('chown -R {0} "{1}"'.format(
+                            user,name)) != 0:
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to enforce ownership on ' \
+                                         '{0} for user {1}'.format(name,group)
+                    else:
+                        ret['changes']['recurse']['user'] = \
+                                __salt__['file.uid_to_user'](uid)
+            if needs_fixed.get('group'):
+                ret['changes'].setdefault('recurse',{})
+                if 'group' in targets:
+                    if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
+                            group,name)) != 0:
+                        ret['result'] = False
+                        ret['comment'] = 'Failed to enforce group ownership ' \
+                                         'on {0} for group ' \
+                                         '{1}'.format(name,group)
+                    else:
+                        ret['changes']['recurse']['group'] = \
+                                __salt__['file.gid_to_group'](gid)
 
     if clean:
         keep = _gen_keep_files(name, require)
