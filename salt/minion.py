@@ -159,7 +159,8 @@ class Minion(object):
         # from returning a predictable exception
         #if data['fun'] not in self.functions:
         #    return
-        log.debug('Executing command {0[fun]} with jid {0[jid]}'.format(data))
+        log.info('{0[user]} executed command {0[fun]} with jid {0[jid]}'.format(data))
+        log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_pub(self, load):
@@ -471,8 +472,9 @@ class Syndic(salt.client.LocalClient, Minion):
            or 'to' not in data or 'arg' not in data:
             return
         data['to'] = int(data['to']) - 1
-        log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
-                  .format(data)))
+        log.info(('{0[user]} executed syndic command {0[fun]} with jid {0[jid]}'
+                 .format(data)))
+        log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
