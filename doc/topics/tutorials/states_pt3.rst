@@ -87,10 +87,10 @@ The Salt module functions are also made available in the template context as
           - group: {{ usr }}
     {% endfor %}
 
-Below is another example that calls an arbitrary command in order to grab the
-mac addr for eth0::
+Below is an example that uses the ``network.hwaddr`` function to retrieve the
+MAC address for eth0:
 
-    salt['cmd.run']('ifconfig eth0 | grep HWaddr | cut -d" " -f10')
+    salt['network.hwaddr']('eth0')
 
 Advanced SLS module syntax
 ==========================
