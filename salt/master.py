@@ -542,7 +542,7 @@ class AESFuncs(object):
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
             open(wtag, 'w+').write('')
-        except IOError:
+        except (IOError, OSError):
             log.error(
                     ('Failed to commit the write tag for the syndic return,'
                     ' are permissions correct in the cache dir:'
