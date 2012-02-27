@@ -27,7 +27,7 @@ def __virtual__():
     '''
     Only load this module if the mysql config is set
     '''
-    if 'mysql' in __opts__:
+    if any(k.startswith('mysql.') for k in __opts__.keys()):
         return 'mysql'
     return False
 
