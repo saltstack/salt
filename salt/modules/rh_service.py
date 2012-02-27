@@ -1,6 +1,7 @@
 '''
-Top level package command wrapper, used to translate the os detected by the
-grains to the correct service manager
+Service support for classic Red Hat type systems. This interface uses the
+service command (so it is compatible with upstart systems) and the chkconfig
+command.
 '''
 
 import os

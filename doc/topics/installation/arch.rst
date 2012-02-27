@@ -1,7 +1,6 @@
-.. _introduction:
-
-Introduction
-============
+==========
+Arch Linux
+==========
 
 Salt has primarily been developed on Arch Linux, meaning it is known to work
 very well on that distribution. The lead developer, Thomas S. Hatch (thatch45) has
@@ -9,8 +8,6 @@ been a TU (Trusted User) for the Arch Linux distribution, and has written a
 number of Arch-specific tools in the past.
 
 Salt, while not Arch-specific, is packaged for and works well on Arch Linux.
-
-.. _installation:
 
 Installation
 ============
@@ -79,8 +76,6 @@ currently relies on the following packages only available via the AUR:
 
 .. _Yaourt: https://aur.archlinux.org/packages.php?ID=5863
 
-.. _configuration:
-
 Configuration
 =============
 
@@ -99,8 +94,6 @@ Note: You'll only need to copy the config for the service you're going to run.
 Once you've copied the config into place you'll need to make changes specific
 to your setup. Below I'll outline suggested configuration changes to the
 Master, after which I'll outline configuring the Minion.
-
-.. _master_configuration:
 
 Master Configuration
 ====================
@@ -136,8 +129,6 @@ seen here::
 If your Salt Master doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
-
-.. _ minion_configuration:
 
 Minion Configuration
 ====================
@@ -181,8 +172,6 @@ seen here::
 If your Salt Minion doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
-
-.. _tying_it_all_together:
 
 Tying It All Together
 ======================
@@ -230,8 +219,6 @@ The ``salt-key`` command allows for signing keys individually or in bulk. The
 example above, using ``-A`` bulk-accepts all pending keys. To accept keys
 individually use the lowercase of the same option, ``-a keyname``.
 
-.. _sending_commands:
-
 Sending Commands
 ================
 
@@ -245,8 +232,6 @@ the ``test.ping`` remote command::
 
    [root@master ~]# salt '*' test.ping
    {'avon': True}
-
-.. _where_do_i_go_from_here:
 
 Where Do I Go From Here
 ========================

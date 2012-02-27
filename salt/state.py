@@ -1054,6 +1054,9 @@ class HighState(object):
             mods = set()
             for sls in states:
                 state, mods, err = self.render_state(sls, env, mods)
+                # The extend members can not be treated as globally unique:
+                if '__extend__' in state and '__extend__' in highstate:
+                    highstate['__extend__'].extend(state.pop('__extend__'))
                 for id_ in state:
                     if id_ in highstate:
                         if highstate[id_] != state[id_]:
@@ -1086,7 +1089,8 @@ class HighState(object):
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',
-                        'changes': {}
+                        'changes': {},
+                        '__run_num__': 0,
                         }
                    }
         return self.state.call_high(high)

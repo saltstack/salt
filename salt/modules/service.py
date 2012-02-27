@@ -26,6 +26,7 @@ def __virtual__():
                'Scientific',
                'Fedora',
                'Gentoo',
+               'Ubuntu',
                'FreeBSD',
                'Windows',
               ]

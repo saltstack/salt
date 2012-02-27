@@ -113,7 +113,9 @@ class SaltCMD(object):
                 dest='query',
                 default=False,
                 action='store_true',
-                help=('Execute a salt command query, this can be used to find '
+                help=('This option is deprecated and will be removed in a '
+                      'future release, please use salt-run jobs instead\n'
+                      'Execute a salt command query, this can be used to find '
                       'the results os a previous function call: -Q test.echo'))
         parser.add_option('-c',
                 '--config',

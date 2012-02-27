@@ -7,6 +7,7 @@ Full Table of Contents
     :glob:
 
     topics/index
+    topics/installation/index
     topics/configuration
     topics/targeting/index
     topics/tutorials/modules
@@ -16,7 +17,6 @@ Full Table of Contents
     ref/index
     ref/modules/*
     ref/modules/all/index
-    ref/grains
     ref/returners/*
     ref/returners/all/index
     ref/states/*
