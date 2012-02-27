@@ -132,7 +132,7 @@ class State(object):
         if isinstance(data, dict):
             if data.get('provider', False):
                 provider = {}
-                if isinstance(data['provider'], str):
+                if isinstance(data['provider'], basestring):
                     providers = [{data['state']: data['provider']}]
                 elif isinstance(data['provider'], list):
                     providers = data['provider']
