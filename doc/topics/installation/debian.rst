@@ -11,7 +11,9 @@ for Lucid::
     aptitude -y install python-software-properties
     add-apt-repository ppa:saltstack/salt
     aptitude update
-    aptitude install salt
+    aptitude install salt-master        # on the master
+    aptitude install salt-minion        # on the minion
+    aptitude install salt-syndic        # instead of a slaved master
 
 Debian
 ------
