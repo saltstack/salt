@@ -261,6 +261,7 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
@@ -280,9 +281,15 @@ class LocalClient(object):
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
             if len(ret) >= len(minions):
+                # All Minions have returned
                 return ret
             if int(time.time()) > start + timeout:
+                # The timeout has been reached
                 return ret
             if int(time.time()) > gstart + timeout and not ret:
                 # No minions have replied within the specified global timeout,
