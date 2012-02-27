@@ -111,6 +111,7 @@ mygemset:
 
 import re
 
+
 def _check_rvm(ret):
     if not __salt__["rvm.is_installed"]():
         if __salt__["rvm.install"]():
@@ -120,10 +121,11 @@ def _check_rvm(ret):
             ret["comment"] = "Could not install RVM."
     return ret
 
-def _check_and_install_ruby(ret, ruby, default = False, runas = None):
-    ret = _check_ruby(ret, ruby, runas = runas)
+
+def _check_and_install_ruby(ret, ruby, default=False, runas=None):
+    ret = _check_ruby(ret, ruby, runas=runas)
     if not ret["result"]:
-        if __salt__["rvm.install_ruby"](ruby, runas = runas):
+        if __salt__["rvm.install_ruby"](ruby, runas=runas):
             ret["result"] = True
             ret["changes"][ruby] = "Installed"
             ret["comment"] = "Successfully installed ruby."
@@ -134,11 +136,12 @@ def _check_and_install_ruby(ret, ruby, default = False, runas = None):
             return ret
 
     if not ret["default"] and default:
-        __salt__["rvm.set_default"](ruby, runas = runas)
+        __salt__["rvm.set_default"](ruby, runas=runas)
 
     return ret
 
-def _check_ruby(ret, ruby, runas = None):
+
+def _check_ruby(ret, ruby, runas=None):
     match_version = True
     match_micro_version = False
     micro_version_regex = re.compile("-([0-9]{4}\.[0-9]{2}|p[0-9]+)$")
@@ -147,10 +150,10 @@ def _check_ruby(ret, ruby, runas = None):
     if re.match("^[a-z]+$", ruby):
         match_version = False
     ruby = re.sub("^ruby-", "", ruby)
-        
-    for impl, version, default in __salt__["rvm.list"](runas = runas):
+
+    for impl, version, default in __salt__["rvm.list"](runas=runas):
         if impl != "ruby":
-            version = "{impl}-{version}".format(impl = impl, version = version)
+            version = "{impl}-{version}".format(impl=impl, version=version)
         if not match_micro_version:
             version = micro_version_regex.sub("", version)
         if not match_version:
@@ -162,9 +165,11 @@ def _check_ruby(ret, ruby, runas = None):
             break
     return ret
 
-def installed(name, default = False, runas = None):
+
+def installed(name, default=False, runas=None):
     """
-    Verify that the specified ruby is installed with RVM. RVM is installed when necessary.
+    Verify that the specified ruby is installed with RVM. RVM is
+    installed when necessary.
 
     name
         The version of ruby to install
@@ -178,13 +183,14 @@ def installed(name, default = False, runas = None):
     ret = _check_rvm(ret)
     if ret["result"] == False:
         return ret
-        
-    return _check_and_install_ruby(ret, name, default, runas = runas)
-            
-def gemset_present(name, ruby = "default", runas = None):
+
+    return _check_and_install_ruby(ret, name, default, runas=runas)
+
+
+def gemset_present(name, ruby="default", runas=None):
     """
     Verify that the gemset is present.
-    
+
     name
         The name of the gemset.
     ruby : default
@@ -197,7 +203,7 @@ def gemset_present(name, ruby = "default", runas = None):
     ret = _check_rvm(ret)
     if ret["result"] == False:
         return ret
-    
+
     if name.find("@") != -1:
         ruby, name = name.split("@")
         ret = _check_ruby(ret, ruby)
@@ -205,12 +211,12 @@ def gemset_present(name, ruby = "default", runas = None):
             ret["result"] = False
             ret["comment"] = "Requested ruby implementation was not found."
             return ret
-    
-    if name in __salt__["rvm.gemset_list"](ruby, runas = runas):
+
+    if name in __salt__["rvm.gemset_list"](ruby, runas=runas):
         ret["result"] = True
         ret["comment"] = "Gemset already exists."
     else:
-        if __salt__["rvm.gemset_create"](ruby, name, runas = runas):
+        if __salt__["rvm.gemset_create"](ruby, name, runas=runas):
             ret["result"] = True
             ret["comment"] = "Gemset successfully created."
             ret["changes"][name] = "created"

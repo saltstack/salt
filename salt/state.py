@@ -130,16 +130,16 @@ class State(object):
         log.info('Loading fresh modules for state activity')
         self.functions = salt.loader.minion_mods(self.opts)
         if isinstance(data, dict):
-            if data.get('redirect', False):
-                redirect = {}
-                if isinstance(data['redirect'], basestring):
-                    redirects = [{data['state']: data['redirect']}]
-                elif isinstance(data['redirect'], list):
-                    redirects = data['redirect']
-                for redirect in redirects:
-                    for mod in redirect:
+            if data.get('provider', False):
+                provider = {}
+                if isinstance(data['provider'], basestring):
+                    providers = [{data['state']: data['provider']}]
+                elif isinstance(data['provider'], list):
+                    providers = data['provider']
+                for provider in providers:
+                    for mod in provider:
                         funcs = salt.loader.raw_mod(self.opts,
-                                redirect[mod],
+                                provider[mod],
                                 self.functions)
                         if funcs:
                             for func in funcs:
@@ -570,14 +570,14 @@ class State(object):
                     data
                     )
                 )
-        if 'redirect' in data:
+        if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
         ret = self.states[cdata['full']](*cdata['args'])
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
-        if 'redirect' in data:
+        if 'provider' in data:
             self.load_modules()
         return ret
 
@@ -1054,6 +1054,9 @@ class HighState(object):
             mods = set()
             for sls in states:
                 state, mods, err = self.render_state(sls, env, mods)
+                # The extend members can not be treated as globally unique:
+                if '__extend__' in state and '__extend__' in highstate:
+                    highstate['__extend__'].extend(state.pop('__extend__'))
                 for id_ in state:
                     if id_ in highstate:
                         if highstate[id_] != state[id_]:
@@ -1086,7 +1089,8 @@ class HighState(object):
                         'result': False,
                         'comment': 'No states found for this minion',
                         'name': 'No States',
-                        'changes': {}
+                        'changes': {},
+                        '__run_num__': 0,
                         }
                    }
         return self.state.call_high(high)

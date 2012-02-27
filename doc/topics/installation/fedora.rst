@@ -1,14 +1,20 @@
-.. _introduction:
-
-Introduction
-============
+==================================
+Fedora & CentOS / Enterprise Linux
+==================================
 
 Beginning with version 0.9.4, Salt has been available in the primary Fedora
 repositories and is available for installation using yum. Fedora will have more
 up to date versions of Salt than other members of the Red Hat family, which
 makes it a great place to help improve Salt!
 
-.. _installation:
+.. admonition:: CentOS/EL 5
+
+    We are still working to get msgpack packaged for Python 2.6 so Salt is not
+    yet (but nearly) in EPEL 5. In the meantime you can install Salt via our
+    Fedora People repository::
+
+        wget -O /etc/yum.repos.d/epel-salt.repo \\
+            http://repos.fedorapeople.org/repos/herlo/salt/epel-salt.repo
 
 Installation
 ============
@@ -26,15 +32,11 @@ means you're going to want one master and a whole bunch of minions!::
     yum install salt-master
     yum install salt-minion
 
-.. _configuration:
-
 Configuration
 =============
 
 In the sections below I'll outline configuration options for both the Salt
 Master and Salt Minions.
-
-.. _master_configuration:
 
 Master Configuration
 ====================
@@ -69,8 +71,6 @@ seen here::
 If your Salt Master doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
-
-.. _ minion_configuration:
 
 Minion Configuration
 ====================
@@ -112,8 +112,6 @@ here::
 If your Salt Minion doesn't start successfully, go back through each step and
 see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
-
-.. _tying_it_all_together:
 
 Tying It All Together
 ======================
@@ -161,8 +159,6 @@ The ``salt-key`` command allows for signing keys individually or in bulk. The
 example above, using ``-A`` bulk-accepts all pending keys. To accept keys
 individually use the lowercase of the same option, ``-a keyname``.
 
-.. _sending_commands:
-
 Sending Commands
 ================
 
@@ -176,8 +172,6 @@ the ``test.ping`` remote command::
 
    [root@master ~]# salt '*' test.ping
    {'avon': True}
-
-.. _where_do_i_go_from_here:
 
 Where Do I Go From Here
 ========================

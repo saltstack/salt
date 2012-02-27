@@ -44,8 +44,8 @@ def install(env='', requirements='', pkgs='', pip_bin=''):
     '''
     cmd = '{pip_bin} install {env} {reqs} {pkgs}'.format(
         pip_bin=_get_pip_bin(pip_bin, env),
-        env='-E {0}'.format(env if env else ''),
-        reqs='-r {0}'.format(requirements if requirements else ''),
+        env='-E {0}'.format(env) if env else '',
+        reqs='-r {0}'.format(requirements) if requirements else '',
         pkgs=pkgs)
 
     return __salt__['cmd.run'](cmd)
