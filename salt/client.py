@@ -32,6 +32,7 @@ import sys
 import glob
 import time
 import datetime
+import getpass
 
 # Import zmq modules
 import zmq
@@ -67,6 +68,7 @@ class LocalClient(object):
         self.opts = salt.config.master_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
         self.key = self.__read_master_key()
+        self.salt_user = self.__get_user()
 
     def __read_master_key(self):
         '''
@@ -79,6 +81,20 @@ class LocalClient(object):
         except (OSError, IOError):
             raise SaltClientError(('Problem reading the salt root key. Are'
                                    ' you root?'))
+
+    def __get_user(self):
+        '''
+        Determine the current user running the salt command
+        '''
+        user = getpass.getuser()
+        # if our user is root, look for other ways to figure out
+        # who we are
+        if user == 'root':
+            env_vars = ['SUDO_USER', 'USER', 'USERNAME']
+            for evar in env_vars:
+                if evar in os.environ:
+                    return os.environ[evar]
+        return user
 
     def _check_glob_minions(self, expr):
         '''
@@ -448,6 +464,7 @@ class LocalClient(object):
                     tgt_type=expr_form,
                     ret=ret,
                     jid=jid,
+                    user=self.salt_user,
                     to=timeout)
         else:
             package = salt.payload.format_payload(
@@ -459,6 +476,7 @@ class LocalClient(object):
                     key=self.key,
                     tgt_type=expr_form,
                     jid=jid,
+                    user=self.salt_user,
                     ret=ret)
         # Prep zmq
         context = zmq.Context()
