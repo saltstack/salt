@@ -493,15 +493,15 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         Take the now clear load and forward it on to the client cmd
         '''
-        # Set up default expr_form
-        if 'expr_form' not in data:
-            data['expr_form'] = 'glob'
+        # Set up default tgt_type
+        if 'tgt_type' not in data:
+            data['tgt_type'] = 'glob'
         # Send out the publication
         pub_data = self.pub(
                 data['tgt'],
                 data['fun'],
                 data['arg'],
-                data['expr_form'],
+                data['tgt_type'],
                 data['ret'],
                 data['jid'],
                 data['to']
