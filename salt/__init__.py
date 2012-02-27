@@ -343,6 +343,7 @@ class Syndic(object):
         cli = {'daemon': options.daemon,
                'minion_config': options.minion_config,
                'master_config': options.master_config,
+               'pidfile': options.pidfile,
                'user': options.user}
 
         return cli
