@@ -325,7 +325,8 @@ class Minion(object):
         payload = {'enc': 'aes'}
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
-                    'jid': ret['jid']}
+                    'jid': ret['jid'],
+                    'id': self.opts['id']}
             load['return'] = {}
             for key, value in ret.items():
                 if key == 'jid' or key == 'fun':
