@@ -513,7 +513,7 @@ def managed(name,
                         source = single_src
                         source_hash = single_hash
                         break
-            elif isinstance(single, str):
+            elif isinstance(single, basestring):
                 if single in mfiles:
                     source = single
                     break

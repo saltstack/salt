@@ -300,7 +300,7 @@ class State(object):
                 else:
                     fun = 0
                     for arg in body[state]:
-                        if isinstance(arg, str):
+                        if isinstance(arg, basestring):
                             fun += 1
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
@@ -442,7 +442,7 @@ class State(object):
                 funcs = set()
                 names = set()
                 for arg in run:
-                    if isinstance(arg, str):
+                    if isinstance(arg, basestring):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
@@ -494,8 +494,8 @@ class State(object):
                     for arg in run:
                         update = False
                         for hind in range(len(high[name][state])):
-                            if isinstance(arg, str) and \
-                                    isinstance(high[name][state][hind], str):
+                            if isinstance(arg, basestring) and \
+                                    isinstance(high[name][state][hind], basestring):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
@@ -543,7 +543,7 @@ class State(object):
         Take the path to a template and return the high data structure derived
         from the template.
         '''
-        if not isinstance(template, str):
+        if not isinstance(template, basestring):
             return {}
         if not os.path.isfile(template):
             return {}
@@ -899,12 +899,12 @@ class HighState(object):
                         for comp in ctop[env][tgt]:
                             if isinstance(comp, dict):
                                 cmatches.append(comp)
-                            if isinstance(comp, str):
+                            if isinstance(comp, basestring):
                                 cstates.add(comp)
                         for comp in top[env][tgt]:
                             if isinstance(comp, dict):
                                 matches.append(comp)
-                            if isinstance(comp, str):
+                            if isinstance(comp, basestring):
                                 states.add(comp)
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
