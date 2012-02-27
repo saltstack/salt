@@ -529,14 +529,35 @@ class AESFuncs(object):
         individual minions.
         '''
         # Verify the load
-        if 'return' not in load or 'jid' not in load:
+        if 'return' not in load or 'jid' not in load or 'id' not in load:
             return None
+        # set the write flag
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        if not os.path.isdir(jid_dir):
+            log.error(
+                'An inconsistency occurred, a job was received with a job id '
+                'that is not present on the master: %(jid)s', load
+            )
+            return False
+        wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
+        try:
+            open(wtag, 'w+').write('')
+        except IOError:
+            log.error(
+                    ('Failed to commit the write tag for the syndic return,'
+                    ' are permissions correct in the cache dir:'
+                    ' {0}?').format(self.opts['cachedir'])
+                    )
+            return False
+
         # Format individual return loads
         for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
             self._return(ret)
+        if os.path.isfile(wtag):
+            os.remove(wtag)
 
     def minion_publish(self, clear_load):
         '''
