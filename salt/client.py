@@ -214,6 +214,7 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         found = set()
+        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             yield {}
@@ -240,6 +241,10 @@ class LocalClient(object):
                     yield ret
             if ret and start == 999999999999:
                 start = int(time.time())
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
             if len(ret) >= len(minions):
                 break
             if int(time.time()) > start + timeout:
@@ -308,6 +313,7 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
@@ -331,6 +337,10 @@ class LocalClient(object):
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
             if len(ret) >= len(minions):
                 return ret
             if int(time.time()) > start + timeout:
