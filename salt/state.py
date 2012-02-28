@@ -405,6 +405,14 @@ class State(object):
             arglen = len(aspec[0])
         if isinstance(aspec[3], tuple):
             deflen = len(aspec[3])
+        if aspec[2]:
+            # This state accepts kwargs
+            ret['kwargs'] = {}
+            for key in data:
+                # Passing kwargs the conflict with args == stack trace
+                if key in aspec[0]:
+                    continue
+                ret['kwargs'][key] = data[key]
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
             minus = arglen - ind
@@ -573,7 +581,10 @@ class State(object):
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
-        ret = self.states[cdata['full']](*cdata['args'])
+        if 'kwargs' in cdata:
+            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
+        else:
+            ret = self.states[cdata['full']](*cdata['args'])
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
