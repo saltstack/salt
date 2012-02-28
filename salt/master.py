@@ -827,19 +827,30 @@ class ClearFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
         # Save the invocation information
-        self.serial.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        self.serial.dump(
+                clear_load,
+                open(os.path.join(jid_dir, '.load.p'), 'w+')
+                )
         # Set up the payload
         payload = {'enc': 'aes'}
+        # Altering the contents of the publish load is serious!! Changes here
+        # break compatibility with minion/master versions and even tiny 
+        # additions can have serious implications on the performance of the
+        # publish commands.
+        #
+        # In short, check with Thomas Hatch before you even think about
+        # touching this stuff, we can probably do what you want to do another
+        # way that won't have a negative impact.
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'tgt': clear_load['tgt'],
                 'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
-                'user': clear_load['user'],
                }
 
-        log.info('{0[user]} published command {0[fun]} with jid {0[jid]}'.format(load))
+        log.info(('User {0[user]} Published command {0[fun]} with jid'
+                  ' {0[jid]}').format(clear_load))
         log.debug('Published command details {0}'.format(load))
 
         if 'tgt_type' in clear_load:
