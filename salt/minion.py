@@ -159,7 +159,7 @@ class Minion(object):
         # from returning a predictable exception
         #if data['fun'] not in self.functions:
         #    return
-        log.info('{0[user]} executed command {0[fun]} with jid {0[jid]}'.format(data))
+        log.info('Executing command {0[fun]} with jid {0[jid]}'.format(data))
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -472,8 +472,8 @@ class Syndic(salt.client.LocalClient, Minion):
            or 'to' not in data or 'arg' not in data:
             return
         data['to'] = int(data['to']) - 1
-        log.info(('{0[user]} executed syndic command {0[fun]} with jid {0[jid]}'
-                 .format(data)))
+        log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
+            .format(data)))
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
@@ -608,6 +608,7 @@ class Matcher(object):
                'L': 'list',
                'E': 'pcre'}
         results = []
+        opers = ['and', 'or', 'not']
         for match in tgt.split():
             # Attach the boolean operator
             if match == 'and':
@@ -622,7 +623,7 @@ class Matcher(object):
             # If we are here then it is not a boolean operator, check if the
             # last member of the result list is a boolean, if no, append and
             if results:
-                if results[-1] != 'and' or results[-1] != 'or' or results[-1] != 'not':
+                if results[-1] not in opers:
                     results.append('and')
             if match[1] == '@':
                 comps = match.split('@')
