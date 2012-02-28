@@ -40,9 +40,9 @@ directory named ``webserver`` and moving and renaming ``webserver.sls`` to
 
 ::
 
-        |- top.sls
-        `- webserver/
-           `- init.sls
+    |- top.sls
+    `- webserver/
+       `- init.sls
 
 .. admonition:: Organizing SLS modules
 
@@ -65,7 +65,7 @@ installed and running. Include the following at the bottom of your
 
 .. code-block:: yaml
     :linenos:
-    :emphasize-lines: 6,11
+    :emphasize-lines: 7,11
 
     apache:
       pkg:
@@ -80,25 +80,25 @@ installed and running. Include the following at the bottom of your
         - require:                              # requisite declaration
           - pkg: apache                         # requisite reference
 
-Again in **line 1** is the :term:`ID declaration`. In this example it is the
+**line 7** is the :term:`ID declaration`. In this example it is the
 location we want to install our custom HTML file. (**Note:** the default
 location that Apache serves may differ from the above on your OS or distro.
 ``/srv/www`` could also be a likely place to look.)
 
-**Line 2** the :term:`state declaration`. This example uses the Salt :mod:`file
+**Line 8** the :term:`state declaration`. This example uses the Salt :mod:`file
 state <salt.states.file>`.
 
-**Line 3** is the :term:`function declaration`. The :func:`managed function
+**Line 9** is the :term:`function declaration`. The :func:`managed function
 <salt.states.file.managed>` will download a file from the master and install it
 in the location specified.
 
-**Line 4** is a :term:`function arg declaration` which, in this example, passes
+**Line 10** is a :term:`function arg declaration` which, in this example, passes
 the ``source`` argument to the :func:`managed function
-<salt.states.file.managed>`. 
+<salt.states.file.managed>`.
 
-**Line 5** is a :term:`requisite declaration`.
+**Line 11** is a :term:`requisite declaration`.
 
-**Line 6** is a :term:`requisite reference` which refers to a state and an ID.
+**Line 12** is a :term:`requisite reference` which refers to a state and an ID.
 In this example, it is referring to the ``ID declaration`` from our example in
 :doc:`part 1 <states_pt1>`. This declaration tells Salt not to install the HTML
 file until Apache is installed.
