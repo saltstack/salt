@@ -77,7 +77,8 @@ def refresh_db():
     return servers
 
 
-def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
+def install(pkg, refresh=False, repo='', skip_verify=False,
+            debconf=None, **kwargs):
     '''
     Install the passed package
 
@@ -90,6 +91,9 @@ def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
         (e.g., ``apt-get -t unstable install somepackage``)
     skip_verify : False
         Skip the GPG verification check (e.g., ``--allow-unauthenticated``)
+    debconf : None
+        Provide the path to a debconf answers file, processed before
+        installation.
 
     Return a dict containing the new package names and versions::
 
@@ -102,6 +106,9 @@ def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     if refresh:
         refresh_db()
+
+    if debconf:
+        __salt__['debconf.set_file'](debconf)
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
