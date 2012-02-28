@@ -836,7 +836,12 @@ class ClearFuncs(object):
                 'tgt': clear_load['tgt'],
                 'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
+                'user': clear_load['user'],
                }
+
+        log.info('{0[user]} published command {0[fun]} with jid {0[jid]}'.format(load))
+        log.debug('Published command details {0}'.format(load))
+
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
