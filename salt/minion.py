@@ -621,11 +621,14 @@ class Matcher(object):
                 results.append('not')
                 continue
             # If we are here then it is not a boolean operator, check if the
-            # last member of the result list is a boolean, if no, append and
+            # last member of the result list is a boolean, if no, append "and"
             if results:
+                # Results exist, check if we need to add an and because 2
+                # match statements are back to back
                 if results[-1] not in opers:
                     results.append('and')
-            if match[1] == '@':
+            if '@' in match and match[1] == '@':
+                # If the match is explicitly defined then evaluate the matcher
                 comps = match.split('@')
                 matcher = ref.get(comps[0])
                 if not matcher:
@@ -638,12 +641,8 @@ class Matcher(object):
                             )('@'.join(comps[1:]))
                         ))
             else:
-                results.append(
-                        str(getattr(
-                            self,
-                            '{0}_match'.format(matcher)
-                            )('@'.join(comps[1:]))
-                        ))
+                # The match is not explicitely defined, evaluate it as a glob
+                results.append(str(self.glob_match(match)))
 
         return eval(' '.join(results))
 
