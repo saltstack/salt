@@ -571,7 +571,29 @@ class Matcher(object):
 
     def grain_match(self, tgt):
         '''
-        Reads in the grains regular expression match
+        Reads in the grains glob match
+        '''
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            log.error('Got insufficient arguments for grains from master')
+            return False
+        if comps[0] not in self.opts['grains']:
+            log.error('Got unknown grain from master: {0}'.format(comps[0]))
+            return False
+        if isinstance(self.opts['grains'][comps[0]], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['grains'][comps[0]]:
+                if fnmatch.fnmatch(str(member), comps[1]):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            str(self.opts['grains'][comps[0]]),
+            comps[1],
+            ))
+
+    def grain_pcre_match(self, tgt):
+        '''
+        Matches a grain based on regex
         '''
         comps = tgt.split(':')
         if len(comps) < 2:
