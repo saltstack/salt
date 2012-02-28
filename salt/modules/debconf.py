@@ -72,6 +72,10 @@ def show(name):
     result = selections.get(name)
     return result
 
+def _set_file(path):
+    cmd = 'debconf-set-selections {0}'.format(path)
+
+    out = __salt__['cmd.run_stdout'](cmd)
 
 def set(package, question, type, value, *extra):
     '''
@@ -91,10 +95,26 @@ def set(package, question, type, value, *extra):
     os.write(fd, line)
     os.close(fd)
 
-    cmd = 'debconf-set-selections {0}'.format(fname)
-
-    out = __salt__['cmd.run_stdout'](cmd)
+    _set_file(fname)
 
     os.unlink(fname)
 
     return True
+
+def set_file(path):
+    '''
+    Set answers to debconf questions from a file.
+
+    CLI Example::
+
+        salt '*' debconf.set_file salt://pathto/pkg.selections
+    '''
+
+    r = False
+
+    path = __salt__['cp.cache_file'](path)
+    if path:
+        _set_file(path)
+        r = True
+
+    return r
