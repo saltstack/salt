@@ -384,7 +384,15 @@ class SaltCP(object):
                 action='store_true',
                 help=('Instead of using shell globs to evaluate the target '
                       'use a grain value to identify targets, the syntax '
-                      'for the target is the grains key followed by a pcre '
+                      'for the target is the grain key followed by a glob'
+                      'expression:\n"os:Arch*"'))
+        parser.add_option('--grain-pcre',
+                default=False,
+                dest='grain_pcre',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use a grain value to identify targets, the syntax '
+                      'for the target is the grain key followed by a pcre '
                       'regular expression:\n"os:Arch.*"'))
         parser.add_option('-N',
                 '--nodegroup',
@@ -410,6 +418,7 @@ class SaltCP(object):
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
+        opts['grain_pcre'] = options.grain_pcre
         opts['nodegroup'] = options.nodegroup
         opts['conf_file'] = options.conf_file
 
