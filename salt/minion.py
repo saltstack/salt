@@ -610,21 +610,8 @@ class Matcher(object):
         results = []
         opers = ['and', 'or', 'not']
         for match in tgt.split():
-            # Attach the boolean operator
-            if match == 'and':
-                results.append('and')
-                continue
-            elif match == 'or':
-                results.append('or')
-                continue
-            elif match == 'not':
-                results.append('not')
-                continue
-            # If we are here then it is not a boolean operator, check if the
-            # last member of the result list is a boolean, if no, append and
-            if results:
-                if results[-1] not in opers:
-                    results.append('and')
+            # Try to match tokens from the compound target, first by using
+            # the 'G, X, L, E' matcher types, then by hostname glob.
             if match[1] == '@':
                 comps = match.split('@')
                 matcher = ref.get(comps[0])
@@ -637,14 +624,12 @@ class Matcher(object):
                             '{0}_match'.format(matcher)
                             )('@'.join(comps[1:]))
                         ))
+            elif match in opers:
+                # We didn't match a target, so append a boolean operator
+                results.append(match)
             else:
-                results.append(
-                        str(getattr(
-                            self,
-                            '{0}_match'.format(matcher)
-                            )('@'.join(comps[1:]))
-                        ))
-
+                # Try to match by glob
+                results.append(str(self.glob_match(match)))
         return eval(' '.join(results))
 
     def nodegroup_match(self, tgt, nodegroups):
