@@ -406,6 +406,7 @@ class LocalClient(object):
                 'pcre': self._check_pcre_minions,
                 'list': self._check_list_minions,
                 'grain': self._check_grain_minions,
+                'grain_pcre': self._check_grain_minions,
                 'exsel': self._check_grain_minions,
                 'compound': self._check_grain_minions,
                 }[expr_form](expr)
