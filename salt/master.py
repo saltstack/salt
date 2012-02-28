@@ -849,14 +849,15 @@ class ClearFuncs(object):
                 'ret': clear_load['ret'],
                }
 
-        log.info(('User {0[user]} Published command {0[fun]} with jid'
-                  ' {0[jid]}').format(clear_load))
-        log.debug('Published command details {0}'.format(load))
-
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
             load['to'] = clear_load['to']
+
+        log.info(('User {0[user]} Published command {0[fun]} with jid'
+                  ' {0[jid]}').format(clear_load))
+        log.debug('Published command details {0}'.format(load))
+
         payload['load'] = self.crypticle.dumps(load)
         # Send 0MQ to the publisher
         context = zmq.Context(1)
