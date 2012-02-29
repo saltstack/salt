@@ -74,6 +74,8 @@ class SaltCP(object):
             args.append('list')
         elif self.opts['grain']:
             args.append('grain')
+        elif self.opts['grain_pcre']:
+            args.append('grain_pcre')
         elif self.opts['nodegroup']:
             args.append('nodegroup')
 

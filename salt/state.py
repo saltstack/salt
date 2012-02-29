@@ -111,8 +111,8 @@ class State(object):
 
     def _mod_init(self, low):
         '''
-        Check the module initilization function, if this is the first run of
-        a state package that has a mod_init function, then execute the
+        Check the module initialization function, if this is the first run
+        of a state package that has a mod_init function, then execute the
         mod_init function in the state module.
         '''
         minit = '{0}.mod_init'.format(low['state'])
@@ -155,9 +155,9 @@ class State(object):
         '''
         Check to see if the modules for this state instance need to be
         updated, only update if the state is a file. If the function is
-        managed check to see if the file is a possible module type, eg a
-        python, pyx, or .so. Always refresh if the function is recuse, since
-        that can lay down anything.
+        managed check to see if the file is a possible module type, e.g. a
+        python, pyx, or .so. Always refresh if the function is recuse,
+        since that can lay down anything.
         '''
         if data['state'] == 'file':
             if data['fun'] == 'managed':
@@ -187,8 +187,8 @@ class State(object):
 
     def format_verbosity(self, returns):
         '''
-        Check for the state_verbose option and strip out the result=True and
-        changes={} members of the state return list.
+        Check for the state_verbose option and strip out the result=True
+        and changes={} members of the state return list.
         '''
         if self.opts['state_verbose']:
             return returns
@@ -405,6 +405,14 @@ class State(object):
             arglen = len(aspec[0])
         if isinstance(aspec[3], tuple):
             deflen = len(aspec[3])
+        if aspec[2]:
+            # This state accepts kwargs
+            ret['kwargs'] = {}
+            for key in data:
+                # Passing kwargs the conflict with args == stack trace
+                if key in aspec[0]:
+                    continue
+                ret['kwargs'][key] = data[key]
         kwargs = {}
         for ind in range(arglen - 1, 0, -1):
             minus = arglen - ind
@@ -540,8 +548,8 @@ class State(object):
 
     def compile_template(self, template, env='', sls=''):
         '''
-        Take the path to a template and return the high data structure derived
-        from the template.
+        Take the path to a template and return the high data structure
+        derived from the template.
         '''
         if not isinstance(template, basestring):
             return {}
@@ -551,8 +559,8 @@ class State(object):
 
     def compile_template_str(self, template):
         '''
-        Take the path to a template and return the high data structure derived
-        from the template.
+        Take the path to a template and return the high data structure
+        derived from the template.
         '''
         fn_ = tempfile.mkstemp()[1]
         open(fn_, 'w+').write(template)
@@ -562,8 +570,8 @@ class State(object):
 
     def call(self, data):
         '''
-        Call a state directly with the low data structure, verify data before
-        processing.
+        Call a state directly with the low data structure, verify data
+        before processing.
         '''
         log.info(
                 'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
@@ -573,7 +581,10 @@ class State(object):
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
-        ret = self.states[cdata['full']](*cdata['args'])
+        if 'kwargs' in cdata:
+            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
+        else:
+            ret = self.states[cdata['full']](*cdata['args'])
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
@@ -610,7 +621,8 @@ class State(object):
 
     def check_requisite(self, low, running, chunks):
         '''
-        Look into the running data to check the status of all requisite states
+        Look into the running data to check the status of all requisite
+        states
         '''
         present = False
         if 'watch' in low:
@@ -660,8 +672,8 @@ class State(object):
 
     def call_chunk(self, low, running, chunks):
         '''
-        Check if a chunk has any requires, execute the requires and then the
-        chunk
+        Check if a chunk has any requires, execute the requires and then
+        the chunk
         '''
         self._mod_init(low)
         tag = _gen_tag(low)
@@ -773,9 +785,9 @@ class State(object):
 
 class HighState(object):
     '''
-    Generate and execute the salt "High State". The High State is the compound
-    state derived from a group of template files stored on the salt master or
-    in the local cache.
+    Generate and execute the salt "High State". The High State is the
+    compound state derived from a group of template files stored on the
+    salt master or in the local cache.
     '''
     def __init__(self, opts):
         self.client = salt.minion.FileClient(opts)
@@ -785,9 +797,9 @@ class HighState(object):
 
     def __gen_opts(self, opts):
         '''
-        The options used by the High State object are derived from options on
-        the minion and the master, or just the minion if the high state call is
-        entirely local.
+        The options used by the High State object are derived from options
+        on the minion and the master, or just the minion if the high state
+        call is entirely local.
         '''
         # If the state is intended to be applied locally, then the local opts
         # should have all of the needed data, otherwise overwrite the local
@@ -919,8 +931,8 @@ class HighState(object):
 
     def top_matches(self, top):
         '''
-        Search through the top high data for matches and return the states that
-        this minion needs to execute.
+        Search through the top high data for matches and return the states
+        that this minion needs to execute.
 
         Returns:
         {'env': ['state1', 'state2', ...]}
@@ -982,7 +994,7 @@ class HighState(object):
         errors = []
         fn_ = self.client.get_state(sls, env)
         if not fn_:
-            errors.append(('Specifed SLS {0} in environment {1} is not'
+            errors.append(('Specified SLS {0} in environment {1} is not'
                            ' available on the salt master').format(sls, env))
         state = None
         try:
@@ -1045,8 +1057,8 @@ class HighState(object):
 
     def render_highstate(self, matches):
         '''
-        Gather the state files and render them into a single unified salt high
-        data structure.
+        Gather the state files and render them into a single unified salt
+        high data structure.
         '''
         highstate = {}
         errors = []
@@ -1110,8 +1122,8 @@ class HighState(object):
 
     def compile_low_chunks(self):
         '''
-        Compile the highstate but don't run it, return the low chunks to see
-        exactly what the highstate will execute
+        Compile the highstate but don't run it, return the low chunks to
+        see exactly what the highstate will execute
         '''
         err = []
         top = self.get_top()

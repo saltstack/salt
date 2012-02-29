@@ -33,9 +33,9 @@ Configuration
 In the sections below I'll outline configuration options for both the Salt
 Master and Salt Minions.
 
-The Salt port installs two sample configuration files, salt/master.sample and
-salt/minion.sample (these should be installed in /usr/local/etc/, unless you use a
-different %%PREFIX%%). You'll need to copy these .sample files into place and
+The Salt port installs two sample configuration files, ``salt/master.sample`` and
+``salt/minion.sample`` (these should be installed in ``/usr/local/etc/``, unless you use a
+different ``%%PREFIX%%``). You'll need to copy these .sample files into place and
 make a few edits. First, copy them into place as seen here::
 
    cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
@@ -59,7 +59,9 @@ configuration paths.
 
 By default the Salt master listens on ports 4505 and 4506 on all interfaces
 (0.0.0.0). If you have a need to bind Salt to a specific IP, redefine the
-"interface" directive as seen here::
+"interface" directive as seen here.
+
+.. code-block:: diff
 
    - #interface: 0.0.0.0
    + interface: 10.0.0.1
@@ -68,7 +70,9 @@ By default the Salt master listens on ports 4505 and 4506 on all interfaces
 
 Last but not least you'll need to activate the Salt Master in your rc.conf
 file. Using your favorite editor, open /etc/rc.conf or /etc/rc.conf.local and
-add this line::
+add this line.
+
+.. code-block:: diff
 
    + salt_master_enable="YES"
 
@@ -98,7 +102,9 @@ this you likely can do without any minion configuration at all.
 
 If you are not able to update DNS, you'll simply need to update one entry in
 the configuration file. Using your favorite editor, open the minion
-configuration file and update the "master" entry as seen here::
+configuration file and update the "master" entry as seen here.
+
+.. code-block:: diff
 
    - #master: salt
    + master: 10.0.0.1
@@ -111,14 +117,16 @@ configuration options are covered in another chapter.
 
 Before you're able to start the Salt Minion you'll need to update your rc.conf
 file. Using your favorite editor open /etc/rc.conf or /etc/rc.conf.local and
-add this line::
+add this line.
+
+.. code-block:: diff
 
    + salt_minion_enable="YES"
 
 Once you've completed all of these steps you're ready to start your Salt
 Minion. The Salt port installs an rc script which should be used to manage your
 Salt Minion. You should be able to start your Salt Minion now using the command
-seen here::
+seen here. ::
 
    service salt_minion start
 
@@ -149,10 +157,10 @@ list the keys known to the Salt Master::
 
    [root@master ~]# salt-key -L
    Unaccepted Keys:
-   avon
-   bodie
-   bubbles
-   marlo
+   alpha
+   bravo
+   charlie
+   delta
    Accepted Keys:
 
 This example shows that the Salt Master is aware of four Minions, but none of
@@ -163,10 +171,10 @@ controlled by the Master, again use the ``salt-key`` command::
    [root@master ~]# salt-key -L
    Unaccepted Keys:
    Accepted Keys:
-   avon
-   bodie
-   bubbles
-   marlo
+   alpha
+   bravo
+   charlie
+   delta
 
 The ``salt-key`` command allows for signing keys individually or in bulk. The
 example above, using ``-A`` bulk-accepts all pending keys. To accept keys
@@ -181,10 +189,10 @@ Whether you have a few or a few-dozen, Salt can help you manage them easily!
 For final verification, send a test function from your Salt Master to your
 minions. If all of your minions are properly communicating with your Master,
 you should "True" responses from each of them. See the example below to send
-the ``test.ping`` remote command::
+the ``test.ping`` remote command. ::
 
-   [root@master ~]# salt '*' test.ping
-   {'avon': True}
+   [root@master ~]# salt 'alpha' test.ping
+   {'alpha': True}
 
 Where Do I Go From Here
 ========================

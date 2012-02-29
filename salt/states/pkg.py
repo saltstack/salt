@@ -26,7 +26,7 @@ def __gen_rtag():
     return os.path.join(__opts__['cachedir'], 'pkg_refresh')
 
 
-def installed(name, version=None, refresh=False, repo='', skip_verify=False):
+def installed(name, version=None, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Verify that the package is installed, and only that it is installed. This
     state will not upgrade an existing package and only verify that it is
@@ -66,14 +66,16 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False):
                           True,
                           version=version,
                           repo=repo,
-                          skip_verify=skip_verify)
+                          skip_verify=skip_verify,
+                          **kwargs)
         if os.path.isfile(rtag):
             os.remove(rtag)
     else:
         changes = __salt__['pkg.install'](name,
                           version=version,
                           repo=repo,
-                          skip_verify=skip_verify)
+                          skip_verify=skip_verify,
+                          **kwargs)
     if not changes:
         return {'name': name,
                 'changes': changes,
@@ -85,7 +87,7 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False):
             'comment': 'Package {0} installed'.format(name)}
 
 
-def latest(name, refresh=False, repo='', skip_verify=False):
+def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Verify that the named package is installed and the latest available
     package. If the package can be updated this state function will update
@@ -126,14 +128,16 @@ def latest(name, refresh=False, repo='', skip_verify=False):
             ret['changes'] = __salt__['pkg.install'](name,
                              True,
                              repo=repo,
-                             skip_verify=skip_verify)
+                             skip_verify=skip_verify,
+                             **kwargs)
             if os.path.isfile(rtag):
                 os.remove(rtag)
 
         else:
             ret['changes'] = __salt__['pkg.install'](name,
                              repo=repo,
-                             skip_verify=skip_verify)
+                             skip_verify=skip_verify,
+                             **kwargs)
 
         if ret['changes']:
             ret['comment'] = 'Package {0} upgraded to latest'.format(name)

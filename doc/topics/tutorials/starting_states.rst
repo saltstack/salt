@@ -19,7 +19,7 @@ is just a data structure under the hood. While understanding that the SLS is
 just a data structure is not at all critical to understand to make use Salt States,
 it should help bolster the understanding of where the real power is.
 
-SLS files are therefore, in reality, just dictionaries, lists strings and
+SLS files are therefore, in reality, just dictionaries, lists, strings and
 numbers. By using this approach Salt can be much more flexible, and as someone
 writes more SLS files it becomes clear exactly what is being written. The result
 is a system that is easy to understand, yet grows with the needs of the admin
@@ -38,6 +38,7 @@ serialization formats available - YAML.
 A typical, small SLS file will often look like this in YAML:
 
 .. code-block:: yaml
+   :linenos:
 
     apache:
       pkg:
@@ -74,6 +75,7 @@ need to be added. The apache configuration file will most likely be managed,
 and a user and group may need to be set up.
 
 .. code-block:: yaml
+   :linenos:
 
     apache:
       pkg:
@@ -138,10 +140,10 @@ The SLS files are laid out in a directory on the salt master. Files are laid
 out as just files, an sls is just a file and files to download are just files.
 
 The apache example would be laid out in the root of the salt file server like
-this:
+this: ::
 
-/apache/init.sls
-/apache/httpd.conf
+    /apache/init.sls
+    /apache/httpd.conf
 
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
@@ -149,14 +151,15 @@ directly.
 But with more than a single SLS file, more components can be added to the
 toolkit, consider this ssh example:
 
-``/ssh/init.sls``
+``/ssh/init.sls:``
 
 .. code-block:: yaml
-    
+   :linenos:
+
     openssh-client:
       pkg:
         - installed
-    
+
     /etc/ssh/ssh_config
       file:
         - managed
@@ -167,9 +170,10 @@ toolkit, consider this ssh example:
         - require:
           - pkg: openssh-client
 
-``/ssh/server.sls``
+``ssh/server.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - ssh
@@ -206,15 +210,15 @@ toolkit, consider this ssh example:
         - require:
           - pkg: openssh-server
 
-Now our State Tree looks like this:
+Now our State Tree looks like this: ::
 
-/apache/init.sls
-/apache/httpd.conf
-/ssh/init.sls
-/ssh/server.sls
-/ssh/banner
-/ssh/ssh_config
-/ssh/sshd_config
+    /apache/init.sls
+    /apache/httpd.conf
+    /ssh/init.sls
+    /ssh/server.sls
+    /ssh/banner
+    /ssh/ssh_config
+    /ssh/sshd_config
 
 This example now introduces the ``include`` statement. The include statement
 includes another SLS file so that components found in it can be required,
@@ -233,9 +237,10 @@ needs to be placed.
 
 These examples will add more watchers to apache and change the ssh banner.
 
-``/ssh/custom-server.sls``
+``/ssh/custom-server.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - ssh.server
@@ -245,9 +250,10 @@ These examples will add more watchers to apache and change the ssh banner.
         file:
           - source: salt://ssh/custom-banner
 
-``/python/mod_python.sls``
+``/python/mod_python.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - apache
@@ -281,7 +287,7 @@ with YAML. Salt defaults to YAML because it is very straightforward and easy
 to learn and use. But the SLS files can be rendered from almost any imaginable
 medium, so long as a renderer module is provided.
 
-The default rendering system is the ``yaml_jinja`` renderer. The 
+The default rendering system is the ``yaml_jinja`` renderer. The
 ``yaml_jinja`` renderer will first pass the template through the jinja
 templating system, and then through the YAML parser. The benefit here is that
 full programming constructs are available when creating SLS files.
@@ -305,9 +311,10 @@ available, ``salt`` and ``grains``. The salt object allows for any salt
 function to be called from within the template, and grains allows for the
 grains to be accessed from within the template. A few examples are in order:
 
-``/apache/init.sls``
+``/apache/init.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     apache:
       pkg:
@@ -352,9 +359,10 @@ Red Hat, then the name of the apache package and service needs to be httpd.
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
 
-``/moosefs/chunk.sls``
+``/moosefs/chunk.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - moosefs
@@ -427,9 +435,10 @@ but a SLS file set to use another renderer can be easily added to the tree.
 
 This example shows a very basic python SLS file:
 
-``/python/django.sls``
+``/python/django.sls:``
 
 .. code-block:: python
+   :linenos:
 
     #!py
 
@@ -449,6 +458,7 @@ must be a Salt friendly data structure, or better known as a Salt
 This python example would look like this if it were written in YAML:
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - python
