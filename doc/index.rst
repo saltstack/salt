@@ -16,7 +16,7 @@ Get started with Salt
 Salt is a **remote execution** and **configuration management** tool.
 
 Salt is designed to be secure using **AES encryption** and **public-key
-authentication**; incredibly scaleable using an advanced **ZeroMQ** topology;
+authentication**; incredibly scalable using an advanced **ZeroMQ** topology;
 fast and efficient using **msgpack**; and extensible using small and simple
 **Python** modules.
 
