@@ -191,7 +191,7 @@ def rehash():
 
     CLI Example::
 
-        salt '*' cmd.run 'rehash'
+        salt '*' pkg.rehash
     '''
     shell =  __salt__['cmd.run']('echo $SHELL').split('/')
     if shell[len(shell)-1] in ["csh","tcsh"]:
