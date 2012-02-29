@@ -173,9 +173,9 @@ def runner(opts):
 
 class Loader(object):
     '''
-    Used to load in arbitrary modules from a directory, the Loader can also be
-    used to only load specific functions from a directory, or to call modules
-    in an arbitrary directory directly.
+    Used to load in arbitrary modules from a directory, the Loader can
+    also be used to only load specific functions from a directory, or to
+    call modules in an arbitrary directory directly.
     '''
     def __init__(self, module_dirs, opts=dict(), tag='module'):
         self.module_dirs = module_dirs
@@ -470,8 +470,8 @@ class Loader(object):
 
     def chop_mods(self):
         '''
-        Chop off the module names so that the raw functions are exposed, used
-        to generate the grains
+        Chop off the module names so that the raw functions are exposed,
+        used to generate the grains
         '''
         funcs = {}
         for key, fun in self.gen_functions().items():
@@ -481,8 +481,8 @@ class Loader(object):
     def gen_grains(self):
         '''
         Read the grains directory and execute all of the public callable
-        members. Then verify that the returns are python dict's and return a
-        dict containing all of the returned values.
+        members. Then verify that the returns are python dict's and return
+        a dict containing all of the returned values.
         '''
         grains = {}
         funcs = self.gen_functions()

@@ -28,8 +28,8 @@ class CommandNotFoundError(SaltException):
 
 class CommandExecutionError(SaltException):
     '''
-    Used when a module runs a command which returns an error  and
-    wants to show the user the output gracefully instead of dying
+    Used when a module runs a command which returns an error and wants
+    to show the user the output gracefully instead of dying
     '''
     pass
 
@@ -47,14 +47,14 @@ class MinionError(SaltException):
 
 class SaltInvocationError(SaltException):
     '''
-    Used when the wrong number of arguments are sent to modules
-    or invalid arguments are  specified  on  the  command  line
+    Used when the wrong number of arguments are sent to modules or invalid
+    arguments are specified on the command line
     '''
     pass
 
 class PkgParseError(SaltException):
     '''
-    Used when of the pkg modules cannot correctly parse the output from the CLI
-    tool (pacman, yum, apt, aptitude, etc)
+    Used when of the pkg modules cannot correctly parse the output from
+    the CLI tool (pacman, yum, apt, aptitude, etc)
     '''
     pass

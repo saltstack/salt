@@ -95,8 +95,8 @@ class MasterKeys(dict):
 
 class Auth(object):
     '''
-    The Auth class provides the sequence for setting up communication with the
-    master server from a minion.
+    The Auth class provides the sequence for setting up communication with
+    the master server from a minion.
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -124,9 +124,9 @@ class Auth(object):
 
     def minion_sign_in_payload(self):
         '''
-        Generates the payload used to authenticate with the master server. This
-        payload consists of the passed in id_ and the ssh public key to encrypt
-        the AES key sent back form the master.
+        Generates the payload used to authenticate with the master
+        server. This payload consists of the passed in id_ and the ssh
+        public key to encrypt the AES key sent back form the master.
         '''
         payload = {}
         key = self.get_priv_key()
@@ -142,8 +142,10 @@ class Auth(object):
 
     def decrypt_aes(self, aes):
         '''
-        This function is used to decrypt the aes seed phrase returned from the
-        master server, the seed phrase is decrypted with the ssh rsa host key.
+        This function is used to decrypt the aes seed phrase returned from
+        the master server, the seed phrase is decrypted with the ssh rsa
+        host key.
+
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
@@ -155,10 +157,11 @@ class Auth(object):
         '''
         Takes the master pubkey and compares it to the saved master pubkey,
         the token is encrypted with the master private key and must be
-        decrypted successfully to verify that the master has been connected to.
-        The token must decrypt with the public key, and it must say:
+        decrypted successfully to verify that the master has been connected
+        to.  The token must decrypt with the public key, and it must say:
         'salty bacon'
-        returns a bool
+
+        Returns a bool
         '''
         tmp_pub = tempfile.mktemp()
         open(tmp_pub, 'w+').write(master_pub)
@@ -304,8 +307,8 @@ class Crypticle(object):
 
 class SAuth(Auth):
     '''
-    Set up an object to maintain the standalone authentication session with
-    the salt master
+    Set up an object to maintain the standalone authentication session
+    with the salt master
     '''
     def __init__(self, opts):
         super(SAuth, self).__init__(opts)
@@ -314,20 +317,20 @@ class SAuth(Auth):
     def __authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        paradigm, it will update the master information from a fresh sign in,
-        signing in can occur as often as needed to keep up with the revolving
-        master aes key.
+        paradigm, it will update the master information from a fresh sign
+        in, signing in can occur as often as needed to keep up with the
+        revolving master aes key.
         '''
         creds = self.sign_in()
         if creds == 'retry':
-            log.error('Failed to authenticate with the master, verify that this'\
+            log.error('Failed to authenticate with the master, verify this'\
                 + ' minion\'s public key has been accepted on the salt master')
             sys.exit(2)
         return Crypticle(self.opts, creds['aes'])
 
     def gen_token(self, clear_tok):
         '''
-        Encrypt a string with the minion private key to verify identity with
-        the master.
+        Encrypt a string with the minion private key to verify identity
+        with the master.
         '''
         return self.get_priv_key().private_encrypt(clear_tok, 5)
