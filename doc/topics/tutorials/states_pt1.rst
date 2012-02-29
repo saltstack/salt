@@ -28,6 +28,11 @@ uncomment the following lines:
       base:
         - /srv/salt
 
+.. note::
+
+    If you are deploying on FreeBSD via ports, the ``file_roots`` path defaults
+    to ``/usr/local/etc/salt/states``.
+
 Restart the Salt master in order to pick up this change:
 
 .. code-block:: bash
