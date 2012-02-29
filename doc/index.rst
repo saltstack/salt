@@ -60,7 +60,7 @@ truly make it work for you.
 .. sidebar:: More tutorials!
 
     * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
-    * :doc:`Installing Salt on FreeBSD <topics/tutorials/freebsd>`
+    * :doc:`Installing Salt on FreeBSD <topics/installation/freebsd>`
 
 .. contents:: The components of Salt
     :local:
