@@ -96,6 +96,11 @@ class LocalClient(object):
             for evar in env_vars:
                 if evar in os.environ:
                     return os.environ[evar]
+            return None
+        # If the running user is just the specified user in the
+        # conf file, don't pass the user as it's implied.
+        elif user == self.opts['user']:
+          return None
         return user
 
     def _check_glob_minions(self, expr):
@@ -456,31 +461,27 @@ class LocalClient(object):
         if not minions:
             return {'jid': '',
                     'minions': minions}
+
+        # Generate the standard keyword args to feed to format_payload
+        payload_kwargs = { 'cmd': 'publish',
+                           'tgt': tgt,
+                           'fun': fun,
+                           'arg': arg,
+                           'key': self.key,
+                           'tgt_type': expr_form,
+                           'ret': ret,
+                           'jid': jid }
+
+        # If we have a salt user, add it to the payload
+        if self.salt_user:
+            payload_kwargs['user'] = self.salt_user
+
+        # If we're a syndication master, pass the timeout
         if self.opts['order_masters']:
-            package = salt.payload.format_payload(
-                    'clear',
-                    cmd='publish',
-                    tgt=tgt,
-                    fun=fun,
-                    arg=arg,
-                    key=self.key,
-                    tgt_type=expr_form,
-                    ret=ret,
-                    jid=jid,
-                    user=self.salt_user,
-                    to=timeout)
-        else:
-            package = salt.payload.format_payload(
-                    'clear',
-                    cmd='publish',
-                    tgt=tgt,
-                    fun=fun,
-                    arg=arg,
-                    key=self.key,
-                    tgt_type=expr_form,
-                    jid=jid,
-                    user=self.salt_user,
-                    ret=ret)
+            payload_kwargs['to'] = timeout
+
+        package = salt.payload.format_payload( 'clear', **payload_kwargs)
+
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
