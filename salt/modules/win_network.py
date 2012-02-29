@@ -15,13 +15,12 @@ __outputter__ = {
 
 def __virtual__():
     '''
-    Only work on posix-like systems
+    Only works on Windows systems
     '''
-
-    # Disable on Windows, a specific file module exists:
     if __grains__['os'] == 'Windows':
-        return False
-    return 'network'
+        return 'network'
+    return False
+
 
 
 def _sanitize_host(host):
@@ -41,11 +40,10 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -c 4 %s' % _sanitize_host(host)
+    cmd = 'ping -n 4 %s' % _sanitize_host(host)
     return __salt__['cmd.run'](cmd)
 
 
-# FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools 1.6.0 (Ubuntu 10.10)
 def netstat():
     '''
     Return information on open ports and states
@@ -55,36 +53,25 @@ def netstat():
         salt '*' network.netstat
     '''
     ret = []
-    cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd)
-    for line in out:
+    cmd = 'netstat -na'
+    lines = __salt__['cmd.run'](cmd).split('\n')
+    for line in lines:
         comps = line.split()
-        if line.startswith('tcp'):
+        if line.startswith('  TCP'):
             ret.append({
-                'inode': comps[7],
-                'local-address': comps[3],
-                'program': comps[8],
+                'local-address': comps[1],
                 'proto': comps[0],
-                'recv-q': comps[1],
-                'remote-address': comps[4],
-                'send-q': comps[2],
-                'state': comps[5],
-                'user': comps[6]})
-        if line.startswith('udp'):
+                'remote-address': comps[2],
+                'state': comps[3]})
+        if line.startswith('  UDP'):
             ret.append({
-                'inode': comps[6],
-                'local-address': comps[3],
-                'program': comps[7],
+                'local-address': comps[1],
                 'proto': comps[0],
-                'recv-q': comps[1],
-                'remote-address': comps[4],
-                'send-q': comps[2],
-                'user': comps[5]})
+                'remote-address': comps[2],
+                'state': None})
     return ret
 
 
-# FIXME: This is broken on: Modern traceroute for Linux, version 2.0.14, May 10 2010 (Ubuntu 10.10)
-# FIXME: traceroute is deprecated, make this fall back to tracepath
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
@@ -94,26 +81,44 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'traceroute %s' % _sanitize_host(host)
-    out = __salt__['cmd.run'](cmd)
-
-    for line in out:
+    cmd = 'tracert %s' % _sanitize_host(host)
+    lines = __salt__['cmd.run'](cmd).split('\n')
+    for line in lines:
         if not ' ' in line:
             continue
-        if line.startswith('traceroute'):
+        if line.startswith('Trac'):
+            continue
+        if line.startswith('over'):
             continue
         comps = line.split()
-        result = {
-            'count': comps[0],
-            'hostname': comps[1],
-            'ip': comps[2],
-            'ms1': comps[4],
-            'ms2': comps[6],
-            'ms3': comps[8],
-            'ping1': comps[3],
-            'ping2': comps[5],
-            'ping3': comps[7]}
-        ret.append(result)
+        complength = len(comps)
+        if complength == 9:
+            result = {
+                'count': comps[0],
+                'hostname': comps[7],
+                'ip': comps[8],
+                'ms1': comps[1],
+                'ms2': comps[3],
+                'ms3': comps[5]}
+            ret.append(result)
+        elif complength == 8:
+            result = {
+                'count': comps[0],
+                'hostname': None,
+                'ip': comps[7],
+                'ms1': comps[1],
+                'ms2': comps[3],
+                'ms3': comps[5]}
+            ret.append(result)
+        else:
+            result = {
+                'count': comps[0],
+                'hostname': None,
+                'ip': None,
+                'ms1': None, 
+                'ms2': None,
+                'ms3': None}
+            ret.append(result)
     return ret
 
 
