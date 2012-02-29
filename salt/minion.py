@@ -61,9 +61,9 @@ def get_proc_dir(cachedir):
 class SMinion(object):
     '''
     Create an object that has loaded all of the minion module functions,
-    grains, modules, returners etc.
-    The SMinion allows developers to generate all of the salt minion functions
-    and present them with these functions for general use.
+    grains, modules, returners etc.  The SMinion allows developers to
+    generate all of the salt minion functions and present them with these
+    functions for general use.
     '''
     def __init__(self, opts):
         # Generate all of the minion side components
@@ -83,8 +83,8 @@ class SMinion(object):
 
 class Minion(object):
     '''
-    This class instantiates a minion, runs connections for a minion, and loads
-    all of the functions into the minion
+    This class instantiates a minion, runs connections for a minion,
+    and loads all of the functions into the minion
     '''
     def __init__(self, opts):
         '''
@@ -115,7 +115,8 @@ class Minion(object):
 
     def __load_modules(self):
         '''
-        Return the functions and the returners loaded up from the loader module
+        Return the functions and the returners loaded up from the loader
+        module
         '''
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
@@ -177,8 +178,8 @@ class Minion(object):
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded
-        data differently.
+        Override this method if you wish to handle the decoded data
+        differently.
         '''
         if isinstance(data['fun'], basestring):
             if data['fun'] == 'sys.reload_modules':
@@ -372,9 +373,9 @@ class Minion(object):
     def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        paradigm, it will update the master information from a fresh sign in,
-        signing in can occur as often as needed to keep up with the revolving
-        master aes key.
+        paradigm, it will update the master information from a fresh sign
+        in, signing in can occur as often as needed to keep up with the
+        revolving master aes key.
         '''
         log.debug('Attempting to authenticate with the Salt Master')
         auth = salt.crypt.Auth(self.opts)
@@ -447,8 +448,8 @@ class Minion(object):
 
 class Syndic(salt.client.LocalClient, Minion):
     '''
-    Make a Syndic minion, this minion will use the minion keys on the master to
-    authenticate with a higher level master.
+    Make a Syndic minion, this minion will use the minion keys on the
+    master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
         self._syndic = True
@@ -479,8 +480,8 @@ class Syndic(salt.client.LocalClient, Minion):
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle
-        the decoded data differently.
+        Override this method if you wish to handle the decoded data
+        differently.
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
@@ -650,13 +651,13 @@ class Matcher(object):
                 # We didn't match a target, so append a boolean operator
                 results.append(match)
             else:
-                # The match is not explicitely defined, evaluate it as a glob
+                # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
         return eval(' '.join(results))
 
     def nodegroup_match(self, tgt, nodegroups):
         '''
-        This is a compatability matcher and is NOT called when using
+        This is a compatibility matcher and is NOT called when using
         nodegroups for remote execution, but is called when the nodegroups
         matcher is used in states
         '''
@@ -778,7 +779,7 @@ class FileClient(object):
         ret = []
         # Strip trailing slash
         path = string.rstrip(self._check_proto(path), '/')
-        # Break up the path into a list conaining the bottom-level directory
+        # Break up the path into a list containing the bottom-level directory
         # (the one being recursively copied) and the directories preceding it
         separated = string.rsplit(path,'/',1)
         if len(separated) != 2:
@@ -850,15 +851,15 @@ class FileClient(object):
 
     def cache_file(self, path, env='base'):
         '''
-        Pull a file down from the file server and store it in the minion file
-        cache
+        Pull a file down from the file server and store it in the minion
+        file cache
         '''
         return self.get_url(path, '', True, env)
 
     def cache_files(self, paths, env='base'):
         '''
-        Download a list of files stored on the master and put them
-        in the minion file cache
+        Download a list of files stored on the master and put them in the
+        minion file cache
         '''
         ret = []
         for path in paths:
@@ -953,8 +954,8 @@ class FileClient(object):
 
     def hash_file(self, path, env='base'):
         '''
-        Return the hash of a file, to get the hash of a file on the
-        salt master file server prepend the path with salt://<file on server>
+        Return the hash of a file, to get the hash of a file on the salt
+        master file server prepend the path with salt://<file on server>
         otherwise, prepend the file with / for a local file.
         '''
         try:
@@ -991,8 +992,8 @@ class FileClient(object):
 
     def get_state(self, sls, env):
         '''
-        Get a state file from the master and store it in the local minion cache
-        return the location of the file
+        Get a state file from the master and store it in the local minion
+        cache return the location of the file
         '''
         if '.' in sls:
             sls = sls.replace('.', '/')

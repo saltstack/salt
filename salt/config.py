@@ -163,8 +163,9 @@ def minion_config(path):
     opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
                        + str(opts['master_port'])
 
-    # Enabling open mode requires that the value be set to True, and nothing
-    # else!
+    # Enabling open mode requires that the value be set to True, and
+    # nothing else!
+
     opts['open_mode'] = opts['open_mode'] is True
 
     # set up the extension_modules location from the cachedir
@@ -225,8 +226,8 @@ def master_config(path):
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir'])
 
-    # Enabling open mode requires that the value be set to True, and nothing
-    # else!
+    # Enabling open mode requires that the value be set to True, and
+    # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
