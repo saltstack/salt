@@ -3,11 +3,11 @@ FreeBSD
 =======
 
 Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 8.2 and 9.0
+<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2 and 9.0
 releases.
 
 Salt is dependent on the following additional ports. These will be installed as
-dependencies of the ``sysutils/salt`` port::
+dependencies of the ``sysutils/salt`` port. ::
 
    /devel/py-yaml
    /devel/py-pyzmq
@@ -19,7 +19,9 @@ dependencies of the ``sysutils/salt`` port::
 Installation
 ============
 
-To install Salt from the FreeBSD ports tree, use the command::
+To install Salt from the FreeBSD ports tree, use the command:
+
+.. code-block:: bash
 
    cd /usr/ports/sysutils/salt && make install clean
 
@@ -36,7 +38,9 @@ Master and Salt Minions.
 The Salt port installs two sample configuration files, ``salt/master.sample`` and
 ``salt/minion.sample`` (these should be installed in ``/usr/local/etc/``, unless you use a
 different ``%%PREFIX%%``). You'll need to copy these .sample files into place and
-make a few edits. First, copy them into place as seen here::
+make a few edits. First, copy them into place as seen here:
+
+.. code-block:: bash
 
    cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
    cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
@@ -69,17 +73,21 @@ By default the Salt master listens on ports 4505 and 4506 on all interfaces
 **rc.conf**
 
 Last but not least you'll need to activate the Salt Master in your rc.conf
-file. Using your favorite editor, open /etc/rc.conf or /etc/rc.conf.local and
-add this line.
+file. Using your favorite editor, open ``/etc/rc.conf`` or
+``/etc/rc.conf.local`` and add this line.
 
 .. code-block:: diff
 
    + salt_master_enable="YES"
 
+**Start the Master**
+
 Once you've completed all of these steps you're ready to start your Salt
 Master. The Salt port installs an rc script which should be used to manage your
 Salt Master. You should be able to start your Salt Master now using the command
-seen here::
+seen here:
+
+.. code-block:: bash
 
    service salt_master start
 
@@ -116,8 +124,8 @@ configuration options are covered in another chapter.
 **rc.conf**
 
 Before you're able to start the Salt Minion you'll need to update your rc.conf
-file. Using your favorite editor open /etc/rc.conf or /etc/rc.conf.local and
-add this line.
+file. Using your favorite editor open ``/etc/rc.conf`` or
+``/etc/rc.conf.local`` and add this line.
 
 .. code-block:: diff
 
@@ -126,7 +134,9 @@ add this line.
 Once you've completed all of these steps you're ready to start your Salt
 Minion. The Salt port installs an rc script which should be used to manage your
 Salt Minion. You should be able to start your Salt Minion now using the command
-seen here. ::
+seen here.
+
+.. code-block:: bash
 
    service salt_minion start
 
@@ -153,7 +163,9 @@ only done through trusted, accepted keys.
 
 Before you'll be able to do any remote execution or state management you'll
 need to accept any pending keys on the Master. Run the ``salt-key`` command to
-list the keys known to the Salt Master::
+list the keys known to the Salt Master:
+
+.. code-block:: bash
 
    [root@master ~]# salt-key -L
    Unaccepted Keys:
@@ -165,7 +177,9 @@ list the keys known to the Salt Master::
 
 This example shows that the Salt Master is aware of four Minions, but none of
 the keys have been accepted. To accept the keys and allow the Minions to be
-controlled by the Master, again use the ``salt-key`` command::
+controlled by the Master, again use the ``salt-key`` command:
+
+.. code-block:: bash
 
    [root@master ~]# salt-key -A
    [root@master ~]# salt-key -L
@@ -202,3 +216,4 @@ able to send remote commands. I'm sure you're eager to learn more about what
 Salt can do. Depending on the primary way you want to manage your machines you
 may either want to visit the section regarding Salt States, or the section on
 Modules.
+
