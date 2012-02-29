@@ -857,6 +857,7 @@ class ClearFuncs(object):
         if 'user' in clear_load:
             log.info(('User {0[user]} Published command {0[fun]} with jid'
                       ' {0[jid]}').format(clear_load))
+            load['user'] = clear_load['user']
         else:
             log.info(('Published command {0[fun]} with jid'
                       ' {0[jid]}').format(clear_load))
