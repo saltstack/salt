@@ -11,7 +11,9 @@ makes it a great place to help improve Salt!
 
     We are still working to get msgpack packaged for Python 2.6 so Salt is not
     yet (but nearly) in EPEL 5. In the meantime you can install Salt via our
-    Fedora People repository::
+    Fedora People repository:
+
+    .. code-block:: bash
 
         wget -O /etc/yum.repos.d/epel-salt.repo \\
             http://repos.fedorapeople.org/repos/herlo/salt/epel-salt.repo
@@ -27,7 +29,9 @@ Stable Release
 
 Salt is packaged separately for the minion and the master. You'll only need to
 install the appropriate package for the role you need the machine to play. This
-means you're going to want one master and a whole bunch of minions!::
+means you're going to want one master and a whole bunch of minions!
+
+.. code-block:: bash
 
     yum install salt-master
     yum install salt-minion
@@ -50,7 +54,9 @@ configuration paths.
 
 By default the Salt master listens on ports 4505 and 4506 on all interfaces
 (0.0.0.0). If you have a need to bind Salt to a specific IP, redefine the
-"interface" directive as seen here::
+"interface" directive as seen here:
+
+.. code-block:: diff
 
    - #interface: 0.0.0.0
    + interface: 10.0.0.1
@@ -58,13 +64,19 @@ By default the Salt master listens on ports 4505 and 4506 on all interfaces
 **Enable the Master**
 
 You'll also likely want to activate the Salt Master in systemd, configuring the
-Salt Master to start automatically at boot.::
+Salt Master to start automatically at boot.
+
+.. code-block:: bash
 
     systemctl enable salt-master.service
 
+**Start the Master**
+
 Once you've completed all of these steps you're ready to start your Salt
 Master. You should be able to start your Salt Master now using the command
-seen here::
+seen here:
+
+.. code-block:: bash
 
     systemctl start salt-master.service
 
@@ -87,7 +99,9 @@ this you likely can do without any minion configuration at all.
 
 If you are not able to update DNS, you'll simply need to update one entry in
 the configuration file. Using your favorite editor, open the minion
-configuration file and update the "master" entry as seen here::
+configuration file and update the "master" entry as seen here:
+
+.. code-block:: diff
 
    - #master: salt
    + master: 10.0.0.1
@@ -99,13 +113,19 @@ configuration options are covered in another chapter.
 **Enable the Minion**
 
 You'll need to configure the minion to auto-start at boot. You can toggle
-that option through systemd.::
+that option through systemd.
+
+.. code-block:: bash
 
     systemctl enable salt-minion.service
 
+**Start the Minion**
+
 Once you've completed all of these steps you're ready to start your Salt
 Minion. You should be able to start your Salt Minion now using the command
-here::
+here:
+
+.. code-block:: bash
 
     systemctl start salt-minion.service
 
@@ -132,28 +152,32 @@ only done through trusted, accepted keys.
 
 Before you'll be able to do any remote execution or configuration management you'll
 need to accept any pending keys on the Master. Run the ``salt-key`` command to
-list the keys known to the Salt Master::
+list the keys known to the Salt Master:
+
+.. code-block:: bash
 
    [root@master ~]# salt-key -L
    Unaccepted Keys:
-   avon
-   bodie
-   bubbles
-   marlo
+   alpha
+   bravo
+   charlie
+   delta
    Accepted Keys:
 
 This example shows that the Salt Master is aware of four Minions, but none of
 the keys have been accepted. To accept the keys and allow the Minions to be
-controlled by the Master, again use the ``salt-key`` command::
+controlled by the Master, again use the ``salt-key`` command:
+
+.. code-block:: bash
 
    [root@master ~]# salt-key -A
    [root@master ~]# salt-key -L
    Unaccepted Keys:
    Accepted Keys:
-   avon
-   bodie
-   bubbles
-   marlo
+   alpha
+   bravo
+   charlie
+   delta
 
 The ``salt-key`` command allows for signing keys individually or in bulk. The
 example above, using ``-A`` bulk-accepts all pending keys. To accept keys
@@ -168,10 +192,12 @@ Whether you have a few or a few-dozen, Salt can help you manage them easily!
 For final verification, send a test function from your Salt Master to your
 minions. If all of your minions are properly communicating with your Master,
 you should "True" responses from each of them. See the example below to send
-the ``test.ping`` remote command::
+the ``test.ping`` remote command:
+
+.. code-block:: bash
 
    [root@master ~]# salt '*' test.ping
-   {'avon': True}
+   {'alpha': True}
 
 Where Do I Go From Here
 ========================

@@ -18,7 +18,9 @@ currently stable and -git packages available.
 Stable Release
 --------------
 
-To install Salt stable releases from the Arch Linux AUR, use the commands::
+To install Salt stable releases from the Arch Linux AUR, use the commands:
+
+.. code-block:: bash
 
     wget https://aur.archlinux.org/packages/sa/salt/salt.tar.gz
     tar xf salt.tar.gz
@@ -39,7 +41,7 @@ currently relies on the following packages only available via the AUR:
 
     The command to install salt using the yaourt tool is:
 
-    .. code-block:: none
+    .. code-block:: bash
 
         yaourt salt
 
@@ -49,7 +51,9 @@ Tracking develop
 ----------------
 
 To install the bleeding edge version of Salt (**may include bugs!**), you can use
-the -git package. Installing the -git package can be done using the commands::
+the -git package. Installing the -git package can be done using the commands:
+
+.. code-block:: bash
 
     wget https://aur.archlinux.org/packages/sa/salt-git/salt-git.tar.gz
     tar xf salt-git.tar.gz
@@ -70,7 +74,7 @@ currently relies on the following packages only available via the AUR:
 
     The command to install salt using the yaourt tool is:
 
-    .. code-block:: none
+    .. code-block:: bash
 
         yaourt salt-git
 
@@ -82,9 +86,12 @@ Configuration
 In the sections below I'll outline configuration options for both the Salt
 Master and Salt Minions.
 
-The Salt package installs two template configuration files, /etc/salt/master.template and
-/etc/salt/minion.template. You'll need to copy these .template files into place and
-make a few edits. First, copy them into place as seen here::
+The Salt package installs two template configuration files,
+``/etc/salt/master.template`` and ``/etc/salt/minion.template``. You'll need
+to copy these .template files into place and make a few edits. First, copy
+them into place as seen here:
+
+.. code-block:: bash
 
    cp /etc/salt/master.template /etc/salt/master
    cp /etc/salt/minion.template /etc/salt/minion
@@ -107,22 +114,30 @@ configuration paths.
 
 By default the Salt master listens on ports 4505 and 4506 on all interfaces
 (0.0.0.0). If you have a need to bind Salt to a specific IP, redefine the
-"interface" directive as seen here::
+"interface" directive as seen here:
+
+.. code-block:: diff
 
    - #interface: 0.0.0.0
    + interface: 10.0.0.1
 
 **rc.conf**
 
-Last but not least you'll need to activate the Salt Master in your rc.conf
-file. Using your favorite editor, open /etc/rc.conf and add the salt-master::
+You'll need to activate the Salt Master in your rc.conf file. Using your
+favorite editor, open ``/etc/rc.conf`` and add the  salt-master.
+
+.. code-block:: diff
 
     -DAEMONS=(syslog-ng network crond)
     +DAEMONS=(syslog-ng network crond @salt-master)
 
+**Start the Master**
+
 Once you've completed all of these steps you're ready to start your Salt
 Master. You should be able to start your Salt Master now using the command
-seen here::
+seen here:
+
+.. code-block:: bash
 
     rc.d start salt-master
 
@@ -145,7 +160,9 @@ this you likely can do without any minion configuration at all.
 
 If you are not able to update DNS, you'll simply need to update one entry in
 the configuration file. Using your favorite editor, open the minion
-configuration file and update the "master" entry as seen here::
+configuration file and update the "master" entry as seen here.
+
+.. code-block:: diff
 
    - #master: salt
    + master: 10.0.0.1
@@ -157,15 +174,20 @@ configuration options are covered in another chapter.
 **rc.conf**
 
 Before you're able to start the Salt Minion you'll need to update your rc.conf
-file. Using your favorite editor open /etc/rc.conf or /etc/rc.conf.local and
-add this line::
+file. Using your favorite editor open ``/etc/rc.conf`` and add this line:
+
+.. code-block:: diff
 
     -DAEMONS=(syslog-ng network crond)
     +DAEMONS=(syslog-ng network crond @salt-minion)
 
+**Start the Minion**
+
 Once you've completed all of these steps you're ready to start your Salt
 Minion. You should be able to start your Salt Minion now using the command
-seen here::
+seen here:
+
+.. code-block:: bash
 
     rc.d start salt-minion
 
@@ -192,28 +214,32 @@ only done through trusted, accepted keys.
 
 Before you'll be able to do any remote execution or configuration management you'll
 need to accept any pending keys on the Master. Run the ``salt-key`` command to
-list the keys known to the Salt Master::
+list the keys known to the Salt Master.
+
+.. code-block:: bash
 
    [root@master ~]# salt-key -L
    Unaccepted Keys:
-   avon
-   bodie
-   bubbles
-   marlo
+   alpha
+   bravo
+   charlie
+   delta
    Accepted Keys:
 
 This example shows that the Salt Master is aware of four Minions, but none of
 the keys have been accepted. To accept the keys and allow the Minions to be
-controlled by the Master, again use the ``salt-key`` command::
+controlled by the Master, again use the ``salt-key`` command:
+
+.. code-block:: bash
 
    [root@master ~]# salt-key -A
    [root@master ~]# salt-key -L
    Unaccepted Keys:
    Accepted Keys:
-   avon
-   bodie
-   bubbles
-   marlo
+   alpha
+   bravo
+   charlie
+   delta
 
 The ``salt-key`` command allows for signing keys individually or in bulk. The
 example above, using ``-A`` bulk-accepts all pending keys. To accept keys
@@ -228,10 +254,12 @@ Whether you have a few or a few-dozen, Salt can help you manage them easily!
 For final verification, send a test function from your Salt Master to your
 minions. If all of your minions are properly communicating with your Master,
 you should "True" responses from each of them. See the example below to send
-the ``test.ping`` remote command::
+the ``test.ping`` remote command:
+
+.. code-block:: bash
 
    [root@master ~]# salt '*' test.ping
-   {'avon': True}
+   {'alpha': True}
 
 Where Do I Go From Here
 ========================
