@@ -8,7 +8,7 @@ under the hood, as well as some features that make working with Salt much
 better.
 
 A few highlights include the new Job system, refinements to the requisite
-system in states, the mod_init interface for states, external node
+system in states, the ``mod_init`` interface for states, external node
 classification, search path to managed files in the file state, and refinements
 and additions to dynamic module loading.
 
@@ -24,12 +24,12 @@ Salt Jobs Interface
 
 The new jobs interface makes the management of running executions much cleaner
 and more transparent. Building on the existing execution framework the jobs
-system allows clear introspection into the active running state of the,
+system allows clear introspection into the active running state of the
 running Salt interface.
 
 The Jobs interface is centered in the new minion side proc system. The
-minions now store a msgpack serialized file under /var/cache/salt/proc. These
-files keep track of the active state of processes on the minion.
+minions now store msgpack serialized files under ``/var/cache/salt/proc``.
+These files keep track of the active state of processes on the minion.
 
 Functions in the saltutil Module
 ````````````````````````````````
@@ -37,18 +37,18 @@ Functions in the saltutil Module
 A number of functions have been added to the saltutil module to manage and
 view the jobs:
 
-1. running
-   Returns the data of all running jobs that are found in the proc directory.
-2. find_job
-   Returns specific data about a certain job based on job id.
-3. signal_job
-   Allows for a given jid to be sent a signal.
-4. term_job
-   Sends a termination signal (SIGTERM, 15) to the process controlling the
-   specified job.
-5. kill_job
-   Sends a kill signal (SIGKILL, 9) to the process controlling the
-   specified job.
+``running`` - Returns the data of all running jobs that are found in the proc
+directory.
+
+``find_job`` - Returns specific data about a certain job based on job id.
+
+``signal_job`` - Allows for a given jid to be sent a signal.
+
+``term_job`` - Sends a termination signal (``SIGTERM, 15``) to the process
+controlling the specified job.
+
+``kill_job`` Sends a kill signal (``SIGKILL, 9``) to the process controlling the
+specified job.
 
 The jobs Runner
 ---------------
@@ -61,7 +61,7 @@ The jobs runner contains a number of functions...
 active
 ``````
 
-The active function runs saltutil.running on all minions and formats the
+The active function runs ``saltutil.running`` on all minions and formats the
 return data about all running jobs in a much more usable and compact format.
 The active function will also compare jobs that have returned and jobs that
 are still running, making it easier to see what systems have completed a job
@@ -73,21 +73,22 @@ lookup_jid
 When jobs are executed the return data is sent back to the master and cached.
 By default is is cached for 24 hours, but this can be configured via the
 ``keep_jobs`` option in the master configuration.
-Using the lookup_jid runner will display the same return data that the initial
-job invocation with the salt command would display.
+
+Using the ``lookup_jid`` runner will display the same return data that the
+initial job invocation with the salt command would display.
 
 list_jobs
 `````````
 
-Before finding a historic job, it may be required to find the job id. list_jobs
-will parse the cached execution data and display all of the job data for jobs
-that have already, or partially returned.
+Before finding a historic job, it may be required to find the job id.
+``list_jobs`` will parse the cached execution data and display all of the job
+data for jobs that have already, or partially returned.
 
 
 External Node Classification
 ----------------------------
 
-Salt can now use external node classifiers like Cobbler's 
+Salt can now use external node classifiers like Cobbler's
 ``cobbler-ext-nodes``.
 
 Salt uses specific data from the external node classifier. In particular the
@@ -107,14 +108,14 @@ State Mod Init System
 An issue arose with the pkg state. Every time a package was run Salt would
 need to refresh the package database. This made systems with slower package
 metadata refresh speeds much slower to work with. To alleviate this issue the
-mod_init interface has been added to salt states.
+``mod_init`` interface has been added to salt states.
 
-The mod_init interface is a function that can be added to a state file.
+The ``mod_init`` interface is a function that can be added to a state file.
 This function is called with the first state called. In the case of the pkg
-state, the mod_init function sets up a tag which makes the package database
+state, the ``mod_init`` function sets up a tag which makes the package database
 only refresh on the first attempt to install a package.
 
-In a nutshell, the mod_init interface allows a state to run any command that
+In a nutshell, the ``mod_init`` interface allows a state to run any command that
 only needs to be run once, or can be used to set up an environment for working
 with the state.
 
@@ -153,7 +154,7 @@ more quickly.
 Initial Unit Testing Framework
 ------------------------------
 
-Because of the module system, and the need to test real scenarios the,
+Because of the module system, and the need to test real scenarios, the
 development of a viable unit testing system has been difficult, but unit
 testing has finally arrived. Only a small amount of unit testing coverage
 has been developed, much more coverage will be in place soon.
@@ -175,5 +176,4 @@ Previously the nodegroups defined in the master configuration file could not
 be used to match nodes for states. The nodegroups support has been expanded
 and the nodegroups defined in the master configuration can now be used to
 match minions in the top file.
-
 
