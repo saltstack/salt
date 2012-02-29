@@ -43,9 +43,9 @@ class Outputter(object):
 
 class HighStateOutputter(Outputter):
     '''
-    Not a command line option, the HighStateOutputter is only meant to be used
-    with the state.highstate function, or a function that returns highstate
-    return data
+    Not a command line option, the HighStateOutputter is only meant to
+    be used with the state.highstate function, or a function that returns
+    highstate return data
     '''
     supports = 'highstate'
 
@@ -127,9 +127,8 @@ class RawOutputter(Outputter):
 
 class TxtOutputter(Outputter):
     '''
-    Plain text output. Primarily for returning output from
-    shell commands in the exact same way they would output
-    on the shell when ran directly.
+    Plain text output. Primarily for returning output from shell commands
+    in the exact same way they would output on the shell when ran directly.
     '''
     supports = 'txt'
 

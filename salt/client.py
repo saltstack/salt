@@ -11,17 +11,19 @@ The data structure needs to be:
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
 # option.
-# The concerns are
+# The concerns are:
 # 1. Who executes the command?
-# 2. what is the function being run?
+# 2. What is the function being run?
 # 3. What arguments need to be passed to the function?
 # 4. How long do we wait for all of the replies?
 #
 # Next there are a number of tasks, first we need some kind of authentication
-# This Client initially will be the master root client, which will run as the
-# root user on the master server.
+# This Client initially will be the master root client, which will run as
+# the root user on the master server.
+#
 # BUT we also want a client to be able to work over the network, so that
 # controllers can exist within disparate applications.
+#
 # The problem is that this is a security nightmare, so I am going to start
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
@@ -221,8 +223,8 @@ class LocalClient(object):
 
     def get_iter_returns(self, jid, minions, timeout=None):
         '''
-        This method starts off a watcher looking at the return data for a
-        specified jid, it returns all of the information for the jid
+        This method starts off a watcher looking at the return data for
+        a specified jid, it returns all of the information for the jid
         '''
         if timeout is None:
             timeout = self.opts['timeout']
@@ -273,8 +275,8 @@ class LocalClient(object):
 
     def get_returns(self, jid, minions, timeout=None):
         '''
-        This method starts off a watcher looking at the return data for a
-        specified jid
+        This method starts off a watcher looking at the return data for
+        a specified jid
         '''
         if timeout is None:
             timeout = self.opts['timeout']
@@ -320,8 +322,8 @@ class LocalClient(object):
 
     def get_full_returns(self, jid, minions, timeout=None):
         '''
-        This method starts off a watcher looking at the return data for a
-        specified jid, it returns all of the information for the jid
+        This method starts off a watcher looking at the return data for
+        a specified jid, it returns all of the information for the jid
         '''
         if timeout is None:
             timeout = self.opts['timeout']
@@ -397,10 +399,10 @@ class LocalClient(object):
 
     def check_minions(self, expr, expr_form='glob'):
         '''
-        Check the passed regex against the available minions' public
-        keys stored for authentication. This should return a set of ids
-        which match the regex, this will then be used to parse the
-        returns to make sure everyone has checked back in.
+        Check the passed regex against the available minions' public keys
+        stored for authentication. This should return a set of ids which
+        match the regex, this will then be used to parse the returns to
+        make sure everyone has checked back in.
         '''
         return {'glob': self._check_glob_minions,
                 'pcre': self._check_pcre_minions,
@@ -418,19 +420,19 @@ class LocalClient(object):
         Arguments:
             tgt:
                 The tgt is a regex or a glob used to match up the ids on
-                the minions. Salt works by always publishing every command to
-                all of the minions and then the minions determine if the
-                command is for them based on the tgt value.
+                the minions. Salt works by always publishing every command
+                to all of the minions and then the minions determine if
+                the command is for them based on the tgt value.
             fun:
-                The function name to be called on the remote host(s), this must
-                be a string in the format "<modulename>.<function name>"
+                The function name to be called on the remote host(s), this
+                must be a string in the format "<modulename>.<function name>"
             arg:
-                The arg option needs to be a tuple of arguments to pass to the
-                calling function, if left blank
+                The arg option needs to be a tuple of arguments to pass
+                to the calling function, if left blank
         Returns:
             jid:
-                A string, as returned by the publisher, which is the job id,
-                this will inform the client where to get the job results
+                A string, as returned by the publisher, which is the job
+                id, this will inform the client where to get the job results
             minions:
                 A set, the targets that the tgt passed should match.
         '''
