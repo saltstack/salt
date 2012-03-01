@@ -97,6 +97,20 @@ def available_version(name):
     return list(set(versions_list))[0]
 
 
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    if available_version(name):
+        return True
+    else:
+        return False
+
+
 def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
