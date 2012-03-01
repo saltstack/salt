@@ -172,7 +172,10 @@ class Master(object):
                 import salt.utils
                 salt.utils.daemonize()
             set_pidfile(self.cli['pidfile'])
-            master.start()
+            try:
+                master.start()
+            except salt.master.MasterExit:
+                sys.exit()
 
 
 class Minion(object):

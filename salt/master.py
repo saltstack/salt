@@ -67,9 +67,17 @@ def clean_proc(proc, wait_for_kill=1):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
                 os.kill(signal.SIGKILL, proc.pid)
-    except Exception as e:
-        log.debug(e)
+    except (AssertionError, AttributeError) as e:
+        # Catch AssertionError when the proc is evaluated inside the child
+        # Catch AttributeError when the process dies between proc.is_alive()
+        # and proc.terminate() and turns into a NoneType
+        pass
 
+class MasterExit(SystemExit):
+    '''
+    Named exit exception for the master process exiting
+    '''
+    pass
 
 class SMaster(object):
     '''
@@ -162,9 +170,9 @@ class Master(SMaster):
 
         def sigterm_clean(signum, frame):
             '''
-            Cleaner method for stoping multiprocessing processes when a SIGTERM
-            is encountered.  This is required when running a salt master under
-            a process minder like daemontools
+            Cleaner method for stopping multiprocessing processes when a
+            SIGTERM is encountered.  This is required when running a salt
+            master under a process minder like daemontools
             '''
             mypid = os.getpid()
             log.warn(('Caught signal {0}, stopping the Salt Master'
@@ -173,7 +181,7 @@ class Master(SMaster):
             clean_proc(reqserv.publisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
-            raise SystemExit
+            raise MasterExit
 
         signal.signal(signal.SIGTERM, sigterm_clean)
 
@@ -183,8 +191,6 @@ class Master(SMaster):
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             raise SystemExit('\nExiting on Ctrl-c')
-        finally:
-            raise SystemExit('Salt Master Stopped')
 
 
 class Publisher(multiprocessing.Process):
