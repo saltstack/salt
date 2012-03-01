@@ -50,7 +50,7 @@ def prep_jid(opts, load):
         return prep_jid(opts['cachedir'], load)
     return jid
 
-def clean_proc(proc, wait_for_kill=1):
+def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
     '''
@@ -62,7 +62,7 @@ def clean_proc(proc, wait_for_kill=1):
         while proc.is_alive():
             proc.terminate()
             waited += 1
-            time.sleep(1)
+            time.sleep(0.1)
             if proc.is_alive() and (waited >= wait_for_kill):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
