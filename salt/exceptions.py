@@ -14,6 +14,12 @@ class SaltClientError(SaltException):
     '''
     pass
 
+class SaltMasterError(SaltException):
+    '''
+    Problem reading the master root key
+    '''
+    pass
+
 class AuthenticationError(SaltException):
     '''
     If sha256 signature fails during decryption
