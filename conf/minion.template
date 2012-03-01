@@ -44,6 +44,10 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time = 10
 
+# When healing a dns_check is run, this is to make sure that the originally
+# resolved dns has not changed, if this is something that does not happen in
+# your environment then set this value to False.
+#dns_check: True
 
 
 #####   Minion module management     #####
