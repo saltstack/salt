@@ -174,8 +174,7 @@ def minion_config(path):
     opts['grains'] = salt.loader.grains(opts)
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
-
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'key_logfile'])
     return opts
 
 
@@ -214,6 +213,7 @@ def master_config(path):
             'cluster_mode': 'paranoid',
             'serial': 'msgpack',
             'nodegroups': {},
+            'key_logfile': '/var/log/salt/key.log',
     }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
@@ -224,7 +224,8 @@ def master_config(path):
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir'])
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+                            'sock_dir', 'key_logfile'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
