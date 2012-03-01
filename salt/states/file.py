@@ -697,24 +697,31 @@ def managed(name,
                 ret['result'] = False
                 ret['comment'] = 'Source file {0} not found'.format(source)
                 return ret
-            if not __opts__['test']:
-                if not os.path.isdir(os.path.dirname(name)):
-                    if makedirs:
-                        _makedirs(name)
-                    else:
-                        ret['result'] = False
-                        ret['comment'] = 'Parent directory not present'
-                        __clean_tmp(sfn)
-                        return ret
+            if not os.path.isdir(os.path.dirname(name)):
+                if makedirs:
+                    _makedirs(name)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Parent directory not present'
+                    __clean_tmp(sfn)
+                    return ret
         else:
-            ret['changes']['new'] = 'file {0} created'.format(name)
-            ret['comment'] = 'Empty file'
-        # Create the file, user-rw-only if mode will be set
-        if mode:
-          cumask = os.umask(384)
-        open(name, 'a').close()
-        if mode:
-          os.umask(cumask)
+            if not os.path.isdir(os.path.dirname(name)):
+                if makedirs:
+                    _makedirs(name)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Parent directory not present'
+                    __clean_tmp(sfn)
+                    return ret
+            # Create the file, user-rw-only if mode will be set
+            if mode:
+                cumask = os.umask(384)
+            open(name, 'a+').close()
+            if mode:
+                os.umask(cumask)
+                ret['changes']['new'] = 'file {0} created'.format(name)
+                ret['comment'] = 'Empty file'
         # Check permissions
         perms = {}
         perms['luser'] = __salt__['file.get_user'](name)
