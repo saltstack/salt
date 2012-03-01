@@ -26,8 +26,7 @@ import zmq
 
 # Import salt libs
 from salt.exceptions import AuthenticationError, MinionError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltMasterError
+    CommandExecutionError, CommandNotFoundError, SaltInvocationError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -76,7 +75,7 @@ def safe_dns_check(addr):
                   'now fails to resolve! The previously resolved ip addr '
                   'will continue to be used').format(addr)
             log.error(err)
-            raise SaltMasterError
+            raise SaltClientError
 
 
 class SMinion(object):
@@ -455,7 +454,7 @@ class Minion(object):
                         try:
                             # Verify that the dns entry has not changed
                             self.opts['master_ip'] = safe_dns_check()
-                        except SaltMasterError:
+                        except SaltClientError:
                             # Failed to update the dns, keep the old addr
                             pass
                     self.passive_refresh()
