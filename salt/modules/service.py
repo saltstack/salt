@@ -13,6 +13,7 @@ grainmap = {
            'Ubuntu': '/etc/init.d',
            'Gentoo': '/etc/init.d',
            'CentOS': '/etc/init.d',
+           'SunOS': '/etc/init.d',
           }
 
 def __virtual__():

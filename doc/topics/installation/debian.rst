@@ -6,7 +6,9 @@ Ubuntu
 ------
 
 We are working to get Salt into apt. In the meantime we have a PPA available
-for Lucid::
+for Lucid:
+
+.. code-block:: bash
 
     aptitude -y install python-software-properties
     add-apt-repository ppa:saltstack/salt
@@ -29,7 +31,9 @@ accepted you can install Salt by downloading the latest ``.deb`` in the
 
     There is a `python-zmq`__ package available in Debian \"wheezy (testing)\".
     If you don't have that repo enabled the best way to install Salt and pyzmq
-    is by using ``pip`` (or ``easy_install``)::
+    is by using ``pip`` (or ``easy_install``):
+
+    .. code-block:: bash
 
         pip install pyzmq salt
 
