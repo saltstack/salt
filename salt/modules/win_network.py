@@ -122,9 +122,33 @@ def traceroute(host):
     return ret
 
 
+def nslookup(host):
+    '''
+    Query DNS for information about a domain or ip address
+
+    CLI Example::
+
+        salt '*' network.nslookup archlinux.org
+    '''
+    ret = []
+    cmd = 'nslookup %s' % _sanitize_host(host)
+    lines = __salt__['cmd.run'](cmd).split('\n')
+    for line in lines:
+        if line.startswith('Non-authoritative'):
+            continue
+        if ":" in line:
+            comps = line.split(":")
+            ret.append({comps[0].strip(): comps[1].strip()})
+
+    return ret
+
+
+
 def dig(host):
     '''
     Performs a DNS lookup with dig
+    
+    Note: dig must be installed on the Windows minion
 
     CLI Example::
 
