@@ -33,6 +33,18 @@ def available_version(name):
     return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
 
 
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return name in __salt__['cmd.run'](
+            'pacman -Spu --print-format %n | egrep "^\S+$"').split()
+
+
 def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
