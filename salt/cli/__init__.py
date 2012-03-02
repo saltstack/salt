@@ -44,13 +44,13 @@ class SaltCMD(object):
                 dest='timeout',
                 help=('Set the return timeout for batch jobs; '
                       'default=5 seconds'))
-        parser.add_option('-i',
-                '--iter',
-                '--iter-return',
+        parser.add_option('-s',
+                '--static',
                 default=False,
-                dest='iter_',
+                dest='static',
                 action='store_true',
-                help='Return the data from minions as the data is returned')
+                help=('Return the data from minions as a group after they '
+                      'all return.'))
         parser.add_option('-b',
                 '--batch',
                 '--batch-size',
@@ -171,7 +171,7 @@ class SaltCMD(object):
 
         if not options.timeout is None:
             opts['timeout'] = int(options.timeout)
-        opts['iter'] = options.iter_
+        opts['static'] = options.static
         opts['batch'] = options.batch
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
@@ -285,14 +285,14 @@ class SaltCMD(object):
             try:
                 # local will be None when there was an error
                 if local:
-                    if self.opts['iter']:
-                        for full_ret in local.cmd_iter(*args):
-                            ret, out = self._format_ret(full_ret)
-                            self._output_ret(ret, out)
-                    else:
+                    if self.opts['static']:
                         full_ret = local.cmd_full_return(*args)
                         ret, out = self._format_ret(full_ret)
                         self._output_ret(ret, out)
+                    else:
+                        for full_ret in local.cmd_cli(*args):
+                            ret, out = self._format_ret(full_ret)
+                            self._output_ret(ret, out)
             except SaltInvocationError as exc:
                 ret = exc
                 out = ''
