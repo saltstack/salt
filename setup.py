@@ -11,6 +11,9 @@ from distutils.command.sdist import sdist
 from distutils.cmd import Command
 from distutils.sysconfig import get_python_lib, PREFIX
 
+if os.environ.get('VIRTUAL_ENV'):
+    from setuptools import setup
+
 execfile('salt/version.py')
 
 class TestCommand(Command):
@@ -47,6 +50,10 @@ else:
     etc_path = os.path.join(os.path.dirname(PREFIX), 'etc')
 
 libraries = ['ws2_32'] if sys.platform == 'win32' else []
+
+requirements=''
+with open('requirements.txt') as f:
+    requirements = f.read()
 
 setup(
       name=NAME,
@@ -108,4 +115,5 @@ setup(
                     ['doc/man/salt.7',
                     ]),
                  ],
+      install_requires=requirements,
      )
