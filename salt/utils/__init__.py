@@ -2,9 +2,9 @@
 Some of the utils used by salt
 '''
 
-import logging
 import os
 import sys
+import logging
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,16 @@ months = {'01': 'Jan',
           '10': 'Oct',
           '11': 'Nov',
           '12': 'Dec'}
+
+def is_empty(filename):
+    '''
+    Is a file empty?
+    '''
+    try:
+        return os.stat(filename).st_size == 0
+    except OSError:
+        # Non-existant file or permission denied to the parent dir
+        return False
 
 
 def get_colors(use=True):

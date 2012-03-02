@@ -11,14 +11,15 @@ The data sent to the state calls is as follows:
       }
 '''
 
+import os
 import copy
 import inspect
 import fnmatch
 import logging
-import os
 import tempfile
 import collections
 
+import salt.utils
 import salt.loader
 import salt.minion
 
@@ -553,7 +554,11 @@ class State(object):
         '''
         if not isinstance(template, basestring):
             return {}
+        # No highstate data from invalid or empty files
         if not os.path.isfile(template):
+            return {}
+
+        if salt.utils.is_empty(template):
             return {}
         return self.rend[self.template_shebang(template)](template, env, sls)
 
