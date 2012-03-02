@@ -54,8 +54,14 @@ class Batch(object):
         '''
         Return the active number of minions to maintain
         '''
-        if self.opts['batch'].startswith('%'):
-            return int(float(self.opts['batch']) * snum)
+        try:
+            if self.opts['batch'].startswith('%'):
+                return int(float(self.opts['batch'][1:]) / 100.0 * snum)
+            elif self.opts['batch'].endswith('%'):
+                return int(float(self.opts['batch'][:-1]) / 100.0 * snum)
+        except ValueError:
+            print ('Invalid batch data sent: {0}\nData must be in the form'
+                   'of %10, 10% or 3').format(self.opts['batch'])
         return int(self.opts['batch'])
 
     def run(self):
