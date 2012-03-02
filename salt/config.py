@@ -151,6 +151,7 @@ def minion_config(path):
             'cython_enable': False,
             'state_verbose': False,
             'acceptance_wait_time': 10,
+            'dns_check': True,
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
