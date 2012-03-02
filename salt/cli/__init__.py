@@ -11,6 +11,7 @@ import sys
 import salt.cli.caller
 import salt.cli.cp
 import salt.cli.key
+import salt.cli.batch
 import salt.client
 import salt.output
 import salt.runner
@@ -50,6 +51,13 @@ class SaltCMD(object):
                 dest='iter_',
                 action='store_true',
                 help='Return the data from minions as the data is returned')
+        parser.add_option('-b',
+                '--batch',
+                default='',
+                dest='batch',
+                help=('Execute the salt job in batch mode, pass either the '
+                      'number of minions to batch at a time, or the '
+                      'percentage of minions to have running'))
         parser.add_option('-E',
                 '--pcre',
                 default=False,
@@ -163,6 +171,7 @@ class SaltCMD(object):
         if not options.timeout is None:
             opts['timeout'] = int(options.timeout)
         opts['iter'] = options.iter_
+        opts['batch'] = options.batch
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
         opts['grain'] = options.grain
@@ -242,7 +251,9 @@ class SaltCMD(object):
                     print 'Return data for job {0}:'.format(jid)
                     printout(ret[jid])
                     print ''
-
+        elif self.opts['batch']:
+            batch = salt.cli.batch.Batch(self.opts)
+            batch.run()
         else:
             if not 'timeout' in self.opts:
                 self.opts['timeout'] = local.opts['timeout']
@@ -529,8 +540,8 @@ class SaltKey(object):
                 action='store_true',
                 help='Supress output')
         
-        parser.add_option('--logfile',
-                dest='logfile',
+        parser.add_option('--key-logfile',
+                dest='key_logfile',
                 default='/var/log/salt/key.log',
                 help=('Send all output to a file. '
                       'Default is /var/log/salt/key.log'))
@@ -566,7 +577,7 @@ class SaltKey(object):
         opts = {}
 
         opts['quiet'] = options.quiet
-        opts['logfile'] = options.logfile
+        opts['key_logfile'] = options.key_logfile
         # I decided to always set this to info, since it really all is info or
         # error.
         opts['loglevel'] = 'info'
@@ -596,7 +607,7 @@ class SaltKey(object):
         Execute saltkey
         '''
         import salt.log
-        salt.log.setup_logfile_logger(self.opts['logfile'], 
+        salt.log.setup_logfile_logger(self.opts['key_logfile'],
                                       self.opts['loglevel'])
         key = salt.cli.key.Key(self.opts)
         key.run()

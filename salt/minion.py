@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import string
+import socket
 import tempfile
 import threading
 import time
@@ -56,6 +57,25 @@ def get_proc_dir(cachedir):
         for proc_fn in os.listdir(fn_):
             os.remove(os.path.join(fn_, proc_fn))
     return fn_
+
+
+def safe_dns_check(addr):
+    '''
+    Return the ip resolved by dns, but do not exit on failure, only raise an
+    exception.
+    '''
+    try:
+        socket.inet_aton(addr)
+    except socket.error:
+        # Not a valid ip adder, check DNS
+        try:
+            addr = socket.gethostbyname(addr)
+        except socket.gaierror:
+            err = ('This master address: {0} was previously resolvable but '
+                  'now fails to resolve! The previously resolved ip addr '
+                  'will continue to be used').format(addr)
+            log.error(err)
+            raise SaltClientError
 
 
 class SMinion(object):
@@ -430,6 +450,14 @@ class Minion(object):
                 if time.time() - last > self.opts['sub_timeout']:
                     # It has been a while since the last command, make sure
                     # the connection is fresh by reconnecting
+                    if self.opts['dns_check']:
+                        try:
+                            # Verify that the dns entry has not changed
+                            self.opts['master_ip'] = safe_dns_check()
+                        except SaltClientError:
+                            # Failed to update the dns, keep the old addr
+                            pass
+                    self.passive_refresh()
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -437,7 +465,6 @@ class Minion(object):
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
-                self.passive_refresh()
         else:
             while True:
                 payload = None
