@@ -552,14 +552,19 @@ class State(object):
         Take the path to a template and return the high data structure
         derived from the template.
         '''
+        # Template was specified incorrectly
         if not isinstance(template, basestring):
             return {}
-        # No highstate data from invalid or empty files
+        # Template does not exists
         if not os.path.isfile(template):
             return {}
-
+        # Template is an empty file
         if salt.utils.is_empty(template):
             return {}
+        # Template is nothing but whitespace
+        if not open(template).read().strip():
+            return {}
+
         return self.rend[self.template_shebang(template)](template, env, sls)
 
     def compile_template_str(self, template):
