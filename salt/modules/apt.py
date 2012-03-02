@@ -266,3 +266,30 @@ def list_pkgs(regex_string=""):
             ret[cols[1]] = cols[2]
 
     return ret
+
+
+def upgrade_available(name):
+
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    cmd = 'apt-get --just-print upgrade'
+    out = __salt__['cmd.run_stdout'](cmd)
+
+    # Mini filter function
+    def _to_update(line):
+        return line.startswith("Conf ")
+
+    upgraded_packages = filter(_to_update, out.split('\n'))
+
+    # Example line:
+    # 'Conf linux-image-2.6.35-32-generic (2.6.35-32.66 Ubuntu:10.10/maverick-updates [amd64])'
+    for line in upgraded_packages:
+        data = line.split()
+        if name == data[1]:
+            return True
+    return False
