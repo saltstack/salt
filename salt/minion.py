@@ -26,7 +26,8 @@ import zmq
 
 # Import salt libs
 from salt.exceptions import AuthenticationError, MinionError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError
+    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
+    SaltClientError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -76,6 +77,7 @@ def safe_dns_check(addr):
                   'will continue to be used').format(addr)
             log.error(err)
             raise SaltClientError
+    return addr
 
 
 class SMinion(object):
@@ -453,7 +455,7 @@ class Minion(object):
                     if self.opts['dns_check']:
                         try:
                             # Verify that the dns entry has not changed
-                            self.opts['master_ip'] = safe_dns_check()
+                            self.opts['master_ip'] = safe_dns_check(self.opts['master'])
                         except SaltClientError:
                             # Failed to update the dns, keep the old addr
                             pass
