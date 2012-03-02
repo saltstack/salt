@@ -7,6 +7,7 @@ import copy
 
 # Import Salt libs
 import salt.client
+import salt.output
 
 class Batch(object):
     '''
@@ -112,7 +113,6 @@ class Batch(object):
                             if ncnt > 5:
                                 break
                             continue
-                        print part
                         parts.update(part)
                 except StopIteration:
                     # remove the iter, it is done
@@ -120,5 +120,13 @@ class Batch(object):
             for minion, data in parts.items():
                 active.remove(minion)
                 ret[minion] = data['ret']
-                #print minion
-                #print ret[minion]
+                data[minion] = data.pop('ret')
+                if 'out' in data:
+                    out = data.pop('out')
+                else:
+                    out = None
+                salt.output.display_output(
+                        data,
+                        out,
+                        self.opts)
+        return ret
