@@ -540,8 +540,8 @@ class SaltKey(object):
                 action='store_true',
                 help='Supress output')
         
-        parser.add_option('--logfile',
-                dest='logfile',
+        parser.add_option('--key-logfile',
+                dest='key_logfile',
                 default='/var/log/salt/key.log',
                 help=('Send all output to a file. '
                       'Default is /var/log/salt/key.log'))
@@ -577,7 +577,7 @@ class SaltKey(object):
         opts = {}
 
         opts['quiet'] = options.quiet
-        opts['logfile'] = options.logfile
+        opts['key_logfile'] = options.key_logfile
         # I decided to always set this to info, since it really all is info or
         # error.
         opts['loglevel'] = 'info'
@@ -607,7 +607,7 @@ class SaltKey(object):
         Execute saltkey
         '''
         import salt.log
-        salt.log.setup_logfile_logger(self.opts['logfile'], 
+        salt.log.setup_logfile_logger(self.opts['key_logfile'],
                                       self.opts['loglevel'])
         key = salt.cli.key.Key(self.opts)
         key.run()
