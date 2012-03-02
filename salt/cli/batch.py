@@ -54,6 +54,7 @@ class Batch(object):
         '''
         Return the active number of minions to maintain
         '''
+        snum = len(self.minions)
         try:
             if self.opts['batch'].startswith('%'):
                 return int(float(self.opts['batch'][1:]) / 100.0 * snum)
