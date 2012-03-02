@@ -199,6 +199,35 @@ class LocalClient(object):
         for fn_ret in self.get_iter_returns(pub_data['jid'],
                 pub_data['minions'],
                 timeout):
+            if not fn_ret:
+                continue
+            yield fn_ret
+
+    def cmd_iter_no_block(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        expr_form='glob',
+        ret=''):
+        '''
+        Execute a salt command and return
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
+        jid = prep_jid(self.opts['cachedir'])
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout)
+        for fn_ret in self.get_iter_returns(pub_data['jid'],
+                pub_data['minions'],
+                timeout):
             yield fn_ret
 
     def cmd_full_return(
@@ -276,6 +305,7 @@ class LocalClient(object):
                 # No minions have replied within the specified global timeout,
                 # return an empty dict
                 break
+            yield None
             time.sleep(0.02)
 
     def get_returns(self, jid, minions, timeout=None):
