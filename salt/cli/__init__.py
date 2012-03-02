@@ -53,6 +53,7 @@ class SaltCMD(object):
                 help='Return the data from minions as the data is returned')
         parser.add_option('-b',
                 '--batch',
+                '--batch-size',
                 default='',
                 dest='batch',
                 help=('Execute the salt job in batch mode, pass either the '
