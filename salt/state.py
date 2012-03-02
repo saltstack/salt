@@ -1058,6 +1058,8 @@ class HighState(object):
                         state[name]['__sls__'] = sls
                     if '__env__' not in state[name]:
                         state[name]['__env__'] = env
+        else:
+            state = {}
         return state, mods, errors
 
     def render_highstate(self, matches):
