@@ -2,9 +2,11 @@
 A simple way of setting the output format for data from modules
 '''
 
+# Import Python libs
 import json
 import pprint
 
+# Import third party libs
 import yaml
 try:
     yaml.Loader = yaml.CLoader
@@ -12,16 +14,34 @@ try:
 except:
     pass
 
+# Import Salt libs
 import salt.utils
+from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
 
 
-def remove_colors():
+def display_output(ret, out, opts):
     '''
-    Access all of the utility colors and change them to empty strings
+    Display the output of a command in the terminal
     '''
-    pass
+    if isinstance(ret, list) or isinstance(ret, dict):
+        if opts['raw_out']:
+            printout = get_outputter('raw')
+        elif opts['json_out']:
+            printout = get_outputter('json')
+        elif opts['txt_out']:
+            printout = get_outputter('txt')
+        elif opts['yaml_out']:
+            printout = get_outputter('yaml')
+        elif out:
+            printout = get_outputter(out)
+        else:
+            printout = get_outputter(None)
+    # Pretty print any salt exceptions
+    elif isinstance(ret, SaltException):
+        printout = get_outputter("txt")
+    printout(ret)
 
 
 class Outputter(object):
