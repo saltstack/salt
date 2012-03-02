@@ -1,14 +1,13 @@
 '''
-A module to wrap pacman calls, since Arch is the best
-(https://wiki.archlinux.org/index.php/Arch_is_the_best)
+Package support for openSUSE via the zypper package manager
 '''
 
 
 def __virtual__():
     '''
-    Set the virtual pkg module if the os is Arch
+    Set the virtual pkg module if the os is openSUSE
     '''
-    return 'pkg' if __grains__['os'] == 'Arch' else False
+    return 'pkg' if __grains__['os'] == 'openSUSE' else False
 
 
 def _list_removed(old, new):
@@ -22,28 +21,35 @@ def _list_removed(old, new):
     return pkgs
 
 
+def _available_versions():
+    '''
+    The available versions of packages
+    '''
+    cmd = 'zypper packages -i'
+    ret = {}
+    out = __salt__['cmd.run'](cmd).split('\n')
+    for line in out:
+        if not line:
+            continue
+        if '|' not in line:
+            continue
+        comps = []
+        for comp in line.split('|'):
+            comps.append(comp.strip())
+        if comps[0] == 'v':
+            ret[comps[2]] = comps[3]
+    return ret
+
 def available_version(name):
     '''
-    The available version of the package in the repository
+    Return the available version of a given package
 
     CLI Example::
 
         salt '*' pkg.available_version <package name>
     '''
-    return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
-
-
-def upgrade_available(name):
-    '''
-    Check whether or not an upgrade is available for a given package
-
-    CLI Example::
-
-        salt '*' pkg.upgrade_available <package name>
-    '''
-    return name in __salt__['cmd.run'](
-            'pacman -Spu --print-format %n | egrep "^\S+$"').split()
-
+    avail = _available_versions()
+    return avail.get(name, '')
 
 def version(name):
     '''
@@ -70,20 +76,25 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
-    cmd = 'pacman -Q'
+    cmd = 'zypper packages -i'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         if not line:
             continue
-        comps = line.split()
-        ret[comps[0]] = comps[1]
+        if '|' not in line:
+            continue
+        comps = []
+        for comp in line.split('|'):
+            comps.append(comp.strip())
+        if comps[0] == 'i':
+            ret[comps[2]] = comps[3]
     return ret
 
 
 def refresh_db():
     '''
-    Just run a ``pacman -Sy``, return a dict::
+    Just run a ``zypper refresh``, return a dict::
 
         {'<database name>': Bool}
 
@@ -91,19 +102,20 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'pacman -Sy'
+    cmd = 'zypper refresh'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
-        if line.strip().startswith('::'):
-            continue
         if not line:
             continue
-        key = line.strip().split()[0]
-        if 'is up to date' in line:
-            ret[key] = False
-        elif 'downloading' in line:
-            ret[key] = True
+        if line.strip().startswith('Repository'):
+            key = line.split("'")[1].strip()
+            if 'is up to date' in line:
+                ret[key] = False
+        elif line.strip().startswith('Building'):
+            key = line.split("'")[1].strip()
+            if 'done' in line:
+                ret[key] = True
     return ret
 
 
@@ -121,9 +133,9 @@ def install(name, refresh=False, **kwargs):
         salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -S --noprogressbar --noconfirm ' + name
+    cmd = 'zypper -n install -l {0}'.format(name)
     if refresh:
-        cmd = 'pacman -Syu --noprogressbar --noconfirm ' + name
+        refresh_db()
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
@@ -145,7 +157,7 @@ def install(name, refresh=False, **kwargs):
 
 def upgrade():
     '''
-    Run a full system upgrade, a pacman -Syu
+    Run a full system upgrade, a zypper upgrade
 
     Return a dict containing the new package names and versions::
 
@@ -157,7 +169,7 @@ def upgrade():
         salt '*' pkg.upgrade
     '''
     old = list_pkgs()
-    cmd = 'pacman -Syu --noprogressbar --noconfirm '
+    cmd = 'zypper -n up -l'
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
@@ -179,7 +191,7 @@ def upgrade():
 
 def remove(name):
     '''
-    Remove a single package with ``pacman -R``
+    Remove a single package with ``zypper remove``
 
     Return a list containing the removed packages.
 
@@ -188,7 +200,7 @@ def remove(name):
         salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
+    cmd = 'zypper -n remove {0}'.format(name)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
@@ -197,7 +209,7 @@ def remove(name):
 def purge(name):
     '''
     Recursively remove a package and all dependencies which were installed
-    with it, this will call a ``pacman -Rsc``
+    with it, this will call a ``zypper remove -u``
 
     Return a list containing the removed packages.
 
@@ -206,7 +218,7 @@ def purge(name):
         salt '*' pkg.purge <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
+    cmd = 'zypper -n remove -u {0}'.format(name)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)

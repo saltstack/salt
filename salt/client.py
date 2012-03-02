@@ -11,17 +11,19 @@ The data structure needs to be:
 # The components here are simple, and they need to be and stay simple, we
 # want a client to have 3 external concerns, and maybe a forth configurable
 # option.
-# The concerns are
+# The concerns are:
 # 1. Who executes the command?
-# 2. what is the function being run?
+# 2. What is the function being run?
 # 3. What arguments need to be passed to the function?
 # 4. How long do we wait for all of the replies?
 #
 # Next there are a number of tasks, first we need some kind of authentication
-# This Client initially will be the master root client, which will run as the
-# root user on the master server.
+# This Client initially will be the master root client, which will run as
+# the root user on the master server.
+#
 # BUT we also want a client to be able to work over the network, so that
 # controllers can exist within disparate applications.
+#
 # The problem is that this is a security nightmare, so I am going to start
 # small, and only start with the ability to execute salt commands locally.
 # This means that the primary client to build is, the LocalClient
@@ -32,6 +34,7 @@ import sys
 import glob
 import time
 import datetime
+import getpass
 
 # Import zmq modules
 import zmq
@@ -67,6 +70,7 @@ class LocalClient(object):
         self.opts = salt.config.master_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
         self.key = self.__read_master_key()
+        self.salt_user = self.__get_user()
 
     def __read_master_key(self):
         '''
@@ -79,6 +83,25 @@ class LocalClient(object):
         except (OSError, IOError):
             raise SaltClientError(('Problem reading the salt root key. Are'
                                    ' you root?'))
+
+    def __get_user(self):
+        '''
+        Determine the current user running the salt command
+        '''
+        user = getpass.getuser()
+        # if our user is root, look for other ways to figure out
+        # who we are
+        if user == 'root':
+            env_vars = ['SUDO_USER', 'USER', 'USERNAME']
+            for evar in env_vars:
+                if evar in os.environ:
+                    return os.environ[evar]
+            return None
+        # If the running user is just the specified user in the
+        # conf file, don't pass the user as it's implied.
+        elif user == self.opts['user']:
+          return None
+        return user
 
     def _check_glob_minions(self, expr):
         '''
@@ -176,6 +199,35 @@ class LocalClient(object):
         for fn_ret in self.get_iter_returns(pub_data['jid'],
                 pub_data['minions'],
                 timeout):
+            if not fn_ret:
+                continue
+            yield fn_ret
+
+    def cmd_iter_no_block(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        expr_form='glob',
+        ret=''):
+        '''
+        Execute a salt command and return
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
+        jid = prep_jid(self.opts['cachedir'])
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout)
+        for fn_ret in self.get_iter_returns(pub_data['jid'],
+                pub_data['minions'],
+                timeout):
             yield fn_ret
 
     def cmd_full_return(
@@ -205,8 +257,8 @@ class LocalClient(object):
 
     def get_iter_returns(self, jid, minions, timeout=None):
         '''
-        This method starts off a watcher looking at the return data for a
-        specified jid, it returns all of the information for the jid
+        This method starts off a watcher looking at the return data for
+        a specified jid, it returns all of the information for the jid
         '''
         if timeout is None:
             timeout = self.opts['timeout']
@@ -214,6 +266,7 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         found = set()
+        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             yield {}
@@ -240,6 +293,10 @@ class LocalClient(object):
                     yield ret
             if ret and start == 999999999999:
                 start = int(time.time())
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
             if len(ret) >= len(minions):
                 break
             if int(time.time()) > start + timeout:
@@ -248,12 +305,13 @@ class LocalClient(object):
                 # No minions have replied within the specified global timeout,
                 # return an empty dict
                 break
+            yield None
             time.sleep(0.02)
 
     def get_returns(self, jid, minions, timeout=None):
         '''
-        This method starts off a watcher looking at the return data for a
-        specified jid
+        This method starts off a watcher looking at the return data for
+        a specified jid
         '''
         if timeout is None:
             timeout = self.opts['timeout']
@@ -261,6 +319,7 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
@@ -280,9 +339,15 @@ class LocalClient(object):
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
             if len(ret) >= len(minions):
+                # All Minions have returned
                 return ret
             if int(time.time()) > start + timeout:
+                # The timeout has been reached
                 return ret
             if int(time.time()) > gstart + timeout and not ret:
                 # No minions have replied within the specified global timeout,
@@ -292,8 +357,8 @@ class LocalClient(object):
 
     def get_full_returns(self, jid, minions, timeout=None):
         '''
-        This method starts off a watcher looking at the return data for a
-        specified jid, it returns all of the information for the jid
+        This method starts off a watcher looking at the return data for
+        a specified jid, it returns all of the information for the jid
         '''
         if timeout is None:
             timeout = self.opts['timeout']
@@ -301,6 +366,7 @@ class LocalClient(object):
         start = 999999999999
         gstart = int(time.time())
         ret = {}
+        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
@@ -324,6 +390,10 @@ class LocalClient(object):
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
             if len(ret) >= len(minions):
                 return ret
             if int(time.time()) > start + timeout:
@@ -364,15 +434,16 @@ class LocalClient(object):
 
     def check_minions(self, expr, expr_form='glob'):
         '''
-        Check the passed regex against the available minions' public
-        keys stored for authentication. This should return a set of ids
-        which match the regex, this will then be used to parse the
-        returns to make sure everyone has checked back in.
+        Check the passed regex against the available minions' public keys
+        stored for authentication. This should return a set of ids which
+        match the regex, this will then be used to parse the returns to
+        make sure everyone has checked back in.
         '''
         return {'glob': self._check_glob_minions,
                 'pcre': self._check_pcre_minions,
                 'list': self._check_list_minions,
                 'grain': self._check_grain_minions,
+                'grain_pcre': self._check_grain_minions,
                 'exsel': self._check_grain_minions,
                 'compound': self._check_grain_minions,
                 }[expr_form](expr)
@@ -384,19 +455,19 @@ class LocalClient(object):
         Arguments:
             tgt:
                 The tgt is a regex or a glob used to match up the ids on
-                the minions. Salt works by always publishing every command to
-                all of the minions and then the minions determine if the
-                command is for them based on the tgt value.
+                the minions. Salt works by always publishing every command
+                to all of the minions and then the minions determine if
+                the command is for them based on the tgt value.
             fun:
-                The function name to be called on the remote host(s), this must
-                be a string in the format "<modulename>.<function name>"
+                The function name to be called on the remote host(s), this
+                must be a string in the format "<modulename>.<function name>"
             arg:
-                The arg option needs to be a tuple of arguments to pass to the
-                calling function, if left blank
+                The arg option needs to be a tuple of arguments to pass
+                to the calling function, if left blank
         Returns:
             jid:
-                A string, as returned by the publisher, which is the job id,
-                this will inform the client where to get the job results
+                A string, as returned by the publisher, which is the job
+                id, this will inform the client where to get the job results
             minions:
                 A set, the targets that the tgt passed should match.
         '''
@@ -420,29 +491,27 @@ class LocalClient(object):
         if not minions:
             return {'jid': '',
                     'minions': minions}
+
+        # Generate the standard keyword args to feed to format_payload
+        payload_kwargs = { 'cmd': 'publish',
+                           'tgt': tgt,
+                           'fun': fun,
+                           'arg': arg,
+                           'key': self.key,
+                           'tgt_type': expr_form,
+                           'ret': ret,
+                           'jid': jid }
+
+        # If we have a salt user, add it to the payload
+        if self.salt_user:
+            payload_kwargs['user'] = self.salt_user
+
+        # If we're a syndication master, pass the timeout
         if self.opts['order_masters']:
-            package = salt.payload.format_payload(
-                    'clear',
-                    cmd='publish',
-                    tgt=tgt,
-                    fun=fun,
-                    arg=arg,
-                    key=self.key,
-                    tgt_type=expr_form,
-                    ret=ret,
-                    jid=jid,
-                    to=timeout)
-        else:
-            package = salt.payload.format_payload(
-                    'clear',
-                    cmd='publish',
-                    tgt=tgt,
-                    fun=fun,
-                    arg=arg,
-                    key=self.key,
-                    tgt_type=expr_form,
-                    jid=jid,
-                    ret=ret)
+            payload_kwargs['to'] = timeout
+
+        package = salt.payload.format_payload( 'clear', **payload_kwargs)
+
         # Prep zmq
         context = zmq.Context()
         socket = context.socket(zmq.REQ)

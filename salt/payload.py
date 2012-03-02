@@ -1,6 +1,7 @@
 '''
 Many aspects of the salt payload need to be managed, from the return of
-encrypted keys to general payload dynamics and packaging, these happen in here
+encrypted keys to general payload dynamics and packaging, these happen
+in here
 '''
 
 import cPickle as pickle
@@ -10,8 +11,8 @@ import msgpack
 
 def package(payload):
     '''
-    This method for now just wraps msgpack.dumps, but it is here so that we can
-    make the serialization a custom option in the future with ease.
+    This method for now just wraps msgpack.dumps, but it is here so that
+    we can make the serialization a custom option in the future with ease.
     '''
     return msgpack.dumps(payload)
 

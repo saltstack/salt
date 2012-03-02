@@ -51,7 +51,7 @@ class Caller(object):
             sys.exit(1)
         if hasattr(self.minion.functions[fun], '__outputter__'):
             oput = self.minion.functions[fun].__outputter__
-            if isinstance(oput, str):
+            if isinstance(oput, basestring):
                 ret['out'] = oput
         return ret
 

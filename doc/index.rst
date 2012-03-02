@@ -16,7 +16,7 @@ Get started with Salt
 Salt is a **remote execution** and **configuration management** tool.
 
 Salt is designed to be secure using **AES encryption** and **public-key
-authentication**; incredibly scaleable using an advanced **ZeroMQ** topology;
+authentication**; incredibly scalable using an advanced **ZeroMQ** topology;
 fast and efficient using **msgpack**; and extensible using small and simple
 **Python** modules.
 
@@ -60,7 +60,7 @@ truly make it work for you.
 .. sidebar:: More tutorials!
 
     * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
-    * :doc:`Installing Salt on FreeBSD <topics/tutorials/freebsd>`
+    * :doc:`Installing Salt on FreeBSD <topics/installation/freebsd>`
 
 .. contents:: The components of Salt
     :local:

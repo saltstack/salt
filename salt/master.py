@@ -12,6 +12,7 @@ import logging
 import hashlib
 import tempfile
 import datetime
+import signal
 import multiprocessing
 import subprocess
 
@@ -48,6 +49,26 @@ def prep_jid(opts, load):
     else:
         return prep_jid(opts['cachedir'], load)
     return jid
+
+def clean_proc(proc, wait_for_kill=1):
+    '''
+    Generic method for cleaning up multiprocessing procs
+    '''
+    # NoneType and other fun stuff need not apply
+    if not proc:
+        return
+    try:
+        waited = 0
+        while proc.is_alive():
+            proc.terminate()
+            waited += 1
+            time.sleep(1)
+            if proc.is_alive() and (waited >= wait_for_kill):
+                log.error(('Process did not die with terminate(): {0}'
+                    .format(proc.pid)))
+                os.kill(signal.SIGKILL, proc.pid)
+    except Exception as e:
+        log.debug(e)
 
 
 class SMaster(object):
@@ -121,7 +142,9 @@ class Master(SMaster):
         Turn on the master server components
         '''
         log.warn('Starting the Salt Master')
-        multiprocessing.Process(target=self._clear_old_jobs).start()
+        clear_old_jobs_proc = multiprocessing.Process(
+            target=self._clear_old_jobs)
+        clear_old_jobs_proc.start()
         aes_funcs = AESFuncs(self.opts, self.crypticle)
         clear_funcs = ClearFuncs(
                 self.opts,
@@ -137,12 +160,31 @@ class Master(SMaster):
                 clear_funcs)
         reqserv.start_publisher()
 
+        def sigterm_clean(signum, frame):
+            '''
+            Cleaner method for stoping multiprocessing processes when a SIGTERM
+            is encountered.  This is required when running a salt master under
+            a process minder like daemontools
+            '''
+            mypid = os.getpid()
+            log.warn(('Caught signal {0}, stopping the Salt Master'
+                .format(signum)))
+            clean_proc(clear_old_jobs_proc)
+            clean_proc(reqserv.publisher)
+            for proc in reqserv.work_procs:
+                clean_proc(proc)
+            raise SystemExit
+
+        signal.signal(signal.SIGTERM, sigterm_clean)
+
         try:
             reqserv.run()
         except KeyboardInterrupt:
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             raise SystemExit('\nExiting on Ctrl-c')
+        finally:
+            raise SystemExit('Salt Master Stopped')
 
 
 class Publisher(multiprocessing.Process):
@@ -207,15 +249,19 @@ class ReqServer(object):
         '''
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
+        self.work_procs = []
 
         for ind in range(int(self.opts['worker_threads'])):
-            log.info('Starting Salt worker process {0}'.format(ind))
-            MWorker(self.opts,
+            self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,
                     self.crypticle,
                     self.aes_funcs,
-                    self.clear_funcs).start()
+                    self.clear_funcs))
+
+        for ind, proc in enumerate(self.work_procs):
+            log.info('Starting Salt worker process {0}'.format(ind))
+            proc.start()
 
         self.workers.bind(self.w_uri)
 
@@ -529,14 +575,35 @@ class AESFuncs(object):
         individual minions.
         '''
         # Verify the load
-        if 'return' not in load or 'jid' not in load:
+        if 'return' not in load or 'jid' not in load or 'id' not in load:
             return None
+        # set the write flag
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        if not os.path.isdir(jid_dir):
+            log.error(
+                'An inconsistency occurred, a job was received with a job id '
+                'that is not present on the master: %(jid)s', load
+            )
+            return False
+        wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
+        try:
+            open(wtag, 'w+').write('')
+        except (IOError, OSError):
+            log.error(
+                    ('Failed to commit the write tag for the syndic return,'
+                    ' are permissions correct in the cache dir:'
+                    ' {0}?').format(self.opts['cachedir'])
+                    )
+            return False
+
         # Format individual return loads
         for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
             self._return(ret)
+        if os.path.isfile(wtag):
+            os.remove(wtag)
 
     def minion_publish(self, clear_load):
         '''
@@ -806,9 +873,20 @@ class ClearFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
         # Save the invocation information
-        self.serial.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        self.serial.dump(
+                clear_load,
+                open(os.path.join(jid_dir, '.load.p'), 'w+')
+                )
         # Set up the payload
         payload = {'enc': 'aes'}
+        # Altering the contents of the publish load is serious!! Changes here
+        # break compatibility with minion/master versions and even tiny 
+        # additions can have serious implications on the performance of the
+        # publish commands.
+        #
+        # In short, check with Thomas Hatch before you even think about
+        # touching this stuff, we can probably do what you want to do another
+        # way that won't have a negative impact.
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
@@ -816,10 +894,21 @@ class ClearFuncs(object):
                 'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
                }
+
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
             load['to'] = clear_load['to']
+
+        if 'user' in clear_load:
+            log.info(('User {0[user]} Published command {0[fun]} with jid'
+                      ' {0[jid]}').format(clear_load))
+            load['user'] = clear_load['user']
+        else:
+            log.info(('Published command {0[fun]} with jid'
+                      ' {0[jid]}').format(clear_load))
+        log.debug('Published command details {0}'.format(load))
+
         payload['load'] = self.crypticle.dumps(load)
         # Send 0MQ to the publisher
         context = zmq.Context(1)

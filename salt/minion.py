@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import string
+import socket
 import tempfile
 import threading
 import time
@@ -58,12 +59,31 @@ def get_proc_dir(cachedir):
     return fn_
 
 
+def safe_dns_check(addr):
+    '''
+    Return the ip resolved by dns, but do not exit on failure, only raise an
+    exception.
+    '''
+    try:
+        socket.inet_aton(addr)
+    except socket.error:
+        # Not a valid ip adder, check DNS
+        try:
+            addr = socket.gethostbyname(addr)
+        except socket.gaierror:
+            err = ('This master address: {0} was previously resolvable but '
+                  'now fails to resolve! The previously resolved ip addr '
+                  'will continue to be used').format(addr)
+            log.error(err)
+            raise SaltClientError
+
+
 class SMinion(object):
     '''
     Create an object that has loaded all of the minion module functions,
-    grains, modules, returners etc.
-    The SMinion allows developers to generate all of the salt minion functions
-    and present them with these functions for general use.
+    grains, modules, returners etc.  The SMinion allows developers to
+    generate all of the salt minion functions and present them with these
+    functions for general use.
     '''
     def __init__(self, opts):
         # Generate all of the minion side components
@@ -83,8 +103,8 @@ class SMinion(object):
 
 class Minion(object):
     '''
-    This class instantiates a minion, runs connections for a minion, and loads
-    all of the functions into the minion
+    This class instantiates a minion, runs connections for a minion,
+    and loads all of the functions into the minion
     '''
     def __init__(self, opts):
         '''
@@ -115,23 +135,9 @@ class Minion(object):
 
     def __load_modules(self):
         '''
-        Return the functions and the returners loaded up from the loader module
+        Return the functions and the returners loaded up from the loader
+        module
         '''
-        pre_opts = {}
-        salt.config.load_config(
-                pre_opts,
-                self.opts['conf_file'],
-                'SALT_MINION_CONFIG'
-                )
-        if 'include' in pre_opts:
-            pre_opts = salt.config.include_config(
-                    pre_opts,
-                    self.opts['conf_file']
-                    )
-        if 'grains' in pre_opts:
-            self.opts['grains'] = pre_opts['grains']
-        else:
-            self.opts['grains'] = {}
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts)
@@ -174,7 +180,13 @@ class Minion(object):
         # from returning a predictable exception
         #if data['fun'] not in self.functions:
         #    return
-        log.debug('Executing command {0[fun]} with jid {0[jid]}'.format(data))
+        if 'user' in data:
+            log.info(('User {0[user]} Executing command {0[fun]} with jid '
+                '{0[jid]}'.format(data)))
+        else:
+            log.info(('Executing command {0[fun]} with jid {0[jid]}'
+                .format(data)))
+        log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_pub(self, load):
@@ -191,10 +203,10 @@ class Minion(object):
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded
-        data differently.
+        Override this method if you wish to handle the decoded data
+        differently.
         '''
-        if isinstance(data['fun'], str):
+        if isinstance(data['fun'], basestring):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
 
@@ -233,7 +245,7 @@ class Minion(object):
                 arg = eval(data['arg'][ind])
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, str)):
+                elif isinstance(arg, (dict, int, list, basestring)):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
@@ -292,7 +304,7 @@ class Minion(object):
                     arg = eval(data['arg'][ind][index])
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, str)):
+                    elif isinstance(arg, (dict, int, list, basestring)):
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
@@ -340,7 +352,8 @@ class Minion(object):
         payload = {'enc': 'aes'}
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
-                    'jid': ret['jid']}
+                    'jid': ret['jid'],
+                    'id': self.opts['id']}
             load['return'] = {}
             for key, value in ret.items():
                 if key == 'jid' or key == 'fun':
@@ -354,7 +367,7 @@ class Minion(object):
         try:
             if hasattr(self.functions[ret['fun']], '__outputter__'):
                 oput = self.functions[ret['fun']].__outputter__
-                if isinstance(oput, str):
+                if isinstance(oput, basestring):
                     load['out'] = oput
         except KeyError:
             pass
@@ -362,7 +375,7 @@ class Minion(object):
         data = self.serial.dumps(payload)
         socket.send(data)
         ret_val = self.serial.loads(socket.recv())
-        if isinstance(ret_val, str) and not ret_val:
+        if isinstance(ret_val, basestring) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
             payload['load'] = self.crypticle.dumps(load)
@@ -385,9 +398,9 @@ class Minion(object):
     def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        paradigm, it will update the master information from a fresh sign in,
-        signing in can occur as often as needed to keep up with the revolving
-        master aes key.
+        paradigm, it will update the master information from a fresh sign
+        in, signing in can occur as often as needed to keep up with the
+        revolving master aes key.
         '''
         log.debug('Attempting to authenticate with the Salt Master')
         auth = salt.crypt.Auth(self.opts)
@@ -437,6 +450,14 @@ class Minion(object):
                 if time.time() - last > self.opts['sub_timeout']:
                     # It has been a while since the last command, make sure
                     # the connection is fresh by reconnecting
+                    if self.opts['dns_check']:
+                        try:
+                            # Verify that the dns entry has not changed
+                            self.opts['master_ip'] = safe_dns_check()
+                        except SaltClientError:
+                            # Failed to update the dns, keep the old addr
+                            pass
+                    self.passive_refresh()
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -444,7 +465,6 @@ class Minion(object):
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
-                self.passive_refresh()
         else:
             while True:
                 payload = None
@@ -460,8 +480,8 @@ class Minion(object):
 
 class Syndic(salt.client.LocalClient, Minion):
     '''
-    Make a Syndic minion, this minion will use the minion keys on the master to
-    authenticate with a higher level master.
+    Make a Syndic minion, this minion will use the minion keys on the
+    master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
         self._syndic = True
@@ -485,14 +505,19 @@ class Syndic(salt.client.LocalClient, Minion):
            or 'to' not in data or 'arg' not in data:
             return
         data['to'] = int(data['to']) - 1
-        log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
-                  .format(data)))
+        if 'user' in data:
+            log.debug(('User {0[user]} Executing syndic command {0[fun]} with '
+                'jid {0[jid]}'.format(data)))
+        else:
+            log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
+                .format(data)))
+        log.debug('Command details: {0}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle
-        the decoded data differently.
+        Override this method if you wish to handle the decoded data
+        differently.
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
@@ -507,15 +532,15 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         Take the now clear load and forward it on to the client cmd
         '''
-        # Set up default expr_form
-        if 'expr_form' not in data:
-            data['expr_form'] = 'glob'
+        # Set up default tgt_type
+        if 'tgt_type' not in data:
+            data['tgt_type'] = 'glob'
         # Send out the publication
         pub_data = self.pub(
                 data['tgt'],
                 data['fun'],
                 data['arg'],
-                data['expr_form'],
+                data['tgt_type'],
                 data['ret'],
                 data['jid'],
                 data['to']
@@ -583,7 +608,29 @@ class Matcher(object):
 
     def grain_match(self, tgt):
         '''
-        Reads in the grains regular expression match
+        Reads in the grains glob match
+        '''
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            log.error('Got insufficient arguments for grains from master')
+            return False
+        if comps[0] not in self.opts['grains']:
+            log.error('Got unknown grain from master: {0}'.format(comps[0]))
+            return False
+        if isinstance(self.opts['grains'][comps[0]], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['grains'][comps[0]]:
+                if fnmatch.fnmatch(str(member), comps[1]):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            str(self.opts['grains'][comps[0]]),
+            comps[1],
+            ))
+
+    def grain_pcre_match(self, tgt):
+        '''
+        Matches a grain based on regex
         '''
         comps = tgt.split(':')
         if len(comps) < 2:
@@ -612,7 +659,7 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, str):
+        if not isinstance(tgt, basestring):
             log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',
@@ -620,23 +667,11 @@ class Matcher(object):
                'L': 'list',
                'E': 'pcre'}
         results = []
+        opers = ['and', 'or', 'not']
         for match in tgt.split():
-            # Attach the boolean operator
-            if match == 'and':
-                results.append('and')
-                continue
-            elif match == 'or':
-                results.append('or')
-                continue
-            elif match == 'not':
-                results.append('not')
-                continue
-            # If we are here then it is not a boolean operator, check if the
-            # last member of the result list is a boolean, if no, append and
-            if results:
-                if results[-1] != 'and' or results[-1] != 'or' or results[-1] != 'not':
-                    results.append('and')
-            if match[1] == '@':
+            # Try to match tokens from the compound target, first by using
+            # the 'G, X, L, E' matcher types, then by hostname glob.
+            if '@' in match and match[1] == '@':
                 comps = match.split('@')
                 matcher = ref.get(comps[0])
                 if not matcher:
@@ -648,19 +683,17 @@ class Matcher(object):
                             '{0}_match'.format(matcher)
                             )('@'.join(comps[1:]))
                         ))
+            elif match in opers:
+                # We didn't match a target, so append a boolean operator
+                results.append(match)
             else:
-                results.append(
-                        str(getattr(
-                            self,
-                            '{0}_match'.format(matcher)
-                            )('@'.join(comps[1:]))
-                        ))
-
+                # The match is not explicitly defined, evaluate it as a glob
+                results.append(str(self.glob_match(match)))
         return eval(' '.join(results))
 
     def nodegroup_match(self, tgt, nodegroups):
         '''
-        This is a compatability matcher and is NOT called when using
+        This is a compatibility matcher and is NOT called when using
         nodegroups for remote execution, but is called when the nodegroups
         matcher is used in states
         '''
@@ -782,7 +815,7 @@ class FileClient(object):
         ret = []
         # Strip trailing slash
         path = string.rstrip(self._check_proto(path), '/')
-        # Break up the path into a list conaining the bottom-level directory
+        # Break up the path into a list containing the bottom-level directory
         # (the one being recursively copied) and the directories preceding it
         separated = string.rsplit(path,'/',1)
         if len(separated) != 2:
@@ -854,15 +887,15 @@ class FileClient(object):
 
     def cache_file(self, path, env='base'):
         '''
-        Pull a file down from the file server and store it in the minion file
-        cache
+        Pull a file down from the file server and store it in the minion
+        file cache
         '''
         return self.get_url(path, '', True, env)
 
     def cache_files(self, paths, env='base'):
         '''
-        Download a list of files stored on the master and put them
-        in the minion file cache
+        Download a list of files stored on the master and put them in the
+        minion file cache
         '''
         ret = []
         for path in paths:
@@ -957,8 +990,8 @@ class FileClient(object):
 
     def hash_file(self, path, env='base'):
         '''
-        Return the hash of a file, to get the hash of a file on the
-        salt master file server prepend the path with salt://<file on server>
+        Return the hash of a file, to get the hash of a file on the salt
+        master file server prepend the path with salt://<file on server>
         otherwise, prepend the file with / for a local file.
         '''
         try:
@@ -995,8 +1028,8 @@ class FileClient(object):
 
     def get_state(self, sls, env):
         '''
-        Get a state file from the master and store it in the local minion cache
-        return the location of the file
+        Get a state file from the master and store it in the local minion
+        cache return the location of the file
         '''
         if '.' in sls:
             sls = sls.replace('.', '/')

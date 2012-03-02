@@ -49,7 +49,7 @@ def verify_env(dirs):
 
         mode = os.stat(dir_)
         # TODO: Should this log if it can't set the permissions
-        #       to very secure for these PKI cert  directories?
+        #       to very secure for these PKI cert directories?
         if not stat.S_IMODE(mode.st_mode) == 448:
             if os.access(dir_, os.W_OK):
                 os.chmod(dir_, 448)
@@ -343,6 +343,7 @@ class Syndic(object):
         cli = {'daemon': options.daemon,
                'minion_config': options.minion_config,
                'master_config': options.master_config,
+               'pidfile': options.pidfile,
                'user': options.user}
 
         return cli

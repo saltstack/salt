@@ -19,7 +19,7 @@ def _sync(form, env):
     '''
     Sync the given directory in the given environment
     '''
-    if isinstance(env, str):
+    if isinstance(env, basestring):
         env = env.split(',')
     ret = []
     remote = set()
