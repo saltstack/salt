@@ -69,7 +69,7 @@ class SaltCMD(object):
         parser.add_option('-L',
                 '--list',
                 default=False,
-                dest='list_',
+                dest='list',
                 action='store_true',
                 help=('Instead of using shell globs to evaluate the target '
                       'servers, take a comma delimited list of servers.'))
@@ -119,7 +119,7 @@ class SaltCMD(object):
                        'webser* or E@database.*\''))
         parser.add_option('--return',
                 default='',
-                dest='return_',
+                dest='return',
                 metavar='RETURNER',
                 help=('Set an alternative return method. By default salt will '
                       'send the return data from the command back to the '
@@ -128,7 +128,6 @@ class SaltCMD(object):
         parser.add_option('-Q',
                 '--query',
                 dest='query',
-                default=False,
                 action='store_true',
                 help=('This option is deprecated and will be removed in a '
                       'future release, please use salt-run jobs instead\n'
@@ -374,7 +373,7 @@ class SaltCP(object):
         parser.add_option('-L',
                 '--list',
                 default=False,
-                dest='list_',
+                dest='list',
                 action='store_true',
                 help=('Instead of using shell globs to evaluate the target '
                       'servers, take a comma delimited list of servers.'))
