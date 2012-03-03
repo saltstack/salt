@@ -210,6 +210,7 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
             'log_granular_levels': {},
+            'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
             'serial': 'msgpack',
