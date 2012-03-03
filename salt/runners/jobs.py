@@ -20,7 +20,7 @@ def active():
     '''
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    client = salt.client.LocalClient(__opts__['config'])
+    client = salt.client.LocalClient(__opts__['conf_file'])
     active = client.cmd('*', 'saltutil.running', timeout=1)
     for minion, data in active.items():
         if not isinstance(data, tuple):
@@ -67,7 +67,7 @@ def lookup_jid(jid):
                 out = data['out']
             return ret, out
 
-    client = salt.client.LocalClient(__opts__['config'])
+    client = salt.client.LocalClient(__opts__['conf_file'])
     full_ret = client.get_full_returns(jid, [], 0)
     ret, out = _format_ret(full_ret)
     # Determine the proper output method and run it

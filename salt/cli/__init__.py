@@ -76,7 +76,7 @@ class SaltCMD(object):
         parser.add_option('-L',
                 '--list',
                 default=False,
-                dest='list_',
+                dest='list',
                 action='store_true',
                 help=('Instead of using shell globs to evaluate the target '
                       'servers, take a comma delimited list of servers.'))
@@ -126,7 +126,7 @@ class SaltCMD(object):
                        'webser* or E@database.*\''))
         parser.add_option('--return',
                 default='',
-                dest='return_',
+                dest='return',
                 metavar='RETURNER',
                 help=('Set an alternative return method. By default salt will '
                       'send the return data from the command back to the '
@@ -135,7 +135,6 @@ class SaltCMD(object):
         parser.add_option('-Q',
                 '--query',
                 dest='query',
-                default=False,
                 action='store_true',
                 help=('This option is deprecated and will be removed in a '
                       'future release, please use salt-run jobs instead\n'
@@ -176,24 +175,12 @@ class SaltCMD(object):
 
         opts = {}
 
+        for k, v in options.__dict__.items():
+            if v is not None:
+                opts[k] = v
+
         if not options.timeout is None:
             opts['timeout'] = int(options.timeout)
-        opts['static'] = options.static
-        opts['verbose'] = options.verbose
-        opts['batch'] = options.batch
-        opts['pcre'] = options.pcre
-        opts['list'] = options.list_
-        opts['grain'] = options.grain
-        opts['grain_pcre'] = options.grain_pcre
-        opts['exsel'] = options.exsel
-        opts['nodegroup'] = options.nodegroup
-        opts['compound'] = options.compound
-        opts['return'] = options.return_
-        opts['conf_file'] = options.conf_file
-        opts['raw_out'] = options.raw_out
-        opts['txt_out'] = options.txt_out
-        opts['yaml_out'] = options.yaml_out
-        opts['json_out'] = options.json_out
 
         if options.query:
             opts['query'] = options.query
@@ -397,7 +384,7 @@ class SaltCP(object):
         parser.add_option('-L',
                 '--list',
                 default=False,
-                dest='list_',
+                dest='list',
                 action='store_true',
                 help=('Instead of using shell globs to evaluate the target '
                       'servers, take a comma delimited list of servers.'))
@@ -438,13 +425,9 @@ class SaltCP(object):
 
         opts = {}
 
-        opts['timeout'] = options.timeout
-        opts['pcre'] = options.pcre
-        opts['list'] = options.list_
-        opts['grain'] = options.grain
-        opts['grain_pcre'] = options.grain_pcre
-        opts['nodegroup'] = options.nodegroup
-        opts['conf_file'] = options.conf_file
+        for k, v in options.__dict__.items():
+            if v is not None:
+                opts[k] = v
 
         if len(args) <= 1:
             parser.print_help()
@@ -580,14 +563,14 @@ class SaltKey(object):
 
         parser.add_option('-c',
                 '--config',
-                dest='config',
+                dest='conf_file',
                 default='/etc/salt/master',
                 help='Pass in an alternative configuration file')
 
         options, args = parser.parse_args()
 
         opts = {}
-        opts.update(salt.config.master_config(options.config))
+        opts.update(salt.config.master_config(options.conf_file))
 
         for k, v in options.__dict__.items():
             if k == 'keysize':
@@ -640,7 +623,7 @@ class SaltCall(object):
                       'from, multiple directories can be delimited by commas'))
         parser.add_option('-c',
                 '--config',
-                dest='config',
+                dest='conf_file',
                 default='/etc/salt/minion',
                 help='Pass in an alternative configuration file')
         parser.add_option('-d',
@@ -687,17 +670,14 @@ class SaltCall(object):
         options, args = parser.parse_args()
 
         opts = {}
+        opts.update(salt.config.minion_config(options.conf_file))
 
-        opts['grains_run'] = options.grains
-        opts['module_dirs'] = options.module_dirs.split(',')
-        opts['doc'] = options.doc
-        opts['raw_out'] = options.raw_out
-        opts['txt_out'] = options.txt_out
-        opts['yaml_out'] = options.yaml_out
-        opts['color'] = not options.no_color
-        opts['json_out'] = options.json_out
-        opts.update(salt.config.minion_config(options.config))
-        opts['log_level'] = options.log_level
+        for k, v in options.__dict__.items():
+            if k == 'module_dirs':
+                opts[k] = v.split(',')
+            else:
+                opts[k] = v
+
         if len(args) >= 1:
             opts['fun'] = args[0]
             opts['arg'] = args[1:]
@@ -739,7 +719,7 @@ class SaltRun(object):
 
         parser.add_option('-c',
                 '--config',
-                dest='config',
+                dest='conf_file',
                 default='/etc/salt/master',
                 help=('Change the location of the master configuration; '
                       'default=/etc/salt/master'))
@@ -757,10 +737,9 @@ class SaltRun(object):
         options, args = parser.parse_args()
 
         opts = {}
-
-        opts['config'] = options.config
+        opts.update(salt.config.master_config(options.conf_file))
+        opts['conf_file'] = options.conf_file
         opts['doc'] = options.doc
-
         if len(args) > 0:
             opts['fun'] = args[0]
         else:
@@ -769,8 +748,6 @@ class SaltRun(object):
             opts['arg'] = args[1:]
         else:
             opts['arg'] = []
-
-        opts.update(salt.config.master_config(options.config))
 
         return opts
 

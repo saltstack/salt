@@ -28,7 +28,8 @@ def set_pidfile(pidfile):
     if not os.path.isdir(pdir):
         os.makedirs(pdir)
     try:
-        open(pidfile, 'w+').write(str(os.getpid()))
+        with open(pidfile, 'w+') as f:
+            f.write(str(os.getpid()))
     except IOError:
         pass
 

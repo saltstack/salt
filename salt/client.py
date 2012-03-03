@@ -319,7 +319,6 @@ class LocalClient(object):
         inc_timeout = timeout
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = int(time.time())
-        gstart = int(time.time())
         found = set()
         wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict

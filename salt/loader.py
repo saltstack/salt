@@ -17,20 +17,25 @@ log = logging.getLogger(__name__)
 salt_base_path = os.path.dirname(salt.__file__)
 
 
+def _create_loader(opts, ext_type, tag):
+    extra_dirs = [
+            os.path.join(opts['extension_modules'],
+                ext_type)
+            ]
+    ext_type_dirs = '%s_dirs' % ext_type
+    if ext_type_dirs in opts:
+        extra_dirs.extend(opts[ext_type_dirs])
+    module_dirs = [
+        os.path.join(salt_base_path, ext_type),
+        ] + extra_dirs
+    return Loader(module_dirs, opts, tag)
+
+
 def minion_mods(opts):
     '''
     Returns the minion modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'modules')
-            ]
-    if 'module_dirs' in opts:
-        extra_dirs.extend(opts['module_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'modules'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'module')
+    load = _create_loader(opts, 'modules', 'module')
     return load.apply_introspection(load.gen_functions())
 
 
@@ -38,16 +43,7 @@ def raw_mod(opts, name, functions):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'modules')
-            ]
-    if 'module_dirs' in opts:
-        extra_dirs.extend(opts['module_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'modules'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'rawmodule')
+    load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
 
 
@@ -55,16 +51,7 @@ def returners(opts):
     '''
     Returns the returner modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'returners')
-            ]
-    if 'returner_dirs' in opts:
-        extra_dirs.extend(opts['returner_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'returners'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'returner')
+    load = _create_loader(opts, 'returners', 'returner')
     return load.filter_func('returner')
 
 
@@ -72,16 +59,7 @@ def states(opts, functions):
     '''
     Returns the returner modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'states')
-            ]
-    if 'states_dirs' in opts:
-        extra_dirs.extend(opts['states_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'states'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'state')
+    load = _create_loader(opts, 'states', 'state')
     pack = {'name': '__salt__',
             'value': functions}
     return load.gen_functions(pack)
@@ -337,11 +315,8 @@ class Loader(object):
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
                     continue
-                if fn_.endswith('.py')\
-                    or fn_.endswith('.pyc')\
-                    or fn_.endswith('.pyo')\
-                    or fn_.endswith('.so')\
-                    or (cython_enabled and fn_.endswith('.pyx')):
+                if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
+                    or (cython_enabled and fn_.endswith('.pyx'))):
                     names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
         for name in names:
             try:
