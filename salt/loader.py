@@ -337,11 +337,8 @@ class Loader(object):
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
                     continue
-                if fn_.endswith('.py')\
-                    or fn_.endswith('.pyc')\
-                    or fn_.endswith('.pyo')\
-                    or fn_.endswith('.so')\
-                    or (cython_enabled and fn_.endswith('.pyx')):
+                if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
+                    or (cython_enabled and fn_.endswith('.pyx'))):
                     names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
         for name in names:
             try:

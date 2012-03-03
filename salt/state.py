@@ -162,11 +162,8 @@ class State(object):
         '''
         if data['state'] == 'file':
             if data['fun'] == 'managed':
-                if any((data['name'].endswith('.py'),
-                        data['name'].endswith('.pyx'),
-                        data['name'].endswith('.pyo'),
-                        data['name'].endswith('.pyc'),
-                        data['name'].endswith('.so'))):
+                if data['name'].endswith(
+                    ('.py', '.pyx', '.pyo', '.pyc', '.so')):
                     self.load_modules()
                     open(os.path.join(
                         self.opts['cachedir'],
