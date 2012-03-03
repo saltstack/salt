@@ -316,6 +316,7 @@ class LocalClient(object):
             print '------------------------------------\n'
         if timeout is None:
             timeout = self.opts['timeout']
+        fret = {}
         inc_timeout = timeout
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = int(time.time())
@@ -344,12 +345,13 @@ class LocalClient(object):
                         except:
                             pass
                     found.add(fn_)
+                    fret.update(ret)
                     yield ret
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(fret) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if int(time.time()) > start + timeout:
