@@ -51,6 +51,13 @@ class SaltCMD(object):
                 action='store_true',
                 help=('Return the data from minions as a group after they '
                       'all return.'))
+        parser.add_option('-v',
+                '--verbose',
+                default=False,
+                dest='verbose',
+                action='store_true',
+                help=('Turn on command verbosity, display jid and active job '
+                     'queries'))
         parser.add_option('-b',
                 '--batch',
                 '--batch-size',
@@ -172,6 +179,7 @@ class SaltCMD(object):
         if not options.timeout is None:
             opts['timeout'] = int(options.timeout)
         opts['static'] = options.static
+        opts['verbose'] = options.verbose
         opts['batch'] = options.batch
         opts['pcre'] = options.pcre
         opts['list'] = options.list_
@@ -282,6 +290,8 @@ class SaltCMD(object):
 
             if self.opts['return']:
                 args.append(self.opts['return'])
+            else:
+                args.append('')
             try:
                 # local will be None when there was an error
                 if local:
@@ -290,6 +300,8 @@ class SaltCMD(object):
                         ret, out = self._format_ret(full_ret)
                         self._output_ret(ret, out)
                     else:
+                        if self.opts['verbose']:
+                            args.append(True)
                         for full_ret in local.cmd_cli(*args):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
