@@ -175,7 +175,8 @@ def minion_config(path):
     opts['grains'] = salt.loader.grains(opts)
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'key_logfile'])
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+                            'key_logfile', 'extension_modules'])
     return opts
 
 
