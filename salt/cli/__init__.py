@@ -482,7 +482,7 @@ class SaltKey(object):
 
         parser.add_option('-l',
                 '--list',
-                dest='list_',
+                dest='list',
                 default=False,
                 action='store_true',
                 help='List the unaccepted public keys')
@@ -538,7 +538,7 @@ class SaltKey(object):
                 dest='delete',
                 default='',
                 help='Delete the named key')
-        
+
         parser.add_option('-D',
                 '--delete-all',
                 dest='delete_all',
@@ -552,10 +552,9 @@ class SaltKey(object):
                 default=False,
                 action='store_true',
                 help='Supress output')
-        
+
         parser.add_option('--key-logfile',
                 dest='key_logfile',
-                default='/var/log/salt/key.log',
                 help=('Send all output to a file. '
                       'Default is /var/log/salt/key.log'))
 
@@ -588,31 +587,19 @@ class SaltKey(object):
         options, args = parser.parse_args()
 
         opts = {}
+        opts.update(salt.config.master_config(options.config))
 
-        opts['quiet'] = options.quiet
-        opts['key_logfile'] = options.key_logfile
+        for k, v in options.__dict__.items():
+            if k == 'keysize':
+                if v < 2048:
+                    opts[k] = v
+                else:
+                    opts[k] = v
+            elif v is not None:
+                opts[k] = v
         # I decided to always set this to info, since it really all is info or
         # error.
         opts['loglevel'] = 'info'
-        opts['list'] = options.list_
-        opts['list_all'] = options.list_all
-        opts['accept'] = options.accept
-        opts['accept_all'] = options.accept_all
-        opts['reject'] = options.reject
-        opts['reject_all'] = options.reject_all
-        opts['print'] = options.print_
-        opts['print_all'] = options.print_all
-        opts['delete'] = options.delete
-        opts['delete_all'] = options.delete_all
-        opts['gen_keys'] = options.gen_keys
-        opts['gen_keys_dir'] = options.gen_keys_dir
-        if options.keysize < 2048:
-            opts['keysize'] = 2048
-        else:
-            opts['keysize'] = options.keysize
-
-        opts.update(salt.config.master_config(options.config))
-
         return opts
 
     def run(self):
