@@ -422,6 +422,9 @@ class LocalClient(object):
         gstart = int(time.time())
         ret = {}
         wtag = os.path.join(jid_dir, 'wtag*')
+        # If jid == 0, there is no payload
+        if int(jid) == 0:
+            return ret
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
