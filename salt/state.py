@@ -11,6 +11,7 @@ The data sent to the state calls is as follows:
       }
 '''
 
+# Import python libs
 import os
 import copy
 import inspect
@@ -19,9 +20,11 @@ import logging
 import tempfile
 import collections
 
+# Import Salt Libs
 import salt.utils
 import salt.loader
 import salt.minion
+import salt.fileclient
 
 
 log = logging.getLogger(__name__)
@@ -797,7 +800,7 @@ class HighState(object):
     salt master or in the local cache.
     '''
     def __init__(self, opts):
-        self.client = salt.minion.FileClient(opts)
+        self.client = salt.fileclient.get_file_client(opts)
         self.opts = self.__gen_opts(opts)
         self.state = State(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
