@@ -120,8 +120,7 @@ def grains(opts):
             opts['grains'] = {}
     load = Loader(module_dirs, opts, 'grain')
     grains = load.gen_grains()
-    if 'grains' in opts:
-        grains.update(opts['grains'])
+    grains.update(opts['grains'])
     return grains
 
 
