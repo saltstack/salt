@@ -33,8 +33,8 @@ def _validate_file_roots(file_roots):
     just replace it with an empty list
     '''
     if not isinstance(file_roots, dict):
-        log.warning(('The file_roots parameter is not properly formatted,'
-            ' using defaults'))
+        log.warning('The file_roots parameter is not properly formatted,'
+                    ' using defaults')
         return {'base': ['/srv/salt']}
     for env, dirs in file_roots.items():
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
