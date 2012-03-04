@@ -27,6 +27,19 @@ import salt.payload
 
 log = logging.getLogger(__name__)
 
+def get_file_client(opts):
+    '''
+    Read in the ``file_server`` option and return the correct type of file
+    server
+    '''
+    try:
+        return {
+                'remote': RemoteClient,
+                'local': LocalClient
+               }.get(opts['file_server'], 'remote')(opts)
+    except KeyError:
+        return RemoteClient(opts)
+
 class Client(object):
     '''
     Base class for Salt file interactions
