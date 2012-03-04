@@ -8,6 +8,7 @@ import logging
 import hashlib
 import os
 import shutil
+import stat
 import string
 import subprocess
 import urllib2
@@ -477,12 +478,12 @@ class RemoteClient(Client):
                         data['dest']
                         )
                     destdir = os.path.dirname(dest)
-                    cumask = os.umask(191)
+                    cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
                     if not os.path.isdir(destdir):
                         os.makedirs(destdir)
                     if not os.path.exists(dest):
                         open(dest, 'w+').write(data['data'])
-                    os.chmod(dest, 384)
+                    os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
                     os.umask(cumask)
                 break
             if not fn_:
@@ -493,11 +494,11 @@ class RemoteClient(Client):
                     data['dest']
                     )
                 destdir = os.path.dirname(dest)
-                cumask = os.umask(191)
+                cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
                 if not os.path.isdir(destdir):
                     os.makedirs(destdir)
                 fn_ = open(dest, 'w+')
-                os.chmod(dest, 384)
+                os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
                 os.umask(cumask)
             fn_.write(data['data'])
         return dest
