@@ -674,6 +674,11 @@ class SaltCall(object):
             opts['fun'] = ''
             opts['arg'] = []
 
+        salt.verify_env([opts['pki_dir'],
+                         opts['cachedir'],
+                         os.path.dirname(opts['log_file']),
+                         ])
+
         return opts
 
     def run(self):
