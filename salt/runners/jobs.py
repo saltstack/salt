@@ -9,6 +9,7 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
+from salt.exceptions import SaltException
 
 # Import Third party libs
 import yaml
@@ -55,12 +56,13 @@ def lookup_jid(jid):
     Return the printout from a previousely executed job
     '''
 
+    out = None
+
     def _format_ret(full_ret):
         '''
         Take the full return data and format it to simple output
         '''
         ret = {}
-        out = ''
         for key, data in full_ret.items():
             ret[key] = data['ret']
             if 'out' in data:
@@ -69,17 +71,24 @@ def lookup_jid(jid):
 
     client = salt.client.LocalClient(__opts__['conf_file'])
     full_ret = client.get_full_returns(jid, [], 0)
-    ret, out = _format_ret(full_ret)
+    formatted = _format_ret(full_ret)
+
+    if formatted:
+        ret = formatted[0]
+        out = formatted[1]
+    else:
+        ret = SaltException('Job {0} hasn\'t finished. No data yet :('.format(jid))
+        out = ''
+
     # Determine the proper output method and run it
     get_outputter = salt.output.get_outputter
-    if isinstance(ret, list) or isinstance(ret, dict):
-        if out:
-            printout = get_outputter(out)
-        else:
-            printout = get_outputter(None)
+    if isinstance(ret, (list, dict, basestring)) and out:
+        printout = get_outputter(out)
     # Pretty print any salt exceptions
     elif isinstance(ret, SaltException):
         printout = get_outputter("txt")
+    else:
+        printout = get_outputter(None)
     printout(ret)
     return ret
 
