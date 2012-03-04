@@ -192,7 +192,8 @@ class LocalClient(object):
         arg=(),
         timeout=None,
         expr_form='glob',
-        ret=''):
+        ret='',
+        verbose=False):
         '''
         Execute a salt command and return
         '''
@@ -211,7 +212,8 @@ class LocalClient(object):
                 pub_data['minions'],
                 timeout,
                 tgt,
-                expr_form):
+                expr_form,
+                verbose):
             if not fn_ret:
                 continue
             yield fn_ret
@@ -297,15 +299,24 @@ class LocalClient(object):
         return (self.get_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
 
-    def get_cli_returns(self, jid, minions, timeout=None, tgt='*', tgt_type='glob'):
+    def get_cli_returns(
+            self,
+            jid,
+            minions,
+            timeout=None,
+            tgt='*',
+            tgt_type='glob',
+            verbose=False):
         '''
         This method starts off a watcher looking at the return data for
         a specified jid, it returns all of the information for the jid
         '''
-        print 'Executing job with jid {0}'.format(jid)
-        print '------------------------------------\n'
+        if verbose:
+            print 'Executing job with jid {0}'.format(jid)
+            print '------------------------------------\n'
         if timeout is None:
             timeout = self.opts['timeout']
+        fret = {}
         inc_timeout = timeout
         jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
         start = int(time.time())
@@ -334,12 +345,13 @@ class LocalClient(object):
                         except:
                             pass
                     found.add(fn_)
+                    fret.update(ret)
                     yield ret
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(fret) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if int(time.time()) > start + timeout:
@@ -349,7 +361,8 @@ class LocalClient(object):
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
-                        print 'Execution is still running on {0}'.format(id_)
+                        if verbose:
+                            print 'Execution is still running on {0}'.format(id_)
                         more_time = True
                 if more_time:
                     timeout += inc_timeout
