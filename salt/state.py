@@ -163,28 +163,23 @@ class State(object):
         python, pyx, or .so. Always refresh if the function is recuse,
         since that can lay down anything.
         '''
+        def _refresh():
+            self.load_modules()
+            module_refresh_path = os.path.join(
+                self.opts['cachedir'],
+                'module_refresh')
+            with open(module_refresh_path, 'w+') as f:
+                f.write('')
+
         if data['state'] == 'file':
             if data['fun'] == 'managed':
                 if data['name'].endswith(
                     ('.py', '.pyx', '.pyo', '.pyc', '.so')):
-                    self.load_modules()
-                    open(os.path.join(
-                        self.opts['cachedir'],
-                        'module_refresh'),
-                        'w+').write('')
+                    _refresh()
             elif data['fun'] == 'recurse':
-                self.load_modules()
-                open(os.path.join(
-                    self.opts['cachedir'],
-                    'module_refresh'),
-                    'w+').write('')
+                _refresh()
         elif data['state'] == 'pkg':
-            self.load_modules()
-            open(os.path.join(
-                self.opts['cachedir'],
-                'module_refresh'),
-                'w+').write('')
-
+            _refresh()
 
     def format_verbosity(self, returns):
         '''

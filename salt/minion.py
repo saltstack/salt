@@ -141,6 +141,7 @@ class Minion(object):
         Return the functions and the returners loaded up from the loader
         module
         '''
+        self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts)
         return functions, returners
@@ -397,6 +398,11 @@ class Minion(object):
             open(fn_, 'w+').write(self.serial.dumps(ret))
         return ret_val
 
+    @property
+    def master_pub(self):
+        return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
+                                          port=self.publish_port)
+
     def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
@@ -431,14 +437,10 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        master_pub = 'tcp://{0}:{1}'.format(
-            self.opts['master_ip'],
-            str(self.publish_port)
-            )
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
-        socket.connect(master_pub)
+        socket.connect(self.master_pub)
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
@@ -463,7 +465,7 @@ class Minion(object):
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
-                    socket.connect(master_pub)
+                    socket.connect(self.master_pub)
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
