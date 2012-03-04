@@ -295,7 +295,7 @@ class State(object):
                 if state.startswith('__'):
                     continue
                 if not isinstance(body[state], list):
-                    err = ('The state {0} in sls {1} is not formed as a list'
+                    err = ('The state "{0}" in sls {1} is not formed as a list'
                            .format(name, body['__sls__']))
                     errors.append(err)
                 else:
@@ -310,7 +310,7 @@ class State(object):
                                     or arg.keys()[0] == 'watch':
                                 if not isinstance(arg[arg.keys()[0]], list):
                                     errors.append(('The require or watch'
-                                    ' statement in state {0} in sls {1} needs'
+                                    ' statement in state "{0}" in sls "{1}" needs'
                                     ' to be formed as a list').format(
                                         name,
                                         body['__sls__']
@@ -329,17 +329,17 @@ class State(object):
                                 # Make sure that there is only one key in the dict
                                 if len(arg.keys()) != 1:
                                     errors.append(('Multiple dictionaries defined'
-                                    ' in argument of state {0} in sls {1}').format(
+                                    ' in argument of state "{0}" in sls {1}').format(
                                         name,
                                         body['__sls__']))
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue
-                        errors.append(('No function declared in state {0} in'
+                        errors.append(('No function declared in state "{0}" in'
                             ' sls {1}').format(state, body['__sls__']))
                     elif fun > 1:
                         errors.append(('Too many functions declared in state'
-                            ' {0} in sls {1}').format(state, body['__sls__']))
+                            ' "{0}" in sls {1}').format(state, body['__sls__']))
         return errors
 
     def verify_chunks(self, chunks):
