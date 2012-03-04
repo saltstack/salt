@@ -152,6 +152,7 @@ def minion_config(path):
             'state_verbose': False,
             'acceptance_wait_time': 10,
             'dns_check': True,
+            'grains': {},
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
