@@ -3,6 +3,7 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python modules
+from contextlib import nested
 import glob
 import os
 import sys
@@ -42,6 +43,15 @@ def _validate_file_roots(file_roots):
     return file_roots
 
 
+def _read_conf_file(path):
+    with open(path, 'r') as conf_file:
+        conf_opts = yaml.safe_load(conf_file.read()) or {}
+        # allow using numeric ids: convert int to string
+        if 'id' in conf_opts:
+            conf_opts['id'] = str(conf_opts['id'])
+        return conf_opts
+
+
 def load_config(opts, path, env_var):
     '''
     Attempts to update ``opts`` dict by parsing either the file described by
@@ -54,22 +64,13 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            with open(path, 'w') as out:
-                with open(template, 'r') as f:
-                    f.readline() # skip first line
-                    out.write(f.read())
+            with nested(open(path, 'w'), open(template, 'r')) as (out, f):
+                f.readline() # skip first line
+                out.write(f.read())
 
     if os.path.isfile(path):
         try:
-            conf_opts = yaml.safe_load(open(path, 'r'))
-            if conf_opts is None:
-                # The config file is empty and the yaml.load returned None
-                conf_opts = {}
-            else:
-                # allow using numeric ids: convert int to string
-                if 'id' in conf_opts:
-                    conf_opts['id'] = str(conf_opts['id'])
-            opts.update(conf_opts)
+            opts.update(_read_conf_file(path))
             opts['conf_file'] = path
         except Exception, e:
             msg = 'Error parsing configuration file: {0} - {1}'
@@ -91,15 +92,7 @@ def include_config(opts, orig_path):
             path = os.path.join(os.path.dirname(orig_path), path)
         for fn_ in glob.glob(path):
             try:
-                conf_opts = yaml.safe_load(open(fn_, 'r'))
-                if conf_opts is None:
-                    # The config file is empty and the yaml.load returned None
-                    conf_opts = {}
-                else:
-                    # allow using numeric ids: convert int to string
-                    if 'id' in conf_opts:
-                        conf_opts['id'] = str(conf_opts['id'])
-                opts.update(conf_opts)
+                opts.update(_read_conf_file(path))
             except Exception, e:
                 msg = 'Error parsing configuration file: {0} - {1}'
                 log.warn(msg.format(fn_, e))
