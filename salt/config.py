@@ -162,8 +162,8 @@ def minion_config(path):
 
     opts['master_ip'] = dns_check(opts['master'])
 
-    opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
-                       + str(opts['master_port'])
+    opts['master_uri'] = 'tcp://%s:%s' % (opts['master_ip'],
+                                          opts['master_port'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
