@@ -4,6 +4,7 @@ from jinja2.loaders import split_template_path
 from jinja2.exceptions import TemplateNotFound
 import salt
 
+
 def get_template(filename, opts, env):
     loader = SaltCacheLoader(opts, env)
     if filename.startswith(loader.searchpath):
@@ -14,7 +15,9 @@ def get_template(filename, opts, env):
         return jinja.get_template(relpath)
     else:
         # fallback for templates outside the state tree
-        return Template(open(filename, 'r').read())
+        with open(filename, 'r') as f:
+            return Template(f.read())
+
 
 class SaltCacheLoader(BaseLoader):
     '''
@@ -31,7 +34,7 @@ class SaltCacheLoader(BaseLoader):
         self.searchpath = path.join(opts['cachedir'], 'files', env)
         self._file_client = None
         self.cached = []
-        
+
     def file_client(self):
         '''
         Return a file client. Instantiates on first call.
@@ -60,14 +63,13 @@ class SaltCacheLoader(BaseLoader):
         template = path.join(*split_template_path(template))
         self.check_cache(template)
         filepath = path.join(self.searchpath, template)
-        try:
-            f = open(filepath, 'rb')
-            contents = f.read().decode(self.encoding)
-        except IOError:
-            raise TemplateNotFound(template) 
-        finally:
-            f.close()
+        with open(filepath, 'rb') as f:
+            try:
+                contents = f.read().decode(self.encoding)
+            except IOError:
+                raise TemplateNotFound(template)
         mtime = path.getmtime(filepath)
+
         def uptodate():
             try:
                 return path.getmtime(filepath) == mtime
