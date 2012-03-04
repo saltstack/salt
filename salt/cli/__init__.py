@@ -494,7 +494,7 @@ class SaltKey(object):
 
         parser.add_option('-p',
                 '--print',
-                dest='print_',
+                dest='print',
                 default='',
                 help='Print the specified public key')
 
