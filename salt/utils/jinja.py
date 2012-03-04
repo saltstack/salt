@@ -1,8 +1,17 @@
+'''
+Jinja loading utils to enable a more powerful backend for jinja templates
+'''
+# Import python libs
 from os import path
+
+# Import third-party libs
 from jinja2 import Template, BaseLoader, Environment
 from jinja2.loaders import split_template_path
 from jinja2.exceptions import TemplateNotFound
+
+# Import Salt libs
 import salt
+import salt.fileclient
 
 
 def get_template(filename, opts, env):
@@ -40,7 +49,7 @@ class SaltCacheLoader(BaseLoader):
         Return a file client. Instantiates on first call.
         '''
         if not self._file_client:
-            self._file_client = salt.minion.FileClient(self.opts)
+            self._file_client = salt.fileclient.get_file_client(self.opts)
         return self._file_client
 
     def cache_file(self, template):
