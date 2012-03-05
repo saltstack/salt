@@ -183,7 +183,7 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        if pup_data['jid'] == 0:
+        if pub_data['jid'] == 0:
             # Failed to connect to the master and send the pub
             return {}
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
@@ -211,7 +211,7 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        if pup_data['jid'] == 0:
+        if pub_data['jid'] == 0:
             print 'Failed to connect to the Master, is the Salt Master running?'
             return {}
         for fn_ret in self.get_cli_returns(pub_data['jid'],
@@ -246,7 +246,7 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        if pup_data['jid'] == 0:
+        if pub_data['jid'] == 0:
             # Failed to connect to the master and send the pub
             yield {}
         else:
@@ -279,7 +279,7 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        if pup_data['jid'] == 0:
+        if pub_data['jid'] == 0:
             # Failed to connect to the master and send the pub
             yield {}
         else:
@@ -310,7 +310,7 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        if pup_data['jid'] == 0:
+        if pub_data['jid'] == 0:
             # Failed to connect to the master and send the pub
             return {}
         return (self.get_returns(pub_data['jid'],
