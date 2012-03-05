@@ -127,6 +127,7 @@ def minion_config(path):
             'failhard': False,
             'autoload_dynamic_modules': True,
             'environment': None,
+            'file_client': 'remote',
             'file_roots': {
                 'base': ['/srv/salt'],
             },

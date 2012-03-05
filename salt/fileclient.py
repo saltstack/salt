@@ -30,14 +30,14 @@ log = logging.getLogger(__name__)
 
 def get_file_client(opts):
     '''
-    Read in the ``file_server`` option and return the correct type of file
+    Read in the ``file_client`` option and return the correct type of file
     server
     '''
     try:
         return {
                 'remote': RemoteClient,
                 'local': LocalClient
-               }.get(opts['file_server'], 'remote')(opts)
+               }.get(opts['file_client'], 'remote')(opts)
     except KeyError:
         return RemoteClient(opts)
 
