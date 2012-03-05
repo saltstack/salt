@@ -17,17 +17,25 @@ log = logging.getLogger(__name__)
 salt_base_path = os.path.dirname(salt.__file__)
 
 
-def _create_loader(opts, ext_type, tag):
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                ext_type)
-            ]
-    ext_type_dirs = '%s_dirs' % ext_type
-    if ext_type_dirs in opts:
-        extra_dirs.extend(opts[ext_type_dirs])
-    module_dirs = [
-        os.path.join(salt_base_path, ext_type),
-        ] + extra_dirs
+def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
+    '''Creates Loader instance
+
+    Order of module_dirs:
+        opts[ext_type_dirs],
+        extension types,
+        base types.
+    '''
+    ext_types = os.path.join(opts['extension_modules'], ext_type)
+    sys_types = os.path.join(salt_base_path, ext_type)
+
+    ext_type_types = []
+    if ext_dirs:
+        if ext_type_dirs == None:
+            ext_type_dirs = '{0}_dirs'.format(ext_type)
+        if ext_type_dirs in opts:
+            ext_type_types.extend(opts[ext_type_dirs])
+
+    module_dirs = ext_type_types + [ext_types, sys_types]
     return Loader(module_dirs, opts, tag)
 
 
@@ -69,16 +77,7 @@ def render(opts, functions):
     '''
     Returns the render modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'renderers')
-            ]
-    if 'render_dirs' in opts:
-        extra_dirs.extend(opts['render_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'renderers'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'render')
+    load = _create_loader(opts, 'renderers', 'render', ext_type_dir='render_dirs')
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)
@@ -95,13 +94,6 @@ def grains(opts):
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'grains')
-            ]
-    module_dirs = [
-        os.path.join(salt_base_path, 'grains'),
-        ] + extra_dirs
     if not 'grains' in opts:
         pre_opts = {}
         salt.config.load_config(
@@ -118,7 +110,7 @@ def grains(opts):
             opts['grains'] = pre_opts['grains']
         else:
             opts['grains'] = {}
-    load = Loader(module_dirs, opts, 'grain')
+    load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
     grains = load.gen_grains()
     grains.update(opts['grains'])
     return grains

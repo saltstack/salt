@@ -30,14 +30,14 @@ log = logging.getLogger(__name__)
 
 def get_file_client(opts):
     '''
-    Read in the ``file_server`` option and return the correct type of file
+    Read in the ``file_client`` option and return the correct type of file
     server
     '''
     try:
         return {
                 'remote': RemoteClient,
                 'local': LocalClient
-               }.get(opts['file_server'], 'remote')(opts)
+               }.get(opts['file_client'], 'remote')(opts)
     except KeyError:
         return RemoteClient(opts)
 
@@ -301,8 +301,10 @@ class LocalClient(Client):
         '''
         path = self._check_proto(path)
         fnd = self._find_file(path, env)
+        if not fnd['path']:
+            return ''
         if not dest:
-            dest = _cache_loc(path, env)
+            dest = self._cache_loc(path, env)
         destdir = os.path.dirname(dest)
         if not os.path.isdir(destdir):
             if makedirs:
