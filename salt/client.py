@@ -213,7 +213,7 @@ class LocalClient(object):
             timeout=timeout)
         if pub_data['jid'] == 0:
             print 'Failed to connect to the Master, is the Salt Master running?'
-            return {}
+            yield {}
         for fn_ret in self.get_cli_returns(pub_data['jid'],
                 pub_data['minions'],
                 timeout,
