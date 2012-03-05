@@ -105,6 +105,10 @@
 # by statically setting it. Remember that the recommended way to manage
 # environments is to issolate via the top file.
 #environment: None
+#
+# If using the local file directory, then the state top file name needs to be
+# defined, by default this is top.sls.
+#state_top: top.sls
 
 #####     File Directory Settings    #####
 ##########################################
