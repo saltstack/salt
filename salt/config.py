@@ -127,6 +127,11 @@ def minion_config(path):
             'failhard': False,
             'autoload_dynamic_modules': True,
             'environment': None,
+            'file_roots': {
+                'base': ['/srv/salt'],
+            },
+            'hash_type': 'md5',
+            'external_nodes': '',
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
