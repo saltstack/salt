@@ -6,7 +6,12 @@ in here
 
 import cPickle as pickle
 
-import msgpack
+try:
+    # Attempt to import msgpack
+    import msgpack
+except ImportError:
+    # Fall back to msgpack_pure
+    import msgpack_pure as msgpack
 
 
 def package(payload):

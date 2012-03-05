@@ -2,13 +2,30 @@
 Support for APT (Advanced Packaging Tool)
 '''
 
+import os
 
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
 
-    return 'pkg' if __grains__['os'] in [ 'Debian', 'Ubuntu' ] else False
+    return 'pkg' if __grains__['os'] in ('Debian', 'Ubuntu') else False
+
+
+def __init__():
+    '''
+    For Debian and derivative systems, set up
+    a few env variables to keep apt happy and
+    non-interactive.
+    '''
+    if __virtual__():
+        env_vars = {
+            'APT_LISTBUGS_FRONTEND': 'none',
+            'APT_LISTCHANGES_FRONTEND': 'none',
+            'DEBIAN_FRONTENT': 'noninteractive',
+        }
+        # Export these puppies so they persist
+        os.environ.update(env_vars)
 
 
 def available_version(name):
@@ -113,8 +130,7 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
     ret_pkgs = {}
     old_pkgs = list_pkgs()
 
-    cmd = '{nonint} apt-get -q -y {confold}{verify}{target} install {pkg}'.format(
-            nonint='DEBIAN_FRONTEND=noninteractive',
+    cmd = 'apt-get -q -y {confold}{verify}{target} install {pkg}'.format(
             confold=' -o DPkg::Options::=--force-confold',
             verify=' --allow-unauthenticated' if skip_verify else '',
             target=' -t {0}'.format(repo) if repo else '',
@@ -150,7 +166,7 @@ def remove(pkg):
     ret_pkgs = []
     old_pkgs = list_pkgs()
 
-    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y remove {0}'.format(pkg)
+    cmd = 'apt-get -q -y remove {0}'.format(pkg)
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
     for pkg in old_pkgs:
@@ -175,7 +191,7 @@ def purge(pkg):
     old_pkgs = list_pkgs()
 
     # Remove inital package
-    purge_cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y purge {0}'.format(pkg)
+    purge_cmd = 'apt-get -q -y purge {0}'.format(pkg)
     __salt__['cmd.run'](purge_cmd)
 
     new_pkgs = list_pkgs()
@@ -211,7 +227,7 @@ def upgrade(refresh=True):
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
-    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -q -y -o DPkg::Options::=--force-confold dist-upgrade'
+    cmd = 'apt-get -q -y -o DPkg::Options::=--force-confold dist-upgrade'
     __salt__['cmd.run'](cmd)
     new_pkgs = list_pkgs()
 
@@ -250,3 +266,30 @@ def list_pkgs(regex_string=""):
             ret[cols[1]] = cols[2]
 
     return ret
+
+
+def upgrade_available(name):
+
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    cmd = 'apt-get --just-print upgrade'
+    out = __salt__['cmd.run_stdout'](cmd)
+
+    # Mini filter function
+    def _to_update(line):
+        return line.startswith("Conf ")
+
+    upgraded_packages = filter(_to_update, out.split('\n'))
+
+    # Example line:
+    # 'Conf linux-image-2.6.35-32-generic (2.6.35-32.66 Ubuntu:10.10/maverick-updates [amd64])'
+    for line in upgraded_packages:
+        data = line.split()
+        if name == data[1]:
+            return True
+    return False
