@@ -301,8 +301,10 @@ class LocalClient(Client):
         '''
         path = self._check_proto(path)
         fnd = self._find_file(path, env)
+        if not fnd['path']:
+            return ''
         if not dest:
-            dest = _cache_loc(path, env)
+            dest = self._cache_loc(path, env)
         destdir = os.path.dirname(dest)
         if not os.path.isdir(destdir):
             if makedirs:
