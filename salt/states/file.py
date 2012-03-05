@@ -306,6 +306,13 @@ def _py(sfn, name, source, user, group, mode, env, context=None):
                 'data': trb}
 
 
+template_registry = {
+    'jinja': _jinja,
+    'mako': _mako,
+    'py': _py,
+}
+
+
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
@@ -530,11 +537,15 @@ def managed(name,
     # then make sure to cpy it down and templatize  things.
     if template and source:
         sfn = __salt__['cp.cache_file'](source, __env__)
-        t_key = '_{0}'.format(template)
-        if t_key in globals():
+        if not os.path.exists(sfn):
+            ret['result'] = False
+            ret['comment'] = (
+                'File "{sfn}" could not be found').format(sfn=sfn)
+        if template in template_registry:
             context_dict = defaults if defaults else {}
-            if context: context_dict.update(context)
-            data = globals()[t_key](
+            if context:
+                context_dict.update(context)
+            data = template_registry[template](
                     sfn,
                     name,
                     source,
