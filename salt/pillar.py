@@ -16,12 +16,13 @@ class Pillar(object):
     '''
     Read over the pillar top files and render the pillar data
     '''
-    def __init__(self, opts, grains):
+    def __init__(self, opts, grains, id_):
         # use the local file client
         self.opts = copy.deepcopy(opts)
         self.opts['file_roots'] = self.opts['pillar_roots']
         self.opts['file_client'] = 'local'
         self.opts['grains'] = grains
+        self.opts['id'] = id_
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
         self.rend = salt.loader.render(opts, {})
