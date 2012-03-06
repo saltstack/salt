@@ -334,6 +334,55 @@ template_registry = {
 }
 
 
+def _check_perms(name, ret, user, group, mode):
+    # Check permissions
+    perms = {}
+    perms['luser'] = __salt__['file.get_user'](name)
+    perms['lgroup'] = __salt__['file.get_group'](name)
+    perms['lmode'] = __salt__['file.get_mode'](name)
+
+    # Mode changes if needed
+    if mode:
+        if mode != perms['lmode']:
+            if not __opts__['test']:
+                __salt__['file.set_mode'](name, mode)
+            print __salt__['file.get_mode'](name)
+            if mode != __salt__['file.get_mode'](name):
+                ret['result'] = False
+                ret['comment'] += 'Failed to change mode to {0} '.format(mode)
+            else:
+                ret['changes']['mode'] = mode
+    # user/group changes if needed, then check if it worked
+    if user:
+        if user != perms['luser']:
+            perms['cuser'] = user
+    if group:
+        if group != perms['lgroup']:
+            perms['cgroup'] = group
+    if 'cuser' in perms or 'cgroup' in perms:
+        if not __opts__['test']:
+            __salt__['file.chown'](
+                    name,
+                    user,
+                    group
+                    )
+    if user:
+        if user != __salt__['file.get_user'](name):
+            ret['result'] = False
+            ret['comment'] = 'Failed to change user to {0} '.format(user)
+        elif 'cuser' in perms:
+            ret['changes']['user'] = user
+    if group:
+        if group != __salt__['file.get_group'](name):
+            ret['result'] = False
+            ret['comment'] += ('Failed to change group to {0} '
+                               .format(group))
+        elif 'cgroup' in perms:
+            ret['changes']['group'] = group
+
+    return ret, perms
+
+
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
@@ -626,49 +675,6 @@ def managed(name,
 
     # Check changes if the target file exists
     if os.path.isfile(name):
-        # Check permissions
-        perms = {}
-        perms['luser'] = __salt__['file.get_user'](name)
-        perms['lgroup'] = __salt__['file.get_group'](name)
-        perms['lmode'] = __salt__['file.get_mode'](name)
-        # Mode changes if needed
-        if mode:
-            if mode != perms['lmode']:
-                if not __opts__['test']:
-                    __salt__['file.set_mode'](name, mode)
-                if mode != __salt__['file.get_mode'](name):
-                    ret['result'] = False
-                    ret['comment'] += 'Mode not changed '
-                else:
-                    ret['changes']['mode'] = mode
-        # user/group changes if needed, then check if it worked
-        if user:
-            if user != perms['luser']:
-                perms['cuser'] = user
-        if group:
-            if group != perms['lgroup']:
-                perms['cgroup'] = group
-        if 'cuser' in perms or 'cgroup' in perms:
-            if not __opts__['test']:
-                __salt__['file.chown'](
-                        name,
-                        user,
-                        group
-                        )
-        if user:
-            if user != __salt__['file.get_user'](name):
-                ret['result'] = False
-                ret['comment'] = 'Failed to change user to {0} '.format(user)
-            elif 'cuser' in perms:
-                ret['changes']['user'] = user
-        if group:
-            if group != __salt__['file.get_group'](name):
-                ret['result'] = False
-                ret['comment'] += ('Failed to change group to {0} '
-                                   .format(group))
-            elif 'cgroup' in perms:
-                ret['changes']['group'] = group
-
         # Only test the checksums on files with managed contents
         if source:
             name_sum = ''
@@ -699,6 +705,8 @@ def managed(name,
             if not __opts__['test']:
                 shutil.copyfile(sfn, name)
                 __clean_tmp(sfn)
+
+        ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -741,47 +749,8 @@ def managed(name,
                 os.umask(cumask)
                 ret['changes']['new'] = 'file {0} created'.format(name)
                 ret['comment'] = 'Empty file'
-        # Check permissions
-        perms = {}
-        perms['luser'] = __salt__['file.get_user'](name)
-        perms['lgroup'] = __salt__['file.get_group'](name)
-        perms['lmode'] = __salt__['file.get_mode'](name)
-        # Run through the perms and detect and apply the needed changes to
-        # permissions
-        if user:
-            if user != perms['luser']:
-                perms['cuser'] = user
-        if group:
-            if group != perms['lgroup']:
-                perms['cgroup'] = group
-        if 'cuser' in perms or 'cgroup' in perms:
-            if not __opts__['test']:
-                __salt__['file.chown'](
-                        name,
-                        user,
-                        group
-                        )
-        if mode:
-            if mode != perms['lmode']:
-                if not __opts__['test']:
-                    __salt__['file.set_mode'](name, mode)
-                if mode != __salt__['file.get_mode'](name):
-                    ret['result'] = False
-                    ret['comment'] += 'Mode not changed '
-                else:
-                    ret['changes']['mode'] = mode
-        if user:
-            if user != __salt__['file.get_user'](name):
-                ret['result'] = False
-                ret['comment'] += 'User not changed '
-            elif 'cuser' in perms:
-                ret['changes']['user'] = user
-        if group:
-            if group != __salt__['file.get_group'](name):
-                ret['result'] = False
-                ret['comment'] += 'Group not changed '
-            elif 'cgroup' in perms:
-                ret['changes']['group'] = group
+
+        ret, perms = _check_perms(name, ret, user, group, mode)
 
         # Now copy the file contents if there is a source file
         if sfn:
@@ -864,48 +833,10 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    perms = {}
-    perms['luser'] = __salt__['file.get_user'](name)
-    perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name)
-    # Run through the perms and detect and apply the needed changes
-    if user:
-        if user != perms['luser']:
-            perms['cuser'] = user
-    if group:
-        if group != perms['lgroup']:
-            perms['cgroup'] = group
-    if 'cuser' in perms or 'cgroup' in perms:
-        if not __opts__['test']:
-            __salt__['file.chown'](
-                    name,
-                    user,
-                    group
-                    )
-    if mode:
-        if mode != perms['lmode']:
-            if not __opts__['test']:
-                __salt__['file.set_mode'](name, mode)
-            if mode != __salt__['file.get_mode'](name):
-                ret['result'] = False
-                ret['comment'] += 'Mode not changed '
-            else:
-                ret['changes']['mode'] = mode
-    if user:
-        if user != __salt__['file.get_user'](name):
-            ret['result'] = False
-            ret['comment'] = 'Failed to change user to {0} '.format(user)
-        elif 'cuser' in perms:
-            ret['changes']['user'] = user
-    if group:
-        if group != __salt__['file.get_group'](name):
-            ret['result'] = False
-            ret['comment'] += 'Failed to change group to {0} '.format(group)
-        elif 'cgroup' in perms:
-            ret['changes']['group'] = group
+    ret, perms = _check_perms(ret, user, group, mode)
 
     if recurse:
-        if not set(['user','group']) >= set(recurse):
+        if not set(['user', 'group']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user" and ' \
                              '"group"'
