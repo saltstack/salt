@@ -183,6 +183,9 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            return {}
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
 
     def cmd_cli(
@@ -208,15 +211,19 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        for fn_ret in self.get_cli_returns(pub_data['jid'],
-                pub_data['minions'],
-                timeout,
-                tgt,
-                expr_form,
-                verbose):
-            if not fn_ret:
-                continue
-            yield fn_ret
+        if pub_data['jid'] == '0':
+            print 'Failed to connect to the Master, is the Salt Master running?'
+            yield {}
+        else:
+            for fn_ret in self.get_cli_returns(pub_data['jid'],
+                    pub_data['minions'],
+                    timeout,
+                    tgt,
+                    expr_form,
+                    verbose):
+                if not fn_ret:
+                    continue
+                yield fn_ret
 
     def cmd_iter(
         self,
@@ -240,12 +247,16 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        for fn_ret in self.get_iter_returns(pub_data['jid'],
-                pub_data['minions'],
-                timeout):
-            if not fn_ret:
-                continue
-            yield fn_ret
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            yield {}
+        else:
+            for fn_ret in self.get_iter_returns(pub_data['jid'],
+                    pub_data['minions'],
+                    timeout):
+                if not fn_ret:
+                    continue
+                yield fn_ret
 
     def cmd_iter_no_block(
         self,
@@ -269,10 +280,14 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        for fn_ret in self.get_iter_returns(pub_data['jid'],
-                pub_data['minions'],
-                timeout):
-            yield fn_ret
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            yield {}
+        else:
+            for fn_ret in self.get_iter_returns(pub_data['jid'],
+                    pub_data['minions'],
+                    timeout):
+                yield fn_ret
 
     def cmd_full_return(
         self,
@@ -296,6 +311,9 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            return {}
         return (self.get_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
 
