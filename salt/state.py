@@ -11,16 +11,20 @@ The data sent to the state calls is as follows:
       }
 '''
 
+# Import python libs
+import os
 import copy
 import inspect
 import fnmatch
 import logging
-import os
 import tempfile
 import collections
 
+# Import Salt Libs
+import salt.utils
 import salt.loader
 import salt.minion
+import salt.fileclient
 
 
 log = logging.getLogger(__name__)
@@ -159,31 +163,23 @@ class State(object):
         python, pyx, or .so. Always refresh if the function is recuse,
         since that can lay down anything.
         '''
+        def _refresh():
+            self.load_modules()
+            module_refresh_path = os.path.join(
+                self.opts['cachedir'],
+                'module_refresh')
+            with open(module_refresh_path, 'w+') as f:
+                f.write('')
+
         if data['state'] == 'file':
             if data['fun'] == 'managed':
-                if any((data['name'].endswith('.py'),
-                        data['name'].endswith('.pyx'),
-                        data['name'].endswith('.pyo'),
-                        data['name'].endswith('.pyc'),
-                        data['name'].endswith('.so'))):
-                    self.load_modules()
-                    open(os.path.join(
-                        self.opts['cachedir'],
-                        'module_refresh'),
-                        'w+').write('')
+                if data['name'].endswith(
+                    ('.py', '.pyx', '.pyo', '.pyc', '.so')):
+                    _refresh()
             elif data['fun'] == 'recurse':
-                self.load_modules()
-                open(os.path.join(
-                    self.opts['cachedir'],
-                    'module_refresh'),
-                    'w+').write('')
+                _refresh()
         elif data['state'] == 'pkg':
-            self.load_modules()
-            open(os.path.join(
-                self.opts['cachedir'],
-                'module_refresh'),
-                'w+').write('')
-
+            _refresh()
 
     def format_verbosity(self, returns):
         '''
@@ -294,7 +290,7 @@ class State(object):
                 if state.startswith('__'):
                     continue
                 if not isinstance(body[state], list):
-                    err = ('The state {0} in sls {1} is not formed as a list'
+                    err = ('The state "{0}" in sls {1} is not formed as a list'
                            .format(name, body['__sls__']))
                     errors.append(err)
                 else:
@@ -309,7 +305,7 @@ class State(object):
                                     or arg.keys()[0] == 'watch':
                                 if not isinstance(arg[arg.keys()[0]], list):
                                     errors.append(('The require or watch'
-                                    ' statement in state {0} in sls {1} needs'
+                                    ' statement in state "{0}" in sls "{1}" needs'
                                     ' to be formed as a list').format(
                                         name,
                                         body['__sls__']
@@ -328,17 +324,17 @@ class State(object):
                                 # Make sure that there is only one key in the dict
                                 if len(arg.keys()) != 1:
                                     errors.append(('Multiple dictionaries defined'
-                                    ' in argument of state {0} in sls {1}').format(
+                                    ' in argument of state "{0}" in sls {1}').format(
                                         name,
                                         body['__sls__']))
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue
-                        errors.append(('No function declared in state {0} in'
+                        errors.append(('No function declared in state "{0}" in'
                             ' sls {1}').format(state, body['__sls__']))
                     elif fun > 1:
                         errors.append(('Too many functions declared in state'
-                            ' {0} in sls {1}').format(state, body['__sls__']))
+                            ' "{0}" in sls {1}').format(state, body['__sls__']))
         return errors
 
     def verify_chunks(self, chunks):
@@ -551,10 +547,19 @@ class State(object):
         Take the path to a template and return the high data structure
         derived from the template.
         '''
+        # Template was specified incorrectly
         if not isinstance(template, basestring):
             return {}
+        # Template does not exists
         if not os.path.isfile(template):
             return {}
+        # Template is an empty file
+        if salt.utils.is_empty(template):
+            return {}
+        # Template is nothing but whitespace
+        if not open(template).read().strip():
+            return {}
+
         return self.rend[self.template_shebang(template)](template, env, sls)
 
     def compile_template_str(self, template):
@@ -790,7 +795,7 @@ class HighState(object):
     salt master or in the local cache.
     '''
     def __init__(self, opts):
-        self.client = salt.minion.FileClient(opts)
+        self.client = salt.fileclient.get_file_client(opts)
         self.opts = self.__gen_opts(opts)
         self.state = State(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
@@ -1053,6 +1058,8 @@ class HighState(object):
                         state[name]['__sls__'] = sls
                     if '__env__' not in state[name]:
                         state[name]['__env__'] = env
+        else:
+            state = {}
         return state, mods, errors
 
     def render_highstate(self, matches):

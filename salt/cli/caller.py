@@ -15,6 +15,7 @@ import salt.minion
 # Custom exceptions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
+
 class Caller(object):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
@@ -24,7 +25,6 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
-        opts['grains'] = salt.loader.grains(opts)
         self.minion = salt.minion.SMinion(opts)
 
     def call(self):
@@ -113,4 +113,4 @@ class Caller(object):
             if 'json_out' in self.opts and self.opts['json_out']:
                 printout.indent = 2
 
-            printout({'local': ret['return']}, color=self.opts['color'])
+            printout({'local': ret['return']}, color=self.opts['no_color'])

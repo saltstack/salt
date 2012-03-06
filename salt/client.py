@@ -150,6 +150,17 @@ class LocalClient(object):
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
 
+    def gather_job_info(self, jid, tgt, tgt_type):
+        '''
+        Return the information about a given job
+        '''
+        return self.cmd(
+                tgt,
+                'saltutil.find_job',
+                [jid],
+                2,
+                tgt_type)
+
     def cmd(
         self,
         tgt,
@@ -172,7 +183,47 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            return {}
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
+
+    def cmd_cli(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        timeout=None,
+        expr_form='glob',
+        ret='',
+        verbose=False):
+        '''
+        Execute a salt command and return
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
+        jid = prep_jid(self.opts['cachedir'])
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout)
+        if pub_data['jid'] == '0':
+            print 'Failed to connect to the Master, is the Salt Master running?'
+            yield {}
+        else:
+            for fn_ret in self.get_cli_returns(pub_data['jid'],
+                    pub_data['minions'],
+                    timeout,
+                    tgt,
+                    expr_form,
+                    verbose):
+                if not fn_ret:
+                    continue
+                yield fn_ret
 
     def cmd_iter(
         self,
@@ -196,12 +247,16 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        for fn_ret in self.get_iter_returns(pub_data['jid'],
-                pub_data['minions'],
-                timeout):
-            if not fn_ret:
-                continue
-            yield fn_ret
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            yield {}
+        else:
+            for fn_ret in self.get_iter_returns(pub_data['jid'],
+                    pub_data['minions'],
+                    timeout):
+                if not fn_ret:
+                    continue
+                yield fn_ret
 
     def cmd_iter_no_block(
         self,
@@ -225,10 +280,14 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        for fn_ret in self.get_iter_returns(pub_data['jid'],
-                pub_data['minions'],
-                timeout):
-            yield fn_ret
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            yield {}
+        else:
+            for fn_ret in self.get_iter_returns(pub_data['jid'],
+                    pub_data['minions'],
+                    timeout):
+                yield fn_ret
 
     def cmd_full_return(
         self,
@@ -252,8 +311,82 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
-        return (self.get_full_returns(pub_data['jid'],
+        if pub_data['jid'] == '0':
+            # Failed to connect to the master and send the pub
+            return {}
+        return (self.get_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
+
+    def get_cli_returns(
+            self,
+            jid,
+            minions,
+            timeout=None,
+            tgt='*',
+            tgt_type='glob',
+            verbose=False):
+        '''
+        This method starts off a watcher looking at the return data for
+        a specified jid, it returns all of the information for the jid
+        '''
+        if verbose:
+            print 'Executing job with jid {0}'.format(jid)
+            print '------------------------------------\n'
+        if timeout is None:
+            timeout = self.opts['timeout']
+        fret = {}
+        inc_timeout = timeout
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', jid)
+        start = int(time.time())
+        found = set()
+        wtag = os.path.join(jid_dir, 'wtag*')
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            yield {}
+        # Wait for the hosts to check in
+        while True:
+            for fn_ in os.listdir(jid_dir):
+                ret = {}
+                if fn_.startswith('.'):
+                    continue
+                if fn_ not in found:
+                    retp = os.path.join(jid_dir, fn_, 'return.p')
+                    outp = os.path.join(jid_dir, fn_, 'out.p')
+                    if not os.path.isfile(retp):
+                        continue
+                    while fn_ not in ret:
+                        try:
+                            ret_data = self.serial.load(open(retp, 'r'))
+                            ret[fn_] = {'ret': ret_data}
+                            if os.path.isfile(outp):
+                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                        except:
+                            pass
+                    found.add(fn_)
+                    fret.update(ret)
+                    yield ret
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
+            if len(fret) >= len(minions):
+                # All minions have returned, break out of the loop
+                break
+            if int(time.time()) > start + timeout:
+                # The timeout has been reached, check the jid to see if the
+                # timeout needs to be increased
+                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                more_time = False
+                for id_ in jinfo:
+                    if jinfo[id_]:
+                        if verbose:
+                            print 'Execution is still running on {0}'.format(id_)
+                        more_time = True
+                if more_time:
+                    timeout += inc_timeout
+                    continue
+                break
+            time.sleep(0.01)
 
     def get_iter_returns(self, jid, minions, timeout=None):
         '''
@@ -320,6 +453,9 @@ class LocalClient(object):
         gstart = int(time.time())
         ret = {}
         wtag = os.path.join(jid_dir, 'wtag*')
+        # If jid == 0, there is no payload
+        if int(jid) == 0:
+            return ret
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
             return ret
