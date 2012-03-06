@@ -77,7 +77,7 @@ def render(opts, functions):
     '''
     Returns the render modules
     '''
-    load = _create_loader(opts, 'renderers', 'render', ext_type_dir='render_dirs')
+    load = _create_loader(opts, 'renderers', 'render', ext_type_dirs='render_dirs')
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)

@@ -532,7 +532,9 @@ class State(object):
         Check the template shebang line and return the renderer
         '''
         # Open up the first line of the sls template
-        line = open(template, 'r').readline()
+        line = ''
+        with open(template, 'r') as f:
+            line = f.readline()
         # Check if it starts with a shebang
         if line.startswith('#!'):
             # pull out the shebang data
@@ -568,7 +570,8 @@ class State(object):
         derived from the template.
         '''
         fn_ = tempfile.mkstemp()[1]
-        open(fn_, 'w+').write(template)
+        with open(fn_, 'w+') as f:
+            f.write(template)
         high = self.rend[self.template_shebang(fn_)](fn_)
         os.remove(fn_)
         return high
