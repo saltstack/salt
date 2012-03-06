@@ -12,6 +12,19 @@ import salt.loader
 import salt.fileclient
 import salt.minion
 
+def get_pillar(opts, grains, id_):
+    '''
+    Return the correct pillar driver based on the file_client option
+    '''
+    try:
+        return {
+                #'remote': RemotePillar,
+                'local': Pillar
+               }.get(opts['file_client'], 'local')(opts, grains, id_)
+    except KeyError:
+        return Pillar(opts, grains, id_)
+
+
 class Pillar(object):
     '''
     Read over the pillar top files and render the pillar data
