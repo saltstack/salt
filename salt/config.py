@@ -24,6 +24,7 @@ except:
 import salt.crypt
 import salt.loader
 import salt.utils
+import salt.pillar
 
 log = logging.getLogger(__name__)
 
@@ -177,6 +178,13 @@ def minion_config(path):
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
 
     opts['grains'] = salt.loader.grains(opts)
+
+    opts['pillar'] = salt.pillar.get_pillar(
+            opts,
+            opts['grains'],
+            opts['id'],
+            opts['environment'],
+            ).compile_pillar()
 
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
