@@ -49,14 +49,20 @@ def _libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
     '''
-    g_cmd = 'grep group /etc/libvirt/qemu.conf'
-    u_cmd = 'grep user /etc/libvirt/qemu.conf'
-    group = subprocess.Popen(g_cmd,
+    g_cmd = 'grep ^group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep ^user /etc/libvirt/qemu.conf'
+    try:
+        group = subprocess.Popen(g_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
-    user = subprocess.Popen(u_cmd,
+    except IndexError:
+        group = "root"
+    try:
+        user = subprocess.Popen(u_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+    except IndexError:
+        user = "root"
     return {'user': user, 'group': group}
 
 
