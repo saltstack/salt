@@ -346,7 +346,6 @@ def _check_perms(name, ret, user, group, mode):
         if mode != perms['lmode']:
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
-            print __salt__['file.get_mode'](name)
             if mode != __salt__['file.get_mode'](name):
                 ret['result'] = False
                 ret['comment'] += 'Failed to change mode to {0} '.format(mode)
@@ -750,12 +749,12 @@ def managed(name,
                 ret['changes']['new'] = 'file {0} created'.format(name)
                 ret['comment'] = 'Empty file'
 
-        ret, perms = _check_perms(name, ret, user, group, mode)
-
         # Now copy the file contents if there is a source file
         if sfn:
             shutil.copyfile(sfn, name)
             __clean_tmp(sfn)
+
+        ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
