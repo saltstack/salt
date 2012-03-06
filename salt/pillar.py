@@ -11,32 +11,71 @@ import collections
 import salt.loader
 import salt.fileclient
 import salt.minion
+import salt.crypt
 
-def get_pillar(opts, grains, id_):
+# Import third party libs
+import zmq
+
+def get_pillar(opts, grains, id_, env=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
     try:
         return {
-                #'remote': RemotePillar,
+                'remote': RemotePillar,
                 'local': Pillar
-               }.get(opts['file_client'], 'local')(opts, grains, id_)
+               }.get(opts['file_client'], 'local')(opts, grains, id_, env)
     except KeyError:
-        return Pillar(opts, grains, id_)
+        return Pillar(opts, grains, id_, env)
+
+class RemotePillar(object):
+    '''
+    Get the pillar from the master
+    '''
+    def __init__(self, opts, grains, id_, env):
+        self.opts = opts
+        self.opts['environment'] = env
+        self.grains = grains
+        self.id_ = id_
+        self.serial = salt.payload.Serial(self.opts)
+        self.auth = salt.crypt.SAuth(opts)
+        self.socket = self.__get_socket()
+
+    def __get_socket(self):
+        '''
+        Return the zeromq socket to use
+        '''
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(self.opts['master_uri'])
+        return socket
+
+    def compile_pillar(self):
+        '''
+        Return the pillar data from the master
+        '''
+        payload = {'enc': 'aes'}
+        load = {'id': self.id_,
+                'grains': self.grains,
+                'env': self.opts['environment'],
+                'cmd': '_pillar'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
 
 
 class Pillar(object):
     '''
     Read over the pillar top files and render the pillar data
     '''
-    def __init__(self, opts, grains, id_):
+    def __init__(self, opts, grains, id_, env):
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, id_)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
         self.rend = salt.loader.render(opts, {})
 
-    def __gen_opts(self, opts, grains, id_):
+    def __gen_opts(self, opts, grains, id_, env=None):
         '''
         The options need to be altered to conform to the file client
         '''
@@ -45,6 +84,9 @@ class Pillar(object):
         opts['file_client'] = 'local'
         opts['grains'] = grains
         opts['id'] = id_
+        if 'environment' not in opts:
+            opts['environment'] = env
+        opts
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
