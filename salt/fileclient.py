@@ -93,7 +93,6 @@ class Client(object):
         if not os.path.isdir(destdir):
             os.makedirs(destdir)
         yield dest
-        os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
         os.umask(cumask)
 
     def cache_file(self, path, env='base'):
