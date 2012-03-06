@@ -159,6 +159,21 @@ def _gen_keep_files(name, require):
     return list(keep)
 
 
+def _check_file(ret, name):
+    ret = True
+    msg = ''
+
+    if not os.path.isabs(name):
+        ret = False
+        msg = ('Specified file {0} is not an absolute'
+               ' path').format(name)
+    elif not os.path.exists(name):
+        ret = False
+        msg = '{0}: file not found'.format(name)
+
+    return ret, msg
+
+
 def _clean_dir(root, keep):
     '''
     Clean out all of the files and directories in a directory (root) while
@@ -175,7 +190,7 @@ def _clean_dir(root, keep):
                 real_keep.add(fn_)
                 if fn_ == '/':
                     break
-    rm_files = []
+
     for roots, dirs, files in os.walk(root):
         for name in files:
             nfn = os.path.join(roots, name)
@@ -188,6 +203,12 @@ def _clean_dir(root, keep):
                 removed.add(nfn)
                 shutil.rmtree(nfn)
     return list(removed)
+
+
+def _error(ret, err_msg):
+    ret['result'] = False,
+    ret['comment'] = err_msg
+    return ret
 
 
 def _mako(sfn, name, source, user, group, mode, env, context=None):
@@ -313,6 +334,55 @@ template_registry = {
 }
 
 
+def _check_perms(name, ret, user, group, mode):
+    # Check permissions
+    perms = {}
+    perms['luser'] = __salt__['file.get_user'](name)
+    perms['lgroup'] = __salt__['file.get_group'](name)
+    perms['lmode'] = __salt__['file.get_mode'](name)
+
+    # Mode changes if needed
+    if mode:
+        if mode != perms['lmode']:
+            if not __opts__['test']:
+                __salt__['file.set_mode'](name, mode)
+            print __salt__['file.get_mode'](name)
+            if mode != __salt__['file.get_mode'](name):
+                ret['result'] = False
+                ret['comment'] += 'Failed to change mode to {0} '.format(mode)
+            else:
+                ret['changes']['mode'] = mode
+    # user/group changes if needed, then check if it worked
+    if user:
+        if user != perms['luser']:
+            perms['cuser'] = user
+    if group:
+        if group != perms['lgroup']:
+            perms['cgroup'] = group
+    if 'cuser' in perms or 'cgroup' in perms:
+        if not __opts__['test']:
+            __salt__['file.chown'](
+                    name,
+                    user,
+                    group
+                    )
+    if user:
+        if user != __salt__['file.get_user'](name):
+            ret['result'] = False
+            ret['comment'] = 'Failed to change user to {0} '.format(user)
+        elif 'cuser' in perms:
+            ret['changes']['user'] = user
+    if group:
+        if group != __salt__['file.get_group'](name):
+            ret['result'] = False
+            ret['comment'] += ('Failed to change group to {0} '
+                               .format(group))
+        elif 'cgroup' in perms:
+            ret['changes']['group'] = group
+
+    return ret, perms
+
+
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
@@ -338,18 +408,16 @@ def symlink(name, target, force=False, makedirs=False):
            'result': True,
            'comment': ''}
     if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+        return _error(
+            ret, 'Specified file {0} is not an absolute path'.format(name))
+
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             _makedirs(name)
         else:
-            ret['result'] = False
-            ret['comment'] = ('Directory {0} for symlink is not present'
-                            .format(os.path.dirname(name)))
-            return ret
+            return _error(ret,
+                          ('Directory {0} for symlink is not present'
+                           ) .format(os.path.dirname(name)))
     if os.path.islink(name):
         # The link exists, verify that it matches the target
         if not os.readlink(name) == target:
@@ -364,19 +432,15 @@ def symlink(name, target, force=False, makedirs=False):
         if force:
             os.remove(name)
         else:
-            ret['result'] = False
-            ret['comment'] = ('File exists where the symlink {0} should be'
-                              .format(name))
-            return ret
+            return _error(ret, ('File exists where the symlink {0} should be'
+                              .format(name)))
     elif os.path.isdir(name):
         # It is not a link or a file, it is a dir, error out
         if force:
             shutil.rmtree(name)
         else:
-            ret['result'] = False
-            ret['comment'] = ('Directory exists where the symlink {0} '
+            return _error(ret, 'Directory exists where the symlink {0} '
                               'should be'.format(name))
-            return ret
     if not os.path.exists(name):
         # The link is not present, make it
         os.symlink(target, name)
@@ -398,10 +462,8 @@ def absent(name):
            'result': True,
            'comment': ''}
     if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+        return _error(ret, ('Specified file {0} is not an absolute'
+                          ' path').format(name))
     if os.path.isfile(name) or os.path.islink(name):
         try:
             os.remove(name)
@@ -409,9 +471,8 @@ def absent(name):
             ret['changes']['removed'] = name
             return ret
         except:
-            ret['result'] = False
-            ret['comment'] = 'Failed to remove file {0}'.format(name)
-            return ret
+            return _error(ret, 'Failed to remove file {0}'.format(name))
+
     elif os.path.isdir(name):
         try:
             shutil.rmtree(name)
@@ -419,9 +480,8 @@ def absent(name):
             ret['changes']['removed'] = name
             return ret
         except:
-            ret['result'] = False
-            ret['comment'] = 'Failed to remove directory {0}'.format(name)
-            return ret
+            return _error(ret, 'Failed to remove directory {0}'.format(name))
+
     ret['comment'] = 'File {0} is not present'.format(name)
     return ret
 
@@ -495,14 +555,13 @@ def managed(name,
            'name': name,
            'result': True}
     if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+        return _error(
+            ret, ('Specified file {0} is not an absolute'
+                  ' path').format(name))
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
-    
+
     # If the source is a list then find which file exists
     if isinstance(source, list):
         # get the master file list
@@ -538,9 +597,8 @@ def managed(name,
     if template and source:
         sfn = __salt__['cp.cache_file'](source, __env__)
         if not os.path.exists(sfn):
-            ret['result'] = False
-            ret['comment'] = (
-                'File "{sfn}" could not be found').format(sfn=sfn)
+            return _error(
+                ret, ('File "{sfn}" could not be found').format(sfn=sfn))
         if template in template_registry:
             context_dict = defaults if defaults else {}
             if context:
@@ -556,10 +614,10 @@ def managed(name,
                     context_dict
                     )
         else:
-            ret['result'] = False
-            ret['comment'] = ('Specified template format {0} is not supported'
-                              .format(template))
-            return ret
+            return _error(
+                ret, ('Specified template format {0} is not supported'
+                      ).format(template))
+
         if data['result']:
             sfn = data['data']
             hsum = ''
@@ -568,109 +626,55 @@ def managed(name,
             source_sum = {'hash_type': 'md5',
                           'hsum': hsum}
         else:
-            ret['result'] = False
-            ret['comment'] = data['data']
             __clean_tmp(sfn)
-            return ret
+            return _error(ret, data['data'])
     else:
         # Copy the file down if there is a source
         if source:
             if urlparse.urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, __env__)
                 if not source_sum:
-                    ret['result'] = False
-                    ret['comment'] = 'Source file {0} not found'.format(source)
-                    return ret
+                    return _error(
+                        ret, 'Source file {0} not found'.format(source))
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
                 if urlparse.urlparse(source_hash).scheme in protos:
                     # The sourc_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
-                        ret['result'] = False
-                        ret['comment'] = 'Source hash file {0} not found'.format(
+                        return _error(
+                            ret, 'Source hash file {0} not found'.format(
                              source_hash
-                             )
-                        return ret
+                             ))
                     comps = []
                     with open(hash_fn, 'r') as hashfile:
                         comps = hashfile.read().split('=')
                     if len(comps) < 2:
-                        ret['result'] = False
-                        ret['comment'] = ('Source hash file {0} contains an '
-                                          ' invalid hash format, it must be in '
-                                          ' the format <hash type>=<hash>').format(
-                                          source_hash
-                                          )
-                        return ret
+                        return _error(
+                            ret, ('Source hash file {0} contains an '
+                                  ' invalid hash format, it must be in '
+                                  ' the format <hash type>=<hash>'
+                                  ).format(source_hash))
                     source_sum['hsum'] = comps[1].strip()
                     source_sum['hash_type'] = comps[0].strip()
                 else:
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
                     if len(comps) < 2:
-                        ret['result'] = False
-                        ret['comment'] = ('Source hash file {0} contains an '
-                                          ' invalid hash format, it must be in '
-                                          ' the format <hash type>=<hash>').format(
-                                          source_hash
-                                          )
-                        return ret
+                        return _error(
+                            ret, ('Source hash file {0} contains an '
+                                  ' invalid hash format, it must be in '
+                                  ' the format <hash type>=<hash>'
+                                  ).format(source_hash))
                     source_sum['hsum'] = comps[1].strip()
                     source_sum['hash_type'] = comps[0].strip()
             else:
-                ret['result'] = False
-                ret['comment'] = ('Unable to determine upstream hash of'
-                                  ' source file {0}').format(
-                     source
-                     )
-                return ret
+                return _error(
+                    ret, ('Unable to determine upstream hash of'
+                          ' source file {0}').format(source))
 
     # Check changes if the target file exists
     if os.path.isfile(name):
-        # Check permissions
-        perms = {}
-        perms['luser'] = __salt__['file.get_user'](name)
-        perms['lgroup'] = __salt__['file.get_group'](name)
-        perms['lmode'] = __salt__['file.get_mode'](name)
-        # Mode changes if needed
-        if mode:
-            if mode != perms['lmode']:
-                if not __opts__['test']:
-                    __salt__['file.set_mode'](name, mode)
-                if mode != __salt__['file.get_mode'](name):
-                    ret['result'] = False
-                    ret['comment'] += 'Mode not changed '
-                else:
-                    ret['changes']['mode'] = mode
-        # user/group changes if needed, then check if it worked
-        if user:
-            if user != perms['luser']:
-                perms['cuser'] = user
-        if group:
-            if group != perms['lgroup']:
-                perms['cgroup'] = group
-        if 'cuser' in perms or 'cgroup' in perms:
-            if not __opts__['test']:
-                __salt__['file.chown'](
-                        name,
-                        user,
-                        group
-                        )
-        if user:
-            if user != __salt__['file.get_user'](name):
-                ret['result'] = False
-                ret['comment'] = 'Failed to change user to {0} '.format(user)
-            elif 'cuser' in perms:
-                ret['changes']['user'] = user
-        if group:
-            if group != __salt__['file.get_group'](name):
-                ret['result'] = False
-                ret['comment'] += ('Failed to change group to {0} '
-                                   .format(group))
-            elif 'cgroup' in perms:
-                ret['changes']['group'] = group
-
         # Only test the checksums on files with managed contents
         if source:
             name_sum = ''
@@ -683,9 +687,9 @@ def managed(name,
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, __env__)
             if not sfn:
-                ret['result'] = False
-                ret['comment'] = 'Source file {0} not found'.format(source)
-                return ret
+                return _error(
+                    ret, 'Source file {0} not found'.format(source))
+
             # Check to see if the files are bins
             if _is_bin(sfn) or _is_bin(name):
                 ret['changes']['diff'] = 'Replace binary file'
@@ -701,6 +705,8 @@ def managed(name,
             if not __opts__['test']:
                 shutil.copyfile(sfn, name)
                 __clean_tmp(sfn)
+
+        ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -720,26 +726,22 @@ def managed(name,
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, __env__)
             if not sfn:
-                ret['result'] = False
-                ret['comment'] = 'Source file {0} not found'.format(source)
-                return ret
+                return ret.error(
+                    ret, 'Source file {0} not found'.format(source))
+
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
                     _makedirs(name)
                 else:
-                    ret['result'] = False
-                    ret['comment'] = 'Parent directory not present'
                     __clean_tmp(sfn)
-                    return ret
+                    return _error(ret, 'Parent directory not present')
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
                     _makedirs(name)
                 else:
-                    ret['result'] = False
-                    ret['comment'] = 'Parent directory not present'
                     __clean_tmp(sfn)
-                    return ret
+                    return _error(ret, 'Parent directory not present')
             # Create the file, user-rw-only if mode will be set
             if mode:
                 cumask = os.umask(384)
@@ -747,47 +749,8 @@ def managed(name,
                 os.umask(cumask)
                 ret['changes']['new'] = 'file {0} created'.format(name)
                 ret['comment'] = 'Empty file'
-        # Check permissions
-        perms = {}
-        perms['luser'] = __salt__['file.get_user'](name)
-        perms['lgroup'] = __salt__['file.get_group'](name)
-        perms['lmode'] = __salt__['file.get_mode'](name)
-        # Run through the perms and detect and apply the needed changes to
-        # permissions
-        if user:
-            if user != perms['luser']:
-                perms['cuser'] = user
-        if group:
-            if group != perms['lgroup']:
-                perms['cgroup'] = group
-        if 'cuser' in perms or 'cgroup' in perms:
-            if not __opts__['test']:
-                __salt__['file.chown'](
-                        name,
-                        user,
-                        group
-                        )
-        if mode:
-            if mode != perms['lmode']:
-                if not __opts__['test']:
-                    __salt__['file.set_mode'](name, mode)
-                if mode != __salt__['file.get_mode'](name):
-                    ret['result'] = False
-                    ret['comment'] += 'Mode not changed '
-                else:
-                    ret['changes']['mode'] = mode
-        if user:
-            if user != __salt__['file.get_user'](name):
-                ret['result'] = False
-                ret['comment'] += 'User not changed '
-            elif 'cuser' in perms:
-                ret['changes']['user'] = user
-        if group:
-            if group != __salt__['file.get_group'](name):
-                ret['result'] = False
-                ret['comment'] += 'Group not changed '
-            elif 'cgroup' in perms:
-                ret['changes']['group'] = group
+
+        ret, perms = _check_perms(name, ret, user, group, mode)
 
         # Now copy the file contents if there is a source file
         if sfn:
@@ -850,75 +813,30 @@ def directory(name,
            'result': True,
            'comment': ''}
     if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+        return _error(
+            ret, 'Specified file {0} is not an absolute path'.format(name))
     if os.path.isfile(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified location {0} exists and is a file'
-                          .format(name))
-        return ret
+        return _error(
+            ret, 'Specified location {0} exists and is a file'.format(name))
     if not os.path.isdir(name):
         # The dir does not exist, make it
         if not os.path.isdir(os.path.dirname(name)):
             if makedirs:
                 _makedirs(name)
             else:
-                ret['result'] = False
-                ret['comment'] = 'No directory to create {0} in'.format(name)
-                return ret
+                return _error(
+                    ret, 'No directory to create {0} in'.format(name))
     if not os.path.isdir(name):
         _makedirs(name)
         os.makedirs(name)
     if not os.path.isdir(name):
-        ret['result'] = False
-        ret['comment'] = 'Failed to create directory {0}'.format(name)
-        return ret
+        return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    perms = {}
-    perms['luser'] = __salt__['file.get_user'](name)
-    perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name)
-    # Run through the perms and detect and apply the needed changes
-    if user:
-        if user != perms['luser']:
-            perms['cuser'] = user
-    if group:
-        if group != perms['lgroup']:
-            perms['cgroup'] = group
-    if 'cuser' in perms or 'cgroup' in perms:
-        if not __opts__['test']:
-            __salt__['file.chown'](
-                    name,
-                    user,
-                    group
-                    )
-    if mode:
-        if mode != perms['lmode']:
-            if not __opts__['test']:
-                __salt__['file.set_mode'](name, mode)
-            if mode != __salt__['file.get_mode'](name):
-                ret['result'] = False
-                ret['comment'] += 'Mode not changed '
-            else:
-                ret['changes']['mode'] = mode
-    if user:
-        if user != __salt__['file.get_user'](name):
-            ret['result'] = False
-            ret['comment'] = 'Failed to change user to {0} '.format(user)
-        elif 'cuser' in perms:
-            ret['changes']['user'] = user
-    if group:
-        if group != __salt__['file.get_group'](name):
-            ret['result'] = False
-            ret['comment'] += 'Failed to change group to {0} '.format(group)
-        elif 'cgroup' in perms:
-            ret['changes']['group'] = group
+    ret, perms = _check_perms(ret, user, group, mode)
 
     if recurse:
-        if not set(['user','group']) >= set(recurse):
+        if not set(['user', 'group']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user" and ' \
                              '"group"'
@@ -1042,19 +960,16 @@ def recurse(name,
            'result': True,
            'comment': ''}
     if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+        return _error(
+            ret, 'Specified file {0} is not an absolute path'.format(name))
+
     keep = set()
     # Verify the target directory
     if not os.path.isdir(name):
         if os.path.exists(name):
             # it is not a dir, but it exists - fail out
-            ret['result'] = False
-            ret['comment'] = ('The path {0} exists and is not a directory'
-                              .format(name))
-            return ret
+            return _error(
+                ret, 'The path {0} exists and is not a directory'.format(name))
         os.makedirs(name)
     for fn_ in __salt__['cp.cache_dir'](source, __env__):
         if not fn_.strip():
@@ -1133,14 +1048,9 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
-    if not os.path.exists(name):
-        ret['comment'] = "File '{0}' not found".format(name)
-        return ret
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
 
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
@@ -1183,17 +1093,11 @@ def comment(name, regex, char='#', backup='.bak'):
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
 
     unanchor_regex = regex.lstrip('^').rstrip('$')
-
-    if not os.path.exists(name):
-        ret['comment'] = "File not found"
-        return ret
 
     # Make sure the pattern appears in the file before continuing
     if not __salt__['file.contains'](name, regex):
@@ -1203,8 +1107,7 @@ def comment(name, regex, char='#', backup='.bak'):
             ret['result'] = True
             return ret
         else:
-            ret['comment'] = "Pattern not found"
-            return ret
+            return _error(ret, '{0}: Pattern not found'.format(unanchor_regex))
 
     # Perform the edit
     __salt__['file.comment'](name, regex, char, backup)
@@ -1236,16 +1139,12 @@ def uncomment(name, regex, char='#', backup='.bak'):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
-    unanchor_regex = regex.lstrip('^')
 
-    if not os.path.exists(name):
-        ret['comment'] = "File not found"
-        return ret
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
+
+    unanchor_regex = regex.lstrip('^')
 
     # Make sure the pattern appears in the file
     if not __salt__['file.contains'](name, unanchor_regex,
@@ -1255,8 +1154,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
             ret['result'] = True
             return ret
         else:
-            ret['comment'] = "Pattern not found"
-            return ret
+            return _error(ret, '{0}: Pattern not found'.format(regex))
 
     # Perform the edit
     __salt__['file.uncomment'](name, regex, char, backup)
@@ -1303,11 +1201,9 @@ def append(name, text):
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
 
     if isinstance(text, basestring):
         text = (text,)
@@ -1318,8 +1214,7 @@ def append(name, text):
         except AttributeError:
             logger.debug("Error appending text to %s; given object is: %s",
                     name, type(chunk))
-            ret['comment'] = "Given text is not a string"
-            return ret
+            return _error(ret, "Given text is not a string")
 
         for line in lines:
             if __salt__['file.contains'](name, line):
@@ -1334,6 +1229,7 @@ def append(name, text):
     ret['comment'] = "Appended {0} lines".format(count)
     ret['result'] = True
     return ret
+
 
 def touch(name, atime=None, mtime=None, makedirs=False):
     """
@@ -1353,18 +1249,14 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         'changes': {},
     }
     if not os.path.isabs(name):
-        ret['result'] = False
-        ret['comment'] = ('Specified file {0} is not an absolute'
-                          ' path').format(name)
-        return ret
+        _error(
+            ret, 'Specified file {0} is not an absolute path'.format(name))
+
     if makedirs:
         _makedirs(name)
     if not os.path.isdir(os.path.dirname(name)):
-        ret['result'] = False
-        ret['comment'] = 'Direcotry not present to touch file {0}'.format(
-                name
-                )
-        return ret
+        return _error(
+            ret, 'Directory not present to touch file {0}'.format(name))
     exists = os.path.exists(name)
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
