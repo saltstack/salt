@@ -1094,6 +1094,18 @@ class HighState(object):
                     highstate.update(state)
                 if err:
                     errors += err
+        # Clean out duplicate extend data 
+        if '__extend__' in highstate:
+            highext = []
+            for ext in highstate['__extend__']:
+                for key, val in ext.items():
+                    exists = False
+                    for hext in highext:
+                        if hext == {key: val}:
+                            exists = True
+                    if not exists:
+                        highext.append({key: val})
+            highstate['__extend__'] = highext
         return highstate, errors
 
     def call_highstate(self):
