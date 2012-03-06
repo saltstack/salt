@@ -832,7 +832,7 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    ret, perms = _check_perms(ret, user, group, mode)
+    ret, perms = _check_perms(name, ret, user, group, mode)
 
     if recurse:
         if not set(['user', 'group']) >= set(recurse):
