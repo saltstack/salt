@@ -28,6 +28,7 @@ import salt.payload
 
 log = logging.getLogger(__name__)
 
+
 def get_file_client(opts):
     '''
     Read in the ``file_client`` option and return the correct type of file
@@ -41,6 +42,7 @@ def get_file_client(opts):
     except KeyError:
         return RemoteClient(opts)
 
+
 class Client(object):
     '''
     Base class for Salt file interactions
@@ -48,7 +50,7 @@ class Client(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
-    
+
     def _check_proto(self, path):
         '''
         Make sure that this path is intended for the salt master and trim it
@@ -75,6 +77,7 @@ class Client(object):
 
         return filelist
 
+    @contextlib.contextmanager
     def _cache_loc(self, path, env='base'):
         '''
         Return the local location to cache the file, cache dirs will be made
@@ -86,12 +89,12 @@ class Client(object):
             path
             )
         destdir = os.path.dirname(dest)
-        cumask = os.umask(191)
+        cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
         if not os.path.isdir(destdir):
             os.makedirs(destdir)
-        os.chmod(dest, 384)
+        yield dest
+        os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
         os.umask(cumask)
-        return dest
 
     def cache_file(self, path, env='base'):
         '''
@@ -272,6 +275,7 @@ class Client(object):
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
         return ''
 
+
 class LocalClient(Client):
     '''
     Use the local_roots option to parse a local file root
@@ -304,7 +308,8 @@ class LocalClient(Client):
         if not fnd['path']:
             return ''
         if not dest:
-            dest = self._cache_loc(path, env)
+            with self._cache_loc(path, env) as cache_dest:
+                dest = cache_dest
         destdir = os.path.dirname(dest)
         if not os.path.isdir(destdir):
             if makedirs:
@@ -344,8 +349,8 @@ class LocalClient(Client):
             return ret
         for path in self.opts['file_roots'][env]:
             for root, dirs, files in os.walk(path):
-                if len(dirs)==0 and len(files)==0:
-                    ret.append(os.path.relpath(root,path))
+                if len(dirs) == 0 and len(files) == 0:
+                    ret.append(os.path.relpath(root, path))
         return ret
 
     def hash_file(self, path, env='base'):
@@ -364,18 +369,20 @@ class LocalClient(Client):
                 log.warning(err)
                 return ret
             else:
-                ret['hsum'] = hashlib.md5(open(path, 'rb').read()).hexdigest()
+                with open(path, 'rb') as f:
+                    ret['hsum'] = hashlib.md5(f.read()).hexdigest()
                 ret['hash_type'] = 'md5'
                 return ret
         path = self._find_file(path, env)['path']
         if not path:
             return {}
         ret = {}
-        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
-                open(path, 'rb').read()).hexdigest()
+        with open(path, 'rb') as f:
+            ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
+                f.read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
         return ret
- 
+
     def list_env(self, path, env='base'):
         '''
         Return a list of the files in the file server's specified environment
@@ -450,6 +457,9 @@ class RemoteClient(Client):
         '''
         path = self._check_proto(path)
         payload = {'enc': 'aes'}
+        load = {'path': path,
+                'env': env,
+                'cmd': '_serve_file'}
         fn_ = None
         if dest:
             destdir = os.path.dirname(dest)
@@ -459,9 +469,6 @@ class RemoteClient(Client):
                 else:
                     return False
             fn_ = open(dest, 'w+')
-        load = {'path': path,
-                'env': env,
-                'cmd': '_serve_file'}
         while True:
             if not fn_:
                 load['loc'] = 0
@@ -473,36 +480,19 @@ class RemoteClient(Client):
             if not data['data']:
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master
-                    dest = os.path.join(
-                        self.opts['cachedir'],
-                        'files',
-                        env,
-                        data['dest']
-                        )
-                    destdir = os.path.dirname(dest)
-                    cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
-                    if not os.path.isdir(destdir):
-                        os.makedirs(destdir)
-                    if not os.path.exists(dest):
-                        open(dest, 'w+').write(data['data'])
-                    os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
-                    os.umask(cumask)
+                    with self._cache_loc(data['dest'], env) as cache_dest:
+                        dest = cache_dest
+                        if not os.path.exists(cache_dest):
+                            with open(cache_dest, 'w+') as f:
+                                f.write(data['data'])
                 break
             if not fn_:
-                dest = os.path.join(
-                    self.opts['cachedir'],
-                    'files',
-                    env,
-                    data['dest']
-                    )
-                destdir = os.path.dirname(dest)
-                cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
-                if not os.path.isdir(destdir):
-                    os.makedirs(destdir)
-                fn_ = open(dest, 'w+')
-                os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
-                os.umask(cumask)
+                with self._cache_loc(data['dest'], env) as cache_dest:
+                    dest = cache_dest
+                    fn_ = open(dest, 'w+')
             fn_.write(data['data'])
+        if fn_:
+            fn_.close()
         return dest
 
     def file_list(self, env='base'):
@@ -543,7 +533,8 @@ class RemoteClient(Client):
                 return {}
             else:
                 ret = {}
-                ret['hsum'] = hashlib.md5(open(path, 'rb').read()).hexdigest()
+                with open(path, 'rb') as f:
+                    ret['hsum'] = hashlib.md5(f.read()).hexdigest()
                 ret['hash_type'] = 'md5'
                 return ret
         payload = {'enc': 'aes'}

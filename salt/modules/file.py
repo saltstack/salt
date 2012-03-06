@@ -235,7 +235,8 @@ def get_sum(path, form='md5'):
     if not os.path.isfile(path):
         return 'File not found'
     try:
-        return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
+        with open(path, 'rb') as f:
+            return getattr(hashlib, form)(f.read()).hexdigest()
     except (IOError, OSError), e:
         return 'File Error: %s' % (str(e))
     except AttributeError, e:
