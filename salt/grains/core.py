@@ -257,7 +257,7 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'Darwin')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
-    elif osdata['os'] = 'Windows':
+    elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
         grains['ps'] = 'vzps -E 0 -efH|cut -b 6-'
