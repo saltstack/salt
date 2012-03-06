@@ -131,7 +131,10 @@ def minion_config(path):
             'file_client': 'remote',
             'file_roots': {
                 'base': ['/srv/salt'],
-            },
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                }
             'hash_type': 'md5',
             'external_nodes': '',
             'disable_modules': [],
@@ -198,7 +201,10 @@ def master_config(path):
             'cachedir': '/var/cache/salt',
             'file_roots': {
                 'base': ['/srv/salt'],
-            },
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                }
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
