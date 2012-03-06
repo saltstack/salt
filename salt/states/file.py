@@ -159,7 +159,7 @@ def _gen_keep_files(name, require):
     return list(keep)
 
 
-def _check_file(ret, name):
+def _check_file(name):
     ret = True
     msg = ''
 
