@@ -230,6 +230,7 @@ def _mako(sfn, name, source, user, group, mode, env, context=None):
         passthrough = context if context else {}
         passthrough.update(__salt__)
         passthrough.update(__grains__)
+        passthrough.update(__pillar__)
         with nested(open(sfn, 'r'), open(tgt, 'w+')) as (src, target):
             template = Template(src.read())
             target.write(template.render(**passthrough))
@@ -264,6 +265,7 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         passthrough = context if context else {}
         passthrough['salt'] = __salt__
         passthrough['grains'] = __grains__
+        passthrough['pillar'] = __pillar__
         passthrough['name'] = name
         passthrough['source'] = source
         passthrough['user'] = user
@@ -307,6 +309,7 @@ def _py(sfn, name, source, user, group, mode, env, context=None):
             )
     mod.salt = __salt__
     mod.grains = __grains__
+    mod.pillar = __pillar__
     mod.name = name
     mod.source = source
     mod.user = user
