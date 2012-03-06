@@ -297,7 +297,7 @@ class LocalClient(Client):
 
     def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
-        Coppies a file from the local files directory and coppies it into place
+        Copies a file from the local files directory and coppies it into place
         '''
         path = self._check_proto(path)
         fnd = self._find_file(path, env)
