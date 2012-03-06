@@ -501,7 +501,7 @@ def virt_type():
 
 def is_kvm_hyper():
     '''
-    Returns a bool whether or not this node is a hypervisor
+    Returns a bool whether or not this node is a KVM hypervisor
 
     CLI Example::
 
@@ -509,6 +509,42 @@ def is_kvm_hyper():
     '''
     if __grains__['virtual'] != 'physical':
         return False
-    if 'kvm_' not in open('/proc/modules').read():
-        return False
+    try:
+        if 'kvm_' not in open('/proc/modules').read():
+            return False
+    except IOError:
+            # No /proc/modules? Are we on Windows? Or Solaris?
+            return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
+def is_xen_hyper():
+    '''
+    Returns a bool whether or not this node is a XEN hypervisor
+
+    CLI Example::
+
+        salt '*' virt.is_xen_hyper
+    '''
+    try:
+        if __grains__['virtual_subtype'] != 'Xen Dom0':
+            return False
+    except KeyError:
+            # virtual_subtype isn't set everywhere. 
+            return False
+    try:
+        if 'xen_' not in open('/proc/modules').read():
+            return False
+    except IOError:
+            # No /proc/modules? Are we on Windows? Or Solaris?
+            return False
+    return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
+def is_hyper():
+    '''
+    Returns a bool whether or not this nos is a hypervisor of any kind
+
+    CLI Example::
+
+        salt '*' virt.is_hyper
+    '''
+    return is_xen_hyper() or is_kvm_hyper()
