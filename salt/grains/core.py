@@ -341,7 +341,7 @@ def os_data():
             grains.update(_memdata(grains))
             grains.update(_windows_platform_data(grains))
             grains.update(_windows_cpudata())
-            grains.update(_ps())
+            grains.update(_ps(grains))
             return grains
     grains.update(_kernel())
 
