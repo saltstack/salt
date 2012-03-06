@@ -18,14 +18,27 @@ class Pillar(object):
     '''
     def __init__(self, opts, grains, id_):
         # use the local file client
-        self.opts = copy.deepcopy(opts)
-        self.opts['file_roots'] = self.opts['pillar_roots']
-        self.opts['file_client'] = 'local'
-        self.opts['grains'] = grains
-        self.opts['id'] = id_
+        self.opts = self.__gen_opts(opts, grains, id_)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
         self.rend = salt.loader.render(opts, {})
+
+    def __gen_opts(self, opts, grains, id_):
+        '''
+        The options need to be altered to conform to the file client
+        '''
+        opts = copy.deepcopy(opts)
+        opts['file_roots'] = opts['pillar_roots']
+        opts['file_client'] = 'local'
+        opts['grains'] = grains
+        opts['id'] = id_
+        if opts['state_top'].startswith('salt://'):
+            opts['state_top'] = opts['state_top']
+        elif opts['state_top'].startswith('/'):
+            opts['state_top'] = os.path.join('salt://', opts['state_top'][1:])
+        else:
+            opts['state_top'] = os.path.join('salt://', opts['state_top'])
+        return opts
 
     def _get_envs(self):
         '''
@@ -191,7 +204,7 @@ class Pillar(object):
                 if self.matcher.confirm_top(
                         match,
                         data,
-                        self.opts['nodegroups']
+                        self.opts.get('nodegroups', {}),
                         ):
                     if env not in matches:
                         matches[env] = []
