@@ -171,11 +171,14 @@ def minion_config(path):
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
-
     opts['open_mode'] = opts['open_mode'] is True
 
     # set up the extension_modules location from the cachedir
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+
+    # Prepend root_dir to other paths
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+                            'key_logfile', 'extension_modules'])
 
     opts['grains'] = salt.loader.grains(opts)
 
@@ -186,9 +189,6 @@ def minion_config(path):
             opts['environment'],
             ).compile_pillar()
 
-    # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
-                            'key_logfile', 'extension_modules'])
     return opts
 
 
