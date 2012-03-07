@@ -112,6 +112,14 @@ class SaltCMD(object):
                 help=('Instead of using shell globs to evaluate the target '
                       'use one of the predefined nodegroups to identify a '
                       'list of targets.'))
+        parser.add_option('-R',
+                '--range',
+                default=False,
+                dest='range',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use a range expressions to identify targets. '
+                      'Range expressions look like %cluster'))
         parser.add_option('-C',
                 '--compound',
                 default=False,
@@ -270,6 +278,8 @@ class SaltCMD(object):
                 args.append('exsel')
             elif self.opts['nodegroup']:
                 args.append('nodegroup')
+            elif self.opts['range']:
+                args.append('range')
             elif self.opts['compound']:
                 args.append('compound')
             else:
@@ -413,6 +423,14 @@ class SaltCP(object):
                 help=('Instead of using shell globs to evaluate the target '
                       'use one of the predefined nodegroups to identify a '
                       'list of targets.'))
+        parser.add_option('-R',
+                '--range',
+                default=False,
+                dest='range',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use a range expressions to identify targets. '
+                      'Range expressions look like %cluster'))
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',

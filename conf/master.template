@@ -202,3 +202,8 @@
 #   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
 #   group2: 'G@os:Debian and foo.domain.com',
 
+#####     Range Cluster settings     #####
+##########################################
+# The range server (and optional port) that
+# serves your cluster information
+#range_server: range:80
