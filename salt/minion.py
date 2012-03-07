@@ -61,26 +61,6 @@ def get_proc_dir(cachedir):
     return fn_
 
 
-def safe_dns_check(addr):
-    '''
-    Return the ip resolved by dns, but do not exit on failure, only raise an
-    exception.
-    '''
-    try:
-        socket.inet_aton(addr)
-    except socket.error:
-        # Not a valid ip adder, check DNS
-        try:
-            addr = socket.gethostbyname(addr)
-        except socket.gaierror:
-            err = ('This master address: {0} was previously resolvable but '
-                  'now fails to resolve! The previously resolved ip addr '
-                  'will continue to be used').format(addr)
-            log.error(err)
-            raise SaltClientError
-    return addr
-
-
 class SMinion(object):
     '''
     Create an object that has loaded all of the minion module functions,
@@ -457,7 +437,8 @@ class Minion(object):
                     if self.opts['dns_check']:
                         try:
                             # Verify that the dns entry has not changed
-                            self.opts['master_ip'] = safe_dns_check(self.opts['master'])
+                            self.opts['master_ip'] = salt.utils.dns_check(
+                                self.opts['master'], safe=True)
                         except SaltClientError:
                             # Failed to update the dns, keep the old addr
                             pass

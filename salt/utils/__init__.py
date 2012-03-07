@@ -3,9 +3,11 @@ Some of the utils used by salt
 '''
 
 from calendar import month_abbr as months
-import os
-import sys
 import logging
+import os
+import socket
+import sys
+
 
 log = logging.getLogger(__name__)
 
@@ -249,3 +251,27 @@ def gen_mac(prefix='52:54:'):
             mac += random.choice(src) + random.choice(src) + ':'
     return mac[:-1]
 
+
+def dns_check(addr, safe=False):
+    '''
+    Return the ip resolved by dns, but do not exit on failure, only raise an
+    exception.
+    '''
+    try:
+        socket.inet_aton(addr)
+    except socket.error:
+        # Not a valid ip adder, check DNS
+        try:
+            addr = socket.gethostbyname(addr)
+        except socket.gaierror:
+            err = ('This master address: {0} was previously resolvable but '
+                  'now fails to resolve! The previously resolved ip addr '
+                  'will continue to be used').format(addr)
+            if safe:
+                log.error(err)
+                raise SaltClientError
+            else:
+                err = err.format(addr)
+                sys.stderr.write(err)
+                sys.exit(42)
+    return addr
