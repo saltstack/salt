@@ -44,6 +44,14 @@ import salt.config
 import salt.payload
 from salt.exceptions import SaltClientError, SaltInvocationError
 
+# Try to import range from https://github.com/ytoolshed/range
+RANGE = False
+try:
+  import seco.range
+  RANGE = True
+except ImportError:
+  pass
+
 
 def prep_jid(cachedir):
     '''
@@ -149,6 +157,14 @@ class LocalClient(object):
         Return the minions found by looking via a list
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+
+    def _convert_range_to_list(self, tgt):
+        range = seco.range.Range(self.opts['range_server'])
+        try:
+          return range.expand(tgt)
+        except seco.range.RangeException, e:
+          print "Range server exception: %s" % e
+          return []
 
     def gather_job_info(self, jid, tgt, tgt_type):
         '''
@@ -614,6 +630,12 @@ class LocalClient(object):
                 raise SaltInvocationError(err)
             tgt = self.opts['nodegroups'][tgt]
             expr_form = 'compound'
+
+        # Convert a range expression to a list of nodes and change expression
+        # form to list
+        if expr_form == 'range' and RANGE:
+          tgt = self._convert_range_to_list(tgt)
+          expr_form = 'list'
 
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload

@@ -171,7 +171,7 @@ class Master(object):
                 # Late import so logging works correctly
                 import salt.utils
                 salt.utils.daemonize()
-            set_pidfile(self.cli['pidfile'])
+            set_pidfile(self.opts['pidfile'])
             try:
                 master.start()
             except salt.master.MasterExit:
