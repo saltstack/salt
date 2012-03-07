@@ -13,8 +13,12 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 
+from salt.template import compile_template
+
+
 # Import third party libs
 import zmq
+
 
 def get_pillar(opts, grains, id_, env=None):
     '''
@@ -104,43 +108,6 @@ class Pillar(object):
             envs.update(self.opts['file_roots'].keys())
         return envs
 
-    def template_shebang(self, template):
-        '''
-        Check the template shebang line and return the renderer
-        '''
-        # Open up the first line of the sls template
-        line = ''
-        with open(template, 'r') as f:
-            line = f.readline()
-        # Check if it starts with a shebang
-        if line.startswith('#!'):
-            # pull out the shebang data
-            trend = line.strip()[2:]
-            # If the specified renderer exists, use it, or fallback
-            if trend in self.rend:
-                return trend
-        return self.opts['renderer']
-
-    def compile_template(self, template, env='', sls=''):
-        '''
-        Take the path to a template and return the high data structure
-        derived from the template.
-        '''
-        # Template was specified incorrectly
-        if not isinstance(template, basestring):
-            return {}
-        # Template does not exists
-        if not os.path.isfile(template):
-            return {}
-        # Template is an empty file
-        if salt.utils.is_empty(template):
-            return {}
-        # Template is nothing but whitespace
-        if not open(template).read().strip():
-            return {}
-
-        return self.rend[self.template_shebang(template)](template, env, sls)
-
     def get_tops(self):
         '''
         Gather the top files
@@ -151,23 +118,27 @@ class Pillar(object):
         # Gather initial top files
         if self.opts['environment']:
             tops[self.opts['environment']] = [
-                    self.compile_template(
+                    compile_template(
                         self.client.cache_file(
                             self.opts['state_top'],
                             self.opts['environment']
                             ),
+                        self.rend,
+                        self.opts['renderer'],
                         self.opts['environment']
                         )
                     ]
         else:
             for env in self._get_envs():
                 tops[env].append(
-                        self.compile_template(
+                        compile_template(
                             self.client.cache_file(
                                 self.opts['state_top'],
                                 env
                                 ),
-                            env
+                            self.rend,
+                            self.opts['renderer'],
+                            env=env
                             )
                         )
 
@@ -190,12 +161,14 @@ class Pillar(object):
                     if sls in done[env]:
                         continue
                     tops[env].append(
-                            self.compile_template(
+                            compile_template(
                                 self.client.get_state(
                                     sls,
                                     env
                                     ),
-                                env
+                                self.rend,
+                                self.opts['renderer'],
+                                env=env
                                 )
                             )
                     done[env].append(sls)
@@ -286,7 +259,8 @@ class Pillar(object):
                            ' available on the salt master').format(sls, env))
         state = None
         try:
-            state = self.compile_template(fn_, env, sls)
+            state = compile_template(
+                fn_, self.rend, self.opts['renderer'], env, sls)
         except Exception as exc:
             errors.append(('Rendering SLS {0} failed, render error:\n{1}'
                            .format(sls, exc)))
@@ -332,7 +306,7 @@ class Pillar(object):
                 if err:
                     errors += err
         return pillar, errors
- 
+
 
     def compile_pillar(self):
         '''
