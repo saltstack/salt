@@ -2,6 +2,7 @@
 Some of the utils used by salt
 '''
 
+from calendar import month_abbr as months
 import os
 import sys
 import logging
@@ -30,18 +31,6 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-months = {'01': 'Jan',
-          '02': 'Feb',
-          '03': 'Mar',
-          '04': 'Apr',
-          '05': 'May',
-          '06': 'Jun',
-          '07': 'Jul',
-          '08': 'Aug',
-          '09': 'Sep',
-          '10': 'Oct',
-          '11': 'Nov',
-          '12': 'Dec'}
 
 def is_empty(filename):
     '''
@@ -237,7 +226,7 @@ def jid_to_time(jid):
 
     ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(
             year,
-            months[month],
+            months[int(month)],
             day,
             hour,
             minute,
