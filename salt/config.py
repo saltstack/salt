@@ -229,6 +229,7 @@ def master_config(path):
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
+            'range_server': 'range:80',
             'serial': 'msgpack',
             'nodegroups': {},
             'key_logfile': '/var/log/salt/key.log',
