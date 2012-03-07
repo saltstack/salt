@@ -3,24 +3,16 @@ Routines to set up a minion
 '''
 
 # Import python libs
-import BaseHTTPServer
-import contextlib
+
 import logging
 import multiprocessing
-import hashlib
+
 import fnmatch
 import os
 import re
-import shutil
-import stat
-import string
-import socket
-import tempfile
 import threading
 import time
 import traceback
-import urllib2
-import urlparse
 
 # Import zeromq libs
 import zmq

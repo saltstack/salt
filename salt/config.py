@@ -6,7 +6,6 @@ All salt configuration loading and defaults should be in this module
 from contextlib import nested
 import glob
 import os
-import sys
 import socket
 import logging
 import tempfile
