@@ -28,7 +28,8 @@ def set_pidfile(pidfile):
     if not os.path.isdir(pdir):
         os.makedirs(pdir)
     try:
-        open(pidfile, 'w+').write(str(os.getpid()))
+        with open(pidfile, 'w+') as f:
+            f.write(str(os.getpid()))
     except IOError:
         pass
 
@@ -96,7 +97,8 @@ class Master(object):
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
         # Send the pidfile location to the opts
-        self.opts['pidfile'] = self.cli['pidfile']
+        if self.cli['pidfile']:
+            self.opts['pidfile'] = self.cli['pidfile']
 
     def __parse_cli(self):
         '''
@@ -121,9 +123,7 @@ class Master(object):
                 help='Specify user to run master')
         parser.add_option('--pid-file',
                 dest='pidfile',
-                default='/var/run/salt-master.pid',
-                help=('Specify the location of the pidfile. Default'
-                      ' %default'))
+                help=('Specify the location of the pidfile.'))
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',

@@ -105,6 +105,47 @@
 # by statically setting it. Remember that the recommended way to manage
 # environments is to issolate via the top file.
 #environment: None
+#
+# If using the local file directory, then the state top file name needs to be
+# defined, by default this is top.sls.
+#state_top: top.sls
+
+#####     File Directory Settings    #####
+##########################################
+# The Salt Minion can redirect all file server operations to a local directory,
+# this allows for the same state tree that is on the master to be used if
+# coppied completely onto the minion. This is a literal copy of the settings on
+# the master but used to reference a local directory on the minion.
+
+# Set the file client, the client defaults to looking on the master server for
+# files, but can be directed to look at the local file directory setting 
+# defined below by setting it to local.
+#file_client: remote
+
+# The file directory works on environments passed to the minion, each environment
+# can have multiple root directories, the subdirectories in the multiple file
+# roots cannot match, otherwise the downloaded files will not be able to be
+# reliably ensured. A base environment is required to house the top file.
+# Example:
+# file_roots:
+#   base:
+#     - /srv/salt/
+#   dev:
+#     - /srv/salt/dev/services
+#     - /srv/salt/dev/states
+#   prod:
+#     - /srv/salt/prod/services
+#     - /srv/salt/prod/states
+#
+# Default:
+#file_roots:
+#  base:
+#    - /srv/salt
+
+# The hash_type is the hash to use when discovering the hash of a file in
+# the minion directory, the default is md5, but sha1, sha224, sha256, sha384
+# and sha512 are also supported.
+#hash_type: md5
 
 ######        Security settings       #####
 ###########################################

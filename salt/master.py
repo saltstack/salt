@@ -28,6 +28,7 @@ import salt.crypt
 import salt.utils
 import salt.client
 import salt.payload
+import salt.pillar
 
 
 log = logging.getLogger(__name__)
@@ -541,6 +542,19 @@ class AESFuncs(object):
         Return the master options to the minion
         '''
         return self.opts
+
+    def _pillar(self, load):
+        '''
+        Return the pillar data for the minion
+        '''
+        if 'id' not in load or 'grains' not in load or 'env' not in load:
+            return False
+        pillar = salt.pillar.Pillar(
+                self.opts,
+                load['grains'],
+                load['id'],
+                load['env'])
+        return pillar.compile_pillar()
 
     def _return(self, load):
         '''

@@ -17,20 +17,33 @@ log = logging.getLogger(__name__)
 salt_base_path = os.path.dirname(salt.__file__)
 
 
+def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
+    '''Creates Loader instance
+
+    Order of module_dirs:
+        opts[ext_type_dirs],
+        extension types,
+        base types.
+    '''
+    ext_types = os.path.join(opts['extension_modules'], ext_type)
+    sys_types = os.path.join(salt_base_path, ext_type)
+
+    ext_type_types = []
+    if ext_dirs:
+        if ext_type_dirs == None:
+            ext_type_dirs = '{0}_dirs'.format(ext_type)
+        if ext_type_dirs in opts:
+            ext_type_types.extend(opts[ext_type_dirs])
+
+    module_dirs = ext_type_types + [ext_types, sys_types]
+    return Loader(module_dirs, opts, tag)
+
+
 def minion_mods(opts):
     '''
     Returns the minion modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'modules')
-            ]
-    if 'module_dirs' in opts:
-        extra_dirs.extend(opts['module_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'modules'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'module')
+    load = _create_loader(opts, 'modules', 'module')
     return load.apply_introspection(load.gen_functions())
 
 
@@ -38,16 +51,7 @@ def raw_mod(opts, name, functions):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'modules')
-            ]
-    if 'module_dirs' in opts:
-        extra_dirs.extend(opts['module_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'modules'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'rawmodule')
+    load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
 
 
@@ -55,16 +59,7 @@ def returners(opts):
     '''
     Returns the returner modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'returners')
-            ]
-    if 'returner_dirs' in opts:
-        extra_dirs.extend(opts['returner_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'returners'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'returner')
+    load = _create_loader(opts, 'returners', 'returner')
     return load.filter_func('returner')
 
 
@@ -72,16 +67,7 @@ def states(opts, functions):
     '''
     Returns the returner modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'states')
-            ]
-    if 'states_dirs' in opts:
-        extra_dirs.extend(opts['states_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'states'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'state')
+    load = _create_loader(opts, 'states', 'state')
     pack = {'name': '__salt__',
             'value': functions}
     return load.gen_functions(pack)
@@ -91,16 +77,7 @@ def render(opts, functions):
     '''
     Returns the render modules
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'renderers')
-            ]
-    if 'render_dirs' in opts:
-        extra_dirs.extend(opts['render_dirs'])
-    module_dirs = [
-        os.path.join(salt_base_path, 'renderers'),
-        ] + extra_dirs
-    load = Loader(module_dirs, opts, 'render')
+    load = _create_loader(opts, 'renderers', 'render', ext_type_dirs='render_dirs')
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)
@@ -117,13 +94,6 @@ def grains(opts):
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
-    extra_dirs = [
-            os.path.join(opts['extension_modules'],
-                'grains')
-            ]
-    module_dirs = [
-        os.path.join(salt_base_path, 'grains'),
-        ] + extra_dirs
     if not 'grains' in opts:
         pre_opts = {}
         salt.config.load_config(
@@ -140,10 +110,9 @@ def grains(opts):
             opts['grains'] = pre_opts['grains']
         else:
             opts['grains'] = {}
-    load = Loader(module_dirs, opts, 'grain')
+    load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
     grains = load.gen_grains()
-    if 'grains' in opts:
-        grains.update(opts['grains'])
+    grains.update(opts['grains'])
     return grains
 
 
@@ -186,6 +155,10 @@ class Loader(object):
             self.grains = opts['grains']
         else:
             self.grains = {}
+        if 'pillar' in opts:
+            self.pillar = opts['pillar']
+        else:
+            self.pillar = {}
         self.opts = self.__prep_mod_opts(opts)
 
     def __prep_mod_opts(self, opts):
@@ -337,11 +310,8 @@ class Loader(object):
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
                     continue
-                if fn_.endswith('.py')\
-                    or fn_.endswith('.pyc')\
-                    or fn_.endswith('.pyo')\
-                    or fn_.endswith('.so')\
-                    or (cython_enabled and fn_.endswith('.pyx')):
+                if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
+                    or (cython_enabled and fn_.endswith('.pyx'))):
                     names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
         for name in names:
             try:
@@ -374,6 +344,7 @@ class Loader(object):
                 mod.__opts__ = self.opts
 
             mod.__grains__ = self.grains
+            mod.__pillar__ = self.pillar
 
             if pack:
                 if isinstance(pack, list):
@@ -496,7 +467,13 @@ class Loader(object):
         for key, fun in funcs.items():
             if key[key.index('.') + 1:] == 'core':
                 continue
-            ret = fun()
+            try:
+                ret = fun()
+            except Exception as exc:
+                log.critical(('Failed to load grains definded in grain file '
+                              '{0} in function {1}, error: {2}').format(
+                                  key, fun, exc))
+                continue
             if not isinstance(ret, dict):
                 continue
             grains.update(ret)

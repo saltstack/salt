@@ -3,6 +3,7 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python modules
+from contextlib import nested
 import glob
 import os
 import sys
@@ -23,6 +24,7 @@ except:
 import salt.crypt
 import salt.loader
 import salt.utils
+import salt.pillar
 
 log = logging.getLogger(__name__)
 
@@ -33,13 +35,22 @@ def _validate_file_roots(file_roots):
     just replace it with an empty list
     '''
     if not isinstance(file_roots, dict):
-        log.warning(('The file_roots parameter is not properly formatted,'
-            ' using defaults'))
+        log.warning('The file_roots parameter is not properly formatted,'
+                    ' using defaults')
         return {'base': ['/srv/salt']}
     for env, dirs in file_roots.items():
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             file_roots[env] = []
     return file_roots
+
+
+def _read_conf_file(path):
+    with open(path, 'r') as conf_file:
+        conf_opts = yaml.safe_load(conf_file.read()) or {}
+        # allow using numeric ids: convert int to string
+        if 'id' in conf_opts:
+            conf_opts['id'] = str(conf_opts['id'])
+        return conf_opts
 
 
 def load_config(opts, path, env_var):
@@ -54,22 +65,13 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            with open(path, 'w') as out:
-                with open(template, 'r') as f:
-                    f.readline() # skip first line
-                    out.write(f.read())
+            with nested(open(path, 'w'), open(template, 'r')) as (out, f):
+                f.readline() # skip first line
+                out.write(f.read())
 
     if os.path.isfile(path):
         try:
-            conf_opts = yaml.safe_load(open(path, 'r'))
-            if conf_opts is None:
-                # The config file is empty and the yaml.load returned None
-                conf_opts = {}
-            else:
-                # allow using numeric ids: convert int to string
-                if 'id' in conf_opts:
-                    conf_opts['id'] = str(conf_opts['id'])
-            opts.update(conf_opts)
+            opts.update(_read_conf_file(path))
             opts['conf_file'] = path
         except Exception, e:
             msg = 'Error parsing configuration file: {0} - {1}'
@@ -91,15 +93,7 @@ def include_config(opts, orig_path):
             path = os.path.join(os.path.dirname(orig_path), path)
         for fn_ in glob.glob(path):
             try:
-                conf_opts = yaml.safe_load(open(fn_, 'r'))
-                if conf_opts is None:
-                    # The config file is empty and the yaml.load returned None
-                    conf_opts = {}
-                else:
-                    # allow using numeric ids: convert int to string
-                    if 'id' in conf_opts:
-                        conf_opts['id'] = str(conf_opts['id'])
-                opts.update(conf_opts)
+                opts.update(_read_conf_file(path))
             except Exception, e:
                 msg = 'Error parsing configuration file: {0} - {1}'
                 log.warn(msg.format(fn_, e))
@@ -134,6 +128,16 @@ def minion_config(path):
             'failhard': False,
             'autoload_dynamic_modules': True,
             'environment': None,
+            'state_top': 'top.sls',
+            'file_client': 'remote',
+            'file_roots': {
+                'base': ['/srv/salt'],
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                },
+            'hash_type': 'md5',
+            'external_nodes': '',
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
@@ -151,6 +155,8 @@ def minion_config(path):
             'cython_enable': False,
             'state_verbose': False,
             'acceptance_wait_time': 10,
+            'dns_check': True,
+            'grains': {},
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
@@ -160,8 +166,8 @@ def minion_config(path):
 
     opts['master_ip'] = dns_check(opts['master'])
 
-    opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
-                       + str(opts['master_port'])
+    opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['master_ip'],
+                                                    port=opts['master_port'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
@@ -173,9 +179,16 @@ def minion_config(path):
 
     opts['grains'] = salt.loader.grains(opts)
 
-    # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
+    opts['pillar'] = salt.pillar.get_pillar(
+            opts,
+            opts['grains'],
+            opts['id'],
+            opts['environment'],
+            ).compile_pillar()
 
+    # Prepend root_dir to other paths
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+                            'key_logfile', 'extension_modules'])
     return opts
 
 
@@ -196,7 +209,10 @@ def master_config(path):
             'cachedir': '/var/cache/salt',
             'file_roots': {
                 'base': ['/srv/salt'],
-            },
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                },
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
@@ -210,10 +226,12 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
             'log_granular_levels': {},
+            'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
             'serial': 'msgpack',
             'nodegroups': {},
+            'key_logfile': '/var/log/salt/key.log',
     }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
@@ -223,8 +241,10 @@ def master_config(path):
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir'])
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+                            'sock_dir', 'key_logfile', 'extension_modules'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
