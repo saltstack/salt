@@ -17,7 +17,6 @@ import copy
 import inspect
 import fnmatch
 import logging
-import tempfile
 import collections
 
 # Import Salt Libs
@@ -26,6 +25,11 @@ import salt.loader
 import salt.minion
 import salt.fileclient
 
+from salt.template import (
+    compile_template,
+    compile_template_str,
+    template_shebang,
+    )
 
 log = logging.getLogger(__name__)
 
@@ -527,55 +531,6 @@ class State(object):
                             high[name][state].append(arg)
         return high, errors
 
-    def template_shebang(self, template):
-        '''
-        Check the template shebang line and return the renderer
-        '''
-        # Open up the first line of the sls template
-        line = ''
-        with open(template, 'r') as f:
-            line = f.readline()
-        # Check if it starts with a shebang
-        if line.startswith('#!'):
-            # pull out the shebang data
-            trend = line.strip()[2:]
-            # If the specified renderer exists, use it, or fallback
-            if trend in self.rend:
-                return trend
-        return self.opts['renderer']
-
-    def compile_template(self, template, env='', sls=''):
-        '''
-        Take the path to a template and return the high data structure
-        derived from the template.
-        '''
-        # Template was specified incorrectly
-        if not isinstance(template, basestring):
-            return {}
-        # Template does not exists
-        if not os.path.isfile(template):
-            return {}
-        # Template is an empty file
-        if salt.utils.is_empty(template):
-            return {}
-        # Template is nothing but whitespace
-        if not open(template).read().strip():
-            return {}
-
-        return self.rend[self.template_shebang(template)](template, env, sls)
-
-    def compile_template_str(self, template):
-        '''
-        Take the path to a template and return the high data structure
-        derived from the template.
-        '''
-        fn_ = tempfile.mkstemp()[1]
-        with open(fn_, 'w+') as f:
-            f.write(template)
-        high = self.rend[self.template_shebang(fn_)](fn_)
-        os.remove(fn_)
-        return high
-
     def call(self, data):
         '''
         Call a state directly with the low data structure, verify data
@@ -776,7 +731,8 @@ class State(object):
         '''
         Enforce the states in a template
         '''
-        high = self.compile_template(template)
+        high = compile_template(
+            template, self.renderers, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high
@@ -785,7 +741,8 @@ class State(object):
         '''
         Enforce the states in a template, pass the template as a string
         '''
-        high = self.compile_template_str(template)
+        high = compile_template_str(
+            template, self.renderers, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high
@@ -846,23 +803,27 @@ class HighState(object):
         # Gather initial top files
         if self.opts['environment']:
             tops[self.opts['environment']] = [
-                    self.state.compile_template(
+                    compile_template(
                         self.client.cache_file(
                             self.opts['state_top'],
                             self.opts['environment']
                             ),
-                        self.opts['environment']
+                        self.state.rend,
+                        self.state.opts['renderer'],
+                        env=self.opts['environment']
                         )
                     ]
         else:
             for env in self._get_envs():
                 tops[env].append(
-                        self.state.compile_template(
+                        compile_template(
                             self.client.cache_file(
                                 self.opts['state_top'],
                                 env
                                 ),
-                            env
+                            self.state.rend,
+                            self.state.opts['renderer'],
+                            env=env
                             )
                         )
 
@@ -885,12 +846,14 @@ class HighState(object):
                     if sls in done[env]:
                         continue
                     tops[env].append(
-                            self.state.compile_template(
+                            compile_template(
                                 self.client.get_state(
                                     sls,
                                     env
                                     ),
-                                env
+                                self.state.rend,
+                                self.state.opts['renderer'],
+                                env=env
                                 )
                             )
                     done[env].append(sls)
@@ -1006,7 +969,8 @@ class HighState(object):
                            ' available on the salt master').format(sls, env))
         state = None
         try:
-            state = self.state.compile_template(fn_, env, sls)
+            state = compile_template(
+                fn_, self.state.rend, self.state.opts['renderer'], env, sls)
         except Exception as exc:
             errors.append(('Rendering SLS {0} failed, render error:\n{1}'
                            .format(sls, exc)))
