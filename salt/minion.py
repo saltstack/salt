@@ -3,24 +3,16 @@ Routines to set up a minion
 '''
 
 # Import python libs
-import BaseHTTPServer
-import contextlib
+
 import logging
 import multiprocessing
-import hashlib
+
 import fnmatch
 import os
 import re
-import shutil
-import stat
-import string
-import socket
-import tempfile
 import threading
 import time
 import traceback
-import urllib2
-import urlparse
 
 # Import zeromq libs
 import zmq
@@ -59,26 +51,6 @@ def get_proc_dir(cachedir):
         for proc_fn in os.listdir(fn_):
             os.remove(os.path.join(fn_, proc_fn))
     return fn_
-
-
-def safe_dns_check(addr):
-    '''
-    Return the ip resolved by dns, but do not exit on failure, only raise an
-    exception.
-    '''
-    try:
-        socket.inet_aton(addr)
-    except socket.error:
-        # Not a valid ip adder, check DNS
-        try:
-            addr = socket.gethostbyname(addr)
-        except socket.gaierror:
-            err = ('This master address: {0} was previously resolvable but '
-                  'now fails to resolve! The previously resolved ip addr '
-                  'will continue to be used').format(addr)
-            log.error(err)
-            raise SaltClientError
-    return addr
 
 
 class SMinion(object):
@@ -457,7 +429,8 @@ class Minion(object):
                     if self.opts['dns_check']:
                         try:
                             # Verify that the dns entry has not changed
-                            self.opts['master_ip'] = safe_dns_check(self.opts['master'])
+                            self.opts['master_ip'] = salt.utils.dns_check(
+                                self.opts['master'], safe=True)
                         except SaltClientError:
                             # Failed to update the dns, keep the old addr
                             pass
