@@ -142,7 +142,7 @@ def daemonize():
         if pid > 0:
             # exit first parent
             sys.exit(0)
-    except OSError as exc:
+    except OSError as e:
         msg = 'fork #1 failed: {0} ({1})'.format(e.errno, e.strerror)
         log.error(msg)
         sys.exit(1)
@@ -157,7 +157,7 @@ def daemonize():
         pid = os.fork()
         if pid > 0:
             sys.exit(0)
-    except OSError as exc:
+    except OSError as e:
         msg = 'fork #2 failed: {0} ({1})'
         log.error(msg.format(e.errno, e.strerror))
         sys.exit(1)
