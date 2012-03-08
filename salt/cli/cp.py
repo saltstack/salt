@@ -78,6 +78,8 @@ class SaltCP(object):
             args.append('grain_pcre')
         elif self.opts['nodegroup']:
             args.append('nodegroup')
+        elif self.opts['range']:
+            args.append('range')
 
         ret = local.cmd(*args)
 
