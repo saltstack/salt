@@ -732,7 +732,7 @@ class AESFuncs(object):
         try:
             ret = getattr(self, func)(load)
         except AttributeError as exc:
-            log.error(('Recived function {0} which in unavailable on the '
+            log.error(('Received function {0} which in unavailable on the '
                        'master, returning False').format(exc))
             return self.crypticle.dumps(False)
         # Don't encrypt the return value for the _return func
