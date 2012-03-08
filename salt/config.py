@@ -6,7 +6,6 @@ All salt configuration loading and defaults should be in this module
 from contextlib import nested
 import glob
 import os
-import sys
 import socket
 import logging
 import tempfile
@@ -164,7 +163,7 @@ def minion_config(path):
     if 'include' in opts:
         opts = include_config(opts, path)
 
-    opts['master_ip'] = dns_check(opts['master'])
+    opts['master_ip'] = salt.utils.dns_check(opts['master'])
 
     opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['master_ip'],
                                                     port=opts['master_port'])
@@ -181,13 +180,6 @@ def minion_config(path):
                             'key_logfile', 'extension_modules'])
 
     opts['grains'] = salt.loader.grains(opts)
-
-    opts['pillar'] = salt.pillar.get_pillar(
-            opts,
-            opts['grains'],
-            opts['id'],
-            opts['environment'],
-            ).compile_pillar()
 
     return opts
 
@@ -254,25 +246,3 @@ def master_config(path):
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
 
-
-def dns_check(addr):
-    '''
-    Verify that the passed address is valid and return the ipv4 addr if it is
-    a hostname
-    '''
-    try:
-        socket.inet_aton(addr)
-        # is a valid ip addr
-    except socket.error:
-        # Not a valid ip addr, check if it is an available hostname
-        try:
-            addr = socket.gethostbyname(addr)
-        except socket.gaierror:
-            # Woah, this addr is totally bogus, die!!!
-            err = ('The master address {0} could not be validated, please '
-                   'check that the specified master in the minion config '
-                   'file is correct\n')
-            err = err.format(addr)
-            sys.stderr.write(err)
-            sys.exit(42)
-    return addr

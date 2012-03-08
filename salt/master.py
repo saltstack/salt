@@ -335,6 +335,7 @@ class MWorker(multiprocessing.Process):
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
         '''
+        key = load = None
         try:
             key = payload['enc']
             load = payload['load']
@@ -342,7 +343,7 @@ class MWorker(multiprocessing.Process):
             return ''
         return {'aes': self._handle_aes,
                 'pub': self._handle_pub,
-                'clear': self._handle_clear}[payload['enc']](payload['load'])
+                'clear': self._handle_clear}[key](load)
 
     def _handle_clear(self, load):
         '''
