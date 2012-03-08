@@ -181,13 +181,6 @@ def minion_config(path):
 
     opts['grains'] = salt.loader.grains(opts)
 
-    opts['pillar'] = salt.pillar.get_pillar(
-            opts,
-            opts['grains'],
-            opts['id'],
-            opts['environment'],
-            ).compile_pillar()
-
     return opts
 
 
