@@ -13,6 +13,16 @@ __outputter__ = {
     'netstat': 'txt',
 }
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+
+    # Disable on Windows, a specific file module exists:
+    if __grains__['os'] == 'Windows':
+        return False
+    return 'network'
+
 
 def _sanitize_host(host):
     '''
