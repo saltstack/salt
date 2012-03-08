@@ -22,7 +22,6 @@ def __virtual__():
     return False
 
 
-
 def _sanitize_host(host):
     '''
     Sanitize host string.
@@ -92,6 +91,8 @@ def traceroute(host):
             continue
         comps = line.split()
         complength = len(comps)
+        # This method still needs to better catch rows of other lengths
+        # For example if some of the ms returns are '*'
         if complength == 9:
             result = {
                 'count': comps[0],
@@ -139,9 +140,7 @@ def nslookup(host):
         if ":" in line:
             comps = line.split(":")
             ret.append({comps[0].strip(): comps[1].strip()})
-
     return ret
-
 
 
 def dig(host):
@@ -203,68 +202,44 @@ def interfaces():
         salt '*' network.interfaces
     '''
     ret = {}
-
-    out = __salt__['cmd.run']('ip addr show')
-    groups = re.compile('\r?\n\d').split(out)
-
-    for group in groups:
-        iface = None
-        data = {}
-        for line in group.split('\n'):
-            if not ' ' in line:
-                continue
-            m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
-            if m:
-                iface,parent,attrs = m.groups()
-                if 'UP' in attrs.split(','):
-                    data['up'] = True
-                if parent:
-                    data['parent'] = parent
+    ifaces = []
+    lines = __salt__['cmd.run']('ipconfig /all').split('\r\n')
+    configstart = 0
+    configname = ''
+    for line in lines:
+        if configstart == 3:
+            ifaces.append(config)
+            configstart = 0
+            continue
+        if not line:
+            configstart = configstart + 1
+            continue
+        if line.startswith('  '):
+            comps = line.split(':', 1)
+            config[configname][comps[0].rstrip(' .').strip()] =  comps[1].strip()
+            continue
+        if configstart == 1:
+            configname = line.strip(' :')
+            config = {configname: {}} 
+            configstart = configstart + 1
+            continue
+    for iface in ifaces:
+        for key, val in iface.iteritems():
+            item = {} 
+            itemdict = {'Physical Address': 'hwaddr', 
+                        'IPv4 Address': 'ipaddr', 
+                        'Link-local IPv6 Address': 'ipaddr6',
+                        'Subnet Mask': 'netmask',
+                        }
+            item['broadcast'] = None
+            for k, v in itemdict.iteritems():
+                if k in val:
+                    item[v] = val[k].rstrip('(Preferred)')
+            if 'IPv4 Address' in val:
+                item['up'] = True
             else:
-                cols = line.split()
-                if len(cols) >= 2:
-                    type,value = tuple(cols[0:2])
-                    if type in ('inet', 'inet6'):
-                        def parse_network():
-                            """
-                            Return a tuple of ip, netmask, broadcast
-                            based on the current set of cols
-                            """
-                            brd = None
-                            ip,cidr = tuple(value.split('/'))
-                            if type == 'inet':
-                                mask = _cidr_to_ipv4_netmask(int(cidr))
-                                if 'brd' in cols:
-                                    brd = cols[cols.index('brd')+1]
-                            elif type == 'inet6':
-                                mask = cidr
-                            return (ip, mask, brd)
-
-                        if 'secondary' not in cols:
-                            ipaddr, netmask, broadcast = parse_network()
-                            if type == 'inet':
-                                data['ipaddr'] = ipaddr
-                                data['netmask'] = netmask
-                                data['broadcast'] = broadcast
-                            elif type == 'inet6':
-                                data['ipaddr6'] = ipaddr
-                                data['netmask6'] = netmask
-                        else:
-                            if 'secondary' not in data:
-                                data['secondary'] = []
-                            ip, mask, brd = parse_network()
-                            data['secondary'].append({
-                                'type': type,
-                                'ipaddr': ip,
-                                'netmask': mask,
-                                'broadcast': brd
-                                })
-                            del ip, mask, brd
-                    elif type.startswith('link'):
-                        data['hwaddr'] = value
-        if iface:
-            ret[iface] = data
-            del iface, data
+                item['up'] = False
+            ret[key] = item 
     return ret
 
 
@@ -274,7 +249,7 @@ def up(interface):
 
     CLI Example::
 
-        salt '*' network.up eth0
+        salt '*' network.up 'Wireless LAN adapter Wireless Network Connection'
     '''
     data = interfaces().get(interface)
     if data:
@@ -282,13 +257,14 @@ def up(interface):
     else:
         return None
 
+
 def ipaddr(interface):
     '''
     Returns the IP address for a given interface
 
     CLI Example::
 
-        salt '*' network.ipaddr eth0
+        salt '*' network.ipaddr 'Wireless LAN adapter Wireless Network Connection'
     '''
     data = interfaces().get(interface)
     if data:
@@ -296,13 +272,14 @@ def ipaddr(interface):
     else:
         return None
 
+
 def netmask(interface):
     '''
     Returns the netmask for a given interface
 
     CLI Example::
 
-        salt '*' network.netmask eth0
+        salt '*' network.netmask 'Wireless LAN adapter Wireless Network Connection'
     '''
     data = interfaces().get(interface)
     if data:
@@ -310,13 +287,14 @@ def netmask(interface):
     else:
         return None
 
+
 def hwaddr(interface):
     '''
     Returns the hwaddr for a given interface
 
     CLI Example::
 
-        salt '*' network.hwaddr eth0
+        salt '*' network.hwaddr 'Wireless LAN adapter Wireless Network Connection'
     '''
     data = interfaces().get(interface)
     if data:
