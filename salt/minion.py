@@ -96,6 +96,12 @@ class Minion(object):
         else:
             log.warn('Starting the Salt Minion')
         self.authenticate()
+        opts['pillar'] = salt.pillar.get_pillar(
+            opts,
+            opts['grains'],
+            opts['id'],
+            opts['environment'],
+            ).compile_pillar()
 
     def __prep_mod_opts(self):
         '''
