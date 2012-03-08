@@ -1224,7 +1224,7 @@ def append(name, text):
             return _error(ret, "Given text is not a string")
 
         for line in lines:
-            if __salt__['file.contains'](name, line):
+            if __salt__['file.contains'](name, line, escape=True):
                 continue
             else:
                 __salt__['file.append'](name, line)
