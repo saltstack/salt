@@ -28,6 +28,7 @@ import salt.crypt
 import salt.utils
 import salt.client
 import salt.payload
+import salt.pillar
 
 
 log = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ def prep_jid(opts, load):
         return prep_jid(opts['cachedir'], load)
     return jid
 
-def clean_proc(proc, wait_for_kill=1):
+def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
     '''
@@ -62,14 +63,22 @@ def clean_proc(proc, wait_for_kill=1):
         while proc.is_alive():
             proc.terminate()
             waited += 1
-            time.sleep(1)
+            time.sleep(0.1)
             if proc.is_alive() and (waited >= wait_for_kill):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
                 os.kill(signal.SIGKILL, proc.pid)
-    except Exception as e:
-        log.debug(e)
+    except (AssertionError, AttributeError) as e:
+        # Catch AssertionError when the proc is evaluated inside the child
+        # Catch AttributeError when the process dies between proc.is_alive()
+        # and proc.terminate() and turns into a NoneType
+        pass
 
+class MasterExit(SystemExit):
+    '''
+    Named exit exception for the master process exiting
+    '''
+    pass
 
 class SMaster(object):
     '''
@@ -162,9 +171,9 @@ class Master(SMaster):
 
         def sigterm_clean(signum, frame):
             '''
-            Cleaner method for stoping multiprocessing processes when a SIGTERM
-            is encountered.  This is required when running a salt master under
-            a process minder like daemontools
+            Cleaner method for stopping multiprocessing processes when a
+            SIGTERM is encountered.  This is required when running a salt
+            master under a process minder like daemontools
             '''
             mypid = os.getpid()
             log.warn(('Caught signal {0}, stopping the Salt Master'
@@ -173,7 +182,7 @@ class Master(SMaster):
             clean_proc(reqserv.publisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
-            raise SystemExit
+            raise MasterExit
 
         signal.signal(signal.SIGTERM, sigterm_clean)
 
@@ -183,8 +192,6 @@ class Master(SMaster):
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             raise SystemExit('\nExiting on Ctrl-c')
-        finally:
-            raise SystemExit('Salt Master Stopped')
 
 
 class Publisher(multiprocessing.Process):
@@ -328,6 +335,7 @@ class MWorker(multiprocessing.Process):
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
         '''
+        key = load = None
         try:
             key = payload['enc']
             load = payload['load']
@@ -335,7 +343,7 @@ class MWorker(multiprocessing.Process):
             return ''
         return {'aes': self._handle_aes,
                 'pub': self._handle_pub,
-                'clear': self._handle_clear}[payload['enc']](payload['load'])
+                'clear': self._handle_clear}[key](load)
 
     def _handle_clear(self, load):
         '''
@@ -535,6 +543,19 @@ class AESFuncs(object):
         Return the master options to the minion
         '''
         return self.opts
+
+    def _pillar(self, load):
+        '''
+        Return the pillar data for the minion
+        '''
+        if 'id' not in load or 'grains' not in load or 'env' not in load:
+            return False
+        pillar = salt.pillar.Pillar(
+                self.opts,
+                load['grains'],
+                load['id'],
+                load['env'])
+        return pillar.compile_pillar()
 
     def _return(self, load):
         '''

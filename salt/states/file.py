@@ -159,7 +159,7 @@ def _gen_keep_files(name, require):
     return list(keep)
 
 
-def _check_file(ret, name):
+def _check_file(name):
     ret = True
     msg = ''
 
@@ -230,6 +230,7 @@ def _mako(sfn, name, source, user, group, mode, env, context=None):
         passthrough = context if context else {}
         passthrough.update(__salt__)
         passthrough.update(__grains__)
+        passthrough.update(__pillar__)
         with nested(open(sfn, 'r'), open(tgt, 'w+')) as (src, target):
             template = Template(src.read())
             target.write(template.render(**passthrough))
@@ -264,6 +265,7 @@ def _jinja(sfn, name, source, user, group, mode, env, context=None):
         passthrough = context if context else {}
         passthrough['salt'] = __salt__
         passthrough['grains'] = __grains__
+        passthrough['pillar'] = __pillar__
         passthrough['name'] = name
         passthrough['source'] = source
         passthrough['user'] = user
@@ -307,6 +309,7 @@ def _py(sfn, name, source, user, group, mode, env, context=None):
             )
     mod.salt = __salt__
     mod.grains = __grains__
+    mod.pillar = __pillar__
     mod.name = name
     mod.source = source
     mod.user = user
@@ -346,7 +349,6 @@ def _check_perms(name, ret, user, group, mode):
         if mode != perms['lmode']:
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
-            print __salt__['file.get_mode'](name)
             if mode != __salt__['file.get_mode'](name):
                 ret['result'] = False
                 ret['comment'] += 'Failed to change mode to {0} '.format(mode)
@@ -750,12 +752,12 @@ def managed(name,
                 ret['changes']['new'] = 'file {0} created'.format(name)
                 ret['comment'] = 'Empty file'
 
-        ret, perms = _check_perms(name, ret, user, group, mode)
-
         # Now copy the file contents if there is a source file
         if sfn:
             shutil.copyfile(sfn, name)
             __clean_tmp(sfn)
+
+        ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -833,7 +835,7 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    ret, perms = _check_perms(ret, user, group, mode)
+    ret, perms = _check_perms(name, ret, user, group, mode)
 
     if recurse:
         if not set(['user', 'group']) >= set(recurse):

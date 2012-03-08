@@ -155,6 +155,10 @@ class Loader(object):
             self.grains = opts['grains']
         else:
             self.grains = {}
+        if 'pillar' in opts:
+            self.pillar = opts['pillar']
+        else:
+            self.pillar = {}
         self.opts = self.__prep_mod_opts(opts)
 
     def __prep_mod_opts(self, opts):
@@ -340,6 +344,7 @@ class Loader(object):
                 mod.__opts__ = self.opts
 
             mod.__grains__ = self.grains
+            mod.__pillar__ = self.pillar
 
             if pack:
                 if isinstance(pack, list):

@@ -2,9 +2,12 @@
 Some of the utils used by salt
 '''
 
-import os
-import sys
+from calendar import month_abbr as months
 import logging
+import os
+import socket
+import sys
+
 
 log = logging.getLogger(__name__)
 
@@ -30,18 +33,6 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-months = {'01': 'Jan',
-          '02': 'Feb',
-          '03': 'Mar',
-          '04': 'Apr',
-          '05': 'May',
-          '06': 'Jun',
-          '07': 'Jul',
-          '08': 'Aug',
-          '09': 'Sep',
-          '10': 'Oct',
-          '11': 'Nov',
-          '12': 'Dec'}
 
 def is_empty(filename):
     '''
@@ -143,7 +134,7 @@ def daemonize():
             # exit first parent
             sys.exit(0)
     except OSError as exc:
-        msg = 'fork #1 failed: {0} ({1})'.format(e.errno, e.strerror)
+        msg = 'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
         log.error(msg)
         sys.exit(1)
 
@@ -159,7 +150,7 @@ def daemonize():
             sys.exit(0)
     except OSError as exc:
         msg = 'fork #2 failed: {0} ({1})'
-        log.error(msg.format(e.errno, e.strerror))
+        log.error(msg.format(exc.errno, exc.strerror))
         sys.exit(1)
 
     dev_null = open('/dev/null', 'rw')
@@ -237,7 +228,7 @@ def jid_to_time(jid):
 
     ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(
             year,
-            months[month],
+            months[int(month)],
             day,
             hour,
             minute,
@@ -260,3 +251,27 @@ def gen_mac(prefix='52:54:'):
             mac += random.choice(src) + random.choice(src) + ':'
     return mac[:-1]
 
+
+def dns_check(addr, safe=False):
+    '''
+    Return the ip resolved by dns, but do not exit on failure, only raise an
+    exception.
+    '''
+    try:
+        socket.inet_aton(addr)
+    except socket.error:
+        # Not a valid ip adder, check DNS
+        try:
+            addr = socket.gethostbyname(addr)
+        except socket.gaierror:
+            err = ('This master address: {0} was previously resolvable but '
+                  'now fails to resolve! The previously resolved ip addr '
+                  'will continue to be used').format(addr)
+            if safe:
+                log.error(err)
+                raise SaltClientError
+            else:
+                err = err.format(addr)
+                sys.stderr.write(err)
+                sys.exit(42)
+    return addr

@@ -6,7 +6,6 @@ All salt configuration loading and defaults should be in this module
 from contextlib import nested
 import glob
 import os
-import sys
 import socket
 import logging
 import tempfile
@@ -24,6 +23,7 @@ except:
 import salt.crypt
 import salt.loader
 import salt.utils
+import salt.pillar
 
 log = logging.getLogger(__name__)
 
@@ -131,7 +131,10 @@ def minion_config(path):
             'file_client': 'remote',
             'file_roots': {
                 'base': ['/srv/salt'],
-            },
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                },
             'hash_type': 'md5',
             'external_nodes': '',
             'disable_modules': [],
@@ -160,24 +163,24 @@ def minion_config(path):
     if 'include' in opts:
         opts = include_config(opts, path)
 
-    opts['master_ip'] = dns_check(opts['master'])
+    opts['master_ip'] = salt.utils.dns_check(opts['master'])
 
     opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['master_ip'],
                                                     port=opts['master_port'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
-
     opts['open_mode'] = opts['open_mode'] is True
 
     # set up the extension_modules location from the cachedir
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
 
-    opts['grains'] = salt.loader.grains(opts)
-
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
                             'key_logfile', 'extension_modules'])
+
+    opts['grains'] = salt.loader.grains(opts)
+
     return opts
 
 
@@ -198,7 +201,10 @@ def master_config(path):
             'cachedir': '/var/cache/salt',
             'file_roots': {
                 'base': ['/srv/salt'],
-            },
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                },
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
@@ -215,6 +221,7 @@ def master_config(path):
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
+            'range_server': 'range:80',
             'serial': 'msgpack',
             'nodegroups': {},
             'key_logfile': '/var/log/salt/key.log',
@@ -227,9 +234,10 @@ def master_config(path):
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
-                            'sock_dir', 'key_logfile'])
+                            'sock_dir', 'key_logfile', 'extension_modules'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
@@ -238,25 +246,3 @@ def master_config(path):
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
 
-
-def dns_check(addr):
-    '''
-    Verify that the passed address is valid and return the ipv4 addr if it is
-    a hostname
-    '''
-    try:
-        socket.inet_aton(addr)
-        # is a valid ip addr
-    except socket.error:
-        # Not a valid ip addr, check if it is an available hostname
-        try:
-            addr = socket.gethostbyname(addr)
-        except socket.gaierror:
-            # Woah, this addr is totally bogus, die!!!
-            err = ('The master address {0} could not be validated, please '
-                   'check that the specified master in the minion config '
-                   'file is correct\n')
-            err = err.format(addr)
-            sys.stderr.write(err)
-            sys.exit(42)
-    return addr
