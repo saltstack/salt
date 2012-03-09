@@ -3,7 +3,9 @@ A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
 '''
 
+import sys
 import time
+
 try:
     import psutil
     has_psutil = True
