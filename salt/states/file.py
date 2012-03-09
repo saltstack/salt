@@ -206,7 +206,7 @@ def _clean_dir(root, keep):
 
 
 def _error(ret, err_msg):
-    ret['result'] = False,
+    ret['result'] = False
     ret['comment'] = err_msg
     return ret
 
