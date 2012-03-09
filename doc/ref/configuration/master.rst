@@ -91,7 +91,7 @@ execution returns and command executions.
 
 Default: :file:`/`
 
-The system root direcotry to operate from, change this to make Salt run from
+The system root directory to operate from, change this to make Salt run from
 an alternative root
 
 .. code-block:: yaml
