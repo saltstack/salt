@@ -1,11 +1,14 @@
 '''
 Create virtualenv environments
 '''
+from salt.exceptions import CommandNotFoundError
 import salt.utils
+
 
 __opts__ = {
     'venv_bin': 'virtualenv',
 }
+
 
 def __virtual__():
     '''
@@ -13,6 +16,7 @@ def __virtual__():
     '''
     cmd = __opts__.get('venv_bin', 'virtualenv')
     return 'virtualenv' if salt.utils.which(cmd) else False
+
 
 def create(path,
         venv_bin='',
@@ -50,6 +54,10 @@ def create(path,
 
         salt '*' pip.virtualenv /path/to/new/virtualenv
     '''
+    if not salt.utils.which(venv_bin):
+        raise CommandNotFoundError(
+            "Please install {venv_bin}".format(venv_bin=venv_bin))
+
     cmd = '{venv_bin} {args} {path}'.format(
             venv_bin=venv_bin if venv_bin else __opts__['venv_bin'],
             args=''.join([
