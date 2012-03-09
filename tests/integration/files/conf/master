@@ -1,10 +1,10 @@
-publish_port: 94505
-ret_port: 94506
+publish_port: 64505
+ret_port: 64506
 worker_threads: 1
 root_dir: /tmp/salttest
-pidfile: /tmp/salttest/masterpid
-pki_dir: /tmp/salttest/pki
-cachedir: /tmp/salttest/cache
+pidfile: masterpid
+pki_dir: pki
+cachedir: cache
 timeout: 1
-sock_dir: /tmp/salttest/.salt-unix
+sock_dir: .salt-unix
 open_mode: True
