@@ -206,7 +206,7 @@ def _clean_dir(root, keep):
 
 
 def _error(ret, err_msg):
-    ret['result'] = False,
+    ret['result'] = False
     ret['comment'] = err_msg
     return ret
 
@@ -563,6 +563,11 @@ def managed(name,
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
+
+    if os.path.isdir(name):
+        ret['comment'] = 'Specified target {0} is a directory'.format(name)
+        ret['result'] = False
+        return ret
 
     # If the source is a list then find which file exists
     if isinstance(source, list):
@@ -1219,7 +1224,7 @@ def append(name, text):
             return _error(ret, "Given text is not a string")
 
         for line in lines:
-            if __salt__['file.contains'](name, line):
+            if __salt__['file.contains'](name, line, escape=True):
                 continue
             else:
                 __salt__['file.append'](name, line)

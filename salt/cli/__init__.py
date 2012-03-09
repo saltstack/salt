@@ -16,6 +16,7 @@ import salt.client
 import salt.output
 import salt.runner
 
+from salt.utils.verify import verify_env
 from salt import __version__ as VERSION
 from salt.exceptions import SaltInvocationError, SaltClientError, \
     SaltException
@@ -703,10 +704,10 @@ class SaltCall(object):
             opts['fun'] = ''
             opts['arg'] = []
 
-        salt.verify_env([opts['pki_dir'],
-                         opts['cachedir'],
-                         os.path.dirname(opts['log_file']),
-                         ])
+        verify_env([opts['pki_dir'],
+                    opts['cachedir'],
+                    os.path.dirname(opts['log_file']),
+                    ])
 
         return opts
 

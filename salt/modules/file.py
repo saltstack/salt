@@ -351,14 +351,19 @@ def find(path, *opts):
     ret.sort()
     return ret
 
-def _sed_esc(s):
+def _sed_esc(s, escape_all=False):
     '''
     Escape single quotes and forward slashes
     '''
-    return '{0}'.format(s).replace("'", "'\"'\"'").replace("/", "\/")
+    special_chars = "^.[$()|*+?{"
+    s = s.replace("'", "'\"'\"'").replace("/", "\/")
+    if escape_all:
+        for ch in special_chars:
+            s = s.replace(ch, "\\" + ch)
+    return s
 
 def sed(path, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g'):
+        flags='g', escape_all=False):
     '''
     Make a simple edit to a file
 
@@ -394,9 +399,9 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
-
-    before = _sed_esc(before)
-    after = _sed_esc(after)
+    # XXX:dc: Do we really want to always force escaping?
+    before = _sed_esc(before, escape_all)
+    after = _sed_esc(after, escape_all)
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
             backup = '-i{0} '.format(backup) if backup else '',
@@ -484,7 +489,7 @@ def comment(path, regex, char='#', backup='.bak'):
         after=r'{0}\1'.format(char),
         backup=backup)
 
-def contains(path, text, limit=''):
+def contains(path, text, limit='', escape=False):
     '''
     Return True if the file at ``path`` contains ``text``
 
@@ -500,7 +505,7 @@ def contains(path, text, limit=''):
         return False
 
     result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options='-n -r -e', flags='gp')
+            options='-n -r -e', flags='gp', escape_all=escape)
 
     return bool(result)
 

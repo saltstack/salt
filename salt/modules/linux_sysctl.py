@@ -112,6 +112,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
             nlines.append('{0} = {1}\n'.format(name, value))
             edited = True
             continue
+        else:
+            nlines.append(line)
     if not edited:
         nlines.append('{0} = {1}\n'.format(name, value))
     open(config, 'w+').writelines(nlines)

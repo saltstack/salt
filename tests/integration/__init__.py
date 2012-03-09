@@ -6,7 +6,7 @@ import salt
 import salt.config
 import salt.master
 import salt.minion
-
+from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
 INTEGRATION_TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
@@ -23,9 +23,15 @@ class TestDaemon(object):
         '''
         Start a master and minion
         '''
-        self.master_opts = salt.config.master_config(os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master'))
-        self.minion_opts = salt.config.minion_config(os.path.join(INTEGRATION_TEST_DIR, 'files/conf/minion'))
-        salt.verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
+        self.master_opts = salt.config.master_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master'))
+        self.minion_opts = salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/minion'))
+        self.master_opts['file_roots'] = FILES
+        self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
+        self.minion_opts['file_roots'] = FILES
+        self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
+        verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
                     os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(self.master_opts['cachedir'], 'jobs'),

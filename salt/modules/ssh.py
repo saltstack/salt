@@ -114,30 +114,42 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     full = os.path.join(uinfo['home'], config)
     if not os.path.isfile(full):
         return {}
-    for line in open(full, 'r').readlines():
-        if line.startswith('#'):
-            # Commented Line
-            continue
-        comps = line.split()
-        if len(comps) < 2:
-            # Not a valid line
-            continue
-        if not comps[0].startswith('ssh-'):
-            # It has options, grab them
-            options = comps[0].split(',')
-        else:
-            options = []
-        if not options:
-            enc = comps[0]
-            key = comps[1]
-            comment = ' '.join(comps[2:])
-        else:
-            enc = comps[1]
-            key = comps[2]
-            comment = ' '.join(comps[3:])
-        ret[key] = {'enc': enc,
-                    'comment': comment,
-                    'options': options}
+
+    return _validate_keys(full)
+
+
+def _validate_keys(key_file):
+    '''
+    Return a dict containing validated keys in the passed file
+    '''
+    ret = {}
+    try:
+        for line in open(key_file, 'r').readlines():
+            if line.startswith('#'):
+                # Commented Line
+                continue
+            comps = line.split()
+            if len(comps) < 2:
+                # Not a valid line
+                continue
+            if not comps[0].startswith('ssh-'):
+                # It has options, grab them
+                options = comps[0].split(',')
+            else:
+                options = []
+            if not options:
+                enc = comps[0]
+                key = comps[1]
+                comment = ' '.join(comps[2:])
+            else:
+                enc = comps[1]
+                key = comps[2]
+                comment = ' '.join(comps[3:])
+            ret[key] = {'enc': enc,
+                        'comment': comment,
+                        'options': options}
+    except IOError:
+        return "fail"
 
     return ret
 
@@ -185,6 +197,38 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         return 'Key removed'
     return 'Key not present'
 
+def set_auth_key_from_file(
+        user,
+        source,
+        config='.ssh/authorized_keys'):
+    '''
+    Add a key to the authorized_keys file, using a file as the source.
+
+    CLI Example::
+
+        salt '*' ssh.set_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub 
+    ''' 
+    # TODO: add support for pulling keys from other file sources as well
+    lfile = __salt__['cp.cache_file'](source)
+    if not os.path.isfile(lfile):
+        return 'fail'
+
+    newkey = {}
+    rval = ""
+    newkey = _validate_keys(lfile)
+    for k in newkey.keys():
+        rval += set_auth_key(user, k, newkey[k]['enc'], newkey[k]['comment'], newkey[k]['options'], config)
+    # Due to the ability for a single file to have multiple keys, it's possible for a single call
+    # to this function to have both "replace" and "new" as possible valid returns. I ordered the 
+    # following as I thought best.
+    if 'fail' in rval:
+        return 'fail'
+    elif 'replace' in rval:
+        return 'replace'
+    elif 'new' in rval:
+        return 'new'
+    else:
+        return 'no change'
 
 def set_auth_key(
         user,
@@ -198,7 +242,7 @@ def set_auth_key(
 
     CLI Example::
 
-        salt '*' ssh.set_auth_key <user> <key> dsa '[]' .ssh/authorized_keys
+        salt '*' ssh.set_auth_key <user> <key> dsa 'my key' '[]' .ssh/authorized_keys
     '''
     enc = _refine_enc(enc)
     replace = False

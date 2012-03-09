@@ -94,7 +94,7 @@ The second line, called the :term:`state declaration`, defines which of the
 Salt States we are using. In this example, we are using the :mod:`pkg state
 <salt.states.pkg>` to ensure that a given package is installed.
 
-The third line, called the :term:`function declaration` defines which function
+The third line, called the :term:`function declaration`, defines which function
 in the :mod:`pkg state <salt.states.pkg>` module to call.
 
 .. admonition:: Renderers
@@ -107,7 +107,7 @@ in the :mod:`pkg state <salt.states.pkg>` module to call.
     Building the expected data structure is the job of Salt :doc:`renderers
     </ref/renderers/index>` and they are dead-simple to write.
 
-    In this tutorial we will be using YAML in Jinja2 templates which is the
+    In this tutorial we will be using YAML in Jinja2 templates, which is the
     default format. You can change the default by changing
     :conf_master:`renderer` in the master configuration file.
 

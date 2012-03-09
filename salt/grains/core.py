@@ -425,6 +425,7 @@ def os_data():
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
+        grains.update(_freebsd_cpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'Linux':
