@@ -56,7 +56,7 @@ def netstat():
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         comps = line.split()
         if line.startswith('tcp'):
