@@ -6,85 +6,18 @@ from salt.version import __version__
 # Import python libs
 import os
 import sys
-import stat
 import optparse
-import getpass
 
 # Import salt libs, the try block bypasses an issue at build time so that c
 # modules don't cause the build to fail
 try:
     import salt.config
-    import salt.utils.verify
+    from salt.utils.process import set_pidfile
+    from salt.utils.verify import check_user, verify_env
 except ImportError as e:
     if e.message != 'No module named _msgpack':
         raise
 
-
-def set_pidfile(pidfile):
-    '''
-    Save the pidfile
-    '''
-    pdir = os.path.dirname(pidfile)
-    if not os.path.isdir(pdir):
-        os.makedirs(pdir)
-    try:
-        with open(pidfile, 'w+') as f:
-            f.write(str(os.getpid()))
-    except IOError:
-        pass
-
-
-def verify_env(dirs):
-    '''
-    Verify that the named directories are in place and that the environment
-    can shake the salt
-    '''
-    for dir_ in dirs:
-        if not os.path.isdir(dir_):
-            try:
-                cumask = os.umask(63)  # 077
-                os.makedirs(dir_)
-                os.umask(cumask)
-            except OSError, e:
-                sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
-
-        mode = os.stat(dir_)
-        # TODO: Should this log if it can't set the permissions
-        #       to very secure for these PKI cert directories?
-        if not stat.S_IMODE(mode.st_mode) == 448:
-            if os.access(dir_, os.W_OK):
-                os.chmod(dir_, 448)
-    # Run the extra verification checks
-    salt.utils.verify.run()
-
-
-def check_user(user, log):
-    '''
-    Check user and assign process uid/gid.
-    '''
-    if 'os' in os.environ:
-        if os.environ['os'].startswith('Windows'):
-            return True
-    if user == getpass.getuser():
-        return True
-    import pwd  # after confirming not running Windows
-    try:
-        p = pwd.getpwnam(user)
-        try:
-            os.setgid(p.pw_gid)
-            os.setuid(p.pw_uid)
-        except OSError:
-            if user == 'root':
-                msg = 'Sorry, the salt must run as root.  http://xkcd.com/838'
-            else:
-                msg = 'Salt must be run from root or user "{0}"'.format(user)
-            log.critical(msg)
-            return False
-    except KeyError:
-        msg = 'User not found: "{0}"'.format(user)
-        log.critical(msg)
-        return False
-    return True
 
 class Master(object):
     '''
