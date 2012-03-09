@@ -34,7 +34,7 @@ Optional Dependencies
 .. _`Cython`: http://cython.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
 
-Platform-specific instllation instructions
+Platform-specific installation instructions
 ------------------------------------------
 
 .. toctree::
