@@ -2,7 +2,6 @@
 Create virtualenv environments
 '''
 from salt.exceptions import CommandNotFoundError
-import salt.utils
 
 
 __opts__ = {
@@ -10,16 +9,8 @@ __opts__ = {
 }
 
 
-def __virtual__():
-    '''
-    Only load the module if virtualenv is installed
-    '''
-    cmd = __opts__.get('venv_bin', 'virtualenv')
-    return 'virtualenv' if salt.utils.which(cmd) else False
-
-
 def create(path,
-        venv_bin='',
+        venv_bin=__opts__['venv_bin'],
         no_site_packages=False,
         system_site_packages=False,
         clear=False,
@@ -54,12 +45,12 @@ def create(path,
 
         salt '*' pip.virtualenv /path/to/new/virtualenv
     '''
-    if not salt.utils.which(venv_bin):
+    if not __salt__['cmd.has_exec'](venv_bin):
         raise CommandNotFoundError(
             "Please install {venv_bin}".format(venv_bin=venv_bin))
 
     cmd = '{venv_bin} {args} {path}'.format(
-            venv_bin=venv_bin if venv_bin else __opts__['venv_bin'],
+            venv_bin=venv_bin,
             args=''.join([
                 ' --no-site-packages' if no_site_packages else '',
                 ' --system-site-packages' if system_site_packages else '',
