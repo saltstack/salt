@@ -66,8 +66,8 @@ called ``grains`` is made available in the template context:
 Calling Salt modules from templates
 ===================================
 
-All of the Salt modules loaded by the minion ave available within the
-templating system. This allows data to be gathered in real time, on the target
+All of the Salt modules loaded by the minion are available within the
+templating system. This allows data to be gathered in real time on the target
 system. It also allows for shell commands to be run easily from within the sls
 modules.
 
@@ -103,7 +103,7 @@ trees.
 
 You have seen an example of how to spread a Salt tree across several files but
 in order to be able to have :term:`requisite references <requisite reference>`
-span multiple files you must use a :term:`include declaration`. For example:
+span multiple files you must use an :term:`include declaration`. For example:
 
 ``python-libs.sls``:
 
@@ -129,7 +129,7 @@ span multiple files you must use a :term:`include declaration`. For example:
 :term:`Extend declaration`
 --------------------------
 
-You can modify previous declarations by using a :term:`extend declaration`. For
+You can modify previous declarations by using an :term:`extend declaration`. For
 example the following modifies the Apache tree to also restart Apache when the
 vhosts file is changed:
 
@@ -164,8 +164,8 @@ vhosts file is changed:
 ------------------------
 
 You can override the :term:`ID declaration` by using a :term:`name
-declaration`. For example the previous example is a bit more maintainable if
-rewritten as the following:
+declaration`. For example, the previous example is a bit more maintainable if
+rewritten as follows:
 
 ``mywebsite.sls``:
 
@@ -208,7 +208,7 @@ can be rewritten without the loop:
 Continue learning
 =================
 
-The best way to continue learing about Salt States is to read through the
+The best way to continue learning about Salt States is to read through the
 :doc:`reference documentation </ref/states/index>` and to look through examples
 of existing :term:`state trees <state tree>`. You can find examples in the
 `salt-states repository`_ and please send a pull-request on GitHub with any

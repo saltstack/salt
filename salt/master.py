@@ -729,7 +729,12 @@ class AESFuncs(object):
         if func.startswith('__'):
             return self.crypticle.dumps({})
         # Run the func
-        ret = getattr(self, func)(load)
+        try:
+            ret = getattr(self, func)(load)
+        except AttributeError as exc:
+            log.error(('Received function {0} which in unavailable on the '
+                       'master, returning False').format(exc))
+            return self.crypticle.dumps(False)
         # Don't encrypt the return value for the _return func
         # (we don't care about the return value, so why encrypt it?)
         if func == '_return':

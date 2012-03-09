@@ -564,6 +564,11 @@ def managed(name,
     sfn = ''
     source_sum = {}
 
+    if os.path.isdir(name):
+        ret['comment'] = 'Specified target {0} is a directory'.format(name)
+        ret['result'] = False
+        return ret
+
     # If the source is a list then find which file exists
     if isinstance(source, list):
         # get the master file list

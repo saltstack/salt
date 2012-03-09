@@ -3,9 +3,26 @@ A salt interface to psutil, a system and process library.
 See http://code.google.com/p/psutil.
 '''
 
+import sys
 import time
-import psutil
 
+try:
+    import psutil
+    has_psutil = True
+except ImportError:
+    has_psutil = False
+
+def __virtual__():
+    if not has_psutil:
+        return False
+
+    # The python 2.6 version of psutil lacks several functions
+    # used in this salt module so instead of spaghetti  string
+    # code to try to bring sanity to everything,  disable  it.
+    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+        return False
+
+    return "ps"
 
 def top(num_processes=5, interval=3):
     '''

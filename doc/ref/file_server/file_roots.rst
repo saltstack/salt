@@ -50,3 +50,13 @@ returned, if the file is not found there, then
 
 This allows for directories to be overlaid and prioritized based on the order
 they are defined in the configuration.
+
+Local File Server
+=================
+
+The file server can be rerouted to run from the minion. This is primarily to
+enable running salt states without a salt master. To use the local file server
+interface, copy the file server data to the minion and set the file_roots
+option on the minion to point to the directories copied from the master.
+Once the minion ``file_roots`` option has been set, change the ``file_client``
+option to local to make sure that the local file server interface is used.
