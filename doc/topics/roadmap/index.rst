@@ -17,7 +17,7 @@ appear in the web interface.
 The features listed here are only listed based on major version releases, the
 plan is to have a clear long term goal but not to overly dictate the flow
 of development. The project needs to be flexible enough to be able to receive
-now features at a moment's notice. This model should spur ideas and make
+new features at a moment's notice. This model should spur ideas and make
 allowing new community developers to join without issue. So just because
 something is slated for a later reason does not mean that a developer is
 going to have their code rejected or stalled.
@@ -40,7 +40,7 @@ Module Cross Calls
 Many instances of using functions when we should be using module cross calls
 exist in the code. Mostly from modules which were written before cross calls
 were around. The big thing to look for are subprocess calls, since they should
-all be running with the cms module.
+all be running with the cmd module.
 
 State Return Data Cleanup
 `````````````````````````
