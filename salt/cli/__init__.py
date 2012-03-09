@@ -236,6 +236,9 @@ class SaltCMD(object):
             local = None
             ret = exc
             out = ''
+            self._output_ret(ret, out)
+            return
+
         if 'query' in self.opts:
             ret = local.find_cmd(self.opts['cmd'])
             for jid in ret:
