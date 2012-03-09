@@ -30,7 +30,7 @@ def __get_conn():
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
     '''
-    # This only supports kvm right now, it needs to be expanded to support
+    # This has only been tested on kvm and xen, it needs to be expanded to support
     # all vm layers supported by libvirt
     return libvirt.open("qemu:///system")
 
@@ -49,8 +49,8 @@ def _libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
     '''
-    g_cmd = 'grep ^group /etc/libvirt/qemu.conf'
-    u_cmd = 'grep ^user /etc/libvirt/qemu.conf'
+    g_cmd = 'grep ^\s*group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep ^\s*user /etc/libvirt/qemu.conf'
     try:
         group = subprocess.Popen(g_cmd,
             shell=True,
