@@ -41,7 +41,7 @@ class SaltCMD(object):
 
         parser.add_option('-t',
                 '--timeout',
-                default=5,
+                default=None,
                 dest='timeout',
                 help=('Set the return timeout for batch jobs; '
                       'default=5 seconds'))
@@ -236,6 +236,9 @@ class SaltCMD(object):
             local = None
             ret = exc
             out = ''
+            self._output_ret(ret, out)
+            return
+
         if 'query' in self.opts:
             ret = local.find_cmd(self.opts['cmd'])
             for jid in ret:
