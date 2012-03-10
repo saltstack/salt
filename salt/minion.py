@@ -236,7 +236,9 @@ class Minion(object):
         function_name = data['fun']
         if function_name in self.functions:
             try:
-                ret['return'] = self.functions[data['fun']](*data['arg'])
+                func = self.functions[data['fun']]
+                args, kw = salt.state.build_args(func, data['arg'])
+                ret['return'] = func(*args, **kw)
             except CommandNotFoundError as exc:
                 msg = 'Command not found in \'{0}\': {1}'
                 log.debug(msg.format(function_name, str(exc)))
@@ -293,8 +295,9 @@ class Minion(object):
                     pass
 
             try:
-                ret['return'][data['fun'][ind]]\
-                    = self.functions[data['fun'][ind]](*data['arg'][ind])
+                func = self.functions[data['fun'][ind]]
+                args, kw = salt.state.build_args(func, data['arg'][ind])
+                ret['return'][data['fun'][ind]] = func(*args, **kw)
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(

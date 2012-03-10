@@ -11,6 +11,7 @@ import salt
 import salt.utils
 import salt.loader
 import salt.minion
+import salt.state
 
 # Custom exceptions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -38,9 +39,9 @@ class Caller(object):
             sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(1)
         try:
-            ret['return'] = self.minion.functions[fun](
-                    *self.opts['arg']
-                    )
+            args, kw = salt.state.build_args(
+                self.minion.functions[fun], self.opts['arg'])
+            ret['return'] = self.minion.functions[fun](*args, **kw)
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             sys.stderr.write(msg.format(fun, str(exc)))
