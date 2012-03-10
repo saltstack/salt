@@ -33,8 +33,10 @@ syslog if there is no disk space:
 
 .. warning::
 
-    Both ``onlyif`` and ``unless`` are using ``/bin/sh`` as their shell for
-    execution
+    Please be advised that on Unix systems the shell being used by python
+    to run executions is /bin/sh, this requires that commands are formatted
+    to execute under /bin/sh. Some capabilities of newer shells such as bash,
+    zsh and ksh will not always be available on minions.
 
 '''
 
