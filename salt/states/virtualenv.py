@@ -8,7 +8,7 @@ import os
 logger = logging.getLogger(__name__)
 
 def manage(name,
-        venv_bin='',
+        venv_bin='virtualenv',
         requirements='',
         no_site_packages=False,
         system_site_packages=False,

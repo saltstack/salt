@@ -31,6 +31,11 @@ syslog if there is no disk space:
         - run
         - unless: echo 'foo' > /tmp/.test
 
+.. warning::
+
+    Both ``onlyif`` and ``unless`` are using ``/bin/sh`` as their shell for
+    execution
+
 '''
 
 import grp
