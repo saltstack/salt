@@ -78,10 +78,10 @@ class TestModuleTest(integration.ModuleCase):
         '''
         self.assertEqual(
                 self.run_function(
-                    'test.fib',
+                    'test.collatz',
                     ['40'],
                     )[0][-1],
-                34
+                2
                 )
 
     def test_outputter(self):
