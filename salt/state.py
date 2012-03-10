@@ -59,6 +59,26 @@ def _getargs(func):
     return aspec
 
 
+def build_args(func, args):
+    spec_args, _, _, _ = _getargs(func)
+
+    _args = []
+    _kw = {}
+    for arg in args:
+        if isinstance(arg, basestring):
+            arg = arg.split('=', 1)
+            arg_len = len(arg)
+            if arg_len == 2:
+                k, v = arg
+                if k in spec_args:
+                    _kw[k] = v
+            else:
+                _args.append(arg[0])
+        else:
+            _args.append(arg)
+    return _args, _kw
+
+
 def format_log(ret):
     '''
     Format the state into a log message
