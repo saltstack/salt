@@ -17,7 +17,8 @@ def manage(name,
         extra_search_dir='',
         never_download=False,
         prompt='',
-        __env__='base'):
+        __env__='base',
+        runas=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -75,7 +76,8 @@ def manage(name,
                 python=python,
                 extra_search_dir=extra_search_dir,
                 never_download=never_download,
-                prompt=prompt)
+                prompt=prompt,
+                runas=runas)
 
         ret['changes']['new'] = __salt__['cmd.run_stderr'](
                 '{0} -V'.format(venv_py)).strip('\n')
