@@ -8,6 +8,8 @@ import os
 import socket
 import sys
 
+from salt.exceptions import SaltClientError
+
 
 log = logging.getLogger(__name__)
 

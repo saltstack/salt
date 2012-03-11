@@ -42,9 +42,8 @@ def install(env='', requirements='', pkgs='', pip_bin=''):
         salt '*' pip.install /var/www/myvirtualenv.com \\
                 /path/to/requirements.txt
     '''
-    cmd = '{pip_bin} install {env} {reqs} {pkgs}'.format(
+    cmd = '{pip_bin} install {reqs} {pkgs}'.format(
         pip_bin=_get_pip_bin(pip_bin, env),
-        env='-E {0}'.format(env) if env else '',
         reqs='-r {0}'.format(requirements) if requirements else '',
         pkgs=pkgs)
 
@@ -64,8 +63,6 @@ def freeze(env='', pip_bin=''):
         to the pip that is installed in the virtualenv. This option can also be
         set in the minion config file as ``pip.pip_bin``.
     '''
-    # Using freeze with -E seems to be twitchy on older pips so call the pip
-    # inside the venv if using a venv
     cmd = '{0} freeze'.format(_get_pip_bin(pip_bin, env))
 
     return __salt__['cmd.run'](cmd).split('\n')

@@ -33,8 +33,10 @@ syslog if there is no disk space:
 
 .. warning::
 
-    Both ``onlyif`` and ``unless`` are using ``/bin/sh`` as their shell for
-    execution
+    Please be advised that on Unix systems the shell being used by python
+    to run executions is /bin/sh, this requires that commands are formatted
+    to execute under /bin/sh. Some capabilities of newer shells such as bash,
+    zsh and ksh will not always be available on minions.
 
 '''
 
@@ -84,7 +86,9 @@ def run(name,
         unless=None,
         cwd='/root',
         user=None,
-        group=None):
+        group=None,
+        shell='/bin/sh',
+        env=()):
     '''
     Run a command if certain circumstances are met
 
@@ -141,9 +145,21 @@ def run(name,
             ret['comment'] = 'The group ' + group + ' is not available'
             return ret
 
+    if env:
+        _env = {}
+        for var in env.split():
+            try:
+                k, v = var.split('=')
+                _env[k] = v
+            except ValueError:
+                ret['comment'] = 'Invalid enviromental var: "{0}"' % var
+                return ret
+        env = _env
+
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user)
+        cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user,
+                                          shell=shell, env=env)
     except CommandExecutionError as e:
         ret['comment'] = e
         return ret
