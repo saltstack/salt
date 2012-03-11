@@ -86,7 +86,8 @@ def run(name,
         unless=None,
         cwd='/root',
         user=None,
-        group=None):
+        group=None,
+        shell='/bin/sh'):
     '''
     Run a command if certain circumstances are met
 
@@ -145,7 +146,7 @@ def run(name,
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user)
+        cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user, shell=shell)
     except CommandExecutionError as e:
         ret['comment'] = e
         return ret
