@@ -5,6 +5,7 @@ minion modules.
 
 # Import python modules
 import sys
+import traceback
 
 # Import salt libs
 import salt
@@ -44,6 +45,7 @@ class Caller(object):
             ret['return'] = self.minion.functions[fun](*args, **kw)
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
+            sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)
         except CommandNotFoundError as exc:
