@@ -36,7 +36,8 @@ def _run(cmd,
          quiet=False,
          runas=None,
          with_env=True,
-         shell=DEFAULT_SHELL):
+         shell=DEFAULT_SHELL,
+         env=()):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -82,11 +83,14 @@ def _run(cmd,
             log.info('Executing command {0} as user {1} in directory {2}'.format(
                     orig_cmd, runas, cwd))
 
+    run_env = os.environ
+    run_env.update(env)
     # This is where the magic happens
     proc = subprocess.Popen(cmd,
                             executable=shell,
                             cwd=cwd,
                             shell=True,
+                            env=run_env,
                             stdout=stdout,
                             stderr=stderr
                             )
@@ -99,15 +103,15 @@ def _run(cmd,
     return ret
 
 
-def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
+def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Helper for running commands quietly for minion startup
     '''
     return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT,
-                quiet=True, shell=shell)['stdout']
+                quiet=True, shell=shell, env=env)['stdout']
 
 
-def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
+def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute the passed command and return the output as a string
 
@@ -116,12 +120,12 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
         salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
     '''
     out = _run(cmd, runas=runas, shell=shell,
-               cwd=cwd, stderr=subprocess.STDOUT)['stdout']
+               cwd=cwd, stderr=subprocess.STDOUT, env=env)['stdout']
     log.debug(out)
     return out
 
 
-def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL):
+def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute a command, and only return the standard out
 
@@ -129,12 +133,12 @@ def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL):
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
     '''
-    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell)["stdout"]
+    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=())["stdout"]
     log.debug(stdout)
     return stdout
 
 
-def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
+def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute a command and only return the standard error
 
@@ -142,12 +146,12 @@ def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
     '''
-    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell)["stderr"]
+    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)["stderr"]
     log.debug(stderr)
     return stderr
 
 
-def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
+def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute the passed command and return a dict of return data
 
@@ -155,7 +159,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
-    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell)
+    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)
     if ret['retcode'] != 0:
         log.error('Command {0} failed'.format(cmd))
         log.error('retcode: {0}'.format(ret['retcode']))
@@ -167,7 +171,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
     return ret
 
 
-def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
+def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute a shell command and return the command's return code.
 
@@ -175,7 +179,7 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
 
         salt '*' cmd.retcode "file /bin/bash"
     '''
-    return _run(cmd, runas=runas, cwd=cwd, shell=shell)['retcode']
+    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)['retcode']
 
 
 def has_exec(cmd):
