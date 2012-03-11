@@ -24,13 +24,19 @@ log = logging.getLogger(__name__)
 __outputter__ = {
     'run': 'txt',
 }
+
+
+DEFAULT_SHELL = '/bin/sh'
+
+
 def _run(cmd,
-        cwd=None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        quiet=False,
-        runas=None,
-        with_env=True):
+         cwd=None,
+         stdout=subprocess.PIPE,
+         stderr=subprocess.PIPE,
+         quiet=False,
+         runas=None,
+         with_env=True,
+         shell=DEFAULT_SHELL):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -78,11 +84,12 @@ def _run(cmd,
 
     # This is where the magic happens
     proc = subprocess.Popen(cmd,
-        cwd=cwd,
-        shell=True,
-        stdout=stdout,
-        stderr=stderr
-    )
+                            executable=shell,
+                            cwd=cwd,
+                            shell=True,
+                            stdout=stdout,
+                            stderr=stderr
+                            )
 
     out = proc.communicate()
     ret['stdout']  = out[0]
@@ -92,14 +99,15 @@ def _run(cmd,
     return ret
 
 
-def _run_quiet(cmd, cwd=None, runas=None):
+def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
     '''
     Helper for running commands quietly for minion startup
     '''
-    return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT, quiet=True)['stdout']
+    return _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT,
+                quiet=True, shell=shell)['stdout']
 
 
-def run(cmd, cwd=None, runas=None):
+def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
     '''
     Execute the passed command and return the output as a string
 
@@ -107,12 +115,13 @@ def run(cmd, cwd=None, runas=None):
 
         salt '*' cmd.run "ls -l | awk '/foo/{print $2}'"
     '''
-    out = _run(cmd, runas=runas, cwd=cwd, stderr=subprocess.STDOUT)['stdout']
+    out = _run(cmd, runas=runas, shell=shell,
+               cwd=cwd, stderr=subprocess.STDOUT)['stdout']
     log.debug(out)
     return out
 
 
-def run_stdout(cmd, cwd=None,  runas=None):
+def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL):
     '''
     Execute a command, and only return the standard out
 
@@ -120,12 +129,12 @@ def run_stdout(cmd, cwd=None,  runas=None):
 
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
     '''
-    stdout = _run(cmd, runas=runas, cwd=cwd)["stdout"]
+    stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell)["stdout"]
     log.debug(stdout)
     return stdout
 
 
-def run_stderr(cmd, cwd=None, runas=None):
+def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
     '''
     Execute a command and only return the standard error
 
@@ -133,12 +142,12 @@ def run_stderr(cmd, cwd=None, runas=None):
 
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
     '''
-    stderr = _run(cmd, runas=runas, cwd=cwd)["stderr"]
+    stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell)["stderr"]
     log.debug(stderr)
     return stderr
 
 
-def run_all(cmd, cwd=None, runas=None):
+def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
     '''
     Execute the passed command and return a dict of return data
 
@@ -146,7 +155,7 @@ def run_all(cmd, cwd=None, runas=None):
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
-    ret = _run(cmd, runas=runas, cwd=cwd)
+    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell)
     if ret['retcode'] != 0:
         log.error('Command {0} failed'.format(cmd))
         log.error('retcode: {0}'.format(ret['retcode']))
@@ -158,7 +167,7 @@ def run_all(cmd, cwd=None, runas=None):
     return ret
 
 
-def retcode(cmd, cwd=None, runas=None):
+def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL):
     '''
     Execute a shell command and return the command's return code.
 
@@ -166,7 +175,7 @@ def retcode(cmd, cwd=None, runas=None):
 
         salt '*' cmd.retcode "file /bin/bash"
     '''
-    return _run(cmd, runas=runas, cwd=cwd)['retcode']
+    return _run(cmd, runas=runas, cwd=cwd, shell=shell)['retcode']
 
 
 def has_exec(cmd):
