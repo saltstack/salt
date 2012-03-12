@@ -307,6 +307,17 @@ def create(vm_):
     return True
 
 
+def start(vm_):
+    '''
+    Alias for the obscurely named 'create' function
+
+    CLI Example::
+
+        salt '*' virt.start <vm name>
+    '''
+    return create(vm_)
+
+
 def create_xml_str(xml):
     '''
     Start a domain based on the xml passed to the function
