@@ -17,7 +17,8 @@ def create(path,
         python='',
         extra_search_dir='',
         never_download=False,
-        prompt=''):
+        prompt='',
+        runas=None):
     '''
     Create a virtualenv
 
@@ -40,6 +41,8 @@ def create(path,
         Passthrough argument given to virtualenv
     prompt : (default)
         Passthrough argument given to virtualenv
+    runas : None
+        Set ownership for the virtualenv
 
     CLI Example::
 
@@ -62,4 +65,4 @@ def create(path,
                 ' --prompt {0}'.format(prompt) if prompt else '']),
             path=path)
 
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, runas=runas)

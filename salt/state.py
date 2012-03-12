@@ -117,6 +117,14 @@ def format_log(ret):
         log.info(str(ret))
 
 
+def ishashable(obj):
+    try:
+        hash(obj)
+    except TypeError:
+        return False
+    return True
+
+
 class StateError(Exception):
     '''
     Custom exception class.
@@ -345,6 +353,12 @@ class State(object):
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
+                                        req_key = req.keys()[0]
+                                        req_val = req[req_key]
+                                        if not ishashable(req_val):
+                                            errors.append((
+                                                'Illegal requisite "{0}", please check your syntax.\n'
+                                                ).format(str(req_val)))
                                 # Make sure that there is only one key in the dict
                                 if len(arg.keys()) != 1:
                                     errors.append(('Multiple dictionaries defined'
@@ -622,9 +636,11 @@ class State(object):
                 for req in low[r_state]:
                     found = False
                     for chunk in chunks:
-                        if fnmatch.fnmatch(chunk['__id__'], req[req.keys()[0]]) or \
-                                fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]):
-                            if chunk['state'] == req.keys()[0]:
+                        req_key = req.keys()[0]
+                        req_val = req[req_key]
+                        if (fnmatch.fnmatch(chunk['name'], req_val) or
+                            fnmatch.fnmatch(chunk['__id__'], req_val)):
+                            if chunk['state'] == req_key:
                                 found = True
                                 reqs[r_state].append(chunk)
                     if not found:
@@ -672,9 +688,10 @@ class State(object):
                 for req in low[requisite]:
                     found = False
                     for chunk in chunks:
-                        if fnmatch.fnmatch(chunk['name'], req[req.keys()[0]]) \
-                                or fnmatch.fnmatch(chunk['__id__'],
-                                        req[req.keys()[0]]):
+                        req_key = req.keys()[0]
+                        req_val = req[req_key]
+                        if (fnmatch.fnmatch(chunk['name'], req_val) or
+                            fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req.keys()[0]:
                                 reqs.append(chunk)
                                 found = True
