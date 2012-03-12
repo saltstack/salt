@@ -32,7 +32,11 @@ def __get_conn():
     '''
     # This has only been tested on kvm and xen, it needs to be expanded to support
     # all vm layers supported by libvirt
-    return libvirt.open("qemu:///system")
+    conn = libvirt.open("qemu:///system")
+    if conn == None:
+        raise Exception('Failed to open a connection to the hypervisor')
+    else:
+        return conn
 
 
 def _get_dom(vm_):
