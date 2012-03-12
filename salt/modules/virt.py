@@ -5,6 +5,7 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 from xml.dom import minidom
+from salt.exceptions import CommandExecutionError
 import StringIO
 import os
 import shutil
@@ -34,7 +35,8 @@ def __get_conn():
     # all vm layers supported by libvirt
     conn = libvirt.open("qemu:///system")
     if conn == None:
-        raise Exception('Failed to open a connection to the hypervisor')
+        msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
+        raise CommandExecutionError(msg.format(__grains__['fqdn']))
     else:
         return conn
 
