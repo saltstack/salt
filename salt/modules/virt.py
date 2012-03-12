@@ -78,12 +78,38 @@ def list_vms():
 
         salt '*' virt.list_vms
     '''
+    vms = []
+    vms.extend(list_active_vms())
+    vms.extend(list_inactive_vms())
+    return vms
+
+def list_active_vms():
+    '''
+    Return a list of names for active virtual machine on the minion
+
+    CLI Example::
+
+        salt '*' virt.list_active_vms
+    '''
     conn = __get_conn()
     vms = []
     for id_ in conn.listDomainsID():
         vms.append(conn.lookupByID(id_).name())
     return vms
 
+def list_inactive_vms():
+    '''
+    Return a list of names for inactive virtual machine on the minion
+
+    CLI Example::
+
+        salt '*' virt.list_inactive_vms
+    '''
+    conn = __get_conn()
+    vms = []
+    for id_ in conn.listDefinedDomains():
+        vms.append(id_)
+    return vms
 
 def vm_info():
     '''
