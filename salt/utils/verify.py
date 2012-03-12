@@ -29,6 +29,16 @@ def zmq_version():
         return True
 
     major,minor,point = match.groups()
+
+    if major.isdigit():
+        major = int(major)
+    if minor.isdigit():
+        minor = int(minor)
+
+    # point very well could be None
+    if point and point.isdigit():
+        point = int(point)
+
     if major == 2 and minor == 1:
         # zmq 2.1dev could be built against a newer libzmq
         if "dev" in ver and not point:
