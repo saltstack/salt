@@ -5,6 +5,7 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 from xml.dom import minidom
+from salt.exceptions import CommandExecutionError
 import StringIO
 import os
 import shutil
@@ -32,7 +33,12 @@ def __get_conn():
     '''
     # This has only been tested on kvm and xen, it needs to be expanded to support
     # all vm layers supported by libvirt
-    return libvirt.open("qemu:///system")
+    try:
+        conn = libvirt.open("qemu:///system")
+    except:
+        msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
+        raise CommandExecutionError(msg.format(__grains__['fqdn']))
+    return conn
 
 
 def _get_dom(vm_):
@@ -74,12 +80,38 @@ def list_vms():
 
         salt '*' virt.list_vms
     '''
+    vms = []
+    vms.extend(list_active_vms())
+    vms.extend(list_inactive_vms())
+    return vms
+
+def list_active_vms():
+    '''
+    Return a list of names for active virtual machine on the minion
+
+    CLI Example::
+
+        salt '*' virt.list_active_vms
+    '''
     conn = __get_conn()
     vms = []
     for id_ in conn.listDomainsID():
         vms.append(conn.lookupByID(id_).name())
     return vms
 
+def list_inactive_vms():
+    '''
+    Return a list of names for inactive virtual machine on the minion
+
+    CLI Example::
+
+        salt '*' virt.list_inactive_vms
+    '''
+    conn = __get_conn()
+    vms = []
+    for id_ in conn.listDefinedDomains():
+        vms.append(id_)
+    return vms
 
 def vm_info():
     '''
@@ -301,6 +333,17 @@ def create(vm_):
     dom = _get_dom(vm_)
     dom.create()
     return True
+
+
+def start(vm_):
+    '''
+    Alias for the obscurely named 'create' function
+
+    CLI Example::
+
+        salt '*' virt.start <vm name>
+    '''
+    return create(vm_)
 
 
 def create_xml_str(xml):
