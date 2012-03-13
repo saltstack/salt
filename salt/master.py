@@ -711,15 +711,29 @@ class AESFuncs(object):
         log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
                   ' "{0[arg]}", target: "{0[tgt]}"').format(load))
         pub_sock.send(self.serial.dumps(payload))
-        # Run the client get_returns method
-        return self.local.get_returns(
-                jid,
-                self.local.check_minions(
-                    clear_load['tgt'],
-                    expr_form
-                    ),
-                timeout
-                )
+        # Run the client get_returns method based on the form data sent
+        if 'form' in clear_load:
+            ret_form = clear_load['form']
+        else:
+            ret_form = 'clean'
+        if ret_form == 'clean':
+            return self.local.get_returns(
+                    jid,
+                    self.local.check_minions(
+                        clear_load['tgt'],
+                        expr_form
+                        ),
+                    timeout
+                    )
+        elif ret_form == 'full':
+            return self.local.get_full_returns(
+                    jid,
+                    self.local.check_minions(
+                        clear_load['tgt'],
+                        expr_form
+                        ),
+                    timeout
+                    )
 
     def run_func(self, func, load):
         '''
