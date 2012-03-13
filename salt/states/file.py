@@ -338,6 +338,9 @@ template_registry = {
 
 
 def _check_perms(name, ret, user, group, mode):
+    '''
+    Check the permissions on files and chown if needed
+    '''
     # Check permissions
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
@@ -363,6 +366,10 @@ def _check_perms(name, ret, user, group, mode):
             perms['cgroup'] = group
     if 'cuser' in perms or 'cgroup' in perms:
         if not __opts__['test']:
+            if user is None:
+                user = perms['luser']
+            if group is None:
+                group = perms['lgroup']
             __salt__['file.chown'](
                     name,
                     user,
