@@ -29,7 +29,8 @@ class Master(object):
         # command line overrides config
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
-        # Send the pidfile location to the opts
+        
+	# Send the pidfile location to the opts
         if self.cli['pidfile']:
             self.opts['pidfile'] = self.cli['pidfile']
 
