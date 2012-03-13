@@ -43,6 +43,7 @@ def zmq_version():
         # zmq 2.1dev could be built against a newer libzmq
         if "dev" in ver and not point:
             log.warn('Using dev zmq module, please report unexpected results')
+            return True
         elif point and point >= 9:
             return True
     elif major > 2 or (major == 2 and minor > 1):
