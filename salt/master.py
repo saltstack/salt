@@ -726,7 +726,7 @@ class AESFuncs(object):
                     timeout
                     )
         elif ret_form == 'full':
-            return self.local.get_full_returns(
+            ret = self.local.get_full_returns(
                     jid,
                     self.local.check_minions(
                         clear_load['tgt'],
@@ -734,6 +734,8 @@ class AESFuncs(object):
                         ),
                     timeout
                     )
+            ret['__jid__'] = jid
+            return ret
 
     def run_func(self, func, load):
         '''
