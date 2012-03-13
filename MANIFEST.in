@@ -8,3 +8,4 @@ include tests/integration/modules/files/*
 include tests/integration/files/*
 include tests/integration/tmp/_README
 include tests/unit/templates/files/*
+recursive-include doc *

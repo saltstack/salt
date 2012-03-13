@@ -443,7 +443,6 @@ class Minion(object):
                         except SaltClientError:
                             # Failed to update the dns, keep the old addr
                             pass
-                    self.passive_refresh()
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -451,6 +450,7 @@ class Minion(object):
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
+                self.passive_refresh()
         else:
             while True:
                 payload = None
