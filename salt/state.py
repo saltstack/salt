@@ -330,6 +330,15 @@ class State(object):
                     for arg in body[state]:
                         if isinstance(arg, basestring):
                             fun += 1
+                            if ' ' in arg.strip():
+                                errors.append(('The function "{0}" in state '
+                                '"{1}" in SLS "{2}" has '
+                                'whitespace, a function with whitespace is '
+                                'not supported, perhaps this is an argument '
+                                'that is missing a ":"').format(
+                                    arg,
+                                    name,
+                                    body['__sls__']))
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
                             # watch, it must be a list.
