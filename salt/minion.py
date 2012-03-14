@@ -411,6 +411,15 @@ class Minion(object):
         '''
         fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
         if os.path.isfile(fn_):
+            with open(fn_, 'r+') as f:
+                data = f.read()
+                if 'pillar' in data:
+                    self.opts['pillar'] = salt.pillar.get_pillar(
+                        self.opts,
+                        self.opts['grains'],
+                        self.opts['id'],
+                        self.opts['environment'],
+                        ).compile_pillar()
             os.remove(fn_)
             self.functions, self.returners = self.__load_modules()
 
