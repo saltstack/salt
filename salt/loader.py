@@ -44,7 +44,21 @@ def minion_mods(opts):
     Returns the minion modules
     '''
     load = _create_loader(opts, 'modules', 'module')
-    return load.apply_introspection(load.gen_functions())
+    functions = load.apply_introspection(load.gen_functions())
+    if opts.get('providers', False):
+        if isinstance(opts['providers'], dict):
+            for mod, provider in opts['providers'].items():
+                funcs = raw_mod(opts,
+                        provider,
+                        functions)
+                if funcs:
+                    for func in funcs:
+                        f_key = '{0}{1}'.format(
+                                mod,
+                                func[func.rindex('.'):]
+                                )
+                        functions[f_key] = funcs[func]
+    return functions
 
 
 def raw_mod(opts, name, functions):
