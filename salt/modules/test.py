@@ -87,7 +87,7 @@ def cross_test(func, args=None):
     return __salt__[func](*args)
 
 
-def kpass(**kwargs):
+def kwarg(**kwargs):
     '''
     Print out the data passed into the function **kwargs, this is used to
     both test the publication data and cli kwarg passing, but also to display
@@ -95,7 +95,7 @@ def kpass(**kwargs):
 
     CLI Example::
 
-        salt '*' test.kpass
+        salt '*' test.kwarg
     '''
     return kwargs
 
