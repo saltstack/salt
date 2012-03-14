@@ -94,15 +94,15 @@ def _run(cmd,
 
     run_env = os.environ
     run_env.update(env)
+    kwargs = {'cwd': cwd,
+              'shell': True,
+              'env': run_env,
+              'stdout': stdout,
+              'stderr':stderr}
+    if not os.environ.get('os', '').startswith('Windows'):
+        kwargs['executable'] = shell
     # This is where the magic happens
-    proc = subprocess.Popen(cmd,
-                            executable=shell,
-                            cwd=cwd,
-                            shell=True,
-                            env=run_env,
-                            stdout=stdout,
-                            stderr=stderr
-                            )
+    proc = subprocess.Popen(cmd, **kwargs)
 
     out = proc.communicate()
     ret['stdout']  = out[0]

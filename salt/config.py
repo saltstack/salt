@@ -143,6 +143,7 @@ def minion_config(path):
             'returner_dirs': [],
             'states_dirs': [],
             'render_dirs': [],
+            'providers': {},
             'clean_dynamic_modules': True,
             'open_mode': False,
             'multiprocessing': True,
