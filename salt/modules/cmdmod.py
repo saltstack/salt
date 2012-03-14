@@ -11,6 +11,8 @@ import subprocess
 import tempfile
 import salt.utils
 from salt.exceptions import CommandExecutionError
+
+# Only available on posix systems, nonfatal on windows
 try:
     import pwd
 except:
@@ -27,6 +29,13 @@ __outputter__ = {
 
 
 DEFAULT_SHELL = '/bin/sh'
+
+def __virtual__():
+    '''
+    Overwriting the cmd python module makes debugging modules
+    with pdb a bit harder so lets do it this way instead.
+    '''
+    return 'cmd'
 
 
 def _run(cmd,
