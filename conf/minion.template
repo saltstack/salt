@@ -66,6 +66,14 @@
 #states_dirs: []
 #render_dirs: []
 #
+# A module provider can be statically overwritten or extended for the minion
+# via the providers option, in this case the default module will be
+# overwritten by the specified module. In this example the pkg module will
+# be provided by the yumpkg5 module instead of the system default.
+#
+# providers:
+#   pkg: yumpkg5
+#
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
 
