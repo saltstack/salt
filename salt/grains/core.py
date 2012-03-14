@@ -22,8 +22,8 @@ import salt.utils
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
-import salt.modules.cmd
-__salt__ = {'cmd.run': salt.modules.cmd._run_quiet}
+import salt.modules.cmdmod
+__salt__ = {'cmd.run': salt.modules.cmdmod._run_quiet}
 
 
 def _kernel():
