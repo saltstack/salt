@@ -1,15 +1,25 @@
 '''
 Manage the registry on Windows
+
+Required python modules: _winreg
 '''
 
-import _winreg
+try:
+    import _winreg
+    has_windows_modules = True
+except ImportError:
+    has_windows_modules = False
+
+import salt.utils
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if __grains__['os'] == 'Windows':
-        return 'reg'
+        if has_windows_modules:
+            return 'reg'
+        log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 
 
@@ -88,7 +98,7 @@ def delete_key(hkey, path, key):
 
         CLI Example::
 
-        salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' 
+        salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
     hkey2 = hkeys[hkey]
     try:

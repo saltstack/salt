@@ -2,10 +2,11 @@
 A few checks to make sure the environment is sane
 '''
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
-import getpass
 import os
-import stat
+import re
 import sys
+import stat
+import getpass
 import logging
 
 log = logging.getLogger(__name__)
@@ -17,11 +18,40 @@ def zmq_version():
     '''ZeroMQ python bindings >= 2.1.9 are required'''
     import zmq
     ver = zmq.__version__
-    ver_int = int(ver.replace('.', ''))
-    if not ver_int >= 219:
-        log.critical("ZeroMQ python bindings >= 2.1.9 are required")
-        return False
-    return True
+    # The last matched group can be None if the version
+    # is something like 3.1 and that will work properly
+    match = re.match('^(\d+)\.(\d+)(?:\.(\d+))?', ver)
+
+    # Fallthrough and hope for the best
+    if not match:
+        msg = 'Using untested zmq python bindings version: \'{0}\''
+        log.warn(msg.format(ver))
+        return True
+
+    major,minor,point = match.groups()
+
+    if major.isdigit():
+        major = int(major)
+    if minor.isdigit():
+        minor = int(minor)
+
+    # point very well could be None
+    if point and point.isdigit():
+        point = int(point)
+
+    if major == 2 and minor == 1:
+        # zmq 2.1dev could be built against a newer libzmq
+        if "dev" in ver and not point:
+            log.warn('Using dev zmq module, please report unexpected results')
+            return True
+        elif point and point >= 9:
+            return True
+    elif major > 2 or (major == 2 and minor > 1):
+        return True
+
+    # If all else fails, gracefully croak and warn the user
+    log.critical("ZeroMQ python bindings >= 2.1.9 are required")
+    return False
 
 
 def verify_env(dirs):

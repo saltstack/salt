@@ -1,26 +1,38 @@
 '''
 Manage information about files on the minion, set/read user, group
 data
+
+Required python modules: win32api, win32con, win32security, ntsecuritycon
 '''
 
 import os
-import os.path
 import time
+import os.path
 import hashlib
-import win32api
-import win32con
-import win32security
-import ntsecuritycon as con
+import logging
 
-#import salt.utils.find
+try:
+    import win32api
+    import win32con
+    import win32security
+    import ntsecuritycon as con
+    has_windows_modules = True
+except ImportError:
+    has_windows_modules = False
+
+import salt.utils
 from salt.exceptions import SaltInvocationError
+
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if __grains__['os'] == 'Windows':
-        return 'file'
+        if has_windows_modules:
+            return 'file'
+        log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
 
 __outputter__ = {
@@ -63,7 +75,7 @@ def get_gid(path):
         salt '*' file.get_gid c:\\temp\\test.txt
     '''
     if not os.path.exists(path):
-        return False 
+        return False
     secdesc = win32security.GetFileSecurity (path, win32security.OWNER_SECURITY_INFORMATION)
     owner_sid = secdesc.GetSecurityDescriptorOwner()
     return win32security.ConvertSidToStringSid(owner_sid)
@@ -104,7 +116,7 @@ def user_to_uid(user):
 
     CLI Example::
 
-        salt '*' file.user_to_uid myusername 
+        salt '*' file.user_to_uid myusername
     '''
     sid, domain, type = win32security.LookupAccountName (None, user)
     return win32security.ConvertSidToStringSid(sid)

@@ -237,7 +237,7 @@ class Minion(object):
         if function_name in self.functions:
             try:
                 func = self.functions[data['fun']]
-                args, kw = salt.state.build_args(func, data['arg'])
+                args, kw = salt.state.build_args(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
             except CommandNotFoundError as exc:
                 msg = 'Command not found in \'{0}\': {1}'
@@ -296,7 +296,7 @@ class Minion(object):
 
             try:
                 func = self.functions[data['fun'][ind]]
-                args, kw = salt.state.build_args(func, data['arg'][ind])
+                args, kw = salt.state.build_args(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kw)
             except Exception as exc:
                 trb = traceback.format_exc()
@@ -411,6 +411,15 @@ class Minion(object):
         '''
         fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
         if os.path.isfile(fn_):
+            with open(fn_, 'r+') as f:
+                data = f.read()
+                if 'pillar' in data:
+                    self.opts['pillar'] = salt.pillar.get_pillar(
+                        self.opts,
+                        self.opts['grains'],
+                        self.opts['id'],
+                        self.opts['environment'],
+                        ).compile_pillar()
             os.remove(fn_)
             self.functions, self.returners = self.__load_modules()
 

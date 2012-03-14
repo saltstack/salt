@@ -689,6 +689,7 @@ class AESFuncs(object):
                 'tgt': clear_load['tgt'],
                 'jid': jid,
                 'ret': clear_load['ret'],
+                'id': clear_load['id'],
                }
         expr_form = 'glob'
         timeout = 5

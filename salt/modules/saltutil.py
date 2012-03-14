@@ -47,7 +47,9 @@ def _sync(form, env):
             shutil.copyfile(fn_, dest)
             ret.append('{0}.{1}'.format(form, os.path.basename(fn_)))
     if ret:
-        open(os.path.join(__opts__['cachedir'], 'module_refresh'), 'w+').write('')
+        mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
+        with open(mod_file, 'a+') as f:
+            f.write('')
     if __opts__.get('clean_dynamic_modules', True):
         current = set(os.listdir(mod_dir))
         for fn_ in current - remote:
@@ -144,6 +146,23 @@ def sync_all(env='base'):
     ret.append(sync_returners(env))
     return ret
 
+
+def refresh_pillar():
+    '''
+    Queue the minion to refresh the pillar data.
+
+    CLI Example::
+
+        salt '*' saltutil.refresh_pillar
+    '''
+    mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
+    try:
+        with open(mod_file, 'a+') as f:
+            f.write('pillar')
+        return True
+    except IOError:
+        return False
+    
 
 def running():
     '''
