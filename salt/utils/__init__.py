@@ -2,11 +2,11 @@
 Some of the utils used by salt
 '''
 
-from calendar import month_abbr as months
-import logging
 import os
-import socket
 import sys
+import socket
+import logging
+from calendar import month_abbr as months
 
 from salt.exceptions import SaltClientError
 
@@ -277,3 +277,39 @@ def dns_check(addr, safe=False):
                 sys.stderr.write(err)
                 sys.exit(42)
     return addr
+
+
+def required_module_list(docstring=None):
+    '''
+    Return a list of python modules required by a salt module that aren't
+    in stdlib and don't exist on the current pythonpath.
+
+    NOTE: this function expects docstring to include something like:
+    Required python modules: win32api, win32con, win32security, ntsecuritycon
+    '''
+    ret = []
+    txt = 'Required python modules: '
+    data = docstring.split('\n') if docstring else []
+    mod_list =  filter(lambda x: x.startswith(txt), data)
+    if not mod_list:
+        return []
+    modules = mod_list[0].replace(txt, '').split(', ')
+    for mod in modules:
+        try:
+            __import__(mod)
+        except ImportError:
+            ret.append(mod)
+    return ret
+
+
+def required_modules_error(name, docstring):
+    '''
+    Pretty print error messages in critical salt modules which are
+    missing deps not always in stdlib such as win32api on windows.
+    '''
+    modules = required_module_list(docstring)
+    if not modules:
+        return ''
+    filename = os.path.basename(name).split('.')[0]
+    msg = '\'{0}\' requires these python modules: {1}'
+    return msg.format(filename, ', '.join(modules))
