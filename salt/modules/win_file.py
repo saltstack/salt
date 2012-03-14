@@ -33,7 +33,6 @@ def __virtual__():
         if has_windows_modules:
             return 'file'
         log.warn(salt.utils.required_modules_error(__file__, __doc__))
-        return False
     return False
 
 __outputter__ = {
