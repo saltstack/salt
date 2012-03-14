@@ -38,7 +38,7 @@ used for states, and has the same structure:
         - packages
 
 This simple pillar top file declares that information for all minions can be
-found in the packages sls file:
+found in the package's sls file:
 
 .. code-block:: yaml
 
