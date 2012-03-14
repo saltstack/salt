@@ -59,8 +59,11 @@ def _getargs(func):
     return aspec
 
 
-def build_args(func, args):
-    spec_args, _, _, _ = _getargs(func)
+def build_args(func, args, data=None):
+    '''
+    Build the args and kwargs
+    '''
+    spec_args, _, kwarg_spec, _ = _getargs(func)
 
     _args = []
     _kw = {}
@@ -76,6 +79,10 @@ def build_args(func, args):
                 _args.append(arg[0])
         else:
             _args.append(arg)
+    if kwarg_spec and isinstance(data, dict):
+        # this function accepts kwargs, pack in the publish data
+        for key, val in data.items():
+            _kw['__pub_{0}'.format(key)] = val
     return _args, _kw
 
 
