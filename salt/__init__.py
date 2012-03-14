@@ -29,7 +29,8 @@ class Master(object):
         # command line overrides config
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
-        # Send the pidfile location to the opts
+        
+	# Send the pidfile location to the opts
         if self.cli['pidfile']:
             self.opts['pidfile'] = self.cli['pidfile']
 
@@ -97,14 +98,14 @@ class Master(object):
         import logging
         log = logging.getLogger(__name__)
         # Late import so logging works correctly
+        import salt.master
+        master = salt.master.Master(self.opts)
+        if self.cli['daemon']:
+            # Late import so logging works correctly
+            import salt.utils
+            salt.utils.daemonize()
+        set_pidfile(self.opts['pidfile'])
         if check_user(self.opts['user'], log):
-            import salt.master
-            master = salt.master.Master(self.opts)
-            if self.cli['daemon']:
-                # Late import so logging works correctly
-                import salt.utils
-                salt.utils.daemonize()
-            set_pidfile(self.opts['pidfile'])
             try:
                 master.start()
             except salt.master.MasterExit:
@@ -186,13 +187,13 @@ class Minion(object):
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
+        if self.cli['daemon']:
+            # Late import so logging works correctly
+            import salt.utils
+            salt.utils.daemonize()
+        set_pidfile(self.cli['pidfile'])
         if check_user(self.opts['user'], log):
             try:
-                if self.cli['daemon']:
-                    # Late import so logging works correctly
-                    import salt.utils
-                    salt.utils.daemonize()
-                set_pidfile(self.cli['pidfile'])
                 minion = salt.minion.Minion(self.opts)
                 minion.tune_in()
             except KeyboardInterrupt:
@@ -303,14 +304,14 @@ class Syndic(object):
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
+        if self.cli['daemon']:
+            # Late import so logging works correctly
+            import salt.utils
+            salt.utils.daemonize()
+        set_pidfile(self.cli['pidfile'])
         if check_user(self.opts['user'], log):
             try:
                 syndic = salt.minion.Syndic(self.opts)
-                if self.cli['daemon']:
-                    # Late import so logging works correctly
-                    import salt.utils
-                    salt.utils.daemonize()
-                set_pidfile(self.cli['pidfile'])
                 syndic.tune_in()
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Syndic Minion')

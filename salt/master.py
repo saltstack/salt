@@ -131,7 +131,6 @@ class Master(SMaster):
         '''
         Clean out the old jobs
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         while True:
             cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
@@ -207,7 +206,6 @@ class Publisher(multiprocessing.Process):
         '''
         Bind to the interface specified in the configuration file
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         pull_sock = context.socket(zmq.PULL)
@@ -286,7 +284,6 @@ class ReqServer(object):
         '''
         Start up the ReqServer
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         self.__bind()
 
 
@@ -376,7 +373,6 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         self.__bind()
 
 
