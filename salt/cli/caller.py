@@ -5,6 +5,7 @@ minion modules.
 
 # Import python modules
 import sys
+import logging
 import traceback
 
 # Import salt libs
