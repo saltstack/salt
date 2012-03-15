@@ -150,9 +150,9 @@ Minion. This ensures that the commands you send to your Minions (your cloud)
 can not be tampered with, and that communication between Master and Minion is
 only done through trusted, accepted keys.
 
-Before you'll be able to do any remote execution or configuration management you'll
-need to accept any pending keys on the Master. Run the ``salt-key`` command to
-list the keys known to the Salt Master:
+Before you'll be able to do any remote execution or configuration management
+you'll need to accept any pending keys on the Master. Run the ``salt-key``
+command to list the keys known to the Salt Master:
 
 .. code-block:: bash
 

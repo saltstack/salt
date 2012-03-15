@@ -9,7 +9,7 @@ order is not necessarily defined the way you want it.
 A few tools exist in Salt to set up the correct state ordering. These tools
 consist of requisite declarations and order options.
 
-.. note:: 
+.. note::
 
     Salt does **not** execute :term:`state declarations <state declaration>` in
     the order they appear in the source.
@@ -149,7 +149,7 @@ restarted.
 Watch and the Watcher Function
 ------------------------------
 
-The watch requisite is based on the ``watcher`` function, state python 
+The watch requisite is based on the ``watcher`` function, state python
 modules can include a function called watcher, this function is then called
 if the watch call is invoked. In the case of the service module the underlying
 service is restarted. In the case of the cmd state the command is executed.

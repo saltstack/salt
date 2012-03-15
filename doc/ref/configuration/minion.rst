@@ -91,7 +91,7 @@ clusters.
 ``sub_timeout``
 ---------------
 
-The minion connection to the master may be inturupted, the minion will
+The minion connection to the master may be interrupted, the minion will
 verify the connection every so many seconds, to disable connection
 verification set this value to 0
 
@@ -172,7 +172,7 @@ disabling modules will lover the minion's ram footprint.
 
 Default: ``[]`` (all returners are enabled by default)
 
-If certian returners should be disabled, this is the place
+If certain returners should be disabled, this is the place
 
 .. code-block:: yaml
 
@@ -274,7 +274,7 @@ The default renderer used for local state executions
 Default: ``False``
 
 state_verbose allows for the data returned from the minion to be more
-verbose. Normaly only states that fail or states that have changes are
+verbose. Normally only states that fail or states that have changes are
 returned, but setting state_verbose to True will return all states that
 were checked
 

@@ -65,7 +65,7 @@ Compound Command Execution With the Salt API
 The Salt client API can also send what is called a compound command. Often
 a collection of commands need to be executed on the targeted minions, rather
 than send the commands one after another, they can be send in a single publish
-containing a series of commands. This can dramatically lower overhead and 
+containing a series of commands. This can dramatically lower overhead and
 speed up the application communicating with Salt.
 
 When commands are executed with compound execution the minion functions called

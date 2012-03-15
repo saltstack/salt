@@ -99,7 +99,7 @@ Options
     form, this is suitable for re-reading the output into
     an executing python script with eval.
 
-.. option::   --text-out         
+.. option::   --text-out
 
     Print the output from the salt command in the same
     form the shell would.

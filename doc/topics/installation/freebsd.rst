@@ -35,10 +35,11 @@ Configuration
 In the sections below I'll outline configuration options for both the Salt
 Master and Salt Minions.
 
-The Salt port installs two sample configuration files, ``salt/master.sample`` and
-``salt/minion.sample`` (these should be installed in ``/usr/local/etc/``, unless you use a
-different ``%%PREFIX%%``). You'll need to copy these .sample files into place and
-make a few edits. First, copy them into place as seen here:
+The Salt port installs two sample configuration files, ``salt/master.sample``
+and ``salt/minion.sample`` (these should be installed in ``/usr/local/etc/``,
+unless you use a different ``%%PREFIX%%``). You'll need to copy these
+.sample files into place and make a few edits. First, copy them into place
+as seen here:
 
 .. code-block:: bash
 
