@@ -12,13 +12,13 @@ Declaring the Master Pillar
 ===========================
 
 The Salt Master server maintains a pillar_roots setup that matches the
-structure of the file_roots used in the Salt file server. Like the 
+structure of the file_roots used in the Salt file server. Like the
 Salt file server the ``pillar_roots`` option in the master config is based
 on environments mapping to directories. The pillar data is then mapped to
 minions based on matchers in a top file which is laid out in the same way
 as the state top file.
 
-the configuration for the pillar_roots in the master config is identical in
+The configuration for the pillar_roots in the master config is identical in
 behavior and function as the file_roots configuration:
 
 .. code-block:: yaml

@@ -35,7 +35,7 @@ def active():
                                    'Target': job['tgt'],
                                    'Target-type': job['tgt_type']}
             else:
-                ret[job['jid']]['running'].append({minion: job['pid']})
+                ret[job['jid']]['Running'].append({minion: job['pid']})
     if os.path.isdir(job_dir):
         for jid in os.listdir(job_dir):
             if not jid in ret:
@@ -47,7 +47,7 @@ def active():
                 if minion.startswith('.'):
                     continue
                 if os.path.exists(os.path.join(jid_dir, minion)):
-                    ret[jid]['returned'].append(minion)
+                    ret[jid]['Returned'].append(minion)
     print yaml.dump(ret)
 
 

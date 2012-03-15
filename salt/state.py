@@ -801,17 +801,13 @@ class State(object):
         return high
 
 
-class HighState(object):
+class BaseHighState(object):
     '''
-    Generate and execute the salt "High State". The High State is the
-    compound state derived from a group of template files stored on the
-    salt master or in the local cache.
+    The BaseHighState is the foundation of running a highstate, extend it and
+    add a self.state opbject of type State
     '''
     def __init__(self, opts):
-        self.client = salt.fileclient.get_file_client(opts)
         self.opts = self.__gen_opts(opts)
-        self.state = State(self.opts)
-        self.matcher = salt.minion.Matcher(self.opts)
 
     def __gen_opts(self, opts):
         '''
@@ -1183,3 +1179,16 @@ class HighState(object):
         if errors:
             return errors
         return chunks
+
+
+class HighState(BaseHighState):
+    '''
+    Generate and execute the salt "High State". The High State is the
+    compound state derived from a group of template files stored on the
+    salt master or in the local cache.
+    '''
+    def __init__(self, opts):
+        self.client = salt.fileclient.get_file_client(opts)
+        BaseHighState.__init__(self, opts)
+        self.state = State(self.opts)
+        self.matcher = salt.minion.Matcher(self.opts)

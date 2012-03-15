@@ -42,6 +42,17 @@ def _validate_file_roots(file_roots):
             file_roots[env] = []
     return file_roots
 
+def _append_domain(opts):
+    '''
+    Append a domain to the existing id if it doesn't already exist
+    '''
+    # Domain already exists
+    if opts['id'].endswith(opts['append_domain']):
+        return opts['id']
+    # Trailing dot should mean an FQDN that is terminated, leave it alone.
+    if opts['id'].endswith('.'):
+        return opts['id']
+    return "{0[id]}.{0[append_domain]}".format(opts)
 
 def _read_conf_file(path):
     with open(path, 'r') as conf_file:
@@ -163,6 +174,9 @@ def minion_config(path):
 
     if 'include' in opts:
         opts = include_config(opts, path)
+
+    if 'append_domain' in opts:
+        opts['id'] = _append_domain(opts)
 
     opts['master_ip'] = salt.utils.dns_check(opts['master'])
 
