@@ -175,7 +175,7 @@ def minion_config(path):
     if 'include' in opts:
         opts = include_config(opts, path)
 
-    if 'append_domain' in conf_opts:
+    if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
 
     opts['master_ip'] = salt.utils.dns_check(opts['master'])
