@@ -6,7 +6,7 @@ The Salt file server is a high performance file server written in ZeroMQ. It
 manages large files quickly and with little overhead, and has been optimized
 to handle small files in an extremely efficient manner.
 
-The Salt file server is an environment aware file server, this means that 
+The Salt file server is an environment aware file server, this means that
 files can be allocated within many root directories and accessed by
 specifying both the file path and the environment to search. The
 individual environments can also be spanned across multiple directory roots

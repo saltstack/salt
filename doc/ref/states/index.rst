@@ -121,7 +121,7 @@ Here is an example of a Salt State:
           - salt-minion
         - watch:
           - file: /etc/salt/minion
-                
+
     /etc/salt/minion:
       file:
         - managed
@@ -145,7 +145,7 @@ The top file is the mapping for the state system. The top file specifies which
 minions should have which modules applied and which environments they should
 draw the states from.
 
-The top file works by specifying the environment, containing matchers with 
+The top file works by specifying the environment, containing matchers with
 lists of Salt states sent to the matching minions:
 
 .. code-block:: yaml

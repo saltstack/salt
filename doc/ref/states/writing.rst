@@ -34,8 +34,8 @@ directly define the user interface.
 Using Custom State Modules
 ==========================
 
-Place your custom state modules inside a ``_states`` directory within the 
-``file_roots`` specified by the master config file. These custome state modules
+Place your custom state modules inside a ``_states`` directory within the
+``file_roots`` specified by the master config file. These custom state modules
 can then be distributed in a number of ways. Custom state modules are
 distributed when state.highstate is run, or via the saltutil.sync_states
 function.
@@ -114,7 +114,7 @@ executing state as an argument. The low state data is a dict and can be seen by
 executing the state.show_lowstate function. Then the mod_init function must
 return a bool. If the return value is True, then the mod_init function will not
 be executed again, meaning that the needed behavior has been set up. Otherwise,
-if the mod_init function returns False, then the function will be called the 
+if the mod_init function returns False, then the function will be called the
 next time.
 
 A good example of the mod_init function is found in the pkg state module:
