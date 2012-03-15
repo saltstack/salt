@@ -801,6 +801,29 @@ class State(object):
         return high
 
 
+class MasterState(State):
+    '''
+    Create a State object for master side compiling
+    '''
+    def __init__(self, opts, minion):
+        State.__init__(self, opts)
+        self.minion = minion
+
+    def load_modules(self, data=None):
+        '''
+        Load the modules into the state
+        '''
+        log.info('Loading fresh modules for state activity')
+        # Load a modified client interface that looks like the interface used
+        # from the minion, but uses remote execution
+        #
+        self.functions = salt.client.FunctionWrapper(self.opts, self.minion)
+        # Load the states, but they should not be used in this class apart
+        # from inspection
+        self.states = salt.loader.states(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions)
+
+
 class BaseHighState(object):
     '''
     The BaseHighState is the foundation of running a highstate, extend it and
