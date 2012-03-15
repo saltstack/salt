@@ -124,7 +124,7 @@ def show_lowstate():
 
     CLI Example::
 
-        salt '*' show_lowstate
+        salt '*' state.show_lowstate
     '''
     st_ = salt.state.HighState(__opts__)
     return st_.compile_low_chunks()
