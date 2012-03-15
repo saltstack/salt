@@ -695,3 +695,47 @@ class LocalClient(object):
             return {'jid': '0', 'minions': []}
         return {'jid': payload['load']['jid'],
                 'minions': minions}
+
+
+class FunctionWrapper(dict):
+    '''
+    Create a function wrapper that looks like the functions dict on the minion
+    but invoked commands on the minion via a LocalClient.
+
+    This allows SLS files to be loaded with an object that calls down to the
+    minion when the salt functions dict is referenced.
+    '''
+    def __init__(self, opts, minion):
+        self.opts = opts
+        self.minion = minion
+        self.local = LocalClient(self.opts['conf_file'])
+        self.functions = self.__load_functions()
+
+    def __missing__(self, key):
+        '''
+        Since the function key is missing, wrap this call to a command to the
+        minion of said key if it is available in the self.functions set
+        '''
+        if not key in self.functions:
+            raise KeyError
+        return self.run_key(key)
+
+    def __load_functions(self):
+        '''
+        Find out what functions are available on the minion
+        '''
+        return set(self.local.cmd(self.minion, 'sys.functions'))
+
+    def run_key(self, key):
+        '''
+        Return a function that executes the arguments passed via the local
+        client
+        '''
+        def func(*args, **kwargs):
+            '''
+            Run a remote call
+            '''
+            args = list(args)
+            for _key, _val in kwargs:
+                args.append('{0}={1}'.format(_key, _val))
+            return self.local.cmd(self.minion, key, args)
