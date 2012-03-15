@@ -11,7 +11,7 @@ import os
 # Import Third Party libs
 from mako.template import Template
 
-from salt.renderers.utils import CustomLoader, load
+from salt.utils.yaml import CustomLoader, load
 
 
 def render(template, env='', sls=''):

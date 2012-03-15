@@ -12,8 +12,7 @@ import warnings
 
 # Import Salt libs
 from salt.utils.jinja import get_template
-
-from salt.renderers.utils import CustomLoader, load
+from salt.utils.yaml import CustomLoader, load
 
 log = logging.getLogger(__name__)
 
