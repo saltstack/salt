@@ -11,6 +11,7 @@ import grp
 import pwd
 import time
 import hashlib
+import sys
 
 import salt.utils.find
 from salt.exceptions import SaltInvocationError
@@ -504,8 +505,15 @@ def contains(path, text, limit='', escape=False):
     if not os.path.exists(path):
         return False
 
+    if 'linux' in sys.platform:
+        options = '-n -r -e'
+    elif 'darwin' in sys.platform:
+        options = '-n -E -e'
+    else:
+        options = '-n -e'
+
     result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options='-n -r -e', flags='gp', escape_all=escape)
+            options=options, flags='gp', escape_all=escape)
 
     return bool(result)
 
