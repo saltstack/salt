@@ -121,7 +121,7 @@ A clean and recommended setup for multiple environments would look like this:
 Then only place state trees in the dev, qa and prod environments, leaving
 the base environment open for generic file transfers. Then the top.sls file
 would look something like this:
-    
+
 .. code-block:: yaml
 
     dev:

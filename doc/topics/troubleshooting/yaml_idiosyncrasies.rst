@@ -18,11 +18,10 @@ no tabs have crept in!
 
 Indentation
 ===========
-The suggested
-syntax for Yaml files is to use 2 spaces for indentation, but Yaml will
-follow whatever indentation system that the individual file uses. Generally
-2 space indentation works very well for sls files given the fact that the
-represented data is uniform and not deeply nested.
+The suggested syntax for Yaml files is to use 2 spaces for indentation,
+but Yaml will follow whatever indentation system that the individual file
+uses. Generally 2 space indentation works very well for sls files given
+the fact that the represented data is uniform and not deeply nested.
 
 Nested Dicts (key-value)
 ------------------------
@@ -52,7 +51,7 @@ state:
 Notice that the spacing used is 2 spaces, and that when defining the context
 and defaults options there is a 4 space indent. If only a 2 space indent is
 used then the information will not be correctly loaded. If using double spacing
-is not desireable, then a deeply nested dict can be declared with curly braces:
+is not desirable, then a deeply nested dict can be declared with curly braces:
 
 .. code-block:: yaml
 

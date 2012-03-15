@@ -18,7 +18,7 @@ The directories are prepended with an underscore:
 
 The contents of these directories need to be synced over to the minions after
 python modules have been created in them. There are a number of ways to sync
-the modules. 
+the modules.
 
 Sync Via States
 ===============

@@ -14,7 +14,7 @@ The Salt State Tree
         Configurable via :conf_master:`state_top`.
 
         .. seealso:: :doc:`A detailed description of the top file </ref/states/top>`
-        
+
 .. glossary::
 
     State tree
@@ -98,7 +98,7 @@ declaration that will restart Apache whenever the Apache configuration file,
 
     include:
       - apache
-    
+
     extend:
       apache:
         service:
@@ -108,7 +108,7 @@ declaration that will restart Apache whenever the Apache configuration file,
     mywebsite:
       file:
         - managed
-    
+
 State declaration
 -----------------
 
@@ -277,7 +277,7 @@ For example, given the following state declaration:
           - python-yaml
 
 Once converted into the :term:`lowstate` data structure the above state
-declaration will be expaneded into the following three state declarations:
+declaration will be expanded into the following three state declarations:
 
 .. code-block:: yaml
 

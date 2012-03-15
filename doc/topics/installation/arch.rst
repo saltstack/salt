@@ -2,10 +2,10 @@
 Arch Linux
 ==========
 
-Salt has primarily been developed on Arch Linux, meaning it is known to work
-very well on that distribution. The lead developer, Thomas S. Hatch (thatch45) has
-been a TU (Trusted User) for the Arch Linux distribution, and has written a
-number of Arch-specific tools in the past.
+Salt has primarily been developed on Arch Linux, meaning it is known to
+work very well on that distribution. The lead developer, Thomas S. Hatch
+(thatch45) has been a TU (Trusted User) for the Arch Linux distribution,
+and has written a number of Arch-specific tools in the past.
 
 Salt, while not Arch-specific, is packaged for and works well on Arch Linux.
 
@@ -50,8 +50,9 @@ currently relies on the following packages only available via the AUR:
 Tracking develop
 ----------------
 
-To install the bleeding edge version of Salt (**may include bugs!**), you can use
-the -git package. Installing the -git package can be done using the commands:
+To install the bleeding edge version of Salt (**may include bugs!**),
+you can use the -git package. Installing the -git package can be done
+using the commands:
 
 .. code-block:: bash
 
