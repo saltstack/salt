@@ -24,6 +24,11 @@
 # clusters.
 #id:
 
+# Append a domain to a hostname in the event that it does not exist.  This is
+# usefule for systems where socket.getfqdn() does not actually result in a
+# FQDN (for instance, Solaris).
+#append_domain:
+
 # If the the connection to the server is interrupted, the minion will
 # attempt to reconnect. sub_timeout allows you to control the rate
 # of reconnection attempts (in seconds). To disable reconnects, set

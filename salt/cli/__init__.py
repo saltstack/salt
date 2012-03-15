@@ -119,7 +119,7 @@ class SaltCMD(object):
                 dest='range',
                 action='store_true',
                 help=('Instead of using shell globs to evaluate the target '
-                      'use a range expressions to identify targets. '
+                      'use a range expression to identify targets. '
                       'Range expressions look like %cluster'))
         parser.add_option('-C',
                 '--compound',
