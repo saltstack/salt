@@ -1,7 +1,7 @@
 '''
-Return data to a Cassandra ColumFamily
+Return data to a Cassandra ColumnFamily
 
-Here's an example Keyspace/ColumnFamily setup that works with this
+Here's an example Keyspace / ColumnFamily setup that works with this
 returner::
 
     create keyspace salt;
@@ -10,10 +10,22 @@ returner::
       with key_validation_class='UTF8Type'
       and comparator='UTF8Type'
       and default_validation_class='UTF8Type';
+
+Required python modules: pycassa
 '''
 
 import logging
-import pycassa
+
+try:
+    import pycassa
+    has_pycassa = True
+except ImportError
+    has_pycassa = False
+
+def __virtual__():
+    if not has_pycassa:
+        return False
+    return 'cassandra'
 
 log = logging.getLogger(__name__)
 
