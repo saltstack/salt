@@ -217,6 +217,9 @@ def master_config(path):
             'file_roots': {
                 'base': ['/srv/salt'],
                 },
+            'master_roots': {
+                'base': ['/srv/salt-master'],
+                },
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },

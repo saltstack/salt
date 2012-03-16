@@ -29,6 +29,7 @@ import salt.utils
 import salt.client
 import salt.payload
 import salt.pillar
+import salt.state
 
 
 log = logging.getLogger(__name__)
@@ -552,6 +553,19 @@ class AESFuncs(object):
                 load['id'],
                 load['env'])
         return pillar.compile_pillar()
+
+    def _master_state(self, load):
+        '''
+        Call the master to compile a master side highstate
+        '''
+        if 'opts' not in load or 'grains' not in load:
+            return False
+        return salt.state.master_compile(
+                self.opts,
+                load['opts'],
+                load['grains'],
+                load['opts']['id'],
+                load['opts']['environment'])
 
     def _return(self, load):
         '''

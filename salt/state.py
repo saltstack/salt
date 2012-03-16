@@ -19,7 +19,10 @@ import fnmatch
 import logging
 import collections
 
-# Import Salt Libs
+# Import Third Party libs
+import zmq
+
+# Import Salt libs
 import salt.utils
 import salt.loader
 import salt.minion
@@ -123,6 +126,13 @@ def format_log(ret):
         # catch unhandled data
         log.info(str(ret))
 
+
+def master_compile(master_opts, minion_opts, grains, id_, env):
+    '''
+    Compile the master side low state data, and build the hidden state file
+    '''
+    st_ = MasterHighState(master_opts, minion_opts, grains, id_, env)
+    return st_.compile_highstate()
 
 def ishashable(obj):
     try:
@@ -1192,3 +1202,81 @@ class HighState(BaseHighState):
         BaseHighState.__init__(self, opts)
         self.state = State(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
+
+
+class MasterState(State):
+    '''
+    Create a State object for master side compiling
+    '''
+    def __init__(self, opts, minion):
+        State.__init__(self, opts)
+
+    def load_modules(self, data=None):
+        '''
+        Load the modules into the state
+        '''
+        log.info('Loading fresh modules for state activity')
+        # Load a modified client interface that looks like the interface used
+        # from the minion, but uses remote execution
+        #
+        self.functions = salt.client.FunctionWrapper(
+                self.opts,
+                self.opts['id']
+                )
+        # Load the states, but they should not be used in this class apart
+        # from inspection
+        self.states = salt.loader.states(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions)
+
+
+class MasterHighState(BaseHighState):
+    '''
+    Execute highstate compilation from the master
+    '''
+    def __init__(self, master_opts, minion_opts, grains, id_, env=None):
+        # Force the fileclient to be local
+        opts = copy.deepcopy(minion_opts)
+        opts['file_client'] = 'local'
+        opts['file_roots'] = master_opts['master_roots']
+        opts['renderer'] = master_opts['renderer']
+        opts['state_top'] = master_opts['state_top']
+        opts['id'] = id_
+        opts['grains'] = grains
+        self.client = salt.fileclient.get_file_client(opts)
+        BaseHighState.__init__(self, opts)
+        # Use the master state object
+        self.state = MasterState(self.opts, grains)
+        self.matcher = salt.minion.Matcher(self.opts)
+
+
+class RemoteHighState(object):
+    '''
+    Manage gathering the data from the master
+    '''
+    def __init__(self, opts, grains):
+        self.opts = opts
+        self.grains = grains
+        self.serial = salt.payload.Serial(self.opts)
+        self.auth = salt.crypt.SAuth(opts)
+        self.socket = self.__get_socket()
+
+    def __get_socket(self):
+        '''
+        Return the zeromq socket to use
+        '''
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(self.opts['master_uri'])
+        return socket
+
+    def compile_master(self):
+        '''
+        Return the state data from the master
+        '''
+        payload = {'enc': 'aes'}
+        load = {'grains': self.grains,
+                'opts': self.opts,
+                'cmd': '_master_state'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))

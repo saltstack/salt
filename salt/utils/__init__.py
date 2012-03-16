@@ -3,6 +3,7 @@ Some of the utils used by salt
 '''
 
 import os
+import imp
 import sys
 import socket
 import logging
@@ -284,7 +285,7 @@ def required_module_list(docstring=None):
     modules = mod_list[0].replace(txt, '').split(', ')
     for mod in modules:
         try:
-            __import__(mod)
+            imp.find_module(mod)
         except ImportError:
             ret.append(mod)
     return ret

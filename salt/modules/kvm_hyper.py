@@ -1,6 +1,8 @@
 '''
 Provide the hyper module for kvm hypervisors. This is the interface used to
 interact with kvm on behalf of the salt-virt interface
+
+Required python modules: libvirt
 '''
 
 # This is a test interface for the salt-virt system. The api in this file is
@@ -8,14 +10,18 @@ interact with kvm on behalf of the salt-virt interface
 
 
 # Import Python Libs
-from xml.dom import minidom
-import StringIO
 import os
 import shutil
+import StringIO
 import subprocess
+from xml.dom import minidom
 
 # Import libvirt
-import libvirt
+try:
+    import libvirt
+    has_libvirt = True
+except ImportError:
+    has_libvirt = True
 
 # Import Third party modules
 import yaml
@@ -39,6 +45,8 @@ def __virtual__():
     if __grains__['virtual'] != 'physical':
         return False
     if 'kvm_' not in open('/proc/modules').read():
+        return False
+    if not has_libvirt:
         return False
     try:
         libvirt_conn = libvirt.open('qemu:///system')

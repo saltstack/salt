@@ -128,3 +128,14 @@ def show_lowstate():
     '''
     st_ = salt.state.HighState(__opts__)
     return st_.compile_low_chunks()
+
+def show_masterstate():
+    '''
+    Display the data gathered from the master compiled state
+
+    CLI Example::
+
+        salt '*' state.show_masterstate
+    '''
+    st_ = salt.state.RemoteHighState(__opts__, __grains__)
+    return st_.compile_master()
