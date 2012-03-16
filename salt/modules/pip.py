@@ -1,21 +1,24 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
-__opts__ = {
-    'pip_bin': 'pip',
-}
 
 import os
 
-def _get_pip_bin(pip, env):
+def _get_pip_bin(bin_env):
     '''
     Return the pip command to call, either from a virtualenv, an argument
     passed in, or from the global modules options
     '''
-    if env:
-        return os.path.join(env, 'bin', 'pip')
+    if not bin_env:
+        pip_bin = 'pip'
     else:
-        return pip if pip else __opts__['pip_bin']
+        # try to get pip bin from env
+        if os.path.exists(os.path.join(bin_env, 'bin', 'pip')):
+            pip_bin = os.path.join(bin_env, 'bin', 'pip')
+        else:
+            pip_bin = bin_env 
+    return pip_bin
+    
 
 def install(packages=None,
             requirements=None,
@@ -128,15 +131,7 @@ def install(packages=None,
         salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
   
     '''
-
-    if not bin_env:
-        pip_bin = 'pip'
-    else:
-        # try to get pip bin from env
-        if os.path.exists(os.path.join(bin_env, 'bin', 'pip')):
-            pip_bin = os.path.join(bin_env, 'bin', 'pip')
-        else:
-            pip_bin = bin_env        
+    pip_bin = _get_pip_bin(bin_env)       
             
     cmd = '{pip_bin} install'.format(pip_bin=pip_bin)
     print cmd
@@ -248,7 +243,7 @@ def install(packages=None,
 
     return __salt__['cmd.run'](cmd)
 
-def freeze(env='', pip_bin=''):
+def freeze(bin_env=None):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -262,6 +257,8 @@ def freeze(env='', pip_bin=''):
         to the pip that is installed in the virtualenv. This option can also be
         set in the minion config file as ``pip.pip_bin``.
     '''
-    cmd = '{0} freeze'.format(_get_pip_bin(pip_bin, env))
+    pip_bin = _get_pip_bin(bin_env)  
+    
+    cmd = '{0} freeze'.format(pip_bin)
 
     return __salt__['cmd.run'](cmd).split('\n')
