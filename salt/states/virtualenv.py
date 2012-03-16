@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def manage(name,
         venv_bin='virtualenv',
         requirements='',
-        no_site_packages=False,
+        no_site_packages=True,
         system_site_packages=False,
         clear=False,
         python='',
