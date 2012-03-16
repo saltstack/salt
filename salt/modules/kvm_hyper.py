@@ -42,6 +42,8 @@ def __virtual__():
     '''
     Apply this module as the hyper module if the minion is a kvm hypervisor
     '''
+    if 'virtual' not in __grains__:
+        return False
     if __grains__['virtual'] != 'physical':
         return False
     if 'kvm_' not in open('/proc/modules').read():
