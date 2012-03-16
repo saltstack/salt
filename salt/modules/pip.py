@@ -341,9 +341,23 @@ def freeze(bin_env=None):
     return __salt__['cmd.run'](cmd).split('\n')
     
 
-def list(name, bin_env=None):
+def list(prefix='', bin_env=None):
     '''
-    Filter list of instaslled apps from ``freeze`` and check to see if ``name``
+    Filter list of instaslled apps from ``freeze`` and check to see if ``prefix``
     exists in the list of packages installed.
     '''
-    pass
+    packages = {}
+    cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
+    for line in __salt__['cmd.run'](cmd).split("\n"):
+        if len(line.split("==")) >= 2:
+            name = line.split("==")[0]
+            version = line.split("==")[1]
+            if prefix:
+                if line.lower().startswith(prefix.lower()):
+                    packages[name]=version
+            else:
+                packages[name]=version
+    return packages
+
+
+
