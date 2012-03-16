@@ -1225,7 +1225,9 @@ class MasterHighState(BaseHighState):
         # Force the fileclient to be local
         opts = copy.deepcopy(opts)
         opts['file_client'] = 'local'
+        opts['file_roots'] = opts['master_roots']
         self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
+        # Use the master state object
         self.state = MasterState(self.opts, minion)
         self.matcher = salt.minion.Matcher(self.opts)
