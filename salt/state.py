@@ -1241,3 +1241,38 @@ class MasterHighState(BaseHighState):
         # Use the master state object
         self.state = MasterState(self.opts, minion)
         self.matcher = salt.minion.Matcher(self.opts)
+
+
+class RemoteHighState(object):
+    '''
+    Manage gathering the data from the master
+    '''
+    def __init__(self, opts, grains):
+        self.opts = opts
+        self.grains = grains
+        self.id_ = opts['id']
+        self.serial = salt.payload.Serial(self.opts)
+        self.auth = salt.crypt.SAuth(opts)
+        self.socket = self.__get_socket()
+
+    def __get_socket(self):
+        '''
+        Return the zeromq socket to use
+        '''
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(self.opts['master_uri'])
+        return socket
+
+    def compile_master(self):
+        '''
+        Return the state data from the master
+        '''
+        payload = {'enc': 'aes'}
+        load = {'id': self.id_,
+                'grains': self.grains,
+                'env': self.opts['environment'],
+                'cmd': '_master_state'}
+        payload['load'] = self.auth.crypticle.dumps(load)
+        self.socket.send(self.serial.dumps(payload))
+        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
