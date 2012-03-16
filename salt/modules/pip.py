@@ -323,14 +323,12 @@ def freeze(bin_env=None):
     Return a list of installed packages either globally or in the specified
     virtualenv
 
-    env : None
-        The path to a virtualenv that pip should install to. This option takes
-        precendence over the ``pip_bin`` argument.
-    pip_bin : 'pip'
-        The name (and optionally path) of the pip command to call. This option
-        will be ignored if the ``env`` argument is given since it will default
-        to the pip that is installed in the virtualenv. This option can also be
-        set in the minion config file as ``pip.pip_bin``.
+    bin_env
+        path to pip bin or path to virtualenv. If doing an uninstall from
+        the system python and want to use a specific pip bin (pip-2.7,
+        pip-2.6, etc..) just specify the pip bin you want.
+        If uninstalling from a virtualenv, just use the path to the virtualenv
+        (/home/code/path/to/virtualenv/)
     '''
 
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
