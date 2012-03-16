@@ -289,7 +289,12 @@ def uninstall(packages=None,
 
     '''
     cmd = '{0} uninstall -y '.format(_get_pip_bin(bin_env))
-
+    
+    if packages:
+        pkg = packages.replace(",", " ")
+        cmd = '{cmd} {pkg} '.format(
+            cmd=cmd, pkg=pkg)
+    
     if requirements:
         cmd = '{cmd} --requirements{requirements} '.format(
             cmd=cmd, requirements=requirements)
