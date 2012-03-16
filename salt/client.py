@@ -724,7 +724,12 @@ class FunctionWrapper(dict):
         '''
         Find out what functions are available on the minion
         '''
-        return set(self.local.cmd(self.minion, 'sys.list_functions'))
+        return set(
+                self.local.cmd(
+                    self.minion,
+                    'sys.list_functions'
+                    ).get(self.minion, [])
+                )
 
     def run_key(self, key):
         '''
