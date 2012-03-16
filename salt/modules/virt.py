@@ -1,17 +1,23 @@
 '''
 Work with virtual machines managed by libvirt
+
+Required python modules: libvirt
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-from xml.dom import minidom
-from salt.exceptions import CommandExecutionError
-import StringIO
 import os
 import shutil
+import StringIO
 import subprocess
+from xml.dom import minidom
+from salt.exceptions import CommandExecutionError
 
-import libvirt
+try:
+    import libvirt
+    has_libvirt = True
+except ImportError:
+    has_libvirt = False
 
 # Import Third Party Libs
 import yaml
@@ -24,6 +30,12 @@ VIRT_STATE_NAME_MAP = {0: "running",
                        4: "shutdown",
                        5: "shutdown",
                        6: "crashed"}
+
+
+def __virtual__():
+    if not has_libvirt:
+        return False
+    return 'virt'
 
 
 def __get_conn():
@@ -572,7 +584,7 @@ def is_xen_hyper():
         if __grains__['virtual_subtype'] != 'Xen Dom0':
             return False
     except KeyError:
-            # virtual_subtype isn't set everywhere. 
+            # virtual_subtype isn't set everywhere.
             return False
     try:
         if 'xen_' not in open('/proc/modules').read():
