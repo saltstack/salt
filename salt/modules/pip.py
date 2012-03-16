@@ -17,7 +17,8 @@ def _get_pip_bin(pip, env):
     else:
         return pip if pip else __opts__['pip_bin']
 
-def install(packages,
+def install(packages=None,
+            requirements=None,
             bin_env=None,
             log=None,
             proxy=None,
@@ -66,15 +67,6 @@ def install(packages,
         salt '*' pip.install <package name> /path/to/pip_bin
     '''
 
-    packages = packages.split(",")
-
-    if len(packages) == 1 and packages[0].endswith('.txt'):
-        # we are installing a requirements file
-        pkg = "-r {reqs}".format(reqs=packages[0])
-    else:
-        # we have a list of packages to install
-        pkg = ' '.join(packages)
-
     if not bin_env:
         pip_bin = 'pip'
     else:
@@ -83,10 +75,18 @@ def install(packages,
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         else:
             pip_bin = bin_env
+            
+    cmd = '{pip_bin} install'.format(pip_bin=pip_bin)
 
-    cmd = '{pip_bin} install {pkg}'.format(
-        pip_bin=pip_bin,
-        pkg=pkg)
+    if packages:
+        pkg = packages.replace(",", " ")
+        cmd = '{cmd} {pkg}'.format(
+            cmd=cmd, pkg=pkg)
+
+    if requirements:
+        cmd = '{cmd} --requirements{requirements}'.format(
+            cmd=cmd, requirements=requirements}
+        
 
     if log:
         try:
