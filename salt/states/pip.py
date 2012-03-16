@@ -13,18 +13,45 @@ A state module to manage system installed python packages
 '''
 
 
-def installed(name, pip_bin=None):
+def installed(name,
+              pip_bin=None,
+              requirements=None,
+              env=None,
+              bin_env=None,
+              log=None,
+              proxy=None,
+              timeout=None,
+              editable=None,
+              find_links=None,
+              index_url=None,
+              extra_index_url=None,
+              no_index=False,
+              mirrors=None,
+              build=None,
+              target=None,
+              download=None,
+              download_cache=None,
+              source=None,
+              upgrade=False,
+              force_reinstall=False,
+              ignore_installed=False,
+              no_deps=False,
+              no_install=False,
+              no_download=False,
+              install_options=None):
     '''
     Make sure the package is installed
 
     name
         The name of the python package to install
     pip_bin :  None
-        the pip executable to use
+        Deprecated, use bin_env
+    bin_env : None
+        the pip executable or virtualenv to use
 
     '''
-    if not pip_bin:
-        pip_bin='pip'
+    if pip_bin and not bin_env:
+        bin_env = pip_bin
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     if name in __salt__['pip.list'](name, pip_bin):
@@ -32,7 +59,30 @@ def installed(name, pip_bin=None):
         ret['comment'] = 'Package already installed'
         return ret
 
-    if __salt__['pip.install'](packages=name, bin_env=pip_bin):
+    if __salt__['pip.install'](pkgs=name,
+                               requirements=requirements,
+                               bin_env=bin_env,
+                               log=log,
+                               proxy=proxy,
+                               timeout=timeout,
+                               editable=editable,
+                               find_links=find_links,
+                               index_url=index_url,
+                               extra_index_url=extra_index_url,
+                               no_index=no_index,
+                               mirrors=mirrors,
+                               build=build,
+                               target=target,
+                               download=download,
+                               download_cache=download_cache,
+                               source=source,
+                               upgrade=upgrade,
+                               force_reinstall=force_reinstall,
+                               ignore_installed=ignore_installed,
+                               no_deps=no_deps,
+                               no_install=no_install,
+                               no_download=no_download,
+                               install_options=install_options):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Package was successfully installed'
@@ -43,25 +93,34 @@ def installed(name, pip_bin=None):
     return ret
 
 
-def removed(name, pip_bin=None):
+def removed(name,
+            packages=None,
+            requirements=None,
+            bin_env=None,
+            log=None,
+            proxy=None,
+            timeout=None):
     """
     Make sure that a package is not installed.
 
     name
         The name of the package to uninstall
-    pip_bin : None
-        the pip executable to use
+    bin_env : None
+        the pip executable or virtualenenv to use
     """
-    if not pip_bin:
-        pip_bin='pip'
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name not in __salt__["pip.list"](packages=name, bin_env=bin_pip):
+    if name not in __salt__["pip.list"](packages=name, bin_env=bin_env):
         ret["result"] = True
         ret["comment"] = "Pacakge is not installed."
         return ret
 
-    if __salt__["pip.uninstall"](packages=name, bin_env=pip_bin):
+    if __salt__["pip.uninstall"](packages=name,
+                                 requirements=requirements,
+                                 bin_env=bin_env,
+                                 log=log,
+                                 proxy=proxy,
+                                 timeout=timeout):
         ret["result"] = True
         ret["changes"][name] = "Removed"
         ret["comment"] = "Package was successfully removed."
