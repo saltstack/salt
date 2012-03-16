@@ -558,13 +558,13 @@ class AESFuncs(object):
         '''
         Call the master to compile a master side highstate
         '''
-        if 'id' not in load or 'grains' not in load or 'env' not in load:
+        if 'opts' not in load or 'grains' not in load:
             return False
         return salt.state.master_compile(
                 self.opts,
                 load['grains'],
-                load['id'],
-                load['env'])
+                load['opts']['id'],
+                load['opts']['environment'])
 
     def _return(self, load):
         '''

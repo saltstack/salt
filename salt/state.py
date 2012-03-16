@@ -1255,7 +1255,6 @@ class RemoteHighState(object):
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
-        self.id_ = opts['id']
         self.serial = salt.payload.Serial(self.opts)
         self.auth = salt.crypt.SAuth(opts)
         self.socket = self.__get_socket()
@@ -1274,9 +1273,8 @@ class RemoteHighState(object):
         Return the state data from the master
         '''
         payload = {'enc': 'aes'}
-        load = {'id': self.id_,
-                'grains': self.grains,
-                'env': self.opts['environment'],
+        load = {'grains': self.grains,
+                'opts': self.opts,
                 'cmd': '_master_state'}
         payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
