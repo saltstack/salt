@@ -4,7 +4,7 @@ Management of python packages
 
 A state module to manage system installed python packages
 
-.. code-block:: yam
+.. code-block:: yaml
 
     virtualenvwrapper:
       pip:
@@ -49,7 +49,6 @@ def removed(name, pip_bin=None):
 
     name
         The name of the package to uninstall
-        For RVM installations: the ruby version and gemset to target.
     pip_bin : None
         the pip executable to use
     """
