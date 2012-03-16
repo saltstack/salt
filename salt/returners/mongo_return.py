@@ -11,7 +11,7 @@ import logging
 try:
     import pymongo
     has_pymongo = True
-except ImportError
+except ImportError:
     has_pymongo = False
 
 
