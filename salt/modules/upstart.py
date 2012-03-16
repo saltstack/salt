@@ -7,6 +7,8 @@ rh_service module, since red hat systems support chkconfig
 '''
 
 import os
+import re
+from salt.exceptions import CommandNotFoundError
 
 
 def __virtual__():
@@ -73,4 +75,37 @@ def status(name, sig=None):
         salt '*' service.status <service name>
     '''
     cmd = 'service {0} status'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def _get_service_exec():
+    executable = 'update-rc.d'
+    if not __salt__['cmd.has_exec'](executable):
+        raise CommandNotFoundError('Missing {0}'.format(executable))
+    return executable
+
+
+def enable(name):
+    '''
+    Enable the named service to start at boot
+
+    CLI Example::
+
+        salt '*' service.enable <service name>
+    '''
+    executable = _get_service_exec()
+    cmd = '{0} -n -f {1} defaults'.format(executable, name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def disable(name):
+    '''
+    Disable the named service from starting on boot
+
+    CLI Example::
+
+        salt '*' service.disable <service name>
+    '''
+    executable = _get_service_exec()
+    cmd = '{0} -n -f {1} defaults'.format(executable, name)
     return not __salt__['cmd.retcode'](cmd)
