@@ -339,3 +339,11 @@ def freeze(bin_env=None):
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
 
     return __salt__['cmd.run'](cmd).split('\n')
+    
+
+def list(name, bin_env=None):
+    '''
+    Filter list of instaslled apps from ``freeze`` and check to see if ``name``
+    exists in the list of packages installed.
+    '''
+    pass
