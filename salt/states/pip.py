@@ -46,12 +46,16 @@ def installed(name,
         The name of the python package to install
     pip_bin :  None
         Deprecated, use bin_env
+    env : None
+        Deprecated, use bin_env
     bin_env : None
         the pip executable or virtualenv to use
 
     '''
     if pip_bin and not bin_env:
         bin_env = pip_bin
+    elif env and not bin_env:
+        bin_env = env
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     if name in __salt__['pip.list'](name, pip_bin):
