@@ -62,7 +62,7 @@ def manage(name,
 
     # If it already exists, grab the version for posterity
     if venv_exists and clear:
-        ret['changes']['cleared_packages'] = __salt__['pip.freeze'](env=name)
+        ret['changes']['cleared_packages'] = __salt__['pip.freeze'](bin_env=name)
         ret['changes']['old'] = __salt__['cmd.run_stderr'](
                     '{0} -V'.format(venv_py)).strip('\n')
 
@@ -109,9 +109,9 @@ def manage(name,
             else:
                 new_reqs = __salt__['cp.cache_local_file'](requirements)
 
-            before = set(__salt__['pip.freeze'](env=name))
-            __salt__['pip.install'](requirements=new_reqs, env=name)
-            after = set(__salt__['pip.freeze'](env=name))
+            before = set(__salt__['pip.freeze'](bin_env=name))
+            __salt__['pip.install'](requirements=new_reqs, bin_env=name)
+            after = set(__salt__['pip.freeze'](bin_env=name))
 
             new = list(after - before)
             old = list(before - after)
