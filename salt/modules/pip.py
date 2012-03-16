@@ -77,12 +77,12 @@ def install(packages=None,
             pip_bin = bin_env
             
     cmd = '{pip_bin} install'.format(pip_bin=pip_bin)
-
+    print cmd
     if packages:
         pkg = packages.replace(",", " ")
         cmd = '{cmd} {pkg}'.format(
             cmd=cmd, pkg=pkg)
-
+    print cmd
     if requirements:
         cmd = '{cmd} --requirements{requirements}'.format(
             cmd=cmd, requirements=requirements}
