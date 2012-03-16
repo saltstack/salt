@@ -22,7 +22,7 @@ def __init__():
         env_vars = {
             'APT_LISTBUGS_FRONTEND': 'none',
             'APT_LISTCHANGES_FRONTEND': 'none',
-            'DEBIAN_FRONTENT': 'noninteractive',
+            'DEBIAN_FRONTEND': 'noninteractive',
         }
         # Export these puppies so they persist
         os.environ.update(env_vars)
