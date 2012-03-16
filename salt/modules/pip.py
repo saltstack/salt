@@ -60,11 +60,13 @@ def install(packages=None,
 
         salt '*' pip.install <package name>,<package2 name>
 
-        salt '*' pip.install /path/to/requirements.txt
+        salt '*' pip.install requirements=/path/to/requirements.txt
 
-        salt '*' pip.install <package name> /path/to/virtualenv
+        salt '*' pip.install <package name> bin_env=/path/to/virtualenv
 
-        salt '*' pip.install <package name> /path/to/pip_bin
+        salt '*' pip.install <package name> bin_env=/path/to/pip_bin
+        
+        salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
     '''
 
     if not bin_env:
@@ -74,7 +76,7 @@ def install(packages=None,
         if os.path.exists(os.path.join(bin_env, 'bin', 'pip')):
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         else:
-            pip_bin = bin_env
+            pip_bin = bin_env        
             
     cmd = '{pip_bin} install'.format(pip_bin=pip_bin)
     print cmd
