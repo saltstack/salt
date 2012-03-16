@@ -127,11 +127,11 @@ def format_log(ret):
         log.info(str(ret))
 
 
-def master_compile(opts, grains, id_, env):
+def master_compile(master_opts, minion_opts, grains, id_, env):
     '''
     Compile the master side low state data, and build the hidden state file
     '''
-    st_ = MasterHighState(opts, grains, id_, env)
+    st_ = MasterHighState(master_opts, minion_opts, grains, id_, env)
     return st_.compile_highstate()
 
 def ishashable(obj):
@@ -1233,14 +1233,15 @@ class MasterHighState(BaseHighState):
     '''
     Execute highstate compilation from the master
     '''
-    def __init__(self, opts, grains, id_, env=None):
+    def __init__(self, master_opts, minion_opts, grains, id_, env=None):
         # Force the fileclient to be local
-        opts = copy.deepcopy(opts)
+        opts = copy.deepcopy(minion_opts)
         opts['file_client'] = 'local'
-        opts['file_roots'] = opts['master_roots']
+        opts['file_roots'] = master_opts['master_roots']
+        opts['renderer'] = master_opts['renderer']
+        opts['state_top'] = master_opts['state_top']
         opts['id'] = id_
         opts['grains'] = grains
-        opts['environment'] = env
         self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
         # Use the master state object
