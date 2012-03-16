@@ -562,6 +562,7 @@ class AESFuncs(object):
             return False
         return salt.state.master_compile(
                 self.opts,
+                load['opts'],
                 load['grains'],
                 load['opts']['id'],
                 load['opts']['environment'])
