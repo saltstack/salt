@@ -48,13 +48,70 @@ def install(packages=None,
     packages globally or to a virtualenv.
 
     packages 
-        package(s) or requirements file
+        comma separated list of packages to install
+    requirements
+        path to requirements
     bin_env
         path to pip bin or path to virtualenv. If doing a system install,
         and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
         specify the pip bin you want.
         If installing into a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
+    log
+        Log file where a complete (maximum verbosity) record will be kept
+    proxy
+        Specify a proxy in the form
+        user:passwd@proxy.server:port. Note that the
+        user:password@ is optional and required only if you
+        are behind an authenticated proxy.  If you provide
+        user@proxy.server:port then you will be prompted for a
+        password.
+    timeout
+        Set the socket timeout (default 15 seconds)
+    editable
+        install something editable(ie git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
+    find_links
+        URL to look for packages at
+    index_url
+        Base URL of Python Package Index
+    extra_index_url
+        Extra URLs of package indexes to use in addition to ``index_url``
+    no_index
+        Ignore package index
+    mirrors
+        Specific mirror URLs to query (automatically adds --use-mirrors)
+    build
+        Unpack packages into ``build`` dir
+    target
+        Install packages into ``target`` dir
+    download
+        Download packages into ``download`` instead of installing them
+    download_cache
+        Cache downloaded packages in ``download_cache`` dir
+    source
+        Check out ``editable`` packages into ``source`` dir
+    upgrade
+        Upgrade all packages to the newest available version
+    force_reinstall
+        When upgrading, reinstall all packages even if they are already up-to-date.
+    ignore_installed
+        Ignore the installed packages (reinstalling instead)
+    no_deps
+        Ignore package dependencies
+    no_install
+        Download and unpack all packages, but don't actually install them
+    no_download
+        Don't download any packages, just install the ones
+        already downloaded (completes an install run with
+        --no-install)
+    install_options
+        Extra arguments to be supplied to the setup.py install
+        command (use like --install-option="--install-
+        scripts=/usr/local/bin").  Use multiple --install-
+        option options to pass multiple options to setup.py
+        install.  If you are using an option with a directory
+        path, be sure to use absolute path.
+        
 
     CLI Example::
 
@@ -65,8 +122,11 @@ def install(packages=None,
         salt '*' pip.install <package name> bin_env=/path/to/virtualenv
 
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
+    
+    Comlicated CLI example::
         
         salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
+  
     '''
 
     if not bin_env:
