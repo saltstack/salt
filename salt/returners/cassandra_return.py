@@ -19,13 +19,8 @@ import logging
 try:
     import pycassa
     has_pycassa = True
-except ImportError
+except ImportError:
     has_pycassa = False
-
-def __virtual__():
-    if not has_pycassa:
-        return False
-    return 'cassandra'
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +28,13 @@ __opts__ = {'cassandra.servers': ['localhost:9160'],
             'cassandra.keyspace': 'salt',
             'cassandra.column_family': 'returns',
             'cassandra.consistency_level': 'ONE'}
+
+
+def __virtual__():
+    if not has_pycassa:
+        return False
+    return 'cassandra'
+
 
 def returner(ret):
     '''
