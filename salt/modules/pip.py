@@ -85,7 +85,7 @@ def install(packages=None,
     print cmd
     if requirements:
         cmd = '{cmd} --requirements{requirements}'.format(
-            cmd=cmd, requirements=requirements}
+            cmd=cmd, requirements=requirements)
         
 
     if log:
