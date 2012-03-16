@@ -46,7 +46,8 @@ def _run(cmd,
          runas=None,
          with_env=True,
          shell=DEFAULT_SHELL,
-         env=()):
+         env=(),
+         rstrip=True):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -105,6 +106,16 @@ def _run(cmd,
     proc = subprocess.Popen(cmd, **kwargs)
 
     out = proc.communicate()
+
+    if rstrip:
+        # Cast out to a list as proc.communicate() returns a tuple
+        out = list(out)
+        if out[0]:
+            out[0] = out[0].rstrip()
+        # None lacks a rstrip() method
+        if out[1]:
+            out[1] = out[1].rstrip()
+
     ret['stdout']  = out[0]
     ret['stderr']  = out[1]
     ret['pid']     = proc.pid
