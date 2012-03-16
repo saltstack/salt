@@ -20,8 +20,9 @@ def _get_pip_bin(bin_env):
     return pip_bin
 
 
-def install(packages=None,
+def install(pkgs=None,
             requirements=None,
+            env=None,
             bin_env=None,
             log=None,
             proxy=None,
@@ -50,7 +51,7 @@ def install(packages=None,
     Install packages individually or from a pip requirements file. Install
     packages globally or to a virtualenv.
 
-    packages
+    pkgs
         comma separated list of packages to install
     requirements
         path to requirements
@@ -60,6 +61,8 @@ def install(packages=None,
         specify the pip bin you want.
         If installing into a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
+    env
+        depreicated, use bin_env now
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
@@ -131,11 +134,19 @@ def install(packages=None,
         salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
+    # Switching from using `pip_bin` and `env` to just `bin_env`
+    # cause using an env and a pip bin that's not in the env could
+    # be problematic.
+    # Still using the `env` variable, for backwards compatiblity sake
+    # but going fwd you should specify either a pip bin or an env with
+    # the `bin_env` argument and we'll take care of the rest.
+    if env and not bin_env:
+        bin_env = env
 
     cmd = '{0} install'.format(_get_pip_bin(bin_env))
 
-    if packages:
-        pkg = packages.replace(",", " ")
+    if pkgs:
+        pkg = pkgs.replace(",", " ")
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
@@ -242,7 +253,7 @@ def install(packages=None,
     return __salt__['cmd.run'](cmd)
 
 
-def uninstall(packages=None,
+def uninstall(pkgs=None,
               requirements=None,
               bin_env=None,
               log=None,
@@ -254,7 +265,7 @@ def uninstall(packages=None,
     Uninstall packages individually or from a pip requirements file. Uninstall
     packages globally or from a virtualenv.
 
-    packages
+    pkgs
         comma separated list of packages to install
     requirements
         path to requirements
@@ -289,12 +300,12 @@ def uninstall(packages=None,
 
     '''
     cmd = '{0} uninstall -y '.format(_get_pip_bin(bin_env))
-    
-    if packages:
-        pkg = packages.replace(",", " ")
+
+    if pkgs:
+        pkg = pkgs.replace(",", " ")
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
-    
+
     if requirements:
         cmd = '{cmd} --requirements{requirements} '.format(
             cmd=cmd, requirements=requirements)
@@ -339,7 +350,7 @@ def freeze(bin_env=None):
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
 
     return __salt__['cmd.run'](cmd).split('\n')
-    
+
 
 def list(prefix='', bin_env=None):
     '''
