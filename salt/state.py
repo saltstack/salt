@@ -19,7 +19,10 @@ import fnmatch
 import logging
 import collections
 
-# Import Salt Libs
+# Import Third Party libs
+import zmq
+
+# Import Salt libs
 import salt.utils
 import salt.loader
 import salt.minion
@@ -1207,7 +1210,6 @@ class MasterState(State):
     '''
     def __init__(self, opts, minion):
         State.__init__(self, opts)
-        self.minion = minion
 
     def load_modules(self, data=None):
         '''
@@ -1217,7 +1219,10 @@ class MasterState(State):
         # Load a modified client interface that looks like the interface used
         # from the minion, but uses remote execution
         #
-        self.functions = salt.client.FunctionWrapper(self.opts, self.minion)
+        self.functions = salt.client.FunctionWrapper(
+                self.opts,
+                self.opts['id']
+                )
         # Load the states, but they should not be used in this class apart
         # from inspection
         self.states = salt.loader.states(self.opts, self.functions)
@@ -1233,13 +1238,13 @@ class MasterHighState(BaseHighState):
         opts = copy.deepcopy(opts)
         opts['file_client'] = 'local'
         opts['file_roots'] = opts['master_roots']
-        opts['id'] = minion
+        opts['id'] = id_
         opts['grains'] = grains
         opts['environment'] = env
         self.client = salt.fileclient.get_file_client(opts)
         BaseHighState.__init__(self, opts)
         # Use the master state object
-        self.state = MasterState(self.opts, minion)
+        self.state = MasterState(self.opts, grains)
         self.matcher = salt.minion.Matcher(self.opts)
 
 
