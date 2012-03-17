@@ -13,8 +13,26 @@ A great deal of information is available via the debug logging system, if you
 are having issues with minions connecting or not starting run the minion and/or
 master in the foreground:
 
+.. code-block:: sh
+
   # salt-master -l debug
   # salt-minion -l debug
+
+
+What Ports do the Master and Minion Need Open?
+==============================================
+
+No ports need to be opened up on each minion. For the master, tcp ports 4505
+and 4506 need to be open. If you've put your salt master and minion both in
+debug mode and don't see an acknowledgement that your minion has connected,
+it could very well be a firewall.
+
+You can check port connectivity from the minion with the nc command:
+
+.. code-block:: sh
+
+  # nc -v -z salt.master.ip 4505
+  # nc -v -z salt.master.ip 4506
 
 
 Using salt-call
@@ -37,6 +55,8 @@ The salt-master needs at least 2 sockets per host that connects to it, one for
 the Publisher and one for response port. Thus, large installations may upon
 scaling up the number of minions accessing a given master, encounter:
 
+.. code-block:: sh
+
         12:45:29,289 [salt.master    ][INFO    ] Starting Salt worker process 38
         Too many open files
         sock != -1 (tcp_listener.cpp:335)
@@ -44,11 +64,57 @@ scaling up the number of minions accessing a given master, encounter:
 The solution to this would be to check the number of files allowed to be
 opened by the user running salt-master (root by default):
 
-        [root@salt-master ~]# ulimit -n
-        1024
+.. code-block:: sh
+
+    [root@salt-master ~]# ulimit -n
+    1024
 
 And modify that value to be at least equal to the number of minions x 2.
 This setting can be changed in limits.conf as the nofile value(s),
 and activated upon new a login of the specified user.
 
-So, an environment with 1800 minions, would need 1800 x 2 = 3600 as a minimum
+So, an environment with 1800 minions, would need 1800 x 2 = 3600 as a minimum.
+
+
+Salt Master Stops Responding
+============================
+
+There are known bugs with ZeroMQ less than 2.1.11 which can cause the salt
+master to not respond properly. If you're running ZeroMQ greater than or equal
+to 2.1.9, you can work around the bug by setting the sysctl net.core.rmem_max
+and net.core.wmem_max to 16777216. Next set the third field in net.ipv4.tcp_rmem
+and net.ipv4.tcp_wmem to at least 16777216.
+
+You can do it manually with something like:
+
+.. code-block:: sh
+
+    # echo 16777216 > /proc/sys/net/core/rmem_max
+    # echo 16777216 > /proc/sys/net/core/wmem_max
+    # echo "4096 87380 16777216" > /proc/sys/net/ipv4/tcp_rmem
+    # echo "4096 87380 16777216" > /proc/sys/net/ipv4/tcp_wmem
+
+Or with the following salt state:
+
+.. code-block:: yaml
+    :linenos:
+
+    net.core.rmem_max:
+      sysctl:
+        - present
+        - value: 16777216
+
+    net.core.wmem_max:
+      sysctl:
+        - present
+        - value: 16777216
+
+    net.ipv4.tcp_rmem:
+      sysctl:
+        - present
+        - value: 4096 87380 16777216
+
+    net.ipv4.tcp_wmem:
+      sysctl:
+        - present
+        - value: 4096 87380 16777216
