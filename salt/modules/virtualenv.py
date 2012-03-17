@@ -27,7 +27,7 @@ def create(path,
     venv_bin : 'virtualenv'
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.
-    no_site_packages : False
+    no_site_packages : True
         Passthrough argument given to virtualenv
     system_site_packages : False
         Passthrough argument given to virtualenv
