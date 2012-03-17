@@ -45,8 +45,8 @@ def present(
         The comment to be placed with the ssh public key
 
     source
-        The source file for the key(s). Can contain any number of public keys, 
-        in standard "authorized_keys" format. If this is set, comment, enc, 
+        The source file for the key(s). Can contain any number of public keys,
+        in standard "authorized_keys" format. If this is set, comment, enc,
         and options will be ignored.
 
     options
