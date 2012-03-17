@@ -56,6 +56,7 @@ Full list of builtin modules
     systemd
     test
     tomcat
+    upstart
     useradd
     virt
     virtualenv
