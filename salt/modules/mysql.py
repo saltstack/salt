@@ -14,11 +14,17 @@ might look like::
 You can also use a defaults file::
 
     mysql.default_file: '/etc/mysql/debian.cnf'
+
+Required python modules: MySQLdb
 '''
 
 import logging
-import MySQLdb
-import MySQLdb.cursors
+try:
+    import MySQLdb
+    import MySQLdb.cursors
+    has_mysqldb = True
+except ImportError:
+    has_mysqldb = True
 
 log = logging.getLogger(__name__)
 __opts__ = {}
@@ -28,7 +34,8 @@ def __virtual__():
     Only load this module if the mysql config is set
     '''
     if any(k.startswith('mysql.') for k in __opts__.keys()):
-        return 'mysql'
+        if has_mysqldb:
+            return 'mysql'
     return False
 
 
@@ -40,8 +47,8 @@ def __check_table(name, table):
     cur.execute(query)
     results = cur.fetchall()
     log.debug(results)
-    return results   
-    
+    return results
+
 def __repair_table(name, table):
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
@@ -51,7 +58,7 @@ def __repair_table(name, table):
     results = cur.fetchall()
     log.debug(results)
     return results
-    
+
 def __optimize_table(name, table):
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
@@ -187,7 +194,7 @@ def free_slave():
         return 'promoted'
     else:
         return 'failed'
-        
+
 '''
 Database related actions
 '''
@@ -210,7 +217,7 @@ def db_list():
 
     log.debug(ret)
     return ret
-    
+
 def db_tables(name):
     '''
     Shows the tables in the given MySQL database (if exists)
@@ -235,7 +242,7 @@ def db_tables(name):
         ret.append(table[0])
     log.debug(ret)
     return ret
-   
+
 def db_exists(name):
     '''
     Checks if a database exists on the MySQL server.
@@ -252,7 +259,7 @@ def db_exists(name):
     result_set = cur.fetchall()
     return cur.rowcount == 1
 
-    
+
 def db_create(name):
     '''
     Adds a databases to the MySQL server.
@@ -340,7 +347,7 @@ def user_exists(user,
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
     return cur.rowcount == 1
-    
+
 def user_info(user,
               host='localhost'):
     '''
@@ -384,7 +391,7 @@ def user_create(user,
 
     log.debug("Query: {0}".format(query,))
     cur.execute( query )
-    
+
     if user_exists(user,host):
         log.info("User '{0}'@'{1}' has been created".format(user,host,))
         return True
@@ -446,7 +453,7 @@ def user_remove(user,
 
 '''
 Maintenance
-'''   
+'''
 def db_check(name,
               table=None):
     '''
@@ -467,7 +474,7 @@ def db_check(name,
         log.info("Checking table '%s' in db '%s'..".format(name,table,))
         ret = __check_table(name,table)
     return ret
-    
+
 def db_repair(name,
               table=None):
     '''
@@ -488,7 +495,7 @@ def db_repair(name,
         log.info("Repairing table '%s' in db '%s'..".format(name,table,))
         ret = __repair_table(name,table)
     return ret
-    
+
 def db_optimize(name,
               table=None):
     '''
@@ -513,15 +520,15 @@ def db_optimize(name,
 '''
 Grants
 '''
-def __grant_generate(grant, 
-                    database, 
-                    user, 
+def __grant_generate(grant,
+                    database,
+                    user,
                     host='localhost',
                     grant_option=False,
                     escape=True):
     # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = grant.replace(',', ', ').upper()
-    
+
     db_part = database.rpartition('.')
     db = db_part[0]
     table = db_part[2]
@@ -534,8 +541,8 @@ def __grant_generate(grant,
         query += " WITH GRANT OPTION"
     log.debug("Query generated: {0}".format(query,))
     return query
-    
-def user_grants(user, 
+
+def user_grants(user,
                 host='localhost'):
     '''
     Shows the grants for the given MySQL user (if it exists)
@@ -561,26 +568,26 @@ def user_grants(user,
     log.debug(ret)
     return ret
 
-def grant_exists(grant, 
-                database, 
-                user, 
+def grant_exists(grant,
+                database,
+                user,
                 host='localhost',
                 grant_option=False,
                 escape=True):
     # todo: This function is a bit tricky, since it requires the ordering to be exactly the same.
     # perhaps should be replaced/reworked with a better/cleaner solution.
     target = __grant_generate(grant, database, user, host, grant_option, escape)
-    
+
     if target in user_grants(user, host):
         log.debug("Grant exists.")
         return True
-    
+
     log.debug("Grant does not exist, or is perhaps not ordered properly?")
     return False
 
 def grant_add(grant,
-              database, 
-              user, 
+              database,
+              user,
               host='localhost',
               grant_option=False,
               escape=True):
@@ -594,7 +601,7 @@ def grant_add(grant,
     # todo: validate grant
     db = connect()
     cur = db.cursor()
-    
+
     query = __grant_generate(grant, database, user, host, grant_option, escape)
     log.debug("Query: {0}".format(query,))
     if cur.execute( query ):
@@ -602,9 +609,9 @@ def grant_add(grant,
         return True
     return False
 
-def grant_revoke(grant, 
-                 database, 
-                 user, 
+def grant_revoke(grant,
+                 database,
+                 user,
                  host='localhost',
                  grant_option=False):
     '''
@@ -615,7 +622,7 @@ def grant_revoke(grant,
         salt '*' mysql.grant_revoke 'SELECT,INSERT,UPDATE' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
-    db = connect() 
+    db = connect()
     cur = db.cursor()
 
     if grant_option:
