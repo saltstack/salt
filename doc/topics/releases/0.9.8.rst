@@ -71,6 +71,30 @@ Requisite Glob Matching
 Batch Size
 ----------
 
+
+Module Updates
+---------------
+
+This is a list of notable, but not complete updates with new and existing
+modules.
+
+For our ruby users, new 'rvm' and 'gem' modules have been added along with
+the associated states.
+
+The 'virt' module gained basic Xen support.
+
+The 'pkg' module supports Scientific Linux.
+
+The 'pkg' module on Debian, Ubuntu, and derivatives forces apt to run in a
+non-interactive mode preventing previous issues with installation. Also,
+Ubuntu users gained a new upstart 'service' module.
+
+The 'mysql.user' state and 'mysql' module gained a *password_hash* argument.
+
+The 'cmd' module and state gained a *shell* keyword argument for specifying
+a shell other than /bin/sh on Linux / Unix systems.
+
+
 In Progress Development
 =======================
 
