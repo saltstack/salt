@@ -420,7 +420,10 @@ class Minion(object):
                         self.opts['id'],
                         self.opts['environment'],
                         ).compile_pillar()
-            os.remove(fn_)
+            try:
+                os.remove(fn_)
+            except OSError:
+                pass
             self.functions, self.returners = self.__load_modules()
 
     def tune_in(self):
