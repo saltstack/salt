@@ -1,10 +1,17 @@
 '''
 Support for YUM
+
+Required python modules: yum, rpm, rpmUtils
 '''
-import yum
-import rpm
+try:
+    import yum
+    import rpm
+    from rpmUtils.arch import getBaseArch
+    has_yumdeps = True
+except ImportError:
+    has_yumdeps = False
+
 import logging
-from rpmUtils.arch import getBaseArch
 
 log = logging.getLogger(__name__)
 
@@ -12,6 +19,9 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
+    if not has_yumdeps:
+        return False
+
     # Return this for pkg on RHEL/Fedora based distros that ship with python
     # 2.6 or greater.
     dists = ('CentOS', 'Scientific', 'RedHat')
@@ -73,7 +83,7 @@ def available_version(name):
     # here we can, but for now its exact match only.
     versions_list = []
     for pkgtype in ['available', 'updates']:
-        
+
         pl = yb.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(pl, [name])
         # build a list of available packages from either available or updates
