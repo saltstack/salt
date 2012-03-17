@@ -15,7 +15,7 @@ Full list of builtin modules
     archive
     butterkvm
     cluster
-    cmd
+    cmdmod
     cp
     cron
     data
@@ -24,6 +24,7 @@ Full list of builtin modules
     file
     freebsdkmod
     freebsdpkg
+    gem
     gentoo_service
     grains
     groupadd
@@ -44,6 +45,7 @@ Full list of builtin modules
     pw_group
     pw_user
     rh_service
+    rvm
     saltutil
     selinux
     service
@@ -56,6 +58,7 @@ Full list of builtin modules
     systemd
     test
     tomcat
+    upstart
     useradd
     virt
     virtualenv
