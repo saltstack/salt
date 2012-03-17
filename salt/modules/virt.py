@@ -173,6 +173,22 @@ def node_info():
             'sockets': raw[5]}
     return info
 
+def get_macs(vm_):
+    '''
+    Return a list off MAC addresses from the named vm
+
+    CLI Example::
+
+        salt '*' virt.get_macs <vm name>
+    '''
+    macs = []
+    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    for node in doc.getElementsByTagName("devices"):
+        i_nodes = node.getElementsByTagName("interface")
+        for i_node in i_nodes:
+            for v_node in i_node.getElementsByTagName('mac'):
+                macs.append(v_node.getAttribute('address'))
+    return macs
 
 def get_graphics(vm_):
     '''
