@@ -58,7 +58,7 @@ def installed(name,
         bin_env = env
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name in __salt__['pip.list'](name, pip_bin):
+    if name in __salt__['pip.list'](name, bin_env):
         ret['result'] = True
         ret['comment'] = 'Package already installed'
         return ret
