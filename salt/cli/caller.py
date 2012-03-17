@@ -117,5 +117,5 @@ class Caller(object):
                 printout = self._get_outputter()
             if 'json_out' in self.opts and self.opts['json_out']:
                 printout.indent = 2
-
-            printout({'local': ret['return']}, color=self.opts['no_color'])
+            color = not bool(self.opts['no_color'])
+            printout({'local': ret['return']}, color=color)

@@ -88,21 +88,95 @@ to what the state is capable of.
 Kwargs and the CLI
 ------------------
 
-In the past it was required that all arguments be passed in order to modules 
+In the past it was required that all arguments be passed in order to modules
 from the salt and salt-call commands. As of 0.9.8 keyword arguments can be
 passed in the form of ``kwarg=argument``.
 
 Matcher Refinements and Changes
 -------------------------------
 
+Support has been added for matching minions with Yahoo's range library. This
+is handled by passing range syntax with *-R* or *--range* arguments to salt.
+
+More information at:
+https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+
+Much like the rest of salt, grains are now matched by default using globs
+instead of regular expressions. A new *--grain-pcre* was added to the salt
+command line for doing just this:
+
+.. code-block:: sh
+
+  # salt --grain-pcre 'os:(Arch:Fed).*' test.ping
+
+The associated compound matcher for use in states or the ``top.sls`` is *P*:
+
+
+.. code-block:: sh
+
+  P@os:(Arch|Fed).*
+
+**NOTE**: The default grains matcher has changed from pcre to glob for consistency
+=======
+A number of fixes and changes have been applied to the Matcher system. The
+most noteworthy is the change in the grain matcher. The grain matcher used
+a regular expression to match the passed data to a grain, but now defaults
+to a shell glob like the majority of match interfaces in Salt. A new option
+is available that still uses the old style regex matching to grain data called
+grain-pcre. To use regex matching in compound matches use the letter P.
+
 Providers
 ---------
+
+Salt predetermines what modules should be mapped to what uses based on the
+properties of a system. These determinations are generally made for modules
+that provide things like package and service management.
+
+Sometimes in states it may be needed for an alternative module to be used
+to provide the functionality needed. For instance, an Arch Linux system may
+have been set up with systemd support, so instead of using the default service
+module detected for Arch Linux, the systemd module can be used:
+
+.. code-block:: yaml
+
+    http:
+      service:
+        - running
+        - enable: True
+        - provider: systemd
 
 Requisite Glob Matching
 -----------------------
 
+Requisites can now be defined with glob expansion. This means that if there are
+many requisities they can be defined in a single line. For instance, if all
+files in a directory are required or watched, then it can be defined like so:
+
+.. code-block:: yaml
+
+    http:
+      service:
+        - running
+        - enable: True
+        - watch:
+          - file: /etc/http/conf.d/*
+
+This example will watch all defined files that match the glob
+``/etc/http/conf.d/*``
+
 Batch Size
 ----------
+
+The new batch size option allows for commands to be executed while maintaining
+that only so many hosts are executing the command at one time. This option can
+take a percentage or a finite number:
+
+.. code-block:: bash
+
+    salt \* -b %10 test.ping
+
+This will only run test.ping on %10 of targeted systems at a time and work
+through all targeted systems until the task is complete
 
 
 Module Updates
@@ -111,21 +185,24 @@ Module Updates
 This is a list of notable, but not complete updates with new and existing
 modules.
 
-For our ruby users, new 'rvm' and 'gem' modules have been added along with
-the associated states.
+For our ruby users, new :doc:`rvm </ref/modules/all/salt.modules.rvm>` and
+:doc:`gem </ref/modules/all/salt.modules.gem>` modules have been added along
+with the :doc:`associated </ref/states/all/salt.states.rvm>`
+:doc:`states </ref/states/all/salt.states.gem>`
 
-The 'virt' module gained basic Xen support.
 
-The 'pkg' module supports Scientific Linux.
+The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
 
-The 'pkg' module on Debian, Ubuntu, and derivatives forces apt to run in a
-non-interactive mode preventing previous issues with installation. Also,
-Ubuntu users gained a new upstart 'service' module.
+The :doc:`pkg </ref/modules/all/salt.modules.yumpkg>` module gained Scientific Linux support.
 
-The 'mysql.user' state and 'mysql' module gained a *password_hash* argument.
+The :doc:`pkg </ref/modules/all/salt.modules.apt>` module on Debian, Ubuntu, and derivatives
+forces apt to run in a non-interactive mode preventing previous issues with installation. Also,
+Ubuntu users gained a new upstart :doc:`service </ref/modules/all/salt.modules.upstart>` module.
 
-The 'cmd' module and state gained a *shell* keyword argument for specifying
-a shell other than /bin/sh on Linux / Unix systems.
+The :doc:`mysql.user </ref/states/all/salt.states.mysql_user>` state and :doc:`mysql </ref/modules/all/salt.modules.mysql>` module gained a *password_hash* argument.
+
+The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module and state gained a *shell* keyword argument for specifying
+a shell other than ``/bin/sh`` on Linux / Unix systems.
 
 
 In Progress Development
