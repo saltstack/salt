@@ -81,6 +81,29 @@ Kwargs and the CLI
 Matcher Refinements and Changes
 -------------------------------
 
+Support has been added for matching minions with Yahoo's range library. This
+is handled by passing range syntax with *-R* or *--range* arguments to salt.
+
+More information at:
+https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+
+Much like the rest of salt, grains are now matched by default using globs
+instead of regular expressions. A new *--grain-pcre* was added to the salt
+command line for doing just this:
+
+.. code-block:: sh
+
+  # salt --grain-pcre 'os:(Arch:Fed).*' test.ping
+
+The associated compound matcher for use in states or the ``top.sls`` is *P*:
+
+
+.. code-block:: sh
+
+  P@os:(Arch|Fed).*
+
+**NOTE**: The default grains matcher has changed from pcre to glob for consistency
+
 Providers
 ---------
 
@@ -97,21 +120,22 @@ Module Updates
 This is a list of notable, but not complete updates with new and existing
 modules.
 
-For our ruby users, new 'rvm' and 'gem' modules have been added along with
-the associated states.
+For our ruby users, new :doc:`rvm </ref/modules/all/salt.modules.rvm>` and :doc:`gem </ref/modules/all/salt.modules.gem>` modules have been added along with
+the :doc:`associated </ref/states/all/salt.states.rvm>` :doc:`states </ref/states/all/salt.states.gem>`
 
-The 'virt' module gained basic Xen support.
 
-The 'pkg' module supports Scientific Linux.
+The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
 
-The 'pkg' module on Debian, Ubuntu, and derivatives forces apt to run in a
-non-interactive mode preventing previous issues with installation. Also,
-Ubuntu users gained a new upstart 'service' module.
+The :doc:`pkg </ref/modules/all/salt.modules.yumpkg>` module gained Scientific Linux support.
 
-The 'mysql.user' state and 'mysql' module gained a *password_hash* argument.
+The :doc:`pkg </ref/modules/all/salt.modules.apt>` module on Debian, Ubuntu, and derivatives
+forces apt to run in a non-interactive mode preventing previous issues with installation. Also,
+Ubuntu users gained a new upstart :doc:`service </ref/modules/all/salt.modules.upstart>` module.
 
-The 'cmd' module and state gained a *shell* keyword argument for specifying
-a shell other than /bin/sh on Linux / Unix systems.
+The :doc:`mysql.user </ref/states/all/salt.states.mysql_user>` state and :doc:`mysql </ref/modules/all/salt.modules.mysql>` module gained a *password_hash* argument.
+
+The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module and state gained a *shell* keyword argument for specifying
+a shell other than ``/bin/sh`` on Linux / Unix systems.
 
 
 In Progress Development
