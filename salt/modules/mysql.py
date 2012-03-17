@@ -373,9 +373,11 @@ def user_create(user,
     '''
     Creates a MySQL user.
 
-    CLI Example::
+    CLI Examples::
 
-        salt '*' mysql.user_create 'username' 'hostname' 'password'
+        salt '*' mysql.user_create 'username' 'hostname' 'password
+
+        salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
     '''
     if user_exists(user,host):
        log.info("User '{0}'@'{1}' already exists".format(user,host,))
@@ -406,9 +408,11 @@ def user_chpass(user,
     '''
     Change password for MySQL user
 
-    CLI Example::
+    CLI Examples::
 
         salt '*' mysql.user_chpass frank localhost newpassword
+
+        salt '*' mysql.user_chpass frank localhost password_hash='hash'
     '''
     if password is None or password_hash is None:
         log.error('No password provided')
