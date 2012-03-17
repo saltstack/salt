@@ -24,6 +24,7 @@ Full list of builtin modules
     file
     freebsdkmod
     freebsdpkg
+    gem
     gentoo_service
     grains
     groupadd
@@ -44,6 +45,7 @@ Full list of builtin modules
     pw_group
     pw_user
     rh_service
+    rvm
     saltutil
     selinux
     service
