@@ -64,7 +64,7 @@ def assign(name, value):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
     ret  = {}
-    cmd  = 'sysctl -w {0}={1}'.format(name, value)
+    cmd  = 'sysctl -w {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd)
     out  = data['stdout']
 
