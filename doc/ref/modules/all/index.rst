@@ -15,7 +15,7 @@ Full list of builtin modules
     archive
     butterkvm
     cluster
-    cmd
+    cmdmod
     cp
     cron
     data
