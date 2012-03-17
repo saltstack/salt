@@ -69,14 +69,28 @@ trivial to those already familiar with salt states.
 CLI Additions
 -------------
 
-Better State Return Data
-------------------------
+The salt command in 0.9.8 has received a serious overhaul and is more powerful
+then ever. Data is returned to the terminal as it is received, and the salt
+command will now wait for all running minions to return data before stopping.
 
 Kwargs and States
 -----------------
 
+A new addition to writing state modules has been made available. State modules
+can now accept the ``**kwargs`` argument. The result of this is that all data
+in an sls file assigned to a state will be made available to the state function.
+
+This enables data to be passed in a transparent way back to the modules that
+are executing the logic. In particular this allows us to add arguments to the
+pkg.install module that enable more advanced and granular controls with respect
+to what the state is capable of.
+
 Kwargs and the CLI
 ------------------
+
+In the past it was required that all arguments be passed in order to modules
+from the salt and salt-call commands. As of 0.9.8 keyword arguments can be
+passed in the form of ``kwarg=argument``.
 
 Matcher Refinements and Changes
 -------------------------------
@@ -103,15 +117,66 @@ The associated compound matcher for use in states or the ``top.sls`` is *P*:
   P@os:(Arch|Fed).*
 
 **NOTE**: The default grains matcher has changed from pcre to glob for consistency
+=======
+A number of fixes and changes have been applied to the Matcher system. The
+most noteworthy is the change in the grain matcher. The grain matcher used
+a regular expression to match the passed data to a grain, but now defaults
+to a shell glob like the majority of match interfaces in Salt. A new option
+is available that still uses the old style regex matching to grain data called
+grain-pcre. To use regex matching in compound matches use the letter P.
 
 Providers
 ---------
 
+Salt predetermines what modules should be mapped to what uses based on the
+properties of a system. These determinations are generally made for modules
+that provide things like package and service management.
+
+Sometimes in states it may be needed for an alternative module to be used
+to provide the functionality needed. For instance, an Arch Linux system may
+have been set up with systemd support, so instead of using the default service
+module detected for Arch Linux, the systemd module can be used:
+
+.. code-block:: yaml
+
+    http:
+      service:
+        - running
+        - enable: True
+        - provider: systemd
+
 Requisite Glob Matching
 -----------------------
 
+Requisites can now be defined with glob expansion. This means that if there are
+many requisities they can be defined in a single line. For instance, if all
+files in a directory are required or watched, then it can be defined like so:
+
+.. code-block:: yaml
+
+    http:
+      service:
+        - running
+        - enable: True
+        - watch:
+          - file: /etc/http/conf.d/*
+
+This example will watch all defined files that match the glob
+``/etc/http/conf.d/*``
+
 Batch Size
 ----------
+
+The new batch size option allows for commands to be executed while maintaining
+that only so many hosts are executing the command at one time. This option can
+take a percentage or a finite number:
+
+.. code-block:: bash
+
+    salt \* -b %10 test.ping
+
+This will only run test.ping on %10 of targeted systems at a time and work
+through all targeted systems until the task is complete
 
 
 Module Updates
@@ -120,8 +185,10 @@ Module Updates
 This is a list of notable, but not complete updates with new and existing
 modules.
 
-For our ruby users, new :doc:`rvm </ref/modules/all/salt.modules.rvm>` and :doc:`gem </ref/modules/all/salt.modules.gem>` modules have been added along with
-the :doc:`associated </ref/states/all/salt.states.rvm>` :doc:`states </ref/states/all/salt.states.gem>`
+For our ruby users, new :doc:`rvm </ref/modules/all/salt.modules.rvm>` and
+:doc:`gem </ref/modules/all/salt.modules.gem>` modules have been added along
+with the :doc:`associated </ref/states/all/salt.states.rvm>`
+:doc:`states </ref/states/all/salt.states.gem>`
 
 
 The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
