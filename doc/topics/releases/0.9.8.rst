@@ -6,9 +6,9 @@ Salt 0.9.8 is a big step forward, with many additions and enhancements, as
 well as a number of precursors to advanced future developments.
 
 This version of Salt adds much more power to the command line, making the
-old hard timeout issues a thing of the past, and adding kwargs support to
-salt calls. These additions are also available in the salt client api, making
-the available api tools much more powerful.
+old hard timeout issues a thing of the past, and adding keyword argument
+support to salt calls. These additions are also available in the salt client
+api, making the available api tools much more powerful.
 
 The new pillar system allows for data to be stored on the master and
 assigned to minions in a granular way similar to the state system.
@@ -19,18 +19,20 @@ system has been added to allow for redirecting what modules function in
 the background for individual states.
 
 Support for OpenSUSE has been added and support for Solaris has begun
-serious development.
+serious development. Windows support has been signifigantly enhanced as well.
 
-The matcher and target systems have received a great deal of attention, the
-default behavior of grain matching has changed slightly to reflect the regular
-salt default behavior and the compound matcher system has been greatly refined.
+The matcher and target systems have received a great deal of attention. The
+default behavior of grain matching has changed slightly to reflect the salt
+default behavior and the compound matcher system has been greatly refined.
 
 A number of impressive features with keyword arguments have been added to both
 the cli and to the state system, making states much more powerful and flexible,
 but available in a clean and simple way.
 
 The new batch size capability allows for executions to be rolled through the
-targeted minions.
+targeted minions in percentage or specific numbers of minions. This was added
+to prevent the "thundering herd" problem when targetting large numbers of
+minions for things like service restarts or file downloads.
 
 Upgrade Considerations
 ======================
@@ -61,7 +63,7 @@ Pillar
 Pillar offers an interface to declare variable data on the master that is then
 assigned to the minions. The pillar data is made available to all modules,
 states, sls files etc. It is compiled on the master and is declared using the
-existing render system. This means that learning pillar should be fairly
+existing renderer system. This means that learning pillar should be fairly
 trivial to those already familiar with salt states.
 
 CLI Additions
@@ -88,6 +90,30 @@ Requisite Glob Matching
 Batch Size
 ----------
 
+
+Module Updates
+---------------
+
+This is a list of notable, but not complete updates with new and existing
+modules.
+
+For our ruby users, new 'rvm' and 'gem' modules have been added along with
+the associated states.
+
+The 'virt' module gained basic Xen support.
+
+The 'pkg' module supports Scientific Linux.
+
+The 'pkg' module on Debian, Ubuntu, and derivatives forces apt to run in a
+non-interactive mode preventing previous issues with installation. Also,
+Ubuntu users gained a new upstart 'service' module.
+
+The 'mysql.user' state and 'mysql' module gained a *password_hash* argument.
+
+The 'cmd' module and state gained a *shell* keyword argument for specifying
+a shell other than /bin/sh on Linux / Unix systems.
+
+
 In Progress Development
 =======================
 
@@ -102,3 +128,18 @@ finished for 0.9.9.
 
 The goal is that states can be compiled on both the master and the minion
 allowing for compilation to be split between master and minion.
+
+
+Solaris Support
+--------------------
+
+Salt 0.9.8 sees the introduction of basic Solaris support.
+
+
+Windows Support
+--------------------
+
+Salt states on windows are now much more viable thanks to contributions from
+our community! States for file, user, and group management are more fully
+fleshed out along with a network module. Windows users can also now manage
+registry entries using the new "reg" module.
