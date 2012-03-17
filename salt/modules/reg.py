@@ -14,7 +14,10 @@ except ImportError:
     has_windows_modules = False
 
 import salt.utils
+import logging
 from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
 
 class Registry(object):
     '''
