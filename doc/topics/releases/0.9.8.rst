@@ -67,14 +67,28 @@ trivial to those already familiar with salt states.
 CLI Additions
 -------------
 
-Better State Return Data
-------------------------
+The salt command in 0.9.8 has received a serious overhaul and is more powerful
+then ever. Data is returned to the terminal as it is received, and the salt
+command will now wait for all running minions to return data before stopping.
 
 Kwargs and States
 -----------------
 
+A new addition to writing state modules has been made available. State modules
+can now accept the ``**kwargs`` argument. The result of this is that all data
+in an sls file assigned to a state will be made available to the state function.
+
+This enables data to be passed in a transparent way back to the modules that
+are executing the logic. In particular this allows us to add arguments to the
+pkg.install module that enable more advanced and granular controls with respect
+to what the state is capable of.
+
 Kwargs and the CLI
 ------------------
+
+In the past it was required that all arguments be passed in order to modules 
+from the salt and salt-call commands. As of 0.9.8 keyword arguments can be
+passed in the form of ``kwarg=argument``.
 
 Matcher Refinements and Changes
 -------------------------------
