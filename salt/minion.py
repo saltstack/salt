@@ -661,7 +661,7 @@ class Matcher(object):
             log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',
-               'R': 'grain_pcre',
+               'P': 'grain_pcre',
                'X': 'exsel',
                'L': 'list',
                'E': 'pcre'}
