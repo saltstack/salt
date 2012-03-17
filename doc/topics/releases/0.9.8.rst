@@ -1,0 +1,85 @@
+========================
+Salt 0.9.8 Release Notes
+========================
+
+Salt 0.9.8 is a big step forward, with many additions and enhancements, as
+well as a number of precursours to advanced future developments.
+
+This version of Salt adds much more power to the command line, making the
+old hard timeout isses a thing of the past, and adding kwargs support to
+salt calls. These additions are also available in the salt client api, making
+the available api tools much more powerful.
+
+The new pillar system allows for data to be stored on the master and
+assigned to minions in a granular way similar to the state system.
+
+Additions to requisites making them much more powerful have been added and
+improved errorchecking for sls files in the state system. A new provider
+system has been added to allow for redirecting what modules function in
+the background for individual states.
+
+Support for OpenSUSE has been added and support for Solaris has begun 
+serious development.
+
+The matcher and target systems have recieved a great deal of attention, the
+default behavior of grain matching has changed slightly to reflect the regular
+salt default behavior and the compound matcher system has been greatly refined.
+
+A number of impressive features with keyword arguments have been added to both
+the cli and to the state system, making states much more powerful and flexible,
+but available in a clean and simple way.
+
+The new batch size capability allows for executions to be rolled through the
+targeted minions.
+
+
+Major Features
+==============
+
+Pillar
+------
+
+Pillar offers an interface to declare variable data on the master that is then
+assigned to the minions. The pillar data is made available to all modules,
+states, sls files etc. It is compiled on the master and is declared using the
+existing render system. This means that learning pillar should be fairly
+trivial to those already familiar with salt states.
+
+CLI Additions
+-------------
+
+Better State Return Data
+------------------------
+
+Kwargs and States
+-----------------
+
+Kwargs and the CLI
+------------------
+
+Matcher Refinements and Changes
+-------------------------------
+
+Providers
+---------
+
+Requisite Glob Matching
+-----------------------
+
+Batch Size
+----------
+
+In Progress Development
+=======================
+
+Master Side State Compiling
+---------------------------
+
+While we feel strongly that the advantages gained with minion side state
+compiling is very critical, it does prevent certian features what may be
+desired. 0.9.8 has support for initial master side state compiling, but many
+more components still need to be developed, it is hoped that these can be
+finished for 0.9.9.
+
+The goal is that states can be compiled on both the master and the minion
+allowing for compilation to be split between master and minion.
