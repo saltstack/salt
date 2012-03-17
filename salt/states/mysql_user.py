@@ -22,7 +22,13 @@ def present(name,
 
     name
         The name of the user to manage
-    '''    
+
+    password
+        The password
+
+    password_hash
+        The password in hashed form
+    '''
     ret = {'name': name,
            'changes': {},
            'result': True,
