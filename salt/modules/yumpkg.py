@@ -27,7 +27,6 @@ def __virtual__():
         else:
             return False
 
-
 def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
@@ -38,7 +37,6 @@ def _list_removed(old, new):
             pkgs.append(pkg)
 
     return pkgs
-
 
 def _compare_versions(old, new):
     '''
@@ -60,7 +58,6 @@ def _compare_versions(old, new):
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
     return pkgs
-
 
 def available_version(name):
     '''
@@ -96,7 +93,6 @@ def available_version(name):
     # remove the duplicate items from the list and return the first one
     return list(set(versions_list))[0]
 
-
 def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
@@ -105,11 +101,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    if available_version(name):
-        return True
-    else:
-        return False
-
+    return available_version(name)
 
 def version(name):
     '''
@@ -124,7 +116,6 @@ def version(name):
         return pkgs[name]
     else:
         return ''
-
 
 def list_pkgs(*args):
     '''
@@ -150,7 +141,6 @@ def list_pkgs(*args):
 
     return pkgs
 
-
 def refresh_db():
     '''
     Since yum refreshes the database automatically, this runs a yum clean,
@@ -163,7 +153,6 @@ def refresh_db():
     yb = yum.YumBase()
     yb.cleanMetadata()
     return True
-
 
 def clean_metadata():
     '''
@@ -232,7 +221,6 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
 
     return _compare_versions(old, new)
 
-
 def upgrade():
     '''
     Run a full system upgrade, a yum upgrade
@@ -263,7 +251,6 @@ def upgrade():
     new = list_pkgs()
     return _compare_versions(old, new)
 
-
 def remove(pkgs):
     '''
     Removes packages with yum remove
@@ -291,7 +278,6 @@ def remove(pkgs):
     new = list_pkgs(*pkgs)
 
     return _list_removed(old, new)
-
 
 def purge(pkgs):
     '''
