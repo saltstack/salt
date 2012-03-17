@@ -2,6 +2,7 @@
 Module for viewing and modifying sysctl parameters
 '''
 
+import re
 import os
 from salt.exceptions import CommandExecutionError
 
@@ -62,13 +63,24 @@ def assign(name, value):
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
-    cmd = 'sysctl -w {0}={1}'.format(name, value)
-    ret = {}
-    out = __salt__['cmd.run'](cmd).strip()
-    if ' = ' not in out:
-        raise CommandExecutionError('sysctl -w failed: {0}'.format(out))
-    comps = out.split(' = ')
-    ret[comps[0]] = comps[1]
+    ret  = {}
+    cmd  = 'sysctl -w {0}="{1}"'.format(name, value)
+    data = __salt__['cmd.run_all'](cmd)
+    out  = data['stdout']
+
+    # Example:
+    #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
+    #    net.ipv4.tcp_rmem = 4096 87380 16777216
+    regex = re.compile('^{0}\s+=\s+{1}$'.format(name, value))
+
+    if not regex.match(out):
+        if data['retcode'] != 0 and data['stderr']:
+            error = data['stderr']
+        else:
+            error = out
+        raise CommandExecutionError('sysctl -w failed: {0}'.format(error))
+    new_name, new_value = out.split(' = ')
+    ret[new_name] = new_value
     return ret
 
 
