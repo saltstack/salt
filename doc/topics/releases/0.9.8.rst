@@ -32,6 +32,25 @@ but available in a clean and simple way.
 The new batch size capability allows for executions to be rolled through the
 targeted minions.
 
+Upgrade Considerations
+======================
+
+Upgrade Issue
+-------------
+
+There was an oversight that has been previously missed which could cause a
+newer minion to crash an older master. This oversight has been repaired so
+that this version incompatibility issue will not occur again. When upgrading
+to 0.9.8 make sure to upgrade the master first, followed by the minions.
+
+Debian/Ubuntu Packages
+----------------------
+
+The original Debian/Ubuntu packages were called salt and included all salt
+applications. New packages in the ppa are split. If an old salt package is
+installed then it should be manually removed and the new split packages
+need to be installed fresh.
+
 
 Major Features
 ==============
