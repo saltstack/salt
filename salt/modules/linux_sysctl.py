@@ -75,9 +75,9 @@ def assign(name, value):
 
     if not regex.match(out):
         if data['retcode'] != 0 and data['stderr']:
-            error = out['stderr']
+            error = data['stderr']
         else:
-            error = out['stdout']
+            error = out
         raise CommandExecutionError('sysctl -w failed: {0}'.format(error))
     new_name, new_value = out.split(' = ')
     ret[new_name] = new_value
