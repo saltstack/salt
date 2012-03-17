@@ -341,6 +341,11 @@ def _check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
     '''
+    if not ret:
+        ret = {'name': name,
+               'changes': {},
+               'comment': '',
+               'result': False}
     # Check permissions
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
@@ -950,6 +955,10 @@ def recurse(name,
         source,
         clean=False,
         require=None,
+        user=None,
+        group=None,
+        dir_mode=None,
+        file_mode=None,
         __env__='base'):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -985,6 +994,7 @@ def recurse(name,
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
         os.makedirs(name)
+    vdir = set()
     for fn_ in __salt__['cp.cache_dir'](source, __env__):
         if not fn_.strip():
             continue
@@ -999,9 +1009,20 @@ def recurse(name,
                         )
                     )
                 )
-        if not os.path.isdir(os.path.dirname(dest)):
+        dirname = os.path.dirname(dest)
+        if not os.path.isdir(dirname):
             _makedirs(dest)
+        if not dirname in vdir:
+            # verify the directory perms if they are set
+            # _check_perms(name, ret, user, group, mode)
+            _ret, perms = _check_perms(dirname, {}, user, group, dir_mode)
+            if _ret['changes']:
+                ret['changes'][dirname] = 'updated'
+            vdir.add(dirname)
         if os.path.isfile(dest):
+            _ret, perms = _check_perms(dest, {}, user, group, file_mode)
+            if _ret['changes']:
+                ret['changes'][dest] = 'updated'
             keep.add(dest)
             srch = ''
             dsth = ''
