@@ -19,7 +19,7 @@ Full list of builtin modules
     cp
     cron
     data
-    debconf
+    debconfmod
     disk
     ebuild
     file
