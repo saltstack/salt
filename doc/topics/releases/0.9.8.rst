@@ -109,7 +109,7 @@ The *salt-key* command gained the *-D* and *--delete-all* arguments for
 removing all keys. Be careful with this one!
 
 Keyword Arguments and States
------------------
+----------------------------
 
 State modules now accept the ``**kwargs`` argument. This results in all data
 in a sls file assigned to a state will be made available to the state function.
@@ -134,7 +134,7 @@ client packages on Debian:
           - libnss-ldapd
 
 Keyword Arguments and the CLI
-------------------
+-----------------------------
 
 In the past it was required that all arguments be passed in the proper order to
 the *salt* and *salt-call* commands. As of 0.9.8, keyword arguments can be
@@ -271,6 +271,10 @@ The :doc:`mysql.user </ref/states/all/salt.states.mysql_user>` state and
 The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module and state gained
 a *shell* keyword argument for specifying a shell other than ``/bin/sh`` on
 Linux / Unix systems.
+
+New :doc:`git </ref/modules/all/salt.modules.git>` and
+:doc:`mercurial </ref/modules/all/salt.modules.hg>` modules have been added
+for fans of distributed version control.
 
 
 In Progress Development
