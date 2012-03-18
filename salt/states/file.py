@@ -825,6 +825,10 @@ def directory(name,
         Make sure that only files that are set up by salt and required by this
         function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
+
+    require
+        Require other resources such as packages or files
+
     '''
     mode = __manage_mode(mode)
     ret = {'name': name,
@@ -977,6 +981,23 @@ def recurse(name,
         Make sure that only files that are set up by salt and required by this
         function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
+
+    require
+        Require other resources such as packages or files
+
+    user
+        The user to own the directory, this defaults to the user salt is
+        running as on the minion
+
+    group
+        The group ownership set for the directory, this defaults to the group
+        salt is running as on the minion
+
+    dir_mode
+        The permissions mode to set any directories created
+
+    file_mode
+        The permissions mode to set any files created
     '''
     ret = {'name': name,
            'changes': {},
