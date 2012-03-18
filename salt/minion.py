@@ -240,7 +240,7 @@ class Minion(object):
                 args, kw = salt.state.build_args(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
             except CommandNotFoundError as exc:
-                msg = 'Command not found in \'{0}\': {1}'
+                msg = 'Command required for \'{0}\' not found: {1}'
                 log.debug(msg.format(function_name, str(exc)))
                 ret['return'] = msg.format(function_name, str(exc))
             except CommandExecutionError as exc:
