@@ -3,6 +3,7 @@ Support for the Git SCM
 '''
 
 import os
+from salt import utils
 from salt.exceptions import CommandNotFoundError
 
 def _git_getdir(cwd, user=None):
@@ -20,13 +21,7 @@ def _git_getdir(cwd, user=None):
     return __salt__['cmd.run'](cmd_toplvl, cwd)
 
 def _check_git():
-    '''
-    Instead of requiring a minion restart after installing
-    git to use this module, just check and gracefully tell
-    the user they need to install git first.
-    '''
-    if not __salt__['cmd.has_exec']('git'):
-        raise CommandNotFoundError('git')
+    utils.check_or_die('git')
 
 def revision(cwd, rev='HEAD', short=False, user=None):
     '''
