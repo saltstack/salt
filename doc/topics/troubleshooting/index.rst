@@ -118,3 +118,11 @@ Or with the following salt state:
       sysctl:
         - present
         - value: 4096 87380 16777216
+
+
+Common YAML Gotchas
+===================
+
+An extensive list of
+:doc:`yaml idiosyncrasies</topics/troubleshooting/yaml_idiosyncrasies>`
+has been compiled.
