@@ -4,7 +4,6 @@ Support for the Git SCM
 
 import os
 from salt import utils
-from salt.exceptions import CommandNotFoundError
 
 def _git_getdir(cwd, user=None):
     '''
@@ -31,7 +30,7 @@ def revision(cwd, rev='HEAD', short=False, user=None):
         The path to the Git repository
 
     rev: HEAD
-        The path to the archive tarball
+        The revision
 
     short: False
         Return an abbreviated SHA1 git hash
@@ -94,7 +93,7 @@ def describe(cwd, rev='HEAD', user=None):
         The path to the Git repository
 
     rev: HEAD
-        The path to the archive tarball
+        The revision to describe
 
     user : (none)
         Run git as a user other than what the minion runs as
@@ -113,7 +112,7 @@ def archive(cwd, output, rev='HEAD', fmt='', prefix='', user=None):
         The path to the archive tarball
 
     rev: HEAD
-        The path to the archive tarball
+        The revision to create an archive from
 
     fmt: ''
         Format of the resulting archive, zip and tar are commonly used
