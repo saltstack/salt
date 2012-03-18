@@ -189,6 +189,13 @@ def user_create(username,
 
         salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
     '''
+    if not user:
+        user = __opts__['postgres.user']
+    if not host:
+        host = __opts__['postgres.host']
+    if not port:
+        port = __opts__['postgres.port']
+
     sub_cmd = "CREATE USER {0} WITH".format(username, )
     if password:
         sub_cmd = "{0} PASSWORD '{1}'".format(sub_cmd, password)
