@@ -2,6 +2,7 @@
 Execute batch runs
 '''
 # Import Python libs
+import math
 import time
 import copy
 
@@ -58,9 +59,11 @@ class Batch(object):
         snum = len(self.minions)
         try:
             if self.opts['batch'].startswith('%'):
-                return int(float(self.opts['batch'][1:]) / 100.0 * snum)
+                return int(math.ceil(
+                        float(self.opts['batch'][1:]) / 100.0 * snum))
             elif self.opts['batch'].endswith('%'):
-                return int(float(self.opts['batch'][:-1]) / 100.0 * snum)
+                return int(math.ceil(
+                        float(self.opts['batch'][:-1]) / 100.0 * snum))
         except ValueError:
             print ('Invalid batch data sent: {0}\nData must be in the form'
                    'of %10, 10% or 3').format(self.opts['batch'])
