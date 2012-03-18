@@ -11,7 +11,7 @@ __opts__ = {
 
 def create(path,
         venv_bin=__opts__['venv_bin'],
-        no_site_packages=True,
+        no_site_packages=False,
         system_site_packages=False,
         clear=False,
         python='',
