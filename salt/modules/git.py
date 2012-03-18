@@ -3,6 +3,7 @@ Support for the Git SCM
 '''
 
 import os
+from salt.exceptions import CommandNotFoundError
 
 def _git_getdir(cwd, user=None):
     '''
