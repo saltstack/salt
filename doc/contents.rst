@@ -12,6 +12,9 @@ Full Table of Contents
     topics/targeting/index
     topics/tutorials/modules
     topics/tutorials/states*
+    topics/pillar/index
+    topics/jobs/index
+    topics/troubleshooting/index
     topics/community
 
     ref/index
