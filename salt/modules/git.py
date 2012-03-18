@@ -101,7 +101,7 @@ def describe(cwd, rev='HEAD', user=None):
     cmd = 'git describe {0}'.format(rev)
     return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
 
-def archive(cwd, output, rev='HEAD', fmt='', prefix='', user=None):
+def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
     '''
     Export a tarball from the repository
 

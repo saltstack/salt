@@ -1,7 +1,7 @@
 '''
 Create virtualenv environments
 '''
-from salt.exceptions import CommandNotFoundError
+from salt import utils
 
 
 __opts__ = {
@@ -51,9 +51,8 @@ def create(path,
 
         salt '*' pip.virtualenv /path/to/new/virtualenv
     '''
-    if not __salt__['cmd.has_exec'](venv_bin):
-        raise CommandNotFoundError(
-            "Please install {venv_bin}".format(venv_bin=venv_bin))
+    # raise CommandNotFoundError if venv_bin is missing
+    utils.check_or_die(venv_bin)
 
     cmd = '{venv_bin} {args} {path}'.format(
             venv_bin=venv_bin,
