@@ -49,7 +49,7 @@ def run(tags=None):
 
         salt '*' puppet.run basefiles::edit,apache::server
     '''
-    _check_puppet():
+    _check_puppet()
 
     if not tags:
         cmd = 'puppetd --test'
@@ -70,7 +70,7 @@ def noop(tags=None):
 
         salt '*' puppet.noop web::server,django::base
     '''
-    _check_puppet():
+    _check_puppet()
 
     if not tags:
         cmd = 'puppetd --test --noop'
@@ -87,7 +87,7 @@ def facts():
 
         salt '*' puppet.facts
     '''
-    _check_facter():
+    _check_facter()
 
     ret = {}
     output = __salt__['cmd.run']('facter')
@@ -111,7 +111,7 @@ def fact(name):
 
         salt '*' puppet.fact kernel
     '''
-    _check_facter():
+    _check_facter()
 
     ret = __salt__['cmd.run']('facter {0}'.format(name))
     if not ret:
