@@ -245,11 +245,16 @@ Module Updates
 This is a list of notable, but non-exhaustive updates with new and existing
 modules.
 
+Windows support has seen a flurry of support this release cycle. We've gained
+all new :doc:`file </ref/modules/all/salt.modules.win_file>`,
+:doc:`network </ref/modules/all/salt.modules.win_network>`, and
+:doc:`shadow </ref/modules/all/salt.modules.win_shadow>` modules. Please note
+that these are still a work in progress.
+
 For our ruby users, new :doc:`rvm </ref/modules/all/salt.modules.rvm>` and
 :doc:`gem </ref/modules/all/salt.modules.gem>` modules have been added along
 with the :doc:`associated </ref/states/all/salt.states.rvm>`
 :doc:`states </ref/states/all/salt.states.gem>`
-
 
 The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
 
