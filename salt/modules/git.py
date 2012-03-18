@@ -114,7 +114,7 @@ def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
     rev: HEAD
         The revision to create an archive from
 
-    fmt: ''
+    fmt: (none)
         Format of the resulting archive, zip and tar are commonly used
 
     prefix: ''
