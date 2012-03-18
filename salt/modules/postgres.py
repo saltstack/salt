@@ -1,21 +1,16 @@
 '''
-Module to provide MySQL compatibility to salt.
+Module to provide Postgres compatibility to salt.
 
-In order to connect to MySQL, certain configuration is required
+In order to connect to Postgres, certain configuration is required
 in /etc/salt/minion on the relevant minions. Some sample configs
 might look like::
 
     postgres.host: 'localhost'
-    postgres.port: 3306
-    postgres.user: 'root'
+    postgres.port: '5432'
+    postgres.user: 'postgres'
     postgres.pass: ''
-    postgres.db: 'mysql'
+    postgres.db: 'postgres'
 
-You can also use a defaults file::
-
-    mysql.default_file: '/etc/mysql/debian.cnf'
-
-Required python modules: MySQLdb
 '''
 
 import logging
@@ -26,8 +21,8 @@ __opts__ = {}
 
 def version():
     '''
-    Return the version of a MySQL server using the output
-    from the ``SELECT VERSION()`` query.
+    Return the version of a Postgres server using the output
+    from the ``psql --version`` cmd.
 
     CLI Example::
 
@@ -36,30 +31,41 @@ def version():
     version_line =  __salt__['cmd.run']('psql --version').split("\n")[0]
     name = version_line.split(" ")[1]
     ver = version_line.split(" ")[2]
-    print "{0} {1}".format(name, ver)
-    return "{0} {1}".format(name, ver)
+    return "%s %s" % (name, ver)
+
 
 '''
 Database related actions
 '''
 
 
-def db_list(user, host):
+def db_list(user=None, host=None):
     '''
     Return a list of databases of a MySQL server using the output
-    from the ``SHOW DATABASES`` query.
+    from the ``psql -l`` query.
 
     CLI Example::
 
         salt '*' postgres.db_list
     '''
+    if not user:
+        user = __opts__['postgres.user']
+    if not host:
+        host = __opts__['postgres.host']
+
+    ret = []
     cmd = "psql -l -U {user} -h {host}".format(
         user=user, host=host)
+    lines = [x for x in __salt__['cmd.run'](cmd).split("\n") if len(x.split("|")) == 6]
+    header = [x.strip() for x in lines[0].split("|")]
+    for line in lines[1:]:
+        line = [x.strip() for x in line.split("|")]
+        if not line[0] == "":        
+            ret.append(zip(header[:-1], line[:-1]))
 
-    __salt__['cmd.run'](cmd)
+    return ret
 
-
-def db_exists(user, host, name):
+def db_exists(name, user=None, host=None):
     '''
     Checks if a database exists on the MySQL server.
 
@@ -68,7 +74,11 @@ def db_exists(user, host, name):
         salt '*' mysql.db_exists 'dbname'
     '''
     databases = __salt__['postgres.db_list'](user, host)
-    return name in databases
+    for db in databases:
+        if name == dict(db).get('Name'):
+            return True
+
+    return False
 
 
 def db_create(user, host, name, **kwargs):
