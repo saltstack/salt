@@ -7,16 +7,18 @@ well as a number of precursors to advanced future developments.
 
 This version of Salt adds much more power to the command line, making the
 old hard timeout issues a thing of the past, and adding keyword argument
-support to salt calls. These additions are also available in the salt client
-api, making the available api tools much more powerful.
+support. These additions are also available in the salt client api, making
+the available api tools much more powerful.
 
 The new pillar system allows for data to be stored on the master and
-assigned to minions in a granular way similar to the state system.
+assigned to minions in a granular way similar to the state system. It also
+allows flexibility for users who want to keep data out of their state tree
+similar to 'external lookup' functionality in other tools.
 
 Additions to requisites making them much more powerful have been added and
 improved error checking for sls files in the state system. A new provider
-system has been added to allow for redirecting what modules function in
-the background for individual states.
+system has been added to allow for redirecting what modules run in the
+background for individual states.
 
 Support for OpenSUSE has been added and support for Solaris has begun
 serious development. Windows support has been signifigantly enhanced as well.
@@ -26,13 +28,13 @@ default behavior of grain matching has changed slightly to reflect the salt
 default behavior and the compound matcher system has been greatly refined.
 
 A number of impressive features with keyword arguments have been added to both
-the cli and to the state system, making states much more powerful and flexible,
-but available in a clean and simple way.
+the cli and to the state system. This makes states much more powerful and
+flexible while maintaining the simple configuration everyone loves.
 
-The new batch size capability allows for executions to be rolled through the
-targeted minions in percentage or specific numbers of minions. This was added
-to prevent the "thundering herd" problem when targetting large numbers of
-minions for things like service restarts or file downloads.
+The new batch size capability allows for executions to be rolled through a
+group of targeted minions a percentage or specific number at a time. This
+was added to prevent the "thundering herd" problem when targetting large
+numbers of minions for things like service restarts or file downloads.
 
 Upgrade Considerations
 ======================
