@@ -3,6 +3,7 @@ Support for APT (Advanced Packaging Tool)
 '''
 
 import os
+from salt import utils
 
 def __virtual__():
     '''
@@ -264,6 +265,17 @@ def list_pkgs(regex_string=""):
         cols = line.split()
         if len(cols) and 'ii' in cols[0]:
             ret[cols[1]] = cols[2]
+
+    if (not ret # Assuming regex_string is a virtual package
+        and util.which('aptitude')): # Without aptitude this won't work
+
+        cmd = ('aptitude search "{} ?virtual ?reverse-provides(?installed)"'
+                .format(regex_string))
+
+        out = __salt__['cmd.run_stdout'](cmd)
+        if out:
+            ret[regex_string] = '1' # Setting all 'installed' virtual package
+                                    # versions to '1'
 
     return ret
 
