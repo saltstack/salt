@@ -59,15 +59,15 @@ def db_list(user=None, host=None, port=None):
     cmd = "psql -l -h {host} -U {user} -p {port}".format(
             host=host, user=user, port=port)
 
-
     lines = [x for x in __salt__['cmd.run'](cmd).split("\n") if len(x.split("|")) == 6]
     header = [x.strip() for x in lines[0].split("|")]
     for line in lines[1:]:
         line = [x.strip() for x in line.split("|")]
-        if not line[0] == "":        
+        if not line[0] == "":
             ret.append(zip(header[:-1], line[:-1]))
 
     return ret
+
 
 def db_exists(name, user=None, host=None, port=None):
     '''
@@ -85,10 +85,10 @@ def db_exists(name, user=None, host=None, port=None):
     return False
 
 
-def db_create(name, 
-              user=None, 
-              host=None, 
-              port=None, 
+def db_create(name,
+              user=None,
+              host=None,
+              port=None,
               tablespace=None,
               encoding=None,
               local=None,
@@ -101,18 +101,18 @@ def db_create(name,
 
     CLI Example::
 
-        salt '*' postgres.db_create 'dbname' 
+        salt '*' postgres.db_create 'dbname'
 
         salt '*' postgres.db_create 'dbname' template=template_postgis
-    
+
     '''
     # check if db exists
     if db_exists(name, user, host, port):
         log.info("DB '{0}' already exists".format(name,))
         return False
- 
+
     cmd = 'createdb {0}'.format(name)
-  
+
     if tablespace:
         cmd = "{0} -D {1}".format(cmd, tablespace)
 
@@ -137,7 +137,7 @@ def db_create(name,
         else:
             log.info("template '{0}' does not exist.".format(template, ))
             return False
-    
+
     __salt__['cmd.run'](cmd)
 
     if db_exists(name, user, host, port):
@@ -149,11 +149,11 @@ def db_create(name,
 
 def db_remove(name, user=None, host=None, port=None):
     '''
-    Removes a databases from the MySQL server.
+    Removes a databases from the Postgres server.
 
     CLI Example::
 
-        salt '*' mysql.db_remove 'dbname'
+        salt '*' postgres.db_remove 'dbname'
     '''
     # check if db exists
     if not db_exists(name):
@@ -168,24 +168,44 @@ def db_remove(name, user=None, host=None, port=None):
     else:
         log.info("Failed to delete DB '{0}'.".format(name, ))
         return False
-        
 
 '''
 User related actions
 '''
-def user_create(user,
-                host='localhost',
-                password=None,
-                password_hash=None):
+
+
+def user_create(username,
+                user=None,
+                host=None,
+                port=None,
+                createdb=False,
+                createuser=False,
+                encrypted=False,
+                password=None):
     '''
-    Creates a MySQL user.
+    Creates a Postgres user.
 
     CLI Examples::
 
-        salt '*' mysql.user_create 'username' 'hostname' 'password
-
-        salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
+        salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
     '''
-    pass
+    sub_cmd = "CREATE USER {0} WITH".format(username, )
+    if password:
+        sub_cmd = "{0} PASSWORD '{1}'".format(sub_cmd, password)
+    if createdb:
+        sub_cmd = "{0} CREATEDB".format(sub_cmd, )
+    if createuser:
+        sub_cmd = "{0} CREATEUSER".format(sub_cmd, )
+    if encrypted:
+        sub_cmd = "{0} ENCRYPTED".format(sub_cmd, )
+
+    if sub_cmd.endswith("WITH"):
+        sub_cmd = sub_cmd.replace(" WITH", "")
+
+    cmd = "psql -h {host} -U {user} -p {port} -c '{sub_cmd}'".format(
+        host=host, user=user, port=port, sub_cmd=sub_cmd)
+
+    return __salt__['cmd.run'](cmd)
+
 
 
