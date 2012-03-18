@@ -34,6 +34,9 @@ You can check port connectivity from the minion with the nc command:
   # nc -v -z salt.master.ip 4505
   # nc -v -z salt.master.ip 4506
 
+There is also a :doc:`firewall configuration</topics/tutorials/firewall>`
+document that might help as well.
+
 
 Using salt-call
 ===============
@@ -81,9 +84,9 @@ Salt Master Stops Responding
 
 There are known bugs with ZeroMQ less than 2.1.11 which can cause the salt
 master to not respond properly. If you're running ZeroMQ greater than or equal
-to 2.1.9, you can work around the bug by setting the sysctl net.core.rmem_max
-and net.core.wmem_max to 16777216. Next set the third field in net.ipv4.tcp_rmem
-and net.ipv4.tcp_wmem to at least 16777216.
+to 2.1.9, you can work around the bug by setting the sysctls
+``net.core.rmem_max`` and ``net.core.wmem_max`` to 16777216. Next set the third
+field in ``net.ipv4.tcp_rmem`` and ``net.ipv4.tcp_wmem`` to at least 16777216.
 
 You can do it manually with something like:
 
