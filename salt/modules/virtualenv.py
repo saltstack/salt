@@ -13,6 +13,7 @@ def create(path,
         venv_bin=__opts__['venv_bin'],
         no_site_packages=False,
         system_site_packages=False,
+        distribute=False,
         clear=False,
         python='',
         extra_search_dir='',
@@ -30,6 +31,8 @@ def create(path,
     no_site_packages : False
         Passthrough argument given to virtualenv
     system_site_packages : False
+        Passthrough argument given to virtualenv
+    distribute : False
         Passthrough argument given to virtualenv
     clear : False
         Passthrough argument given to virtualenv
@@ -57,6 +60,7 @@ def create(path,
             args=''.join([
                 ' --no-site-packages' if no_site_packages else '',
                 ' --system-site-packages' if system_site_packages else '',
+                ' --distribute' if distribute else '',
                 ' --clear' if clear else '',
                 ' --python {0}'.format(python) if python else '',
                 ' --extra-search-dir {0}'.format(extra_search_dir
