@@ -34,7 +34,7 @@ def version():
         salt '*' postgres.version
     '''
     version_line =  __salt__['cmd.run']('psql --version').split("\n")[0]
-    return version_line[1:]
+    return version_line.split(" ")[1:]
 
 '''
 Database related actions
