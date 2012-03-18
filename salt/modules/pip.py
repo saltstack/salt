@@ -151,7 +151,7 @@ def install(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     if requirements:
-        cmd = '{cmd} --requirements {requirements} '.format(
+        cmd = '{cmd} --requirement {requirements} '.format(
             cmd=cmd, requirements=requirements)
 
     if log:
