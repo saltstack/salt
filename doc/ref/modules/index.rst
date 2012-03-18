@@ -12,7 +12,8 @@ Easy Modules to write
 =====================
 
 Salt modules are amazingly simple to write, just write a regular Python module
-or a regular Cython module and place it in the ``salt/modules`` directory.
+or a regular Cython module and place it in the ``salt/modules`` directory. You
+can also place them in a directory called ``_modules/`` in your state directory.
 
 Since Salt modules are just Python/Cython modules there are no restraints as to
 what you can put inside of a salt module, and if a Salt module has errors and
