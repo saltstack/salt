@@ -25,7 +25,7 @@ def revision(cwd, rev='tip', short=False, user=None):
     short: False
         Return an abbreviated commit hash
 
-    user : (none)
+    user : None
         Run hg as a user other than what the minion runs as
 
     CLI Example::
@@ -52,10 +52,10 @@ def describe(cwd, rev='tip', user=None):
     cwd
         The path to the Mercurial repository
 
-    rev: HEAD
+    rev: tip
         The path to the archive tarball
 
-    user : (none)
+    user : None
         Run hg as a user other than what the minion runs as
 
     CLI Example::
@@ -83,14 +83,14 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     rev: tip
         The revision to create an archive from
 
-    fmt: (none)
+    fmt: None
         Format of the resulting archive. Mercurial supports: tar,
         tbz2, tgz, zip, uzip, and files formats.
 
-    prefix: (none)
+    prefix : None
         Prepend <prefix>/ to every filename in the archive
 
-    user : (none)
+    user : None
         Run hg as a user other than what the minion runs as
 
     If ``prefix`` is not specified it defaults to the basename of the repo
@@ -98,7 +98,7 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
 
     CLI Example::
 
-        salt '*' hg.archive /path/to/repo output=/path/to/BACKUP.tar.gz fmt=tgz
+        salt '*' hg.archive /path/to/repo output=/tmp/archive.tgz fmt=tgz
     '''
     _check_hg()
 
@@ -110,17 +110,17 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
 
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 
-def pull(cwd, opts='', user=None):
+def pull(cwd, opts=None, user=None):
     '''
     Perform a pull on the given repository
 
     cwd
         The path to the Mercurial repository
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run hg as a user other than what the minion runs as
 
     CLI Example::
@@ -129,17 +129,25 @@ def pull(cwd, opts='', user=None):
     '''
     _check_hg()
 
+    if not opts:
+        opts = ''
     return __salt__['cmd.run']('hg pull {0}'.format(opts), cwd=cwd, runas=user)
 
 def update(cwd, rev, force=False, user=None):
     '''
-    Checkout a given revision
+    Update to a given revision
 
     cwd
         The path to the Mercurial repository
 
     rev
-        The path to the archive tarball
+        The revision to update to
+
+    force : False
+        Force an update
+
+    user : None
+        Run hg as a user other than what the minion runs as
 
     CLI Example::
 
@@ -150,20 +158,20 @@ def update(cwd, rev, force=False, user=None):
     cmd = 'hg update {0}{1}'.format(rev, ' -C' if force else '')
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 
-def clone(cwd, repository, opts='', user=None):
+def clone(cwd, repository, opts=None, user=None):
     '''
     Clone a new repository
 
     cwd
-        The path to the Git repository
+        The path to the Mercurial repository
 
     repository
         The hg uri of the repository
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run hg as a user other than what the minion runs as
 
     CLI Example::
@@ -172,5 +180,7 @@ def clone(cwd, repository, opts='', user=None):
     '''
     _check_hg()
 
+    if not opts:
+        opts = ''
     cmd = 'hg clone {0} {1} {2}'.format(repository, cwd, opts)
     return __salt__['cmd.run'](cmd, runas=user)

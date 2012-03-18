@@ -35,7 +35,7 @@ def revision(cwd, rev='HEAD', short=False, user=None):
     short: False
         Return an abbreviated SHA1 git hash
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Example::
@@ -62,10 +62,10 @@ def clone(cwd, repository, opts=None, user=None):
     repository
         The git uri of the repository
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Example::
@@ -95,7 +95,7 @@ def describe(cwd, rev='HEAD', user=None):
     rev: HEAD
         The revision to describe
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
     '''
     cmd = 'git describe {0}'.format(rev)
@@ -114,13 +114,13 @@ def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
     rev: HEAD
         The revision to create an archive from
 
-    fmt: (none)
+    fmt: None
         Format of the resulting archive, zip and tar are commonly used
 
-    prefix: ''
+    prefix : None
         Prepend <prefix>/ to every filename in the archive
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     If ``prefix`` is not specified it defaults to the basename of the repo
@@ -149,10 +149,10 @@ def fetch(cwd, opts=None, user=None):
     cwd
         The path to the Git repository
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Example::
@@ -176,10 +176,10 @@ def pull(cwd, opts=None, user=None):
     cwd
         The path to the Git repository
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Example::
@@ -199,13 +199,13 @@ def rebase(cwd, rev='master', opts=None, user=None):
     cwd
         The path to the Git repository
 
-    rev
-        The remote branch or revision to merge into the current branch
+    rev : master
+        The revision to rebase onto the current branch
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Example::
@@ -228,15 +228,15 @@ def checkout(cwd, rev, force=False, opts=None, user=None):
         The path to the Git repository
 
     rev
-        The remote branch or revision to merge into the current branch
+        The remote branch or revision to checkout
 
-    force : (none)
-        The remote branch or revision to merge into the current branch
+    force : False
+        Force a checkout even if there might be overwritten changes
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Examples::
@@ -245,7 +245,7 @@ def checkout(cwd, rev, force=False, opts=None, user=None):
 
         salt '*' git.checkout /path/to/repo opts='testbranch -- conf/file1 file2'
 
-        salt '*' git.checkout /path/to/repo 'origin/mybranch --track'
+        salt '*' git.checkout /path/to/repo rev=origin/mybranch opts=--track
     '''
     _check_git()
 
@@ -264,10 +264,10 @@ def merge(cwd, branch='@{upstream}', opts=None, user=None):
     branch : @{upstream}
         The remote branch or revision to merge into the current branch
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Example::
@@ -292,10 +292,10 @@ def init(cwd, opts=None, user=None):
     cwd
         The path to the Git repository
 
-    opts : (none)
+    opts : None
         Any additional options to add to the command line
 
-    user : (none)
+    user : None
         Run git as a user other than what the minion runs as
 
     CLI Example::
