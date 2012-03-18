@@ -44,7 +44,7 @@ class Batch(object):
             args.append('compound')
         else:
             args.append('glob')
-        
+
         fret = []
         for ret in self.local.cmd_iter(*args):
             for minion in ret:
@@ -56,18 +56,19 @@ class Batch(object):
         '''
         Return the active number of minions to maintain
         '''
-        snum = len(self.minions)
+        partition = lambda x: float(x) / 100.0 * len(self.minions)
         try:
-            if self.opts['batch'].startswith('%'):
-                return int(math.ceil(
-                        float(self.opts['batch'][1:]) / 100.0 * snum))
-            elif self.opts['batch'].endswith('%'):
-                return int(math.ceil(
-                        float(self.opts['batch'][:-1]) / 100.0 * snum))
+            if '%' in self.opts['batch']:
+                res = partition(float(self.opts['batch'].strip('%')))
+                if res < 1:
+                    return int(math.ceil(res))
+                else:
+                    return int(res)
+            else:
+                return int(self.opts['batch'])
         except ValueError:
             print ('Invalid batch data sent: {0}\nData must be in the form'
                    'of %10, 10% or 3').format(self.opts['batch'])
-        return int(self.opts['batch'])
 
     def run(self):
         '''
