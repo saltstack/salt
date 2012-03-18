@@ -151,7 +151,7 @@ def install(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     if requirements:
-        cmd = '{cmd} --requirement {requirements} '.format(
+        cmd = '{cmd} --requirement "{requirements}" '.format(
             cmd=cmd, requirements=requirements)
 
     if log:
@@ -190,13 +190,13 @@ def install(pkgs=None,
     if index_url:
         if not index_url.startswith("http://"):
             raise Exception("'%s' must be a valid url" % index_url)
-        cmd = '{cmd} --index_url={index_url} '.format(
+        cmd = '{cmd} --index_url="{index_url}" '.format(
             cmd=cmd, index_url=index_url)
 
     if extra_index_url:
         if not extra_index_url.startswith("http://"):
             raise Exception("'%s' must be a valid url" % extra_index_url)
-        cmd = '{cmd} --extra_index_url={extra_index_url} '.format(
+        cmd = '{cmd} --extra_index_url="{extra_index_url}" '.format(
             cmd=cmd, extra_index_url=extra_index_url)
 
     if no_index:
@@ -307,7 +307,7 @@ def uninstall(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     if requirements:
-        cmd = '{cmd} --requirements{requirements} '.format(
+        cmd = '{cmd} --requirements "{requirements}" '.format(
             cmd=cmd, requirements=requirements)
 
     if log:
