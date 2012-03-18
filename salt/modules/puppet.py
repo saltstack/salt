@@ -2,7 +2,7 @@
 Execute puppet routines
 '''
 
-from salt.exceptions import CommandNotFoundError
+from salt import utils
 
 __outputter__ = {
     'run':  'txt',
@@ -18,13 +18,13 @@ def _check_puppet():
     # I thought about making this a virtual module, but then I realized that I
     # would require the minion to restart if puppet was installed after the
     # minion was started, and that would be rubbish
-    return __salt__['cmd.has_exec']('puppetd')
+    utils.check_or_die('puppetd')
 
 def _check_facter():
     '''
     Checks if facter is installed
     '''
-    return __salt__['cmd.has_exec']('facter')
+    utils.check_or_die('facter')
 
 def _format_fact(output):
     try:
@@ -49,8 +49,7 @@ def run(tags=None):
 
         salt '*' puppet.run basefiles::edit,apache::server
     '''
-    if not _check_puppet():
-        raise CommandNotFoundError('puppetd not available')
+    _check_puppet():
 
     if not tags:
         cmd = 'puppetd --test'
@@ -71,8 +70,7 @@ def noop(tags=None):
 
         salt '*' puppet.noop web::server,django::base
     '''
-    if not _check_puppet():
-        raise CommandNotFoundError('puppetd not available')
+    _check_puppet():
 
     if not tags:
         cmd = 'puppetd --test --noop'
@@ -89,8 +87,7 @@ def facts():
 
         salt '*' puppet.facts
     '''
-    if not _check_facter():
-        raise CommandNotFoundError('facter not available')
+    _check_facter():
 
     ret = {}
     output = __salt__['cmd.run']('facter')
@@ -114,8 +111,7 @@ def fact(name):
 
         salt '*' puppet.fact kernel
     '''
-    if not _check_facter():
-        raise CommandNotFoundError('facter not available')
+    _check_facter():
 
     ret = __salt__['cmd.run']('facter {0}'.format(name))
     if not ret:
