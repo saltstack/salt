@@ -11,7 +11,7 @@ import re
 
 def _gem(command, ruby=None, runas=None):
     cmdline = "gem {command}".format(command=command)
-    if __salt__["rvm.is_installed"]:
+    if __salt__["rvm.is_installed"]():
         return __salt__["rvm.do"](ruby, cmdline, runas=runas)
 
     ret = __salt__["cmd.run_all"](
@@ -92,8 +92,12 @@ def list(prefix="", ruby=None, runas=None):
         The user to run gem as.
     """
     gems = {}
-    for line in _gem("list {prefix}".format(prefix=prefix),
-                     ruby, runas=runas).splitlines():
+    stdout = _gem("list {prefix}".format(prefix=prefix),
+                     ruby, runas=runas)
+    lines = []
+    if isinstance(stdout, str):
+        lines = stdout.splitlines()
+    for line in lines:
         m = re.match("^([^ ]+) \((.+)\)", line)
         if m:
             gem = m.group(1)

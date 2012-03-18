@@ -179,6 +179,11 @@ class SaltCMD(object):
                 action='store_true',
                 dest='json_out',
                 help='Print the output from the salt command in json.')
+        parser.add_option('--no-color',
+                default=False,
+                action='store_true',
+                dest='no_color',
+                help='Disable all colored output')
 
         options, args = parser.parse_args()
 
@@ -336,7 +341,8 @@ class SaltCMD(object):
             # Pretty print any salt exceptions
             elif isinstance(ret, SaltException):
                 printout = get_outputter("txt")
-            printout(ret)
+            color = not bool(self.opts['no_color'])
+            printout(ret, color=color)
 
     def _format_ret(self, full_ret):
         '''
