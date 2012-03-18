@@ -141,6 +141,11 @@ In the past it was required that all arguments be passed in the proper order to
 the *salt* and *salt-call* commands. As of 0.9.8, keyword arguments can be
 passed in the form of ``kwarg=argument``.
 
+.. code-block:: sh
+
+		# salt -G 'type:dev' git.clone repository=https://github.com/saltstack/salt.git cwd=/tmp/salt
+
+
 Matcher Refinements and Changes
 -------------------------------
 
