@@ -2,15 +2,39 @@
 Support for the Mercurial SCM
 '''
 
+from salt import utils
+
+__outputter__ = {
+  'clone': 'txt',
+  'revision': 'txt',
+}
+
+def _check_hg():
+    utils.check_or_die('hg')
+
 def revision(cwd, rev='tip', short=False, user=None):
     '''
     Returns the long hash of a given identifier (hash, branch, tag, HEAD, etc)
 
-    Usage::
+    cwd
+        The path to the Mercurial repository
+
+    rev: tip
+        The revision
+
+    short: False
+        Return an abbreviated commit hash
+
+    user : (none)
+        Run hg as a user other than what the minion runs as
+
+    CLI Example::
 
         salt '*' hg.revision /path/to/repo mybranch
     '''
-    cmd = 'hg id -i{short} {ref}'.format(
+    _check_hg()
+
+    cmd = 'hg id -i{short} {rev}'.format(
         short = ' --debug' if not short else '',
         rev = ' -r {0}'.format(rev))
 
@@ -25,27 +49,59 @@ def describe(cwd, rev='tip', user=None):
     '''
     Mimick git describe and return an identifier for the given revision
 
-    Usage::
+    cwd
+        The path to the Mercurial repository
+
+    rev: HEAD
+        The path to the archive tarball
+
+    user : (none)
+        Run hg as a user other than what the minion runs as
+
+    CLI Example::
 
         salt '*' hg.describe /path/to/repo
     '''
+    _check_hg()
+
     cmd = "hg log -r {0} --template"\
             " '{{latesttag}}-{{latesttagdistance}}-{{node|short}}'".format(rev)
     desc = __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
 
     return desc or revision(cwd, rev, short=True)
 
-def archive(cwd, output, rev='tip', fmt='', prefix='', user=None):
+def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     '''
     Export a tarball from the repository
+
+    cwd
+        The path to the Mercurial repository
+
+    output
+        The path to the archive tarball
+
+    rev: tip
+        The revision to create an archive from
+
+    fmt: (none)
+        Format of the resulting archive. Mercurial supports: tar,
+        tbz2, tgz, zip, uzip, and files formats.
+
+    prefix: (none)
+        Prepend <prefix>/ to every filename in the archive
+
+    user : (none)
+        Run hg as a user other than what the minion runs as
 
     If ``prefix`` is not specified it defaults to the basename of the repo
     directory.
 
-    Usage::
+    CLI Example::
 
-        salt '*' hg.archive /path/to/repo /path/to/archive.tar.gz
+        salt '*' hg.archive /path/to/repo output=/path/to/BACKUP.tar.gz fmt=tgz
     '''
+    _check_hg()
+
     cmd = 'hg archive {output}{rev}{fmt}'.format(
         rev = ' --rev {0}'.format(rev),
         output = output,
@@ -58,20 +114,39 @@ def pull(cwd, opts='', user=None):
     '''
     Perform a pull on the given repository
 
-    Usage::
+    cwd
+        The path to the Mercurial repository
+
+    opts : (none)
+        Any additional options to add to the command line
+
+    user : (none)
+        Run hg as a user other than what the minion runs as
+
+    CLI Example::
 
         salt '*' hg.pull /path/to/repo '-u'
     '''
+    _check_hg()
+
     return __salt__['cmd.run']('hg pull {0}'.format(opts), cwd=cwd, runas=user)
 
 def update(cwd, rev, force=False, user=None):
     '''
     Checkout a given revision
 
-    Usage::
+    cwd
+        The path to the Mercurial repository
 
-        salt '*' hg.update /path/to/repo somebranch
+    rev
+        The path to the archive tarball
+
+    CLI Example::
+
+        salt devserver1 hg.update /path/to/repo somebranch
     '''
+    _check_hg()
+
     cmd = 'hg update {0}{1}'.format(rev, ' -C' if force else '')
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 
@@ -79,9 +154,23 @@ def clone(cwd, repository, opts='', user=None):
     '''
     Clone a new repository
 
-    Usage::
+    cwd
+        The path to the Git repository
+
+    repository
+        The hg uri of the repository
+
+    opts : (none)
+        Any additional options to add to the command line
+
+    user : (none)
+        Run hg as a user other than what the minion runs as
+
+    CLI Example::
 
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
     '''
+    _check_hg()
+
     cmd = 'hg clone {0} {1} {2}'.format(repository, cwd, opts)
     return __salt__['cmd.run'](cmd, runas=user)
