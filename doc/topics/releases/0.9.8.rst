@@ -6,52 +6,77 @@ Salt 0.9.8 is a big step forward, with many additions and enhancements, as
 well as a number of precursors to advanced future developments.
 
 This version of Salt adds much more power to the command line, making the
-old hard timeout issues a thing of the past, and adding keyword argument
-support to salt calls. These additions are also available in the salt client
-api, making the available api tools much more powerful.
+old hard timeout issues a thing of the past and adds keyword argument
+support. These additions are also available in the salt client api, making
+the available api tools much more powerful.
 
 The new pillar system allows for data to be stored on the master and
-assigned to minions in a granular way similar to the state system.
+assigned to minions in a granular way similar to the state system. It also
+allows flexibility for users who want to keep data out of their state tree
+similar to 'external lookup' functionality in other tools.
 
 Additions to requisites making them much more powerful have been added and
 improved error checking for sls files in the state system. A new provider
-system has been added to allow for redirecting what modules function in
-the background for individual states.
+system has been added to allow for redirecting what modules run in the
+background for individual states.
 
 Support for OpenSUSE has been added and support for Solaris has begun
-serious development. Windows support has been signifigantly enhanced as well.
+serious development. Windows support has been significantly enhanced as well.
 
 The matcher and target systems have received a great deal of attention. The
-default behavior of grain matching has changed slightly to reflect the salt
-default behavior and the compound matcher system has been greatly refined.
+default behavior of grain matching has changed slightly to reflect the rest
+of salt and the compound matcher system has been refined.
 
 A number of impressive features with keyword arguments have been added to both
-the cli and to the state system, making states much more powerful and flexible,
-but available in a clean and simple way.
+the cli and to the state system. This makes states much more powerful and
+flexible while maintaining the simple configuration everyone loves.
 
-The new batch size capability allows for executions to be rolled through the
-targeted minions in percentage or specific numbers of minions. This was added
-to prevent the "thundering herd" problem when targetting large numbers of
-minions for things like service restarts or file downloads.
+The new batch size capability allows for executions to be rolled through a
+group of targeted minions a percentage or specific number at a time. This
+was added to prevent the "thundering herd" problem when targeting large
+numbers of minions for things like service restarts or file downloads.
 
 Upgrade Considerations
 ======================
 
-Upgrade Issue
--------------
+Upgrade Issues
+--------------
 
-There was an oversight that has been previously missed which could cause a
-newer minion to crash an older master. This oversight has been repaired so
-that this version incompatibility issue will not occur again. When upgrading
-to 0.9.8 make sure to upgrade the master first, followed by the minions.
+There was a previously missed oversight which could cause a newer minion to
+crash an older master. That oversight has been resolved so the version
+incompatibility issue will no longer occur. When upgrading to 0.9.8 make
+sure to upgrade the master first, followed by the minions.
 
 Debian/Ubuntu Packages
 ----------------------
 
 The original Debian/Ubuntu packages were called salt and included all salt
-applications. New packages in the ppa are split. If an old salt package is
-installed then it should be manually removed and the new split packages
-need to be installed fresh.
+applications. New packages in the ppa are split by function. If an old salt
+package is installed then it should be manually removed and the new split
+packages need to be freshly installed.
+
+On the master:
+
+.. code-block:: sh
+
+    # apt-get purge salt
+    # apt-get install salt-{master,minion}
+
+On the minions:
+
+.. code-block:: sh
+
+    # apt-get purge salt
+    # apt-get install salt-minion
+
+And on any Syndics:
+
+.. code-block:: sh
+
+    # apt-get install salt-syndic
+
+The official salt stack ppa for Ubuntu is located at:
+https://launchpad.net/~saltstack/+archive/salt
 
 
 Major Features
@@ -69,31 +94,76 @@ trivial to those already familiar with salt states.
 CLI Additions
 -------------
 
-The salt command in 0.9.8 has received a serious overhaul and is more powerful
-then ever. Data is returned to the terminal as it is received, and the salt
+The ``salt`` command has received a serious overhaul and is more powerful
+than ever. Data is returned to the terminal as it is received, and the salt
 command will now wait for all running minions to return data before stopping.
+This makes adding very large *--timeout* arguments completely unnecessary and
+gets rid of long running operations returning empty ``{}`` when the timeout is
+exceeded.
 
-Kwargs and States
------------------
+When calling salt via sudo, the user originally running salt is saved to the
+log for auditing purposes. This makes it easy to see who ran what by just
+looking through the minion logs.
 
-A new addition to writing state modules has been made available. State modules
-can now accept the ``**kwargs`` argument. The result of this is that all data
-in an sls file assigned to a state will be made available to the state function.
+The *salt-key* command gained the *-D* and *--delete-all* arguments for
+removing all keys. Be careful with this one!
 
-This enables data to be passed in a transparent way back to the modules that
-are executing the logic. In particular this allows us to add arguments to the
-pkg.install module that enable more advanced and granular controls with respect
-to what the state is capable of.
+Keyword Arguments and States
+----------------------------
 
-Kwargs and the CLI
-------------------
+State modules now accept the ``**kwargs`` argument. This results in all data
+in a sls file assigned to a state will be made available to the state function.
 
-In the past it was required that all arguments be passed in order to modules
-from the salt and salt-call commands. As of 0.9.8 keyword arguments can be
+This passes data in a transparent way back to the modules executing the logic.
+In particular, this allows adding arguments to the ``pkg.install`` module that
+enable more advanced and granular controls with respect to what the state is
+capable of.
+
+An example of this along with the new debconf module for installing ldap
+client packages on Debian:
+
+.. code-block:: yaml
+
+    ldap-client-packages:
+      pkg:
+        - debconf: salt://debconf/ldap-client.ans
+        - installed
+        - names:
+          - nslcd
+          - libpam-ldapd
+          - libnss-ldapd
+
+Keyword Arguments and the CLI
+-----------------------------
+
+In the past it was required that all arguments be passed in the proper order to
+the *salt* and *salt-call* commands. As of 0.9.8, keyword arguments can be
 passed in the form of ``kwarg=argument``.
 
 Matcher Refinements and Changes
 -------------------------------
+
+A number of fixes and changes have been applied to the Matcher system. The
+most noteworthy is the change in the grain matcher. The grain matcher used
+a regular expression to match the passed data to a grain, but now defaults
+to a shell glob like the majority of match interfaces in Salt. A new option
+is available that still uses the old style regex matching to grain data called
+grain-pcre. To use regex matching in compound matches use the letter *P*.
+
+For example, this would match any ArchLinux or Fedora minions:
+
+.. code-block:: sh
+
+  # salt --grain-pcre 'os:(Arch:Fed).*' test.ping
+
+And the associated compound matcher suitable for ``top.sls`` is *P*:
+
+.. code-block:: sh
+
+  P@os:(Arch|Fed).*
+
+**NOTE**: Changing the grains matcher from pcre to glob is backwards
+incompatible.
 
 Support has been added for matching minions with Yahoo's range library. This
 is handled by passing range syntax with *-R* or *--range* arguments to salt.
@@ -101,41 +171,19 @@ is handled by passing range syntax with *-R* or *--range* arguments to salt.
 More information at:
 https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
 
-Much like the rest of salt, grains are now matched by default using globs
-instead of regular expressions. A new *--grain-pcre* was added to the salt
-command line for doing just this:
-
-.. code-block:: sh
-
-  # salt --grain-pcre 'os:(Arch:Fed).*' test.ping
-
-The associated compound matcher for use in states or the ``top.sls`` is *P*:
-
-
-.. code-block:: sh
-
-  P@os:(Arch|Fed).*
-
-**NOTE**: The default grains matcher has changed from pcre to glob for consistency
-=======
-A number of fixes and changes have been applied to the Matcher system. The
-most noteworthy is the change in the grain matcher. The grain matcher used
-a regular expression to match the passed data to a grain, but now defaults
-to a shell glob like the majority of match interfaces in Salt. A new option
-is available that still uses the old style regex matching to grain data called
-grain-pcre. To use regex matching in compound matches use the letter P.
 
 Providers
 ---------
 
 Salt predetermines what modules should be mapped to what uses based on the
 properties of a system. These determinations are generally made for modules
-that provide things like package and service management.
+that provide things like package and service management. The apt module
+maps to pkg on Debian and the yum module maps to pkg on Fedora for instance.
 
-Sometimes in states it may be needed for an alternative module to be used
-to provide the functionality needed. For instance, an Arch Linux system may
-have been set up with systemd support, so instead of using the default service
-module detected for Arch Linux, the systemd module can be used:
+Sometimes in states, it may be necessary for a non-default module to be used
+for the desired functionality. For instance, an Arch Linux system may have
+been set up with systemd support. Instead of using the default service module
+detected for Arch Linux, the systemd module can be used:
 
 .. code-block:: yaml
 
@@ -149,8 +197,9 @@ Requisite Glob Matching
 -----------------------
 
 Requisites can now be defined with glob expansion. This means that if there are
-many requisities they can be defined in a single line. For instance, if all
-files in a directory are required or watched, then it can be defined like so:
+many requisites, they can be defined on a single line.
+
+To watch all files in a directory:
 
 .. code-block:: yaml
 
@@ -167,22 +216,26 @@ This example will watch all defined files that match the glob
 Batch Size
 ----------
 
-The new batch size option allows for commands to be executed while maintaining
-that only so many hosts are executing the command at one time. This option can
+The new batch size option allows commands to be executed while maintaining that
+only so many hosts are executing the command at one time. This option can
 take a percentage or a finite number:
 
 .. code-block:: bash
 
-    salt \* -b %10 test.ping
+    salt \* -b 10 test.ping
 
-This will only run test.ping on %10 of targeted systems at a time and work
-through all targeted systems until the task is complete
+    salt -G 'os:RedHat' --batch-size 25% apache.signal restart
 
+This will only run test.ping on 10 of the targeted minions at a time and then
+restart apache on 25% of the minions matching ``os:RedHat`` at a time and work
+through them all until the task is complete. This makes jobs like rolling web
+server restarts behind a load balancer or doing maintenance on BSD firewalls
+using carp much easier with salt.
 
 Module Updates
 ---------------
 
-This is a list of notable, but not complete updates with new and existing
+This is a list of notable, but non-exhaustive updates with new and existing
 modules.
 
 For our ruby users, new :doc:`rvm </ref/modules/all/salt.modules.rvm>` and
@@ -193,16 +246,35 @@ with the :doc:`associated </ref/states/all/salt.states.rvm>`
 
 The :doc:`virt </ref/modules/all/salt.modules.virt>` module gained basic Xen support.
 
-The :doc:`pkg </ref/modules/all/salt.modules.yumpkg>` module gained Scientific Linux support.
+The :doc:`yum </ref/modules/all/salt.modules.yumpkg5>`
+:doc:`pkg </ref/modules/all/salt.modules.yumpkg>` modules gained Scientific
+Linux support.
 
-The :doc:`pkg </ref/modules/all/salt.modules.apt>` module on Debian, Ubuntu, and derivatives
-forces apt to run in a non-interactive mode preventing previous issues with installation. Also,
-Ubuntu users gained a new upstart :doc:`service </ref/modules/all/salt.modules.upstart>` module.
+The :doc:`pkg </ref/modules/all/salt.modules.apt>` module on Debian, Ubuntu,
+and derivatives force apt to run in a non-interactive mode. This prevents
+issues when package installation waits for confirmation.
 
-The :doc:`mysql.user </ref/states/all/salt.states.mysql_user>` state and :doc:`mysql </ref/modules/all/salt.modules.mysql>` module gained a *password_hash* argument.
+A :doc:`pkg </ref/modules/all/salt.modules.zypper>` module for OpenSUSE's
+zypper was added.
 
-The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module and state gained a *shell* keyword argument for specifying
-a shell other than ``/bin/sh`` on Linux / Unix systems.
+The :doc:`service </ref/modules/all/salt.modules.upstart>` module on ubuntu
+natively supports upstart.
+
+A new :doc:`debconf </ref/modules/all/salt.modules.debconfmod>` module was
+contributed by our community for more advanced control over deb package
+deployments on Debian based distributions.
+
+The :doc:`mysql.user </ref/states/all/salt.states.mysql_user>` state and
+:doc:`mysql </ref/modules/all/salt.modules.mysql>` module gained a
+*password_hash* argument.
+
+The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module and state gained
+a *shell* keyword argument for specifying a shell other than ``/bin/sh`` on
+Linux / Unix systems.
+
+New :doc:`git </ref/modules/all/salt.modules.git>` and
+:doc:`mercurial </ref/modules/all/salt.modules.hg>` modules have been added
+for fans of distributed version control.
 
 
 In Progress Development
@@ -212,19 +284,31 @@ Master Side State Compiling
 ---------------------------
 
 While we feel strongly that the advantages gained with minion side state
-compiling is very critical, it does prevent certain features what may be
+compiling are very critical, it does prevent certain features what may be
 desired. 0.9.8 has support for initial master side state compiling, but many
 more components still need to be developed, it is hoped that these can be
 finished for 0.9.9.
 
 The goal is that states can be compiled on both the master and the minion
-allowing for compilation to be split between master and minion.
+allowing for compilation to be split between master and minion. Why will
+this be great? It will allow storing sensitive data on the master and sending
+it to some minions without all minions having access to it. This will be
+good for handling ssl certificates on front-end web servers.
+
+
+New File Client
+---------------
+
+The file client code has been re-factored to allow local ``salt://`` uris.
+This will eventually allow for running salt's configuration management via
+``salt-call state.highstate`` to run without a salt-minion daemon running.
 
 
 Solaris Support
 --------------------
 
-Salt 0.9.8 sees the introduction of basic Solaris support.
+Salt 0.9.8 sees the introduction of basic Solaris support. The daemon runs
+well, but grains and more of the modules need updating and testing.
 
 
 Windows Support

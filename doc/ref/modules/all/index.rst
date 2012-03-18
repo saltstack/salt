@@ -19,24 +19,31 @@ Full list of builtin modules
     cp
     cron
     data
+    debconfmod
     disk
     ebuild
     file
     freebsdkmod
     freebsdpkg
+    freebsdservice
     gem
     gentoo_service
+    git
     grains
     groupadd
+    hg
     hosts
     kmod
+    kvm_hyper
     linux_sysctl
     mdadm
     moosefs
     mount
     mysql
     network
+    nginx
     pacman
+    pillar
     pip
     pkg
     ps
@@ -67,3 +74,4 @@ Full list of builtin modules
     win_useradd
     yumpkg
     yumpkg5
+    zypper
