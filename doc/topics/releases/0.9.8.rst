@@ -42,18 +42,41 @@ Upgrade Considerations
 Upgrade Issues
 --------------
 
-There was an oversight that has been previously missed which could cause a
-newer minion to crash an older master. This oversight has been repaired so
-that this version incompatibility issue will not occur again. When upgrading
-to 0.9.8 make sure to upgrade the master first, followed by the minions.
+There was a previously missed oversight which could cause a newer minion to
+crash an older master. That oversight has been resolved so the version
+incompatibility issue will no longer occur. When upgrading to 0.9.8 make
+sure to upgrade the master first, followed by the minions.
 
 Debian/Ubuntu Packages
 ----------------------
 
 The original Debian/Ubuntu packages were called salt and included all salt
-applications. New packages in the ppa are split. If an old salt package is
-installed then it should be manually removed and the new split packages
-need to be installed fresh.
+applications. New packages in the ppa are split by function. If an old salt
+package is installed then it should be manually removed and the new split
+packages need to be freshly installed.
+
+On the master:
+
+.. code-block:: sh
+
+    # apt-get purge salt
+    # apt-get install salt-{master,minion}
+
+On the minions:
+
+.. code-block:: sh
+
+    # apt-get purge salt
+    # apt-get install salt-minion
+
+And on any Syndics:
+
+.. code-block:: sh
+
+    # apt-get install salt-syndic
+
+The official salt stack ppa for Ubuntu is located at:
+https://launchpad.net/~saltstack/+archive/salt
 
 
 Major Features
@@ -71,25 +94,43 @@ trivial to those already familiar with salt states.
 CLI Additions
 -------------
 
-The salt command in 0.9.8 has received a serious overhaul and is more powerful
-then ever. Data is returned to the terminal as it is received, and the salt
+The ``salt`` command has received a serious overhaul and is more powerful
+than ever. Data is returned to the terminal as it is received, and the salt
 command will now wait for all running minions to return data before stopping.
 This makes adding very large *--timeout* arguments completely unnecessary.
+
 When calling salt via sudo, the user originally running salt is saved to the
-salt log for auditing purposes. The *salt-key* command gained the *-D* and
-*--delete-all* arguments for removing all keys.
+salt log for auditing purposes. This makes it easy to see who ran what by just
+looking through the minion logs.
+
+The *salt-key* command gained the *-D* and *--delete-all* arguments for
+removing all keys. Be careful with this one!
 
 Keyword Arguments and States
 -----------------
 
 A new addition to writing state modules has been made available. State modules
-can now accept the ``**kwargs`` argument. The result of this is that all data
+now accept the ``**kwargs`` argument. The result of this is that all data
 in a sls file assigned to a state will be made available to the state function.
 
-This enables data to be passed in a transparent way back to the modules that
-are executing the logic. In particular, this allows us to add arguments to the
-pkg.install module that enable more advanced and granular controls with respect
-to what the state is capable of.
+This passes data in a transparent way back to the modules executing the logic.
+In particular, this allows adding arguments to the ``pkg.install`` module that
+enable more advanced and granular controls with respect to what the state is
+capable of.
+
+An example of this along with the new debconf module for installing ldap
+client packages on Debian:
+
+.. code-block:: yaml
+
+    ldap-client-packages:
+      pkg:
+        - debconf: salt://debconf/ldap-client.ans
+        - installed
+        - names:
+          - nslcd
+          - libpam-ldapd
+          - libnss-ldapd
 
 Keyword Arguments and the CLI
 ------------------
@@ -100,12 +141,6 @@ be passed in the form of ``kwarg=argument``.
 
 Matcher Refinements and Changes
 -------------------------------
-
-Support has been added for matching minions with Yahoo's range library. This
-is handled by passing range syntax with *-R* or *--range* arguments to salt.
-
-More information at:
-https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
 
 A number of fixes and changes have been applied to the Matcher system. The
 most noteworthy is the change in the grain matcher. The grain matcher used
@@ -128,6 +163,12 @@ And the associated compound matcher suitable for ``top.sls`` is *P*:
 
 **NOTE**: The default grains matcher has changed from pcre to glob. This is a
 backwards incompatible change.
+
+Support has been added for matching minions with Yahoo's range library. This
+is handled by passing range syntax with *-R* or *--range* arguments to salt.
+
+More information at:
+https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
 
 Providers
 ---------
@@ -242,6 +283,15 @@ finished for 0.9.9.
 
 The goal is that states can be compiled on both the master and the minion
 allowing for compilation to be split between master and minion.
+
+
+New File Client
+---------------
+
+The file client code has been refactored for allowing ``salt://`` uris to
+get data from the local server. This will eventually allow for running
+salt's configuration management via ``salt-call state.highstate`` to run
+without a salt-minion daemon running.
 
 
 Solaris Support
