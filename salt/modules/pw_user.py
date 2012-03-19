@@ -175,7 +175,7 @@ def chgroups(name, groups, append=False):
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
-    cmd = 'pw usermod -G {0} {1} '.format(','.join(groups), name)
+    cmd = 'pw usermod -G {0} -n {1} '.format(','.join(groups), name)
     if append:
         cmd += '-a'
     __salt__['cmd.run'](cmd)
