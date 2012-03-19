@@ -265,6 +265,17 @@ def list_pkgs(regex_string=""):
         if len(cols) and 'ii' in cols[0]:
             ret[cols[1]] = cols[2]
 
+    # If ret is empty at this point, check to see if the package is virtual.
+    # We also need aptitude past this point.
+    if not ret and __salt__['cmd.has_exec']('aptitude'):
+        cmd = ('aptitude search "{0} ?virtual ?reverse-provides(?installed)"'
+                .format(regex_string))
+
+        out = __salt__['cmd.run_stdout'](cmd)
+        if out:
+            ret[regex_string] = '1' # Setting all 'installed' virtual package
+                                    # versions to '1'
+
     return ret
 
 

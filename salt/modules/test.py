@@ -89,7 +89,7 @@ def cross_test(func, args=None):
 
 def kwarg(**kwargs):
     '''
-    Print out the data passed into the function **kwargs, this is used to
+    Print out the data passed into the function ``**kwargs``, this is used to
     both test the publication data and cli kwarg passing, but also to display
     the information available within the publication data.
 

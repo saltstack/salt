@@ -1,6 +1,6 @@
-====================
-Opening the Firewall
-====================
+================================
+Opening the Firewall up for Salt
+================================
 
 The Salt master communicates with the minions using an AES-encrypted ZeroMQ
 connection. These communications are done over ports 4505 and 4506, which need
@@ -25,11 +25,11 @@ some of the more common locations, but your mileage may vary.
 
 **Arch Linux** ::
 
-    /etc/iptables/iptables.ruls
+    /etc/iptables/iptables.rules
 
-**Debian/Ubuntu** ::
+**Debian**
 
-    ???
+Follow these instructions: http://wiki.debian.org/iptables
 
 Once you've found your firewall rules, you'll need to add the two lines below
 to allow traffic on ``tcp/4505`` and ``tcp/4506``:
@@ -38,6 +38,15 @@ to allow traffic on ``tcp/4505`` and ``tcp/4506``:
 
     + -A INPUT -m state --state new -m tcp -p tcp --dport 4505 -j ACCEPT
     + -A INPUT -m state --state new -m tcp -p tcp --dport 4506 -j ACCEPT
+
+**Ubuntu**
+
+Create a file named ``/etc/ufw/applications.d/salt-master`` ::
+
+		[Salt Master]
+		title=Salt master
+		description=Salt is a remote execution and configuration management tool.
+		ports=4205,4206/tcp
 
 pf.conf
 =======

@@ -34,15 +34,19 @@ You can check port connectivity from the minion with the nc command:
   # nc -v -z salt.master.ip 4505
   # nc -v -z salt.master.ip 4506
 
+There is also a :doc:`firewall configuration</topics/tutorials/firewall>`
+document that might help as well.
+
 
 Using salt-call
 ===============
 
-The salt-call command was originally developed for aiding in the development
+The ``salt-call`` command was originally developed for aiding in the development
 of new salt modules. Since then many applications have arisen for the salt-call
 command that is bundled with the salt minion. These range from the original
 intent of the salt-call, development assistance, to gathering large amounts of
-data from complex calls like state.highstate.
+data from complex calls like
+:doc:`state.highstate</ref/modules/all/salt.modules.state>`.
 
 When developing the state tree it is generally recommended to invoke
 state.highstate with salt-call, this displays a great deal more information
@@ -81,9 +85,9 @@ Salt Master Stops Responding
 
 There are known bugs with ZeroMQ less than 2.1.11 which can cause the salt
 master to not respond properly. If you're running ZeroMQ greater than or equal
-to 2.1.9, you can work around the bug by setting the sysctl net.core.rmem_max
-and net.core.wmem_max to 16777216. Next set the third field in net.ipv4.tcp_rmem
-and net.ipv4.tcp_wmem to at least 16777216.
+to 2.1.9, you can work around the bug by setting the sysctls
+``net.core.rmem_max`` and ``net.core.wmem_max`` to 16777216. Next set the third
+field in ``net.ipv4.tcp_rmem`` and ``net.ipv4.tcp_wmem`` to at least 16777216.
 
 You can do it manually with something like:
 
@@ -118,3 +122,11 @@ Or with the following salt state:
       sysctl:
         - present
         - value: 4096 87380 16777216
+
+
+Common YAML Gotchas
+===================
+
+An extensive list of
+:doc:`yaml idiosyncrasies</topics/troubleshooting/yaml_idiosyncrasies>`
+has been compiled.
