@@ -54,6 +54,15 @@ http://red45.wordpress.com/
 
 .. _`The Red45`: http://red45.wordpress.com/
 
+
+Example Salt States
+===================
+The official ``salt-states`` repository is:
+https://github.com/saltstack/salt-states
+
+Another good example from one of our users is:
+https://github.com/blast-hardcheese/blast-salt-states
+
 Follow on ohloh
 ===============
 
