@@ -4,6 +4,13 @@
 Full list of builtin modules
 ============================
 
+.. admonition:: Virtual modules
+
+    .. toctree::
+
+        salt.modules.pkg
+        salt.modules.sys
+
 .. currentmodule:: salt.modules
 
 .. autosummary::
@@ -45,7 +52,6 @@ Full list of builtin modules
     pacman
     pillar
     pip
-    pkg
     ps
     publish
     puppet
@@ -61,7 +67,6 @@ Full list of builtin modules
     ssh
     state
     status
-    sys
     systemd
     test
     tomcat
