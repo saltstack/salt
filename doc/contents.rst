@@ -14,6 +14,7 @@ Full Table of Contents
     topics/tutorials/starting_states
     topics/tutorials/states*
     topics/tutorials/firewall
+    topics/tutorials/bootstrap_ec2
     topics/pillar/index
     topics/jobs/index
     topics/troubleshooting/index
@@ -34,6 +35,7 @@ Full Table of Contents
     ref/syndic
     ref/python-api
     ref/file_server/index
+    ref/file_server/file_roots
     ref/file_server/dynamic-modules
     ref/configuration/*
 
@@ -47,5 +49,6 @@ Full Table of Contents
     ref/cli/salt-run
     ref/cli/salt-syndic
 
+    topics/specs/salt_auth_proto_abs
     topics/roadmap/index
     topics/releases/index
