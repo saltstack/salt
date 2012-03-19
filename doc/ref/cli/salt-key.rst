@@ -47,9 +47,13 @@ Options
 
     Rejects all pending public keys.
 
-    option:: -d DELETE --delete=DELETE
+.. option:: -d DELETE, --delete=DELETE
 
     Delete the named minion key for command execution.
+
+.. option:: -D DELETE_ALL, --delete-all=DELETE_ALL
+
+    Deleta all keys
 
 .. option:: -c CONFIG, --config=CONFIG
 
