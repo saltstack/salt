@@ -13,6 +13,13 @@ except:
 
 load = yaml.load
 
+
+class DuplicateKeyWarning(RuntimeWarning):
+    """Warned when duplicate keys exist"""
+
+warnings.simplefilter('always', category=DuplicateKeyWarning)
+
+
 class CustomeConstructor(yaml.constructor.SafeConstructor):
     def construct_mapping(self, node, deep=False):
         if not isinstance(node, MappingNode):
@@ -29,7 +36,8 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
                         "found unacceptable key (%s)" % exc, key_node.start_mark)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
-                warnings.warn("Duplicate Key: '{0}'".format(key))
+                warnings.warn(
+                    "Duplicate Key: '{0}'".format(key), DuplicateKeyWarning)
             mapping[key] = value
         return mapping
 
