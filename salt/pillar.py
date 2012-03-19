@@ -194,11 +194,6 @@ class Pillar(object):
                             continue
                         matches = []
                         states = set()
-                        for comp in ctop[env][tgt]:
-                            if isinstance(comp, dict):
-                                cmatches.append(comp)
-                            if isinstance(comp, basestring):
-                                cstates.add(comp)
                         for comp in top[env][tgt]:
                             if isinstance(comp, dict):
                                 matches.append(comp)

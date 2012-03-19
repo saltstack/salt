@@ -15,7 +15,9 @@ __all__ = ('zmq_version', 'run')
 
 
 def zmq_version():
-    '''ZeroMQ python bindings >= 2.1.9 are required'''
+    '''
+    ZeroMQ python bindings >= 2.1.9 are required
+    '''
     import zmq
     ver = zmq.__version__
     # The last matched group can be None if the version
@@ -50,7 +52,11 @@ def zmq_version():
         return True
 
     # If all else fails, gracefully croak and warn the user
-    log.critical("ZeroMQ python bindings >= 2.1.9 are required")
+    log.critical('ZeroMQ python bindings >= 2.1.9 are required')
+    if 'salt-master' in sys.argv[0]:
+        log.critical('The Salt Master is unstable using a ZeroMQ version '
+            'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
+            'org/pipermail/zeromq-dev/2011-June/012094.html')
     return False
 
 

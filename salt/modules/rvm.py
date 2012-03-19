@@ -228,6 +228,7 @@ def gemset_list_all(runas=None):
     List all gemsets for all installed rubies.
 
     Note that you must have set a default ruby before this can work.
+
     runas : None
         The user to run rvm as.
     """

@@ -179,6 +179,11 @@ class SaltCMD(object):
                 action='store_true',
                 dest='json_out',
                 help='Print the output from the salt command in json.')
+        parser.add_option('--no-color',
+                default=False,
+                action='store_true',
+                dest='no_color',
+                help='Disable all colored output')
 
         options, args = parser.parse_args()
 
@@ -203,7 +208,7 @@ class SaltCMD(object):
             # Catch invalid invocations of salt such as: salt run
             if len(args) <= 1:
                 parser.print_help()
-                parser.exit()
+                parser.exit(1)
 
             if opts['list']:
                 opts['tgt'] = args[0].split(',')
@@ -336,7 +341,8 @@ class SaltCMD(object):
             # Pretty print any salt exceptions
             elif isinstance(ret, SaltException):
                 printout = get_outputter("txt")
-            printout(ret)
+            color = not bool(self.opts['no_color'])
+            printout(ret, color=color)
 
     def _format_ret(self, full_ret):
         '''
@@ -451,9 +457,10 @@ class SaltCP(object):
             if v is not None:
                 opts[k] = v
 
+        # salt-cp needs arguments
         if len(args) <= 1:
             parser.print_help()
-            parser.exit()
+            parser.exit(1)
 
         if opts['list']:
             opts['tgt'] = args[0].split(',')
@@ -629,7 +636,8 @@ class SaltCall(object):
         '''
         Parse the command line arguments
         '''
-        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
+        usage = "%prog [options] <function> [arguments]"
+        parser = optparse.OptionParser(version='%%prog %s'.format(VERSION), usage=usage)
 
         parser.add_option('-g',
                 '--grains',
@@ -704,8 +712,9 @@ class SaltCall(object):
             opts['fun'] = args[0]
             opts['arg'] = args[1:]
         else:
-            opts['fun'] = ''
-            opts['arg'] = []
+            # salt-call should not ever be called without arguments
+            parser.print_help()
+            parser.exit(1)
 
         verify_env([opts['pki_dir'],
                     opts['cachedir'],

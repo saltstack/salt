@@ -255,8 +255,8 @@ class Client(object):
                 env,
                 os.path.join(
                     url_data.netloc,
-                    os.path.relpath(url_data.path, '/'))
-                )
+                    os.path.relpath(os.path.relpath(url_data.path, '/'), '..')
+                ))
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)

@@ -46,9 +46,10 @@ Now that you have the basics out of the way, learn to use Salt to configure
 your servers. This is widely known as :term:`configuration management` —
 installing packages, configuring users and services, and much more.
 
-1.  :doc:`Basic config management <topics/tutorials/states_pt1>`
-2.  :doc:`Less basic config management <topics/tutorials/states_pt2>`
-3.  :doc:`Advanced techniques <topics/tutorials/states_pt3>`
+1.  :doc:`Getting Started with States<topics/tutorials/starting_states>`
+2.  :doc:`Basic config management <topics/tutorials/states_pt1>`
+3.  :doc:`Less basic config management <topics/tutorials/states_pt2>`
+4.  :doc:`Advanced techniques <topics/tutorials/states_pt3>`
 
 Salt in depth
 =============

@@ -35,7 +35,7 @@ Optional Dependencies
 .. _`Jinja2`: http://jinja.pocoo.org/
 
 Platform-specific installation instructions
-------------------------------------------
+-------------------------------------------
 
 .. toctree::
     :maxdepth: 1

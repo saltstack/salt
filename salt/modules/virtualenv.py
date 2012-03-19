@@ -1,7 +1,7 @@
 '''
 Create virtualenv environments
 '''
-from salt.exceptions import CommandNotFoundError
+from salt import utils
 
 
 __opts__ = {
@@ -11,8 +11,9 @@ __opts__ = {
 
 def create(path,
         venv_bin=__opts__['venv_bin'],
-        no_site_packages=True,
+        no_site_packages=False,
         system_site_packages=False,
+        distribute=False,
         clear=False,
         python='',
         extra_search_dir='',
@@ -31,6 +32,8 @@ def create(path,
         Passthrough argument given to virtualenv
     system_site_packages : False
         Passthrough argument given to virtualenv
+    distribute : False
+        Passthrough argument given to virtualenv
     clear : False
         Passthrough argument given to virtualenv
     python : (default)
@@ -48,15 +51,15 @@ def create(path,
 
         salt '*' pip.virtualenv /path/to/new/virtualenv
     '''
-    if not __salt__['cmd.has_exec'](venv_bin):
-        raise CommandNotFoundError(
-            "Please install {venv_bin}".format(venv_bin=venv_bin))
+    # raise CommandNotFoundError if venv_bin is missing
+    utils.check_or_die(venv_bin)
 
     cmd = '{venv_bin} {args} {path}'.format(
             venv_bin=venv_bin,
             args=''.join([
                 ' --no-site-packages' if no_site_packages else '',
                 ' --system-site-packages' if system_site_packages else '',
+                ' --distribute' if distribute else '',
                 ' --clear' if clear else '',
                 ' --python {0}'.format(python) if python else '',
                 ' --extra-search-dir {0}'.format(extra_search_dir

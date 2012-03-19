@@ -51,7 +51,7 @@ class Caller(object):
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)
         except CommandNotFoundError as exc:
-            msg = 'Command not found in \'{0}\': {1}\n'
+            msg = 'Command required for \'{0}\' not found: {1}\n'
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)
         if hasattr(self.minion.functions[fun], '__outputter__'):
@@ -117,5 +117,5 @@ class Caller(object):
                 printout = self._get_outputter()
             if 'json_out' in self.opts and self.opts['json_out']:
                 printout.indent = 2
-
-            printout({'local': ret['return']}, color=self.opts['no_color'])
+            color = not bool(self.opts['no_color'])
+            printout({'local': ret['return']}, color=color)

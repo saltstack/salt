@@ -461,7 +461,6 @@ def hostname():
     comps = grains['fqdn'].split('.')
     grains['host'] = comps[0]
     grains['localhost'] = socket.gethostname()
-    grains['localfqdn'] = __salt__['cmd.run']('hostname -f').strip()
     if len(comps) > 1:
         grains['domain'] = '.'.join(comps[1:])
     else:
