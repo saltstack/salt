@@ -1,4 +1,4 @@
-.TH "SALT-CP" "1" "February 15, 2012" "0.9.7" "Salt"
+.TH "SALT-CP" "1" "March 19, 2012" "0.9.8" "Salt"
 .SH NAME
 salt-cp \- salt-cp Documentation
 .
@@ -74,14 +74,34 @@ example: server1.foo.bar,server2.foo.bar,example7.quo.qux
 .TP
 .B \-G, \-\-grain
 The target expression matches values returned by the salt grains system on
+the minions. The target expression is in the format of \(aq<grain value>:<glob
+expression>\(aq; example: \(aqos:Arch*\(aq
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-grain\-pcre
+The target expression matches values returned by the salt grains system on
 the minions. The target expression is in the format of \(aq<grain value>:<pcre
 regular expression>\(aq; example: \(aqos:Arch.*\(aq
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-Q, \-\-query
-Execute a salt command query, this can be used to find the results of a
-previous function call: \-Q test.echo\(aq)
+.B \-R, \-\-range
+Instead of using shell globs to evaluate the targe use a range expression
+to identify targets. Range expressions look like %cluster.
+.sp
+Using the Range option requires that a range server is set up and the
+location of the range server is referenced in the master configuration
+file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-C, \-\-compound
+Utilize many target definitions to make the call very granular. This option
+takes a group of targets separated by and or or. The default matcher is a
+glob as usual, if something other than a glob is used preface it with the
+letter denoting the type, example: \(aqwebserv* and \fI\%G@os\fP:Debian or \fI\%E@db*\fP\(aq
+make sure that the compound target is encapsulated in quotes.
 .UNINDENT
 .INDENT 0.0
 .TP
