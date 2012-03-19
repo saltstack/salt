@@ -41,11 +41,12 @@ document that might help as well.
 Using salt-call
 ===============
 
-The salt-call command was originally developed for aiding in the development
+The ``salt-call`` command was originally developed for aiding in the development
 of new salt modules. Since then many applications have arisen for the salt-call
 command that is bundled with the salt minion. These range from the original
 intent of the salt-call, development assistance, to gathering large amounts of
-data from complex calls like state.highstate.
+data from complex calls like
+:doc:`state.highstate</ref/modules/all/salt.modules.state>`.
 
 When developing the state tree it is generally recommended to invoke
 state.highstate with salt-call, this displays a great deal more information

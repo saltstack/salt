@@ -298,7 +298,7 @@ written in pure python, allowing for the utmost level of flexibility and
 power when preparing SLS data.
 
 Getting to Know the Default - yaml_jinja
----------------------------------------
+----------------------------------------
 
 The default renderer - ``yaml_jinja``, allows for the use of the jinja
 templating system. A guide to the jinja templating system can be found here:
@@ -470,3 +470,4 @@ This clearly illustrates, that not only is using the YAML renderer a wise
 decision as the default, but that unbridled power can be obtained where
 needed by using a pure python SLS.
 
+Now onto the :doc:`States tutorial, part 1</topics/tutorials/states_pt1>`.

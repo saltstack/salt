@@ -11,6 +11,7 @@ Full Table of Contents
     topics/configuration
     topics/targeting/index
     topics/tutorials/modules
+    topics/tutorials/starting_states
     topics/tutorials/states*
     topics/pillar/index
     topics/jobs/index
