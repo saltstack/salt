@@ -5,26 +5,25 @@ How Do I Use Salt States?
 Simplicity, Simplicity, Simplicity
 
 Many of the most powerful and useful engineering solutions are founded on
-simple principals, the Salt SLS system strives to do just that.
+simple principals, the Salt SLS system strives to do just that. K.I.S.S.
 
 The core of the Salt State system is the SLS, or the SaLt State file. The SLS
 is a representation of the state in which a system should be in, and is set up
-to contain this data in the most simple way possible.
+to contain this data simply. This is often called configuration management.
 
 It is All Just Data
 ===================
 
 Before delving into the particulars, it will help to understand that the SLS
 is just a data structure under the hood. While understanding that the SLS is
-just a data structure is not at all critical to understand to make use Salt States,
-it should help bolster the understanding of where the real power is.
+just a data structure is not at all critical to understand to make use Salt
+States, it should help bolster the understanding of where the real power is.
 
 SLS files are therefore, in reality, just dictionaries, lists, strings and
-numbers. By using this approach Salt can be much more flexible, and as someone
-writes more SLS files it becomes clear exactly what is being written. The result
-is a system that is easy to understand, yet grows with the needs of the admin
-or developer, offering simple constructs that grow to encompass the most
-complicated needs.
+numbers. By using this approach Salt can be much more flexible. As someone
+writes more state files, it becomes clear exactly what is being written. The
+result is a system that is easy to understand, yet grows with the needs of
+the admin or developer.
 
 In the section titled "State Data Structures" a reference exists, explaining
 in depth how the data is laid out.
@@ -35,7 +34,7 @@ Default Data - YAML
 By default Salt represents the SLS data in what is one of the simplest
 serialization formats available - YAML.
 
-A typical, small SLS file will often look like this in YAML:
+A typical SLS file will often look like this in YAML:
 
 .. code-block:: yaml
    :linenos:
@@ -63,14 +62,14 @@ lines are the function to run. This function defines what state the named
 package and service should be in. Here the package is to be installed, and
 the service should be running.
 
-Finally, on line 6, is the word ``require``, this is called a Requisite
-Statement, and it makes sure that the apache service is only started after
+Finally, on line 6, is the word ``require``. This is called a Requisite
+Statement, and it makes sure that the Apache service is only started after
 the successful installation of the apache package.
 
 Adding Configs and Users
 ========================
 
-When setting up a service like an apache server many more components may
+When setting up a service like an apache web server, many more components may
 need to be added. The apache configuration file will most likely be managed,
 and a user and group may need to be set up.
 
@@ -130,14 +129,14 @@ config file will also trigger a restart of the respective service.
 Moving Beyond a Single SLS
 ==========================
 
-When setting up Salt States more than one SLS will need to be used, the above
+When setting up Salt States, more than one SLS will need to be used. The above
 examples were just in a single SLS file, but more than one SLS file can be
 combined to build out a State Tree. The above example also references a file
-with a strange source - salt://apache/httpd.conf, that file will need to be
-available as well.
+with a strange source - ``salt://apache/httpd.conf``. That file will need to
+be available as well.
 
 The SLS files are laid out in a directory on the salt master. Files are laid
-out as just files, an sls is just a file and files to download are just files.
+out as just files. A sls is just a file and files to download are just files.
 
 The apache example would be laid out in the root of the salt file server like
 this: ::
@@ -268,7 +267,7 @@ These examples will add more watchers to apache and change the ssh banner.
       pkg:
         - installed
 
-The custom-server.sls file uses the extend statement to overwrite where the
+The ``custom-server.sls`` file uses the extend statement to overwrite where the
 banner is being downloaded from, and therefore changing what file is being used
 to configure the banner.
 
@@ -298,18 +297,18 @@ python or ``py`` renderer. The ``py`` renderer allows for SLS files to be
 written in pure python, allowing for the utmost level of flexibility and
 power when preparing SLS data.
 
-Geting to Know the Default - yaml_jinja
+Getting to Know the Default - yaml_jinja
 ---------------------------------------
 
 The default renderer - ``yaml_jinja``, allows for the use of the jinja
 templating system. A guide to the jinja templating system can be found here:
-<link to the jinga templating docs page>.
+http://jinja.pocoo.org/docs
 
 When working with renderers a few very useful bits of data are passed in. In
 the case of templating engine based renderers two critical components are
-available, ``salt`` and ``grains``. The salt object allows for any salt
-function to be called from within the template, and grains allows for the
-grains to be accessed from within the template. A few examples are in order:
+available, ``salt``, ``grains``, and ``pillar``. The salt object allows for
+any salt function to be called from within the template, and grains allows for
+the grains to be accessed from within the template. A few examples:
 
 ``/apache/init.sls:``
 
@@ -353,7 +352,7 @@ grains to be accessed from within the template. A few examples are in order:
         - group: root
         - mode: 644
 
-This example is simple, if the os grain states that the operating system is
+This example is simple. If the ``os`` grain states that the operating system is
 Red Hat, then the name of the apache package and service needs to be httpd.
 
 A more aggressive way to use Jinja can be found here, in a module to set up
@@ -453,7 +452,7 @@ This is a very simple example, the first line has a SLS shebang line that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
 Then the run function is defined, the return value from the run function
 must be a Salt friendly data structure, or better known as a Salt
-``HighState`` data structure.
+:doc:`HighState data structure</ref/states/highstate>`.
 
 This python example would look like this if it were written in YAML:
 
