@@ -711,7 +711,7 @@ class SaltCall(object):
         if len(args) >= 1:
             opts['fun'] = args[0]
             opts['arg'] = args[1:]
-        elif opts['grains']:
+        elif opts['grains_run']:
             pass
         else:
             # salt-call should not ever be called without arguments
