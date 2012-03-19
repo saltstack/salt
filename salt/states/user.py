@@ -26,7 +26,7 @@ def present(
         uid=None,
         gid=None,
         groups=None,
-        home=False,
+        home=True,
         password=None,
         enforce_password=True,
         shell=None,
