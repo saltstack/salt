@@ -21,7 +21,7 @@ The message itself is abstracted as a python dict in this fashion:
 .. code-block:: python
 
     {'enc': 'aes',
-     'load': <encrypted python pickle>}
+     'load': <encrypted msgpack binary data>}
 
 When this message is received the load can be decrypted using the shared AES
 key. The 'enc' dict key can also be "pub" for pubkey encryption, or "clear"
@@ -90,8 +90,6 @@ Conclusion
 ==========
 
 In the end Salt uses formatted messages with clear header data to specify how
-the message data is encrypted. Only uses pubkey encryption for authentication
-and to securely retrieve the master AES key. Then all regular communication
-is sent in AES encrypted messages.
-
-
+the message data is encrypted. Asymetric encryption via RSA keys is only used
+for authentication and to securely retrieve the master AES key. All further
+communications are are encrypted with 256 bit AES.
