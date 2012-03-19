@@ -251,9 +251,15 @@ def list_pkgs(regex_string=""):
 
         {'<package_name>': '<version>'}
 
+    External dependencies::
+
+        Virtual package resolution requires aptitude.
+        Without aptitude virtual packages will be reported as not installed.
+
     CLI Example::
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs httpd
     '''
     ret = {}
     cmd = 'dpkg --list {0}'.format(regex_string)
