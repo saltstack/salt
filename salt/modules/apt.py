@@ -268,7 +268,7 @@ def list_pkgs(regex_string=""):
     # If ret is empty at this point, check to see if the package is virtual.
     # We also need aptitude past this point.
     if not ret and __salt__['cmd.has_exec']('aptitude'):
-        cmd = ('aptitude search "{} ?virtual ?reverse-provides(?installed)"'
+        cmd = ('aptitude search "{0} ?virtual ?reverse-provides(?installed)"'
                 .format(regex_string))
 
         out = __salt__['cmd.run_stdout'](cmd)
