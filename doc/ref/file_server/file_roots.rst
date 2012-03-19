@@ -54,7 +54,7 @@ they are defined in the configuration.
 Local File Server
 =================
 
-.. versionadded:: 0.9.7
+.. versionadded:: 0.9.8
 
 
 The file server can be rerouted to run from the minion. This is primarily to
