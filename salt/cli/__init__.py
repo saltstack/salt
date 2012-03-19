@@ -208,7 +208,7 @@ class SaltCMD(object):
             # Catch invalid invocations of salt such as: salt run
             if len(args) <= 1:
                 parser.print_help()
-                parser.exit()
+                parser.exit(1)
 
             if opts['list']:
                 opts['tgt'] = args[0].split(',')
@@ -457,9 +457,10 @@ class SaltCP(object):
             if v is not None:
                 opts[k] = v
 
+        # salt-cp needs arguments
         if len(args) <= 1:
             parser.print_help()
-            parser.exit()
+            parser.exit(1)
 
         if opts['list']:
             opts['tgt'] = args[0].split(',')
@@ -635,7 +636,8 @@ class SaltCall(object):
         '''
         Parse the command line arguments
         '''
-        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
+        usage = "%prog [options] <function> [arguments]"
+        parser = optparse.OptionParser(version='%%prog %s'.format(VERSION), usage=usage)
 
         parser.add_option('-g',
                 '--grains',
@@ -710,8 +712,9 @@ class SaltCall(object):
             opts['fun'] = args[0]
             opts['arg'] = args[1:]
         else:
-            opts['fun'] = ''
-            opts['arg'] = []
+            # salt-call should not ever be called without arguments
+            parser.print_help()
+            parser.exit(1)
 
         verify_env([opts['pki_dir'],
                     opts['cachedir'],

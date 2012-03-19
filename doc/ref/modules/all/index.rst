@@ -70,7 +70,10 @@ Full list of builtin modules
     virt
     virtualenv
     win_disk
+    win_file
+    win_network
     win_service
+    win_shadow
     win_useradd
     yumpkg
     yumpkg5

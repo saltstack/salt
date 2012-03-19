@@ -9,7 +9,7 @@ import socket
 import logging
 from calendar import month_abbr as months
 
-from salt.exceptions import SaltClientError
+from salt.exceptions import SaltClientError, CommandNotFoundError
 
 
 log = logging.getLogger(__name__)
@@ -302,3 +302,18 @@ def required_modules_error(name, docstring):
     filename = os.path.basename(name).split('.')[0]
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
+
+def check_or_die(command):
+    '''
+    Simple convienence function for modules to  use
+    for gracefully blowing up if a required tool is
+    not available in the system path.
+
+    Lazily import salt.modules.cmdmod to avoid any
+    sort of circular dependencies.
+    '''
+    import salt.modules.cmdmod
+    __salt__ = {'cmd.has_exec': salt.modules.cmdmod.has_exec}
+
+    if not __salt__['cmd.has_exec'](command):
+        raise CommandNotFoundError(command)

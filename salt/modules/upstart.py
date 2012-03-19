@@ -8,7 +8,7 @@ rh_service module, since red hat systems support chkconfig
 
 import os
 import re
-from salt.exceptions import CommandNotFoundError
+from salt import utils
 
 
 def __virtual__():
@@ -80,8 +80,7 @@ def status(name, sig=None):
 
 def _get_service_exec():
     executable = 'update-rc.d'
-    if not __salt__['cmd.has_exec'](executable):
-        raise CommandNotFoundError('Missing {0}'.format(executable))
+    utils.check_or_die(executable)
     return executable
 
 
