@@ -19,7 +19,8 @@ def add(name,
         gid=None,
         groups=None,
         home=True,
-        shell=None):
+        shell=None,
+        **kwargs):
     '''
     Add a user to the minion
 
