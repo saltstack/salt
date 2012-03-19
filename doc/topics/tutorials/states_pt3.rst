@@ -49,7 +49,7 @@ Using Grains in SLS modules
 ===========================
 
 Often times a state will need to behave differently on different systems.
-:doc:`Salt grains </ref/grains>` can be used from within sls modules. An object
+:doc:`Salt grains </topics/targeting/grains>` can be used from within sls modules. An object
 called ``grains`` is made available in the template context:
 
 .. code-block:: yaml
