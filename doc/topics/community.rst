@@ -29,8 +29,11 @@ IRC
 The ``#salt`` IRC channel is hosted on the popular `Freenode`__ network. You
 can use the `Freenode webchat client`__ right from your browser.
 
+`Logs of the IRC channel activity`__ are being collected courtesy of Moritz Lenz.
+
 .. __: http://freenode.net/irc_servers.shtml
 .. __: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+.. __: http://irclog.perlgeek.de/salt/
 
 .. _community-github:
 
