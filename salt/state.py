@@ -598,8 +598,6 @@ class State(object):
         req_in = set(['require_in', 'watch_in'])
         extend = {}
         for id_, body in high.items():
-            if not isinstance(body, dict):
-                continue
             for state, run in body.items():
                 if state.startswith('__'):
                     continue
@@ -666,11 +664,10 @@ class State(object):
                                 extend[name][_state].append(
                                         {rkey: [{state: id_}]}
                                         )
-        if not '__extend__' in high:
-            high['__extend__'] = []
+        high['__extend__'] = []
         for key, val in extend.items():
             high['__extend__'].append({key: val})
-        return high
+        return self.reconcile_extend(high)
 
     def call(self, data):
         '''
@@ -855,9 +852,10 @@ class State(object):
         err = []
         errors = []
         # If there is extension data reconcile it
-        high = self.requisite_in(high)
         high, ext_errors = self.reconcile_extend(high)
         errors += ext_errors
+        high, req_in_errors = self.requisite_in(high)
+        errors += req_in_errors
         # Verify that the high data is structurally sound
         errors += self.verify_high(high)
         if errors:
