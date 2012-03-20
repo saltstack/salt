@@ -3,6 +3,7 @@ Manage client ssh components
 '''
 
 import os
+import re
 
 
 def _refine_enc(enc):
@@ -138,13 +139,16 @@ def _validate_keys(key_file):
             if line.startswith('#'):
                 # Commented Line
                 continue
-            comps = line.split()
+            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$');
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
             if len(comps) < 2:
                 # Not a valid line
                 continue
-            if comps[0][:4:] not in ['ssh-', 'ecds']:
+            if opts:
                 # It has options, grab them
-                options = comps[0].split(',')
+                options = opts.split(',')
             else:
                 options = []
             if not options:
@@ -194,14 +198,17 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # Commented Line
                 lines.append(line)
                 continue
-            comps = line.split()
+            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$');
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
             if len(comps) < 2:
                 # Not a valid line
                 lines.append(line)
                 continue
-            if comps[0][:4:] not in ['ssh-', 'ecds']:
+            if opts:
                 # It has options, grab them
-                options = comps[0].split(',')
+                options = opts.split(',')
             else:
                 options = []
             if not options:
