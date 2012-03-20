@@ -23,7 +23,7 @@ def _refine_enc(enc):
     elif enc in ecdsa:
         # ecdsa defaults to ecdsa-sha2-nistp256
         # otherwise enc string is actual encoding string
-        if enc in ['e', 'ecdsa']
+        if enc in ['e', 'ecdsa']:
             return 'ecdsa-sha2-nistp256'
         return enc
     else:
