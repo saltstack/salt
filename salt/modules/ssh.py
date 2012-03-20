@@ -74,7 +74,7 @@ def _replace_auth_key(
             lines.append(line)
             continue
         key_ind = 1
-        if not comps[0].startswith('ssh-'):
+        if comps[0][:4:] not in ['ssh-', 'ecds']:
             key_ind = 2
         if comps[key_ind] == key:
             lines.append(auth_line)
@@ -142,7 +142,7 @@ def _validate_keys(key_file):
             if len(comps) < 2:
                 # Not a valid line
                 continue
-            if not comps[0].startswith('ssh-'):
+            if comps[0][:4:] not in ['ssh-', 'ecds']:
                 # It has options, grab them
                 options = comps[0].split(',')
             else:
@@ -190,7 +190,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # Not a valid line
                 lines.append(line)
                 continue
-            if not comps[0].startswith('ssh-'):
+            if comps[0][:4:] not in ['ssh-', 'ecds']:
                 # It has options, grab them
                 options = comps[0].split(',')
             else:
