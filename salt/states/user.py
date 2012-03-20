@@ -26,7 +26,7 @@ def present(
         uid=None,
         gid=None,
         groups=None,
-        home=False,
+        home=True,
         password=None,
         enforce_password=True,
         shell=None,
@@ -167,8 +167,17 @@ def present(
             return ret
 
     # The user is not present, make it!
-    if __salt__['user.add'](name, uid, gid, groups, home, shell, fullname,
-                            roomnumber, workphone, homephone, other):
+    if __salt__['user.add'](name,
+                            uid=uid,
+                            gid=gid,
+                            groups=groups,
+                            home=home,
+                            shell=shell,
+                            fullname=fullname,
+                            roomnumber=roomnumber,
+                            workphone=workphone,
+                            homephone=homephone,
+                            other=other):
         ret['comment'] = 'New user {0} created'.format(name)
         ret['changes'] = __salt__['user.info'](name)
         if password:

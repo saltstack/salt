@@ -47,13 +47,31 @@ Options
 .. option:: -G, --grain
 
     The target expression matches values returned by the salt grains system on
+    the minions. The target expression is in the format of '<grain value>:<glob
+    expression>'; example: 'os:Arch*'
+
+.. option:: --grain-pcre
+
+    The target expression matches values returned by the salt grains system on
     the minions. The target expression is in the format of '<grain value>:<pcre
     regular expression>'; example: 'os:Arch.*'
 
-.. option:: -Q, --query
+.. option:: -R, --range
 
-    Execute a salt command query, this can be used to find the results of a
-    previous function call: -Q test.echo')
+    Instead of using shell globs to evaluate the targe use a range expression
+    to identify targets. Range expressions look like %cluster.
+
+    Using the Range option requires that a range server is set up and the
+    location of the range server is referenced in the master configuration
+    file.
+
+.. option:: -C, --compound
+
+    Utilize many target definitions to make the call very granular. This option
+    takes a group of targets separated by and or or. The default matcher is a
+    glob as usual, if something other than a glob is used preface it with the
+    letter denoting the type, example: 'webserv* and G@os:Debian or E@db*'
+    make sure that the compound target is encapsulated in quotes.
 
 .. option:: -c CONFIG, --config=CONFIG
 

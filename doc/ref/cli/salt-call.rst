@@ -31,3 +31,32 @@ Options
 
     Return the documentation for the specified module of for all modules if
     none are specified
+
+.. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
+
+    Console log level. One of ``info``, ``none``, ``garbage``,
+    ``trace``, ``warning``, ``error``, ``debug``. For the logfile
+    settings see the config file. Default: ``info``.
+
+.. option::  --raw-out
+
+    Print the output from the salt command in raw python
+    form, this is suitable for re-reading the output into
+    an executing python script with eval.
+
+.. option::   --text-out
+
+    Print the output from the salt command in the same
+    form the shell would.
+
+.. option::   --yaml-out
+
+    Print the output from the salt command in yaml.
+
+.. option::   --json-out
+
+    Print the output from the salt command in json.
+
+.. option:: --no-color
+
+    Disable all colored output

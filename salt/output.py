@@ -20,7 +20,6 @@ from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
 
-
 def display_output(ret, out, opts):
     '''
     Display the output of a command in the terminal
@@ -83,8 +82,18 @@ class HighStateOutputter(Outputter):
                     hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
+                # Verify that the needed data is present
+                for tname, info in data[host].items():
+                    if not '__run_num__' in info:
+                        err = ('The State execution failed to record the order '
+                               'in which all states were executed. The state '
+                               'return missing data is:')
+                        print err
+                        pprint.pprint(info)
                 # Everything rendered as it should display the output
-                for tname in sorted(data[host], key=lambda k: data[host][k]['__run_num__']):
+                for tname in sorted(
+                        data[host],
+                        key=lambda k: data[host][k].get('__run_num__', 0)):
                     ret = data[host][tname]
                     tcolor = colors['GREEN']
                     if ret['changes']:

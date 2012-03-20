@@ -314,8 +314,8 @@ class Loader(object):
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
-                log.info('Cython is enabled in options put not present '
-                         'on the system path. Skipping Cython modules.')
+                log.info('Cython is enabled in the options but not present '
+                         'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
                 continue

@@ -1,4 +1,4 @@
-.TH "SALT-KEY" "1" "February 15, 2012" "0.9.7" "Salt"
+.TH "SALT-KEY" "1" "March 19, 2012" "0.9.8" "Salt"
 .SH NAME
 salt-key \- salt-key Documentation
 .
@@ -73,10 +73,16 @@ Reject the named minion public key.
 .TP
 .B \-R, \-\-reject\-all
 Rejects all pending public keys.
+.UNINDENT
 .INDENT 0.0
 .TP
-.B \-d, \-\-delete=DELETE
-Delete the named minion public key for command execution.
+.B \-d DELETE, \-\-delete=DELETE
+Delete the named minion key for command execution.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-D DELETE_ALL, \-\-delete\-all=DELETE_ALL
+Deleta all keys
 .UNINDENT
 .INDENT 0.0
 .TP
