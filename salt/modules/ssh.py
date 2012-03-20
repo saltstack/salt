@@ -140,17 +140,18 @@ def _validate_keys(key_file):
                 # Commented Line
                 continue
 
-            # get "{options} key"
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line)
-            opts = ''
-            comps = ''
-            if ln:
-                opts = ln.group(1)
-                comps = ln.group(2).split()
-
             if len(comps) < 2:
                 # Not a valid line
                 continue
+
+            # get "{options} key"
+            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line)
+            if not ln:
+                return "Invalid SSH key"
+
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
             if opts:
                 # It has options, grab them
                 options = opts.split(',')
@@ -197,15 +198,19 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 lines.append(line)
                 continue
 
-            # get "{options} key"
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line);
-            opts = ln.group(1)
-            comps = ln.group(2).split()
-
             if len(comps) < 2:
                 # Not a valid line
                 lines.append(line)
                 continue
+
+            # get "{options} key"
+            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line)
+            if not ln:
+                return "Invalid SSH key"
+
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
             if opts:
                 # It has options, grab them
                 options = opts.split(',')
