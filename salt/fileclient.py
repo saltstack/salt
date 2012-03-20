@@ -249,14 +249,13 @@ class Client(object):
                 else:
                     return ''
         else:
-            dest = os.path.join(
-                self.opts['cachedir'],
-                'extrn_files',
-                env,
-                os.path.join(
+            dest = os.path.normpath(
+                os.sep.join([
+                    self.opts['cachedir'],
+                    'extrn_files',
+                    env,
                     url_data.netloc,
-                    os.path.relpath(os.path.relpath(url_data.path, '/'), '..')
-                ))
+                    url_data.path]))
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
