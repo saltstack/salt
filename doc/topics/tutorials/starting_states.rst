@@ -51,7 +51,7 @@ This SLS data will ensure that the package named apache is installed, and
 that the apache service is running. The components can be explained in a
 simple way.
 
-The first like it the ID for a set of data, and it is called the ID
+The first line is the ID for a set of data, and it is called the ID
 Declaration. This ID sets the name of the thing that needs to be manipulated.
 
 The second and fourth lines are the start of the State Declarations, so they
