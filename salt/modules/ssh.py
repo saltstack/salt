@@ -134,6 +134,7 @@ def _validate_keys(key_file):
     Return a dict containing validated keys in the passed file
     '''
     ret = {}
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
     try:
         for line in open(key_file, 'r').readlines():
             if line.startswith('#'):
@@ -145,7 +146,7 @@ def _validate_keys(key_file):
                 continue
 
             # get "{options} key"
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line)
+            ln = re.search(linere, line)
             if not ln:
                 return "Invalid SSH key"
 
@@ -185,6 +186,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         salt '*' ssh.rm_auth_key <user> <key>
     '''
     current = auth_keys(user, config)
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
     if key in current:
         # Remove the key
         uinfo = __salt__['user.info'](user)
@@ -204,7 +206,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 continue
 
             # get "{options} key"
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line)
+            ln = re.search(linere, line)
             if not ln:
                 return "Invalid SSH key"
 
