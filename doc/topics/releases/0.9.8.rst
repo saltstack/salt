@@ -15,6 +15,10 @@ assigned to minions in a granular way similar to the state system. It also
 allows flexibility for users who want to keep data out of their state tree
 similar to 'external lookup' functionality in other tools.
 
+A new way to extend requisites was added, the "requisite in" statement.
+This makes adding requires or watch statements to external stae decs
+much easier.
+
 Additions to requisites making them much more powerful have been added and
 improved error checking for sls files in the state system. A new provider
 system has been added to allow for redirecting what modules run in the
@@ -178,6 +182,42 @@ is handled by passing range syntax with *-R* or *--range* arguments to salt.
 More information at:
 https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
 
+
+Requisite "in"
+--------------
+
+A new means to updating requisite statements has been added to make adding
+watchers and requires to external states easier. Before 0.9.8 the only way
+to extend the states that were watched by a state outside of the sls was to
+use an extend statement:
+
+.. code-block:: yaml
+
+    include:
+      - http
+    extend:
+      apache:
+        service:
+          - watch:
+            - pkg: tomcat
+
+    tomcat:
+      pkg:
+        - installed
+
+But the new ``Requisite in`` statement allows for easier extends for
+requisites:
+
+.. code-block:: yaml
+
+    include:
+      - http
+
+    tomcat:
+      pkg:
+        - installed
+        - watch_in:
+          - service: apache
 
 Providers
 ---------
