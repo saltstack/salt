@@ -626,7 +626,7 @@ class State(object):
                                 for ind in range(len(extend[name][_state])):
                                     if extend[name][_state][ind].keys()[0] == rkey:
                                         # Extending again
-                                        extend[name][_state][ind].append(
+                                        extend[name][_state][ind][rkey].append(
                                                 {state: id_}
                                                 )
                                         found = True
@@ -654,7 +654,7 @@ class State(object):
                                 for ind in range(len(extend[name][_state])):
                                     if extend[name][_state][ind].keys()[0] == rkey:
                                         # Extending again
-                                        extend[name][_state][ind].append(
+                                        extend[name][_state][ind][rkey].append(
                                                 {state: id_}
                                                 )
                                         found = True
