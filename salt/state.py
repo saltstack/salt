@@ -591,6 +591,78 @@ class State(object):
                             high[name][state].append(arg)
         return high, errors
 
+    def requisite_in(self, high):
+        '''
+        Extend the data reference with requisite_in arguments
+        '''
+        req_in = set(['require_in', 'watch_in'])
+        extend = {}
+        for id_, body in high.items():
+            for state, run in body.items():
+                if state.startswith('__'):
+                    continue
+                for arg in run:
+                    if isinstance(arg, dict):
+                        # It is not a function, verify that the arg is a
+                        # requisite in statement
+                        if len(arg) < 1:
+                            # Empty arg dict
+                            # How did we get this far?
+                            continue
+                        # Split out the components
+                        key = arg.keys()[0]
+                        if not key in req_in:
+                            continue
+                        rkey = key[:-3]
+                        items = arg[key]
+                        if isinstance(items, dict):
+                            # Formated as a single req_in
+                            for _state, name in items.items():
+                                found = False
+                                if not name in extend:
+                                    extend[name] = {}
+                                if not _state in extend[name]:
+                                    extend[name][_state] = []
+                                for ind in range(len(extend[name][_state])):
+                                    if extend[name][_state][ind].keys()[0] == rkey:
+                                        # Extending again
+                                        extend[name][_state][ind].append(
+                                                {state: id_}
+                                                )
+                                        found = True
+                                if found:
+                                    continue
+                                # The rkey is not present yet, create it
+                                extend[name][_state].append(
+                                        {rkey: [{state: id_}]}
+                                        )
+                        if isinstance(items, list):
+                            # Formed as a list of requisite additions
+                            for ind in items:
+                                if not isinstance(ind, dict):
+                                    # Malformed req_in
+                                    continue
+                                if len(ind) < 1:
+                                    continue
+                                _state = ind.keys()[0]
+                                name = ind[_state]
+                                found = False
+                                for ind in range(len(extend[name][_state])):
+                                    if extend[name][_state][ind].keys()[0] == rkey:
+                                        # Extending again
+                                        extend[name][_state][ind].append(
+                                                {state: id_}
+                                                )
+                                        found = True
+                                if found:
+                                    continue
+                                # The rkey is not present yet, create it
+                                extend[name][_state].append(
+                                        {rkey: [{state: id_}]}
+                                        )
+        high['__extend__'] = extend
+        return self.reconcile_extend(high)
+
     def call(self, data):
         '''
         Call a state directly with the low data structure, verify data
