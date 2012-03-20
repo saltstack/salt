@@ -595,7 +595,7 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set('require_in', 'watch_in')
+        req_in = set(['require_in', 'watch_in'])
         extend = {}
         for id_, body in high.items():
             for state, run in body.items():
