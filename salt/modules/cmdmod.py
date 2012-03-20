@@ -141,7 +141,7 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     out = _run(cmd, runas=runas, shell=shell,
                cwd=cwd, stderr=subprocess.STDOUT, env=env)['stdout']
-    log.debug(out)
+    log.debug('output: {0}'.format(out))
     return out
 
 
@@ -154,7 +154,7 @@ def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL, env=()):
         salt '*' cmd.run_stdout "ls -l | awk '/foo/{print $2}'"
     '''
     stdout = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=())["stdout"]
-    log.debug(stdout)
+    log.debug('stdout: {0}'.format(stdout))
     return stdout
 
 
@@ -167,7 +167,7 @@ def run_stderr(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
         salt '*' cmd.run_stderr "ls -l | awk '/foo/{print $2}'"
     '''
     stderr = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)["stderr"]
-    log.debug(stderr)
+    log.debug('stderr: {0}'.format(stderr))
     return stderr
 
 
@@ -181,13 +181,20 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)
     if ret['retcode'] != 0:
-        log.error('Command {0} failed'.format(cmd))
-        log.error('retcode: {0}'.format(ret['retcode']))
-        log.error('stdout: {0}'.format(ret['stdout']))
-        log.error('stderr: {0}'.format(ret['stderr']))
+        rcode = ret['retcode']
+        msg = 'Command \'{0}\' failed with return code: {1}'
+        log.error(msg.format(cmd, rcode))
+        # Don't log a blank line if there is no stderr or stdout
+        if ret['stdout']:
+            log.error('stdout: {0}'.format(ret['stdout']))
+        if ret['stderr']:
+            log.error('stderr: {0}'.format(ret['stderr']))
     else:
-        log.info('stdout: {0}'.format(ret['stdout']))
-        log.info('stderr: {0}'.format(ret['stderr']))
+        # No need to always log output on success to the logs
+        if ret['stdout']:
+            log.debug('stdout: {0}'.format(ret['stdout']))
+        if ret['stderr']:
+            log.debug('stderr: {0}'.format(ret['stderr']))
     return ret
 
 
@@ -202,16 +209,6 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)['retcode']
 
 
-def has_exec(cmd):
-    '''
-    Returns true if the executable is available on the minion, false otherwise
-
-    CLI Example::
-
-        salt '*' cmd.has_exec cat
-    '''
-    return bool(salt.utils.which(cmd))
-
 def which(cmd):
     '''
     Returns the path of an executable available on the minion, None otherwise
@@ -221,6 +218,18 @@ def which(cmd):
         salt '*' cmd.which cat
     '''
     return salt.utils.which(cmd)
+
+
+def has_exec(cmd):
+    '''
+    Returns true if the executable is available on the minion, false otherwise
+
+    CLI Example::
+
+        salt '*' cmd.has_exec cat
+    '''
+    return bool(which(cmd))
+
 
 def exec_code(lang, code, cwd=None):
     '''

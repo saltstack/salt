@@ -761,19 +761,29 @@ def managed(name,
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
-            # Create the file, user-rw-only if mode will be set
+
+            # Create the file, user rw-only if mode will be set to prevent
+            # a small security race problem before the permissions are set
             if mode:
-                cumask = os.umask(384)
+                current_umask = os.umask(077)
+
+            # Create a new file when test is False and source is None
+            if not __opts__['test']:
+                if __salt__['file.touch'](name):
+                    ret['changes']['new'] = 'file {0} created'.format(name)
+                    ret['comment'] = 'Empty file'
+                else:
+                    return _error(ret, 'Empty file {0} not created'.format(name))
+
             if mode:
-                os.umask(cumask)
-                ret['changes']['new'] = 'file {0} created'.format(name)
-                ret['comment'] = 'Empty file'
+                os.umask(current_umask)
 
         # Now copy the file contents if there is a source file
         if sfn:
             shutil.copyfile(sfn, name)
             __clean_tmp(sfn)
 
+        # Check and set the permissions if necessary
         ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
