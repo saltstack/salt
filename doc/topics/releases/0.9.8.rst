@@ -122,7 +122,7 @@ read locally from a minion. The result is that the UNMODIFIED state tree
 has just become portable, allowing minions to have a local copy of states
 or to manage states without a master entirely.
 
-This is accomp[lished via the new file client interface in Salt that allows
+This is accomplished via the new file client interface in Salt that allows
 for the ``salt://`` uri to be redirected to custom interfaces. This means that
 there are now two interfaces for the salt file server, calling the master
 or looking in a local, minion defined ``file_roots``.
