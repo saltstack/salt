@@ -16,11 +16,11 @@ allows flexibility for users who want to keep data out of their state tree
 similar to 'external lookup' functionality in other tools.
 
 A new way to extend requisites was added, the "requisite in" statement.
-This makes adding requires or watch statements to external stae decs
+This makes adding requires or watch statements to external state decs
 much easier.
 
-Additions to requisites making them much more powerful have been added and
-improved error checking for sls files in the state system. A new provider
+Additions to requisites making them much more powerful have been added as well
+as improved error checking for sls files in the state system. A new provider
 system has been added to allow for redirecting what modules run in the
 background for individual states.
 
@@ -116,7 +116,7 @@ removing all keys. Be careful with this one!
 Running States Without a Master
 -------------------------------
 
-The addition of running states without a salt-master running has been added
+The addition of running states without a salt-master has been added
 to 0.9.8. This feature allows for the unmodified salt state tree to be
 read locally from a minion. The result is that the UNMODIFIED state tree
 has just become portable, allowing minions to have a local copy of states
@@ -135,7 +135,7 @@ Keyword Arguments and States
 ----------------------------
 
 State modules now accept the ``**kwargs`` argument. This results in all data
-in a sls file assigned to a state will be made available to the state function.
+in a sls file assigned to a state being made available to the state function.
 
 This passes data in a transparent way back to the modules executing the logic.
 In particular, this allows adding arguments to the ``pkg.install`` module that
@@ -173,11 +173,11 @@ Matcher Refinements and Changes
 -------------------------------
 
 A number of fixes and changes have been applied to the Matcher system. The
-most noteworthy is the change in the grain matcher. The grain matcher used
-a regular expression to match the passed data to a grain, but now defaults
+most noteworthy is the change in the grain matcher. The grain matcher used to
+use a regular expression to match the passed data to a grain, but now defaults
 to a shell glob like the majority of match interfaces in Salt. A new option
 is available that still uses the old style regex matching to grain data called
-grain-pcre. To use regex matching in compound matches use the letter *P*.
+``grain-pcre``. To use regex matching in compound matches use the letter *P*.
 
 For example, this would match any ArchLinux or Fedora minions:
 
@@ -237,6 +237,9 @@ requisites:
         - watch_in:
           - service: apache
 
+Requisite in is part of the extend system, so still remember to always include
+the sls that is being extended!
+
 Providers
 ---------
 
@@ -257,6 +260,18 @@ detected for Arch Linux, the systemd module can be used:
         - running
         - enable: True
         - provider: systemd
+
+Default providers can also be defined in the minion config file:
+
+.. code-block:: yaml
+
+    providers:
+      pkg: yumpkg5
+      service: systemd
+
+When default providers are passed in the minion config, then those providers
+will be applied to all functionality in Salt, this means that the functions
+called by the minion will use these modules, as well as states.
 
 Requisite Glob Matching
 -----------------------
@@ -354,7 +369,7 @@ Master Side State Compiling
 ---------------------------
 
 While we feel strongly that the advantages gained with minion side state
-compiling are very critical, it does prevent certain features what may be
+compiling are very critical, it does prevent certain features that may be
 desired. 0.9.8 has support for initial master side state compiling, but many
 more components still need to be developed, it is hoped that these can be
 finished for 0.9.9.
@@ -363,18 +378,18 @@ The goal is that states can be compiled on both the master and the minion
 allowing for compilation to be split between master and minion. Why will
 this be great? It will allow storing sensitive data on the master and sending
 it to some minions without all minions having access to it. This will be
-good for handling ssl certificates on front-end web servers.
+good for handling ssl certificates on front-end web servers for instance.
 
 
 Solaris Support
---------------------
+---------------
 
 Salt 0.9.8 sees the introduction of basic Solaris support. The daemon runs
 well, but grains and more of the modules need updating and testing.
 
 
 Windows Support
---------------------
+---------------
 
 Salt states on windows are now much more viable thanks to contributions from
 our community! States for file, service, local user, and local group management are more fully
