@@ -8,6 +8,7 @@ from salt.exceptions import CommandExecutionError
 
 __outputter__ = {
     'assign': 'txt',
+    'get': 'txt',
 }
 
 
@@ -106,9 +107,21 @@ def persist(name, value, config='/etc/sysctl.conf'):
         if '=' not in line:
             nlines.append(line)
             continue
-        comps = line.split('=')
-        comps[0] = comps[0].strip()
-        comps[1] = comps[1].strip()
+
+        # Strip trailing whitespace and split the k,v
+        comps = [i.strip() for i in line.split('=', 1)]
+
+        # On Linux procfs, files such as /proc/sys/net/ipv4/tcp_rmem or any
+        # other sysctl with whitespace in it consistently uses 1 tab.  Lets
+        # allow our users to put a space or tab between multi-value sysctls
+        # and have salt not try to set it every single time.
+        if isinstance(comps[1], basestring) and ' ' in comps[1]:
+            comps[1] = re.sub('\s+', '\t', comps[1])
+
+        # Do the same thing for the value 'just in case'
+        if isinstance(value, basestring) and ' ' in value:
+            value = re.sub('\s+', '\t', value)
+
         if len(comps) < 2:
             nlines.append(line)
             continue
