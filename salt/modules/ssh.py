@@ -139,7 +139,7 @@ def _validate_keys(key_file):
             if line.startswith('#'):
                 # Commented Line
                 continue
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$');
+            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line);
             opts = ln.group(1)
             comps = ln.group(2).split()
 
@@ -198,7 +198,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # Commented Line
                 lines.append(line)
                 continue
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$');
+            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line);
             opts = ln.group(1)
             comps = ln.group(2).split()
 
