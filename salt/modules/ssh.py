@@ -149,12 +149,21 @@ def _validate_keys(key_file):
                 options = []
             if not options:
                 enc = comps[0]
-                key = comps[1]
-                comment = ' '.join(comps[2:])
+                # check if key has a space
+                if len(comps) == 3:
+                    key = comps[1] + ' ' + comps[2]
+                    comment = ' '.join(comps[3:])
+                else:
+                    key = comps[1]
+                    comment = ' '.join(comps[2:])
             else:
                 enc = comps[1]
-                key = comps[2]
-                comment = ' '.join(comps[3:])
+                if len(comps) == 4:
+                    key = comps[2] + ' ' + comps[3]
+                    comment = ' '.join(comps[4:])
+                else:
+                    key = comps[2]
+                    comment = ' '.join(comps[3:])
             ret[key] = {'enc': enc,
                         'comment': comment,
                         'options': options}
@@ -196,9 +205,15 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
             else:
                 options = []
             if not options:
-                pkey = comps[1]
+                if len(comps) == 3:
+                    pkey = comps[1] + ' ' + comps[2]
+                else:
+                    pkey = comps[1]
             else:
-                pkey = comps[2]
+                if len(comps) == 3:
+                    pkey = comps[2] + ' ' + comps[3]
+                else:
+                    pkey = comps[2]
             if pkey == key:
                 continue
             else:
