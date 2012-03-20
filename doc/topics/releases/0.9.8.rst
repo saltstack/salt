@@ -113,6 +113,24 @@ looking through the minion logs.
 The *salt-key* command gained the *-D* and *--delete-all* arguments for
 removing all keys. Be careful with this one!
 
+Running States Without a Master
+-------------------------------
+
+The addition of running states without a salt-master running has been added
+to 0.9.8. This feature allows for the unmodified salt state tree to be
+read locally from a minion. The result is that the UNMODIFIED state tree
+has just become portable, allowing minions to have a local copy of states
+or to manage states without a master entirely.
+
+This is accomp[lished via the new file client interface in Salt that allows
+for the ``salt://`` uri to be redirected to custom interfaces. This means that
+there are now two interfaces for the salt file server, calling the master
+or looking in a local, minion defined ``file_roots``.
+
+This new feature can be used by modifying the minion config to point to a
+local ``file_roots`` and setting the ``file_client`` option to ``local``.
+
+
 Keyword Arguments and States
 ----------------------------
 
@@ -346,14 +364,6 @@ allowing for compilation to be split between master and minion. Why will
 this be great? It will allow storing sensitive data on the master and sending
 it to some minions without all minions having access to it. This will be
 good for handling ssl certificates on front-end web servers.
-
-
-New File Client
----------------
-
-The file client code has been re-factored to allow local ``salt://`` uris.
-This will eventually allow for running salt's configuration management via
-``salt-call state.highstate`` to run without a salt-minion daemon running.
 
 
 Solaris Support
