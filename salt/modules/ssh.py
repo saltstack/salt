@@ -141,17 +141,18 @@ def _validate_keys(key_file):
                 # Commented Line
                 continue
 
-            if len(comps) < 2:
-                # Not a valid line
-                continue
-
             # get "{options} key"
             ln = re.search(linere, line)
             if not ln:
-                return "Invalid SSH key"
+                # not an auth ssh key, perhaps a blank line
+                continue
 
             opts = ln.group(1)
             comps = ln.group(2).split()
+
+            if len(comps) < 2:
+                # Not a valid line
+                continue
 
             if opts:
                 # It has options, grab them
@@ -200,18 +201,19 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 lines.append(line)
                 continue
 
+            # get "{options} key"
+            ln = re.search(linere, line)
+            if not ln:
+                # not an auth ssh key, perhaps a blank line
+                continue
+
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
             if len(comps) < 2:
                 # Not a valid line
                 lines.append(line)
                 continue
-
-            # get "{options} key"
-            ln = re.search(linere, line)
-            if not ln:
-                return "Invalid SSH key"
-
-            opts = ln.group(1)
-            comps = ln.group(2).split()
 
             if opts:
                 # It has options, grab them
