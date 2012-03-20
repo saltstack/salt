@@ -543,8 +543,6 @@ class State(object):
         if '__extend__' not in high:
             return high, errors
         ext = high.pop('__extend__')
-        import pprint
-        pprint.pprint(ext)
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
                 if name not in high:
@@ -669,8 +667,6 @@ class State(object):
         high['__extend__'] = []
         for key, val in extend.items():
             high['__extend__'].append({key: val})
-        import pprint
-        pprint.pprint(extend)
         return self.reconcile_extend(high)
 
     def call(self, data):
