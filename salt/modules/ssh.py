@@ -141,9 +141,12 @@ def _validate_keys(key_file):
                 continue
 
             # get "{options} key"
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line);
-            opts = ln.group(1)
-            comps = ln.group(2).split()
+            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line)
+            opts = ''
+            comps = ''
+            if ln:
+                opts = ln.group(1)
+                comps = ln.group(2).split()
 
             if len(comps) < 2:
                 # Not a valid line
