@@ -45,3 +45,4 @@ Platform-specific installation instructions
     fedora
     freebsd
     gentoo
+    windows

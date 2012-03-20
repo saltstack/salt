@@ -327,6 +327,6 @@ Windows Support
 --------------------
 
 Salt states on windows are now much more viable thanks to contributions from
-our community! States for file, user, and group management are more fully
-fleshed out along with a network module. Windows users can also now manage
-registry entries using the new "reg" module.
+our community! States for file, service, local user, and local group management are more fully
+fleshed out along with network and disk modules. Windows users can also now manage
+registry entries using the new "reg" module. 

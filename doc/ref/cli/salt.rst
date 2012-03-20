@@ -98,7 +98,7 @@ Options
 
 .. option:: -R, --range
 
-    Instead of using shell globs to evaluate the targe use a range expression
+    Instead of using shell globs to evaluate the target use a range expression
     to identify targets. Range expressions look like %cluster.
 
     Using the Range option requires that a range server is set up and the
