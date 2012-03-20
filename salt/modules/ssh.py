@@ -8,14 +8,24 @@ import os
 def _refine_enc(enc):
     '''
     Return the properly formatted ssh value for the authorized encryption key
-    type. If the type is not found, return ssh-rsa, the ssh default.
+    type. ecdsa defaults to 256 bits, must give full ecdsa enc schema string if
+    using higher enc. If the type is not found, return ssh-rsa, the ssh default.
     '''
-    rsa = ['r', 'rsa', 'ssh-rsa']
-    dss = ['d', 'dsa', 'dss', 'ssh-dss']
+    rsa   = ['r', 'rsa', 'ssh-rsa']
+    dss   = ['d', 'dsa', 'dss', 'ssh-dss']
+    ecdsa = ['e', 'ecdsa', 'ecdsa-sha2-nistp521', 'ecdsa-sha2-nistp384',
+            'ecdsa-sha2-nistp256']
+
     if enc in rsa:
         return 'ssh-rsa'
     elif enc in dss:
         return 'ssh-dss'
+    elif enc in ecdsa:
+        # ecdsa defaults to ecdsa-sha2-nistp256
+        # otherwise enc string is actual encoding string
+        if enc in ['e', 'ecdsa']
+            return 'ecdsa-sha2-nistp256'
+        return enc
     else:
         return 'ssh-rsa'
 
@@ -64,7 +74,7 @@ def _replace_auth_key(
             lines.append(line)
             continue
         key_ind = 1
-        if not comps[0].startswith('ssh-'):
+        if comps[0][:4:] not in ['ssh-', 'ecds']:
             key_ind = 2
         if comps[key_ind] == key:
             lines.append(auth_line)
@@ -132,7 +142,7 @@ def _validate_keys(key_file):
             if len(comps) < 2:
                 # Not a valid line
                 continue
-            if not comps[0].startswith('ssh-'):
+            if comps[0][:4:] not in ['ssh-', 'ecds']:
                 # It has options, grab them
                 options = comps[0].split(',')
             else:
@@ -180,7 +190,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # Not a valid line
                 lines.append(line)
                 continue
-            if not comps[0].startswith('ssh-'):
+            if comps[0][:4:] not in ['ssh-', 'ecds']:
                 # It has options, grab them
                 options = comps[0].split(',')
             else:
