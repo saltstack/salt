@@ -543,6 +543,8 @@ class State(object):
         if '__extend__' not in high:
             return high, errors
         ext = high.pop('__extend__')
+        import pprint
+        pprint.pprint(ext)
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
                 if name not in high:
@@ -647,6 +649,10 @@ class State(object):
                                 _state = ind.keys()[0]
                                 name = ind[_state]
                                 found = False
+                                if not name in extend:
+                                    extend[name] = {}
+                                if not _state in extend[name]:
+                                    extend[name][_state] = []
                                 for ind in range(len(extend[name][_state])):
                                     if extend[name][_state][ind].keys()[0] == rkey:
                                         # Extending again
@@ -660,7 +666,11 @@ class State(object):
                                 extend[name][_state].append(
                                         {rkey: [{state: id_}]}
                                         )
-        high['__extend__'] = extend
+        high['__extend__'] = []
+        for key, val in extend.items():
+            high['__extend__'].append({key: val})
+        import pprint
+        pprint.pprint(extend)
         return self.reconcile_extend(high)
 
     def call(self, data):
@@ -848,6 +858,8 @@ class State(object):
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
         errors += ext_errors
+        high, req_in_errors = self.requisite_in(high)
+        errors += req_in_errors
         # Verify that the high data is structurally sound
         errors += self.verify_high(high)
         if errors:
