@@ -31,7 +31,7 @@ Parallel execution
 
 The core function of Salt is to enable remote commands to be called in parallel
 rather than in serial, to use a secure and encrypted protocol, the smallest and
-fastest network payloads possible, and with a simple programmer interface. Salt
+fastest network payloads possible, and with a simple programming interface. Salt
 also introduces more granular controls to the realm of remote execution,
 allowing for commands to be executed in parallel and for systems to be targeted
 based on more than just hostname, but by system properties.
