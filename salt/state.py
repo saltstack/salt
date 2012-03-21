@@ -261,7 +261,7 @@ class State(object):
             err = ('The name {0} in sls {1} is not formed as a '
                    'string but is a {2}').format(
                            data['name'], data['__sls__'], type(data['name']))
-            errros.append(err)
+            erros.append(err)
         if errors:
             return errors
         if data['fun'].startswith('mod_'):
