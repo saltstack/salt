@@ -257,6 +257,11 @@ class State(object):
             errors.append('Missing "fun" data')
         if 'name' not in data:
             errors.append('Missing "name" data')
+        if not isinstance(data[name], basestring):
+            err = ('The name {0} in sls {1} is not formed as a '
+                   'string but is a {2}').format(
+                           name, body['__sls__'], type(name))
+            errros.append(err)
         if errors:
             return errors
         if data['fun'].startswith('mod_'):
