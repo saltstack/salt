@@ -9,6 +9,7 @@ as either absent or present
     fred:
       user:
         - present
+        - fullname: Fred Jones
         - shell: /bin/zsh
         - home: /home/fred
         - uid: 4000
@@ -25,9 +26,15 @@ def present(
         uid=None,
         gid=None,
         groups=None,
-        home=False,
+        home=True,
         password=None,
-        shell='/bin/bash'
+        enforce_password=True,
+        shell=None,
+        fullname=None,
+        roomnumber=None,
+        workphone=None,
+        homephone=None,
+        other=None,
         ):
     '''
     Ensure that the named user is present with the specified properties
@@ -51,8 +58,36 @@ def present(
     password
         A password hash to set for the user
 
+    enforce_password
+        Set to False to keep the password from being changed if it has already
+        been set and the password hash differs from what is specified in the
+        "password" field. This option will be ignored if "password" is not
+        specified.
+
     shell
-        The login shell, defaults to /bin/bash
+        The login shell, defaults to the system default shell
+
+
+    User comment field (GECOS) support (currently Linux-only):
+    
+    The below values should be specified as strings to avoid ambiguities when
+    the values are loaded. (Especially the phone and room number fields which
+    are likely to contain numeric data)
+
+    fullname
+        The user's full name.
+
+    roomnumber
+        The user's room number
+    
+    workphone
+        The user's work phone number
+    
+    homephone
+        The user's home phone number
+
+    other
+        The user's "other" GECOS field
     '''
     ret = {'name': name,
            'changes': {},
@@ -89,9 +124,31 @@ def present(
                     __salt__['user.chshell'](name, shell)
             if password:
                 if __grains__['os'] != 'FreeBSD':
-                    if lshad['pwd'] != password:
-                        # Set the new password
-                        __salt__['shadow.set_password'](name, password)
+                    if lshad['pwd'] == '!' or \
+                            lshad['pwd'] != '!' and enforce_password:
+                        if lshad['pwd'] != password:
+                            # Set the new password
+                            __salt__['shadow.set_password'](name, password)
+            if fullname:
+                if lusr['fullname'] != fullname:
+                    # Fix the fullname
+                    __salt__['user.chfullname'](name, fullname)
+            if roomnumber:
+                if lusr['roomnumber'] != roomnumber:
+                    # Fix the roomnumber
+                    __salt__['user.chroomnumber'](name, roomnumber)
+            if workphone:
+                if lusr['workphone'] != workphone:
+                    # Fix the workphone
+                    __salt__['user.chworkphone'](name, workphone)
+            if homephone:
+                if lusr['homephone'] != homephone:
+                    # Fix the homephone
+                    __salt__['user.chhomephone'](name, homephone)
+            if other:
+                if lusr['other'] != other:
+                    # Fix the other
+                    __salt__['user.chother'](name, other)
             post = __salt__['user.info'](name)
             spost = {}
             if __grains__['os'] != 'FreeBSD':
@@ -110,7 +167,17 @@ def present(
             return ret
 
     # The user is not present, make it!
-    if __salt__['user.add'](name, uid, gid, groups, home, shell):
+    if __salt__['user.add'](name,
+                            uid=uid,
+                            gid=gid,
+                            groups=groups,
+                            home=home,
+                            shell=shell,
+                            fullname=fullname,
+                            roomnumber=roomnumber,
+                            workphone=workphone,
+                            homephone=homephone,
+                            other=other):
         ret['comment'] = 'New user {0} created'.format(name)
         ret['changes'] = __salt__['user.info'](name)
         if password:

@@ -43,7 +43,7 @@ def setenforce(mode):
     '''
     Set the enforcing mode
     '''
-    if isinstance(mode, str):
+    if isinstance(mode, basestring):
         if mode.lower() == 'enforcing':
             mode = '1'
         elif mode.lower() == 'permissive':

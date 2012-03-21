@@ -72,8 +72,7 @@ def get_opts():
     return __opts__
 
 
-# FIXME: mutable types as default parameter values
-def cross_test(func, args=[]):
+def cross_test(func, args=None):
     '''
     Execute a minion function via the __salt__ object in the test
     module, used to verify that the minion functions can be called
@@ -83,7 +82,22 @@ def cross_test(func, args=[]):
 
         salt '*' test.cross_test file.gid_to_group 0
     '''
+    if args is None:
+        args = []
     return __salt__[func](*args)
+
+
+def kwarg(**kwargs):
+    '''
+    Print out the data passed into the function ``**kwargs``, this is used to
+    both test the publication data and cli kwarg passing, but also to display
+    the information available within the publication data.
+
+    CLI Example::
+
+        salt '*' test.kwarg
+    '''
+    return kwargs
 
 
 def fib(num):

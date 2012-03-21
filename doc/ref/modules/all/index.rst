@@ -4,6 +4,13 @@
 Full list of builtin modules
 ============================
 
+.. admonition:: Virtual modules
+
+    .. toctree::
+
+        salt.modules.pkg
+        salt.modules.sys
+
 .. currentmodule:: salt.modules
 
 .. autosummary::
@@ -15,35 +22,43 @@ Full list of builtin modules
     archive
     butterkvm
     cluster
-    cmd
+    cmdmod
     cp
     cron
     data
+    debconfmod
     disk
     ebuild
     file
     freebsdkmod
     freebsdpkg
+    freebsdservice
+    gem
     gentoo_service
+    git
     grains
     groupadd
+    hg
     hosts
     kmod
+    kvm_hyper
     linux_sysctl
     mdadm
     moosefs
     mount
     mysql
     network
+    nginx
     pacman
+    pillar
     pip
-    pkg
     ps
     publish
     puppet
     pw_group
     pw_user
     rh_service
+    rvm
     saltutil
     selinux
     service
@@ -52,15 +67,19 @@ Full list of builtin modules
     ssh
     state
     status
-    sys
     systemd
     test
     tomcat
+    upstart
     useradd
     virt
     virtualenv
     win_disk
+    win_file
+    win_network
     win_service
+    win_shadow
     win_useradd
     yumpkg
     yumpkg5
+    zypper

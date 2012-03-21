@@ -1,17 +1,17 @@
 # basic config
 master: localhost
-master_port: 94506
+master_port: 64506
 root_dir: /tmp/salttest
-pki_dir: /tmp/salttest/pki
+pki_dir: pki
 id: minion
-cachedir: /tmp/salttest/cachedir
+cachedir: cachedir
 acceptance_wait_time: = 1
 open_mode: True
-log_file: /tmp/salttest/minion
+log_file: minion
 
 # module extension
 test.foo: baz
-hosts.file: tmp/hosts
+hosts.file: integration/tmp/hosts
 
 # Grains addons
 grains:

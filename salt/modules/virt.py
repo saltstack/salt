@@ -1,16 +1,23 @@
 '''
 Work with virtual machines managed by libvirt
+
+Required python modules: libvirt
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-from xml.dom import minidom
-import StringIO
 import os
 import shutil
+import StringIO
 import subprocess
+from xml.dom import minidom
+from salt.exceptions import CommandExecutionError
 
-import libvirt
+try:
+    import libvirt
+    has_libvirt = True
+except ImportError:
+    has_libvirt = False
 
 # Import Third Party Libs
 import yaml
@@ -25,14 +32,25 @@ VIRT_STATE_NAME_MAP = {0: "running",
                        6: "crashed"}
 
 
+def __virtual__():
+    if not has_libvirt:
+        return False
+    return 'virt'
+
+
 def __get_conn():
     '''
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
     '''
-    # This only supports kvm right now, it needs to be expanded to support
+    # This has only been tested on kvm and xen, it needs to be expanded to support
     # all vm layers supported by libvirt
-    return libvirt.open("qemu:///system")
+    try:
+        conn = libvirt.open("qemu:///system")
+    except:
+        msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
+        raise CommandExecutionError(msg.format(__grains__['fqdn']))
+    return conn
 
 
 def _get_dom(vm_):
@@ -49,14 +67,20 @@ def _libvirt_creds():
     '''
     Returns the user and group that the disk images should be owned by
     '''
-    g_cmd = 'grep group /etc/libvirt/qemu.conf'
-    u_cmd = 'grep user /etc/libvirt/qemu.conf'
-    group = subprocess.Popen(g_cmd,
+    g_cmd = 'grep ^\s*group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep ^\s*user /etc/libvirt/qemu.conf'
+    try:
+        group = subprocess.Popen(g_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
-    user = subprocess.Popen(u_cmd,
+    except IndexError:
+        group = "root"
+    try:
+        user = subprocess.Popen(u_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+    except IndexError:
+        user = "root"
     return {'user': user, 'group': group}
 
 
@@ -68,12 +92,38 @@ def list_vms():
 
         salt '*' virt.list_vms
     '''
+    vms = []
+    vms.extend(list_active_vms())
+    vms.extend(list_inactive_vms())
+    return vms
+
+def list_active_vms():
+    '''
+    Return a list of names for active virtual machine on the minion
+
+    CLI Example::
+
+        salt '*' virt.list_active_vms
+    '''
     conn = __get_conn()
     vms = []
     for id_ in conn.listDomainsID():
         vms.append(conn.lookupByID(id_).name())
     return vms
 
+def list_inactive_vms():
+    '''
+    Return a list of names for inactive virtual machine on the minion
+
+    CLI Example::
+
+        salt '*' virt.list_inactive_vms
+    '''
+    conn = __get_conn()
+    vms = []
+    for id_ in conn.listDefinedDomains():
+        vms.append(id_)
+    return vms
 
 def vm_info():
     '''
@@ -123,6 +173,61 @@ def node_info():
             'sockets': raw[5]}
     return info
 
+def get_nics(vm_):
+    '''
+    Return info about the network interfaces of a named vm
+
+    CLI Example::
+
+        salt '*' virt.get_nics <vm name>
+    '''
+    nics = {}
+    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    for node in doc.getElementsByTagName("devices"):
+        i_nodes = node.getElementsByTagName("interface")
+        for i_node in i_nodes:
+            nic = {}
+            nic['type'] = i_node.getAttribute('type')
+            for v_node in i_node.getElementsByTagName('*'):
+                if v_node.tagName == "mac":
+                    nic['mac'] = v_node.getAttribute('address')
+                if v_node.tagName == "model":
+                    nic['model'] = v_node.getAttribute('type')
+                # driver, source, and match can all have optional attributes
+                if re.match('(driver|source|address)', v_node.tagName):
+                    temp = {}
+                    for key in v_node.attributes.keys():
+                        temp[key] = v_node.getAttribute(key)
+                    nic[str(v_node.tagName)] = temp
+                # virtualport needs to be handled separately, to pick up the
+                # type attribute of the virtualport itself
+                if v_node.tagName == "virtualport":
+                    temp = {}
+                    temp['type'] = v_node.getAttribute('type')
+                    for key in v_node.attributes.keys():
+                        temp[key] = v_node.getAttribute(key)
+                    nic['virtualport'] = temp
+            if 'mac' not in nic:
+                continue
+            nics[nic['mac']] = nic
+    return nics
+
+def get_macs(vm_):
+    '''
+    Return a list off MAC addresses from the named vm
+
+    CLI Example::
+
+        salt '*' virt.get_macs <vm name>
+    '''
+    macs = []
+    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    for node in doc.getElementsByTagName("devices"):
+        i_nodes = node.getElementsByTagName("interface")
+        for i_node in i_nodes:
+            for v_node in i_node.getElementsByTagName('mac'):
+                macs.append(v_node.getAttribute('address'))
+    return macs
 
 def get_graphics(vm_):
     '''
@@ -208,7 +313,7 @@ def freecpu():
 
     CLI Example::
 
-        salt '*' virt.freemem
+        salt '*' virt.freecpu
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
@@ -295,6 +400,17 @@ def create(vm_):
     dom = _get_dom(vm_)
     dom.create()
     return True
+
+
+def start(vm_):
+    '''
+    Alias for the obscurely named 'create' function
+
+    CLI Example::
+
+        salt '*' virt.start <vm name>
+    '''
+    return create(vm_)
 
 
 def create_xml_str(xml):
@@ -417,16 +533,10 @@ def set_autostart(vm_, state='on'):
     dom = _get_dom(vm_)
 
     if state == 'on':
-        if dom.setAutostart(1) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(1) == 0
 
     elif state == 'off':
-        if dom.setAutostart(0) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(0) == 0
 
     else:
         # return False if state is set to something other then on or off
@@ -501,7 +611,7 @@ def virt_type():
 
 def is_kvm_hyper():
     '''
-    Returns a bool whether or not this node is a hypervisor
+    Returns a bool whether or not this node is a KVM hypervisor
 
     CLI Example::
 
@@ -509,9 +619,42 @@ def is_kvm_hyper():
     '''
     if __grains__['virtual'] != 'physical':
         return False
-    if 'kvm_' not in open('/proc/modules').read():
-        return False
-    libvirt_ret = __salt__['cmd.run'](__grains__['ps']).count('libvirtd')
-    if not libvirt_ret:
-        return False
-    return True
+    try:
+        if 'kvm_' not in open('/proc/modules').read():
+            return False
+    except IOError:
+            # No /proc/modules? Are we on Windows? Or Solaris?
+            return False
+    return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
+def is_xen_hyper():
+    '''
+    Returns a bool whether or not this node is a XEN hypervisor
+
+    CLI Example::
+
+        salt '*' virt.is_xen_hyper
+    '''
+    try:
+        if __grains__['virtual_subtype'] != 'Xen Dom0':
+            return False
+    except KeyError:
+            # virtual_subtype isn't set everywhere.
+            return False
+    try:
+        if 'xen_' not in open('/proc/modules').read():
+            return False
+    except IOError:
+            # No /proc/modules? Are we on Windows? Or Solaris?
+            return False
+    return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
+def is_hyper():
+    '''
+    Returns a bool whether or not this nos is a hypervisor of any kind
+
+    CLI Example::
+
+        salt '*' virt.is_hyper
+    '''
+    return is_xen_hyper() or is_kvm_hyper()

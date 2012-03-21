@@ -12,6 +12,12 @@ controlled via the ssh_auth state:
         - present
         - user: root
         - enc: ssh-dss
+
+    thatch:
+      ssh_auth:
+        - present
+        - user: root
+        - source: salt://ssh_keys/thatch.id_rsa.pub
 '''
 
 
@@ -20,6 +26,7 @@ def present(
         user,
         enc='ssh-rsa',
         comment='',
+        source='',
         options=[],       # FIXME: mutable type; http://goo.gl/ToU2z
         config='.ssh/authorized_keys'):
     '''
@@ -37,6 +44,11 @@ def present(
     comment
         The comment to be placed with the ssh public key
 
+    source
+        The source file for the key(s). Can contain any number of public keys,
+        in standard "authorized_keys" format. If this is set, comment, enc,
+        and options will be ignored.
+
     options
         The options passed to the key, pass a list object
 
@@ -49,13 +61,19 @@ def present(
            'result': True,
            'comment': ''}
 
-    data = __salt__['ssh.set_auth_key'](
-            user,
-            name,
-            enc,
-            comment,
-            options,
-            config)
+    if source != '':
+        data = __salt__['ssh.set_auth_key_from_file'](
+                user,
+                source,
+                config)
+    else:
+        data = __salt__['ssh.set_auth_key'](
+                user,
+                name,
+                enc,
+                comment,
+                options,
+                config)
 
     if data == 'replace':
         ret['changes'][name] = 'Updated'
@@ -72,7 +90,7 @@ def present(
     elif data == 'fail':
         ret['result'] = False
         ret['comment'] = ('Failed to add the ssh key, is the home directory'
-                          ' available?')
+                          ' available and/or does the key file exist?')
 
     return ret
 

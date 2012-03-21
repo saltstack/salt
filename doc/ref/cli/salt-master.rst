@@ -35,6 +35,10 @@ Options
 
     Specify user to run minion
 
+.. option:: --pid-file PIDFILE
+
+    Specify the location of the pidfile.
+
 .. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
 
     Console log level. One of ``info``, ``none``, ``garbage``,
