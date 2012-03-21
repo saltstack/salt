@@ -71,8 +71,8 @@ def createsuperuser(settings_module,
     not create a password for the superuser.
     """
     da = _get_django_admin(bin_env)
-    cmd = "{0} createsuperuser --settings={1} --noinput --email={2} --username={3}".format(
-            da, settings_module, username, email)
+    cmd = "{0} createsuperuser --settings={1} --noinput --email='{2}' --username={3}".format(
+            da, settings_module, email, username)
     if database:
         cmd = "{0} --database={1}".format(cmd, database)
     if pythonpath:
