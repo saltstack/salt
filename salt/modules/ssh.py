@@ -3,19 +3,30 @@ Manage client ssh components
 '''
 
 import os
+import re
 
 
 def _refine_enc(enc):
     '''
     Return the properly formatted ssh value for the authorized encryption key
-    type. If the type is not found, return ssh-rsa, the ssh default.
+    type. ecdsa defaults to 256 bits, must give full ecdsa enc schema string if
+    using higher enc. If the type is not found, return ssh-rsa, the ssh default.
     '''
-    rsa = ['r', 'rsa', 'ssh-rsa']
-    dss = ['d', 'dsa', 'dss', 'ssh-dss']
+    rsa   = ['r', 'rsa', 'ssh-rsa']
+    dss   = ['d', 'dsa', 'dss', 'ssh-dss']
+    ecdsa = ['e', 'ecdsa', 'ecdsa-sha2-nistp521', 'ecdsa-sha2-nistp384',
+            'ecdsa-sha2-nistp256']
+
     if enc in rsa:
         return 'ssh-rsa'
     elif enc in dss:
         return 'ssh-dss'
+    elif enc in ecdsa:
+        # ecdsa defaults to ecdsa-sha2-nistp256
+        # otherwise enc string is actual encoding string
+        if enc in ['e', 'ecdsa']:
+            return 'ecdsa-sha2-nistp256'
+        return enc
     else:
         return 'ssh-rsa'
 
@@ -64,7 +75,7 @@ def _replace_auth_key(
             lines.append(line)
             continue
         key_ind = 1
-        if not comps[0].startswith('ssh-'):
+        if comps[0][:4:] not in ['ssh-', 'ecds']:
             key_ind = 2
         if comps[key_ind] == key:
             lines.append(auth_line)
@@ -123,28 +134,41 @@ def _validate_keys(key_file):
     Return a dict containing validated keys in the passed file
     '''
     ret = {}
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
     try:
         for line in open(key_file, 'r').readlines():
             if line.startswith('#'):
                 # Commented Line
                 continue
-            comps = line.split()
+
+            # get "{options} key"
+            ln = re.search(linere, line)
+            if not ln:
+                # not an auth ssh key, perhaps a blank line
+                continue
+
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
             if len(comps) < 2:
                 # Not a valid line
                 continue
-            if not comps[0].startswith('ssh-'):
+
+            if opts:
                 # It has options, grab them
-                options = comps[0].split(',')
+                options = opts.split(',')
             else:
                 options = []
-            if not options:
-                enc = comps[0]
+
+            enc = comps[0]
+            # check if key has a space
+            if len(comps) == 3:
+                key = comps[1] + ' ' + comps[2]
+                comment = ' '.join(comps[3:])
+            else:
                 key = comps[1]
                 comment = ' '.join(comps[2:])
-            else:
-                enc = comps[1]
-                key = comps[2]
-                comment = ' '.join(comps[3:])
+
             ret[key] = {'enc': enc,
                         'comment': comment,
                         'options': options}
@@ -163,6 +187,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         salt '*' ssh.rm_auth_key <user> <key>
     '''
     current = auth_keys(user, config)
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
     if key in current:
         # Remove the key
         uinfo = __salt__['user.info'](user)
@@ -175,20 +200,32 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # Commented Line
                 lines.append(line)
                 continue
-            comps = line.split()
+
+            # get "{options} key"
+            ln = re.search(linere, line)
+            if not ln:
+                # not an auth ssh key, perhaps a blank line
+                continue
+
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
             if len(comps) < 2:
                 # Not a valid line
                 lines.append(line)
                 continue
-            if not comps[0].startswith('ssh-'):
+
+            if opts:
                 # It has options, grab them
-                options = comps[0].split(',')
+                options = opts.split(',')
             else:
                 options = []
-            if not options:
-                pkey = comps[1]
+
+            if len(comps) == 3:
+                pkey = comps[1] + ' ' + comps[2]
             else:
-                pkey = comps[2]
+                pkey = comps[1]
+
             if pkey == key:
                 continue
             else:

@@ -91,7 +91,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'pacman -Sy'
+    cmd = 'LANG=C pacman -Sy'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
@@ -103,6 +103,7 @@ def refresh_db():
         if 'is up to date' in line:
             ret[key] = False
         elif 'downloading' in line:
+            key = line.strip().split()[1].split('.')[0]
             ret[key] = True
     return ret
 
