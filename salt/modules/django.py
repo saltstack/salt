@@ -1,4 +1,4 @@
-
+import os
 
 def _get_django_admin(bin_env):
     if not bin_env:
@@ -28,7 +28,7 @@ def command(settings_module, command, bin_env=None, *args, **kwargs):
     return __salt__['cmd.run'](cmd)
 
 
-def syncdb(settings_module, bin_env=None, migrate=False, database=None):
+def syncdb(settings_module, bin_env=None, migrate=False, database=None, pythonpath=None):
     """
     run syncdb
 
@@ -42,6 +42,9 @@ def syncdb(settings_module, bin_env=None, migrate=False, database=None):
         cmd = "{0} --migrate".format(cmd)
     if database:
         cmd = "{0} --database={1}".format(cmd, database)
+    if pythonpath:
+        cmd = "{0} --pythonpath={1}".format(cmd, pythonpath)
+    print cmd
     return __salt__['cmd.run'](cmd)
 
 
