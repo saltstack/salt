@@ -12,12 +12,19 @@ def _get_django_admin(bin_env):
     return da
 
 
-def command(settings_module, command, bin_env=None, *args, **kwargs):
+def command(settings_module,
+            command,
+            bin_env=None,
+            pythonpath=None,
+            *args, **kwargs):
     """
     run arbitrary django management command
     """
     da = _get_django_admin(bin_env)
     cmd = "{0} {1} --settings={2}".format(da, command, settings_module)
+
+    if pythonpath:
+        cmd = "{0} --pythonpath={1}".format(cmd, pythonpath)
 
     for arg in args:
         cmd = "{0} --{1}".format(cmd, arg)
@@ -28,7 +35,11 @@ def command(settings_module, command, bin_env=None, *args, **kwargs):
     return __salt__['cmd.run'](cmd)
 
 
-def syncdb(settings_module, bin_env=None, migrate=False, database=None, pythonpath=None):
+def syncdb(settings_module,
+           bin_env=None,
+           migrate=False,
+           database=None,
+           pythonpath=None):
     """
     run syncdb
 
@@ -52,7 +63,8 @@ def createsuperuser(settings_module,
                     username,
                     email,
                     bin_env=None,
-                    database=None):
+                    database=None,
+                    pythonpath=None):
     """
     create a super user for the database.
     this defaults to use the ``--noinput`` flag which will
@@ -63,10 +75,16 @@ def createsuperuser(settings_module,
             da, settings_module, username, email)
     if database:
         cmd = "{0} --database={1}".format(cmd, database)
+    if pythonpath:
+        cmd = "{0} --pythonpath={1}".format(cmd, pythonpath)
     return __salt__['cmd.run'](cmd)
 
 
-def loaddata(settings_module, fixtures, bin_env=None, database=None):
+def loaddata(settings_module,
+             fixtures,
+             bin_env=None,
+             database=None,
+             pythonpath=None):
     """
     load fixture data
 
@@ -79,6 +97,8 @@ def loaddata(settings_module, fixtures, bin_env=None, database=None):
         da, settings_module, " ".join(fixtures.split(",")))
     if database:
         cmd = "{0} --database={1}".format(cmd, database)
+    if pythonpath:
+        cmd = "{0} --pythonpath={1}".format(cmd, pythonpath)
     return __salt__['cmd.run'](cmd)
 
 
@@ -89,7 +109,8 @@ def collectstatic(settings_module,
                   dry_run=False,
                   clear=False,
                   link=False,
-                  no_default_ignore=False):
+                  no_default_ignore=False,
+                  pythonpath=None):
 
     da = _get_django_admin(bin_env)
     cmd = "{0} collectstatic --settings={1} --noinput".format(
@@ -106,10 +127,7 @@ def collectstatic(settings_module,
         cmd = "{0} --link".format(cmd)
     if no_default_ignore:
         cmd = "{0} --no-default-ignore".format(cmd)
+    if pythonpath:
+        cmd = "{0} --pythonpath={1}".format(cmd, pythonpath)
 
     return __salt__['cmd.run'](cmd)
-
-
-
-
-
