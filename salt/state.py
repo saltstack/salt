@@ -260,7 +260,7 @@ class State(object):
         if not isinstance(data['name'], basestring):
             err = ('The name {0} in sls {1} is not formed as a '
                    'string but is a {2}').format(
-                           data['name'], body['__sls__'], type(data['name']))
+                           data['name'], data['__sls__'], type(data['name']))
             errros.append(err)
         if errors:
             return errors
