@@ -1,3 +1,9 @@
+salt (0.9.8-1) unstable; urgency=low
+
+  * Initial upload to Debian unstable
+
+ -- Corey Quinn <corey@sequestered.net>  Wed, 21 Mar 2012 19:45:05 +0000
+
 salt (0.9.8-0ppa1ubuntu1) lucid; urgency=low
 
   * New upstream version
