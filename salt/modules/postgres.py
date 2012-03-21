@@ -225,7 +225,6 @@ def user_create(username,
     
     cmd = 'psql -h {host} -U {user} -p {port} -c "{sub_cmd}"'.format(
         host=host, user=user, port=port, sub_cmd=sub_cmd)
-    print cmd
     return __salt__['cmd.run'](cmd)
 
 
