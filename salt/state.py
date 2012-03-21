@@ -261,7 +261,7 @@ class State(object):
             err = ('The name {0} in sls {1} is not formed as a '
                    'string but is a {2}').format(
                            data['name'], data['__sls__'], type(data['name']))
-            erros.append(err)
+            errors.append(err)
         if errors:
             return errors
         if data['fun'].startswith('mod_'):
@@ -339,7 +339,7 @@ class State(object):
                 err = ('The name {0} in sls {1} is not formed as a '
                        'string but is a {2}').format(
                                name, body['__sls__'], type(name))
-                errros.append(err)
+                errors.append(err)
             if not isinstance(body, dict):
                 err = ('The type {0} in {1} is not formated as a dictionary'
                        .format(name, body['__sls__']))
