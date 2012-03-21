@@ -134,6 +134,7 @@ def _validate_keys(key_file):
     Return a dict containing validated keys in the passed file
     '''
     ret = {}
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
     try:
         for line in open(key_file, 'r').readlines():
             if line.startswith('#'):
@@ -141,16 +142,18 @@ def _validate_keys(key_file):
                 continue
 
             # get "{options} key"
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line)
-            opts = ''
-            comps = ''
-            if ln:
-                opts = ln.group(1)
-                comps = ln.group(2).split()
+            ln = re.search(linere, line)
+            if not ln:
+                # not an auth ssh key, perhaps a blank line
+                continue
+
+            opts = ln.group(1)
+            comps = ln.group(2).split()
 
             if len(comps) < 2:
                 # Not a valid line
                 continue
+
             if opts:
                 # It has options, grab them
                 options = opts.split(',')
@@ -184,6 +187,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         salt '*' ssh.rm_auth_key <user> <key>
     '''
     current = auth_keys(user, config)
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
     if key in current:
         # Remove the key
         uinfo = __salt__['user.info'](user)
@@ -198,7 +202,11 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 continue
 
             # get "{options} key"
-            ln = re.search('(.*?)\s?((?:ssh\-|ecds).+)$', line);
+            ln = re.search(linere, line)
+            if not ln:
+                # not an auth ssh key, perhaps a blank line
+                continue
+
             opts = ln.group(1)
             comps = ln.group(2).split()
 
@@ -206,6 +214,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # Not a valid line
                 lines.append(line)
                 continue
+
             if opts:
                 # It has options, grab them
                 options = opts.split(',')
