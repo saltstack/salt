@@ -14,9 +14,23 @@ might look like::
 '''
 
 import logging
+from salt.utils import check_or_die
+from salt.exceptions import CommandNotFoundError
+
 
 log = logging.getLogger(__name__)
 __opts__ = {}
+
+
+def __virtual__():
+    """
+    only load this module if the psql bin exists
+    """
+    try:
+        check_or_die('psql')
+        return 'postgres'
+    except CommandNotFoundError:
+        return False
 
 
 def version():
