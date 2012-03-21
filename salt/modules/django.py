@@ -55,7 +55,6 @@ def syncdb(settings_module,
         cmd = "{0} --database={1}".format(cmd, database)
     if pythonpath:
         cmd = "{0} --pythonpath={1}".format(cmd, pythonpath)
-    print cmd
     return __salt__['cmd.run'](cmd)
 
 
