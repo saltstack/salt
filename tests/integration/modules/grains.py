@@ -2,11 +2,9 @@
 Test the grains module
 '''
 
-# Import python libs
-# Import Salt libs
-import saltunittest
+import integration
 
-class TestModulesGrains(saltunittest.ModuleCase):
+class TestModulesGrains(integration.ModuleCase):
     '''
     Test the grains module
     '''

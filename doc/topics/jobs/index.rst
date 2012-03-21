@@ -20,18 +20,24 @@ cachedir, with a default configuration it is under /var/cache/salt/proc.
 Functions in the saltutil Module
 ================================
 
-Salt 0.9.7 introduced a few new functions to the saltutil module for managing
+Salt 0.9.7 introduced a few new functions to the
+:doc:`saltutil</ref/modules/all/salt.modules.saltutil>` module for managing
 jobs. These functions are:
-1. running
+
+1. ``running``
    Returns the data of all running jobs that are found in the proc directory.
-2. find_job
+
+2. ``find_job``
    Returns specific data about a certain job based on job id.
-3. signal_job
+
+3. ``signal_job``
    Allows for a given jid to be sent a signal.
-4. term_job
+
+4. ``term_job``
    Sends a termination signal (SIGTERM, 15) to the process controlling the
    specified job.
-5. kill_job
+
+5. ``kill_job``
    Sends a kill signal (SIGKILL, 9) to the process controlling the
    specified job.
 

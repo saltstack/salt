@@ -3,9 +3,9 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python modules
+from contextlib import nested
 import glob
 import os
-import sys
 import socket
 import logging
 import tempfile
@@ -23,6 +23,7 @@ except:
 import salt.crypt
 import salt.loader
 import salt.utils
+import salt.pillar
 
 log = logging.getLogger(__name__)
 
@@ -33,13 +34,33 @@ def _validate_file_roots(file_roots):
     just replace it with an empty list
     '''
     if not isinstance(file_roots, dict):
-        log.warning(('The file_roots parameter is not properly formatted,'
-            ' using defaults'))
+        log.warning('The file_roots parameter is not properly formatted,'
+                    ' using defaults')
         return {'base': ['/srv/salt']}
     for env, dirs in file_roots.items():
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             file_roots[env] = []
     return file_roots
+
+def _append_domain(opts):
+    '''
+    Append a domain to the existing id if it doesn't already exist
+    '''
+    # Domain already exists
+    if opts['id'].endswith(opts['append_domain']):
+        return opts['id']
+    # Trailing dot should mean an FQDN that is terminated, leave it alone.
+    if opts['id'].endswith('.'):
+        return opts['id']
+    return "{0[id]}.{0[append_domain]}".format(opts)
+
+def _read_conf_file(path):
+    with open(path, 'r') as conf_file:
+        conf_opts = yaml.safe_load(conf_file.read()) or {}
+        # allow using numeric ids: convert int to string
+        if 'id' in conf_opts:
+            conf_opts['id'] = str(conf_opts['id'])
+        return conf_opts
 
 
 def load_config(opts, path, env_var):
@@ -54,22 +75,13 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            with open(path, 'w') as out:
-                with open(template, 'r') as f:
-                    f.readline() # skip first line
-                    out.write(f.read())
+            with nested(open(path, 'w'), open(template, 'r')) as (out, f):
+                f.readline() # skip first line
+                out.write(f.read())
 
     if os.path.isfile(path):
         try:
-            conf_opts = yaml.safe_load(open(path, 'r'))
-            if conf_opts is None:
-                # The config file is empty and the yaml.load returned None
-                conf_opts = {}
-            else:
-                # allow using numeric ids: convert int to string
-                if 'id' in conf_opts:
-                    conf_opts['id'] = str(conf_opts['id'])
-            opts.update(conf_opts)
+            opts.update(_read_conf_file(path))
             opts['conf_file'] = path
         except Exception, e:
             msg = 'Error parsing configuration file: {0} - {1}'
@@ -91,15 +103,7 @@ def include_config(opts, orig_path):
             path = os.path.join(os.path.dirname(orig_path), path)
         for fn_ in glob.glob(path):
             try:
-                conf_opts = yaml.safe_load(open(fn_, 'r'))
-                if conf_opts is None:
-                    # The config file is empty and the yaml.load returned None
-                    conf_opts = {}
-                else:
-                    # allow using numeric ids: convert int to string
-                    if 'id' in conf_opts:
-                        conf_opts['id'] = str(conf_opts['id'])
-                opts.update(conf_opts)
+                opts.update(_read_conf_file(path))
             except Exception, e:
                 msg = 'Error parsing configuration file: {0} - {1}'
                 log.warn(msg.format(fn_, e))
@@ -134,12 +138,23 @@ def minion_config(path):
             'failhard': False,
             'autoload_dynamic_modules': True,
             'environment': None,
+            'state_top': 'top.sls',
+            'file_client': 'remote',
+            'file_roots': {
+                'base': ['/srv/salt'],
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                },
+            'hash_type': 'md5',
+            'external_nodes': '',
             'disable_modules': [],
             'disable_returners': [],
             'module_dirs': [],
             'returner_dirs': [],
             'states_dirs': [],
             'render_dirs': [],
+            'providers': {},
             'clean_dynamic_modules': True,
             'open_mode': False,
             'multiprocessing': True,
@@ -151,6 +166,8 @@ def minion_config(path):
             'cython_enable': False,
             'state_verbose': False,
             'acceptance_wait_time': 10,
+            'dns_check': True,
+            'grains': {},
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
@@ -158,22 +175,26 @@ def minion_config(path):
     if 'include' in opts:
         opts = include_config(opts, path)
 
-    opts['master_ip'] = dns_check(opts['master'])
+    if 'append_domain' in opts:
+        opts['id'] = _append_domain(opts)
 
-    opts['master_uri'] = 'tcp://' + opts['master_ip'] + ':'\
-                       + str(opts['master_port'])
+    opts['master_ip'] = salt.utils.dns_check(opts['master'])
 
-    # Enabling open mode requires that the value be set to True, and nothing
-    # else!
+    opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['master_ip'],
+                                                    port=opts['master_port'])
+
+    # Enabling open mode requires that the value be set to True, and
+    # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
 
     # set up the extension_modules location from the cachedir
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
 
-    opts['grains'] = salt.loader.grains(opts)
-
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file'])
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+                            'key_logfile', 'extension_modules'])
+
+    opts['grains'] = salt.loader.grains(opts)
 
     return opts
 
@@ -195,7 +216,13 @@ def master_config(path):
             'cachedir': '/var/cache/salt',
             'file_roots': {
                 'base': ['/srv/salt'],
-            },
+                },
+            'master_roots': {
+                'base': ['/srv/salt-master'],
+                },
+            'pillar_roots': {
+                'base': ['/srv/pillar'],
+                },
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
@@ -209,10 +236,13 @@ def master_config(path):
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
             'log_granular_levels': {},
+            'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
             'cluster_mode': 'paranoid',
+            'range_server': 'range:80',
             'serial': 'msgpack',
             'nodegroups': {},
+            'key_logfile': '/var/log/salt/key.log',
     }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
@@ -222,35 +252,15 @@ def master_config(path):
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
+    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir'])
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+                            'sock_dir', 'key_logfile', 'extension_modules'])
 
-    # Enabling open mode requires that the value be set to True, and nothing
-    # else!
+    # Enabling open mode requires that the value be set to True, and
+    # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
 
-
-def dns_check(addr):
-    '''
-    Verify that the passed address is valid and return the ipv4 addr if it is
-    a hostname
-    '''
-    try:
-        socket.inet_aton(addr)
-        # is a valid ip addr
-    except socket.error:
-        # Not a valid ip addr, check if it is an available hostname
-        try:
-            addr = socket.gethostbyname(addr)
-        except socket.gaierror:
-            # Woah, this addr is totally bogus, die!!!
-            err = ('The master address {0} could not be validated, please '
-                   'check that the specified master in the minion config '
-                   'file is correct\n')
-            err = err.format(addr)
-            sys.stderr.write(err)
-            sys.exit(42)
-    return addr

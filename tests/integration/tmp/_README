@@ -1,0 +1,5 @@
+=======
+TMP DIR
+=======
+The tmp dir is used to place files that need to be modified durring the
+execution of the test suite

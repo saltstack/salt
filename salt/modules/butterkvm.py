@@ -103,14 +103,20 @@ def libvirt_creds():
 
         salt '*' butterkvm.libvirt_creds
     '''
-    g_cmd = 'grep group /etc/libvirt/qemu.conf'
-    u_cmd = 'grep user /etc/libvirt/qemu.conf'
-    group = subprocess.Popen(g_cmd,
+    g_cmd = 'grep ^\s*group /etc/libvirt/qemu.conf'
+    u_cmd = 'grep ^\s*user /etc/libvirt/qemu.conf'
+    try:
+        group = subprocess.Popen(g_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
-    user = subprocess.Popen(u_cmd,
+    except IndexError:
+        group = "root"
+    try:
+        user = subprocess.Popen(u_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+    except IndexError:
+        user = "root"
     return {'user': user, 'group': group}
 
 

@@ -1,6 +1,7 @@
 '''
-Top level package command wrapper, used to translate the os detected by the
-grains to the correct service manager
+Service support for classic Red Hat type systems. This interface uses the
+service command (so it is compatible with upstart systems) and the chkconfig
+command.
 '''
 
 import os
@@ -14,6 +15,7 @@ def __virtual__():
     enable = [
                'RedHat',
                'CentOS',
+               'Scientific',
                'Fedora',
               ]
     if __grains__['os'] in enable:
@@ -57,7 +59,7 @@ def get_disabled():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_disabled
     '''
     rlevel = _runlevel()
     ret = set()
@@ -77,7 +79,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
 
@@ -119,13 +121,12 @@ def restart(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Return the status for a service, returns a bool whether the service is
+    running.
 
     CLI Example::
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
     '''
     cmd = 'service {0} status'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -163,9 +164,7 @@ def enabled(name):
 
         salt '*' service.enabled <service name>
     '''
-    if name in get_enabled():
-        return True
-    return False
+    return name in get_enabled()
 
 
 def disabled(name):
@@ -176,6 +175,4 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    if name in get_disabled():
-        return True
-    return False
+    return name in get_disabled()

@@ -3,29 +3,24 @@ Routines to set up a minion
 '''
 
 # Import python libs
-import BaseHTTPServer
-import contextlib
-import glob
+
 import logging
 import multiprocessing
-import hashlib
+
+import fnmatch
 import os
 import re
-import shutil
-import string
-import tempfile
 import threading
 import time
 import traceback
-import urllib2
-import urlparse
 
 # Import zeromq libs
 import zmq
 
 # Import salt libs
 from salt.exceptions import AuthenticationError, MinionError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError
+    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
+    SaltClientError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -61,9 +56,9 @@ def get_proc_dir(cachedir):
 class SMinion(object):
     '''
     Create an object that has loaded all of the minion module functions,
-    grains, modules, returners etc.
-    The SMinion allows developers to generate all of the salt minion functions
-    and present them with these functions for general use.
+    grains, modules, returners etc.  The SMinion allows developers to
+    generate all of the salt minion functions and present them with these
+    functions for general use.
     '''
     def __init__(self, opts):
         # Generate all of the minion side components
@@ -83,8 +78,8 @@ class SMinion(object):
 
 class Minion(object):
     '''
-    This class instantiates a minion, runs connections for a minion, and loads
-    all of the functions into the minion
+    This class instantiates a minion, runs connections for a minion,
+    and loads all of the functions into the minion
     '''
     def __init__(self, opts):
         '''
@@ -101,6 +96,12 @@ class Minion(object):
         else:
             log.warn('Starting the Salt Minion')
         self.authenticate()
+        opts['pillar'] = salt.pillar.get_pillar(
+            opts,
+            opts['grains'],
+            opts['id'],
+            opts['environment'],
+            ).compile_pillar()
 
     def __prep_mod_opts(self):
         '''
@@ -115,7 +116,8 @@ class Minion(object):
 
     def __load_modules(self):
         '''
-        Return the functions and the returners loaded up from the loader module
+        Return the functions and the returners loaded up from the loader
+        module
         '''
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
@@ -159,7 +161,13 @@ class Minion(object):
         # from returning a predictable exception
         #if data['fun'] not in self.functions:
         #    return
-        log.debug('Executing command {0[fun]} with jid {0[jid]}'.format(data))
+        if 'user' in data:
+            log.info(('User {0[user]} Executing command {0[fun]} with jid '
+                '{0[jid]}'.format(data)))
+        else:
+            log.info(('Executing command {0[fun]} with jid {0[jid]}'
+                .format(data)))
+        log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_pub(self, load):
@@ -176,10 +184,10 @@ class Minion(object):
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle the decoded
-        data differently.
+        Override this method if you wish to handle the decoded data
+        differently.
         '''
-        if isinstance(data['fun'], str):
+        if isinstance(data['fun'], basestring):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
 
@@ -218,7 +226,7 @@ class Minion(object):
                 arg = eval(data['arg'][ind])
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, str)):
+                elif isinstance(arg, (dict, int, list, basestring)):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
@@ -228,9 +236,11 @@ class Minion(object):
         function_name = data['fun']
         if function_name in self.functions:
             try:
-                ret['return'] = self.functions[data['fun']](*data['arg'])
+                func = self.functions[data['fun']]
+                args, kw = salt.state.build_args(func, data['arg'], data)
+                ret['return'] = func(*args, **kw)
             except CommandNotFoundError as exc:
-                msg = 'Command not found in \'{0}\': {1}'
+                msg = 'Command required for \'{0}\' not found: {1}'
                 log.debug(msg.format(function_name, str(exc)))
                 ret['return'] = msg.format(function_name, str(exc))
             except CommandExecutionError as exc:
@@ -277,7 +287,7 @@ class Minion(object):
                     arg = eval(data['arg'][ind][index])
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, str)):
+                    elif isinstance(arg, (dict, int, list, basestring)):
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
@@ -285,8 +295,9 @@ class Minion(object):
                     pass
 
             try:
-                ret['return'][data['fun'][ind]]\
-                    = self.functions[data['fun'][ind]](*data['arg'][ind])
+                func = self.functions[data['fun'][ind]]
+                args, kw = salt.state.build_args(func, data['arg'][ind], data)
+                ret['return'][data['fun'][ind]] = func(*args, **kw)
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(
@@ -325,7 +336,8 @@ class Minion(object):
         payload = {'enc': 'aes'}
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
-                    'jid': ret['jid']}
+                    'jid': ret['jid'],
+                    'id': self.opts['id']}
             load['return'] = {}
             for key, value in ret.items():
                 if key == 'jid' or key == 'fun':
@@ -339,14 +351,21 @@ class Minion(object):
         try:
             if hasattr(self.functions[ret['fun']], '__outputter__'):
                 oput = self.functions[ret['fun']].__outputter__
-                if isinstance(oput, str):
+                if isinstance(oput, basestring):
                     load['out'] = oput
         except KeyError:
             pass
         payload['load'] = self.crypticle.dumps(load)
         data = self.serial.dumps(payload)
         socket.send(data)
-        ret_val = socket.recv()
+        ret_val = self.serial.loads(socket.recv())
+        if isinstance(ret_val, basestring) and not ret_val:
+            # The master AES key has changed, reauth
+            self.authenticate()
+            payload['load'] = self.crypticle.dumps(load)
+            data = self.serial.dumps(payload)
+            socket.send(data)
+            ret_val = self.serial.loads(socket.recv())
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
             fn_ = os.path.join(
@@ -360,12 +379,17 @@ class Minion(object):
             open(fn_, 'w+').write(self.serial.dumps(ret))
         return ret_val
 
+    @property
+    def master_pub(self):
+        return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
+                                          port=self.publish_port)
+
     def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
-        paradigm, it will update the master information from a fresh sign in,
-        signing in can occur as often as needed to keep up with the revolving
-        master aes key.
+        paradigm, it will update the master information from a fresh sign
+        in, signing in can occur as often as needed to keep up with the
+        revolving master aes key.
         '''
         log.debug('Attempting to authenticate with the Salt Master')
         auth = salt.crypt.Auth(self.opts)
@@ -387,21 +411,29 @@ class Minion(object):
         '''
         fn_ = os.path.join(self.opts['cachedir'], 'module_refresh')
         if os.path.isfile(fn_):
-            os.remove(fn_)
+            with open(fn_, 'r+') as f:
+                data = f.read()
+                if 'pillar' in data:
+                    self.opts['pillar'] = salt.pillar.get_pillar(
+                        self.opts,
+                        self.opts['grains'],
+                        self.opts['id'],
+                        self.opts['environment'],
+                        ).compile_pillar()
+            try:
+                os.remove(fn_)
+            except OSError:
+                pass
             self.functions, self.returners = self.__load_modules()
 
     def tune_in(self):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        master_pub = 'tcp://{0}:{1}'.format(
-            self.opts['master_ip'],
-            str(self.publish_port)
-            )
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
-        socket.connect(master_pub)
+        socket.connect(self.master_pub)
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
@@ -415,10 +447,18 @@ class Minion(object):
                 if time.time() - last > self.opts['sub_timeout']:
                     # It has been a while since the last command, make sure
                     # the connection is fresh by reconnecting
+                    if self.opts['dns_check']:
+                        try:
+                            # Verify that the dns entry has not changed
+                            self.opts['master_ip'] = salt.utils.dns_check(
+                                self.opts['master'], safe=True)
+                        except SaltClientError:
+                            # Failed to update the dns, keep the old addr
+                            pass
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
-                    socket.connect(master_pub)
+                    socket.connect(self.master_pub)
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
@@ -438,8 +478,8 @@ class Minion(object):
 
 class Syndic(salt.client.LocalClient, Minion):
     '''
-    Make a Syndic minion, this minion will use the minion keys on the master to
-    authenticate with a higher level master.
+    Make a Syndic minion, this minion will use the minion keys on the
+    master to authenticate with a higher level master.
     '''
     def __init__(self, opts):
         self._syndic = True
@@ -463,14 +503,19 @@ class Syndic(salt.client.LocalClient, Minion):
            or 'to' not in data or 'arg' not in data:
             return
         data['to'] = int(data['to']) - 1
-        log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
-                  .format(data)))
+        if 'user' in data:
+            log.debug(('User {0[user]} Executing syndic command {0[fun]} with '
+                'jid {0[jid]}'.format(data)))
+        else:
+            log.debug(('Executing syndic command {0[fun]} with jid {0[jid]}'
+                .format(data)))
+        log.debug('Command details: {0}'.format(data))
         self._handle_decoded_payload(data)
 
     def _handle_decoded_payload(self, data):
         '''
-        Override this method if you wish to handle
-        the decoded data differently.
+        Override this method if you wish to handle the decoded data
+        differently.
         '''
         if self.opts['multiprocessing']:
             multiprocessing.Process(
@@ -485,15 +530,15 @@ class Syndic(salt.client.LocalClient, Minion):
         '''
         Take the now clear load and forward it on to the client cmd
         '''
-        # Set up default expr_form
-        if 'expr_form' not in data:
-            data['expr_form'] = 'glob'
+        # Set up default tgt_type
+        if 'tgt_type' not in data:
+            data['tgt_type'] = 'glob'
         # Send out the publication
         pub_data = self.pub(
                 data['tgt'],
                 data['fun'],
                 data['arg'],
-                data['expr_form'],
+                data['tgt_type'],
                 data['ret'],
                 data['jid'],
                 data['to']
@@ -545,14 +590,7 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
-        tmp_dir = tempfile.mkdtemp()
-        cwd = os.getcwd()
-        os.chdir(tmp_dir)
-        open(self.opts['id'], 'w+').write('salt')
-        ret = bool(glob.glob(tgt))
-        os.chdir(cwd)
-        shutil.rmtree(tmp_dir)
-        return ret
+        return fnmatch.fnmatch(self.opts['id'], tgt)
 
     def pcre_match(self, tgt):
         '''
@@ -568,7 +606,7 @@ class Matcher(object):
 
     def grain_match(self, tgt):
         '''
-        Reads in the grains regular expression match
+        Reads in the grains glob match
         '''
         comps = tgt.split(':')
         if len(comps) < 2:
@@ -576,6 +614,34 @@ class Matcher(object):
             return False
         if comps[0] not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
+            return False
+        if isinstance(self.opts['grains'][comps[0]], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['grains'][comps[0]]:
+                if fnmatch.fnmatch(str(member), comps[1]):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            str(self.opts['grains'][comps[0]]),
+            comps[1],
+            ))
+
+    def grain_pcre_match(self, tgt):
+        '''
+        Matches a grain based on regex
+        '''
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            log.error('Got insufficient arguments for grains from master')
+            return False
+        if comps[0] not in self.opts['grains']:
+            log.error('Got unknown grain from master: {0}'.format(comps[0]))
+            return False
+        if isinstance(self.opts['grains'][comps[0]], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['grains'][comps[0]]:
+                if re.match(comps[1], str(member)):
+                    return True
             return False
         return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
 
@@ -591,31 +657,20 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, str):
+        if not isinstance(tgt, basestring):
             log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',
+               'P': 'grain_pcre',
                'X': 'exsel',
                'L': 'list',
                'E': 'pcre'}
         results = []
+        opers = ['and', 'or', 'not']
         for match in tgt.split():
-            # Attach the boolean operator
-            if match == 'and':
-                results.append('and')
-                continue
-            elif match == 'or':
-                results.append('or')
-                continue
-            elif match == 'not':
-                results.append('not')
-                continue
-            # If we are here then it is not a boolean operator, check if the
-            # last member of the result list is a boolean, if no, append and
-            if results:
-                if results[-1] != 'and' or results[-1] != 'or' or results[-1] != 'not':
-                    results.append('and')
-            if match[1] == '@':
+            # Try to match tokens from the compound target, first by using
+            # the 'G, X, L, E' matcher types, then by hostname glob.
+            if '@' in match and match[1] == '@':
                 comps = match.split('@')
                 matcher = ref.get(comps[0])
                 if not matcher:
@@ -627,383 +682,20 @@ class Matcher(object):
                             '{0}_match'.format(matcher)
                             )('@'.join(comps[1:]))
                         ))
+            elif match in opers:
+                # We didn't match a target, so append a boolean operator
+                results.append(match)
             else:
-                results.append(
-                        str(getattr(
-                            self,
-                            '{0}_match'.format(matcher)
-                            )('@'.join(comps[1:]))
-                        ))
-
+                # The match is not explicitly defined, evaluate it as a glob
+                results.append(str(self.glob_match(match)))
         return eval(' '.join(results))
 
     def nodegroup_match(self, tgt, nodegroups):
         '''
-        This is a compatability matcher and is NOT called when using
+        This is a compatibility matcher and is NOT called when using
         nodegroups for remote execution, but is called when the nodegroups
         matcher is used in states
         '''
         if tgt in nodegroups:
             return self.compound_match(nodegroups[tgt])
         return False
-
-
-class FileClient(object):
-    '''
-    Interact with the salt master file server.
-    '''
-    def __init__(self, opts):
-        self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)
-        self.auth = salt.crypt.SAuth(opts)
-        self.socket = self.__get_socket()
-
-    def __get_socket(self):
-        '''
-        Return the ZeroMQ socket to use
-        '''
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        return socket
-
-    def _check_proto(self, path):
-        '''
-        Make sure that this path is intended for the salt master and trim it
-        '''
-        if not path.startswith('salt://'):
-            raise MinionError('Unsupported path: {0}'.format(path))
-        return path[7:]
-
-    def _file_local_list(self, dest):
-        '''
-        Helper util to return a list of files in a directory
-        '''
-        if os.path.isdir(dest):
-            destdir = dest
-        else:
-            destdir = os.path.dirname(dest)
-
-        filelist = []
-
-        for root, dirs, files in os.walk(destdir):
-            for name in files:
-                path = os.path.join(root, name)
-                filelist.append(path)
-
-        return filelist
-
-    def get_file(self, path, dest='', makedirs=False, env='base'):
-        '''
-        Get a single file from the salt-master
-        '''
-        path = self._check_proto(path)
-        payload = {'enc': 'aes'}
-        fn_ = None
-        if dest:
-            destdir = os.path.dirname(dest)
-            if not os.path.isdir(destdir):
-                if makedirs:
-                    os.makedirs(destdir)
-                else:
-                    return False
-            fn_ = open(dest, 'w+')
-        load = {'path': path,
-                'env': env,
-                'cmd': '_serve_file'}
-        while True:
-            if not fn_:
-                load['loc'] = 0
-            else:
-                load['loc'] = fn_.tell()
-            payload['load'] = self.auth.crypticle.dumps(load)
-            self.socket.send(self.serial.dumps(payload))
-            data = self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
-            if not data['data']:
-                if not fn_ and data['dest']:
-                    # This is a 0 byte file on the master
-                    dest = os.path.join(
-                        self.opts['cachedir'],
-                        'files',
-                        env,
-                        data['dest']
-                        )
-                    destdir = os.path.dirname(dest)
-                    cumask = os.umask(191)
-                    if not os.path.isdir(destdir):
-                        os.makedirs(destdir)
-                    if not os.path.exists(dest):
-                        open(dest, 'w+').write(data['data'])
-                    os.chmod(dest, 384)
-                    os.umask(cumask)
-                break
-            if not fn_:
-                dest = os.path.join(
-                    self.opts['cachedir'],
-                    'files',
-                    env,
-                    data['dest']
-                    )
-                destdir = os.path.dirname(dest)
-                cumask = os.umask(191)
-                if not os.path.isdir(destdir):
-                    os.makedirs(destdir)
-                fn_ = open(dest, 'w+')
-                os.chmod(dest, 384)
-                os.umask(cumask)
-            fn_.write(data['data'])
-        return dest
-
-    def get_dir(self, path, dest='', env='base'):
-        '''
-        Get a directory recursively from the salt-master
-        '''
-        ret = []
-        # Strip trailing slash
-        path = string.rstrip(self._check_proto(path), '/')
-        # Break up the path into a list conaining the bottom-level directory
-        # (the one being recursively copied) and the directories preceding it
-        separated = string.rsplit(path,'/',1)
-        if len(separated) != 2:
-            # No slashes in path. (This means all files in env will be copied)
-            prefix = ''
-        else:
-            prefix = separated[0]
-
-        # Copy files from master
-        for fn_ in self.file_list(env):
-            if fn_.startswith(path):
-                # Remove the leading directories from path to derive
-                # the relative path on the minion.
-                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
-                ret.append(self.get_file('salt://{0}'.format(fn_),
-                                         '%s/%s' % (dest,minion_relpath),
-                                         True, env))
-        # Replicate empty dirs from master
-        for fn_ in self.file_list_emptydirs(env):
-            if fn_.startswith(path):
-                # Remove the leading directories from path to derive
-                # the relative path on the minion.
-                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
-                minion_mkdir = '%s/%s' % (dest,minion_relpath)
-                os.makedirs(minion_mkdir)
-                ret.append(minion_mkdir)
-        ret.sort()
-        return ret
-
-    def get_url(self, url, dest, makedirs=False, env='base'):
-        '''
-        Get a single file from a URL.
-        '''
-        url_data = urlparse.urlparse(url)
-        if url_data.scheme == 'salt':
-            return self.get_file(url, dest, makedirs, env)
-        if dest:
-            destdir = os.path.dirname(dest)
-            if not os.path.isdir(destdir):
-                if makedirs:
-                    os.makedirs(destdir)
-                else:
-                    return ''
-        else:
-            dest = os.path.join(
-                self.opts['cachedir'],
-                'extrn_files',
-                env,
-                os.path.join(
-                    url_data.netloc,
-                    os.path.relpath(url_data.path, '/'))
-                )
-            destdir = os.path.dirname(dest)
-            if not os.path.isdir(destdir):
-                os.makedirs(destdir)
-        try:
-            with contextlib.closing(urllib2.urlopen(url)) as srcfp:
-                with open(dest, 'wb') as destfp:
-                    shutil.copyfileobj(srcfp, destfp)
-            return dest
-        except urllib2.HTTPError, ex:
-            raise MinionError('HTTP error {0} reading {1}: {3}'.format(
-                    ex.code,
-                    url,
-                    *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
-        except urllib2.URLError, ex:
-            raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
-        return ''
-
-    def cache_file(self, path, env='base'):
-        '''
-        Pull a file down from the file server and store it in the minion file
-        cache
-        '''
-        return self.get_url(path, '', True, env)
-
-    def cache_files(self, paths, env='base'):
-        '''
-        Download a list of files stored on the master and put them
-        in the minion file cache
-        '''
-        ret = []
-        for path in paths:
-            ret.append(self.cache_file(path, env))
-        return ret
-
-    def cache_master(self, env='base'):
-        '''
-        Download and cache all files on a master in a specified environment
-        '''
-        ret = []
-        for path in self.file_list(env):
-            ret.append(self.cache_file('salt://{0}'.format(path), env))
-        return ret
-
-    def cache_dir(self, path, env='base'):
-        '''
-        Download all of the files in a subdir of the master
-        '''
-        ret = []
-        path = self._check_proto(path)
-        for fn_ in self.file_list(env):
-            if fn_.startswith(path):
-                local = self.cache_file('salt://{0}'.format(fn_), env)
-                if not fn_.strip():
-                    continue
-                ret.append(local)
-        return ret
-
-    def cache_local_file(self, path, **kwargs):
-        '''
-        Cache a local file on the minion in the localfiles cache
-        '''
-        dest = os.path.join(self.opts['cachedir'], 'localfiles',
-                path.lstrip('/'))
-        destdir = os.path.dirname(dest)
-
-        if not os.path.isdir(destdir):
-            os.makedirs(destdir)
-
-        shutil.copyfile(path, dest)
-        return dest
-
-    def file_list(self, env='base'):
-        '''
-        List the files on the master
-        '''
-        payload = {'enc': 'aes'}
-        load = {'env': env,
-                'cmd': '_file_list'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
-
-    def file_list_emptydirs(self, env='base'):
-        '''
-        List the empty dirs on the master
-        '''
-        payload = {'enc': 'aes'}
-        load = {'env': env,
-                'cmd': '_file_list_emptydirs'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
-
-    def file_local_list(self, env='base'):
-        '''
-        List files in the local minion files and localfiles caches
-        '''
-        filesdest = os.path.join(self.opts['cachedir'], 'files', env)
-        localfilesdest = os.path.join(self.opts['cachedir'], 'localfiles')
-
-        return sorted(self._file_local_list(filesdest) +
-                self._file_local_list(localfilesdest))
-
-    def is_cached(self, path, env='base'):
-        '''
-        Returns the full path to a file if it is cached locally on the minion
-        otherwise returns a blank string
-        '''
-        localsfilesdest = os.path.join(
-                self.opts['cachedir'], 'localfiles', path.lstrip('/'))
-        filesdest = os.path.join(
-                self.opts['cachedir'], 'files', env, path.lstrip('salt://'))
-
-        if os.path.exists(filesdest):
-            return filesdest
-        elif os.path.exists(localsfilesdest):
-            return localsfilesdest
-
-        return ''
-
-    def hash_file(self, path, env='base'):
-        '''
-        Return the hash of a file, to get the hash of a file on the
-        salt master file server prepend the path with salt://<file on server>
-        otherwise, prepend the file with / for a local file.
-        '''
-        try:
-            path = self._check_proto(path)
-        except MinionError:
-            if not os.path.isfile(path):
-                err = ('Specified file {0} is not present to generate '
-                        'hash').format(path)
-                log.warning(err)
-                return {}
-            else:
-                ret = {}
-                ret['hsum'] = hashlib.md5(open(path, 'rb').read()).hexdigest()
-                ret['hash_type'] = 'md5'
-                return ret
-        payload = {'enc': 'aes'}
-        load = {'path': path,
-                'env': env,
-                'cmd': '_file_hash'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
-
-    def list_env(self, path, env='base'):
-        '''
-        Return a list of the files in the file server's specified environment
-        '''
-        payload = {'enc': 'aes'}
-        load = {'env': env,
-                'cmd': '_file_list'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
-
-    def get_state(self, sls, env):
-        '''
-        Get a state file from the master and store it in the local minion cache
-        return the location of the file
-        '''
-        if sls.count('.'):
-            sls = sls.replace('.', '/')
-        for path in ['salt://' + sls + '.sls',
-                     os.path.join('salt://', sls, 'init.sls')]:
-            dest = self.cache_file(path, env)
-            if dest:
-                return dest
-        return False
-
-    def master_opts(self):
-        '''
-        Return the master opts data
-        '''
-        payload = {'enc': 'aes'}
-        load = {'cmd': '_master_opts'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
-
-    def ext_nodes(self):
-        '''
-        Return the metadata derived from the external nodes system on the
-        master.
-        '''
-        payload = {'enc': 'aes'}
-        load = {'cmd': '_ext_nodes',
-                'id': self.opts['id']}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))

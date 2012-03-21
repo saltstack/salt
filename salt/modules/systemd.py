@@ -11,6 +11,8 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Fedora' and __grains__['osrelease'] > 15:
         return 'service'
+    elif __grains__['os'] == 'openSUSE':
+        return 'service'
     return False
 
 

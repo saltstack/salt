@@ -113,6 +113,19 @@
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576
 
+# Pillar Configurations:
+# The Salt Pillar, is a system that allows for the building of global data
+# that is refined based on minion. Basically, the pillar creates data that
+# can be generated to be specific based on the grains of the minion. Pillar
+# is laid out in the same fashion as the file server, with environments, a top
+# file and sls files. The difference is that the data does not need to be
+# in the highstate format, and is generally just key/value pairs.
+#
+#pillar_roots:
+#  base:
+#    - /srv/pillar
+#
+
 #####          Syndic settings       #####
 ##########################################
 # The Salt syndic is used to pass commands through a master from a higher
@@ -127,7 +140,7 @@
 #order_masters: False
 #
 # If this master will be running a salt syndic daemon, syndic_master tells
-# this master where to recieve commands from.
+# this master where to receive commands from.
 #syndic_master: masterofmaster
 
 #####      Peer Publish settings     #####
@@ -202,3 +215,8 @@
 #   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
 #   group2: 'G@os:Debian and foo.domain.com',
 
+#####     Range Cluster settings     #####
+##########################################
+# The range server (and optional port) that
+# serves your cluster information
+#range_server: range:80

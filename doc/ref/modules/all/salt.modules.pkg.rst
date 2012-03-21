@@ -13,3 +13,4 @@ salt.modules.pkg
 * :mod:`salt.modules.pacman`
 * :mod:`salt.modules.yumpkg`
 * :mod:`salt.modules.yumpkg5`
+* :mod:`salt.modules.zypper`

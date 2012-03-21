@@ -28,6 +28,11 @@ uncomment the following lines:
       base:
         - /srv/salt
 
+.. note::
+
+    If you are deploying on FreeBSD via ports, the ``file_roots`` path defaults
+    to ``/usr/local/etc/salt/states``.
+
 Restart the Salt master in order to pick up this change:
 
 .. code-block:: bash
@@ -55,7 +60,7 @@ minion matches is defined; for now simply specify all hosts (``*``).
 
     The expressions can use any of the targeting mechanisms used by Salt —
     minions can be matched by glob, pcre regular expression, or by :doc:`grains
-    </ref/grains>`. For example::
+    </topics/targeting/grains>`. For example::
 
         base:
           'os:Fedora':
@@ -81,15 +86,11 @@ In this case it defines the name of the package to be installed. **NOTE:** the
 package name for the Apache httpd web server may differ on your OS or distro —
 for example, on Fedora it is ``httpd`` but on Debian/Ubuntu it is ``apache2``.
 
-Additionally, an ID declaration should not contain a dot, as this will produce
-unpredictable output in the summary returned from a call to
-:func:`state.highstate <salt.modules.state.highstate>`.
-
 The second line, called the :term:`state declaration`, defines which of the
 Salt States we are using. In this example, we are using the :mod:`pkg state
 <salt.states.pkg>` to ensure that a given package is installed.
 
-The third line, called the :term:`function declaration` defines which function
+The third line, called the :term:`function declaration`, defines which function
 in the :mod:`pkg state <salt.states.pkg>` module to call.
 
 .. admonition:: Renderers
@@ -102,7 +103,7 @@ in the :mod:`pkg state <salt.states.pkg>` module to call.
     Building the expected data structure is the job of Salt :doc:`renderers
     </ref/renderers/index>` and they are dead-simple to write.
 
-    In this tutorial we will be using YAML in Jinja2 templates which is the
+    In this tutorial we will be using YAML in Jinja2 templates, which is the
     default format. You can change the default by changing
     :conf_master:`renderer` in the master configuration file.
 
