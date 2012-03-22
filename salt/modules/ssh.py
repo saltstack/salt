@@ -275,7 +275,7 @@ def set_auth_key(
         salt '*' ssh.set_auth_key <user> <key> dsa 'my key' '[]' .ssh/authorized_keys
     '''
     if len(key.split()) > 1:
-        return "Fail: SSH key has spaces"
+        return "invalid"
 
     enc = _refine_enc(enc)
     replace = False
