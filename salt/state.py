@@ -1050,7 +1050,7 @@ class BaseHighState(object):
         Returns the high data derived from the top file
         '''
         tops = self.get_tops()
-	if tops == 'invalid':
+        if tops == 'invalid':
             return tops
         return self.merge_tops(tops)
 
