@@ -975,7 +975,6 @@ class BaseHighState(object):
                             env=env
                             )
                         )
-	#print tops
 
         # Search initial top files for includes
         for env, ctops in tops.items():
