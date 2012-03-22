@@ -46,6 +46,8 @@ def __virtual__():
         return False
     if __grains__['virtual'] != 'physical':
         return False
+    if __grains__['kernel'] != 'Linux':
+        return False
     if 'kvm_' not in open('/proc/modules').read():
         return False
     if not has_libvirt:
