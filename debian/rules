@@ -4,8 +4,8 @@
 	dh $@ #--with python2
 dh_override_auto_build:
 	python setup.py build #--install-layout=deb build
-get-orig-source:
-	git clone https://github.com/saltstack/salt.git
-	mv salt salt-0.9.8
-	tar -zcvf salt_0.9.8.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.8
-	rm -rf salt-0.9.8
+#get-orig-source:
+#	git clone https://github.com/saltstack/salt.git
+#	mv salt salt-0.9.8
+#	tar -zcvf salt_0.9.8.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.8
+##	rm -rf salt-0.9.8
