@@ -1067,8 +1067,6 @@ class BaseHighState(object):
             if self.opts['environment']:
                 if not env == self.opts['environment']:
                     continue
-            if not isinstance(body, list):
-                return {'env': []}
             for match, data in body.items():
                 if self.matcher.confirm_top(
                         match,
