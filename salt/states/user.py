@@ -35,6 +35,7 @@ def present(
         workphone=None,
         homephone=None,
         other=None,
+        unique=True,
         ):
     '''
     Ensure that the named user is present with the specified properties
@@ -88,6 +89,9 @@ def present(
 
     other
         The user's "other" GECOS field
+
+    unique
+        Require a unique UID, True by default
     '''
     ret = {'name': name,
            'changes': {},
@@ -177,7 +181,8 @@ def present(
                             roomnumber=roomnumber,
                             workphone=workphone,
                             homephone=homephone,
-                            other=other):
+                            other=other,
+                            unique=unique):
         ret['comment'] = 'New user {0} created'.format(name)
         ret['changes'] = __salt__['user.info'](name)
         if password:
