@@ -95,7 +95,7 @@ def refresh_db():
 
 
 def install(pkg, refresh=False, repo='', skip_verify=False,
-            debconf=None, **kwargs):
+            debconf=None, version=None, **kwargs):
     '''
     Install the passed package
 
@@ -111,6 +111,8 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
     debconf : None
         Provide the path to a debconf answers file, processed before
         installation.
+    version : None
+        Install a specific version of the package, e.g. 1.0.9~ubuntu
 
     Return a dict containing the new package names and versions::
 
@@ -129,6 +131,9 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
 
     ret_pkgs = {}
     old_pkgs = list_pkgs()
+
+    if version:
+        pkg = "{0}={1}".format(pkg, version)
 
     cmd = 'apt-get -q -y {confold}{verify}{target} install {pkg}'.format(
             confold=' -o DPkg::Options::=--force-confold',
