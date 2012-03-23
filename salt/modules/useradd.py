@@ -23,7 +23,8 @@ def add(name,
         roomnumber=None,
         workphone=None,
         homephone=None,
-        other=None):
+        other=None,
+        unique=True):
     '''
     Add a user to the minion
 
@@ -47,6 +48,8 @@ def add(name,
             cmd += '-m '
         else:
             cmd += '-m -d {0} '.format(home)
+    if not unique:
+        cmd += '-o '
     cmd += name
     ret = __salt__['cmd.retcode'](cmd)
     if ret != 0:
