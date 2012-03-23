@@ -1010,13 +1010,18 @@ class BaseHighState(object):
                 if env in include:
                     include.pop(env)
 
+        errors = []
         for env,ctops in tops.items():
             if env == '':
-                return 'invalid'
+                errors.append("Empty environment")
             for ctop in ctops:
                 for key,val in ctop.items():
                     if val['']:
-                        return 'invalid'
+                        errors.append("Empty string used as key in {0}".format(
+                            ctop))
+        if errors:
+            errors.insert(0, 'invalid')
+            return errors
 
         return tops
 
@@ -1050,7 +1055,7 @@ class BaseHighState(object):
         Returns the high data derived from the top file
         '''
         tops = self.get_tops()
-        if tops == 'invalid':
+        if tops[0] == 'invalid':
             return tops
         return self.merge_tops(tops)
 
@@ -1231,14 +1236,8 @@ class BaseHighState(object):
         Run the sequence to execute the salt highstate for this minion
         '''
         top = self.get_top()
-        if top == 'invalid':
-            return {'no_|-states_|-states_|-None': {
-                        'result': False,
-                        'comment': 'Invalid top syntax',
-                        'name': 'Invalid sls',
-                        'changes': {},
-                        '__run_num__': 0,
-                   }}
+        if top[0] == 'invalid':
+            return top
         matches = self.top_matches(top)
         self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
@@ -1260,14 +1259,8 @@ class BaseHighState(object):
         Return just the highstate or the errors
         '''
         top = self.get_top()
-        if top == 'invalid':
-            return {'no_|-states_|-states_|-None': {
-                        'result': False,
-                        'comment': 'Invalid top syntax',
-                        'name': 'Invalid sls',
-                        'changes': {},
-                        '__run_num__': 0,
-                   }}
+        if top[0] == 'invalid':
+            return top
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
 
@@ -1283,14 +1276,8 @@ class BaseHighState(object):
         '''
         err = []
         top = self.get_top()
-        if top == 'invalid':
-            return {'no_|-states_|-states_|-None': {
-                        'result': False,
-                        'comment': 'Invalid top syntax',
-                        'name': 'Invalid sls',
-                        'changes': {},
-                        '__run_num__': 0,
-                   }}
+        if top[0] == 'invalid':
+            return top
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
 
