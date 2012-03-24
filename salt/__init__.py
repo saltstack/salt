@@ -223,7 +223,7 @@ class Syndic(object):
             # Some of the opts need to be changed to match the needed opts
             # in the minion class.
             opts['master'] = opts['syndic_master']
-            opts['master_ip'] = salt.config.dns_check(opts['master'])
+            opts['master_ip'] = salt.utils.dns_check(opts['master'])
 
             opts['master_uri'] = ('tcp://' + opts['master_ip'] +
                                   ':' + str(opts['master_port']))
