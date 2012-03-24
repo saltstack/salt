@@ -35,23 +35,6 @@ import salt.state
 log = logging.getLogger(__name__)
 
 
-def prep_jid(opts, load):
-    '''
-    Parses the job return directory, generates a job id and sets up the
-    job id directory.
-    '''
-    serial = salt.payload.Serial(opts)
-    jid_root = os.path.join(opts['cachedir'], 'jobs')
-    jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
-
-    jid_dir = os.path.join(jid_root, jid)
-    if not os.path.isdir(jid_dir):
-        os.makedirs(jid_dir)
-        serial.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
-    else:
-        return prep_jid(opts['cachedir'], load)
-    return jid
-
 def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
@@ -132,15 +115,23 @@ class Master(SMaster):
         '''
         Clean out the old jobs
         '''
+        if self.opts['keep_jobs'] == 0:
+            return
+        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         while True:
             cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
-            if self.opts['keep_jobs'] == 0:
-                return
-            jid_root = os.path.join(self.opts['cachedir'], 'jobs')
-            for jid in os.listdir(jid_root):
-                if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
-                    shutil.rmtree(os.path.join(jid_root, jid))
+            for top in os.listdir(jid_root):
+                t_path = os.path.join(jid_root, top)
+                for final in os.listdir(t_path):
+                    f_path = os.path.join(t_path, final)
+                    jid_file = os.path.join(f_path, 'jid')
+                    if not os.path.isfile(jid_file):
+                        continue
+                    with open(jid_file, 'r') as fn_:
+                        jid = fn_.read()
+                    if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                        shutil.rmtree(f_path)
             try:
                 time.sleep(60)
             except KeyboardInterrupt:
@@ -575,7 +566,11 @@ class AESFuncs(object):
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
         log.info('Got return from %(id)s for job %(jid)s', load)
-        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        jid_dir = salt.utils.jid_dir(
+                load['jid'],
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
@@ -609,7 +604,11 @@ class AESFuncs(object):
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return None
         # set the write flag
-        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        jid_dir = salt.utils.jid_dir(
+                load['jid'],
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
@@ -691,7 +690,18 @@ class AESFuncs(object):
         if not good:
             return {}
         # Set up the publication payload
-        jid = prep_jid(self.opts, clear_load)
+        jid = salt.utils.prep_jid(
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
+        self.serial.dump(
+                clear_load, open(
+                    os.path.join(
+                        salt.utils.jid_dir(jid),
+                        '.load.p'
+                        ),
+                    'w+')
+                )
         payload = {'enc': 'aes'}
         load = {
                 'fun': clear_load['fun'],
@@ -920,8 +930,11 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         if not clear_load.pop('key') == self.key:
             return ''
-        jid_dir = (os.path.join(self.opts['cachedir'],
-                   'jobs', clear_load['jid']))
+        jid_dir = salt.utils.jid_dir(
+                clear_load['jid'],
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
         # Verify the jid dir
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
