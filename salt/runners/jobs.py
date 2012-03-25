@@ -100,15 +100,18 @@ def list_jobs():
     serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid in os.listdir(job_dir):
-        loadpath = os.path.join(job_dir, jid, '.load.p')
-        if not os.path.isfile(loadpath):
-            continue
-        load = serial.load(open(loadpath, 'rb'))
-        ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
-                    'Function': load['fun'],
-                    'Arguments': list(load['arg']),
-                    'Target': load['tgt'],
-                    'Target-type': load['tgt_type']}
+    for top in os.listdir(job_dir):
+        t_path = os.path.join(job_dir, top)
+        for final in os.listdir(t_path):
+            loadpath = os.path.join(t_path, final, '.load.p')
+            if not os.path.isfile(loadpath):
+                continue
+            load = serial.load(open(loadpath, 'rb'))
+            jid = load['jid']
+            ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
+                        'Function': load['fun'],
+                        'Arguments': list(load['arg']),
+                        'Target': load['tgt'],
+                        'Target-type': load['tgt_type']}
     print yaml.dump(ret)
 
