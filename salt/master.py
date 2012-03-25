@@ -500,7 +500,7 @@ class AESFuncs(object):
         if load['env'] not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 for fn in files:
                     ret.append(
                         os.path.relpath(
@@ -521,7 +521,7 @@ class AESFuncs(object):
         if load['env'] not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 if len(dirs)==0 and len(files)==0:
                     ret.append(os.path.relpath(root,path))
         return ret
