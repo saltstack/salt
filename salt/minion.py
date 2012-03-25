@@ -572,6 +572,10 @@ class Matcher(object):
         data matches this minion
         '''
         matcher = 'glob'
+        if not data:
+            log.error('Recived bad data when setting the match from the top '
+                      'file')
+            return False
         for item in data:
             if isinstance(item, dict):
                 if 'match' in item:
