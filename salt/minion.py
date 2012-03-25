@@ -622,12 +622,12 @@ class Matcher(object):
         if isinstance(self.opts['grains'][comps[0]], list):
             # We are matching a single component to a single list member
             for member in self.opts['grains'][comps[0]]:
-                if fnmatch.fnmatch(str(member), comps[1]):
+                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
         return bool(fnmatch.fnmatch(
-            str(self.opts['grains'][comps[0]]),
-            comps[1],
+            str(self.opts['grains'][comps[0]]).lower(),
+            comps[1].lower(),
             ))
 
     def grain_pcre_match(self, tgt):
@@ -644,10 +644,15 @@ class Matcher(object):
         if isinstance(self.opts['grains'][comps[0]], list):
             # We are matching a single component to a single list member
             for member in self.opts['grains'][comps[0]]:
-                if re.match(comps[1], str(member)):
+                if re.match(comps[1].lower(), str(member).lower()):
                     return True
             return False
-        return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
+        return bool(
+                re.match(
+                    comps[1].lower(),
+                    str(self.opts['grains'][comps[0]]).lower()
+                    )
+                )
 
     def exsel_match(self, tgt):
         '''
