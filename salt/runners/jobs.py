@@ -22,9 +22,9 @@ def active():
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
     client = salt.client.LocalClient(__opts__['conf_file'])
-    active = client.cmd('*', 'saltutil.running', timeout=1)
-    for minion, data in active.items():
-        if not isinstance(data, tuple):
+    active_ = client.cmd('*', 'saltutil.running', timeout=1)
+    for minion, data in active_.items():
+        if not isinstance(data, list):
             continue
         for job in data:
             if not job['jid'] in ret:
@@ -36,18 +36,19 @@ def active():
                                    'Target-type': job['tgt_type']}
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
-    if os.path.isdir(job_dir):
-        for jid in os.listdir(job_dir):
-            if not jid in ret:
+    for jid in ret:
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                __opts__['cachedir'],
+                __opts__['hash_type']
+                )
+        if not os.path.isdir(jid_dir):
+            continue
+        for minion in os.listdir(jid_dir):
+            if minion.startswith('.'):
                 continue
-            jid_dir = os.path.join(job_dir, jid)
-            if not os.path.isdir(jid_dir):
-                continue
-            for minion in os.listdir(jid_dir):
-                if minion.startswith('.'):
-                    continue
-                if os.path.exists(os.path.join(jid_dir, minion)):
-                    ret[jid]['Returned'].append(minion)
+            if os.path.exists(os.path.join(jid_dir, minion)):
+                ret[jid]['Returned'].append(minion)
     print yaml.dump(ret)
 
 
