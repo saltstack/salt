@@ -1009,20 +1009,6 @@ class BaseHighState(object):
             for env in pops:
                 if env in include:
                     include.pop(env)
-
-        errors = []
-        for env,ctops in tops.items():
-            if env == '':
-                errors.append("Empty environment")
-            for ctop in ctops:
-                for key,val in ctop.items():
-                    if val['']:
-                        errors.append("Empty string used as key in {0}".format(
-                            ctop))
-        if errors:
-            errors.insert(0, 'invalid')
-            return errors
-
         return tops
 
     def merge_tops(self, tops):
@@ -1050,13 +1036,55 @@ class BaseHighState(object):
                         top[env][tgt].extend(list(states))
         return top
 
+    def verify_tops(self, tops):
+        '''
+        Verify the contents of the top file data
+        '''
+        errors = []
+        if not isinstance(tops, dict):
+            errors.append('Top data was not formed as a dict')
+            # No further checks will work, bail out
+            return errors
+        for env, matches in tops.items():
+            if env == 'include':
+                continue
+            if not isinstance(env, basestring):
+                err = ('Environment {0} in top file is not formed as a '
+                       'string').format(env)
+                errors.append(err)
+            if env == '':
+                errors.append('Empty environment statement in top file')
+            if not isinstance(matches, dict):
+                err = ('The top file matches for environment {0} are not '
+                       'laid out as a dict').format(env)
+                errors.append(err)
+            for match, slsmods in matches.items():
+                for slsmod in slsmods:
+                    if isinstance(slsmod, dict):
+                        # This value is a match option
+                        for key, val in slsmod.items():
+                            if not val:
+                                err = ('Improperly formatted top file matcher '
+                                       'in environment {0}: {1} file'.format(
+                                           slsmod,
+                                           val
+                                           )
+                                       )
+                                errors.append(err)
+                    elif isinstance(slsmod, basestring):
+                        # This is a sls module
+                        if not slsmod:
+                            err = ('Environment {0} contains an empty sls '
+                                   'index').format(env)
+                            errors.append(err)
+
+        return errors
+
     def get_top(self):
         '''
         Returns the high data derived from the top file
         '''
         tops = self.get_tops()
-        if tops[0] == 'invalid':
-            return tops
         return self.merge_tops(tops)
 
     def top_matches(self, top):
@@ -1235,14 +1263,15 @@ class BaseHighState(object):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
+        err = []
         top = self.get_top()
-        if top[0] == 'invalid':
-            return top
+        err += self.verify_tops(top)
         matches = self.top_matches(top)
         self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
-        if errors:
-            return errors
+        err += errors
+        if err:
+            return err
         if not high:
             return {'no_|-states_|-states_|-None': {
                         'result': False,
@@ -1259,8 +1288,6 @@ class BaseHighState(object):
         Return just the highstate or the errors
         '''
         top = self.get_top()
-        if top[0] == 'invalid':
-            return top
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
 
@@ -1276,8 +1303,6 @@ class BaseHighState(object):
         '''
         err = []
         top = self.get_top()
-        if top[0] == 'invalid':
-            return top
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
 
