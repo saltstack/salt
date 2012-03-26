@@ -4,6 +4,17 @@ Network tools to run from the Master
 
 import socket
 
+def wollist(maclist, bcast='255.255.255.255', destport=9):
+    '''
+    Send a "Magic Packet" to wake up a list of Minions.
+    This list must contain one MAC hardware address per line
+
+    CLI Example::
+
+        salt-run '/path/to/maclist'
+        salt-run '/path/to/maclist' 255.255.255.255 7
+        salt-run '/path/to/maclist' 255.255.255.255 7
+    '''
 def wol(mac, bcast='255.255.255.255', destport=9):
     '''
     Send a "Magic Packet" to wake up a Minion
