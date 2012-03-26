@@ -123,6 +123,13 @@ Or with the following salt state:
         - present
         - value: 4096 87380 16777216
 
+Red Hat Enterprise Linux 5
+==========================
+
+Salt requires Python 2.6 or 2.7. RHEL 5 and variants come with python 2.4 by
+default, when installing on RHEL 5 from the EPEL repository this is handled
+for you. But if running Salt from git, be advised that the deps needs to be
+installed from EPEL and salt needs to be run with the ``python26`` executable.
 
 Common YAML Gotchas
 ===================

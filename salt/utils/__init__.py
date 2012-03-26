@@ -154,6 +154,18 @@ def daemonize():
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
+def daemonize_if(multiprocessing):
+    '''
+    Daemonize a module function process if multiprocessing is True and the
+    process is not being called by salt-call
+    '''
+    if 'salt-call' in sys.argv[0]:
+        return
+    if not multiprocessing:
+        return
+    daemonize()
+
+
 def profile_func(filename=None):
     '''
     Decorator for adding profiling to a nested function in Salt
