@@ -187,6 +187,7 @@ class Minion(object):
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
+        minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
@@ -194,7 +195,6 @@ class Minion(object):
         set_pidfile(self.cli['pidfile'])
         if check_user(self.opts['user'], log):
             try:
-                minion = salt.minion.Minion(self.opts)
                 minion.tune_in()
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Minion')
