@@ -61,13 +61,16 @@ class TestDaemon(object):
 
 
     def stop_master_processes(self):
-        with open(self.master_opts['pidfile']) as pidfile:
-            for pid in pidfile.readlines():
-                if len(pid.strip()):
-                    try:
-                        os.kill(int(pid.strip()), signal.SIGTERM)
-                    except OSError:
-                        pass
+        try:
+            with open(self.master_opts['pidfile']) as pidfile:
+                for pid in pidfile.readlines():
+                    if len(pid.strip()):
+                        try:
+                            os.kill(int(pid.strip()), signal.SIGTERM)
+                        except OSError:
+                            pass
+        except IOError:
+            pass
 
 
 class ModuleCase(TestCase):
