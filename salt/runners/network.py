@@ -15,6 +15,14 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
         salt-run '/path/to/maclist' 255.255.255.255 7
         salt-run '/path/to/maclist' 255.255.255.255 7
     '''
+    try:
+        macfile = open(maclist, 'r')
+        for mac in macfile.readline().strip():
+            wol(mac, bcast, destport)
+            print "Waking up %s" % mac
+    except:
+        print "Failed to open the MAC file"
+
 def wol(mac, bcast='255.255.255.255', destport=9):
     '''
     Send a "Magic Packet" to wake up a Minion
