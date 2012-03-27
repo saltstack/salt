@@ -697,7 +697,11 @@ class AESFuncs(object):
         self.serial.dump(
                 clear_load, open(
                     os.path.join(
-                        salt.utils.jid_dir(jid),
+                        salt.utils.jid_dir(
+                            jid,
+                            self.opts['cachedir'],
+                            self.opts['hash_type']
+                            ),
                         '.load.p'
                         ),
                     'w+')
