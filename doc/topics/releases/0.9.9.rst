@@ -2,6 +2,8 @@
 Salt 0.9.9 Release Notes
 ========================
 
+THIS RELEASE IS A WORK IN PROGRESS - 0.9.9 IS NOT RELEASED YET!!!!!
+
 Major Features
 ==============
 
