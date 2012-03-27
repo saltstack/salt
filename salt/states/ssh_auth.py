@@ -26,7 +26,9 @@ name.
         - present
         - user: root
         - enc: ssh-rsa
-        - options: option1="value1",option2="value2 flag2"
+        - options:
+          - option1="value1"
+          - option2="value2 flag2"
         - comment: myuser
         - names:
           - AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==
@@ -34,7 +36,7 @@ name.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9fJ5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
-
+import re
 
 def present(
         name,
@@ -94,13 +96,13 @@ def present(
         else:
             # if there are options, set them
             if fullkey.group(1):
-                options = fullkey.group(1).split(',')
+                options = fullkey.group(1)
             # key is of format: {enc} {key} [comment]
             comps = fullkey.group(2).split()
             enc = comps[0]
             name = comps[1]
             if len(comps) == 3:
-                comment = comps[3]
+                comment = comps[2]
 
         data = __salt__['ssh.set_auth_key'](
                 user,
