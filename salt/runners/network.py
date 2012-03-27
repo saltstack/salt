@@ -10,9 +10,9 @@ def wol(mac, bcast='255.255.255.255', destport=9):
 
     CLI Example::
 
-        salt-run 08-00-27-13-69-77
-        salt-run 080027136977 255.255.255.255 7
-        salt-run 08:00:27:13:69:77 255.255.255.255 7
+        salt-run network.wol 08-00-27-13-69-77
+        salt-run network.wol 080027136977 255.255.255.255 7
+        salt-run network.wol 08:00:27:13:69:77 255.255.255.255 7
     '''
     if len(mac) == 12:
         pass
