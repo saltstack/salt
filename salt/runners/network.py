@@ -17,7 +17,7 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
     '''
     try:
         macfile = open(maclist, 'r')
-        for mac in macfile.readline().strip():
+        for mac in macfile:
             wol(mac, bcast, destport)
             print "Waking up %s" % mac
     except:
