@@ -96,7 +96,7 @@ def present(
         else:
             # if there are options, set them
             if fullkey.group(1):
-                options = fullkey.group(1)
+                options = fullkey.group(1).split(',')
             # key is of format: {enc} {key} [comment]
             comps = fullkey.group(2).split()
             enc = comps[0]
