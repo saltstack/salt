@@ -7,6 +7,21 @@ import os
 import salt.payload
 import ast
 
+def clear():
+    '''
+    Clear out all of the data in the minion datastore, this function is
+    destructive!
+
+    CLI Example::
+
+        salt '*' data.clear
+    '''
+    try:
+        os.remove(os.path.join(__opts__['cachedir'], 'datastore'))
+    except IOError:
+        pass
+    return True
+
 def load():
     '''
     Return all of the data in the minion datastore
