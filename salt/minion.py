@@ -56,7 +56,6 @@ def detect_kwargs(func, data):
     '''
     Detect the args and kwargs that need to be passed to a function call
     '''
-    # ArgSpec(args=['cmd', 'cwd', 'runas', 'shell', 'env'], varargs=None, keywords=None, defaults=(None, None, '/bin/sh', ()))
     spec_args, _, _, defaults = salt.state._getargs(func)
     starti = len(spec_args) - len(defaults)
     kwarg_spec = set()
