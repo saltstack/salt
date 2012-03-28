@@ -15,7 +15,7 @@ Originally the jobs executed were stored on the master in the format:
 But this format restricted the number of jobs in the cache to the number of
 subdirectories allowed in the filesystem. Ext3 for instance limits
 subdirectories to 32000. To combat this the new format for 0.9.9 is:
-``<cachedir>/jobs/jid_hash[:2]/jid_hach[2:]/{minion ids}``
+``<cachedir>/jobs/jid_hash[:2]/jid_hash[2:]/{minion ids}``
 So that now the number of maximum jobs that can be run before the cleanup
 cycle hits the job directory is substantially higher.
 
