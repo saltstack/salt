@@ -81,6 +81,7 @@ def _run(cmd,
         # Load the 'nix environment
         if with_env:
             cmd_prefix += ' - '
+            cmd = 'cd ' + cwd + ' && ' + cmd
 
         cmd_prefix += runas + ' -c'
         cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
