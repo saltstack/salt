@@ -52,6 +52,28 @@ def get_proc_dir(cachedir):
             os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
+def detect_kwargs(func, data):
+    '''
+    Detect the args and kwargs that need to be passed to a function call
+    '''
+    # ArgSpec(args=['cmd', 'cwd', 'runas', 'shell', 'env'], varargs=None, keywords=None, defaults=(None, None, '/bin/sh', ()))
+    spec_args, _, _, defaults = salt.state._getargs(func)
+    starti = len(spec_args) - len(defaults)
+    kwarg_spec = set()
+    for ind in xrange(len(defaults)):
+        kwarg_spec.add(spec_args[starti])
+        starti += 1
+    args = []
+    kwargs = {}
+    for arg in data['arg']:
+        if '=' in arg:
+            comps = arg.split('=')
+            if comps[0] in kwarg_spec:
+                kwargs[comps[0]] = '='.join(comps[1:])
+                continue
+        args.append(arg)
+    return args, kwargs
+
 
 class SMinion(object):
     '''
@@ -237,7 +259,7 @@ class Minion(object):
         if function_name in self.functions:
             try:
                 func = self.functions[data['fun']]
-                args, kw = salt.state.build_args(func, data['arg'], data)
+                args, kw = detect_kwargs(func, data)
                 ret['return'] = func(*args, **kw)
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
