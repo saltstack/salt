@@ -66,11 +66,12 @@ def detect_kwargs(func, args):
     _args = []
     kwargs = {}
     for arg in args:
-        if '=' in arg:
-            comps = arg.split('=')
-            if comps[0] in kwarg_spec:
-                kwargs[comps[0]] = '='.join(comps[1:])
-                continue
+        if isinstance(arg, basestring):
+            if '=' in arg:
+                comps = arg.split('=')
+                if comps[0] in kwarg_spec:
+                    kwargs[comps[0]] = '='.join(comps[1:])
+                    continue
         _args.append(arg)
     return _args, kwargs
 
