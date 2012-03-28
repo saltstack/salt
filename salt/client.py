@@ -665,7 +665,13 @@ class LocalClient(object):
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
 
-        if not minions:
+        if self.opts['order_masters']:
+            # If we're a master of masters, ignore the check_minion and
+            # set the minions to the target.  This speeds up wait time
+            # for lists and ranges and makes regex and other expression
+            # forms possible
+            minions = tgt
+        elif not minions:
             return {'jid': '',
                     'minions': minions}
 
