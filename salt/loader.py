@@ -289,6 +289,10 @@ class Loader(object):
                 continue
             if callable(getattr(mod, attr)):
                 func = getattr(mod, attr)
+                if hasattr(func, '__bases__'):
+                    if 'BaseException' in func.__bases__:
+                        # the callable object is an exception, don't load it
+                        continue
                 funcs[
                         '{0}.{1}'.format(
                             mod.__name__[:mod.__name__.rindex('_')],
