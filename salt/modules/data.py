@@ -98,5 +98,6 @@ def getvals(keys):
     store = load()
     ret = []
     for key in keys:
-        ret.append(store[key])
+        if key in store:
+            ret.append(store[key])
     return ret
