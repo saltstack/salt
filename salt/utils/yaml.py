@@ -11,20 +11,28 @@ try:
 except:
     pass
 
-load = yaml.load
+load = yaml.safe_load
 
 
 class DuplicateKeyWarning(RuntimeWarning):
-    """Warned when duplicate keys exist"""
+    '''
+    Warned when duplicate keys exist
+    '''
 
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
 class CustomeConstructor(yaml.constructor.SafeConstructor):
+    '''
+    Create a custom constructor for manageging YAML
+    '''
     def construct_mapping(self, node, deep=False):
+        '''
+        Build the mapping for yaml
+        '''
         if not isinstance(node, MappingNode):
             raise ConstructorError(None, None,
-                    "expected a mapping node, but found %s" % node.id,
+                    'expected a mapping node, but found {0}'.format(node.id),
                     node.start_mark)
         mapping = {}
         for key_node, value_node in node.value:
@@ -32,12 +40,12 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
             try:
                 hash(key)
             except TypeError, exc:
-                raise ConstructorError("while constructing a mapping", node.start_mark,
-                        "found unacceptable key (%s)" % exc, key_node.start_mark)
+                raise ConstructorError('while constructing a mapping', node.start_mark,
+                        'found unacceptable key (%s)' % exc, key_node.start_mark)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
                 warnings.warn(
-                    "Duplicate Key: '{0}'".format(key), DuplicateKeyWarning)
+                    'Duplicate Key: "{0}"'.format(key), DuplicateKeyWarning)
             mapping[key] = value
         return mapping
 
