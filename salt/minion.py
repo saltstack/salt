@@ -57,6 +57,7 @@ def detect_kwargs(func, args):
     Detect the args and kwargs that need to be passed to a function call
     '''
     spec_args, _, _, defaults = salt.state._getargs(func)
+    defaults = [] if defaults is None else defaults
     starti = len(spec_args) - len(defaults)
     kwarg_spec = set()
     for ind in xrange(len(defaults)):
