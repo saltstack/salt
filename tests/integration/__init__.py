@@ -42,6 +42,9 @@ class TestDaemon(object):
         self.master_opts['pillar_roots'] = {
                 'base': [os.path.join(FILES, 'pillar/base')]
                 }
+        self.master_opts['file_roots'] = {
+                'base': [os.path.join(FILES, 'file/base')]
+                }
         # clean up the old files
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
