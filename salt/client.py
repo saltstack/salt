@@ -189,6 +189,8 @@ class LocalClient(object):
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             return {}
+        elif not pub_data['jid']:
+            return {}
         return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
 
     def cmd_cli(
@@ -219,6 +221,9 @@ class LocalClient(object):
             timeout=timeout)
         if pub_data['jid'] == '0':
             print 'Failed to connect to the Master, is the Salt Master running?'
+            yield {}
+        elif not pub_data['jid']:
+            print 'No minions match the target'
             yield {}
         else:
             for fn_ret in self.get_cli_returns(pub_data['jid'],
@@ -259,6 +264,8 @@ class LocalClient(object):
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
+        elif not pub_data['jid']:
+            yield {}
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
@@ -295,6 +302,8 @@ class LocalClient(object):
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
+        elif not pub_data['jid']:
+            yield {}
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
@@ -328,6 +337,8 @@ class LocalClient(object):
             timeout=timeout)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
+            return {}
+        elif not pub_data['jid']:
             return {}
         return (self.get_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
@@ -665,7 +676,13 @@ class LocalClient(object):
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
 
-        if not minions:
+        if self.opts['order_masters']:
+            # If we're a master of masters, ignore the check_minion and
+            # set the minions to the target.  This speeds up wait time
+            # for lists and ranges and makes regex and other expression
+            # forms possible
+            minions = tgt
+        elif not minions:
             return {'jid': '',
                     'minions': minions}
 
