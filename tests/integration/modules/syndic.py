@@ -12,7 +12,6 @@ class TestSyndicTest(integration.SyndicCase):
         '''
         test.ping
         '''
-        print 'foobar'
         self.assertTrue(self.run_function('test.ping'))
 
     def test_echo(self):
