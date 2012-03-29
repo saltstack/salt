@@ -38,6 +38,10 @@ class TestDaemon(object):
         self.syndic_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files/conf/syndic'))
         self.syndic_opts['_master_conf_file'] = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        # Set up config options that require internal data
+        self.master_opts['pillar_roots'] = {
+                'base': [os.path.join(FILES, 'pillar/base')]
+                }
         # clean up the old files
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
