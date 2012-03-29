@@ -48,8 +48,11 @@ def __virtual__():
         return False
     if __grains__['kernel'] != 'Linux':
         return False
-    if 'kvm_' not in open('/proc/modules').read():
-        return False
+    try:
+        if 'kvm_' not in open('/proc/modules').read():
+            return False
+    except IOError:
+        pass
     if not has_libvirt:
         return False
     try:
