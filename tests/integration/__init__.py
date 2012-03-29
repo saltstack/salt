@@ -25,7 +25,6 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-
     def __enter__(self):
         '''
         Start a master and minion
@@ -82,23 +81,9 @@ class TestDaemon(object):
         Kill the minion and master processes
         '''
         self.minion_process.terminate()
-        self.stop_master_processes()
         self.master_process.terminate()
         self.syndic_process.terminate()
         self.smaster_process.terminate()
-
-
-    def stop_master_processes(self):
-        try:
-            with open(self.master_opts['pidfile']) as pidfile:
-                for pid in pidfile.readlines():
-                    if len(pid.strip()):
-                        try:
-                            os.kill(int(pid.strip()), signal.SIGTERM)
-                        except OSError:
-                            pass
-        except IOError:
-            pass
 
 
 class ModuleCase(TestCase):
