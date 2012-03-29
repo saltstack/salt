@@ -8,6 +8,7 @@ cachedir: cache
 timeout: 1
 sock_dir: .salt-unix
 open_mode: True
+syndic_master: localhost
 peer:
   '.*':
     - 'test.*'
