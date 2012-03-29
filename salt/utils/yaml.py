@@ -11,7 +11,7 @@ try:
 except:
     pass
 
-load = yaml.safe_load
+load = yaml.load
 
 
 class DuplicateKeyWarning(RuntimeWarning):
