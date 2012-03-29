@@ -120,7 +120,12 @@ class ModuleCase(TestCase):
         '''
         Generate the tools to test a module
         '''
-        self.client = salt.client.LocalClient(os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master'))
+        self.client = salt.client.LocalClient(
+                os.path.join(
+                    INTEGRATION_TEST_DIR,
+                    'files/conf/master'
+                    )
+                )
 
     def run_function(self, function, arg=()):
         '''
@@ -151,3 +156,26 @@ class ModuleCase(TestCase):
                     'files/conf/master'
                     )
                 )
+
+class SyndicCase(TestCase):
+    '''
+    Execute a syndic based execution test
+    '''
+    def setUp(self):
+        '''
+        Generate the tools to test a module
+        '''
+        self.client = salt.client.LocalClient(
+                os.path.join(
+                    INTEGRATION_TEST_DIR,
+                    'files/conf/syndic_master'
+                    )
+                )
+
+    def run_function(self, function, arg=()):
+        '''
+        Run a single salt function and condition the return down to match the
+        behavior of the raw function call
+        '''
+        orig = self.client.cmd('minion', function, arg)
+        return orig['minion']
