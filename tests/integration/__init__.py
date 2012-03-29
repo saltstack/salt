@@ -42,9 +42,7 @@ class TestDaemon(object):
         # clean up the old files
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
-        self.master_opts['file_roots'] = FILES
         self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
-        self.minion_opts['file_roots'] = FILES
         self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
         verify_env([
                     os.path.join(self.master_opts['pki_dir'], 'minions'),
