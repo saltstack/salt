@@ -10,4 +10,4 @@ sock_dir: .salt-unix
 open_mode: True
 peer:
   '.*':
-    - '.*'
+    - 'test.*'

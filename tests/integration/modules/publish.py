@@ -25,3 +25,17 @@ class PublishModuleTest(integration.ModuleCase):
                 ]
                 )
         self.assertEqual(ret['minion']['ret'][0][-1], 34)
+        
+    def test_reject_minion(self):
+        '''
+        Test bad authentication
+        '''
+        ret = self.run_function(
+                'publish.publish',
+                [
+                    'minion',
+                    'cmd.run',
+                    ['echo foo']
+                ]
+                )
+        self.assertEqual(ret, {})
