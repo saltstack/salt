@@ -36,11 +36,9 @@ class TestDaemon(object):
             os.path.join(INTEGRATION_TEST_DIR, 'files/conf/minion'))
         self.smaster_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files/conf/syndic_master'))
-        self.syndic_opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master'))
-        self.syndic_opts.update(self.minion_opts)
-        self.syndic_opts['master_port'] = '74506'
-        self.syndic_opts['_master_conf_file'] = self.master_opts['conf_file']
+        self.syndic_opts = salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/syndic'))
+        self.syndic_opts['_master_conf_file'] = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
         # clean up the old files
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
@@ -80,13 +78,6 @@ class TestDaemon(object):
         self.syndic_process.start()
 
         return self
-
-    def __exit__(self, type, value, traceback):
-        '''
-        Kill the minion and master processes
-        '''
-        self.syndic_process.terminate()
-        self.master_process.terminate()
 
     def __exit__(self, type, value, traceback):
         '''
