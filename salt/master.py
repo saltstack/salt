@@ -694,8 +694,17 @@ class AESFuncs(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
+        load = {
+                'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'tgt_type': clear_load.get('tgt_type', 'glob'),
+                'tgt': clear_load['tgt'],
+                'jid': jid,
+                'ret': clear_load['ret'],
+                'id': clear_load['id'],
+               }
         self.serial.dump(
-                clear_load, open(
+                load, open(
                     os.path.join(
                         salt.utils.jid_dir(
                             jid,
@@ -707,14 +716,6 @@ class AESFuncs(object):
                     'w+')
                 )
         payload = {'enc': 'aes'}
-        load = {
-                'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'tgt': clear_load['tgt'],
-                'jid': jid,
-                'ret': clear_load['ret'],
-                'id': clear_load['id'],
-               }
         expr_form = 'glob'
         timeout = 5
         if 'tmo' in clear_load:
