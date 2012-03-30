@@ -2,13 +2,17 @@
 Some of the utils used by salt
 '''
 
+# Import Python libs
 import os
 import imp
 import sys
 import socket
 import logging
+import hashlib
+import datetime
 from calendar import month_abbr as months
 
+# Import Salt libs
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
 
@@ -148,6 +152,18 @@ def daemonize():
     os.dup2(dev_null.fileno(), sys.stdin.fileno())
     os.dup2(dev_null.fileno(), sys.stdout.fileno())
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
+
+
+def daemonize_if(multiprocessing):
+    '''
+    Daemonize a module function process if multiprocessing is True and the
+    process is not being called by salt-call
+    '''
+    if 'salt-call' in sys.argv[0]:
+        return
+    if not multiprocessing:
+        return
+    daemonize()
 
 
 def profile_func(filename=None):
@@ -302,6 +318,28 @@ def required_modules_error(name, docstring):
     filename = os.path.basename(name).split('.')[0]
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
+
+def prep_jid(cachedir, sum_type):
+    '''
+    Return a job id and prepare the job id directory
+    '''
+    jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+
+    jid_dir_ = jid_dir(jid, cachedir, sum_type)
+    if not os.path.isdir(jid_dir_):
+        os.makedirs(jid_dir_)
+        with open(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
+            fn_.write(jid)
+    else:
+        return prep_jid(cachedir, sum_type)
+    return jid
+
+def jid_dir(jid, cachedir, sum_type):
+    '''
+    Return the jid_dir for the given job id
+    '''
+    jhash = getattr(hashlib, sum_type)(jid).hexdigest()
+    return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 
 def check_or_die(command):
     '''

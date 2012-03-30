@@ -2,8 +2,11 @@
 Control the state system on the minion
 '''
 
+# Import Python libs
 import os
+import sys
 
+# Import Salt libs
 import salt.state
 
 
@@ -75,6 +78,7 @@ def highstate():
 
         salt '*' state.highstate
     '''
+    salt.utils.daemonize_if(__opts__['multiprocessing'])
     st_ = salt.state.HighState(__opts__)
     return st_.call_highstate()
 
@@ -88,6 +92,7 @@ def sls(mods, env='base'):
 
         salt '*' state.sls core,edit.vim dev
     '''
+    salt.utils.daemonize_if(__opts__['multiprocessing'])
     st_ = salt.state.HighState(__opts__)
     if isinstance(mods, basestring):
         mods = mods.split(',')

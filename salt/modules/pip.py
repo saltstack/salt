@@ -44,7 +44,8 @@ def install(pkgs=None,
             no_deps=False,
             no_install=False,
             no_download=False,
-            install_options=None):
+            install_options=None,
+            runas=None):
     '''
     Install packages with pip
 
@@ -117,6 +118,8 @@ def install(pkgs=None,
         option options to pass multiple options to setup.py
         install.  If you are using an option with a directory
         path, be sure to use absolute path.
+    runas
+        User to run pip as
 
 
     CLI Example::
@@ -250,7 +253,7 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, runas=runas)
 
 
 def uninstall(pkgs=None,
