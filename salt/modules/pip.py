@@ -363,7 +363,12 @@ def list(prefix='', bin_env=None):
     packages = {}
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
     for line in __salt__['cmd.run'](cmd).split("\n"):
-        if len(line.split("==")) >= 2:
+        if line.startswith('-e'):
+            line = line.split('-e ')[1]
+            line, name = line.split('#egg=')
+            packages[name]=line
+            
+        elif len(line.split("==")) >= 2:
             name = line.split("==")[0]
             version = line.split("==")[1]
             if prefix:
