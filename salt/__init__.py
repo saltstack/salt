@@ -316,3 +316,18 @@ class Syndic(object):
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Syndic Minion')
                 raise SystemExit('\nExiting on Ctrl-c')
+
+
+def master():
+    master = Master()
+    master.start()
+
+
+def minion():
+    minion = Master()
+    minion.start()
+
+
+def syndic():
+    syndic = Syndic()
+    syndic.start()
