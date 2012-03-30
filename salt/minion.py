@@ -92,6 +92,12 @@ class SMinion(object):
         '''
         Load all of the modules for the minion
         '''
+        self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts)
         self.returners = salt.loader.returners(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
