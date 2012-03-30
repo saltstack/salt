@@ -794,3 +794,43 @@ class SaltRun(object):
         '''
         runner = salt.runner.Runner(self.opts)
         runner.run()
+
+
+def run():
+    try:
+        client = SaltRun()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
+
+
+def key():
+    try:
+        client = SaltKey()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
+
+
+def cp_():
+    try:
+        client = SaltCP()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
+
+
+def call():
+    try:
+        client = SaltCall()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')
+
+
+def cmd():
+    try:
+        client = SaltCMD()
+        client.run()
+    except KeyboardInterrupt:
+        raise SystemExit('\nExiting gracefully on Ctrl-c')

@@ -6,13 +6,11 @@ The setup script for salt
 import os
 import sys
 from glob import glob
-from distutils.core import setup, Extension
+from distutils.core import Extension
 from distutils.command.sdist import sdist
 from distutils.cmd import Command
 from distutils.sysconfig import get_python_lib, PREFIX
-
-if os.environ.get('VIRTUAL_ENV'):
-    from setuptools import setup
+from setuptools import setup
 
 execfile('salt/version.py')
 
@@ -89,14 +87,6 @@ setup(
                 'salt.states',
                 'salt.utils',
                 ],
-      scripts=['scripts/salt-master',
-               'scripts/salt-minion',
-               'scripts/salt-syndic',
-               'scripts/salt-key',
-               'scripts/salt-cp',
-               'scripts/salt-call',
-               'scripts/salt-run',
-               'scripts/salt'],
       data_files=[('share/man/man1',
                     ['doc/man/salt-master.1',
                      'doc/man/salt-key.1',
@@ -112,4 +102,16 @@ setup(
                     ]),
                  ],
       install_requires=requirements,
-     )
+      entry_points = {
+          "console_scripts": [
+              "salt-syndic = salt:syndic",
+              "salt-minion = salt:minion",
+              "salt-master = salt:master",
+              "salt-call = salt.cli:call",
+              "salt-run = salt.cli:run",
+              "salt-key = salt.cli:key",
+              "salt-cp = salt.cli:cp",
+              "salt = salt.cli:cmd",
+        ],
+    },
+)
