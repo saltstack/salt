@@ -25,7 +25,6 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-
     def __enter__(self):
         '''
         Start a master and minion
@@ -39,6 +38,13 @@ class TestDaemon(object):
         self.syndic_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files/conf/syndic'))
         self.syndic_opts['_master_conf_file'] = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        # Set up config options that require internal data
+        self.master_opts['pillar_roots'] = {
+                'base': [os.path.join(FILES, 'pillar/base')]
+                }
+        self.master_opts['file_roots'] = {
+                'base': [os.path.join(FILES, 'file/base')]
+                }
         # clean up the old files
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
@@ -82,23 +88,9 @@ class TestDaemon(object):
         Kill the minion and master processes
         '''
         self.minion_process.terminate()
-        self.stop_master_processes()
         self.master_process.terminate()
         self.syndic_process.terminate()
         self.smaster_process.terminate()
-
-
-    def stop_master_processes(self):
-        try:
-            with open(self.master_opts['pidfile']) as pidfile:
-                for pid in pidfile.readlines():
-                    if len(pid.strip()):
-                        try:
-                            os.kill(int(pid.strip()), signal.SIGTERM)
-                        except OSError:
-                            pass
-        except IOError:
-            pass
 
 
 class ModuleCase(TestCase):
