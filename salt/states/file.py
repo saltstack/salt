@@ -80,7 +80,7 @@ something like this:
         - recurse
         - source: salt://code/flask
 '''
-
+# Import Python libs
 import codecs
 from contextlib import nested  # For < 2.7 compat
 import os
@@ -93,6 +93,9 @@ import tempfile
 import traceback
 import urlparse
 import copy
+
+# Import Salt libs
+import salt.utils.templates
 
 logger = logging.getLogger(__name__)
 
@@ -211,129 +214,10 @@ def _error(ret, err_msg):
     return ret
 
 
-def _mako(sfn, name, source, user, group, mode, env, context=None):
-    '''
-    Render a mako template, returns the location of the rendered file,
-    return False if render fails.
-    Returns::
-
-        {'result': bool,
-         'data': <Error data or rendered file path>}
-    '''
-    try:
-        from mako.template import Template
-    except ImportError:
-        return {'result': False,
-                'data': 'Failed to import jinja'}
-    try:
-        tgt = tempfile.mkstemp()[1]
-        passthrough = context if context else {}
-        passthrough.update(__salt__)
-        passthrough.update(__grains__)
-        passthrough.update(__pillar__)
-        with nested(open(sfn, 'r'), open(tgt, 'w+')) as (src, target):
-            template = Template(src.read())
-            target.write(template.render(**passthrough))
-        return {'result': True,
-                'data': tgt}
-    except:
-        trb = traceback.format_exc()
-        return {'result': False,
-                'data': trb}
-
-
-def _jinja(sfn, name, source, user, group, mode, env, context=None):
-    '''
-    Render a jinja2 template, returns the location of the rendered file,
-    return False if render fails.
-    Returns::
-
-        {'result': bool,
-         'data': <Error data or rendered file path>}
-    '''
-    try:
-        from salt.utils.jinja import get_template
-    except ImportError:
-        return {'result': False,
-                'data': 'Failed to import jinja'}
-    try:
-        newline = False
-        with open(sfn, 'rb') as source:
-            if source.read().endswith('\n'):
-                newline = True
-        tgt = tempfile.mkstemp()[1]
-        passthrough = context if context else {}
-        passthrough['salt'] = __salt__
-        passthrough['grains'] = __grains__
-        passthrough['pillar'] = __pillar__
-        passthrough['name'] = name
-        passthrough['source'] = source
-        passthrough['user'] = user
-        passthrough['group'] = group
-        passthrough['mode'] = mode
-        passthrough['env'] = env
-        template = get_template(sfn, __opts__, env)
-        try:
-            with open(tgt, 'w+') as target:
-                target.write(template.render(**passthrough))
-                if newline:
-                    target.write('\n')
-        except UnicodeEncodeError:
-            with codecs.open(tgt, encoding='utf-8', mode='w+') as target:
-                target.write(template.render(**passthrough))
-                if newline:
-                    target.write('\n')
-        return {'result': True,
-                    'data': tgt}
-    except:
-        trb = traceback.format_exc()
-        return {'result': False,
-                'data': trb}
-
-
-def _py(sfn, name, source, user, group, mode, env, context=None):
-    '''
-    Render a template from a python source file
-
-    Returns::
-
-        {'result': bool,
-         'data': <Error data or rendered file path>}
-    '''
-    if not os.path.isfile(sfn):
-        return {}
-
-    mod = imp.load_source(
-            os.path.basename(sfn).split('.')[0],
-            sfn
-            )
-    mod.salt = __salt__
-    mod.grains = __grains__
-    mod.pillar = __pillar__
-    mod.name = name
-    mod.source = source
-    mod.user = user
-    mod.group = group
-    mod.mode = mode
-    mod.env = env
-    mod.context = context
-
-    try:
-        tgt = tempfile.mkstemp()[1]
-        with open(tgt, 'w+') as target:
-            target.write(mod.run())
-        return {'result': True,
-                'data': tgt}
-    except:
-        trb = traceback.format_exc()
-        return {'result': False,
-                'data': trb}
-
-
 template_registry = {
-    'jinja': _jinja,
-    'mako': _mako,
-    'py': _py,
+    'jinja': salt.utils.templates.jinja,
+    'mako': salt.utils.templates.mako,
+    'py': salt.utils.templates.py,
 }
 
 
@@ -612,7 +496,7 @@ def managed(name,
                     break
 
     # If the file is a template and the contents is managed
-    # then make sure to cpy it down and templatize  things.
+    # then make sure to copy it down and templatize  things.
     if template and source:
         sfn = __salt__['cp.cache_file'](source, __env__)
         if not os.path.exists(sfn):
@@ -624,13 +508,17 @@ def managed(name,
                 context_dict.update(context)
             data = template_registry[template](
                     sfn,
-                    name,
-                    source,
-                    user,
-                    group,
-                    mode,
-                    __env__,
-                    context_dict
+                    name=name,
+                    source=source,
+                    user=user,
+                    group=group,
+                    mode=mode,
+                    env=__env__,
+                    context=context_dict,
+                    salt=__salt__,
+                    pillar=__pillar__,
+                    grains=__grains__,
+                    opts=__opts__,
                     )
         else:
             return _error(
