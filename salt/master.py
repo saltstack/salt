@@ -718,12 +718,17 @@ class AESFuncs(object):
         expr_form = 'glob'
         timeout = 5
         if 'tmo' in clear_load:
-            timeout = int(clear_load['tmo'])
+            try:
+                timeout = int(clear_load['tmo'])
+            except ValueError:
+                msg = 'Failed to parse timeout value: {0}'.format(clear_load['tmo'])
+                log.warn(msg)
+                return {}
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
         if 'timeout' in clear_load:
-            timeout = clear_load('timeout')
+            timeout = clear_load['timeout']
         # Encrypt!
         payload['load'] = self.crypticle.dumps(load)
         # Connect to the publisher
