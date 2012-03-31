@@ -1,0 +1,5 @@
+/var/log/salt/master {
+	missingok
+	sharedscripts
+	endscript
+}
