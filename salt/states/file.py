@@ -214,13 +214,6 @@ def _error(ret, err_msg):
     return ret
 
 
-template_registry = {
-    'jinja': salt.utils.templates.jinja,
-    'mako': salt.utils.templates.mako,
-    'py': salt.utils.templates.py,
-}
-
-
 def _check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
@@ -502,11 +495,11 @@ def managed(name,
         if not os.path.exists(sfn):
             return _error(
                 ret, ('File "{sfn}" could not be found').format(sfn=sfn))
-        if template in template_registry:
+        if template in salt.utils.templates.template_registry:
             context_dict = defaults if defaults else {}
             if context:
                 context_dict.update(context)
-            data = template_registry[template](
+            data = salt.utils.templates.template_registry[template](
                     sfn,
                     name=name,
                     source=source,

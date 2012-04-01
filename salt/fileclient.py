@@ -279,7 +279,8 @@ class Client(object):
             dest,
             template='jinja',
             makedirs=False,
-            env='base'):
+            env='base',
+            **kwargs):
         '''
         Cache a file then process it as a template
         '''
@@ -290,17 +291,7 @@ class Client(object):
         if template in salt.utils.templates.template_registry:
             data = template_registry[template](
                     sfn,
-                    name=name,
-                    source=source,
-                    user=user,
-                    group=group,
-                    mode=mode,
-                    env=__env__,
-                    context=context_dict,
-                    salt=__salt__,
-                    pillar=__pillar__,
-                    grains=__grains__,
-                    opts=__opts__,
+                    **kwargs
                     )
         else:
             log.error('Attempted to render template with unavailable engine '

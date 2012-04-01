@@ -13,6 +13,7 @@ import copy
 
 logger = logging.getLogger(__name__)
 
+
 def mako(sfn, **kwargs):
     '''
     Render a mako template, returns the location of the rendered file,
@@ -122,3 +123,10 @@ def py(sfn, **kwargs):
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
+
+template_registry = {
+    'jinja': jinja,
+    'mako': mako,
+    'py': py,
+}
+
