@@ -59,7 +59,7 @@ def _get_dom(vm_):
     '''
     conn = __get_conn()
     if vm_ not in list_vms():
-        raise Exception('The specified vm is not present')
+        raise CommandExecutionError('The specified vm is not present')
     return conn.lookupByName(vm_)
 
 
