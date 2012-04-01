@@ -56,7 +56,7 @@ def detect_kwargs(func, args):
     '''
     Detect the args and kwargs that need to be passed to a function call
     '''
-    spec_args, _, _, defaults = salt.state._getargs(func)
+    spec_args, _, has_kwargs, defaults = salt.state._getargs(func)
     defaults = [] if defaults is None else defaults
     starti = len(spec_args) - len(defaults)
     kwarg_spec = set()
@@ -69,6 +69,9 @@ def detect_kwargs(func, args):
         if isinstance(arg, basestring):
             if '=' in arg:
                 comps = arg.split('=')
+                if has_kwargs:
+                    kwargs[comps[0]] = '='.join(comps[1:])
+                    continue
                 if comps[0] in kwarg_spec:
                     kwargs[comps[0]] = '='.join(comps[1:])
                     continue
@@ -92,6 +95,12 @@ class SMinion(object):
         '''
         Load all of the modules for the minion
         '''
+        self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts)
         self.returners = salt.loader.returners(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
