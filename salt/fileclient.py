@@ -25,6 +25,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils.templates
 
 log = logging.getLogger(__name__)
 
@@ -284,12 +285,13 @@ class Client(object):
         '''
         Cache a file then process it as a template
         '''
+        kwargs['env'] = env
         url_data = urlparse.urlparse(url)
-        sfn = self.cache_file(source,env)
+        sfn = self.cache_file(url, env)
         if not os.path.exists(sfn):
             return ''
         if template in salt.utils.templates.template_registry:
-            data = template_registry[template](
+            data = salt.utils.templates.template_registry[template](
                     sfn,
                     **kwargs
                     )
