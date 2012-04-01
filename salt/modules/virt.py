@@ -152,6 +152,19 @@ def vm_info():
                      'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
     return info
 
+def vm_state(vm_):
+    '''
+    Return the status of the named VM.
+
+    CLI Example::
+
+        salt '*' virt.vm_state <vm name>
+    '''
+    state = ''
+    dom = _get_dom(vm_)
+    raw = dom.info()
+    state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
+    return state
 
 def node_info():
     '''
