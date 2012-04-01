@@ -273,6 +273,63 @@ class Client(object):
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
         return ''
 
+    def get_template(
+            self,
+            url,
+            dest,
+            template='jinja',
+            makedirs=False,
+            env='base'):
+        '''
+        Cache a file then process it as a template
+        '''
+        url_data = urlparse.urlparse(url)
+        sfn = self.cache_file(source,env)
+        if not os.path.exists(sfn):
+            return ''
+        if template in salt.utils.templates.template_registry:
+            data = template_registry[template](
+                    sfn,
+                    name=name,
+                    source=source,
+                    user=user,
+                    group=group,
+                    mode=mode,
+                    env=__env__,
+                    context=context_dict,
+                    salt=__salt__,
+                    pillar=__pillar__,
+                    grains=__grains__,
+                    opts=__opts__,
+                    )
+        else:
+            log.error('Attempted to render template with unavailable engine '
+                      '{0}'.format(template))
+            return ''
+        if not data['result']:
+            # Failed to render the template
+            log.error('Failed to render template with error: {0}'.format(
+                data['data']
+                ))
+            return ''
+        if not dest:
+            # No destination passed, set the dest as an extrn_files cache
+            dest = os.path.normpath(
+                os.sep.join([
+                    self.opts['cachedir'],
+                    'extrn_files',
+                    env,
+                    url_data.netloc,
+                    url_data.path]))
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            if makedirs:
+                os.makedirs(destdir)
+            else:
+                return ''
+        shutil.move(data['data'], dest)
+        return dest
+
 
 class LocalClient(Client):
     '''
