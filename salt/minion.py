@@ -52,7 +52,7 @@ def get_proc_dir(cachedir):
             os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
-def detect_kwargs(func, args):
+def detect_kwargs(func, args, data=None):
     '''
     Detect the args and kwargs that need to be passed to a function call
     '''
@@ -76,6 +76,10 @@ def detect_kwargs(func, args):
                     kwargs[comps[0]] = '='.join(comps[1:])
                     continue
         _args.append(arg)
+    if has_kwargs and isinstance(data, dict):
+        # this function accepts kwargs, pack in the publish data
+        for key, val in data.items():
+            kwargs['__pub_{0}'.format(key)] = val
     return _args, kwargs
 
 
@@ -269,7 +273,7 @@ class Minion(object):
         if function_name in self.functions:
             try:
                 func = self.functions[data['fun']]
-                args, kw = detect_kwargs(func, data['arg'])
+                args, kw = detect_kwargs(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
@@ -328,7 +332,7 @@ class Minion(object):
 
             try:
                 func = self.functions[data['fun'][ind]]
-                args, kw = salt.state.build_args(func, data['arg'][ind], data)
+                args, kw = detect_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kw)
             except Exception as exc:
                 trb = traceback.format_exc()
