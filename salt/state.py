@@ -904,10 +904,20 @@ class State(object):
 class BaseHighState(object):
     '''
     The BaseHighState is the foundation of running a highstate, extend it and
-    add a self.state opbject of type State
+    add a self.state object of type State
     '''
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
+        self.avail = self.__gather_avail()
+
+    def __gather_avail(self):
+        '''
+        Gather the lists of available sls data from the master
+        '''
+        avail = {}
+        for env in self._get_envs():
+            avail[env] = self.client.list_states(env)
+        return avail
 
     def __gen_opts(self, opts):
         '''
@@ -991,21 +1001,22 @@ class BaseHighState(object):
                 pops.append(env)
                 if not states:
                     continue
-                for sls in states:
-                    if sls in done[env]:
-                        continue
-                    tops[env].append(
-                            compile_template(
-                                self.client.get_state(
-                                    sls,
-                                    env
-                                    ),
-                                self.state.rend,
-                                self.state.opts['renderer'],
-                                env=env
+                for sls_match in states:
+                    for sls in fnmatch.filter(self.avail[env], sls_match):
+                        if sls in done[env]:
+                            continue
+                        tops[env].append(
+                                compile_template(
+                                    self.client.get_state(
+                                        sls,
+                                        env
+                                        ),
+                                    self.state.rend,
+                                    self.state.opts['renderer'],
+                                    env=env
+                                    )
                                 )
-                            )
-                    done[env].append(sls)
+                        done[env].append(sls)
             for env in pops:
                 if env in include:
                     include.pop(env)
@@ -1132,18 +1143,6 @@ class BaseHighState(object):
         faux = {'state': 'file', 'fun': 'recurse'}
         self.state.module_refresh(faux)
 
-    def gather_states(self, matches):
-        '''
-        Gather the template files from the master
-        '''
-        group = []
-        for env, states in matches.items():
-            for sls in states:
-                state = self.client.get_state(sls, env)
-                if state:
-                    group.append(state)
-        return group
-
     def render_state(self, sls, env, mods):
         '''
         Render a state file and retrieve all of the include states
@@ -1225,26 +1224,27 @@ class BaseHighState(object):
         errors = []
         for env, states in matches.items():
             mods = set()
-            for sls in states:
-                state, mods, err = self.render_state(sls, env, mods)
-                # The extend members can not be treated as globally unique:
-                if '__extend__' in state and '__extend__' in highstate:
-                    highstate['__extend__'].extend(state.pop('__extend__'))
-                for id_ in state:
-                    if id_ in highstate:
-                        if highstate[id_] != state[id_]:
-                            errors.append(('Detected conflicting IDs, SLS IDs'
-                            ' need to be globally unique.\n    The'
-                            ' conflicting ID is "{0}" and is found in SLS'
-                            ' "{1}" and SLS "{2}"').format(
-                                    id_,
-                                    highstate[id_]['__sls__'],
-                                    state[id_]['__sls__'])
-                            )
-                if state:
-                    highstate.update(state)
-                if err:
-                    errors += err
+            for sls_match in states:
+                for sls in fnmatch.filter(self.avail[env], sls_match):
+                    state, mods, err = self.render_state(sls, env, mods)
+                    # The extend members can not be treated as globally unique:
+                    if '__extend__' in state and '__extend__' in highstate:
+                        highstate['__extend__'].extend(state.pop('__extend__'))
+                    for id_ in state:
+                        if id_ in highstate:
+                            if highstate[id_] != state[id_]:
+                                errors.append(('Detected conflicting IDs, SLS'
+                                ' IDs need to be globally unique.\n    The'
+                                ' conflicting ID is "{0}" and is found in SLS'
+                                ' "{1}" and SLS "{2}"').format(
+                                        id_,
+                                        highstate[id_]['__sls__'],
+                                        state[id_]['__sls__'])
+                                )
+                    if state:
+                        highstate.update(state)
+                    if err:
+                        errors += err
         # Clean out duplicate extend data 
         if '__extend__' in highstate:
             highext = []
