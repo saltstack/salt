@@ -47,3 +47,50 @@ passed in the stae. This gives substantial power to using ssh_auth with names:
           - option3="value3",option4="value4 flag4" ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0555== override
           - option3="value3" ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0666==
 
+LocalClient Additions
+---------------------
+
+To follow up the recent additions in 0.9.8 of additional kwargs support,
+0.9.9 also adds the capability to send kwargs into commands via a dict.
+This addition to the LocalClient api can be used like so:
+
+.. code-block:: python
+
+    import salt.client
+
+    client = salt.client.LocalClient('/etc/salt/master')
+    ret = client.cmd('*', 'cmd.run', ['ls -l'], kwarg={'cwd': '/etc'})
+
+This update has been added to all cmd methods in the LocalClient class.
+
+Better Self Salting
+-------------------
+
+One problem faced with running Salt states, is that it has been difficult
+to manage the Salt minion via states, this is due to the fact that if the
+minion is called to restart while a state run is happening then the state
+run would be killed. 0.9.9 slightly changes the process scope of the state
+runs, so now when salt is executing states it can safely restart the
+salt-minion daemon.
+
+Wildcards for SLS Modules
+-------------------------
+
+Now, when including sls modules in include statements or in the top file,
+shell globs can be used. This can greatly simplify listing matched sls
+modules in the top file and include statements:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - files*
+        - core*
+
+.. code-block:: yaml
+
+    include:
+      - users.dev.*
+      - apache.ser*
+
+
