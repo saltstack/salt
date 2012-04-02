@@ -54,6 +54,18 @@ except ImportError:
   pass
 
 
+def condition_kwarg(arg, kwarg):
+    '''
+    Return a single arg structure for the publisher to safely use
+    '''
+    if isinstance(kwarg, dict):
+        kw_ = []
+        for key, val in kwarg:
+            kw_.append('{0}={1}'.format(key, val))
+        return list(arg) + kw_
+    return arg
+
+
 class LocalClient(object):
     '''
     Connect to the salt master via the local server and via root
@@ -168,10 +180,12 @@ class LocalClient(object):
         arg=(),
         timeout=None,
         expr_form='glob',
-        ret=''):
+        ret='',
+        kwarg=None):
         '''
         Execute a salt command and return.
         '''
+        arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
         jid = salt.utils.prep_jid(
@@ -201,10 +215,13 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        verbose=False):
+        verbose=False,
+        kwarg=None):
         '''
-        Execute a salt command and return
+        Execute a salt command and return data conditioned for command line
+        output
         '''
+        arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
         jid = salt.utils.prep_jid(
@@ -243,10 +260,13 @@ class LocalClient(object):
         arg=(),
         timeout=None,
         expr_form='glob',
-        ret=''):
+        ret='',
+        kwarg=None):
         '''
-        Execute a salt command and return
+        Execute a salt command and return an iterator to return data as it is
+        received
         '''
+        arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
         jid = salt.utils.prep_jid(
@@ -281,10 +301,12 @@ class LocalClient(object):
         arg=(),
         timeout=None,
         expr_form='glob',
-        ret=''):
+        ret='',
+        kwarg=None):
         '''
         Execute a salt command and return
         '''
+        arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
         jid = salt.utils.prep_jid(
@@ -317,10 +339,12 @@ class LocalClient(object):
         arg=(),
         timeout=None,
         expr_form='glob',
-        ret=''):
+        ret='',
+        kwarg=None):
         '''
         Execute a salt command and return
         '''
+        arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
         jid = salt.utils.prep_jid(
