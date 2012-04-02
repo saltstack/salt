@@ -134,6 +134,7 @@ def master_compile(master_opts, minion_opts, grains, id_, env):
     st_ = MasterHighState(master_opts, minion_opts, grains, id_, env)
     return st_.compile_highstate()
 
+
 def ishashable(obj):
     try:
         hash(obj)
@@ -146,7 +147,6 @@ class StateError(Exception):
     '''
     Custom exception class.
     '''
-
     pass
 
 
