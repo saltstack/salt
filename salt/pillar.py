@@ -77,7 +77,7 @@ class Pillar(object):
         self.opts = self.__gen_opts(opts, grains, id_)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
-        self.rend = salt.loader.render(opts, {})
+        self.rend = salt.loader.render(self.opts, {})
 
     def __gen_opts(self, opts, grains, id_, env=None):
         '''
