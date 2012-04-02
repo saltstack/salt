@@ -173,6 +173,18 @@ def cache_local_file(path):
     return client.cache_local_file(path)
 
 
+def list_states(env='base'):
+    '''
+    List all of the available state modules in an environment
+
+    CLI Example::
+
+        salt '*' cp.list_states
+    '''
+    client = salt.fileclient.get_file_client(__opts__)
+    return client.list_states(env)
+
+
 def list_master(env='base'):
     '''
     List all of the files stored on the master
