@@ -30,19 +30,19 @@ def _read_file(path):
         
     
 # Setup networking attributes
-_ETHTOOL_CONFIG_OPTS = [ 
-    'autoneg', 'speed', 'duplex', 
-    'rx', 'tx', 'sg', 'tso', 'ufo', 
-    'gso', 'gro', 'lro' 
+_ETHTOOL_CONFIG_OPTS = [
+    'autoneg', 'speed', 'duplex',
+    'rx', 'tx', 'sg', 'tso', 'ufo',
+    'gso', 'gro', 'lro'
 ]
 _RH_CONFIG_OPTS = [ 
-    'domain', 'peerdns', 'defaultroute', 
-    'mtu', 'static-routes' 
+    'domain', 'peerdns', 'defaultroute',
+    'mtu', 'static-routes'
 ]
-_RH_CONFIG_BONDING_OPTS = [ 
-    'mode', 'miimon', 'arp_interval', 
-    'arp_ip_target', 'downdelay', 'updelay', 
-    'use_carrier', 'lacp_rate', 'hashing-algorithm' 
+_RH_CONFIG_BONDING_OPTS = [
+    'mode', 'miimon', 'arp_interval',
+    'arp_ip_target', 'downdelay', 'updelay',
+    'use_carrier', 'lacp_rate', 'hashing-algorithm'
 ]
 _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
