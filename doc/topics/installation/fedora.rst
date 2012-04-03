@@ -17,6 +17,10 @@ makes it a great place to help improve Salt!
 
         yum --enablerepo=epel-testing install salt
 
+    On RHEL6, the proper jinja packages were moved from EPEL to the
+    "RHEL Server Optional Channel". Verify this repository is enabled before
+    installing salt on RHEL6.
+
 Installation
 ============
 
