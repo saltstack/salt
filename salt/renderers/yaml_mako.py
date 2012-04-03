@@ -12,6 +12,8 @@ import os
 from mako.template import Template
 
 from salt.utils.yaml import CustomLoader, load
+from salt.exceptions import SaltRenderError
+import salt.utils.templates
 
 
 def render(template, env='', sls=''):
