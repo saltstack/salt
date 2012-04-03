@@ -4,9 +4,9 @@ Salt File Server
 
 Salt comes with a simple file server suitable for distributing files to the
 salt minions. The file server is a stateless ZeroMQ server that is built into
-the salt master. 
+the salt master.
 
-The main intent of the Salt File server is the present files for use in the
+The main intent of the Salt File server is to present files for use in the
 Salt state system. With this said, the Salt file server can be used for any
 general file transfer from the master to the minions.
 

@@ -13,6 +13,7 @@ grainmap = {
            'Ubuntu': '/etc/init.d',
            'Gentoo': '/etc/init.d',
            'CentOS': '/etc/init.d',
+           'SunOS': '/etc/init.d',
           }
 
 def __virtual__():
@@ -23,8 +24,10 @@ def __virtual__():
     disable = [
                'RedHat',
                'CentOS',
+               'Scientific',
                'Fedora',
                'Gentoo',
+               'Ubuntu',
                'FreeBSD',
                'Windows',
               ]
@@ -87,3 +90,15 @@ def status(name, sig=None):
             __grains__, sig)
     return __salt__['cmd.run'](cmd).strip()
 
+
+def reload(name):
+    '''
+    Restart the named service
+
+    CLI Example::
+
+        salt '*' service.reload <service name>
+    '''
+    cmd = os.path.join(grainmap[__grains__['os']],
+            name + ' reload')
+    return not __salt__['cmd.retcode'](cmd)

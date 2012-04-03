@@ -22,8 +22,8 @@ import salt.utils
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
-import salt.modules.cmd
-__salt__ = {'cmd.run': salt.modules.cmd._run_quiet}
+import salt.modules.cmdmod
+__salt__ = {'cmd.run': salt.modules.cmdmod._run_quiet}
 
 
 def _kernel():
@@ -257,6 +257,10 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'Darwin')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
+    elif osdata['os'] == 'Windows':
+        grains['ps'] = 'tasklist.exe'
+    elif osdata.get('virtual', '') == 'openvzhn':
+        grains['ps'] = 'vzps -E 0 -efH|cut -b 6-'
     else:
         grains['ps'] = 'ps -efH'
     return grains
@@ -337,6 +341,7 @@ def os_data():
             grains.update(_memdata(grains))
             grains.update(_windows_platform_data(grains))
             grains.update(_windows_cpudata())
+            grains.update(_ps(grains))
             return grains
     grains.update(_kernel())
 
@@ -420,6 +425,7 @@ def os_data():
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
+        grains.update(_freebsd_cpudata())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'Linux':

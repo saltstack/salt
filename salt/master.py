@@ -12,6 +12,7 @@ import logging
 import hashlib
 import tempfile
 import datetime
+import signal
 import multiprocessing
 import subprocess
 
@@ -27,6 +28,8 @@ import salt.crypt
 import salt.utils
 import salt.client
 import salt.payload
+import salt.pillar
+import salt.state
 
 
 log = logging.getLogger(__name__)
@@ -49,6 +52,34 @@ def prep_jid(opts, load):
         return prep_jid(opts['cachedir'], load)
     return jid
 
+def clean_proc(proc, wait_for_kill=10):
+    '''
+    Generic method for cleaning up multiprocessing procs
+    '''
+    # NoneType and other fun stuff need not apply
+    if not proc:
+        return
+    try:
+        waited = 0
+        while proc.is_alive():
+            proc.terminate()
+            waited += 1
+            time.sleep(0.1)
+            if proc.is_alive() and (waited >= wait_for_kill):
+                log.error(('Process did not die with terminate(): {0}'
+                    .format(proc.pid)))
+                os.kill(signal.SIGKILL, proc.pid)
+    except (AssertionError, AttributeError) as e:
+        # Catch AssertionError when the proc is evaluated inside the child
+        # Catch AttributeError when the process dies between proc.is_alive()
+        # and proc.terminate() and turns into a NoneType
+        pass
+
+class MasterExit(SystemExit):
+    '''
+    Named exit exception for the master process exiting
+    '''
+    pass
 
 class SMaster(object):
     '''
@@ -101,7 +132,6 @@ class Master(SMaster):
         '''
         Clean out the old jobs
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         while True:
             cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
@@ -121,7 +151,9 @@ class Master(SMaster):
         Turn on the master server components
         '''
         log.warn('Starting the Salt Master')
-        multiprocessing.Process(target=self._clear_old_jobs).start()
+        clear_old_jobs_proc = multiprocessing.Process(
+            target=self._clear_old_jobs)
+        clear_old_jobs_proc.start()
         aes_funcs = AESFuncs(self.opts, self.crypticle)
         clear_funcs = ClearFuncs(
                 self.opts,
@@ -136,6 +168,23 @@ class Master(SMaster):
                 aes_funcs,
                 clear_funcs)
         reqserv.start_publisher()
+
+        def sigterm_clean(signum, frame):
+            '''
+            Cleaner method for stopping multiprocessing processes when a
+            SIGTERM is encountered.  This is required when running a salt
+            master under a process minder like daemontools
+            '''
+            mypid = os.getpid()
+            log.warn(('Caught signal {0}, stopping the Salt Master'
+                .format(signum)))
+            clean_proc(clear_old_jobs_proc)
+            clean_proc(reqserv.publisher)
+            for proc in reqserv.work_procs:
+                clean_proc(proc)
+            raise MasterExit
+
+        signal.signal(signal.SIGTERM, sigterm_clean)
 
         try:
             reqserv.run()
@@ -158,7 +207,6 @@ class Publisher(multiprocessing.Process):
         '''
         Bind to the interface specified in the configuration file
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         pull_sock = context.socket(zmq.PULL)
@@ -207,15 +255,19 @@ class ReqServer(object):
         '''
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
+        self.work_procs = []
 
         for ind in range(int(self.opts['worker_threads'])):
-            log.info('Starting Salt worker process {0}'.format(ind))
-            MWorker(self.opts,
+            self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,
                     self.crypticle,
                     self.aes_funcs,
-                    self.clear_funcs).start()
+                    self.clear_funcs))
+
+        for ind, proc in enumerate(self.work_procs):
+            log.info('Starting Salt worker process {0}'.format(ind))
+            proc.start()
 
         self.workers.bind(self.w_uri)
 
@@ -233,7 +285,6 @@ class ReqServer(object):
         '''
         Start up the ReqServer
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         self.__bind()
 
 
@@ -282,6 +333,7 @@ class MWorker(multiprocessing.Process):
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
         '''
+        key = load = None
         try:
             key = payload['enc']
             load = payload['load']
@@ -289,7 +341,7 @@ class MWorker(multiprocessing.Process):
             return ''
         return {'aes': self._handle_aes,
                 'pub': self._handle_pub,
-                'clear': self._handle_clear}[payload['enc']](payload['load'])
+                'clear': self._handle_clear}[key](load)
 
     def _handle_clear(self, load):
         '''
@@ -322,7 +374,6 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
-        salt.utils.append_pid(self.opts['pidfile'])
         self.__bind()
 
 
@@ -390,12 +441,12 @@ class AESFuncs(object):
         if not self.opts['external_nodes']:
             return {}
         if not salt.utils.which(self.opts['external_nodes']):
-            log.error(('Specified external nodes controller {0} is not' 
+            log.error(('Specified external nodes controller {0} is not'
                        ' available, please verify that it is installed'
                        '').format(self.opts['external_nodes']))
             return {}
         cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-        ndata = yaml.safe_loads(
+        ndata = yaml.safe_load(
                 subprocess.Popen(
                     cmd,
                     shell=True,
@@ -406,7 +457,7 @@ class AESFuncs(object):
             env = ndata['environment']
         else:
             env = 'base'
-        
+
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
                 ret[env] = ndata['classes'].keys()
@@ -490,6 +541,32 @@ class AESFuncs(object):
         '''
         return self.opts
 
+    def _pillar(self, load):
+        '''
+        Return the pillar data for the minion
+        '''
+        if 'id' not in load or 'grains' not in load or 'env' not in load:
+            return False
+        pillar = salt.pillar.Pillar(
+                self.opts,
+                load['grains'],
+                load['id'],
+                load['env'])
+        return pillar.compile_pillar()
+
+    def _master_state(self, load):
+        '''
+        Call the master to compile a master side highstate
+        '''
+        if 'opts' not in load or 'grains' not in load:
+            return False
+        return salt.state.master_compile(
+                self.opts,
+                load['opts'],
+                load['grains'],
+                load['opts']['id'],
+                load['opts']['environment'])
+
     def _return(self, load):
         '''
         Handle the return data sent from the minions
@@ -508,6 +585,15 @@ class AESFuncs(object):
         hn_dir = os.path.join(jid_dir, load['id'])
         if not os.path.isdir(hn_dir):
             os.makedirs(hn_dir)
+        # Otherwise the minion has already returned this jid and it should
+        # be dropped
+        else:
+            log.error(
+                    ('An extra return was detected from minion {0}, please'
+                    ' verify the minion, this could be a replay'
+                    ' attack').format(load['id'])
+                    )
+            return False
         self.serial.dump(load['return'],
                 open(os.path.join(hn_dir, 'return.p'), 'w+'))
         if 'out' in load:
@@ -520,14 +606,35 @@ class AESFuncs(object):
         individual minions.
         '''
         # Verify the load
-        if 'return' not in load or 'jid' not in load:
+        if 'return' not in load or 'jid' not in load or 'id' not in load:
             return None
+        # set the write flag
+        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        if not os.path.isdir(jid_dir):
+            log.error(
+                'An inconsistency occurred, a job was received with a job id '
+                'that is not present on the master: %(jid)s', load
+            )
+            return False
+        wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
+        try:
+            open(wtag, 'w+').write('')
+        except (IOError, OSError):
+            log.error(
+                    ('Failed to commit the write tag for the syndic return,'
+                    ' are permissions correct in the cache dir:'
+                    ' {0}?').format(self.opts['cachedir'])
+                    )
+            return False
+
         # Format individual return loads
         for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
             self._return(ret)
+        if os.path.isfile(wtag):
+            os.remove(wtag)
 
     def minion_publish(self, clear_load):
         '''
@@ -592,6 +699,7 @@ class AESFuncs(object):
                 'tgt': clear_load['tgt'],
                 'jid': jid,
                 'ret': clear_load['ret'],
+                'id': clear_load['id'],
                }
         expr_form = 'glob'
         timeout = 5
@@ -614,15 +722,31 @@ class AESFuncs(object):
         log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
                   ' "{0[arg]}", target: "{0[tgt]}"').format(load))
         pub_sock.send(self.serial.dumps(payload))
-        # Run the client get_returns method
-        return self.local.get_returns(
-                jid,
-                self.local.check_minions(
-                    clear_load['tgt'],
-                    expr_form
-                    ),
-                timeout
-                )
+        # Run the client get_returns method based on the form data sent
+        if 'form' in clear_load:
+            ret_form = clear_load['form']
+        else:
+            ret_form = 'clean'
+        if ret_form == 'clean':
+            return self.local.get_returns(
+                    jid,
+                    self.local.check_minions(
+                        clear_load['tgt'],
+                        expr_form
+                        ),
+                    timeout
+                    )
+        elif ret_form == 'full':
+            ret = self.local.get_full_returns(
+                    jid,
+                    self.local.check_minions(
+                        clear_load['tgt'],
+                        expr_form
+                        ),
+                    timeout
+                    )
+            ret['__jid__'] = jid
+            return ret
 
     def run_func(self, func, load):
         '''
@@ -632,7 +756,12 @@ class AESFuncs(object):
         if func.startswith('__'):
             return self.crypticle.dumps({})
         # Run the func
-        ret = getattr(self, func)(load)
+        try:
+            ret = getattr(self, func)(load)
+        except AttributeError as exc:
+            log.error(('Received function {0} which in unavailable on the '
+                       'master, returning False').format(exc))
+            return self.crypticle.dumps(False)
         # Don't encrypt the return value for the _return func
         # (we don't care about the return value, so why encrypt it?)
         if func == '_return':
@@ -797,9 +926,20 @@ class ClearFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
         # Save the invocation information
-        self.serial.dump(clear_load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
+        self.serial.dump(
+                clear_load,
+                open(os.path.join(jid_dir, '.load.p'), 'w+')
+                )
         # Set up the payload
         payload = {'enc': 'aes'}
+        # Altering the contents of the publish load is serious!! Changes here
+        # break compatibility with minion/master versions and even tiny 
+        # additions can have serious implications on the performance of the
+        # publish commands.
+        #
+        # In short, check with Thomas Hatch before you even think about
+        # touching this stuff, we can probably do what you want to do another
+        # way that won't have a negative impact.
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
@@ -807,10 +947,21 @@ class ClearFuncs(object):
                 'jid': clear_load['jid'],
                 'ret': clear_load['ret'],
                }
+
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
             load['to'] = clear_load['to']
+
+        if 'user' in clear_load:
+            log.info(('User {0[user]} Published command {0[fun]} with jid'
+                      ' {0[jid]}').format(clear_load))
+            load['user'] = clear_load['user']
+        else:
+            log.info(('Published command {0[fun]} with jid'
+                      ' {0[jid]}').format(clear_load))
+        log.debug('Published command details {0}'.format(load))
+
         payload['load'] = self.crypticle.dumps(load)
         # Send 0MQ to the publisher
         context = zmq.Context(1)

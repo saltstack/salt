@@ -7,17 +7,14 @@ high data format for salt states.
 
 # Import Python Modules
 import os
-
-# Import thirt party modules
-import yaml
-try:
-    yaml.Loader = yaml.CLoader
-    yaml.Dumper = yaml.CDumper
-except:
-    pass
+import logging
+import warnings
 
 # Import Salt libs
 from salt.utils.jinja import get_template
+from salt.utils.yaml import CustomLoader, load
+
+log = logging.getLogger(__name__)
 
 def render(template_file, env='', sls=''):
     '''
@@ -29,11 +26,17 @@ def render(template_file, env='', sls=''):
     passthrough = {}
     passthrough['salt'] = __salt__
     passthrough['grains'] = __grains__
+    passthrough['pillar'] = __pillar__
     passthrough['env'] = env
     passthrough['sls'] = sls
 
     template = get_template(template_file, __opts__, env)
 
     yaml_data = template.render(**passthrough)
-
-    return yaml.safe_load(yaml_data)
+    with warnings.catch_warnings(record=True) as warn_list:
+        data = load(yaml_data, Loader=CustomLoader)
+        if len(warn_list) > 0:
+            for item in warn_list:
+                log.warn("{warn} found in {file_}".format(
+                        warn=item.message, file_=template_file))
+        return data

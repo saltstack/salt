@@ -4,7 +4,7 @@ Salt Authentication Protocol
 
 The Salt Authentication Protocol (SAP) defines a viable mechanism to create an
 authenticated, encrypted communication channel. The SAP is used to create a
-general purpose secure comunication channel.
+general purpose secure communication channel.
 
 Editor: Thomas S Hatch <thatch45@gmail.com>
 

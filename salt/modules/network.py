@@ -13,6 +13,16 @@ __outputter__ = {
     'netstat': 'txt',
 }
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+
+    # Disable on Windows, a specific file module exists:
+    if __grains__['os'] == 'Windows':
+        return False
+    return 'network'
+
 
 def _sanitize_host(host):
     '''
@@ -46,7 +56,7 @@ def netstat():
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
         comps = line.split()
         if line.startswith('tcp'):
@@ -170,34 +180,62 @@ def interfaces():
 
     for group in groups:
         iface = None
-        up = False
+        data = {}
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+(\w+):\s+<(.+)>', line)
+            m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
-                iface,attrs = m.groups()
+                iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
-                    up = True
-                ipaddr = None
-                netmask = None
-                hwaddr = None
+                    data['up'] = True
+                if parent:
+                    data['parent'] = parent
             else:
                 cols = line.split()
                 if len(cols) >= 2:
                     type,value = tuple(cols[0:2])
-                    if type == 'inet':
-                        ipaddr,cidr = tuple(value.split('/'))
-                        netmask = _cidr_to_ipv4_netmask(int(cidr))
+                    if type in ('inet', 'inet6'):
+                        def parse_network():
+                            """
+                            Return a tuple of ip, netmask, broadcast
+                            based on the current set of cols
+                            """
+                            brd = None
+                            ip,cidr = tuple(value.split('/'))
+                            if type == 'inet':
+                                mask = _cidr_to_ipv4_netmask(int(cidr))
+                                if 'brd' in cols:
+                                    brd = cols[cols.index('brd')+1]
+                            elif type == 'inet6':
+                                mask = cidr
+                            return (ip, mask, brd)
+
+                        if 'secondary' not in cols:
+                            ipaddr, netmask, broadcast = parse_network()
+                            if type == 'inet':
+                                data['ipaddr'] = ipaddr
+                                data['netmask'] = netmask
+                                data['broadcast'] = broadcast
+                            elif type == 'inet6':
+                                data['ipaddr6'] = ipaddr
+                                data['netmask6'] = netmask
+                        else:
+                            if 'secondary' not in data:
+                                data['secondary'] = []
+                            ip, mask, brd = parse_network()
+                            data['secondary'].append({
+                                'type': type,
+                                'ipaddr': ip,
+                                'netmask': mask,
+                                'broadcast': brd
+                                })
+                            del ip, mask, brd
                     elif type.startswith('link'):
-                        hwaddr = value
+                        data['hwaddr'] = value
         if iface:
-            ret[iface] = {}
-            ret[iface]['up'] = up
-            ret[iface]['ipaddr'] = ipaddr
-            ret[iface]['netmask'] = netmask
-            ret[iface]['hwaddr'] = hwaddr
-            del iface,up
+            ret[iface] = data
+            del iface, data
     return ret
 
 

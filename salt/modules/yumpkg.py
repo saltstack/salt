@@ -1,10 +1,17 @@
 '''
 Support for YUM
+
+Required python modules: yum, rpm, rpmUtils
 '''
-import yum
-import rpm
+try:
+    import yum
+    import rpm
+    from rpmUtils.arch import getBaseArch
+    has_yumdeps = True
+except ImportError:
+    has_yumdeps = False
+
 import logging
-from rpmUtils.arch import getBaseArch
 
 log = logging.getLogger(__name__)
 
@@ -12,6 +19,9 @@ def __virtual__():
     '''
     Confine this module to yum based systems
     '''
+    if not has_yumdeps:
+        return False
+
     # Return this for pkg on RHEL/Fedora based distros that ship with python
     # 2.6 or greater.
     dists = ('CentOS', 'Scientific', 'RedHat')
@@ -27,7 +37,6 @@ def __virtual__():
         else:
             return False
 
-
 def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
@@ -38,7 +47,6 @@ def _list_removed(old, new):
             pkgs.append(pkg)
 
     return pkgs
-
 
 def _compare_versions(old, new):
     '''
@@ -61,7 +69,6 @@ def _compare_versions(old, new):
                           'new': new[npkg]}
     return pkgs
 
-
 def available_version(name):
     '''
     The available version of the package in the repository
@@ -76,7 +83,7 @@ def available_version(name):
     # here we can, but for now its exact match only.
     versions_list = []
     for pkgtype in ['available', 'updates']:
-        
+
         pl = yb.doPackageLists(pkgtype)
         exactmatch, matched, unmatched = yum.packages.parsePackages(pl, [name])
         # build a list of available packages from either available or updates
@@ -85,8 +92,7 @@ def available_version(name):
         # on available, and only iterate though updates if we don't..
         for pkg in exactmatch:
             if pkg.arch == getBaseArch():
-                rel = pkg.release.rpartition('.')[0]
-                versions_list.append('-'.join([pkg.version, rel]))
+                versions_list.append('-'.join([pkg.version, pkg.release]))
 
     if len(versions_list) == 0:
         # if versions_list is empty return empty string.  It may make sense
@@ -97,6 +103,15 @@ def available_version(name):
     # remove the duplicate items from the list and return the first one
     return list(set(versions_list))[0]
 
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return available_version(name)
 
 def version(name):
     '''
@@ -111,7 +126,6 @@ def version(name):
         return pkgs[name]
     else:
         return ''
-
 
 def list_pkgs(*args):
     '''
@@ -128,17 +142,14 @@ def list_pkgs(*args):
     # if no args are passed in get all packages
     if len(args) == 0:
         for h in ts.dbMatch():
-            rel = h['release'].rpartition('.')[0]
-            pkgs[h['name']] = '-'.join([h['version'], rel])
+            pkgs[h['name']] = '-'.join([h['version'],h['release']])
     else:
         # get package version for each package in *args
         for arg in args:
             for h in ts.dbMatch('name', arg):
-                rel = h['release'].rpartition('.')[0]
-                pkgs[h['name']] = '-'.join([h['version'], rel])
+                pkgs[h['name']] = '-'.join([h['version'],h['release']])
 
     return pkgs
-
 
 def refresh_db():
     '''
@@ -152,7 +163,6 @@ def refresh_db():
     yb = yum.YumBase()
     yb.cleanMetadata()
     return True
-
 
 def clean_metadata():
     '''
@@ -221,7 +231,6 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
 
     return _compare_versions(old, new)
 
-
 def upgrade():
     '''
     Run a full system upgrade, a yum upgrade
@@ -252,7 +261,6 @@ def upgrade():
     new = list_pkgs()
     return _compare_versions(old, new)
 
-
 def remove(pkgs):
     '''
     Removes packages with yum remove
@@ -280,7 +288,6 @@ def remove(pkgs):
     new = list_pkgs(*pkgs)
 
     return _list_removed(old, new)
-
 
 def purge(pkgs):
     '''

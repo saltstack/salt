@@ -13,6 +13,7 @@ Full list of builtin states
     cmd
     cron
     file
+    gem
     group
     host
     kmod
@@ -21,6 +22,7 @@ Full list of builtin states
     mysql_user
     network
     pkg
+    rvm
     service
     ssh_auth
     sysctl

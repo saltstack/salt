@@ -12,7 +12,8 @@ Easy Modules to write
 =====================
 
 Salt modules are amazingly simple to write, just write a regular Python module
-or a regular Cython module and place it in the ``salt/modules`` directory.
+or a regular Cython module and place it in the ``salt/modules`` directory. You
+can also place them in a directory called ``_modules/`` in your state directory.
 
 Since Salt modules are just Python/Cython modules there are no restraints as to
 what you can put inside of a salt module, and if a Salt module has errors and
@@ -32,7 +33,7 @@ This means that when creating a module functions in modules which already exist
 can be called.
 
 The variable ``__salt__`` is packed into the modules after they are loaded into
-the salt minion. This variable is a python dictionary of all of the salt 
+the salt minion. This variable is a python dictionary of all of the salt
 functions, laid out in the same way that they are made available to the salt
 command.
 
@@ -40,7 +41,7 @@ Salt modules can be cross called by accessing the value in the ``__salt__``
 dict:
 
 .. code-block:: python
-    
+
     def foo(bar):
         return __salt__['cmd.run'](bar)
 

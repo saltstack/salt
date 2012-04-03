@@ -22,6 +22,7 @@ def render(template, env='', sls=''):
             )
     mod.salt = __salt__
     mod.grains = __grains__
+    mod.pillar = __pillar__
     mod.env = env
     mod.sls = sls
 

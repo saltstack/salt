@@ -29,10 +29,11 @@ then enforced.
 Understanding the Salt State System Components
 ==============================================
 
-The Salt state system is comprised of a number of components, as a user, an
+The Salt state system is comprised of a number of components. As a user, an
 understanding of the sls and renderer systems are needed. But as a developer,
-an understanding of salt states, as well as understanding salt states and how
-to write the states used by salt.
+an understanding of salt states and how to write the states is needed as well.
+
+
 
 Salt SLS System
 ---------------
@@ -80,8 +81,8 @@ users.admin states.
 The init.sls files are translated to be the state name of the parent
 directory, so the ``salt/init.sls`` file translates to the salt state.
 
-The plain files are visible to the minions, as well as the state files, in
-salt, everything is a file, there is not "magic translation" of files and file
+The plain files are visible to the minions, as well as the state files. In
+salt, everything is a file; there is no "magic translation" of files and file
 types. This means that a state file can be distributed to minions just like a
 plain text or binary file.
 
@@ -91,8 +92,8 @@ SLS Files
 The Salt state files are simple sets of data. Since the SLS files are just data
 they can be represented in a number of different ways. The default format is
 yaml generated from a jinja template. This allows for the states files to have
-all the language constructs of Python, and the simplicity of yaml. State files
-can then be complicated jinja templates the translate down to yaml, or just
+all the language constructs of Python and the simplicity of yaml. State files
+can then be complicated jinja templates that translate down to yaml, or just
 plain and simple yaml files!
 
 The State files are constructed data structures in a simple format. The format
@@ -104,32 +105,32 @@ Here is an example of a Salt State:
 .. code-block:: yaml
 
     vim:
-        pkg:
-            - installed
+      pkg:
+        - installed
 
     salt:
-        pkg:
-            - latest
-        service:
-            - running
-            - require:
-                - file: /etc/salt/minion
-                - pkg: salt
-            - names:
-                - salt-master
-                - salt-minion
-            - watch:
-                - file: /etc/salt/minion
-                
+      pkg:
+        - latest
+      service:
+        - running
+        - require:
+          - file: /etc/salt/minion
+          - pkg: salt
+        - names:
+          - salt-master
+          - salt-minion
+        - watch:
+          - file: /etc/salt/minion
+
     /etc/salt/minion:
-        file:
-            - managed
-            - source: salt://salt/minion
-            - user: root
-            - group: root
-            - mode: 644
-            - require:
-                - pkg: salt
+      file:
+        - managed
+        - source: salt://salt/minion
+        - user: root
+        - group: root
+        - mode: 644
+        - require:
+          - pkg: salt
 
 This short stanza will ensure that vim is installed, salt is installed and up
 to date, the salt-master and salt-minion daemons are running and the Salt
@@ -144,19 +145,19 @@ The top file is the mapping for the state system. The top file specifies which
 minions should have which modules applied and which environments they should
 draw the states from.
 
-The top file works by specifying the environment, containing matchers with 
+The top file works by specifying the environment, containing matchers with
 lists of Salt states sent to the matching minions:
 
 .. code-block:: yaml
 
     base:
-        '*':
-            - salt
-            - users
-            - users.admin
-        'saltmaster.*':
-            - match: pcre
-            - salt.master
+      '*':
+        - salt
+        - users
+        - users.admin
+      'saltmaster.*':
+        - match: pcre
+        - salt.master
 
 This simple example uses the base environment, which is built into the default
 salt setup, and then all minions will have the modules salt, users and
@@ -169,7 +170,7 @@ Renderer System
 
 The Renderer system is a key component to the state system. SLS files are
 representations of Salt "high data" structures. All Salt cares about when
-reading an sls file is the data structure that is produced from file.
+reading an sls file is the data structure that is produced from the file.
 
 This allows Salt states to be represented by multiple types of files. The
 Renderer system can be used to allow different formats to be used for sls

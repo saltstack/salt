@@ -34,8 +34,11 @@ directly define the user interface.
 Using Custom State Modules
 ==========================
 
-Place your custom state modules inside a ``_states`` directory within the 
-``file_roots`` specified by the master config file. 
+Place your custom state modules inside a ``_states`` directory within the
+``file_roots`` specified by the master config file. These custom state modules
+can then be distributed in a number of ways. Custom state modules are
+distributed when state.highstate is run, or via the saltutil.sync_states
+function.
 
 Cross Calling Modules
 =====================
@@ -69,3 +72,71 @@ A State Module must return a dict containing the following keys/values:
 - **result:** A boolean value. *True* if the action was successful, otherwise
   *False*.
 - **comment:** A string containing a summary of the result.
+
+Watcher Function
+================
+
+If the state being written should support the watch requisite then a watcher
+function needs to be declared. The watcher function is called whenever the
+watch requisite is invoked and should be generic to the behavior of the state
+itself.
+
+The watcher function should accept all of the options that the normal state
+functions accept (as they will be passed into the watcher function).
+
+A watcher function typically is used to execute state specific reactive
+behavior, for instance, the watcher for the service module restarts the
+named service and makes it useful for the watcher to make the service
+react to changes in the environment.
+
+The watcher function also needs to return the same data that a normal state
+function returns.
+
+
+Mod_init Interface
+==================
+
+Some states need to execute something only once to ensure that an environment
+has been set up, or certain conditions global to the state behavior can be
+predefined. This is the realm of the mod_init interface.
+
+A state module can have a function called **mod_init** which executes when the
+first state of this type is called. This interface was created primarily to
+improve the pkg state. When packages are installed the package metadata needs
+to be refreshed, but refreshing the package metadata every time a package is
+installed is wasteful. The mod_init function for the pkg state sets a flag down
+so that the first, and only the first, package installation attempt will refresh
+the package database (the package database can of course be manually called to
+refresh via the ``refresh`` option in the pkg state).
+
+The mod_init function must accept the **Low State Data** for the given
+executing state as an argument. The low state data is a dict and can be seen by
+executing the state.show_lowstate function. Then the mod_init function must
+return a bool. If the return value is True, then the mod_init function will not
+be executed again, meaning that the needed behavior has been set up. Otherwise,
+if the mod_init function returns False, then the function will be called the
+next time.
+
+A good example of the mod_init function is found in the pkg state module:
+
+.. code-block:: python
+
+    def mod_init(low):
+        '''
+        Refresh the package database here so that it only needs to happen once
+        '''
+        if low['fun'] == 'installed' or low['fun'] == 'latest':
+            rtag = __gen_rtag()
+            if not os.path.exists(rtag):
+                open(rtag, 'w+').write('')
+            return True
+        else:
+            return False
+
+The mod_init function in the pkg state accepts the low state data as ``low``
+and then checks to see if the function being called is going to install
+packages, if the function is not going to install packages then there is no
+need to refresh the package database. Therefore if the package database is
+prepared to refresh, then return True and the mod_init will not be called
+the next time a pkg state is evaluated, otherwise return False and the mod_init
+will be called next time a pkg state is evaluated.

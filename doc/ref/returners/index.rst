@@ -38,7 +38,7 @@ It is also possible to specify multiple returners:
     salt '*' test.ping --return mongo_return,redis_return,cassandra_return
 
 In this scenario all three returners will be called and the data from the
-test.ping command will be sent out to the three named returers.
+test.ping command will be sent out to the three named returners.
 
 Writing a Returner
 ==================

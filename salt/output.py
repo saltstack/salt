@@ -2,9 +2,11 @@
 A simple way of setting the output format for data from modules
 '''
 
+# Import Python libs
 import json
 import pprint
 
+# Import third party libs
 import yaml
 try:
     yaml.Loader = yaml.CLoader
@@ -12,16 +14,33 @@ try:
 except:
     pass
 
+# Import Salt libs
 import salt.utils
+from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
 
-
-def remove_colors():
+def display_output(ret, out, opts):
     '''
-    Access all of the utility colors and change them to empty strings
+    Display the output of a command in the terminal
     '''
-    pass
+    if isinstance(ret, list) or isinstance(ret, dict):
+        if opts['raw_out']:
+            printout = get_outputter('raw')
+        elif opts['json_out']:
+            printout = get_outputter('json')
+        elif opts['txt_out']:
+            printout = get_outputter('txt')
+        elif opts['yaml_out']:
+            printout = get_outputter('yaml')
+        elif out:
+            printout = get_outputter(out)
+        else:
+            printout = get_outputter(None)
+    # Pretty print any salt exceptions
+    elif isinstance(ret, SaltException):
+        printout = get_outputter("txt")
+    printout(ret)
 
 
 class Outputter(object):
@@ -43,9 +62,9 @@ class Outputter(object):
 
 class HighStateOutputter(Outputter):
     '''
-    Not a command line option, the HighStateOutputter is only meant to be used
-    with the state.highstate function, or a function that returns highstate
-    return data
+    Not a command line option, the HighStateOutputter is only meant to
+    be used with the state.highstate function, or a function that returns
+    highstate return data
     '''
     supports = 'highstate'
 
@@ -63,8 +82,19 @@ class HighStateOutputter(Outputter):
                     hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
+                # Verify that the needed data is present
+                for tname, info in data[host].items():
+                    if not '__run_num__' in info:
+                        err = ('The State execution failed to record the order '
+                               'in which all states were executed. The state '
+                               'return missing data is:')
+                        print err
+                        pprint.pprint(info)
                 # Everything rendered as it should display the output
-                for tname, ret in data[host].items():
+                for tname in sorted(
+                        data[host],
+                        key=lambda k: data[host][k].get('__run_num__', 0)):
+                    ret = data[host][tname]
                     tcolor = colors['GREEN']
                     if ret['changes']:
                         tcolor = colors['CYAN']
@@ -96,7 +126,7 @@ class HighStateOutputter(Outputter):
                         ))
                     changes = '        Changes:   '
                     for key in ret['changes']:
-                        if isinstance(ret['changes'][key], str):
+                        if isinstance(ret['changes'][key], basestring):
                             changes += (key + ': ' + ret['changes'][key] +
                                         '\n                   ')
                         elif isinstance(ret['changes'][key], dict):
@@ -126,9 +156,8 @@ class RawOutputter(Outputter):
 
 class TxtOutputter(Outputter):
     '''
-    Plain text output. Primarily for returning output from
-    shell commands in the exact same way they would output
-    on the shell when ran directly.
+    Plain text output. Primarily for returning output from shell commands
+    in the exact same way they would output on the shell when ran directly.
     '''
     supports = 'txt'
 

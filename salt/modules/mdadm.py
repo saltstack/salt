@@ -28,7 +28,7 @@ def list():
     ret = {}
     for line in (__salt__['cmd.run_stdout']
                  ('mdadm --detail --scan').split('\n')):
-        if not line.count(' '):
+        if ' ' not in line:
             continue
         comps = line.split()
         metadata = comps[2].split('=')
@@ -57,7 +57,7 @@ def detail(device='/dev/md0'):
     for line in __salt__['cmd.run_stdout'](cmd).split('\n'):
         if line.startswith(device):
             continue
-        if not line.count(' '):
+        if ' ' not in line:
             continue
         if not ':' in line:
             if '/dev/' in line:

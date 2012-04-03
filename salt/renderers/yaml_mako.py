@@ -10,12 +10,8 @@ import os
 
 # Import Third Party libs
 from mako.template import Template
-import yaml
-try:
-    yaml.Loader = yaml.CLoader
-    yaml.Dumper = yaml.CDumper
-except:
-    pass
+
+from salt.utils.yaml import CustomLoader, load
 
 
 def render(template, env='', sls=''):
@@ -28,10 +24,19 @@ def render(template, env='', sls=''):
     passthrough = {}
     passthrough['salt'] = __salt__
     passthrough['grains'] = __grains__
+    passthrough['pillar'] = __pillar__
     passthrough['env'] = env
     passthrough['sls'] = sls
 
     template = Template(open(template, 'r').read())
     yaml_data = template.render(**passthrough)
 
-    return yaml.safe_load(yaml_data)
+
+    yaml_data = template.render(**passthrough)
+    with warnings.catch_warnings(record=True) as warn_list:
+        data = load(yaml_data, Loader=CustomLoader)
+        if len(warn_list) > 0:
+            for item in warn_list:
+                log.warn("{warn} found in {file_}".format(
+                        warn=item.message, file_=template_file))
+        return data

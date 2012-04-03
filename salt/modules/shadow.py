@@ -5,6 +5,16 @@ Manage the shadow file
 import os
 import spwd
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+
+    # Disable on Windows, a specific file module exists:
+    if __grains__['os'] == 'Windows':
+        return False
+    return 'shadow'
+
 
 def info(name):
     '''
@@ -63,6 +73,4 @@ def set_password(name, password):
         lines.append('{0}\n'.format(line))
     open(s_file, 'w+').writelines(lines)
     uinfo = info(name)
-    if uinfo['pwd'] == password:
-        return True
-    return False
+    return uinfo['pwd'] == password

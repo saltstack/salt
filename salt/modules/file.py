@@ -11,12 +11,23 @@ import grp
 import pwd
 import time
 import hashlib
+import sys
 
 import salt.utils.find
 from salt.exceptions import SaltInvocationError
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+    # win_file takes care of windows
+    if __grains__['os'] == 'Windows':
+        return False
+    return 'file'
+
+
 __outputter__ = {
-    'touch': 'txt',
+    'touch':  'txt',
     'append': 'txt',
 }
 
@@ -221,7 +232,8 @@ def get_sum(path, form='md5'):
     if not os.path.isfile(path):
         return 'File not found'
     try:
-        return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
+        with open(path, 'rb') as f:
+            return getattr(hashlib, form)(f.read()).hexdigest()
     except (IOError, OSError), e:
         return 'File Error: %s' % (str(e))
     except AttributeError, e:
@@ -336,14 +348,19 @@ def find(path, *opts):
     ret.sort()
     return ret
 
-def _sed_esc(s):
+def _sed_esc(s, escape_all=False):
     '''
     Escape single quotes and forward slashes
     '''
-    return '{0}'.format(s).replace("'", "'\"'\"'").replace("/", "\/")
+    special_chars = "^.[$()|*+?{"
+    s = s.replace("'", "'\"'\"'").replace("/", "\/")
+    if escape_all:
+        for ch in special_chars:
+            s = s.replace(ch, "\\" + ch)
+    return s
 
 def sed(path, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g'):
+        flags='g', escape_all=False):
     '''
     Make a simple edit to a file
 
@@ -379,9 +396,9 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
-
-    before = _sed_esc(before)
-    after = _sed_esc(after)
+    # XXX:dc: Do we really want to always force escaping?
+    before = _sed_esc(before, escape_all)
+    after = _sed_esc(after, escape_all)
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
             backup = '-i{0} '.format(backup) if backup else '',
@@ -469,7 +486,7 @@ def comment(path, regex, char='#', backup='.bak'):
         after=r'{0}\1'.format(char),
         backup=backup)
 
-def contains(path, text, limit=''):
+def contains(path, text, limit='', escape=False):
     '''
     Return True if the file at ``path`` contains ``text``
 
@@ -484,8 +501,15 @@ def contains(path, text, limit=''):
     if not os.path.exists(path):
         return False
 
+    if 'linux' in sys.platform:
+        options = '-n -r -e'
+    elif 'darwin' in sys.platform:
+        options = '-n -E -e'
+    else:
+        options = '-n -e'
+
     result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options='-n -r -e', flags='gp')
+            options=options, flags='gp', escape_all=escape)
 
     return bool(result)
 
