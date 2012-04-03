@@ -295,3 +295,5 @@ def hwaddr(interface):
     else:
         return None
 
+def get(interface):
+    return interfaces().get(interface)
