@@ -230,9 +230,9 @@ def _generate_if_settings(opts, iftype, iface):
                     if opts.has_key(bo):
                         if bo == 'lacp_rate':
                             if opts[bo] == 'fast':
-                                opts.update( {op:'1'} )
+                                opts.update( {bo:'1'} )
                             if opts[bo] == 'slow':
-                                opts.update( {op:'0'} )
+                                opts.update( {bo:'0'} )
                         try:
                             int(opts[bo])
                             bond.update( {bo:opts[bo]} )
