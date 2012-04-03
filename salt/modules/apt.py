@@ -123,6 +123,7 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
 
         salt '*' pkg.install <package name>
     '''
+    salt.utils.daemonize_if(__opts__['multiprocessing'])
     if refresh:
         refresh_db()
 
@@ -226,7 +227,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-
+    salt.utils.daemonize_if(__opts__['multiprocessing'])
     if refresh:
         refresh_db()
 
