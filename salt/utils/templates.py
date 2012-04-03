@@ -86,7 +86,7 @@ def jinja(sfn, string=False, **kwargs):
             data = template.render(**passthrough)
             if string:
                 return {'result': True,
-                        'string': data}
+                        'data': data}
             with open(tgt, 'w+') as target:
                 target.write(data)
                 if newline:
