@@ -16,12 +16,12 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
         salt-run '/path/to/maclist' 255.255.255.255 7
     '''
     try:
-        macfile = open(maclist, 'r')
-        for mac in macfile:
-            wol(mac, bcast, destport)
-            print "Waking up %s" % mac
-    except:
-        print "Failed to open the MAC file"
+        file = open(maclist, 'r')
+        for mac in file:
+            wol(mac.strip(), bcast, destport)
+            print "Waking up %s" % mac.strip()
+    except Exception as inst:
+        print "Failed to open the MAC file. Error: %s" % inst
 
 def wol(mac, bcast='255.255.255.255', destport=9):
     '''
