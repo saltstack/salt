@@ -325,3 +325,10 @@ def build(iface, ip, type, settings):
         pass
     pass
 
+def get(iface):
+    result = {}
+    ifaces = __salt__['network.interfaces']()
+    if iface in ifaces:
+        result = ifaces[iface]
+    return result
+    
