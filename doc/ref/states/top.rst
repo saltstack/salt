@@ -140,7 +140,7 @@ would look something like this:
       'db*prod*':
         - db
 
-Other Ways of Targetting Minions
+Other Ways of Targeting Minions
 ================================
 
 In addition to globs, minions can be specified in top files a few other
