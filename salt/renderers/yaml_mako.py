@@ -20,19 +20,20 @@ def render(template, env='', sls=''):
     '''
     if not os.path.isfile(template):
         return {}
+    tmp_data = salt.utils.templates.mako(
+            template_file,
+            True,
+            salt=__salt__,
+            grains=__grains__,
+            opts=__opts__,
+            pillar=__pillar__,
+            env=env,
+            sls=sls)
+    if not tmp_data.get('result', False):
+        raise SaltRenderError(tmp_data.get('data',
+            'Unknown render error in yaml_mako renderer'))
+    yaml_data = tmp_data['data']
 
-    passthrough = {}
-    passthrough['salt'] = __salt__
-    passthrough['grains'] = __grains__
-    passthrough['pillar'] = __pillar__
-    passthrough['env'] = env
-    passthrough['sls'] = sls
-
-    template = Template(open(template, 'r').read())
-    yaml_data = template.render(**passthrough)
-
-
-    yaml_data = template.render(**passthrough)
     with warnings.catch_warnings(record=True) as warn_list:
         data = load(yaml_data, Loader=CustomLoader)
         if len(warn_list) > 0:
