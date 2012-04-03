@@ -64,3 +64,9 @@ class PkgParseError(SaltException):
     the CLI tool (pacman, yum, apt, aptitude, etc)
     '''
     pass
+
+class SaltRenderError(SaltException):
+    '''
+    Used when a renderer needs to raise an explicit error
+    '''
+    pass
