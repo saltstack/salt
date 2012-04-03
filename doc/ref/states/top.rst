@@ -161,9 +161,11 @@ Here is a slightly more complex top file example:
             - salt.master
 
         'nag1* or G@role:monitoring':
+            - match: compound
             - nagios.server
 
         'E@^(memcache|web).(qa|prod).loc$':
+            - match: pcre
             - nagios.mon.web
             - apache.server
 
