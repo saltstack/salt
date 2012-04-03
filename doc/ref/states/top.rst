@@ -140,4 +140,10 @@ would look something like this:
       'db*prod*':
         - db
 
+Other Ways of Targetting Minions
+================================
 
+In addition to globs, minions can be specified in top files a few other
+ways. Some common ones are :doc:`compound matches </topics/targeting/compound>`
+and :doc:`node groups </topics/targeting/nodegroups>`.
+or compound matches.
