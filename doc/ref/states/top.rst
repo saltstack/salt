@@ -146,4 +146,31 @@ Other Ways of Targetting Minions
 In addition to globs, minions can be specified in top files a few other
 ways. Some common ones are :doc:`compound matches </topics/targeting/compound>`
 and :doc:`node groups </topics/targeting/nodegroups>`.
-or compound matches.
+
+Here is a slightly more complex top file example:
+
+.. code-block:: yaml
+
+    base:
+        '*':
+            - ldap-client
+            - networking
+            - salt.minion
+
+        'salt-master*':
+            - salt.master
+
+        'nag1* or G@role:monitoring':
+            - nagios.server
+
+        'E@^(memcache|web).(qa|prod).loc$':
+            - nagios.mon.web
+            - apache.server
+
+In this example ``top.sls``, all minions get the ldap-client, networking and
+salt.minion states. Any minion with an id matching the ``salt-master*`` glob
+will get the salt.master state. Minions with ids matching the nag1* glob or
+with a grain named _role_ equal to _monitoring_ will get the nagios.server
+state. Finally, any minion with ids matching the regular expression
+``^(memcache|web).(qa|prod).loc$``, will get the nagios.mon.web and
+apache.server states.
