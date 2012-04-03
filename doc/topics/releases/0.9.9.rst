@@ -73,6 +73,11 @@ run would be killed. 0.9.9 slightly changes the process scope of the state
 runs, so now when salt is executing states it can safely restart the
 salt-minion daemon.
 
+In addition to daemonizing the state run, the apt module also daemonizes.
+This update makes it possible to cleanly update the salt-minion package on
+Debian/Ubuntu systems without leaving apt in an inconsistent state or killing
+the active minion process mid-execution.
+
 Wildcards for SLS Modules
 -------------------------
 
