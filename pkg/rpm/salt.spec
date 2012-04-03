@@ -9,8 +9,8 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.9.7
-Release: 2%{?dist}
+Version: 0.9.8
+Release: 1%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -256,6 +256,9 @@ fi
 %endif
 
 %changelog
+* Wed Mar 21 2012 Clint Savage <herlo1@gmail.com> - 0.9.8-1
+- Moved to upstream release 0.9.8
+
 * Thu Mar 8 2012 Clint Savage <herlo1@gmail.com> - 0.9.7-2
 - Added dmidecode as a Requires
 
