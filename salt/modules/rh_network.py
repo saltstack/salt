@@ -50,9 +50,9 @@ _IFACE_TYPES = ['eth', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
 
 def _generate_if_settings(opts, iftype, iface):
     '''
-    Fiters given options and outputs valid settings for requested operation.
-    If an option has a value that is not expected, this fuction will log what
-    the Interface, Setting and what it was expecting. 
+    Fiters given options and outputs valid settings for requested
+    operation. If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was expecting.
     '''
     
     if iftype in ['eth', 'lo', 'br']:
