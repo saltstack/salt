@@ -78,9 +78,9 @@ bond0:
 
 def managed(
         name,
+        type,
         enabled=True,
-        ip=None,
-        interface=None
+        **kwargs
         ):
     '''
     Ensure that the named interface is configured properly.
@@ -88,15 +88,15 @@ def managed(
     name
         The name of the interface to manage
     
+    type
+        Type of interface and configuration.
+    
     enabled
         Designates the state of this interface.
         
-    ip
+    kwargs
         The IP parameters for this interface.
         
-    interface
-        Type of interface and configuration.
-    
     '''
     pass
     
