@@ -296,4 +296,12 @@ def hwaddr(interface):
         return None
 
 def get(interface):
+    '''
+    Returns a dictionary of with various information about a single
+    interface (up/down state, ip address, netmask, and hwaddr)
+
+    CLI Example::
+
+        salt '*' network.get eth0
+    '''
     return interfaces().get(interface)
