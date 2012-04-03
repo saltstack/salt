@@ -46,7 +46,7 @@ _RH_CONFIG_BONDING_OPTS = [
 ]
 _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
-_IFACE_TYPES = ['ethernet', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
+_IFACE_TYPES = ['eth', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
 
 def _generate_if_settings(opts, iftype, iface):
     '''
