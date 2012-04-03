@@ -14,7 +14,7 @@ import copy
 logger = logging.getLogger(__name__)
 
 
-def mako(sfn, **kwargs):
+def mako(sfn, string=False, **kwargs):
     '''
     Render a mako template, returns the location of the rendered file,
     return False if render fails.
@@ -37,9 +37,15 @@ def mako(sfn, **kwargs):
             if kwarg == 'context':
                 continue
             passthrough[kwarg] = kwargs[kwarg]
-        with nested(open(sfn, 'r'), open(tgt, 'w+')) as (src, target):
+        data = ''
+        with open(sfn, 'r') as src:
             template = Template(src.read())
-            target.write(template.render(**passthrough))
+            data = template.render(**passthrough)
+        if string:
+            return {'result': True,
+                    'data': data}
+        with open(tgt, 'w+') as target:
+            target.write(data)
         return {'result': True,
                 'data': tgt}
     except:
@@ -48,7 +54,7 @@ def mako(sfn, **kwargs):
                 'data': trb}
 
 
-def jinja(sfn, **kwargs):
+def jinja(sfn, string=False, **kwargs):
     '''
     Render a jinja2 template, returns the location of the rendered file,
     return False if render fails.
@@ -77,8 +83,12 @@ def jinja(sfn, **kwargs):
             passthrough[kwarg] = kwargs[kwarg]
         template = get_template(sfn, kwargs['opts'], kwargs['env'])
         try:
+            data = template.render(**passthrough)
+            if string:
+                return {'result': True,
+                        'string': data}
             with open(tgt, 'w+') as target:
-                target.write(template.render(**passthrough))
+                target.write(data)
                 if newline:
                     target.write('\n')
         except UnicodeEncodeError:
@@ -94,7 +104,7 @@ def jinja(sfn, **kwargs):
                 'data': trb}
 
 
-def py(sfn, **kwargs):
+def py(sfn, string=False, **kwargs):
     '''
     Render a template from a python source file
 
@@ -114,9 +124,13 @@ def py(sfn, **kwargs):
         setattr(mod, kwarg, kwargs[kwarg])
 
     try:
+        data = mod.run()
+        if string:
+            return {'result': True,
+                    'data': data}
         tgt = tempfile.mkstemp()[1]
         with open(tgt, 'w+') as target:
-            target.write(mod.run())
+            target.write(data)
         return {'result': True,
                 'data': tgt}
     except:
