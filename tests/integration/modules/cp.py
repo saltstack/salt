@@ -102,3 +102,14 @@ class CPModuleTest(integration.ModuleCase):
                 data = scene.read()
                 self.assertIn('ARTHUR:', data)
                 self.assertNotIn('bacon', data)
+
+    def test_cache_master(self):
+        '''
+        cp.cache_master
+        '''
+        ret = self.run_function(
+                'cp.cache_master',
+                )
+        for path in ret:
+            self.assertTrue(os.path.exists(path))
+
