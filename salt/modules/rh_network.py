@@ -2,12 +2,18 @@
 The networking module for RHEL/Fedora based distros 
 '''
 
-import os
 import logging
+import os
+import re
+from os.path import exists, dirname, join
+
+from jinja2 import Environment, PackageLoader
 
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Set up template environment
+env = Environment(loader=PackageLoader('salt.modules', 'rh_network'))
 
 def __virtual__():
     '''
