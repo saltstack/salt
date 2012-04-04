@@ -354,6 +354,8 @@ class State(object):
                     errors.append(err)
                 else:
                     fun = 0
+                    if '.' in state:
+                        fun += 1
                     for arg in body[state]:
                         if isinstance(arg, basestring):
                             fun += 1
@@ -508,8 +510,15 @@ class State(object):
             if name.startswith('__'):
                 continue
             for state, run in body.items():
+                funcs = set()
+                names = set()
                 if state.startswith('__'):
                     continue
+                if '.' in state:
+                    # the function is formatted as part of the state dec
+                    comps = state.split('.')
+                    state = comps[0]
+                    funcs.add(comps[1])
                 chunk = {'state': state,
                          'name': name}
                 if '__sls__' in body:
@@ -517,8 +526,6 @@ class State(object):
                 if '__env__' in body:
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
-                funcs = set()
-                names = set()
                 for arg in run:
                     if isinstance(arg, basestring):
                         funcs.add(arg)
@@ -1204,6 +1211,14 @@ class BaseHighState(object):
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
                             continue
+                        
+                        if isinstance(state[name], basestring):
+                            # Is this is a short state, it needs to be padded
+                            if '.' in state[name]:
+                                state[name] = {'__sls__': sls,
+                                               '__env__': env,
+                                               state[name]: []}
+                                continue
                         errors.append(('Name {0} in sls {1} is not a dictionary'
                                        .format(name, sls)))
                         continue
