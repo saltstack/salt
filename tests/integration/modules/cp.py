@@ -135,3 +135,19 @@ class CPModuleTest(integration.ModuleCase):
                 )
         self.assertIn('core', ret)
         self.assertIn('top', ret)
+
+    def test_list_minion(self):
+        '''
+        cp.list_minion
+        '''
+        self.run_function(
+                'cp.cache_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        ret = self.run_function('cp.list_minion')
+        found = False
+        for path in ret:
+            if 'grail/scene33' in path:
+                found = True
+        self.assertTrue(found)
