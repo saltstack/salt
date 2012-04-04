@@ -18,15 +18,6 @@ def __virtual__():
         return 'network'
     return False
 
-def _read_file(path):
-    '''
-    Reads and returns the contents of a file
-    '''
-    try:
-        with open(path, 'rb') as contents:
-            return contents.readline().strip()
-    except:
-        return ''
         
     
 # Setup networking attributes
@@ -44,6 +35,7 @@ _RH_CONFIG_BONDING_OPTS = [
     'arp_ip_target', 'downdelay', 'updelay',
     'use_carrier', 'lacp_rate', 'hashing-algorithm'
 ]
+_RH_NETWORK_SCRIPT_DIR = '/etc/sysconfig/network-scripts'
 _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
 _IFACE_TYPES = ['eth', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
@@ -336,3 +328,16 @@ def build(iface, ip, type, settings):
         pass
     pass
 
+def _read_file(path):
+    '''
+    Reads and returns the contents of a file
+    '''
+    try:
+        with open(path, 'rb') as contents:
+            return contents.read()
+    except:
+        return ''
+
+def get(iface):
+    filename = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
+    return _read_file(filename)
