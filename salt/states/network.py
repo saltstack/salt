@@ -1,3 +1,5 @@
+import difflib
+
 '''
 Network Management
 ==================
@@ -98,7 +100,6 @@ def managed(
         The IP parameters for this interface.
         
     '''
-    pass
     
     ret = {
         'name': name,
@@ -110,8 +111,17 @@ def managed(
     # get current iface run through settings filter
     # get proposed iface submit to builder
     # diff iface
-    pre = __salt__['network.get'](interface)
-    new = __salt__['network.build'](ip, interface)
+    try:
+        old = __salt__['network.get'](name)
+        new = __salt__['network.build'](name, type, kwargs)
+        if not old and new:
+            ret['changes']['diff'] = 'Added ifcfg script'
+        elif old != new:
+            diff = difflib.unified_diff(old, new)
+            ret['changes']['diff'] = ''.join(diff)
+    except AttributeError, error:
+        ret['result'] = False
+        ret['comment'] = error.message
 
     return ret
            
