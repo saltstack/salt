@@ -125,3 +125,13 @@ class CPModuleTest(integration.ModuleCase):
                 [src])
         with open(ret, 'r') as cp_:
             self.assertEqual(cp_.read(), 'foo')
+
+    def test_list_states(self):
+        '''
+        cp.list_states
+        '''
+        ret = self.run_function(
+                'cp.list_states',
+                )
+        self.assertIn('core', ret)
+        self.assertIn('top', ret)
