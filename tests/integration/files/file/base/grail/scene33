@@ -15,7 +15,7 @@ Scene 33
   ARTHUR:  Where?
   TIM:  There!
   ARTHUR:  What, behind the rabbit?
-  TIM:  It is the rabbit!
+  TIM:  It is the {{ spam }}!
   ARTHUR:  You silly sod!  You got us all worked up!
   TIM:  Well, that's no ordinary rabbit.  That's the most foul, cruel,
       and bad-tempered rodent you ever set eyes on.
