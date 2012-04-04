@@ -151,3 +151,25 @@ class CPModuleTest(integration.ModuleCase):
             if 'grail/scene33' in path:
                 found = True
         self.assertTrue(found)
+
+    def test_is_cached(self):
+        '''
+        cp.is_cached
+        '''
+        self.run_function(
+                'cp.cache_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        ret1 = self.run_function(
+                'cp.is_cached',
+                [
+                    'salt://grail/scene33',
+                ])
+        self.assertTrue(ret1)
+        ret2 = self.run_function(
+                'cp.is_cached',
+                [
+                    'salt://fasldkgj/poicxzbn',
+                ])
+        self.assertFalse(ret2)
