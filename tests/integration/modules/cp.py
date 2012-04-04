@@ -1,5 +1,6 @@
 # Import python libs
 import os
+import hashlib
 
 # Import salt libs
 import integration
@@ -173,3 +174,23 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://fasldkgj/poicxzbn',
                 ])
         self.assertFalse(ret2)
+
+    def test_hash_file(self):
+        '''
+        cp.hash_file
+        '''
+        md5_hash = self.run_function(
+                'cp.hash_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        path = self.run_function(
+                'cp.cache_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        with open(path, 'r') as fn_:
+            self.assertEqual(
+                    md5_hash['hsum'],
+                    hashlib.md5(fn_.read()).hexdigest()
+                    )
