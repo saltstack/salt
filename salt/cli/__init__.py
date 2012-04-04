@@ -215,6 +215,7 @@ class SaltCMD(object):
             else:
                 opts['tgt'] = args[0]
 
+            # Detect compound command and set up the data for it
             if ',' in args[1]:
                 opts['fun'] = args[1].split(',')
                 opts['arg'] = []

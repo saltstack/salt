@@ -658,7 +658,6 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer'], dict):
             return {}
-        # FIXME: rewrite this ugly monster using eg any()
         if 'fun' not in clear_load\
                 or 'arg' not in clear_load\
                 or 'tgt' not in clear_load\
@@ -684,9 +683,22 @@ class AESFuncs(object):
                 if isinstance(self.opts['peer'][match], list):
                     perms.update(self.opts['peer'][match])
         good = False
+        if ',' in clear_load['fun']:
+            # 'arg': [['cat', '/proc/cpuinfo'], [], ['foo']]
+            clear_load['fun'] = clear_load['fun'].split(',')
+            arg_ = []
+            for arg in clear_load['arg']:
+                arg_.append(arg.split())
+            clear_load['arg'] = arg_
         for perm in perms:
-            if re.match(perm, clear_load['fun']):
+            if isinstance(clear_load['fun'], list):
                 good = True
+                for fun in clear_load['fun']:
+                    if not re.match(perm, fun):
+                        good = False
+            else:
+                if re.match(perm, clear_load['fun']):
+                    good = True
         if not good:
             return {}
         # Set up the publication payload

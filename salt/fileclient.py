@@ -183,6 +183,21 @@ class Client(object):
 
         return ''
 
+    def list_states(self, env):
+        '''
+        Return a list of all available sls modules on the master for a given
+        environment
+        '''
+        states = []
+        for path in self.file_list(env):
+            if path.endswith('.sls'):
+                # is an sls module!
+                if path.endswith('{0}init.sls'.format(os.sep)):
+                    states.append(path.replace(os.sep, '.')[:-9])
+                else:
+                    states.append(path.replace(os.sep, '.')[:-4])
+        return states
+
     def get_state(self, sls, env):
         '''
         Get a state file from the master and store it in the local minion

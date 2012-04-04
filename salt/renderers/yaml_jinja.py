@@ -13,6 +13,8 @@ import warnings
 # Import Salt libs
 from salt.utils.jinja import get_template
 from salt.utils.yaml import CustomLoader, load
+from salt.exceptions import SaltRenderError
+import salt.utils.templates
 
 log = logging.getLogger(__name__)
 
@@ -23,16 +25,19 @@ def render(template_file, env='', sls=''):
     if not os.path.isfile(template_file):
         return {}
 
-    passthrough = {}
-    passthrough['salt'] = __salt__
-    passthrough['grains'] = __grains__
-    passthrough['pillar'] = __pillar__
-    passthrough['env'] = env
-    passthrough['sls'] = sls
-
-    template = get_template(template_file, __opts__, env)
-
-    yaml_data = template.render(**passthrough)
+    tmp_data = salt.utils.templates.jinja(
+            template_file,
+            True,
+            salt=__salt__,
+            grains=__grains__,
+            opts=__opts__,
+            pillar=__pillar__,
+            env=env,
+            sls=sls)
+    if not tmp_data.get('result', False):
+        raise SaltRenderError(tmp_data.get('data',
+            'Unknown render error in yaml_jinja renderer'))
+    yaml_data = tmp_data['data']
     with warnings.catch_warnings(record=True) as warn_list:
         data = load(yaml_data, Loader=CustomLoader)
         if len(warn_list) > 0:
