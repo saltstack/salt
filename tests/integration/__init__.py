@@ -46,8 +46,7 @@ class TestDaemon(object):
                 'base': [os.path.join(FILES, 'file/base')]
                 }
         # clean up the old files
-        if os.path.isdir(self.master_opts['root_dir']):
-            shutil.rmtree(self.master_opts['root_dir'])
+        self._clean()
         self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
         self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
         verify_env([
@@ -91,7 +90,22 @@ class TestDaemon(object):
         self.master_process.terminate()
         self.syndic_process.terminate()
         self.smaster_process.terminate()
+        self._clean()
 
+    def _clean(self):
+        '''
+        Clean out the tmp files
+        '''
+        if os.path.isdir(self.master_opts['root_dir']):
+            shutil.rmtree(self.master_opts['root_dir'])
+        for fn_ in os.listdir(TMP):
+            if fn_ == '_README':
+                continue
+            path = os.path.join(TMP, fn_)
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            elif os.path.isfile(path):
+                os.remove(path)
 
 class ModuleCase(TestCase):
     '''
