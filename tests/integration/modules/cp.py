@@ -87,3 +87,18 @@ class CPModuleTest(integration.ModuleCase):
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
+
+    def test_cache_files(self):
+        '''
+        cp.cache_files
+        '''
+        ret = self.run_function(
+                'cp.cache_files',
+                [
+                    ['salt://grail/scene33' ,'salt://grail/36/scene'],
+                ])
+        for path in ret:
+            with open(path, 'r') as scene:
+                data = scene.read()
+                self.assertIn('ARTHUR:', data)
+                self.assertNotIn('bacon', data)
