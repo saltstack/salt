@@ -113,3 +113,15 @@ class CPModuleTest(integration.ModuleCase):
         for path in ret:
             self.assertTrue(os.path.exists(path))
 
+    def test_cache_local_file(self):
+        '''
+        cp.cache_local_file
+        '''
+        src = os.path.join(integration.TMP, 'random')
+        with open(src, 'w+') as fn_:
+            fn_.write('foo')
+        ret = self.run_function(
+                'cp.cache_local_file',
+                [src])
+        with open(ret, 'r') as cp_:
+            self.assertEqual(cp_.read(), 'foo')
