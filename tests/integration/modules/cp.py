@@ -56,3 +56,21 @@ class CPModuleTest(integration.ModuleCase):
         self.assertIn('36', os.listdir(os.path.join(tgt, 'grail')))
         self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
         self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
+
+    def test_get_url(self):
+        '''
+        cp.get_url
+        '''
+        # We should add a "if the internet works download some files"
+        tgt = os.path.join(integration.TMP, 'scene33')
+        self.run_function(
+                'cp.get_url',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ])
+        with open(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
