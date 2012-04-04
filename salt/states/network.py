@@ -14,13 +14,12 @@ eth0:
     - managed
     - enabled: True
     - type: eth
-    - ipv4:
-      - proto: none
-      - ipaddress: 10.1.0.1
-      - netmask: 255.255.255.0
-      - dns:
-        - 8.8.8.8
-        - 8.8.4.4
+    - proto: none
+    - ipaddr: 10.1.0.1
+    - netmask: 255.255.255.0
+    - dns:
+      - 8.8.8.8
+      - 8.8.4.4
 eth2:
   network:
     - managed
@@ -35,12 +34,11 @@ bond0:
   network:
     - managed
     - type: bond
-    - ipv4:
-      - ipaddress: 10.1.0.1
-      - netmask: 255.255.255.0
-      - dns:
-        - 8.8.8.8
-        - 8.8.4.4
+    - ipaddr: 10.1.0.1
+    - netmask: 255.255.255.0
+    - dns:
+      - 8.8.8.8
+      - 8.8.4.4
     - ipv6:
     - enabled: False
     - watch:
