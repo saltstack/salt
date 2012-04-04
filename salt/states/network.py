@@ -100,14 +100,16 @@ def managed(
     '''
     pass
     
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': 'Interface {0} is up to date.'.format(name)}
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': 'Interface {0} is up to date.'.format(name)
+    }
            
-           # get current iface run through settings filter
-           # get proposed iface submit to builder
-           # diff iface
+    # get current iface run through settings filter
+    # get proposed iface submit to builder
+    # diff iface
     pre = __salt__['network.get'](interface)
     new = __salt__['network.build'](ip, interface)
 

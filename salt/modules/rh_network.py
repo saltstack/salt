@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''$
+    '''
     Confine this module to RHEL/Fedora based distros$
     '''
     dists = ('CentOS', 'Scientific', 'RedHat')
@@ -20,6 +20,7 @@ def __virtual__():
 
         
     
+
 # Setup networking attributes
 _ETHTOOL_CONFIG_OPTS = [
     'autoneg', 'speed', 'duplex',
