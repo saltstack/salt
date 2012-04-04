@@ -32,7 +32,7 @@ The best examples of runners can be found in the Salt source:
 
 :blob:`salt/runners`
 
-A simple runner that returns a well formated list of the minons that are
+A simple runner that returns a well-formatted list of the minions that are
 responding to salt calls would look like this:
 
 .. code-block:: python

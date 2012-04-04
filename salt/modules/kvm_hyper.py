@@ -1,6 +1,8 @@
 '''
 Provide the hyper module for kvm hypervisors. This is the interface used to
 interact with kvm on behalf of the salt-virt interface
+
+Required python modules: libvirt
 '''
 
 # This is a test interface for the salt-virt system. The api in this file is
@@ -8,14 +10,18 @@ interact with kvm on behalf of the salt-virt interface
 
 
 # Import Python Libs
-from xml.dom import minidom
-import StringIO
 import os
 import shutil
+import StringIO
 import subprocess
+from xml.dom import minidom
 
 # Import libvirt
-import libvirt
+try:
+    import libvirt
+    has_libvirt = True
+except ImportError:
+    has_libvirt = True
 
 # Import Third party modules
 import yaml
@@ -36,11 +42,14 @@ def __virtual__():
     '''
     Apply this module as the hyper module if the minion is a kvm hypervisor
     '''
+    if 'virtual' not in __grains__:
+        return False
     if __grains__['virtual'] != 'physical':
         return False
     if 'kvm_' not in open('/proc/modules').read():
         return False
-    #libvirt_ret = __salt__['cmd.run'](__grains__['ps']).count('libvirtd')
+    if not has_libvirt:
+        return False
     try:
         libvirt_conn = libvirt.open('qemu:///system')
         libvirt_conn.close()
@@ -395,16 +404,10 @@ def set_autostart(name):
     dom = _get_dom(name)
 
     if state == 'on':
-        if dom.setAutostart(1) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(1) == 0
 
     elif state == 'off':
-        if dom.setAutostart(0) == 0:
-            return True
-        else:
-            return False
+        return dom.setAutostart(0) == 0
 
     else:
         # return False if state is set to something other then on or off

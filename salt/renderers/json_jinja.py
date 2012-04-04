@@ -19,6 +19,7 @@ def render(template_file, env='', sls=''):
     passthrough = {}
     passthrough['salt'] = __salt__
     passthrough['grains'] = __grains__
+    passthrough['pillar'] = __pillar__
     passthrough['env'] = env
     passthrough['sls'] = sls
 

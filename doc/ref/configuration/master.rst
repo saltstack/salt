@@ -91,7 +91,7 @@ execution returns and command executions.
 
 Default: :file:`/`
 
-The system root direcotry to oporate from, change this to make Salt run from
+The system root directory to operate from, change this to make Salt run from
 an alternative root
 
 .. code-block:: yaml
@@ -158,9 +158,9 @@ Open mode is a dangerous security feature. One problem encountered with pki
 authentication systems is that keys can become "mixed up" and authentication
 begins to fail. Open mode turns off authentication and tells the master to
 accept all authentication. This will clean up the pki keys received from the
-minions. Open mode should not be turned on for general use, open mode should
+minions. Open mode should not be turned on for general use. Open mode should
 only be used for a short period of time to clean up pki keys. To turn on open
-mode the value passed must be ``True``.
+mode set this value to ``True``.
 
 .. code-block:: yaml
 
@@ -173,7 +173,7 @@ mode the value passed must be ``True``.
 
 Default: ``False``
 
-Enable auto_accept, this setting will automatically accept all incoming
+Enable auto_accept. This setting will automatically accept all incoming
 public keys from the minions
 
 .. code-block:: yaml
@@ -206,7 +206,7 @@ root of the base environment
 Default: None
 
 The external_nodes option allows Salt to gather data that would normally be
-placed in a top file from and external node controller. The external_nodes 
+placed in a top file from and external node controller. The external_nodes
 option is the executable that will return the ENC data. Remember that Salt
 will look for external nodes AND top files and combine the results if both
 are enabled and available!
@@ -252,10 +252,10 @@ Default: ``base: [/srv/salt]``
 Salt runs a lightweight file server written in zeromq to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
-The file server works on environments passed to the master, each environment
-can have multiple root directories, the subdirectories in the multiple file
+The file server works on environments passed to the master. Each environment
+can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
-reliably ensured. A base environment is required to house the top file
+reliably ensured. A base environment is required to house the top file.
 Example:
 
 .. code-block:: yaml
@@ -306,12 +306,11 @@ The buffer size in the file server in bytes
 Syndic Server Settings
 ----------------------
 
-The Salt syndic is used to pass commands through a master from a higher
-master. Using the syndic is simple, if this is a master that will have
-syndic servers(s) below it set the "order_masters" setting to True, if this
+A Salt syndic is a Salt master used to pass commands from a higher Salt master to
+minions below the syndic. Using the syndic is simple. If this is a master that
+will have syndic servers(s) below it, set the "order_masters" setting to True. If this
 is a master that will be running a syndic daemon for passthrough the
 "syndic_master" setting needs to be set to the location of the master server
-to recieve commands from
 
 .. conf_master:: order_masters
 
@@ -320,7 +319,7 @@ to recieve commands from
 
 Default: ``False``
 
-Extra data needs to be sind with publications if the master os controlling a
+Extra data needs to be sent with publications if the master is controlling a
 lower level master via a syndic minion. If this is the case the order_masters
 value must be set to True
 
@@ -336,7 +335,7 @@ value must be set to True
 Default: ``None``
 
 If this master will be running a salt-syndic to connect to a higher level
-master specify the higher level master with this configuration value
+master, specify the higher level master with this configuration value
 
 .. code-block:: yaml
 
@@ -358,7 +357,7 @@ compartmentalization of commands based on individual minions.
 Default: ``{}``
 
 The configuration uses regular expressions to match minions and then a list
-of regular expressions to match functions, the following will allow the
+of regular expressions to match functions. The following will allow the
 minion authenticated as foo.example.com to execute functions from the test
 and pkg modules
 
@@ -377,7 +376,7 @@ This will allow all minions to execute all commands:
       .*:
           - .*
 
-This is not recomanded, since it would allow anyone who gets root on any
+This is not recommended, since it would allow anyone who gets root on any
 single minion to instantly have root on all of the minions!
 
 Node Groups
@@ -434,7 +433,7 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 Default: ``{}``
 
 Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the salt library at the 'warning' level, but, you
+Imagine you want to have the salt library at the 'warning' level, but you
 still wish to have 'salt.modules' at the 'debug' level:
 
 .. code-block:: yaml

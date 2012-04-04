@@ -1,3 +1,5 @@
+import difflib
+
 '''
 Network Management
 ==================
@@ -12,13 +14,12 @@ eth0:
     - managed
     - enabled: True
     - type: eth
-    - ipv4:
-      - proto: none
-      - ipaddress: 10.1.0.1
-      - netmask: 255.255.255.0
-      - dns:
-        - 8.8.8.8
-        - 8.8.4.4
+    - proto: none
+    - ipaddr: 10.1.0.1
+    - netmask: 255.255.255.0
+    - dns:
+      - 8.8.8.8
+      - 8.8.4.4
 eth2:
   network:
     - managed
@@ -33,12 +34,11 @@ bond0:
   network:
     - managed
     - type: bond
-    - ipv4:
-      - ipaddress: 10.1.0.1
-      - netmask: 255.255.255.0
-      - dns:
-        - 8.8.8.8
-        - 8.8.4.4
+    - ipaddr: 10.1.0.1
+    - netmask: 255.255.255.0
+    - dns:
+      - 8.8.8.8
+      - 8.8.4.4
     - ipv6:
     - enabled: False
     - watch:
@@ -78,9 +78,9 @@ bond0:
 
 def managed(
         name,
+        type,
         enabled=True,
-        ip=None,
-        interface=None
+        **kwargs
         ):
     '''
     Ensure that the named interface is configured properly.
@@ -88,28 +88,38 @@ def managed(
     name
         The name of the interface to manage
     
+    type
+        Type of interface and configuration.
+    
     enabled
         Designates the state of this interface.
         
-    ip
+    kwargs
         The IP parameters for this interface.
         
-    interface
-        Type of interface and configuration.
-    
     '''
-    pass
     
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': 'Interface {0} is up to date.'.format(name)}
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': 'Interface {0} is up to date.'.format(name)
+    }
            
-           # get current iface run through settings filter
-           # get proposed iface submit to builder
-           # diff iface
-    pre = __salt__['network.get'](interface)
-    new = __salt__['network.build'](ip, interface)
+    # get current iface run through settings filter
+    # get proposed iface submit to builder
+    # diff iface
+    try:
+        old = __salt__['network.get'](name)
+        new = __salt__['network.build'](name, type, kwargs)
+        if not old and new:
+            ret['changes']['diff'] = 'Added ifcfg script'
+        elif old != new:
+            diff = difflib.unified_diff(old, new)
+            ret['changes']['diff'] = ''.join(diff)
+    except AttributeError, error:
+        ret['result'] = False
+        ret['comment'] = error.message
 
     return ret
            

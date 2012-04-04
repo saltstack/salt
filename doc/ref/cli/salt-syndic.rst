@@ -29,6 +29,10 @@ Options
 
     Run the salt syndic as a daemon
 
+.. option:: --pid-file PIDFILE
+
+    Specify the location of the pidfile
+
 .. option:: --master-config=MASTER_CONFIG
 
     The master configuration file to use, the default is /etc/salt/master

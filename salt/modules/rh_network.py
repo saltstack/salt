@@ -2,15 +2,21 @@
 The networking module for RHEL/Fedora based distros 
 '''
 
-import os
 import logging
+import os
+import re
+from os.path import exists, dirname, join
+
+from jinja2 import Environment, PackageLoader
 
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Set up template environment
+env = Environment(loader=PackageLoader('salt.modules', 'rh_network'))
 
 def __virtual__():
-    '''$
+    '''
     Confine this module to RHEL/Fedora based distros$
     '''
     dists = ('CentOS', 'Scientific', 'RedHat')
@@ -18,30 +24,35 @@ def __virtual__():
         return 'network'
     return False
 
-def _read_file(path):
-    '''
-    Reads and returns the contents of a file
-    '''
-    try:
-        with open(path, 'rb') as contents:
-            return contents.readline().strip()
-    except:
-        return ''
         
     
+
 # Setup networking attributes
-_ETHTOOL_CONFIG_OPTS = [ 'autoneg', 'speed', 'duplex', 'rx', 'tx', 'sg', 'tso', 'ufo', 'gso', 'gro', 'lro' ]
-_RH_CONFIG_OPTS = [ 'domain', 'peerdns', 'defaultroute', 'mtu', 'static-routes' ]
-_RH_CONFIG_BONDING_OPTS = [ 'mode', 'miimon', 'arp_interval', 'arp_ip_target', 'downdelay', 'updelay', 'use_carrier', 'lacp_rate', 'hashing-algorithm' ]
+_ETHTOOL_CONFIG_OPTS = [
+    'autoneg', 'speed', 'duplex',
+    'rx', 'tx', 'sg', 'tso', 'ufo',
+    'gso', 'gro', 'lro'
+]
+_RH_CONFIG_OPTS = [ 
+    'domain', 'peerdns', 'defaultroute',
+    'mtu', 'static-routes'
+]
+_RH_CONFIG_BONDING_OPTS = [
+    'mode', 'miimon', 'arp_interval',
+    'arp_ip_target', 'downdelay', 'updelay',
+    'use_carrier', 'lacp_rate', 'hashing-algorithm'
+]
+_RH_NETWORK_SCRIPT_DIR = '/etc/sysconfig/network-scripts'
+_MAC_REGEX = re.compile('([0-9A-F]{1,2}:){5}[0-9A-F]{1,2}')
 _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
-_IFACE_TYPES = ['ethernet', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
+_IFACE_TYPES = ['eth', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
 
 def _generate_if_settings(opts, iftype, iface):
     '''
-    Fiters given options and outputs valid settings for requested operation.
-    If an option has a value that is not expected, this fuction will log what
-    the Interface, Setting and what it was expecting. 
+    Fiters given options and outputs valid settings for requested
+    operation. If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was expecting.
     '''
     
     if iftype in ['eth', 'lo', 'br']:
@@ -230,9 +241,9 @@ def _generate_if_settings(opts, iftype, iface):
                     if opts.has_key(bo):
                         if bo == 'lacp_rate':
                             if opts[bo] == 'fast':
-                                opts.update( {op:'1'} )
+                                opts.update( {bo:'1'} )
                             if opts[bo] == 'slow':
-                                opts.update( {op:'0'} )
+                                opts.update( {bo:'0'} )
                         try:
                             int(opts[bo])
                             bond.update( {bo:opts[bo]} )
@@ -319,9 +330,90 @@ def _generate_if_settings(opts, iftype, iface):
     
         return bond
 
-def build(iface, ip, type, settings):
-    if type in _IFACE_TYPES:
-        _generate_if_settings(opts=settings, iftype=type, iface=iface)
-        pass
-    pass
+def _error_msg(iface, option, expected):
+    msg = 'Invalid option -- Interface: %s, Option: %s, Expected: [%s]'
+    return msg % (iface, option, '|'.join(expected))
 
+def _parse_settings_eth(opts, iface):
+    result = {'name': iface}
+    if 'proto' in opts:
+        valid = ['none', 'bootp', 'dhcp']
+        if opts['proto'] in valid:
+            result['proto'] = opts['proto']
+        else:
+             _raise_error(iface, opts['proto'], valid)
+
+    if 'dns' in opts:
+        result['dns'] = opts['dns']
+        result['peernds'] = 'yes'
+
+    #TODO Add call to the ETHTOOL_OPTS parsing
+
+    if 'addr' in opts:
+        if _MAC_REGEX.match(opts['addr']):
+            result['addr'] = opts['addr']
+        else:
+            _raise_error(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
+    else:
+        ifaces = __salt__['network.interfaces']()
+        if iface in ifaces and 'hwaddr' in ifaces[iface]:
+            result['addr'] = ifaces[iface]['hwaddr']         
+
+    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr']:
+        if opt in opts:
+            result[opt] = opts[opt]
+
+    valid = _CONFIG_TRUE + _CONFIG_FALSE
+    for opt in ['onboot', 'peerdns', 'slave', 'userctl']:
+        if opt in opts:
+            if opts[opt] in _CONFIG_TRUE:
+                result[opt] = 'yes'
+            elif opts[opt] in _CONFIG_FALSE:
+                result[opt] = 'no'
+            else:
+                _raise_error(iface, opts[opt], valid)
+
+    return result
+
+def _raise_error(iface, option, expected):
+    msg = _error_msg(iface, option, expected)
+    log.error(msg)
+    raise AttributeError(msg)
+
+def _read_file(path):
+    '''
+    Reads and returns the contents of a file
+    '''
+    try:
+        with open(path, 'rb') as contents:
+            return contents.read()
+    except:
+        return ''
+
+def _write_file(iface, data):
+    filename = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
+    if not exists(_RH_NETWORK_SCRIPT_DIR):
+        msg = '%s cannot be written. %s does not exists'
+        msg = msg % (filename, _RH_NETWORK_SCRIPT_DIR)
+        log.error(msg)
+        raise AttributeError(msg)
+    fout = open(filename, 'w')
+    fout.write(data)
+    fout.close()
+
+def build(iface, type, settings):
+    if type not in _IFACE_TYPES:
+        _raise_error(iface, type, _IFACE_TYPES)
+
+    if type in ['eth']:
+        log.info('SETTINGS = %s' % str(settings))
+        settings = _parse_settings_eth(settings, iface)
+        template = env.get_template('eth.jinja')
+        ifcfg = template.render(settings)
+
+    _write_file(iface, ifcfg)
+    return ifcfg
+
+def get(iface):
+    filename = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
+    return _read_file(filename)

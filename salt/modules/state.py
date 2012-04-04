@@ -89,7 +89,7 @@ def sls(mods, env='base'):
         salt '*' state.sls core,edit.vim dev
     '''
     st_ = salt.state.HighState(__opts__)
-    if isinstance(mods, str):
+    if isinstance(mods, basestring):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
     if errors:
@@ -124,7 +124,18 @@ def show_lowstate():
 
     CLI Example::
 
-        salt '*' show_lowstate
+        salt '*' state.show_lowstate
     '''
     st_ = salt.state.HighState(__opts__)
     return st_.compile_low_chunks()
+
+def show_masterstate():
+    '''
+    Display the data gathered from the master compiled state
+
+    CLI Example::
+
+        salt '*' state.show_masterstate
+    '''
+    st_ = salt.state.RemoteHighState(__opts__, __grains__)
+    return st_.compile_master()

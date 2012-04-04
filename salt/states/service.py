@@ -47,7 +47,7 @@ def _enable(name, started):
            'comment': ''}
 
     # Check to see if this minion supports enable
-    if not 'service.enable' in __salt__:
+    if not 'service.enable' in __salt__ or not 'service.enabled' in __salt__:
         if started is True:
             ret['comment'] = ('Enable is not available on this minion,'
                 ' service {0} started').format(name)
@@ -126,7 +126,7 @@ def _disable(name, started):
            'comment': ''}
 
     # is enable/disable available?
-    if not 'service.disable' in __salt__:
+    if not 'service.disable' in __salt__ or not 'service.disabled' in __salt__:
         if started is True:
             ret['comment'] = ('Disable is not available on this minion,'
                 ' service {0} started').format(name)
@@ -291,7 +291,33 @@ def dead(name, enable=None, sig=None):
         return ret
 
 
-def watcher(name, sig=None):
+def enabled(name):
+    '''
+    Verify that the service is enabled on boot, only use this state if you
+    don't want to manage the running process, remember that if you want to
+    enable a running service to use the enable: True option for the running
+    or dead function.
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _enable(name, None)
+
+
+def disabled(name):
+    '''
+    Verify that the service is disabled on boot, only use this state if you
+    don't want to manage the running process, remember that if you want to
+    disable a service to use the enable: False option for the running or dead
+    function.
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _disable(name, None)
+
+
+def mod_watch(name, sig=None):
     '''
     The service watcher, called to invoke the watch command.
 
@@ -312,23 +338,3 @@ def watcher(name, sig=None):
             'changes': {},
             'result': True,
             'comment': 'Service {0} started'.format(name)}
-
-
-def enabled(name):
-    '''
-    Verify that the service is enabled on boot
-
-    name
-        The name of the init or rc script used to manage the service
-    '''
-    return _enable(name, None)
-
-
-def disabled(name):
-    '''
-    Verify that the service is disabled on boot
-
-    name
-        The name of the init or rc script used to manage the service
-    '''
-    return _disable(name, None)

@@ -123,7 +123,7 @@ class Key(object):
          minions_pre,
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
-        if not pre.count(key):
+        if key not in pre:
             err = ('The key named %s does not exist, please accept an '
                    'available key' %(key))
             #log.error(err)
@@ -143,28 +143,38 @@ class Key(object):
         for key in os.listdir(minions_pre):
             self._accept(key)
 
-    def _delete_key(self):
+    def _delete_key(self, delete=None):
         '''
         Delete a key
         '''
         (minions_accepted,
          minions_pre,
          minions_rejected) = self._check_minions_directories()
-        pre = os.path.join(minions_pre, self.opts['delete'])
-        acc = os.path.join(minions_accepted, self.opts['delete'])
-        rej= os.path.join(minions_rejected, self.opts['delete'])
+        if delete == None:
+            delete = self.opts['delete']
+        pre = os.path.join(minions_pre, delete)
+        acc = os.path.join(minions_accepted, delete)
+        rej = os.path.join(minions_rejected, delete)
         if os.path.exists(pre):
             os.remove(pre)
-            self._log('Removed pending key %s' % self.opts['delete'], 
+            self._log('Removed pending key %s' % delete, 
                          level='info')
         if os.path.exists(acc):
             os.remove(acc)
-            self._log('Removed accepted key %s' % self.opts['delete'], 
+            self._log('Removed accepted key %s' % delete, 
                          level='info')
         if os.path.exists(rej):
             os.remove(rej)
-            self._log('Removed rejected key %s' % self.opts['delete'], 
+            self._log('Removed rejected key %s' % delete, 
                          level='info')
+    def _delete_all(self):
+        '''
+        Delete all keys 
+        '''
+        for dir in ("acc", "rej", "pre"):
+            for key in self._keys(dir):
+                self._delete_key(key)
+
 
     def _reject(self, key):
         '''
@@ -174,7 +184,7 @@ class Key(object):
          minions_pre,
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
-        if not pre.count(key):
+        if key not in pre:
             err = ('The host named %s is unavailable, please accept an '
                    'available key' %(key))
             self._log(err, level='error')
@@ -234,5 +244,7 @@ class Key(object):
             self._reject_all()
         elif self.opts['delete']:
             self._delete_key()
+        elif self.opts['delete_all']:
+            self._delete_all()
         else:
             self._list_all()

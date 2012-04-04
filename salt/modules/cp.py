@@ -1,10 +1,12 @@
 '''
 Minion side functions for salt-cp
 '''
-
+# Import python libs
 import os
 
+# Import salt libs
 import salt.minion
+import salt.fileclient
 
 
 def recv(files, dest):
@@ -43,8 +45,11 @@ def get_file(path, dest, env='base'):
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
     '''
-    client = salt.minion.FileClient(__opts__)
-    return client.get_file(path, dest, False, env)
+    if not hash_file(path,env):
+        return ''
+    else:
+        client = salt.fileclient.get_file_client(__opts__)
+        return client.get_file(path, dest, False, env)
 
 
 def get_dir(path, dest, env='base'):
@@ -55,7 +60,7 @@ def get_dir(path, dest, env='base'):
 
         salt '*' cp.get_dir salt://path/to/dir/ /minion/dest
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.get_dir(path, dest, env)
 
 
@@ -68,7 +73,7 @@ def get_url(path, dest, env='base'):
         salt '*' cp.get_url salt://my/file /tmp/mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.get_url(path, dest, False, env)
 
 
@@ -80,7 +85,7 @@ def cache_file(path, env='base'):
 
         salt '*' cp.cache_file salt://path/to/file
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.cache_file(path, env)
 
 
@@ -94,7 +99,7 @@ def cache_files(paths, env='base'):
 
         salt '*' cp.cache_files salt://pathto/file1,salt://pathto/file1
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.cache_files(paths, env)
 
 
@@ -106,7 +111,7 @@ def cache_dir(path, env='base'):
     
         salt '*' cp.cache_dir salt://path/to/dir
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.cache_dir(path, env)
 
 
@@ -118,7 +123,7 @@ def cache_master(env='base'):
 
         salt '*' cp.cache_master
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.cache_master(env)
 
 
@@ -144,7 +149,7 @@ def cache_local_file(path):
             return path_cached
 
     # The file hasn't been cached or has changed; cache it
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.cache_local_file(path)
 
 
@@ -156,7 +161,7 @@ def list_master(env='base'):
 
         salt '*' cp.list_master
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.file_list(env)
 
 
@@ -168,7 +173,7 @@ def list_minion(env='base'):
 
         salt '*' cp.list_minion
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.file_local_list(env)
 
 
@@ -181,7 +186,7 @@ def is_cached(path, env='base'):
 
         salt '*' cp.is_cached salt://path/to/file
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.is_cached(path, env)
 
 
@@ -195,5 +200,5 @@ def hash_file(path, env='base'):
 
         salt '*' cp.hash_file salt://path/to/file
     '''
-    client = salt.minion.FileClient(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
     return client.hash_file(path, env)

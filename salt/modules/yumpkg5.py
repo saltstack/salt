@@ -42,9 +42,8 @@ def _parse_yum(arg):
 
     for line in out.split('\n'):
         if len(line.split()) == 3:
-            namearchstr, versionstr, pkgstatus = line.split()
+            namearchstr, pkgver, pkgstatus = line.split()
             pkgname = namearchstr.rpartition('.')[0]
-            pkgver = versionstr.rpartition('.')[0]
 
             results.append(YumOut(pkgname, pkgver, pkgstatus))
 
@@ -72,6 +71,17 @@ def available_version(name):
     '''
     out = _parse_yum('list updates {0}'.format(name))
     return out[0].version if out else ''
+
+
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return available_version(name) != ''
 
 
 def version(name):

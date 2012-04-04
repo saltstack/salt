@@ -73,10 +73,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    if __salt__['cmd.retcode']('emerge --sync --quiet'):
-        return False
-    else:
-        return True
+    return __salt__['cmd.retcode']('emerge --sync --quiet') == 0
 
 def install(pkg, refresh=False, **kwargs):
     '''

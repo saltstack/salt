@@ -2,9 +2,9 @@
 Command Line Reference
 ======================
 
-Salt can be controlled by a command line client by the root user on the Salt 
+Salt can be controlled by a command line client by the root user on the Salt
 master. The Salt command line client uses the Salt client API to communicate
-with the Salt master server. The Salt client is straightforward and simple 
+with the Salt master server. The Salt client is straightforward and simple
 to use.
 
 Using the Salt client commands can be easily sent to the minions.

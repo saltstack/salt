@@ -85,7 +85,7 @@ def refresh_db():
         __salt__['cmd.run']('portsnap update')
 
 
-def install(name, **kwargs):
+def install(name, *args, **kwargs):
     '''
     Install the passed package
 
@@ -115,6 +115,7 @@ def install(name, **kwargs):
             # the package is freshly installed
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
+    rehash()
     return pkgs
 
 
@@ -148,6 +149,7 @@ def upgrade():
             # the package is freshly installed
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
+    rehash()
     return pkgs
 
 
@@ -180,3 +182,17 @@ def purge(name):
         salt '*' pkg.purge <package name>
     '''
     return remove(name)
+
+def rehash():
+    '''
+    Recomputes internal hash table for the PATH variable.
+    Use whenever a new command is created during the current
+    session.
+
+    CLI Example::
+
+        salt '*' pkg.rehash
+    '''
+    shell =  __salt__['cmd.run']('echo $SHELL').split('/')
+    if shell[len(shell)-1] in ["csh","tcsh"]:
+        __salt__['cmd.run']('rehash')
