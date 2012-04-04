@@ -12,9 +12,12 @@ TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
 def run_integration_tests():
     with TestDaemon():
-        loader = saltunittest.TestLoader()
-        tests = loader.discover(os.path.join(TEST_DIR, 'integration', 'modules'), '*.py')
-        saltunittest.TextTestRunner(verbosity=1).run(tests)
+        moduleloader = saltunittest.TestLoader()
+        moduletests = moduleloader.discover(os.path.join(TEST_DIR, 'integration', 'modules'), '*.py')
+        saltunittest.TextTestRunner(verbosity=1).run(moduletests)
+        clientloader = saltunittest.TestLoader()
+        clienttests = clientloader.discover(os.path.join(TEST_DIR, 'integration', 'client'), '*.py')
+        saltunittest.TextTestRunner(verbosity=1).run(clienttests)
 
 def run_unit_tests():
     loader = saltunittest.TestLoader()
