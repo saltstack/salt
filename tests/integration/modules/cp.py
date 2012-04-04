@@ -40,3 +40,19 @@ class CPModuleTest(integration.ModuleCase):
             data = scene.read()
             self.assertIn('bacon', data)
             self.assertNotIn('spam', data)
+
+    def test_get_dir(self):
+        '''
+        cp.get_dir
+        '''
+        tgt = os.path.join(integration.TMP, 'many')
+        self.run_function(
+                'cp.get_dir',
+                [
+                    'salt://grail',
+                    tgt
+                ])
+        self.assertIn('grail', os.listdir(tgt))
+        self.assertIn('36', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
+        self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
