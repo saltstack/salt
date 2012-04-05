@@ -98,10 +98,11 @@ def _parse_ethtool_opts(opts, iface):
             else:
                 _raise_error(iface, option, valid)
 
-    result = ''
+    result = []
     for key in config:
-        result += '%s %s ' % (key, config[key])
-    return result
+        result.append(key)
+        result.append(str(config[key]))
+    return ' '.join(result)
 
 def _parse_settings_bond(opts, iface):
     '''
