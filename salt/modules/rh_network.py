@@ -46,7 +46,10 @@ _RH_NETWORK_SCRIPT_DIR = '/etc/sysconfig/network-scripts'
 _MAC_REGEX = re.compile('([0-9A-F]{1,2}:){5}[0-9A-F]{1,2}')
 _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
-_IFACE_TYPES = ['eth', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
+_IFACE_TYPES = [
+    'eth', 'bond', 'alias', 'clone', 
+    'ipsec', 'dialup', 'slave'
+]
 
 def _error_msg(iface, option, expected):
     msg = 'Invalid option -- Interface: %s, Option: %s, Expected: [%s]'
