@@ -13,6 +13,8 @@ import datetime
 from calendar import month_abbr as months
 
 # Import Salt libs
+import salt.minion
+import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
 
@@ -154,16 +156,30 @@ def daemonize():
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
-def daemonize_if(multiprocessing):
+def daemonize_if(opts, **kwargs):
     '''
     Daemonize a module function process if multiprocessing is True and the
     process is not being called by salt-call
     '''
     if 'salt-call' in sys.argv[0]:
         return
-    if not multiprocessing:
+    if not opts['multiprocessing']:
         return
+    # Daemonizing breaks the proc dir, so the proc needs to be rewritten
+    data = {}
+    for key, val in kwargs.items():
+        if key.startswith('__pub_'):
+            data[key[6:]] = val
+    if not 'jid' in data:
+        return
+    serial = salt.payload.Serial(opts)
+    proc_dir = salt.minion.get_proc_dir(opts['cachedir'])
+    fn_ = os.path.join(proc_dir, data['jid'])
     daemonize()
+    sdata = {'pid': os.getpid()}
+    sdata.update(data)
+    with open(fn_, 'w+') as f:
+        f.write(serial.dumps(sdata))
 
 
 def profile_func(filename=None):
