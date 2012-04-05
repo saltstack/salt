@@ -24,11 +24,13 @@ eth2:
   network:
     - managed
     - type: slave
+    - master: bond0
     
 eth3:
   network:
     - managed
     - type: slave
+    - master: bond0
 
 bond0:
   network:
@@ -41,12 +43,9 @@ bond0:
       - 8.8.4.4
     - ipv6:
     - enabled: False
-    - watch:
+    - used_in:
       - network: eth2
       - network: eth3
-    - slaves:
-      - eth2
-      - eth3
     - mode: 802.3ad
     - miimon: 100
     - arp_interval: 250
