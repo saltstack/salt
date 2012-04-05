@@ -384,13 +384,14 @@ def _raise_error(iface, option, expected):
     log.error(msg)
     raise AttributeError(msg)
 
-def _read_file(path):
+def _read_file(iface):
     '''
     Reads and returns the contents of a file
     '''
+    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
     try:
         with open(path, 'rb') as contents:
-            return contents.read()
+            return contents.readlines()
     except:
         return ''
 
@@ -416,8 +417,7 @@ def build(iface, type, settings):
         ifcfg = template.render(settings)
 
     _write_file(iface, ifcfg)
-    return ifcfg
+    return _read_file(iface)
 
 def get(iface):
-    filename = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
-    return _read_file(filename)
+    return _read_file(iface)
