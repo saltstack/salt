@@ -1,8 +1,11 @@
 '''
 Support for APT (Advanced Packaging Tool)
 '''
-
+# Import python libs
 import os
+
+# Import Salt libs
+import salt.utils
 
 def __virtual__():
     '''
@@ -124,7 +127,7 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
 
         salt '*' pkg.install <package name>
     '''
-    salt.utils.daemonize_if(__opts__['multiprocessing'])
+    salt.utils.daemonize_if(__opts__, **kwargs)
     if refresh:
         refresh_db()
 
@@ -228,7 +231,7 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
-    salt.utils.daemonize_if(__opts__['multiprocessing'])
+    salt.utils.daemonize_if(__opts__, **kwargs)
     if refresh:
         refresh_db()
 
