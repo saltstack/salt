@@ -470,11 +470,10 @@ def build(iface, type, settings):
     if type not in _IFACE_TYPES:
         _raise_error(iface, type, _IFACE_TYPES)
 
-    if type in ['eth']:
-        log.info('SETTINGS = %s' % str(settings))
-        settings = _parse_settings_eth(settings, iface)
+    if type in ['eth', 'bond', 'slave']:
+        opts = _parse_settings_eth(settings, iface)
         template = env.get_template('eth.jinja')
-        ifcfg = template.render(settings)
+        ifcfg = template.render(opts)
 
     _write_file(iface, ifcfg)
     return _read_file(iface)
