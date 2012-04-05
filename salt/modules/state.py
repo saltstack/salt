@@ -70,7 +70,7 @@ def template_str(tem):
     return st_.call_template_str(tem)
 
 
-def highstate():
+def highstate(**kwargs):
     '''
     Retrive the state data from the salt master for this minion and execute it
 
@@ -78,12 +78,12 @@ def highstate():
 
         salt '*' state.highstate
     '''
-    salt.utils.daemonize_if(__opts__['multiprocessing'])
+    salt.utils.daemonize_if(__opts__, **kwargs)
     st_ = salt.state.HighState(__opts__)
     return st_.call_highstate()
 
 
-def sls(mods, env='base'):
+def sls(mods, env='base', **kwargs):
     '''
     Execute a set list of state modules from an environment, default
     environment is base
@@ -92,7 +92,7 @@ def sls(mods, env='base'):
 
         salt '*' state.sls core,edit.vim dev
     '''
-    salt.utils.daemonize_if(__opts__['multiprocessing'])
+    salt.utils.daemonize_if(__opts__, **kwargs)
     st_ = salt.state.HighState(__opts__)
     if isinstance(mods, basestring):
         mods = mods.split(',')
