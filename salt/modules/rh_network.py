@@ -55,51 +55,6 @@ def _generate_if_settings(opts, iftype, iface):
     fuction will log what the Interface, Setting and what it was expecting.
     '''
     
-    if iftype in ['eth', 'lo', 'br']:
-        config = {}
-        offload = {}
-        
-    
-        # General Configuration
-        if opts.has_key('autoneg'):
-            if opts['autoneg'] in _CONFIG_TRUE:
-                config.update( {'autoneg':'on'} )
-            elif opts['autoneg'] in _CONFIG_FALSE:
-                config.update( {'autoneg':'off'} )
-            else:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, 'autoneg', '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
-        
-        if opts.has_key('duplex'):
-            if opts['duplex'] in ['full', 'half']:
-                config.update( {'duplex':opts['duplex']} )
-            else:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [full|half]' % (iface, 'duplex'))
-                
-        if opts.has_key('mtu'):
-            try:
-                int(opts['mtu'])
-                config.update( {'mtu': opts['mtu']} )
-            except:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, 'mtu'))
-                
-        if opts.has_key('speed'):
-            if opts['speed'] in ['10', '100', '1000']:
-                config.update( {'speed':opts['speed']} )
-            else:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [10|100|1000]' % (iface, 'speed'))
-        
-        # Offload settings
-        for option in ('rx', 'tx', 'sg', 'tso', 'ufo', 'gso', 'gro', 'lro'):
-            if opts.has_key(option):
-                if opts[option] in _CONFIG_TRUE:
-                    offload.update( {option:'on'} )
-                elif opts[option] in _CONFIG_FALSE:
-                    offload.update( {option:'off'} )
-                else:
-                    log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, option, '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
-                    
-        return config, offload
-        
     if iftype in ['bond']:
         bond = {}      
         # Bonding settings
@@ -334,6 +289,53 @@ def _error_msg(iface, option, expected):
     msg = 'Invalid option -- Interface: %s, Option: %s, Expected: [%s]'
     return msg % (iface, option, '|'.join(expected))
 
+def _parse_ethtool_opts(opts, iface):
+    config = {}
+    
+    if opts.has_key('autoneg'):
+        if opts['autoneg'] in _CONFIG_TRUE:
+            config.update( {'autoneg':'on'} )
+        elif opts['autoneg'] in _CONFIG_FALSE:
+            config.update( {'autoneg':'off'} )
+        else:
+            _raise_error(iface, 'autoneg', _CONFIG_TRUE + _CONFIG_FALSE)
+        
+    if opts.has_key('duplex'):
+        valid = ['full', 'half']
+        if opts['duplex'] in valid:
+            config.update( {'duplex':opts['duplex']} )
+        else:
+            _raise_error(iface, 'duplex', valid)
+            
+    if opts.has_key('mtu'):
+        try:
+            int(opts['mtu'])
+            config.update( {'mtu': opts['mtu']} )
+        except:
+            _raise_error(iface, 'mtu', ['integer'])
+            
+    if opts.has_key('speed'):
+        valid = ['10', '100', '1000']
+        if str(opts['speed']) in valid:
+            config.update( {'speed':opts['speed']} )
+        else:
+            _raise_error(iface, opts['speed'], valid)
+    
+    valid = _CONFIG_TRUE + _CONFIG_FALSE
+    for option in ('rx', 'tx', 'sg', 'tso', 'ufo', 'gso', 'gro', 'lro'):
+        if opts.has_key(option):
+            if opts[option] in _CONFIG_TRUE:
+                config.update( {option:'on'} )
+            elif opts[option] in _CONFIG_FALSE:
+                config.update( {option:'off'} )
+            else:
+                _raise_error(iface, option, valid)
+
+    result = ''
+    for key in config:
+        result += '%s %s ' % (key, config[key])
+    return result
+
 def _parse_settings_eth(opts, iface):
     result = {'name': iface}
     if 'proto' in opts:
@@ -347,7 +349,9 @@ def _parse_settings_eth(opts, iface):
         result['dns'] = opts['dns']
         result['peernds'] = 'yes'
 
-    #TODO Add call to the ETHTOOL_OPTS parsing
+    ethtool = _parse_ethtool_opts(opts, iface)
+    if ethtool:
+        result['ethtool'] = ethtool
 
     if 'addr' in opts:
         if _MAC_REGEX.match(opts['addr']):
