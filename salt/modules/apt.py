@@ -30,7 +30,8 @@ def __init__():
 
 def available_version(name):
     '''
-    The available version of the package in the repository
+    Return the latest version of the named package available for upgrade or
+    installation via the available apt repository
 
     CLI Example::
 
@@ -43,7 +44,7 @@ def available_version(name):
 
     version_list = out.split()
     if len(version_list) >= 2:
-        version = version_list[1]
+        version = version_list[-1]
 
     return version
 
