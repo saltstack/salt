@@ -14,8 +14,7 @@ makes use of the jinja templating system would look like this:
 .. code-block:: yaml
 
     /etc/http/conf/http.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/http.conf
         - user: root
         - group: root
@@ -34,8 +33,7 @@ look like this:
 .. code-block:: yaml
 
     /srv/stuff/substuf:
-      file:
-        - directory
+      file.directory:
         - user: fred
         - group: users
         - mode: 755
@@ -47,8 +45,7 @@ directory's contents, you can do so by adding a ``recurse`` directive:
 .. code-block:: yaml
 
     /srv/stuff/substuf:
-      file:
-        - directory
+      file.directory:
         - user: fred
         - group: users
         - mode: 755
@@ -63,8 +60,7 @@ takes a few arguments:
 .. code-block:: yaml
 
     /etc/grub.conf:
-      file:
-        - symlink
+      file.symlink:
         - target: /boot/grub/grub.conf
 
 Recursive directory management can also be set via the ``recurse``
@@ -76,8 +72,7 @@ something like this:
 .. code-block:: yaml
 
     /opt/code/flask:
-      file:
-        - recurse
+      file.recurse:
         - source: salt://code/flask
 '''
 # Import Python libs
@@ -977,16 +972,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
         # Disable the epel repo by default
         /etc/yum.repos.d/epel.repo:
-          file:
-            - sed
+          file.sed:
             - before: 1
             - after: 0
             - limit: ^enabled=
 
         # Remove ldap from nsswitch
         /etc/nsswitch.conf:
-        file:
-            - sed
+        file.sed:
             - before: 'ldap'
             - after: ''
             - limit: '^passwd:'
@@ -1032,8 +1025,7 @@ def comment(name, regex, char='#', backup='.bak'):
     Usage::
 
         /etc/fstab:
-          file:
-            - comment
+          file.comment:
             - regex: ^//10.10.20.5
 
     .. versionadded:: 0.9.5
@@ -1079,8 +1071,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     Usage::
 
         /etc/adduser.conf:
-          file:
-            - uncomment
+          file.uncomment:
             - regex: EXTRA_GROUPS
 
     .. versionadded:: 0.9.5
@@ -1128,8 +1119,7 @@ def append(name, text):
     Multi-line example::
 
         /etc/motd:
-          file:
-            - append
+          file.append:
             - text: |
                 Thou hadst better eat salt with the Philosophers of Greece,
                 than sugar with the Courtiers of Italy.
@@ -1138,8 +1128,7 @@ def append(name, text):
     Multiple lines of text::
 
         /etc/motd:
-          file:
-            - append
+          file.append:
             - text:
               - Trust no one unless you have eaten much salt with him.
               - Salt is born of the purest of parents: the sun and the sea.
@@ -1186,8 +1175,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     Usage::
 
         /var/log/httpd/logrotate.empty
-          file:
-            - touch
+          file.touch
 
     .. versionadded:: 0.9.5
     """
