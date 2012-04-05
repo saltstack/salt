@@ -48,246 +48,13 @@ _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
 _IFACE_TYPES = ['eth', 'bond', 'alias', 'clone', 'ipsec', 'dialup']
 
-def _generate_if_settings(opts, iftype, iface):
-    '''
-    Fiters given options and outputs valid settings for requested
-    operation. If an option has a value that is not expected, this
-    fuction will log what the Interface, Setting and what it was expecting.
-    '''
-    
-    if iftype in ['bond']:
-        bond = {}      
-        # Bonding settings
-        if opts.has_key('mode'):
-            bond_def = {
-                'miimon':'100', # Link monitoring in milliseconds. Most NICs support this
-                'arp_interval':'250',
-                'downdelay':'200', # miimon * 2
-                'lacp_rate':'0', # 0: Slow - every 30 seconds, 1: Fast - every 1 second
-                'max_bonds':'1', # Max bonds for this driver
-                'updelay':'0', # Specifies the time, in milliseconds, to wait before enabling a slave after a link recovery has been detected. Only used with miimon.
-                'use_carrier':'on', # Used with miimon. On: driver sends mii, Off: ethtool sends mii
-                'xmit_hash_policy':'layer2', # Defualt. Don't chnage unless you know what you are doing.
-            }
-        
-            if opts['mode'] in ['balance-rr', '0']:
-                bond.update( {'mode':'0'} )
-                if opts.has_key('arp_ip_target'):
-                    if isinstance(opts['arp_ip_target'], list):
-                        if len(opts['arp_ip_target']) >= 1 and len(opts['arp_ip_target']) <= 16:
-                            bond.update( {'arp_ip_target':[]} )
-                        for ip in opts['arp_ip_target']:
-                            bond['arp_ip_target'].append(ip)
-                        else:
-                            log.info('Invalid option -- Interface: %s Option: %s. Expecting: [list of ips (up to 16)]' % (iface, 'arp_ip_target'))
-                    else:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [list of ips (up to 16)]' % (iface, 'arp_ip_target'))
-                else:
-                    log.info('Missing Required option -- Interface: %s Option: %s. Expecting: [list of ips (up to 16)]' % (iface, 'arp_ip_target'))
-                
-                if opts.has_key('arp_interval'):
-                    try:
-                        int(opts['arp_interval'])
-                        bond.update( {'arp_interval':opts['arp_interval']} )
-                    except:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, 'arp_interval'))
-                else:
-                    bond.update( {'arp_interval':bond_def['arp_interval']} )
-                     
-                if bond.has_key('arp_interval') and bond.has_key('arp_ip_target'):
-                    pass
-                else:
-                    bond = {}
-        
-            elif opts['mode'] in ['active-backup', '1']:
-                bond.update( {'mode':'1'} )
-                for bo in ['miimon', 'downdelay', 'updelay']:
-                    if opts.has_key(bo):
-                        try:
-                            int(opts[bo])
-                            bond.update( {bo:opts[bo]} )
-                        except:
-                            log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, bo))
-                            log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                            bond.update( {bo:bond_def[bo]} )
-                    else:
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                        bond.update( {bo:bond_def[bo]} )
-                if opts.has_key('use_carrier'):
-                    if opts['use_carrier'] in _CONFIG_TRUE:
-                        bond.update( {'use_carrier': 'on'} )
-                    elif opts['use_carrier'] in _CONFIG_FALSE:
-                        bond.update( {'use_carrier': 'off'} )
-                    else:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, 'use_carrier', '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                        bond.update( {'use_carrier': bond_def['use_carrier'] } )
-                else:
-                    log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                    bond.update( {'use_carrier': bond_def['use_carrier'] } )    
-                            
-            elif opts['mode'] in ['balance-xor', '2']:
-                bond.update( {'mode':'2'} )
-                if opts.has_key('arp_ip_target'):
-                    if isinstance(opts['arp_ip_target'], list):
-                        if len(opts['arp_ip_target']) >= 1 and len(opts['arp_ip_target']) <= 16:
-                            bond.update( {'arp_ip_target':[]} )
-                        for ip in opts['arp_ip_target']:
-                            bond['arp_ip_target'].append(ip)
-                        else:
-                            log.info('Invalid option -- Interface: %s Option: %s. Expecting: [list of ips (up to 16)]' % (iface, 'arp_ip_target'))
-                    else:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [list of ips (up to 16)]' % (iface, 'arp_ip_target'))
-                else:
-                    log.info('Missing Required option -- Interface: %s Option: %s. Expecting: [list of ips (up to 16)]' % (iface, 'arp_ip_target'))
-                
-                if opts.has_key('arp_interval'):
-                    try:
-                        int(opts['arp_interval'])
-                        bond.update( {'arp_interval':opts['arp_interval']} )
-                    except:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, 'arp_interval'))
-                else:
-                    bond.update( {'arp_interval':bond_def['arp_interval']} )
-                
-                if opts.has_key('primary'):
-                    bond.update( {'primary': opts['primary']} )
-                
-                if opts.has_key('hashing-algorithm'):
-                    if opts['hashing-algorithm'] in ['layer2', 'layer3+4']:
-                        bond.update( {'xmit_hash_policy':opts['hashing-algorithm']} )
-                     
-                if bond.has_key('arp_interval') and bond.has_key('arp_ip_target'):
-                    pass
-                else:
-                    bond = {}
-                
-            elif opts['mode'] in ['broadcast', '3']:
-                bond.update( {'mode':'3'} )
-                for bo in ['miimon', 'downdelay', 'updelay']:
-                    if opts.has_key(bo):
-                        try:
-                            int(opts[bo])
-                            bond.update( {bo:opts[bo]} )
-                        except:
-                            log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, bo))
-                            log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                            bond.update( {bo:bond_def[bo]} )
-                    else:
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                        bond.update( {bo:bond_def[bo]} )
-                if opts.has_key('use_carrier'):
-                    if opts['use_carrier'] in _CONFIG_TRUE:
-                        bond.update( {'use_carrier': 'on'} )
-                    elif opts['use_carrier'] in _CONFIG_FALSE:
-                        bond.update( {'use_carrier': 'off'} )
-                    else:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, 'use_carrier', '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                        bond.update( {'use_carrier': bond_def['use_carrier'] } )
-                else:
-                    log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                    bond.update( {'use_carrier': bond_def['use_carrier'] } )    
-                
-            elif opts['mode'] in ['802.3ad', '4']:
-                bond.update( {'mode':'4'} )
-                for bo in ['miimon', 'downdelay', 'updelay', 'lacp_rate']:
-
-                    if opts.has_key(bo):
-                        if bo == 'lacp_rate':
-                            if opts[bo] == 'fast':
-                                opts.update( {bo:'1'} )
-                            if opts[bo] == 'slow':
-                                opts.update( {bo:'0'} )
-                        try:
-                            int(opts[bo])
-                            bond.update( {bo:opts[bo]} )
-                        except:
-                            log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, bo))
-                            log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                            bond.update( {bo:bond_def[bo]} )
-                        
-                    else:
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                        bond.update( {bo:bond_def[bo]} )
-                if opts.has_key('use_carrier'):
-                    if opts['use_carrier'] in _CONFIG_TRUE:
-                        bond.update( {'use_carrier': 'on'} )
-                    elif opts['use_carrier'] in _CONFIG_FALSE:
-                        bond.update( {'use_carrier': 'off'} )
-                    else:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, 'use_carrier', '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                        bond.update( {'use_carrier': bond_def['use_carrier'] } )
-                else:
-                    log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                    bond.update( {'use_carrier': bond_def['use_carrier'] } )
-                
-                if opts.has_key('hashing-algorithm'):
-                    if opts['hashing-algorithm'] in ['layer2', 'layer3+4']:
-                        bond.update( {'xmit_hash_policy':opts['hashing-algorithm']} )
-        
-            elif opts['mode'] in ['balance-tlb', '5']:
-                bond.update( {'mode':'5'} )
-                for bo in ['miimon', 'downdelay', 'updelay']:
-                    if opts.has_key(bo):
-                        try:
-                            int(opts[bo])
-                            bond.update( {bo:opts[bo]} )
-                        except:
-                            log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, bo))
-                            log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                            bond.update( {bo:bond_def[bo]} )
-                    else:
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                        bond.update( {bo:bond_def[bo]} )
-                if opts.has_key('use_carrier'):
-                    if opts['use_carrier'] in _CONFIG_TRUE:
-                        bond.update( {'use_carrier': 'on'} )
-                    elif opts['use_carrier'] in _CONFIG_FALSE:
-                        bond.update( {'use_carrier': 'off'} )
-                    else:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, 'use_carrier', '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                        bond.update( {'use_carrier': bond_def['use_carrier'] } )
-                else:
-                    log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                    bond.update( {'use_carrier': bond_def['use_carrier'] } )    
-                
-            elif opts['mode'] in ['balance-alb', '6']:
-                bond.update( {'mode':'6'} )
-                for bo in ['miimon', 'downdelay', 'updelay']:
-                    if opts.has_key(bo):
-                        try:
-                            int(opts[bo])
-                            bond.update( {bo:opts[bo]} )
-                        except:
-                            log.info('Invalid option -- Interface: %s Option: %s. Expecting: [integer]' % (iface, bo))
-                            log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                            bond.update( {bo:bond_def[bo]} )
-                    else:
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, bo, bond_def[bo]))
-                        bond.update( {bo:bond_def[bo]} )
-                if opts.has_key('use_carrier'):
-                    if opts['use_carrier'] in _CONFIG_TRUE:
-                        bond.update( {'use_carrier': 'on'} )
-                    elif opts['use_carrier'] in _CONFIG_FALSE:
-                        bond.update( {'use_carrier': 'off'} )
-                    else:
-                        log.info('Invalid option -- Interface: %s Option: %s. Expecting: [%s]' % (iface, 'use_carrier', '|'.join(str(x) for x in _CONFIG_TRUE + _CONFIG_FALSE) ))
-                        log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                        bond.update( {'use_carrier': bond_def['use_carrier'] } )
-                else:
-                    log.info('Setting default option -- Interface: %s Option: %s Value: %s' % (iface, 'use_carrier', bond_def['use_carrier']))
-                    bond.update( {'use_carrier': bond_def['use_carrier'] } )    
-            else:
-                log.info('Invalid option -- Interface: %s Option: %s. Expecting: [0|1|2|3|4|5|6|balance-rr|active-backup|balance-xor|broadcast|802.3ad|balance-tlb|balance-alb]' % (iface, 'mode'))
-    
-        return bond
-
 def _error_msg(iface, option, expected):
     msg = 'Invalid option -- Interface: %s, Option: %s, Expected: [%s]'
     return msg % (iface, option, '|'.join(expected))
+
+def _log_default(iface, opt, value):
+    msg = 'Using default option -- Interface: %s Option: %s Value: %s'
+    log.info(msg % (iface, opt, value))
 
 def _parse_ethtool_opts(opts, iface):
     config = {}
@@ -335,6 +102,295 @@ def _parse_ethtool_opts(opts, iface):
     for key in config:
         result += '%s %s ' % (key, config[key])
     return result
+
+def _parse_settings_bond(opts, iface):
+    '''
+    Fiters given options and outputs valid settings for requested
+    operation. If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
+    
+    # Bonding settings
+    if 'mode' not in opts:
+        #TODO raise an error
+        return
+
+    bond_def = {
+        # Link monitoring in milliseconds. Most NICs support this
+        'miimon':'100',
+        'arp_interval':'250',
+        # miimon * 2
+        'downdelay':'200',
+        # lacp_rate 0: Slow - every 30 seconds 
+        # lacp_rate 1: Fast - every 1 second
+        'lacp_rate':'0',
+        # Max bonds for this driver
+        'max_bonds':'1',
+        # Specifies the time, in milliseconds, to wait before
+        # enabling a slave after a link recovery has been 
+        # detected. Only used with miimon.
+        'updelay':'0',
+        # Used with miimon. 
+        # On: driver sends mii
+        # Off: ethtool sends mii
+        'use_carrier':'on',
+        # Defualt. Don't change unless you know what you are doing.
+        'xmit_hash_policy':'layer2',
+    }
+    
+    if opts['mode'] in ['balance-rr', '0']:
+        return _parse_settings_bond_0(opts, iface, bod_def)
+    elif opts['mode'] in ['active-backup', '1']:
+        return _parse_settings_bond_1(opts, iface, bod_def)
+    elif opts['mode'] in ['balance-xor', '2']:
+        return _parse_settings_bond_2(opts, iface, bod_def)
+    elif opts['mode'] in ['broadcast', '3']:
+        return _parse_settings_bond_3(opts, iface, bod_def)
+    elif opts['mode'] in ['802.3ad', '4']:
+        return _parse_settings_bond_4(opts, iface, bod_def)
+    elif opts['mode'] in ['balance-tlb', '5']:
+        return _parse_settings_bond_5(opts, iface, bod_def)
+    elif opts['mode'] in ['balance-alb', '6']:
+        return _parse_settings_bond_6(opts, iface, bod_def)
+    else:
+        valid = [ 
+            '0', '1', '2', '3', '4', '5', '6', 
+            'balance-rr', 'active-backup', 'balance-xor', 
+            'broadcast', '802.3ad', 'balance-tlb', 'balance-alb'
+        ]
+        _raise_error(iface, 'mode', valid)
+    
+def _parse_settings_bond_0(opts, iface, bond_def):
+
+    bond = {'mode':'0'}
+
+    valid = ['list of ips (up to 16)']
+    if opts.has_key('arp_ip_target'):
+        if isinstance(opts['arp_ip_target'], list):
+            target_length = len(opts['arp_ip_target'])
+            if 1 <= len(opts['arp_ip_target']) <= 16:
+                bond.update( {'arp_ip_target':[]} )
+                for ip in opts['arp_ip_target']:
+                    bond['arp_ip_target'].append(ip)
+            else:
+                _raise_error(iface, 'arp_ip_target', valid)
+        else:
+            _raise_error(iface, 'arp_ip_target', valid)
+    else:
+        _raise_error(iface, 'arp_ip_target', valid)
+    
+    if opts.has_key('arp_interval'):
+        try:
+            int(opts['arp_interval'])
+            bond.update( {'arp_interval':opts['arp_interval']} )
+        except:
+            _raise_error(iface, 'arp_interval', ['integer'])
+    else:
+        _log_default(iface, 'arp_interval', bond_def['arp_interval'])
+        bond.update( {'arp_interval':bond_def['arp_interval']} )
+         
+    return bond
+    
+def _parse_settings_bond_1(opts, iface, bond_def):
+    
+    bond = {'mode':'1'}
+    
+    for bo in ['miimon', 'downdelay', 'updelay']:
+        if opts.has_key(bo):
+            try:
+                int(opts[bo])
+                bond.update( {bo:opts[bo]} )
+            except:
+                _raise_error(iface, bo, ['integer'])
+        else:
+            _log_default(iface, bo, bond_def[bo])
+            bond.update( {bo:bond_def[bo]} )
+
+    if opts.has_key('use_carrier'):
+        if opts['use_carrier'] in _CONFIG_TRUE:
+            bond.update( {'use_carrier': 'on'} )
+        elif opts['use_carrier'] in _CONFIG_FALSE:
+            bond.update( {'use_carrier': 'off'} )
+        else:
+            valid = _CONFIG_TRUE + _CONFIG_FALSE
+            _raise_error(face, 'use_carrier', valid)
+    else:
+        _log_default(iface, 'use_carrier', bond_def['use_carrier'])
+        bond.update( {'use_carrier': bond_def['use_carrier']} )    
+
+    return bond
+                    
+def _parse_settings_bond_2(opts, iface, bond_def):
+    
+    bond = {'mode':'2'}
+    
+    valid = ['list of ips (up to 16)']
+    if opts.has_key('arp_ip_target'):
+        if isinstance(opts['arp_ip_target'], list):
+            if 1 <= len(opts['arp_ip_target']) <= 16:
+                bond.update( {'arp_ip_target':[]} )
+                for ip in opts['arp_ip_target']:
+                    bond['arp_ip_target'].append(ip)
+            else:
+                _raise_error(iface, 'arp_ip_target', valid)
+        else:
+            _raise_error(iface, 'arp_ip_target', valid)
+    else:
+        _raise_error(iface, 'arp_ip_target', valid)
+    
+    if opts.has_key('arp_interval'):
+        try:
+            int(opts['arp_interval'])
+            bond.update( {'arp_interval':opts['arp_interval']} )
+        except:
+            _raise_error(iface, 'arp_interval', ['integer'])
+    else:
+        _log_default(iface, 'arp_interval', bond_def['arp_interval'])
+        bond.update( {'arp_interval':bond_def['arp_interval']} )
+    
+    if opts.has_key('primary'):
+        bond.update( {'primary': opts['primary']} )
+    
+    if opts.has_key('hashing-algorithm'):
+        valid = ['layer2', 'layer3+4']
+        if opts['hashing-algorithm'] in valid:
+            bond.update( {'xmit_hash_policy':opts['hashing-algorithm']})
+        else:
+            _raise_error(iface, 'hashing-algorithm', valid)
+         
+    return bond
+        
+def _parse_settings_bond_3(opts, iface, bond_def):
+
+    bond = {'mode':'3'}
+
+    for bo in ['miimon', 'downdelay', 'updelay']:
+        if opts.has_key(bo):
+            try:
+                int(opts[bo])
+                bond.update( {bo:opts[bo]} )
+            except:
+                _raise_error(iface, bo, ['interger'])
+        else:
+            _log_default(iface, bo, bond_def[bo])
+            bond.update( {bo:bond_def[bo]} )
+            
+    if opts.has_key('use_carrier'):
+        if opts['use_carrier'] in _CONFIG_TRUE:
+            bond.update( {'use_carrier': 'on'} )
+        elif opts['use_carrier'] in _CONFIG_FALSE:
+            bond.update( {'use_carrier': 'off'} )
+        else:
+            valid = _CONFIG_TRUE + _CONFIG_FALSE
+            _raise_error(iface, 'use_carrier', valid)
+    else:
+        _lod_default(iface, 'use_carrier', bond_def['use_carrier'])
+        bond.update( {'use_carrier': bond_def['use_carrier'] } )    
+
+    return bond
+        
+def _parse_settings_bond_4(opts, iface, bond_def):
+
+    bond = {'mode':'4'}
+
+    for bo in ['miimon', 'downdelay', 'updelay', 'lacp_rate']:
+        if opts.has_key(bo):
+            if bo == 'lacp_rate':
+                if opts[bo] == 'fast':
+                    opts.update( {bo:'1'} )
+                if opts[bo] == 'slow':
+                    opts.update( {bo:'0'} )
+                valid = ['fast', '1', 'slow', '0']
+            else:
+                valid = ['integer']
+            try:
+                int(opts[bo])
+                bond.update( {bo:opts[bo]} )
+            except:
+                _raise_error(iface, bo, valid)
+        else:
+            _log_default(iface, bo, bond_def[bo])
+            bond.update( {bo:bond_def[bo]} )
+
+    if opts.has_key('use_carrier'):
+        if opts['use_carrier'] in _CONFIG_TRUE:
+            bond.update( {'use_carrier': 'on'} )
+        elif opts['use_carrier'] in _CONFIG_FALSE:
+            bond.update( {'use_carrier': 'off'} )
+        else:
+            valid = _CONFIG_TRUE + _CONFIG_FALSE
+            _raise_error(iface, 'use_carrier', valid)
+    else:
+        _log_default(iface, 'use_carrier', bond_def['use_carrier'])
+        bond.update( {'use_carrier': bond_def['use_carrier'] } )
+    
+    if opts.has_key('hashing-algorithm'):
+        valid = ['layer2', 'layer3+4']
+        if opts['hashing-algorithm'] in valid:
+            bond.update( {'xmit_hash_policy':opts['hashing-algorithm']} )
+        else:
+            _raise_error(iface, 'hashing-algorithm', valid)
+
+    return bond
+    
+def _parse_settings_bond_5(opts, iface, bond_def):
+
+    bond = {'mode':'5'}
+
+    for bo in ['miimon', 'downdelay', 'updelay']:
+        if opts.has_key(bo):
+            try:
+                int(opts[bo])
+                bond.update( {bo:opts[bo]} )
+            except:
+                _raise_error(iface, bo, ['integer'])
+        else:
+            _log_default(iface, bo, bond_def[bo])
+            bond.update( {bo:bond_def[bo]} )
+
+    if opts.has_key('use_carrier'):
+        if opts['use_carrier'] in _CONFIG_TRUE:
+            bond.update( {'use_carrier': 'on'} )
+        elif opts['use_carrier'] in _CONFIG_FALSE:
+            bond.update( {'use_carrier': 'off'} )
+        else:
+            valid = _CONFIG_TRUE + _CONFIG_FALSE
+            _raise_error(iface, 'use_carrier', valid)
+    else:
+        _log_default(iface, 'use_carrier', bond_def['use_carrier'])
+        bond.update( {'use_carrier': bond_def['use_carrier'] } )
+        
+    return bond    
+        
+def _parse_settings_bond_6(opts, iface, bond_def):
+
+    bond = {'mode':'6'}
+
+    for bo in ['miimon', 'downdelay', 'updelay']:
+        if opts.has_key(bo):
+            try:
+                int(opts[bo])
+                bond.update( {bo:opts[bo]} )
+            except:
+                _raise_error(iface, bo, ['integer'])
+        else:
+            _log_default(iface, bo, bond_def[bo])
+            bond.update( {bo:bond_def[bo]} )
+
+    if opts.has_key('use_carrier'):
+        if opts['use_carrier'] in _CONFIG_TRUE:
+            bond.update( {'use_carrier': 'on'} )
+        elif opts['use_carrier'] in _CONFIG_FALSE:
+            bond.update( {'use_carrier': 'off'} )
+        else:
+            valid = _CONFIG_TRUE + _CONFIG_FALSE
+            _raise_error(iface, 'use_carrier', valid)
+    else:
+        _log_default(iface, 'use_carrier', bond_def['use_carrier'])
+        bond.update( {'use_carrier': bond_def['use_carrier'] } )    
+    
+    return bond
 
 def _parse_settings_eth(opts, iface):
     result = {'name': iface}
