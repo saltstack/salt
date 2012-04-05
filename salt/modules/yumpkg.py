@@ -69,6 +69,27 @@ def _compare_versions(old, new):
                           'new': new[npkg]}
     return pkgs
 
+def list_upgrades(*args):
+    '''
+    Check whether or not an upgrade is available for a all packages
+
+    CLI Example::
+
+        salt '*' pkg.list_upgrades
+    '''
+    pkgs=list_pkgs()
+    
+    yb=yum.YumBase()
+    versions_list={}
+    for pkgtype in ['updates']:
+        pl=yb.doPackageLists(pkgtype)
+        for pkg in pkgs:
+            exactmatch, matched, unmatched  = yum.packages.parsePackages(pl, [pkg])
+            for pkg in exactmatch:
+                if pkg.arch == getBaseArch():
+                    versions_list[pkg['name']] = '-'.join([pkg['version'],pkg['release']])
+    return versions_list    
+
 def available_version(name):
     '''
     The available version of the package in the repository
@@ -173,7 +194,6 @@ def clean_metadata():
         salt '*' pkg.clean_metadata
     '''
     return refresh_db()
-
 
 def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
