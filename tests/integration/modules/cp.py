@@ -1,5 +1,6 @@
 # Import python libs
 import os
+import hashlib
 
 # Import salt libs
 import integration
@@ -102,3 +103,94 @@ class CPModuleTest(integration.ModuleCase):
                 data = scene.read()
                 self.assertIn('ARTHUR:', data)
                 self.assertNotIn('bacon', data)
+
+    def test_cache_master(self):
+        '''
+        cp.cache_master
+        '''
+        ret = self.run_function(
+                'cp.cache_master',
+                )
+        for path in ret:
+            self.assertTrue(os.path.exists(path))
+
+    def test_cache_local_file(self):
+        '''
+        cp.cache_local_file
+        '''
+        src = os.path.join(integration.TMP, 'random')
+        with open(src, 'w+') as fn_:
+            fn_.write('foo')
+        ret = self.run_function(
+                'cp.cache_local_file',
+                [src])
+        with open(ret, 'r') as cp_:
+            self.assertEqual(cp_.read(), 'foo')
+
+    def test_list_states(self):
+        '''
+        cp.list_states
+        '''
+        ret = self.run_function(
+                'cp.list_states',
+                )
+        self.assertIn('core', ret)
+        self.assertIn('top', ret)
+
+    def test_list_minion(self):
+        '''
+        cp.list_minion
+        '''
+        self.run_function(
+                'cp.cache_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        ret = self.run_function('cp.list_minion')
+        found = False
+        for path in ret:
+            if 'grail/scene33' in path:
+                found = True
+        self.assertTrue(found)
+
+    def test_is_cached(self):
+        '''
+        cp.is_cached
+        '''
+        self.run_function(
+                'cp.cache_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        ret1 = self.run_function(
+                'cp.is_cached',
+                [
+                    'salt://grail/scene33',
+                ])
+        self.assertTrue(ret1)
+        ret2 = self.run_function(
+                'cp.is_cached',
+                [
+                    'salt://fasldkgj/poicxzbn',
+                ])
+        self.assertFalse(ret2)
+
+    def test_hash_file(self):
+        '''
+        cp.hash_file
+        '''
+        md5_hash = self.run_function(
+                'cp.hash_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        path = self.run_function(
+                'cp.cache_file',
+                [
+                    'salt://grail/scene33',
+                ])
+        with open(path, 'r') as fn_:
+            self.assertEqual(
+                    md5_hash['hsum'],
+                    hashlib.md5(fn_.read()).hexdigest()
+                    )
