@@ -71,7 +71,7 @@ def _compare_versions(old, new):
 
 def list_upgrades(*args):
     '''
-    Check whether or not an upgrade is available for a all packages
+    Check whether or not an upgrade is available for all packages
 
     CLI Example::
 
