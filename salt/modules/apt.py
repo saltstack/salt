@@ -3,6 +3,7 @@ Support for APT (Advanced Packaging Tool)
 '''
 
 import os
+import re
 
 def __virtual__():
     '''
@@ -290,9 +291,48 @@ def list_pkgs(regex_string=""):
 
     return ret
 
+def _get_upgradable():
+    '''
+    Utility function to get upgradable packages
+
+    Sample return data:
+    { 'pkgname': '1.2.3-45', ... }
+    '''
+
+    cmd = 'apt-get --just-print upgrade'
+    out = __salt__['cmd.run_stdout'](cmd)
+
+    # rexp parses lines that look like the following:
+    ## Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
+    rexp = re.compile('(?m)^Conf '
+                      '([^ ]+) ' # Package name
+                      '\(([^ ]+) ' # Version
+                      '([^ ]+) ' # Release
+                      '\[([^\]]+)\]\)$') # Arch
+    keys = ['name', 'version', 'release', 'arch']
+    _get = lambda l, k: l[keys.index(k)]
+
+    upgrades = rexp.findall(out)
+
+    r = {}
+    for line in upgrades:
+        name = _get(line, 'name')
+        version = _get(line, 'version')
+        r[name] = version
+
+    return r
+
+def check_update():
+    '''
+    List all available upgrades
+
+    CLI Example::
+        salt '*' pkg.check_update
+    '''
+    r = _get_upgradable()
+    return r
 
 def upgrade_available(name):
-
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -300,19 +340,5 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    cmd = 'apt-get --just-print upgrade'
-    out = __salt__['cmd.run_stdout'](cmd)
-
-    # Mini filter function
-    def _to_update(line):
-        return line.startswith("Conf ")
-
-    upgraded_packages = filter(_to_update, out.split('\n'))
-
-    # Example line:
-    # 'Conf linux-image-2.6.35-32-generic (2.6.35-32.66 Ubuntu:10.10/maverick-updates [amd64])'
-    for line in upgraded_packages:
-        data = line.split()
-        if name == data[1]:
-            return True
-    return False
+    r = name in _get_upgradable()
+    return r
