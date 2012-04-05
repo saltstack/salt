@@ -60,15 +60,14 @@ bond0:
     - autoneg: on
     - speed: 1000
     - duplex: full
-    - offload:
-      - rx: on
-      - tx: off
-      - sg: on
-      - tso: off
-      - ufo: off
-      - gso: off
-      - gro: off
-      - lro: off
+    - rx: on
+    - tx: off
+    - sg: on
+    - tso: off
+    - ufo: off
+    - gso: off
+    - gro: off
+    - lro: off
     - vlans:
       - 2
       - 3
