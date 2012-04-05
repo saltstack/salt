@@ -105,9 +105,8 @@ def managed(
         'comment': 'Interface {0} is up to date.'.format(name)
     }
            
-    # get current iface run through settings filter
-    # get proposed iface submit to builder
-    # diff iface
+    if type = 'slave' and 'slave' not in kwargs:
+        kwargs['slave'] = 'yes'
     try:
         old = __salt__['network.get'](name)
         new = __salt__['network.build'](name, type, kwargs)
@@ -119,6 +118,10 @@ def managed(
     except AttributeError, error:
         ret['result'] = False
         ret['comment'] = error.message
+
+    if type == 'bond':
+        pass
+        # Start the bond, this will be something in the rh_network module.
 
     return ret
            
