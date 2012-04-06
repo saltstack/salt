@@ -514,11 +514,6 @@ class State(object):
                 names = set()
                 if state.startswith('__'):
                     continue
-                if '.' in state:
-                    # the function is formatted as part of the state dec
-                    comps = state.split('.')
-                    state = comps[0]
-                    funcs.add(comps[1])
                 chunk = {'state': state,
                          'name': name}
                 if '__sls__' in body:
@@ -1215,13 +1210,23 @@ class BaseHighState(object):
                         if isinstance(state[name], basestring):
                             # Is this is a short state, it needs to be padded
                             if '.' in state[name]:
+                                comps = state[name].split('.')
                                 state[name] = {'__sls__': sls,
                                                '__env__': env,
-                                               state[name]: []}
+                                               comps[0]: [comps[1]]}
                                 continue
                         errors.append(('Name {0} in sls {1} is not a dictionary'
                                        .format(name, sls)))
                         continue
+                    for key in state[name]:
+                        if key.startswith('_'):
+                            continue
+                        if not isinstance(state[name][key], list):
+                            continue
+                        if '.' in key:
+                            comps = key.split('.')
+                            state[name][comps[0]] = state[name].pop(key)
+                            state[name][comps[0]].append(comps[1])
                     if '__sls__' not in state[name]:
                         state[name]['__sls__'] = sls
                     if '__env__' not in state[name]:
