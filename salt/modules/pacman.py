@@ -45,6 +45,26 @@ def upgrade_available(name):
             'pacman -Spu --print-format %n | egrep "^\S+$"').split()
 
 
+def list_upgrades():
+    '''
+    List all available package upgrades on this system
+
+    CLI Example::
+
+        salt '*' pkg.list_upgrades
+    '''
+    upgrades = {}
+    lines = __salt__['cmd.run'](
+            'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
+            ).split('\n')
+    for line in lines:
+        comps = lines.split(' ')
+        if len(comps) < 2:
+            continue
+        upgrades[comps[0]] = comps[1]
+    return upgrades
+
+
 def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
@@ -122,9 +142,9 @@ def install(name, refresh=False, **kwargs):
         salt '*' pkg.install <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -S --noprogressbar --noconfirm ' + name
+    cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(name)
     if refresh:
-        cmd = 'pacman -Syu --noprogressbar --noconfirm ' + name
+        cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(name)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
@@ -189,7 +209,7 @@ def remove(name):
         salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
+    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
@@ -207,7 +227,7 @@ def purge(name):
         salt '*' pkg.purge <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
+    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
