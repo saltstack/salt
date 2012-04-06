@@ -14,8 +14,7 @@ makes use of the jinja templating system would look like this:
 .. code-block:: yaml
 
     /etc/http/conf/http.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/http.conf
         - user: root
         - group: root
@@ -34,8 +33,7 @@ look like this:
 .. code-block:: yaml
 
     /srv/stuff/substuf:
-      file:
-        - directory
+      file.directory:
         - user: fred
         - group: users
         - mode: 755
@@ -47,8 +45,7 @@ directory's contents, you can do so by adding a ``recurse`` directive:
 .. code-block:: yaml
 
     /srv/stuff/substuf:
-      file:
-        - directory
+      file.directory:
         - user: fred
         - group: users
         - mode: 755
@@ -63,8 +60,7 @@ takes a few arguments:
 .. code-block:: yaml
 
     /etc/grub.conf:
-      file:
-        - symlink
+      file.symlink:
         - target: /boot/grub/grub.conf
 
 Recursive directory management can also be set via the ``recurse``
@@ -76,8 +72,7 @@ something like this:
 .. code-block:: yaml
 
     /opt/code/flask:
-      file:
-        - recurse
+      file.recurse:
         - source: salt://code/flask
 '''
 # Import Python libs
@@ -387,7 +382,8 @@ def managed(name,
         makedirs=False,
         context=None,
         defaults=None,
-        __env__='base'):
+        env=None,
+        **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
     the salt master and potentially run through a templating system.
@@ -449,6 +445,8 @@ def managed(name,
         return _error(
             ret, ('Specified file {0} is not an absolute'
                   ' path').format(name))
+    if env is None:
+        env = kwargs.get('__env__', 'base')
     # Gather the source file from the server
     sfn = ''
     source_sum = {}
@@ -461,7 +459,7 @@ def managed(name,
     # If the source is a list then find which file exists
     if isinstance(source, list):
         # get the master file list
-        mfiles = __salt__['cp.list_master'](__env__)
+        mfiles = __salt__['cp.list_master'](env)
         for single in source:
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
@@ -491,7 +489,7 @@ def managed(name,
     # If the file is a template and the contents is managed
     # then make sure to copy it down and templatize  things.
     if template and source:
-        sfn = __salt__['cp.cache_file'](source, __env__)
+        sfn = __salt__['cp.cache_file'](source, env)
         if not os.path.exists(sfn):
             return _error(
                 ret, ('File "{sfn}" could not be found').format(sfn=sfn))
@@ -506,12 +504,13 @@ def managed(name,
                     user=user,
                     group=group,
                     mode=mode,
-                    env=__env__,
+                    env=env,
                     context=context_dict,
                     salt=__salt__,
                     pillar=__pillar__,
                     grains=__grains__,
                     opts=__opts__,
+                    **kwargs
                     )
         else:
             return _error(
@@ -532,7 +531,7 @@ def managed(name,
         # Copy the file down if there is a source
         if source:
             if urlparse.urlparse(source).scheme == 'salt':
-                source_sum = __salt__['cp.hash_file'](source, __env__)
+                source_sum = __salt__['cp.hash_file'](source, env)
                 if not source_sum:
                     return _error(
                         ret, 'Source file {0} not found'.format(source))
@@ -585,7 +584,7 @@ def managed(name,
         # Check if file needs to be replaced
         if source and source_sum['hsum'] != name_sum:
             if not sfn:
-                sfn = __salt__['cp.cache_file'](source, __env__)
+                sfn = __salt__['cp.cache_file'](source, env)
             if not sfn:
                 return _error(
                     ret, 'Source file {0} not found'.format(source))
@@ -624,7 +623,7 @@ def managed(name,
             ret['changes']['diff'] = 'New file'
             # Apply the new file
             if not sfn:
-                sfn = __salt__['cp.cache_file'](source, __env__)
+                sfn = __salt__['cp.cache_file'](source, env)
             if not sfn:
                 return ret.error(
                     ret, 'Source file {0} not found'.format(source))
@@ -854,7 +853,8 @@ def recurse(name,
         group=None,
         dir_mode=None,
         file_mode=None,
-        __env__='base'):
+        env=None,
+        **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
     over to the specified path.
@@ -897,6 +897,8 @@ def recurse(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
+    if env is None:
+        env = kwargs.get('__env__', 'base')
 
     keep = set()
     # Verify the target directory
@@ -907,7 +909,7 @@ def recurse(name,
                 ret, 'The path {0} exists and is not a directory'.format(name))
         os.makedirs(name)
     vdir = set()
-    for fn_ in __salt__['cp.cache_dir'](source, __env__):
+    for fn_ in __salt__['cp.cache_dir'](source, env):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -916,7 +918,7 @@ def recurse(name,
                     os.path.join(
                         __opts__['cachedir'],
                         'files',
-                        __env__,
+                        env,
                         source[7:]
                         )
                     )
@@ -977,16 +979,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
         # Disable the epel repo by default
         /etc/yum.repos.d/epel.repo:
-          file:
-            - sed
+          file.sed:
             - before: 1
             - after: 0
             - limit: ^enabled=
 
         # Remove ldap from nsswitch
         /etc/nsswitch.conf:
-        file:
-            - sed
+        file.sed:
             - before: 'ldap'
             - after: ''
             - limit: '^passwd:'
@@ -1032,8 +1032,7 @@ def comment(name, regex, char='#', backup='.bak'):
     Usage::
 
         /etc/fstab:
-          file:
-            - comment
+          file.comment:
             - regex: ^//10.10.20.5
 
     .. versionadded:: 0.9.5
@@ -1079,8 +1078,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     Usage::
 
         /etc/adduser.conf:
-          file:
-            - uncomment
+          file.uncomment:
             - regex: EXTRA_GROUPS
 
     .. versionadded:: 0.9.5
@@ -1128,8 +1126,7 @@ def append(name, text):
     Multi-line example::
 
         /etc/motd:
-          file:
-            - append
+          file.append:
             - text: |
                 Thou hadst better eat salt with the Philosophers of Greece,
                 than sugar with the Courtiers of Italy.
@@ -1138,8 +1135,7 @@ def append(name, text):
     Multiple lines of text::
 
         /etc/motd:
-          file:
-            - append
+          file.append:
             - text:
               - Trust no one unless you have eaten much salt with him.
               - Salt is born of the purest of parents: the sun and the sea.
@@ -1186,8 +1182,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     Usage::
 
         /var/log/httpd/logrotate.empty
-          file:
-            - touch
+          file.touch
 
     .. versionadded:: 0.9.5
     """
