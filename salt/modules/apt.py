@@ -322,9 +322,9 @@ def _get_upgradable():
 
     return r
 
-def check_update():
+def list_upgrades():
     '''
-    List all available upgrades
+    List all available package upgrades.
 
     CLI Example::
         salt '*' pkg.check_update
