@@ -24,11 +24,13 @@ eth2:
   network:
     - managed
     - type: slave
+    - master: bond0
     
 eth3:
   network:
     - managed
     - type: slave
+    - master: bond0
 
 bond0:
   network:
@@ -41,12 +43,9 @@ bond0:
       - 8.8.4.4
     - ipv6:
     - enabled: False
-    - watch:
+    - used_in:
       - network: eth2
       - network: eth3
-    - slaves:
-      - eth2
-      - eth3
     - mode: 802.3ad
     - miimon: 100
     - arp_interval: 250
@@ -60,15 +59,14 @@ bond0:
     - autoneg: on
     - speed: 1000
     - duplex: full
-    - offload:
-      - rx: on
-      - tx: off
-      - sg: on
-      - tso: off
-      - ufo: off
-      - gso: off
-      - gro: off
-      - lro: off
+    - rx: on
+    - tx: off
+    - sg: on
+    - tso: off
+    - ufo: off
+    - gso: off
+    - gro: off
+    - lro: off
     - vlans:
       - 2
       - 3
@@ -106,9 +104,8 @@ def managed(
         'comment': 'Interface {0} is up to date.'.format(name)
     }
            
-    # get current iface run through settings filter
-    # get proposed iface submit to builder
-    # diff iface
+    if type = 'slave' and 'slave' not in kwargs:
+        kwargs['slave'] = 'yes'
     try:
         old = __salt__['network.get'](name)
         new = __salt__['network.build'](name, type, kwargs)
@@ -120,6 +117,10 @@ def managed(
     except AttributeError, error:
         ret['result'] = False
         ret['comment'] = error.message
+
+    if type == 'bond':
+        pass
+        # Start the bond, this will be something in the rh_network module.
 
     return ret
            
