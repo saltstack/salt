@@ -1,7 +1,7 @@
 Format: http://dep.debian.net/deps/dep5
 Upstream-Name: salt
 Upstream-Contact: salt-users@googlegroups.com
-Source: https://github.com/downloads/saltstack/salt/salt-0.9.7.tar.gz
+Source: https://github.com/downloads/saltstack/salt/salt-0.9.8.tar.gz
 
 Files: *
 Copyright: 2012 Thomas S Hatch <thatch45@gmail.com>

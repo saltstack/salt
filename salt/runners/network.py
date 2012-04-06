@@ -4,15 +4,34 @@ Network tools to run from the Master
 
 import socket
 
+def wollist(maclist, bcast='255.255.255.255', destport=9):
+    '''
+    Send a "Magic Packet" to wake up a list of Minions.
+    This list must contain one MAC hardware address per line
+
+    CLI Example::
+
+        salt-run '/path/to/maclist'
+        salt-run '/path/to/maclist' 255.255.255.255 7
+        salt-run '/path/to/maclist' 255.255.255.255 7
+    '''
+    try:
+        file = open(maclist, 'r')
+        for mac in file:
+            wol(mac.strip(), bcast, destport)
+            print "Waking up %s" % mac.strip()
+    except Exception as inst:
+        print "Failed to open the MAC file. Error: %s" % inst
+
 def wol(mac, bcast='255.255.255.255', destport=9):
     '''
     Send a "Magic Packet" to wake up a Minion
 
     CLI Example::
 
-        salt-run 08-00-27-13-69-77
-        salt-run 080027136977 255.255.255.255 7
-        salt-run 08:00:27:13:69:77 255.255.255.255 7
+        salt-run network.wol 08-00-27-13-69-77
+        salt-run network.wol 080027136977 255.255.255.255 7
+        salt-run network.wol 08:00:27:13:69:77 255.255.255.255 7
     '''
     if len(mac) == 12:
         pass

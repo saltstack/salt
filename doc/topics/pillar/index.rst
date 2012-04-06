@@ -66,3 +66,13 @@ more via the shared pillar dict:
       pkg:
         - installed
         - name: {{ pillar['git'] }}
+
+Refreshing Pillar Data
+======================
+
+When pillar data is changed on the master the minions need to refresh the data
+locally. This is done with the ``saltutil.refresh_pillar`` function.
+
+.. code-block:: yaml
+
+    salt '*' saltutil.refresh_pillar

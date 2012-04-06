@@ -44,7 +44,8 @@ def install(pkgs=None,
             no_deps=False,
             no_install=False,
             no_download=False,
-            install_options=None):
+            install_options=None,
+            runas=None):
     '''
     Install packages with pip
 
@@ -117,6 +118,8 @@ def install(pkgs=None,
         option options to pass multiple options to setup.py
         install.  If you are using an option with a directory
         path, be sure to use absolute path.
+    runas
+        User to run pip as
 
 
     CLI Example::
@@ -250,7 +253,7 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, runas=runas)
 
 
 def uninstall(pkgs=None,
@@ -360,7 +363,12 @@ def list(prefix='', bin_env=None):
     packages = {}
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
     for line in __salt__['cmd.run'](cmd).split("\n"):
-        if len(line.split("==")) >= 2:
+        if line.startswith('-e'):
+            line = line.split('-e ')[1]
+            line, name = line.split('#egg=')
+            packages[name]=line
+            
+        elif len(line.split("==")) >= 2:
             name = line.split("==")[0]
             version = line.split("==")[1]
             if prefix:

@@ -187,6 +187,7 @@ class Minion(object):
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
+        minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
@@ -194,7 +195,6 @@ class Minion(object):
         set_pidfile(self.cli['pidfile'])
         if check_user(self.opts['user'], log):
             try:
-                minion = salt.minion.Minion(self.opts)
                 minion.tune_in()
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Minion')
@@ -223,7 +223,7 @@ class Syndic(object):
             # Some of the opts need to be changed to match the needed opts
             # in the minion class.
             opts['master'] = opts['syndic_master']
-            opts['master_ip'] = salt.config.dns_check(opts['master'])
+            opts['master_ip'] = salt.utils.dns_check(opts['master'])
 
             opts['master_uri'] = ('tcp://' + opts['master_ip'] +
                                   ':' + str(opts['master_port']))

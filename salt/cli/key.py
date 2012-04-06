@@ -54,38 +54,51 @@ class Key(object):
         if not self.opts['quiet']:
             print message
 
-    def _list_pre(self):
+    def _list_pre(self, header=True):
         '''
         List the unaccepted keys
         '''
-        self._log(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
+        if header == True:
+            self._log(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('pre')):
             output = utils.RED + key + utils.ENDC
             self._log(output)
 
-    def _list_accepted(self):
+    def _list_accepted(self, header=True):
         '''
         List the accepted public keys
         '''
-        self._log(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
+        if header == True:
+            self._log(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('acc')):
             self._log(utils.GREEN + key + utils.ENDC)
 
-    def _list_rejected(self):
+    def _list_rejected(self, header=True):
         '''
         List the unaccepted keys
         '''
-        self._log(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
+        if header == True:
+            self._log(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
         for key in sorted(self._keys('rej')):
             self._log(utils.BLUE + key + utils.ENDC)
 
-    def _list_all(self):
+    def _list(self, name):
         '''
-        List all keys
+        List keys
         '''
-        self._list_pre()
-        self._list_accepted()
-        self._list_rejected()
+        if name in ('pre', 'un', 'unaccept', 'unaccepted'):
+            self._list_pre(False)
+        elif name in ('acc', 'accept', 'accepted'):
+            self._list_accepted(False)
+        elif name in ('rej', 'reject', 'rejected'):
+            self._list_rejected(False)
+        elif name in ('all',):
+            self._list_pre()
+            self._list_accepted()
+            self._list_rejected()
+        else:
+            err = 'Unrecognized key type "%s".  Run with -h for options.' % name
+            self._log(err, level='error')
 
     def _print_key(self, name):
         '''
@@ -227,9 +240,9 @@ class Key(object):
                     self.opts['keysize'])
             return
         if self.opts['list']:
-            self._list_pre()
+            self._list(self.opts['list'])
         elif self.opts['list_all']:
-            self._list_all()
+            self._list('all')
         elif self.opts['print']:
             self._print_key(self.opts['print'])
         elif self.opts['print_all']:
@@ -247,4 +260,4 @@ class Key(object):
         elif self.opts['delete_all']:
             self._delete_all()
         else:
-            self._list_all()
+            self._list('all')

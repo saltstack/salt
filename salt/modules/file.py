@@ -244,7 +244,7 @@ def get_sum(path, form='md5'):
         return str(e)
 
 
-def find(path, *opts):
+def find(path, **kwargs):
     '''
     Approximate the Unix find(1) command and return a list of paths that
     meet the specified critera.
@@ -335,12 +335,8 @@ def find(path, *opts):
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
         salt '*' file.find /var/log name=\*.[0-9] mtime=+30d size=+10m delete
     '''
-    opts_dict = {}
-    for opt in opts:
-        key, value = opt.split('=', 1)
-        opts_dict[key] = value
     try:
-        f = salt.utils.find.Finder(opts_dict)
+        f = salt.utils.find.Finder(kwargs)
     except ValueError, ex:
         return 'error: {0}'.format(ex)
 
