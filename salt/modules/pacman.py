@@ -141,10 +141,18 @@ def install(name, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
+    fname = name
+    if 'gt' in kwargs:
+        fname = '"{0}>{1}"'.format(name, kwargs['gt'])
+    if 'lt' in kwargs:
+        fname = '"{0}<{1}"'.format(name, kwargs['lt'])
+    if 'eq' in kwargs:
+        fname = '"{0}={1}"'.format(name, kwargs['eq'])
     old = list_pkgs()
-    cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(name)
+    cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
     if refresh:
-        cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(name)
+        cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
+
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
