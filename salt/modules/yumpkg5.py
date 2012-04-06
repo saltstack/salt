@@ -121,7 +121,7 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
-    out = _parse_yum('list installed')
+    out = _parse_yum('check-update')
     return dict([(i.name, i.version) for i in out])
 
 
