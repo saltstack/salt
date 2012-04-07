@@ -1,6 +1,6 @@
 '''
 MySQL Grant Management
-=====================
+======================
 The mysql_grants module is used to grant and revoke MySQL permissions.
 
 The ``name`` you pass in purely symbolic and does not have anything to do
@@ -8,11 +8,12 @@ with the grant itself.
 
 The ``database`` parameter needs to specify a 'priv_level' in the same
 specification as defined in the MySQL documentation:
- - *
- - *.*
- - db_name.*
- - db_name.tbl_name
- - etc...
+
+* \*
+* \*.\*
+* db_name.\*
+* db_name.tbl_name
+* etc...
 
 .. code-block:: yaml
 
