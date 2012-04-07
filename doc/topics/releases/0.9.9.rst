@@ -98,4 +98,8 @@ modules in the top file and include statements:
       - users.dev.*
       - apache.ser*
 
+Use Requisite System
+--------------------
 
+The new use and use_in requisites allow for data from one state to be set
+as defaults for another state

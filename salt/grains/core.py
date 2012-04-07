@@ -589,3 +589,12 @@ def _hw_data(osdata):
         }
         grains.update(_dmidecode_data(linux_dmi_regex))
     return grains
+
+def get_server_id():
+    '''
+    Provides an integer based on the FQDN of a machine. 
+    Useful as server-id in MySQL replication or anywhere else you'll need an ID like this.
+    '''
+    # Provides:
+    #   server_id    
+    return { 'server_id': abs(hash(__opts__['id']) % 2**31) }

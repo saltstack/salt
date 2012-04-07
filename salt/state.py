@@ -62,6 +62,48 @@ def _getargs(func):
     return aspec
 
 
+def state_args(id_, state, high):
+    '''
+    Return a set of the arguments passed to the named state
+    '''
+    args = set()
+    if not id_ in high:
+        return args
+    if not state in high[id_]:
+        return args
+    for item in high[id_][state]:
+        if not isinstance(item, dict):
+            continue
+        if len(item) != 1:
+            continue
+        print item
+        args.add(item.keys()[0])
+    return args
+
+
+def find_name(name, state, high):
+    '''
+    Scan high data for the id referencing the given name
+    '''
+    ext_id = ''
+    if name in high:
+        ext_id = name
+    else:
+        # We need to scan for the name
+        for nid in high:
+            if state in high[nid]:
+                if isinstance(
+                        high[nid][_state],
+                        list):
+                    for arg in high[nid][state]:
+                        if not isinstance(arg, dict):
+                            continue
+                        if len(arg) != 1:
+                            continue
+                        if arg[arg.keys()[0]] == name:
+                            ext_id = nid
+    return ext_id
+
 def build_args(func, args, data=None):
     '''
     Build the args and kwargs
@@ -607,7 +649,7 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set(['require_in', 'watch_in'])
+        req_in = set(['require_in', 'watch_in', 'use', 'use_in'])
         extend = {}
         for id_, body in high.items():
             for state, run in body.items():
@@ -625,11 +667,13 @@ class State(object):
                         key = arg.keys()[0]
                         if not key in req_in:
                             continue
-                        rkey = key[:-3]
+                        rkey = key.split('_')[0]
                         items = arg[key]
                         if isinstance(items, dict):
                             # Formated as a single req_in
                             for _state, name in items.items():
+
+                                # Not a use requisite_in
                                 found = False
                                 if not name in extend:
                                     extend[name] = {}
@@ -648,6 +692,7 @@ class State(object):
                                 extend[name][_state].append(
                                         {rkey: [{state: id_}]}
                                         )
+
                         if isinstance(items, list):
                             # Formed as a list of requisite additions
                             for ind in items:
@@ -658,6 +703,86 @@ class State(object):
                                     continue
                                 _state = ind.keys()[0]
                                 name = ind[_state]
+                                if key == 'use_in':
+                                    # 1. Extend the running state to watch
+                                    # the use_in state
+                                    found = False
+                                    rkey = 'watch'
+                                    if not id_ in extend:
+                                        extend[id_] = {}
+                                    if not state in extend[id_]:
+                                        extend[id_][state] = []
+                                    for ind in range(len(extend[id_][state])):
+                                        if extend[id_][state][ind].keys()[0] == rkey:
+                                            # Extending again
+                                            extend[id_][state][ind][rkey].append(
+                                                    {_state: name}
+                                                    )
+                                            found = True
+                                    # The rkey is not present yet, create it
+                                    if not found:
+                                        extend[id_][state].append(
+                                                {rkey: [{_state: name}]}
+                                                )
+                                    # 2. Add the running states args to the
+                                    # use_in states
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    ext_args = state_args(ext_id, _state, high)
+                                    if not ext_id in extend:
+                                        extend[ext_id] = {}
+                                    if not _state in extend[ext_id]:
+                                        extend[ext_id][_state] = []
+                                    for arg in high[id_][state]:
+                                        if not isinstance(arg, dict):
+                                            continue
+                                        if len(arg) != 1:
+                                            continue
+                                        if arg.keys()[0] in ext_args:
+                                            continue
+                                        extend[ext_id][_state].append(arg)
+                                    continue
+                                if key == 'use':
+                                    # 1. Extend the use state to watch
+                                    # the running state
+                                    found = False
+                                    rkey = 'watch'
+                                    if not name in extend:
+                                        extend[name] = {}
+                                    if not _state in extend[name]:
+                                        extend[name][_state] = []
+                                    for ind in range(len(extend[name][_state])):
+                                        if extend[name][_state][ind].keys()[0] == rkey:
+                                            # Extending again
+                                            extend[name][_state][ind][rkey].append(
+                                                    {state: id_}
+                                                    )
+                                            found = True
+                                    # The rkey is not present yet, create it
+                                    if not found:
+                                        extend[name][_state].append(
+                                                {rkey: [{state: id_}]}
+                                                )
+                                    # 2. Add the use state's args to the
+                                    # running state
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    loc_args = state_args(id_, state, high)
+                                    if not id_ in extend:
+                                        extend[id_] = {}
+                                    if not state in extend[id_]:
+                                        extend[id_][state] = []
+                                    for arg in high[ext_id][_state]:
+                                        if not isinstance(arg, dict):
+                                            continue
+                                        if len(arg) != 1:
+                                            continue
+                                        if arg.keys()[0] in loc_args:
+                                            continue
+                                        extend[id_][state].append(arg)
+                                    continue
                                 found = False
                                 if not name in extend:
                                     extend[name] = {}
