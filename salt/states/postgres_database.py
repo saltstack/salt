@@ -1,6 +1,7 @@
 '''
 Postgres Database Management
-=========================
+============================
+
 The postgres_database module is used to create and manage Postgres databases, databases can be set
 as either absent or present
 
@@ -17,14 +18,14 @@ def present(name):
 
     name
         The name of the database to manage
-    '''    
+    '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(name)}
     # check if database exists
     if __salt__['postgres.db_exists'](name):
-        return ret        
+        return ret
 
     # The database is not present, make it!
     if __salt__['postgres.db_create'](name):
@@ -55,7 +56,7 @@ def absent(name):
             ret['comment'] = 'Database {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret
-        
+
     # fallback
     ret['comment'] = 'Database {0} is not present, so it cannot be removed'.format(name)
     return ret
