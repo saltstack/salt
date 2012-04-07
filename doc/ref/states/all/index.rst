@@ -19,8 +19,11 @@ Full list of builtin states
     kmod
     mount
     mysql_database
+    mysql_grants
     mysql_user
+    pip
     pkg
+    postgres_database
     rvm
     service
     ssh_auth
