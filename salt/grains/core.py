@@ -597,4 +597,4 @@ def get_server_id():
     '''
     # Provides:
     #   server_id    
-    return { 'server_id': abs(hash(socket.getfqdn()) % 2**31) }
+    return { 'server_id': abs(hash(__opts__['id']) % 2**31) }
