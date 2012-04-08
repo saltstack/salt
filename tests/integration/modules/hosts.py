@@ -109,3 +109,30 @@ class HostsModuleTest(integration.ModuleCase):
         assert self.run_function('hosts.rm_host', ['127.0.0.1', 'myname'])
         assert not self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
         assert self.run_function('hosts.rm_host', ['127.0.0.1', 'unknown'])
+
+    def test_add_host_formatting(self):
+        '''
+        Ensure that hosts.add_host isn't adding duplicates and that
+        it's formatting the output correctly
+        '''
+        # instead of using the "clean" hosts file we're going to
+        # use an empty one so we can prove the syntax of the entries
+        # being added by the hosts module
+        self.__clear_hosts()
+        f = open(HFN, 'w')
+        f.close()
+
+        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1.fqdn.com'])
+        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1'])
+        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2.fqdn.com'])
+        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2'])
+        assert self.run_function('hosts.add_host', ['192.168.1.2', 'oldhost2'])
+        assert self.run_function('hosts.add_host', ['192.168.1.3', 'host3.fqdn.com'])
+
+        # now read the lines and ensure they're formatted correctly
+        lines = open(HFN, 'r').readlines()
+        self.assertEqual(lines, [
+            "192.168.1.1\t\thost1.fqdn.com\thost1\n",
+            "192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\n",
+            "192.168.1.3\t\thost3.fqdn.com\n",
+            ])
