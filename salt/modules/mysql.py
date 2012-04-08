@@ -539,6 +539,8 @@ def __grant_generate(grant,
 
     if escape:
         db = "`%s`" % db
+        if table is not '*':
+            table = "`%s`" % table
     query = "GRANT %s ON %s.%s TO '%s'@'%s'" % (grant, db, table, user, host,)
     if grant_option:
         query += " WITH GRANT OPTION"
