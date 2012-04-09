@@ -557,7 +557,7 @@ def user_grants(user,
         salt '*' mysql.user_grants 'frank' 'localhost'
     '''
     if not user_exists(user):
-       log.info("User '{0}' does not exist".format(user,))
+       log.info("User '{0}'@'{1}' does not exist".format(user,host,))
        return False
 
     ret = []
