@@ -315,7 +315,7 @@ def ip_to_host(ip):
     
     CLI Example::
         
-        salt '*' network.ip_to_host example.com
+        salt '*' network.ip_to_host 8.8.8.8
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr( ip )
