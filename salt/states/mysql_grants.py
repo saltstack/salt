@@ -95,7 +95,7 @@ def present(name,
                 )
         ret['changes'][name] = 'Present'
     else:
-        ret['comment'] = 'Failed to grant {0} on {1} for {2}@{3}'.format(
+        ret['comment'] = 'Failed to execute: "GRANT {0} ON {1} TO {2}@{3}"'.format(
                 grant,
                 database,
                 user,
