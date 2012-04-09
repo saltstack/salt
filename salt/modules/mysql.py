@@ -538,7 +538,10 @@ def __grant_generate(grant,
     table = db_part[2]
 
     if escape:
-        db = "`%s`" % db
+        if db is not '*':
+            db = "`%s`" % db
+        if table is not '*':
+            table = "`%s`" % table
     query = "GRANT %s ON %s.%s TO '%s'@'%s'" % (grant, db, table, user, host,)
     if grant_option:
         query += " WITH GRANT OPTION"
@@ -554,8 +557,8 @@ def user_grants(user,
 
         salt '*' mysql.user_grants 'frank' 'localhost'
     '''
-    if not user_exists(user):
-       log.info("User '{0}' does not exist".format(user,))
+    if not user_exists(user,host):
+       log.info("User '{0}'@'{1}' does not exist".format(user,host,))
        return False
 
     ret = []
@@ -567,7 +570,7 @@ def user_grants(user,
     cur.execute(query)
     results = cur.fetchall()
     for grant in results:
-        ret.append(grant[0])
+        ret.append(grant[0].split(' IDENTIFIED BY')[0])
     log.debug(ret)
     return ret
 

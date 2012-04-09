@@ -79,7 +79,7 @@ def returners(opts):
 
 def states(opts, functions):
     '''
-    Returns the returner modules
+    Returns the state modules
     '''
     load = _create_loader(opts, 'states', 'state')
     pack = {'name': '__salt__',
