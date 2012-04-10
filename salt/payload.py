@@ -67,6 +67,7 @@ class Serial(object):
         Run the correct serialization to load a file
         '''
         data = fn_.read()
+        fn_.close()
         return self.loads(data)
 
     def dumps(self, msg):
@@ -83,3 +84,4 @@ class Serial(object):
         Serialize the correct data into the named file object
         '''
         fn_.write(self.dumps(msg))
+        fn_.close()
