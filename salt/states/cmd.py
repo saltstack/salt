@@ -140,9 +140,10 @@ def run(name,
     if group:
         try:
             egid = grp.getgrnam(group).gr_gid
-            os.setegid(egid)
+            if not __opts__['test']:
+                os.setegid(egid)
         except KeyError:
-            ret['comment'] = 'The group ' + group + ' is not available'
+            ret['comment'] = 'The group {0} is not available'.format(group)
             return ret
 
     if env:
@@ -152,22 +153,26 @@ def run(name,
                 k, v = var.split('=')
                 _env[k] = v
             except ValueError:
-                ret['comment'] = 'Invalid enviromental var: "{0}"' % var
+                ret['comment'] = 'Invalid enviromental var: "{0}"'.format(var)
                 return ret
         env = _env
 
     # Wow, we passed the test, run this sucker!
-    try:
-        cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user,
-                                          shell=shell, env=env)
-    except CommandExecutionError as e:
-        ret['comment'] = e
-        return ret
+    if not __opts__['test']:
+        try:
+            cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user,
+                                              shell=shell, env=env)
+        except CommandExecutionError as e:
+            ret['comment'] = e
+            return ret
 
-    ret['changes'] = cmd_all
-    ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = 'Command "' + name + '" run'
-    os.setegid(pgid)
+        ret['changes'] = cmd_all
+        ret['result'] = not bool(cmd_all['retcode'])
+        ret['comment'] = 'Command "{0}" run'.format(name)
+        os.setegid(pgid)
+        return ret
+    ret['result'] = False
+    ret['comment'] = 'Command "{0}" would have been executed'.format(name)
     return ret
 
 mod_watch = run
