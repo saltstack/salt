@@ -35,8 +35,8 @@ class Key(object):
             subdir = 'minions'
         dir_ = os.path.join(self.opts['pki_dir'], subdir)
         if not os.path.isdir(dir_):
-            err = ('The ' + subdir + ' directory is not present, ensure that '
-                   'the master server has been started')
+            err = ('The {0} directory is not present, ensure that '
+                   'the master server has been started').format(subdir)
             self._log(err, level='error')
             sys.exit(42)
         keys = os.listdir(dir_)
@@ -97,7 +97,8 @@ class Key(object):
             self._list_accepted()
             self._list_rejected()
         else:
-            err = 'Unrecognized key type "%s".  Run with -h for options.' % name
+            err = ('Unrecognized key type "{0}".  Run with -h for options.'
+                    ).format(name)
             self._log(err, level='error')
 
     def _print_key(self, name):
@@ -141,14 +142,17 @@ class Key(object):
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
         if key not in pre:
-            err = ('The key named %s does not exist, please accept an '
-                   'available key' %(key))
+            err = ('The key named {0} does not exist, please accept an '
+                   'available key').format(key)
             #log.error(err)
             self._log(err, level='error')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_accepted, key))
-        self._log('Key for %s accepted.' %(key), level='info')
+        self._log(
+                'Key for {0} accepted.'.format(key),
+                level='info'
+                )
 
     def _accept_all(self):
         '''
@@ -174,15 +178,15 @@ class Key(object):
         rej = os.path.join(minions_rejected, delete)
         if os.path.exists(pre):
             os.remove(pre)
-            self._log('Removed pending key %s' % delete, 
+            self._log('Removed pending key {0}'.format(delete),
                          level='info')
         if os.path.exists(acc):
             os.remove(acc)
-            self._log('Removed accepted key %s' % delete, 
+            self._log('Removed accepted key {0}'.format(delete),
                          level='info')
         if os.path.exists(rej):
             os.remove(rej)
-            self._log('Removed rejected key %s' % delete, 
+            self._log('Removed rejected key {0}'.format(delete),
                          level='info')
     def _delete_all(self):
         '''
@@ -202,13 +206,13 @@ class Key(object):
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
         if key not in pre:
-            err = ('The host named %s is unavailable, please accept an '
-                   'available key' %(key))
+            err = ('The host named {0} is unavailable, please accept an '
+                   'available key').format(key)
             self._log(err, level='error')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_rejected, key))
-        self._log('%s key rejected.' %(key), level='info')
+        self._log('{0} key rejected.'.format(key), level='info')
 
     def _reject_all(self):
         '''
@@ -225,10 +229,10 @@ class Key(object):
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions_rejected = os.path.join(self.opts['pki_dir'], 
                                         'minions_rejected')
-        for dir in [minions_accepted, minions_pre, minions_rejected]:
-            if not os.path.isdir(dir):
+        for dir_ in [minions_accepted, minions_pre, minions_rejected]:
+            if not os.path.isdir(dir_):
                 err = ('The minions directory {0} is not present, ensure '
-                       'that the master server has been started'.format(dir))
+                       'that the master server has been started'.format(dir_))
                 self._log(err, level='error')
                 sys.exit(42)
         return minions_accepted, minions_pre, minions_rejected
