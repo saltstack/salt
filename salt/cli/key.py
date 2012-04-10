@@ -107,7 +107,8 @@ class Key(object):
         keys = self._keys('pre', True).union(self._keys('acc', True))
         for key in sorted(keys):
             if key.endswith(name):
-                self._log(open(key, 'r').read())
+                with open(key, 'r') as kfn:
+                    self._log(kfn.read())
 
     def _print_all(self):
         '''
@@ -116,17 +117,20 @@ class Key(object):
         self._log(utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
             self._log('  ' + utils.RED + os.path.basename(key) + utils.ENDC)
-            self._log(open(key, 'r').read())
+            with open(key, 'r') as kfn:
+                self._log(kfn.read())
         self._log(utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC)
         for key in sorted(self._keys('acc', True)):
             self._log('  ' + utils.GREEN + os.path.basename(key) + 
                          utils.ENDC)
-            self._log(open(key, 'r').read())
+            with open(key, 'r') as kfn:
+                self._log(kfn.read())
         self._log(utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
             self._log('  ' + utils.BLUE + os.path.basename(key) + 
                          utils.ENDC)
-            self._log(open(key, 'r').read())
+            with open(key, 'r') as kfn:
+                self._log(kfn.read())
 
     def _accept(self, key):
         '''
