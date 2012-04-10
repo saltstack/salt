@@ -26,7 +26,7 @@ class SaltCP(object):
         Take a path and return the contents of the file as a string
         '''
         if not os.path.isfile(fn_):
-            err = 'The referenced file, ' + fn_ + ' is not available.'
+            err = 'The referenced file, {0} is not available.'.format(fn_)
             sys.stderr.write(err + '\n')
             sys.exit(42)
         return {fn_: open(fn_, 'r').read()}
