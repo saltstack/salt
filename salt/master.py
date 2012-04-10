@@ -839,14 +839,15 @@ class ClearFuncs(object):
         '''
         minions = {}
         master_pem = ''
-        master_conf = open(self.opts['conf_file'], 'r').read()
+        with open(self.opts['conf_file'], 'r') as fp_:
+            master_conf = fp_.read()
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
             minions[host] = open(pub, 'r').read()
         if self.opts['cluster_mode'] == 'full':
-            master_pem = open(os.path.join(self.opts['pki_dir'],
-                'master.pem')).read()
+            with open(os.path.join(self.opts['pki_dir'], 'master.pem')) as fp_:
+                master_pem = fp_.read()
         return [minions,
                 master_conf,
                 master_pem,
@@ -897,7 +898,8 @@ class ClearFuncs(object):
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre
             log.info('New public key placed in pending for %(id)s', load)
-            open(pubfn_pend, 'w+').write(load['pub'])
+            with open(pubfn_pend, 'w+') as fp_:
+                fp_.write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
             return ret
@@ -932,7 +934,8 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
 
         log.info('Authentication accepted from %(id)s', load)
-        open(pubfn, 'w+').write(load['pub'])
+        with open(pubfn, 'w+') as fp_:
+            fp_.write(load['pub'])
         key = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
                'pub_key': self.master_key.pub_str,
