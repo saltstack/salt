@@ -1,4 +1,4 @@
-"""
+'''
 Management of rubygems
 =======================
 A state module to manage rubygems. Gems can be set up to be installed
@@ -12,11 +12,11 @@ you can specify what ruby version and gemset to target.
         - installed
         - runas: rvm
         - ruby: jruby@jgemset
-"""
+'''
 
 
 def installed(name, ruby=None, runas=None):
-    """
+    '''
     Make sure that a gem is installed.
 
     name
@@ -25,26 +25,26 @@ def installed(name, ruby=None, runas=None):
         For RVM installations: the ruby version and gemset to target.
     runas : None
         The user to run gem as.
-    """
+    '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name in __salt__["gem.list"](name, ruby, runas=runas):
-        ret["result"] = True
-        ret["comment"] = "Gem is already installed."
+    if name in __salt__['gem.list'](name, ruby, runas=runas):
+        ret['result'] = True
+        ret['comment'] = 'Gem is already installed.'
         return ret
 
-    if __salt__["gem.install"](name, ruby, runas=runas):
-        ret["result"] = True
-        ret["changes"][name] = "Installed"
-        ret["comment"] = "Gem was successfully installed"
+    if __salt__['gem.install'](name, ruby, runas=runas):
+        ret['result'] = True
+        ret['changes'][name] = 'Installed'
+        ret['comment'] = 'Gem was successfully installed'
     else:
-        ret["result"] = False
-        ret["comment"] = "Could not install gem."
+        ret['result'] = False
+        ret['comment'] = 'Could not install gem.'
 
     return ret
 
 
 def removed(name, ruby=None, runas=None):
-    """
+    '''
     Make sure that a gem is not installed.
 
     name
@@ -53,18 +53,18 @@ def removed(name, ruby=None, runas=None):
         For RVM installations: the ruby version and gemset to target.
     runas : None
         The user to run gem as.
-    """
+    '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name not in __salt__["gem.list"](name, ruby, runas=runas):
-        ret["result"] = True
-        ret["comment"] = "Gem is not installed."
+    if name not in __salt__['gem.list'](name, ruby, runas=runas):
+        ret['result'] = True
+        ret['comment'] = 'Gem is not installed.'
         return ret
 
-    if __salt__["gem.uninstall"](name, ruby, runas=runas):
-        ret["result"] = True
-        ret["changes"][name] = "Removed"
-        ret["comment"] = "Gem was successfully removed."
+    if __salt__['gem.uninstall'](name, ruby, runas=runas):
+        ret['result'] = True
+        ret['changes'][name] = 'Removed'
+        ret['comment'] = 'Gem was successfully removed.'
     else:
-        ret["result"] = False
-        ret["comment"] = "Could not remove gem."
+        ret['result'] = False
+        ret['comment'] = 'Could not remove gem.'
     return ret
