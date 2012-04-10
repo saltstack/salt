@@ -26,6 +26,7 @@ import zmq
 import salt.utils
 import salt.loader
 import salt.minion
+import salt.pillar
 import salt.fileclient
 
 from salt.template import (
@@ -76,7 +77,6 @@ def state_args(id_, state, high):
             continue
         if len(item) != 1:
             continue
-        print item
         args.add(item.keys()[0])
     return args
 
@@ -200,9 +200,21 @@ class State(object):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.opts['pillar'] = self.__gather_pillar()
         self.load_modules()
         self.mod_init = set()
         self.__run_num = 0
+
+    def __gather_pillar(self):
+        '''
+        Whenever a state run starts, gather the pillar data fresh
+        '''
+        pillar = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id']
+                )
+        return pillar.compile_pillar()
 
     def _mod_init(self, low):
         '''
