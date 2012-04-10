@@ -171,7 +171,7 @@ def run(name,
         ret['comment'] = 'Command "{0}" run'.format(name)
         os.setegid(pgid)
         return ret
-    ret['result'] = False
+    ret['result'] = None
     ret['comment'] = 'Command "{0}" would have been executed'.format(name)
     return ret
 
