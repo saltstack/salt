@@ -26,12 +26,15 @@ def installed(name, ruby=None, runas=None):
     runas : None
         The user to run gem as.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     if name in __salt__['gem.list'](name, ruby, runas=runas):
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'The gem {0} would have been installed'.format(name)
+        return ret
     if __salt__['gem.install'](name, ruby, runas=runas):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
@@ -60,6 +63,8 @@ def removed(name, ruby=None, runas=None):
         ret['comment'] = 'Gem is not installed.'
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'The gem {0} would have been removed'.format(name)
     if __salt__['gem.uninstall'](name, ruby, runas=runas):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
