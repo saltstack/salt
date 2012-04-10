@@ -91,11 +91,13 @@ class SMaster(object):
         log.info('Preparing the root key for local communication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
         if os.path.isfile(keyfile):
-            return open(keyfile, 'r').read()
+            with open(keyfile, 'r') as fp_:
+                return fp_.read()
         else:
             key = salt.crypt.Crypticle.generate_key_string()
             cumask = os.umask(191)
-            open(keyfile, 'w+').write(key)
+            with open(keyfile, 'w+') as fp_:
+                fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
             return key
@@ -402,16 +404,12 @@ class AESFuncs(object):
         Take a minion id and a string encrypted with the minion private key
         The string needs to decrypt as 'salt' with the minion public key
         '''
-        minion_pub = open(
-                os.path.join(
-                    self.opts['pki_dir'],
-                    'minions',
-                    id_
-                    ),
-                'r'
-                ).read()
+        pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
+        with open(pub_path, 'r') as fp_:
+            minion_pub = fp_.read()
         tmp_pub = tempfile.mktemp()
-        open(tmp_pub, 'w+').write(minion_pub)
+        with open(tmp_pub, 'w+') as fp_:
+            fp_.write(minion_pub)
         pub = RSA.load_pub_key(tmp_pub)
         os.remove(tmp_pub)
         if pub.public_decrypt(token, 5) == 'salt':
@@ -471,9 +469,9 @@ class AESFuncs(object):
         if not fnd['path']:
             return ret
         ret['dest'] = fnd['rel']
-        fn_ = open(fnd['path'], 'rb')
-        fn_.seek(load['loc'])
-        ret['data'] = fn_.read(self.opts['file_buffer_size'])
+        with open(fnd['path'], 'rb') as fp_:
+            fp_.seek(load['loc'])
+            ret['data'] = fp_.read(self.opts['file_buffer_size'])
         return ret
 
     def _file_hash(self, load):
@@ -486,8 +484,9 @@ class AESFuncs(object):
         if not path:
             return {}
         ret = {}
-        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
-                open(path, 'rb').read()).hexdigest()
+        with open(path, 'rb') as fp_:
+            ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
+                    fp_.read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
         return ret
 
@@ -617,7 +616,8 @@ class AESFuncs(object):
             return False
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
-            open(wtag, 'w+').write('')
+            with open(wtag, 'w+') as fp_:
+                fp_.write('')
         except (IOError, OSError):
             log.error(
                     ('Failed to commit the write tag for the syndic return,'
