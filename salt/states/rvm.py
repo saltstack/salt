@@ -1,4 +1,4 @@
-"""
+'''
 Management of ruby installations and gemsets with RVM
 =====================================================
 This module is used to install and manage ruby installations and
@@ -107,67 +107,76 @@ configuration could look like:
         - runas: rvm
         - require:
           - rvm: ruby-1.9.2
-"""
-
+'''
+# Import Python libs
 import re
 
 
 def _check_rvm(ret):
-    if not __salt__["rvm.is_installed"]():
-        if __salt__["rvm.install"]():
-            ret["changes"]["rvm"] = "Installed"
+    '''
+    Check to see if rmv is installed and install it
+    '''
+    if not __salt__['rvm.is_installed']():
+        if __salt__['rvm.install']():
+            ret['changes']['rvm'] = 'Installed'
         else:
-            ret["result"] = False
-            ret["comment"] = "Could not install RVM."
+            ret['result'] = False
+            ret['comment'] = 'Could not install RVM.'
     return ret
 
 
 def _check_and_install_ruby(ret, ruby, default=False, runas=None):
+    '''
+    Verify that ruby is installed, install if unavailable
+    '''
     ret = _check_ruby(ret, ruby, runas=runas)
-    if not ret["result"]:
-        if __salt__["rvm.install_ruby"](ruby, runas=runas):
-            ret["result"] = True
-            ret["changes"][ruby] = "Installed"
-            ret["comment"] = "Successfully installed ruby."
-            ret["default"] = False
+    if not ret['result']:
+        if __salt__['rvm.install_ruby'](ruby, runas=runas):
+            ret['result'] = True
+            ret['changes'][ruby] = 'Installed'
+            ret['comment'] = 'Successfully installed ruby.'
+            ret['default'] = False
         else:
-            ret["result"] = False
-            ret["comment"] = "Could not install ruby."
+            ret['result'] = False
+            ret['comment'] = 'Could not install ruby.'
             return ret
 
-    if not ret["default"] and default:
-        __salt__["rvm.set_default"](ruby, runas=runas)
+    if not ret['default'] and default:
+        __salt__['rvm.set_default'](ruby, runas=runas)
 
     return ret
 
 
 def _check_ruby(ret, ruby, runas=None):
+    '''
+    Check that ruby is installed
+    '''
     match_version = True
     match_micro_version = False
-    micro_version_regex = re.compile("-([0-9]{4}\.[0-9]{2}|p[0-9]+)$")
+    micro_version_regex = re.compile('-([0-9]{4}\.[0-9]{2}|p[0-9]+)$')
     if micro_version_regex.match(ruby):
         match_micro_version = True
-    if re.match("^[a-z]+$", ruby):
+    if re.match('^[a-z]+$', ruby):
         match_version = False
-    ruby = re.sub("^ruby-", "", ruby)
+    ruby = re.sub('^ruby-', '', ruby)
 
-    for impl, version, default in __salt__["rvm.list"](runas=runas):
-        if impl != "ruby":
-            version = "{impl}-{version}".format(impl=impl, version=version)
+    for impl, version, default in __salt__['rvm.list'](runas=runas):
+        if impl != 'ruby':
+            version = '{impl}-{version}'.format(impl=impl, version=version)
         if not match_micro_version:
-            version = micro_version_regex.sub("", version)
+            version = micro_version_regex.sub('', version)
         if not match_version:
-            version = re.sub("-.*", "")
+            version = re.sub('-.*', '')
         if version == ruby:
-            ret["result"] = True
-            ret["comment"] = "Requested ruby exists."
-            ret["default"] = default
+            ret['result'] = True
+            ret['comment'] = 'Requested ruby exists.'
+            ret['default'] = default
             break
     return ret
 
 
 def installed(name, default=False, runas=None):
-    """
+    '''
     Verify that the specified ruby is installed with RVM. RVM is
     installed when necessary.
 
@@ -177,18 +186,18 @@ def installed(name, default=False, runas=None):
         Whether to make this ruby the default.
     runas : None
         The user to run rvm as.
-    """
+    '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     ret = _check_rvm(ret)
-    if ret["result"] == False:
+    if ret['result'] == False:
         return ret
 
     return _check_and_install_ruby(ret, name, default, runas=runas)
 
 
-def gemset_present(name, ruby="default", runas=None):
-    """
+def gemset_present(name, ruby='default', runas=None):
+    '''
     Verify that the gemset is present.
 
     name
@@ -197,31 +206,31 @@ def gemset_present(name, ruby="default", runas=None):
         The ruby version this gemset belongs to.
     runas : None
         The use user to run rvm as.
-    """
+    '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     ret = _check_rvm(ret)
-    if ret["result"] == False:
+    if ret['result'] == False:
         return ret
 
-    if name.find("@") != -1:
-        ruby, name = name.split("@")
+    if name.find('@') != -1:
+        ruby, name = name.split('@')
         ret = _check_ruby(ret, ruby)
-        if not ret["result"]:
-            ret["result"] = False
-            ret["comment"] = "Requested ruby implementation was not found."
+        if not ret['result']:
+            ret['result'] = False
+            ret['comment'] = 'Requested ruby implementation was not found.'
             return ret
 
-    if name in __salt__["rvm.gemset_list"](ruby, runas=runas):
-        ret["result"] = True
-        ret["comment"] = "Gemset already exists."
+    if name in __salt__['rvm.gemset_list'](ruby, runas=runas):
+        ret['result'] = True
+        ret['comment'] = 'Gemset already exists.'
     else:
-        if __salt__["rvm.gemset_create"](ruby, name, runas=runas):
-            ret["result"] = True
-            ret["comment"] = "Gemset successfully created."
-            ret["changes"][name] = "created"
+        if __salt__['rvm.gemset_create'](ruby, name, runas=runas):
+            ret['result'] = True
+            ret['comment'] = 'Gemset successfully created.'
+            ret['changes'][name] = 'created'
         else:
-            ret["result"] = False
-            ret["comment"] = "Gemset could not be created."
+            ret['result'] = False
+            ret['comment'] = 'Gemset could not be created.'
 
     return ret
