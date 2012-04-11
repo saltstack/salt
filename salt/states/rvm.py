@@ -193,6 +193,10 @@ def installed(name, default=False, runas=None):
     if ret['result'] == False:
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
+        return ret
+
     return _check_and_install_ruby(ret, name, default, runas=runas)
 
 
@@ -210,10 +214,10 @@ def gemset_present(name, ruby='default', runas=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     ret = _check_rvm(ret)
-    if ret['result'] == False:
+    if ret['result'] is False:
         return ret
 
-    if name.find('@') != -1:
+    if '@' in name:
         ruby, name = name.split('@')
         ret = _check_ruby(ret, ruby)
         if not ret['result']:
@@ -225,6 +229,10 @@ def gemset_present(name, ruby='default', runas=None):
         ret['result'] = True
         ret['comment'] = 'Gemset already exists.'
     else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Set to install gemset {0}'.format(name)
+            return ret
         if __salt__['rvm.gemset_create'](ruby, name, runas=runas):
             ret['result'] = True
             ret['comment'] = 'Gemset successfully created.'
