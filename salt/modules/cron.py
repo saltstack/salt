@@ -130,7 +130,6 @@ def set_special(user, special, cmd):
     return 'new'
 
 
-# FIXME: Too many arguments; see pylint; use *args, **kwargs
 def set_job(user, minute, hour, dom, month, dow, cmd):
     '''
     Sets a cron job up for a specified user.
