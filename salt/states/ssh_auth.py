@@ -36,7 +36,31 @@ name.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9fJ5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
+
+# Import python libs
 import re
+
+def _present_test(user, name, source, config):
+    '''
+    Run checks for "present"
+    '''
+    if source:
+        pass
+    check = __salt__['check_key'](user, name, config)
+    if check == 'update':
+        comment = (
+                'Key {0} for user {1} is set to be updated'
+                ).format(name, user)
+    elif check == 'add':
+        comment = (
+                'Key {0} for user {1} is set to be added'
+                ).format(name, user)
+    elif check == 'exists':
+        comment = ('The authorized host key {0} is already present '
+                          'for user {1}'.format(name, user))
+
+    return comment
+
 
 def present(
         name,
@@ -44,7 +68,7 @@ def present(
         enc='ssh-rsa',
         comment='',
         source='',
-        options=[],       # FIXME: mutable type; http://goo.gl/ToU2z
+        options=[],
         config='.ssh/authorized_keys'):
     '''
     Verifies that the specified ssh key is present for the specified user
@@ -77,6 +101,10 @@ def present(
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = _present_test(user, name, source, config)
 
     if source != '':
         data = __salt__['ssh.set_auth_key_from_file'](
