@@ -44,8 +44,17 @@ def _present_test(user, name, source, config):
     '''
     Run checks for "present"
     '''
+    result = None
     if source:
-        pass
+        keys = check_key_file(user, source, config)
+        if keys:
+            comment = ('A number of keys are going to be updated from the '
+                       'keyfile: {0}').format(source)
+        else:
+            result = True
+            comment = (
+                    'All host keys in file {0} are already present'
+                    ).format(source)
     check = __salt__['check_key'](user, name, config)
     if check == 'update':
         comment = (
@@ -56,10 +65,11 @@ def _present_test(user, name, source, config):
                 'Key {0} for user {1} is set to be added'
                 ).format(name, user)
     elif check == 'exists':
+        result = True
         comment = ('The authorized host key {0} is already present '
                           'for user {1}'.format(name, user))
 
-    return comment
+    return result, comment
 
 
 def present(
@@ -103,8 +113,12 @@ def present(
            'comment': ''}
 
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = _present_test(user, name, source, config)
+        ret['result'], ret['comment'] = _present_test(
+                user,
+                name,
+                source,
+                config
+                )
 
     if source != '':
         data = __salt__['ssh.set_auth_key_from_file'](
