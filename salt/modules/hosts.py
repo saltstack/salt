@@ -178,7 +178,7 @@ def add_host(ip, alias):
             newline = comps[0] + '\t'
             for existing in comps[1:]:
                 newline += '\t' + existing
-            newline += '\t' + alias
+            newline += '\t' + alias + '\n'
             lines.remove(lines[ind])
             lines.append(newline)
             ovr = True
