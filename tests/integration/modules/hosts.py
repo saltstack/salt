@@ -128,11 +128,13 @@ class HostsModuleTest(integration.ModuleCase):
         assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2'])
         assert self.run_function('hosts.add_host', ['192.168.1.2', 'oldhost2'])
         assert self.run_function('hosts.add_host', ['192.168.1.3', 'host3.fqdn.com'])
+        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2-reorder'])
+        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1-reorder'])
 
         # now read the lines and ensure they're formatted correctly
         lines = open(HFN, 'r').readlines()
         self.assertEqual(lines, [
-            "192.168.1.1\t\thost1.fqdn.com\thost1\n",
-            "192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\n",
             "192.168.1.3\t\thost3.fqdn.com\n",
+            "192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\thost2-reorder\n",
+            "192.168.1.1\t\thost1.fqdn.com\thost1\thost1-reorder\n",
             ])
