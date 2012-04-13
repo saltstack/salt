@@ -174,6 +174,21 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     return _validate_keys(full)
 
 
+def check_key_file(user, keysource, config='.ssh/authorized_keys'):
+    '''
+    Check a keyfile from a source destination against the local keys and
+    return the keys to change
+    '''
+    ret = {}
+    keyfile = __salt__['cp.cahce_file'](keysource)
+    if not keyfile:
+        return ret
+    s_keys = _validate_keys(keyfile)
+    for key in s_keys:
+        ret[key] = check_key(user, k_keys[key], config)
+    return ret
+
+
 def check_key(user, key, config='.ssh/authorized_keys'):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
