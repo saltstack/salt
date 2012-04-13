@@ -124,7 +124,7 @@ def _validate_keys(key_file):
                         'comment': comment,
                         'options': options}
     except IOError:
-        return 'fail'
+        return {}
 
     return ret
 
