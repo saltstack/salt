@@ -124,7 +124,7 @@ def _validate_keys(key_file):
                         'comment': comment,
                         'options': options}
     except IOError:
-        return "fail"
+        return 'fail'
 
     return ret
 
@@ -266,7 +266,7 @@ def set_auth_key_from_file(
         return 'fail'
 
     newkey = {}
-    rval = ""
+    rval = ''
     newkey = _validate_keys(lfile)
     for k in newkey.keys():
         rval += set_auth_key(user, k, newkey[k]['enc'], newkey[k]['comment'], newkey[k]['options'], config)
@@ -297,7 +297,7 @@ def set_auth_key(
         salt '*' ssh.set_auth_key <user> <key> dsa 'my key' '[]' .ssh/authorized_keys
     '''
     if len(key.split()) > 1:
-        return "invalid"
+        return 'invalid'
 
     enc = _refine_enc(enc)
     uinfo = __salt__['user.info'](user)
