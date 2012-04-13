@@ -182,6 +182,16 @@ def absent(name, user, config='.ssh/authorized_keys'):
            'result': True,
            'comment': ''}
 
+    if __opts__['test']:
+        check = __salt__['check_key'](user, name, config)
+        if check == 'update' or check == 'exists':
+            ret['return'] = None
+            ret['comment'] = 'Key {0} is set for removal'.format(name)
+            return ret
+        else:
+            ret['comment'] = 'Key is already absent'
+            return ret
+
     ret['comment'] = __salt__['ssh.rm_auth_key'](user, name, config)
 
     if ret['comment'] == 'User authorized keys file not present':
