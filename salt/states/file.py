@@ -1006,11 +1006,11 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     if not __salt__['file.contains'](name, before, limit):
         # Pattern not found; try to guess why
         if __salt__['file.contains'](name, after, limit):
-            ret['comment'] = "Edit already performed"
+            ret['comment'] = 'Edit already performed'
             ret['result'] = True
             return ret
         else:
-            ret['comment'] = "Pattern not matched"
+            ret['comment'] = 'Pattern not matched'
             return ret
 
     # should be ok now; perform the edit
@@ -1020,10 +1020,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     ret['result'] = __salt__['file.contains'](name, after, limit)
 
     if ret['result']:
-        ret['comment'] = "File successfully edited"
+        ret['comment'] = 'File successfully edited'
         ret['changes'].update({'old': before, 'new': after})
     else:
-        ret['comment'] = "Expected edit does not appear in file"
+        ret['comment'] = 'Expected edit does not appear in file'
 
     return ret
 
@@ -1049,7 +1049,7 @@ def comment(name, regex, char='#', backup='.bak'):
     if not __salt__['file.contains'](name, regex):
         if __salt__['file.contains'](name, unanchor_regex,
                 limit=COMMENT_REGEX.format(char)):
-            ret['comment'] = "Pattern already commented"
+            ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
         else:
@@ -1065,11 +1065,11 @@ def comment(name, regex, char='#', backup='.bak'):
             limit=COMMENT_REGEX.format(char))
 
     if ret['result']:
-        ret['comment'] = "Commented lines successfully"
+        ret['comment'] = 'Commented lines successfully'
         ret['changes'] = {'old': '',
                 'new': 'Commented lines matching: {0}'.format(regex)}
     else:
-        ret['comment'] = "Expected commented lines not found"
+        ret['comment'] = 'Expected commented lines not found'
 
     return ret
 
@@ -1095,7 +1095,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     if not __salt__['file.contains'](name, unanchor_regex,
             limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char)):
         if __salt__['file.contains'](name, regex):
-            ret['comment'] = "Pattern already uncommented"
+            ret['comment'] = 'Pattern already uncommented'
             ret['result'] = True
             return ret
         else:
@@ -1108,11 +1108,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
     ret['result'] = __salt__['file.contains'](name, regex)
 
     if ret['result']:
-        ret['comment'] = "Uncommented lines successfully"
+        ret['comment'] = 'Uncommented lines successfully'
         ret['changes'] = {'old': '',
                 'new': 'Uncommented lines matching: {0}'.format(regex)}
     else:
-        ret['comment'] = "Expected uncommented lines not found"
+        ret['comment'] = 'Expected uncommented lines not found'
 
     return ret
 
@@ -1155,9 +1155,9 @@ def append(name, text):
         try:
             lines = chunk.split('\n')
         except AttributeError:
-            logger.debug("Error appending text to %s; given object is: %s",
+            logger.debug('Error appending text to %s; given object is: %s',
                     name, type(chunk))
-            return _error(ret, "Given text is not a string")
+            return _error(ret, 'Given text is not a string')
 
         for line in lines:
             if __salt__['file.contains'](name, line, escape=True):
@@ -1169,13 +1169,13 @@ def append(name, text):
 
     count = len(ret['changes'].get('new', []))
 
-    ret['comment'] = "Appended {0} lines".format(count)
+    ret['comment'] = 'Appended {0} lines'.format(count)
     ret['result'] = True
     return ret
 
 
 def touch(name, atime=None, mtime=None, makedirs=False):
-    """
+    '''
     Replicate the 'nix "touch" command to create a new empty
     file or update the atime and mtime of an existing  file.
 
@@ -1185,7 +1185,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
           file.touch
 
     .. versionadded:: 0.9.5
-    """
+    '''
     ret = {
         'name': name,
         'changes': {},
@@ -1203,9 +1203,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
     if not exists and ret['result']:
-        ret["comment"] = 'Created empty file {0}'.format(name)
-        ret["changes"]['new'] = name
+        ret['comment'] = 'Created empty file {0}'.format(name)
+        ret['changes']['new'] = name
     elif exists and ret['result']:
-        ret["comment"] = 'Updated times on file {0}'.format(name)
+        ret['comment'] = 'Updated times on file {0}'.format(name)
 
     return ret
