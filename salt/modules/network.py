@@ -164,6 +164,26 @@ def _cidr_to_ipv4_netmask(cidr_bits):
     return netmask
 
 
+def _number_of_set_bits_to_ipv4_netmask(set_bits):
+    '''
+    Returns an IPv4 netmask from the integer representation of that mask.
+
+    Ex. 0xffffff00 -> '255.255.255.0'
+    '''
+    return _cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
+
+def _number_of_set_bits(x):
+    '''
+    Returns the number of bits that are set in a 32bit int
+    '''
+    #Taken from http://stackoverflow.com/a/4912729. Many thanks!
+    x -= (x >> 1) & 0x55555555
+    x = ((x >> 2) & 0x33333333) + (x & 0x33333333)
+    x = ((x >> 4) + x) & 0x0f0f0f0f
+    x += x >> 8
+    x += x >> 16
+    return x & 0x0000003f
+
 def interfaces():
     '''
     Returns a dictionary of interfaces with various information about each
@@ -236,8 +256,67 @@ def interfaces():
         if iface:
             ret[iface] = data
             del iface, data
-    return ret
+    if ret:
+        return ret
 
+    # if nothing was returned then the minion probably doesn't have 'ip'
+    # try 'ifconfig' instead
+
+    piface = re.compile('^(\w+)')
+    pmac = re.compile('.*?(?:HWaddr|ether) (.*?)\s')
+    pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
+    pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
+    pmask = re.compile('.*?(?:Mask:|netmask )(0x[0-9a-fA-F]{8})|([\d\.]+)')
+    pmask6 = re.compile('.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
+    pupdown = re.compile('UP')
+    pbcast = re.compile('.*?(?:Bcast:|broadcast )([\d\.]+)')
+
+    out = __salt__['cmd.run']('ifconfig -a')
+    groups = re.compile('\r?\n(?=\S)').split(out)
+
+    for group in groups:
+        data = {}
+        iface = ''
+        updown = False
+        for line in group.split('\n'):
+            miface = piface.match(line)
+            mmac = pmac.match(line)
+            mip = pip.match(line)
+            mip6 = pip6.match(line)
+            mmask = pmask.match(line)
+            mupdown = pupdown.search(line)
+            mbcast = pbcast.match(line)
+            mmask6 = pmask6.match(line)
+            if miface:
+                iface = miface.group(1)
+            if mmac:
+                data['hwaddr'] = mmac.group(1)
+            if mip:
+                data['ipaddr'] = mip.group(1)
+            if mmask:
+                if mmask.group(1):
+                    data['netmask'] =  _number_of_set_bits_to_ipv4_netmask(
+                        int(mmask.group(1), 16))
+                else:
+                    data['netmask'] = mmask.group(2)
+            if mupdown:
+                updown = True
+            if mbcast:
+                data['broadcast'] = mbcast.group(1)
+            if mip6:
+                if mip6.group(1):
+                    data['ipaddr6'] = mip6.group(1)
+                else:
+                    data['ipaddr6'] = mip6.group(2)
+            if mmask6:
+                if mmask6.group(1):
+                    data['netmask6'] = mmask6.group(1)
+                else:
+                    data['netmask6'] = mmask6.group(2)
+        data['up'] = updown
+        ret[iface] = data
+        del data
+    return ret
 
 def up(interface):
     '''
