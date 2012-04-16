@@ -19,7 +19,8 @@ def managed(name,
         never_download=False,
         prompt='',
         __env__='base',
-        runas=None):
+        runas=None,
+        cwd=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -28,6 +29,8 @@ def managed(name,
     requirements
         Path to a pip requirements file. If the path begins with ``salt://``
         the file will be transfered from the master file server.
+    cwd
+        Path to the working directory where "pip install" is executed.
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -117,7 +120,7 @@ def managed(name,
                 new_reqs = __salt__['cp.cache_local_file'](requirements)
 
             before = set(__salt__['pip.freeze'](bin_env=name))
-            __salt__['pip.install'](requirements=new_reqs, bin_env=name)
+            __salt__['pip.install'](requirements=new_reqs, bin_env=name, runas=runas, cwd=cwd)
             after = set(__salt__['pip.freeze'](bin_env=name))
 
             new = list(after - before)
