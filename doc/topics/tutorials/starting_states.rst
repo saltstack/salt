@@ -442,11 +442,11 @@ This example shows a very basic python SLS file:
     #!py
 
     def run():
-    '''
-    Install the django package
-    '''
-    return {'include': ['python'],
-            'django': {'pkg': ['installed']}}
+        '''
+        Install the django package
+        '''
+        return {'include': ['python'],
+                'django': {'pkg': ['installed']}}
 
 This is a very simple example, the first line has a SLS shebang line that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
