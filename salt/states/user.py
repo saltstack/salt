@@ -89,7 +89,7 @@ def _changes(
                 if lusr['other'] != other:
                     change['other'] = other
     if not found:
-        return
+        return False
     return change
 
 def present(
@@ -219,36 +219,37 @@ def present(
             ret['comment'] = 'Updated user {0}'.format(name)
         return ret
  
-    # The user is not present, make it!
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'User {0} set to be added'.format(name)
-        return ret
-    if __salt__['user.add'](name,
-                            uid=uid,
-                            gid=gid,
-                            groups=groups,
-                            home=home,
-                            shell=shell,
-                            fullname=fullname,
-                            roomnumber=roomnumber,
-                            workphone=workphone,
-                            homephone=homephone,
-                            other=other,
-                            unique=unique):
-        ret['comment'] = 'New user {0} created'.format(name)
-        ret['changes'] = __salt__['user.info'](name)
-        if password:
-            __salt__['shadow.set_password'](name, password)
-            spost = __salt__['shadow.info'](name)
-            if spost['pwd'] != password:
-                ret['comment'] = ('User {0} created but failed to set'
-                ' password to {1}').format(name, password)
-                ret['result'] = False
-            ret['changes']['password'] = password
-    else:
-        ret['comment'] = 'Failed to create new user {0}'.format(name)
-        ret['result'] = False
+    if changes is False:
+        # The user is not present, make it!
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'User {0} set to be added'.format(name)
+            return ret
+        if __salt__['user.add'](name,
+                                uid=uid,
+                                gid=gid,
+                                groups=groups,
+                                home=home,
+                                shell=shell,
+                                fullname=fullname,
+                                roomnumber=roomnumber,
+                                workphone=workphone,
+                                homephone=homephone,
+                                other=other,
+                                unique=unique):
+            ret['comment'] = 'New user {0} created'.format(name)
+            ret['changes'] = __salt__['user.info'](name)
+            if password:
+                __salt__['shadow.set_password'](name, password)
+                spost = __salt__['shadow.info'](name)
+                if spost['pwd'] != password:
+                    ret['comment'] = ('User {0} created but failed to set'
+                    ' password to {1}').format(name, password)
+                    ret['result'] = False
+                ret['changes']['password'] = password
+        else:
+            ret['comment'] = 'Failed to create new user {0}'.format(name)
+            ret['result'] = False
 
     return ret
 
