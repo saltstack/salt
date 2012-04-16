@@ -24,7 +24,7 @@ try:
     import MySQLdb.cursors
     has_mysqldb = True
 except ImportError:
-    has_mysqldb = True
+    has_mysqldb = False
 
 log = logging.getLogger(__name__)
 __opts__ = {}

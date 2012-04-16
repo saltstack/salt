@@ -21,7 +21,7 @@ try:
     import libvirt
     has_libvirt = True
 except ImportError:
-    has_libvirt = True
+    has_libvirt = False
 
 # Import Third party modules
 import yaml
