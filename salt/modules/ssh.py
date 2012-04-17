@@ -185,11 +185,17 @@ def check_key_file(user, keysource, config='.ssh/authorized_keys'):
         return ret
     s_keys = _validate_keys(keyfile)
     for key in s_keys:
-        ret[key] = check_key(user, k_keys[key], config)
+        ret[key] = check_key(
+                user,
+                key,
+                s_keys['enc'],
+                s_keys['comment'],
+                s_keys['options'],
+                config)
     return ret
 
 
-def check_key(user, key, config='.ssh/authorized_keys'):
+def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
 
@@ -198,14 +204,15 @@ def check_key(user, key, config='.ssh/authorized_keys'):
         salt '*' ssh.check_key <user> <key>
     '''
     current = auth_keys(user, config)
+    nline = _format_auth_line(key, enc, comment, options)
     if key in current:
-        if not set(current[key]['options']) == set(options):
+        cline = _format_auth_line(
+                key,
+                current['enc'],
+                current['comment'],
+                current['options'])
+        if cline != nline:
             return 'update'
-        if not current[key]['enc'] == enc:
-            return 'update'
-        if not current[key]['comment'] == comment:
-            if comment:
-                return 'update'
     else:
         return 'add'
     return 'exists'
@@ -316,7 +323,7 @@ def set_auth_key(
 
     enc = _refine_enc(enc)
     uinfo = __salt__['user.info'](user)
-    status = check_key(user, key, config)
+    status = check_key(user, key, enc, comment, options, config)
     if status == 'update':
         _replace_auth_key(
                 user,
