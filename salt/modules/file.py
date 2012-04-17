@@ -6,13 +6,16 @@ data
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
+# Import python libs
 import os
 import grp
 import pwd
 import time
 import hashlib
 import sys
+import stat
 
+# Import salt libs
 import salt.utils.find
 from salt.exceptions import SaltInvocationError
 
@@ -596,9 +599,7 @@ def stats(path, hash_type='md5', follow_symlink=False):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = str(oct(pstat.st_mode)[-4:])
-    if mode.startswith('0'):
-        ret['mode'] = ret['mode'][1:]
+    ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
     ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
@@ -613,7 +614,7 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'link'
     if stat.S_ISFIFO(pstat.st_mode):
         ret['type'] = 'pipe'
-    if stat.S_ISOCK(pstat.st_mode):
+    if stat.S_ISSOCK(pstat.st_mode):
         ret['type'] = 'socket'
     return ret
 
