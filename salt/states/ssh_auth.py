@@ -40,7 +40,7 @@ name.
 # Import python libs
 import re
 
-def _present_test(user, name, source, config):
+def _present_test(user, name, enc, comment, options, source, config):
     '''
     Run checks for "present"
     '''
@@ -55,7 +55,7 @@ def _present_test(user, name, source, config):
             comment = (
                     'All host keys in file {0} are already present'
                     ).format(source)
-    check = __salt__['check_key'](user, name, config)
+    check = __salt__['check_key'](user, name, enc, comment, options, config)
     if check == 'update':
         comment = (
                 'Key {0} for user {1} is set to be updated'
@@ -116,6 +116,9 @@ def present(
         ret['result'], ret['comment'] = _present_test(
                 user,
                 name,
+                enc,
+                comment,
+                options,
                 source,
                 config
                 )
@@ -197,7 +200,13 @@ def absent(name, user, config='.ssh/authorized_keys'):
            'comment': ''}
 
     if __opts__['test']:
-        check = __salt__['check_key'](user, name, config)
+        check = __salt__['check_key'](
+                user,
+                name,
+                '',
+                '',
+                [],
+                config)
         if check == 'update' or check == 'exists':
             ret['return'] = None
             ret['comment'] = 'Key {0} is set for removal'.format(name)
