@@ -46,7 +46,7 @@ def _present_test(user, name, source, config):
     '''
     result = None
     if source:
-        keys = check_key_file(user, source, config)
+        keys = __salt__['check_key_file'](user, source, config)
         if keys:
             comment = ('A number of keys are going to be updated from the '
                        'keyfile: {0}').format(source)
