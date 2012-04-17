@@ -572,3 +572,48 @@ def touch(name, atime=None, mtime=None):
         return False
 
     return os.path.exists(name)
+
+
+def stats(path, hash_type='md5', follow_symlink=False):
+    '''
+    Return a dict containing the stats for a given file
+
+    CLI Example::
+
+        salt '*' file.stats /etc/passwd
+    '''
+    ret = {}
+    if not os.path.exists(path):
+        return ret
+    if follow_symlink:
+        pstat = os.stat(path)
+    else:
+        pstat = os.lstat(path)
+    ret['inode'] = pstat.st_ino
+    ret['uid'] = pstat.st_uid
+    ret['gid'] = pstat.st_gid
+    ret['atime'] = pstat.st_atime
+    ret['mtime'] = pstat.st_mtime
+    ret['ctime'] = pstat.st_ctime
+    ret['size'] = pstat.st_size
+    ret['mode'] = str(oct(pstat.st_mode)[-4:])
+    if mode.startswith('0'):
+        ret['mode'] = ret['mode'][1:]
+    ret['sum'] = get_sum(path, hash_type)
+    ret['type'] = 'file'
+    if stat.S_ISDIR(pstat.st_mode):
+        ret['type'] = 'dir'
+    if stat.S_ISCHR(pstat.st_mode):
+        ret['type'] = 'char'
+    if stat.S_ISBLK(pstat.st_mode):
+        ret['type'] = 'block'
+    if stat.S_ISREG(pstat.st_mode):
+        ret['type'] = 'file'
+    if stat.S_ISLNK(pstat.st_mode):
+        ret['type'] = 'link'
+    if stat.S_ISFIFO(pstat.st_mode):
+        ret['type'] = 'pipe'
+    if stat.S_ISOCK(pstat.st_mode):
+        ret['type'] = 'socket'
+    return ret
+
