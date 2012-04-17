@@ -471,7 +471,7 @@ def comment(path, regex, char='#', backup='.bak'):
     '''
     # Largely inspired by Fabric's contrib.files.comment()
 
-    regex = "{0}({1}){2}".format(
+    regex = '{0}({1}){2}'.format(
             '^' if regex.startswith('^') else '',
             regex.lstrip('^').rstrip('$'),
             '$' if regex.endswith('$') else '')
@@ -527,7 +527,7 @@ def append(path, *args):
         for line in args:
             f.write('{0}\n'.format(line))
 
-    return "Wrote {0} lines to '{1}'".format(len(args), path)
+    return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
 def touch(name, atime=None, mtime=None):
     '''
@@ -550,7 +550,7 @@ def touch(name, atime=None, mtime=None):
     if mtime and mtime.isdigit():
         mtime = int(mtime)
     try:
-        with open(name, "a"):
+        with open(name, 'a'):
             if not atime and not mtime:
                 times = None
             elif not mtime and atime:
@@ -561,9 +561,11 @@ def touch(name, atime=None, mtime=None):
                 times = (atime, mtime)
             os.utime(name, times)
     except TypeError as exc:
-        msg = "atime and mtime must be integers"
+        msg = 'atime and mtime must be integers'
         raise SaltInvocationError(msg)
     except (IOError, OSError) as exc:
         return False
 
     return os.path.exists(name)
+
+
