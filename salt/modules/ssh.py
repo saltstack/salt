@@ -208,9 +208,9 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
     if key in current:
         cline = _format_auth_line(
                 key,
-                current['enc'],
-                current['comment'],
-                current['options'])
+                current[key]['enc'],
+                current[key]['comment'],
+                current[key]['options'])
         if cline != nline:
             return 'update'
     else:
