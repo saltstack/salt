@@ -407,6 +407,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
 
     return __salt__['cmd.run'](cmd)
 
+
 def uncomment(path, regex, char='#', backup='.bak'):
     '''
     Uncomment specified commented lines in a file
@@ -439,6 +440,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         after=r'\1',
         limit=regex.lstrip('^'),
         backup=backup)
+
 
 def comment(path, regex, char='#', backup='.bak'):
     '''
@@ -482,6 +484,7 @@ def comment(path, regex, char='#', backup='.bak'):
         after=r'{0}\1'.format(char),
         backup=backup)
 
+
 def contains(path, text, limit='', escape=False):
     '''
     Return True if the file at ``path`` contains ``text``
@@ -509,6 +512,7 @@ def contains(path, text, limit='', escape=False):
 
     return bool(result)
 
+
 def append(path, *args):
     '''
     Append text to the end of a file
@@ -528,6 +532,7 @@ def append(path, *args):
             f.write('{0}\n'.format(line))
 
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
+
 
 def touch(name, atime=None, mtime=None):
     '''
@@ -567,5 +572,3 @@ def touch(name, atime=None, mtime=None):
         return False
 
     return os.path.exists(name)
-
-
