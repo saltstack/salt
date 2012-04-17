@@ -180,7 +180,7 @@ def check_key_file(user, keysource, config='.ssh/authorized_keys'):
     return the keys to change
     '''
     ret = {}
-    keyfile = __salt__['cp.cahce_file'](keysource)
+    keyfile = __salt__['cp.cache_file'](keysource)
     if not keyfile:
         return ret
     s_keys = _validate_keys(keyfile)
