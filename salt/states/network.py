@@ -108,12 +108,12 @@ def managed(
         'comment': 'Interface {0} is up to date.'.format(name)
     }
            
-    # get current iface run through settings filter
-    # get proposed iface submit to builder
-    # diff iface
+    # build interface and vlans list
     inames = [name]
     if type in ['eth', 'bond']:
         inames += ['%s.%s' % (name, i) for i in kwargs.get('vlans',[])]
+
+    # Build each interface
     for iname in inames:
         try:
             change = '%s interface' % iname
@@ -129,6 +129,7 @@ def managed(
             ret['comment'] = error.message
             return ret
 
+    # Setup up bond modprobe script if required
     if type == 'bond':
         try:
             old = __salt__['network.get_bond'](name)
@@ -144,6 +145,7 @@ def managed(
             ret['comment'] = error.message
             return ret
 
+    #Bring up/shutdown interfaces
     for iname in inames:
         try:
             if enabled:
