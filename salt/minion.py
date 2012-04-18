@@ -364,7 +364,11 @@ class Minion(object):
         if self.opts['multiprocessing']:
             fn_ = os.path.join(self.proc_dir, ret['jid'])
             if os.path.isfile(fn_):
-                os.remove(fn_)
+                try:
+                    os.remove(fn_)
+                except (OSError, IOError):
+                    # The file is gone already
+                    pass
         log.info('Returning information for job: {0}'.format(ret['jid']))
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
