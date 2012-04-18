@@ -4,6 +4,7 @@
 DNS{{loop.index}}={{server}}
 {% endfor -%}
 {% if ethtool %}ETHTOOL_OPTS={%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}
+{%endif%}{%if bonding %}BONDING_OPTS={%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}
 {%endif%}{% if gateway %}GATEWAY={{gateway}}
 {%endif%}{% if addr %}HWADDR={{addr}}
 {%endif%}{% if ipaddr %}IPADDR={{ipaddr}}

@@ -410,6 +410,10 @@ def _parse_settings_eth(opts, iface):
     if ethtool:
         result['ethtool'] = ethtool
 
+    bonding = _parse_settings_bond(opts, iface)
+    if bonding:
+        result['bonding'] = bonding
+
     if 'addr' in opts:
         if _MAC_REGEX.match(opts['addr']):
             result['addr'] = opts['addr']
@@ -463,9 +467,9 @@ def _write_file(iface, data, folder, pattern):
     fout.close()
 
 def build_bond(iface, settings):
-    opts = _parse_settings_eth(settings, iface)
+    opts = _parse_settings_bond(settings, iface)
     template = env.get_template('conf.jinja')
-    data = template.render(opts)
+    data = template.render({'name': iface, 'bonding': opts})
     _write_file(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
     return _read_file(path)
