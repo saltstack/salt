@@ -122,6 +122,7 @@ def present(
                 source,
                 config
                 )
+        return ret
 
     if source != '':
         data = __salt__['ssh.set_auth_key_from_file'](
