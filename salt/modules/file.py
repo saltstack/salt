@@ -616,5 +616,6 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'pipe'
     if stat.S_ISSOCK(pstat.st_mode):
         ret['type'] = 'socket'
+    ret['target'] = os.path.realpath(path)
     return ret
 
