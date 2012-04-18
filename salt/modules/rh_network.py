@@ -470,6 +470,13 @@ def build(iface, type, settings):
     if type not in _IFACE_TYPES:
         _raise_error(iface, type, _IFACE_TYPES)
 
+    if type == 'slave':
+        settings['slave'] = 'yes'
+        if 'master' not in settings:
+            msg = 'master is a required setting for slave interfaces'
+            log.error(msg)
+            raise AttributeError(msg)
+
     if type in ['eth', 'bond', 'slave']:
         opts = _parse_settings_eth(settings, iface)
         template = env.get_template('eth.jinja')
