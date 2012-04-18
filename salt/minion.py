@@ -473,6 +473,7 @@ class Minion(object):
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
+        socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
         if self.opts['sub_timeout']:
             last = time.time()
@@ -498,6 +499,7 @@ class Minion(object):
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
+                    socket.setsockopt(zmq.IDENTITY, self.opts['id'])
                     socket.connect(self.master_pub)
                     last = time.time()
                 time.sleep(0.05)
