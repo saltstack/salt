@@ -43,9 +43,9 @@ bond0:
       - 8.8.4.4
     - ipv6:
     - enabled: False
-    - used_in:
-      - eth2
-      - eth3
+    - use_in:
+      - network: eth2
+      - network: eth3
     - mode: 802.3ad
     - miimon: 100
     - arp_interval: 250
@@ -68,31 +68,35 @@ bond0:
     - gro: off
     - lro: off
 
-bond0.2
+bond0.2:
   network:
-    - vlan
-    - ipaddr:10.1.0.2
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.2
     - use:
       - network: bond0
 
-bond0.3
+bond0.3:
   network:
-    - vlan
-    - ipaddr:10.1.0.3
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.3
     - use:
       - network: bond0
 
-bond0.10
+bond0.10:
   network:
-    - vlan
-    - ipaddr:10.1.0.4
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.4
     - use:
       - network: bond0
 
-bond0.12
+bond0.12:
   network:
-    - vlan
-    - ipaddr:10.1.0.5
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.5
     - use:
       - network: bond0
 '''
