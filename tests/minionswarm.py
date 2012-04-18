@@ -9,6 +9,7 @@ import os
 import optparse
 import subprocess
 import tempfile
+import shutil
 
 # Import third party libs
 import yaml
@@ -24,6 +25,17 @@ def parse():
             default=5,
             type='int',
             help='The number of minions to make')
+    parser.add_option('--master',
+            dest='master',
+            default='salt',
+            help='The location of the salt master that this swarm will serve')
+    parser.add_option('-f',
+            '--foreground',
+            dest='foreground',
+            default=False,
+            action='store_true',
+            help=('Run the minions with debug output of the swarm going to '
+                  'the terminal'))
 
     options, args = parser.parse_args()
     
@@ -54,6 +66,7 @@ class Swarm(object):
         data = {'id': os.path.basename(path),
                 'pki_dir': os.path.join(dpath, 'pki'),
                 'cache_dir': os.path.join(dpath, 'cache'),
+                'master': self.opts['master'],
                }
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
@@ -64,10 +77,14 @@ class Swarm(object):
         Iterate over the config files and start up the minions
         '''
         for path in self.confs:
-            cmd = 'salt-minion -c {0} --pid-file {1} -d &'.format(
+            cmd = 'salt-minion -c {0} --pid-file {1}'.format(
                     path,
                     '{0}.pid'.format(path)
                     )
+            if self.opts['foreground']:
+                cmd += ' -l debug &'
+            else:
+                cmd += ' -d &'
             subprocess.call(cmd, shell=True)
 
     def prep_configs(self):
@@ -84,6 +101,8 @@ class Swarm(object):
         for path in self.confs:
             try:
                 os.remove(path)
+                os.remove('{0}.pid'.format(path))
+                shutil.rmtree('{0}.d'.format(path))
             except:
                 pass
 
@@ -93,7 +112,6 @@ class Swarm(object):
         '''
         self.prep_configs()
         self.start_minions()
-        #self.clean_configs()
 
 if __name__ == '__main__':
     swarm = Swarm(parse())
