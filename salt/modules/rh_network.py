@@ -141,19 +141,19 @@ def _parse_settings_bond(opts, iface):
     }
     
     if opts['mode'] in ['balance-rr', '0']:
-        return _parse_settings_bond_0(opts, iface, bod_def)
+        return _parse_settings_bond_0(opts, iface, bond_def)
     elif opts['mode'] in ['active-backup', '1']:
-        return _parse_settings_bond_1(opts, iface, bod_def)
+        return _parse_settings_bond_1(opts, iface, bond_def)
     elif opts['mode'] in ['balance-xor', '2']:
-        return _parse_settings_bond_2(opts, iface, bod_def)
+        return _parse_settings_bond_2(opts, iface, bond_def)
     elif opts['mode'] in ['broadcast', '3']:
-        return _parse_settings_bond_3(opts, iface, bod_def)
+        return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts['mode'] in ['802.3ad', '4']:
-        return _parse_settings_bond_4(opts, iface, bod_def)
+        return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts['mode'] in ['balance-tlb', '5']:
-        return _parse_settings_bond_5(opts, iface, bod_def)
+        return _parse_settings_bond_5(opts, iface, bond_def)
     elif opts['mode'] in ['balance-alb', '6']:
-        return _parse_settings_bond_6(opts, iface, bod_def)
+        return _parse_settings_bond_6(opts, iface, bond_def)
     else:
         valid = [ 
             '0', '1', '2', '3', '4', '5', '6', 
