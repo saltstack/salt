@@ -43,7 +43,7 @@ bond0:
       - 8.8.4.4
     - ipv6:
     - enabled: False
-    - used_in:
+    - use_in:
       - network: eth2
       - network: eth3
     - mode: 802.3ad
