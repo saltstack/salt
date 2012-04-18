@@ -269,6 +269,21 @@ def _check_perms(name, ret, user, group, mode):
     return ret, perms
 
 
+def _check_touch(name, atime, mtime):
+    '''
+    Check to see if a file needs to be updated or created
+    '''
+    if not os.path.exists(name):
+        return None, 'File {0} is set to be created'
+    stats = __salt__['file.stats'](name)
+    if not atime is None:
+        if str(atime) != str(stats['atime']):
+            return None, 'Times set to be updated on file {0}'.format(name)
+    if not mtime is None:
+        if str(mtime) != str(stats['mtime']):
+            return None, 'Times set to be updated on file {0}'.format(name)
+    return True, 'File {0} exists and has the correct times'.format(name)
+
 def _symlink_check(name, target, force):
     '''
     Check the symlink function
@@ -1242,6 +1257,10 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     if not os.path.isabs(name):
         _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
+
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _check_touch(name, atime, mtime)
+        return ret
 
     if makedirs:
         _makedirs(name)
