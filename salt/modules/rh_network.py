@@ -487,6 +487,8 @@ def build_interface(iface, type, settings):
 
     if type in ['eth', 'bond', 'slave']:
         opts = _parse_settings_eth(settings, iface)
+        if name.find('.') >= 0:
+            opts['vlan'] = 'yes'
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
