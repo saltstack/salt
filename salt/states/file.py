@@ -1045,6 +1045,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
             ret['comment'] = 'Pattern not matched'
             return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['result'] = None
+        return ret
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
 
@@ -1087,6 +1091,10 @@ def comment(name, regex, char='#', backup='.bak'):
         else:
             return _error(ret, '{0}: Pattern not found'.format(unanchor_regex))
 
+    if __opts__['test']:
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['result'] = None
+        return ret
     # Perform the edit
     __salt__['file.comment'](name, regex, char, backup)
 
@@ -1133,6 +1141,10 @@ def uncomment(name, regex, char='#', backup='.bak'):
         else:
             return _error(ret, '{0}: Pattern not found'.format(regex))
 
+    if __opts__['test']:
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['result'] = None
+        return ret
     # Perform the edit
     __salt__['file.uncomment'](name, regex, char, backup)
 
@@ -1195,6 +1207,11 @@ def append(name, text):
             if __salt__['file.contains'](name, line, escape=True):
                 continue
             else:
+                if __opts__['test']:
+                    ret['comment'] = 'File {0} is set to be updated'.format(
+                            name)
+                    ret['result'] = None
+                    return ret
                 __salt__['file.append'](name, line)
                 cgs = ret['changes'].setdefault('new', [])
                 cgs.append(line)
