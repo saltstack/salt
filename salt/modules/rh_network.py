@@ -53,6 +53,10 @@ _IFACE_TYPES = [
 ]
 
 def _error_msg(iface, option, expected):
+    '''
+    Build an appropriate error message from a given option and
+    a list of expected values.
+    '''
     msg = 'Invalid option -- Interface: %s, Option: %s, Expected: [%s]'
     return msg % (iface, option, '|'.join(expected))
 
@@ -61,6 +65,12 @@ def _log_default(iface, opt, value):
     log.info(msg % (iface, opt, value))
 
 def _parse_ethtool_opts(opts, iface):
+    '''
+    Fiters given options and outputs valid settings for ETHTOOLS_OPTS
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
     config = {}
     
     if opts.has_key('autoneg'):
@@ -163,7 +173,12 @@ def _parse_settings_bond(opts, iface):
         _raise_error(iface, 'mode', valid)
     
 def _parse_settings_bond_0(opts, iface, bond_def):
-
+    '''
+    Fiters given options and outputs valid settings for bond0. 
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
     bond = {'mode':'0'}
 
     valid = ['list of ips (up to 16)']
@@ -195,6 +210,12 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     
 def _parse_settings_bond_1(opts, iface, bond_def):
     
+    '''
+    Fiters given options and outputs valid settings for bond1. 
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
     bond = {'mode':'1'}
     
     for bo in ['miimon', 'downdelay', 'updelay']:
@@ -223,6 +244,12 @@ def _parse_settings_bond_1(opts, iface, bond_def):
     return bond
                     
 def _parse_settings_bond_2(opts, iface, bond_def):
+    '''
+    Fiters given options and outputs valid settings for bond2. 
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
     
     bond = {'mode':'2'}
     
@@ -264,6 +291,12 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         
 def _parse_settings_bond_3(opts, iface, bond_def):
 
+    '''
+    Fiters given options and outputs valid settings for bond3. 
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
     bond = {'mode':'3'}
 
     for bo in ['miimon', 'downdelay', 'updelay']:
@@ -292,6 +325,12 @@ def _parse_settings_bond_3(opts, iface, bond_def):
     return bond
         
 def _parse_settings_bond_4(opts, iface, bond_def):
+    '''
+    Fiters given options and outputs valid settings for bond4. 
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
 
     bond = {'mode':'4'}
 
@@ -337,6 +376,12 @@ def _parse_settings_bond_4(opts, iface, bond_def):
     
 def _parse_settings_bond_5(opts, iface, bond_def):
 
+    '''
+    Fiters given options and outputs valid settings for bond5. 
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
     bond = {'mode':'5'}
 
     for bo in ['miimon', 'downdelay', 'updelay']:
@@ -366,6 +411,12 @@ def _parse_settings_bond_5(opts, iface, bond_def):
         
 def _parse_settings_bond_6(opts, iface, bond_def):
 
+    '''
+    Fiters given options and outputs valid settings for bond6. 
+    If an option has a value that is not expected, this
+    fuction will log what the Interface, Setting and what it was 
+    expecting.
+    '''
     bond = {'mode':'6'}
 
     for bo in ['miimon', 'downdelay', 'updelay']:
@@ -394,6 +445,10 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 def _parse_settings_eth(opts, iface):
+    '''
+    Fiters given options and outputs valid settings for a
+    network interface.
+    '''
     result = {'name': iface}
     if 'proto' in opts:
         valid = ['none', 'bootp', 'dhcp']
@@ -441,6 +496,9 @@ def _parse_settings_eth(opts, iface):
     return result
 
 def _raise_error(iface, option, expected):
+    '''
+    Log and raise an error with a logical formated message.
+    '''
     msg = _error_msg(iface, option, expected)
     log.error(msg)
     raise AttributeError(msg)
@@ -456,6 +514,9 @@ def _read_file(path):
         return ''
 
 def _write_file(iface, data, folder, pattern):
+    '''
+    Writes a file to disk
+    '''
     filename = join(folder, pattern % iface) 
     if not exists(folder):
         msg = '%s cannot be written. %s does not exists'
@@ -467,6 +528,9 @@ def _write_file(iface, data, folder, pattern):
     fout.close()
 
 def build_bond(iface, settings):
+    '''
+    Create a bond script in /etc/modprobe.d
+    '''
     opts = _parse_settings_bond(settings, iface)
     template = env.get_template('conf.jinja')
     data = template.render({'name': iface, 'bonding': opts})
@@ -475,6 +539,9 @@ def build_bond(iface, settings):
     return _read_file(path)
 
 def build_interface(iface, type, settings):
+    '''
+    Build an interface script for a network interface.
+    '''
     if type not in _IFACE_TYPES:
         _raise_error(iface, type, _IFACE_TYPES)
 
@@ -497,15 +564,27 @@ def build_interface(iface, type, settings):
     return _read_file(path)
 
 def down(iface):
+    '''
+    Shutdown a network interface
+    '''
     __salt__['cmd.run']('ifdown %s' % iface)
 
 def get_bond(iface):
+    '''
+    Return the content of a bond script
+    '''
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
     return _read_file(path)
 
 def get_interface(iface):
+    '''
+    Return the contents of an interface script
+    '''
     path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
     return _read_file(path)
 
 def up(iface):
+    '''
+    Start up a network interface
+    '''
     __salt__['cmd.run']('ifup %s' % iface)
