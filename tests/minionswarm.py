@@ -49,8 +49,14 @@ class Swarm(object):
         '''
         fd, path = tempfile.mkstemp()
         os.close(fd)
-        data = {'id': os.path.basename(path)}
-        yaml.dump(path, data)
+        dpath = '{0}.d'.format(path)
+        os.makedirs(dpath)
+        data = {'id': os.path.basename(path),
+                'pki_dir': os.path.join(dpath, 'pki'),
+                'cache_dir': os.path.join(dpath, 'cache'),
+               }
+        with open(path, 'w+') as fp_:
+            yaml.dump(data, fp_)
         self.confs.add(path)
 
     def start_minions(self):
@@ -58,11 +64,11 @@ class Swarm(object):
         Iterate over the config files and start up the minions
         '''
         for path in self.confs:
-            cmd = 'salt-minion -c {0} --pid-file {1} -d'.format(
+            cmd = 'salt-minion -c {0} --pid-file {1} -d &'.format(
                     path,
                     '{0}.pid'.format(path)
                     )
-            subprocess.call(cmd)
+            subprocess.call(cmd, shell=True)
 
     def prep_configs(self):
         '''
@@ -87,7 +93,7 @@ class Swarm(object):
         '''
         self.prep_configs()
         self.start_minions()
-        self.clean_configs()
+        #self.clean_configs()
 
 if __name__ == '__main__':
     swarm = Swarm(parse())
