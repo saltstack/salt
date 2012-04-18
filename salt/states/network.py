@@ -108,16 +108,32 @@ def managed(
     # get proposed iface submit to builder
     # diff iface
     try:
-        old = __salt__['network.get'](name)
-        new = __salt__['network.build'](name, type, kwargs)
+        old = __salt__['network.get_interface'](name)
+        new = __salt__['network.build_interface'](name, type, kwargs)
         if not old and new:
-            ret['changes']['diff'] = 'Added ifcfg script'
+            ret['changes']['interface'] = 'Added network interface'
         elif old != new:
             diff = difflib.unified_diff(old, new)
-            ret['changes']['diff'] = ''.join(diff)
+            ret['changes']['interface'] = ''.join(diff)
     except AttributeError, error:
         ret['result'] = False
         ret['comment'] = error.message
+        return ret
+
+    if type == 'bond':
+        try:
+            old = __salt__['network.get_bond'](name)
+            new = __salt__['network.build_bond'](name, kwargs)
+            if not old and new:
+                ret['changes']['bond'] = 'Added bond'
+            elif old != new:
+                diff = difflib.unified_diff(old, new)
+                ret['changes']['bond'] = ''.join(diff)
+        except AttributeError, error:
+            #TODO Add a way of reversing the interface changes.
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
 
     return ret
            

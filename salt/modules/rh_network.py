@@ -43,6 +43,7 @@ _RH_CONFIG_BONDING_OPTS = [
     'use_carrier', 'lacp_rate', 'hashing-algorithm'
 ]
 _RH_NETWORK_SCRIPT_DIR = '/etc/sysconfig/network-scripts'
+_RH_NETWORK_CONF_FILES = '/etc/modprobe.d'
 _MAC_REGEX = re.compile('([0-9A-F]{1,2}:){5}[0-9A-F]{1,2}')
 _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
@@ -101,11 +102,7 @@ def _parse_ethtool_opts(opts, iface):
             else:
                 _raise_error(iface, option, valid)
 
-    result = []
-    for key in config:
-        result.append(key)
-        result.append(str(config[key]))
-    return ' '.join(result)
+    return config
 
 def _parse_settings_bond(opts, iface):
     '''
@@ -444,29 +441,36 @@ def _raise_error(iface, option, expected):
     log.error(msg)
     raise AttributeError(msg)
 
-def _read_file(iface):
+def _read_file(path):
     '''
     Reads and returns the contents of a file
     '''
-    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
     try:
         with open(path, 'rb') as contents:
             return contents.readlines()
     except:
         return ''
 
-def _write_file(iface, data):
-    filename = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
-    if not exists(_RH_NETWORK_SCRIPT_DIR):
+def _write_file(iface, data, folder, pattern):
+    filename = join(folder, pattern % iface) 
+    if not exists(folder):
         msg = '%s cannot be written. %s does not exists'
-        msg = msg % (filename, _RH_NETWORK_SCRIPT_DIR)
+        msg = msg % (filename, folder)
         log.error(msg)
         raise AttributeError(msg)
     fout = open(filename, 'w')
     fout.write(data)
     fout.close()
 
-def build(iface, type, settings):
+def build_bond(iface, settings):
+    opts = _parse_settings_eth(settings, iface)
+    template = env.get_template('conf.jinja')
+    data = template.render(opts)
+    _write_file(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
+    path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    return _read_file(path)
+
+def build_interface(iface, type, settings):
     if type not in _IFACE_TYPES:
         _raise_error(iface, type, _IFACE_TYPES)
 
@@ -482,8 +486,14 @@ def build(iface, type, settings):
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
-    _write_file(iface, ifcfg)
-    return _read_file(iface)
+    _write_file(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s')
+    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
+    return _read_file(path)
 
-def get(iface):
-    return _read_file(iface)
+def get_bond(iface):
+    path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    return _read_file(path)
+
+def get_interface(iface):
+    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
+    return _read_file(path)
