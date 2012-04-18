@@ -269,6 +269,30 @@ def _check_perms(name, ret, user, group, mode):
     return ret, perms
 
 
+def _symlink_check(name, target, force):
+    '''
+    Check the symlink function
+    '''
+    ret = None
+    if not os.path.exists(name):
+        comment = 'Symlink {0} to {1} is set for creation'.format(name, target)
+        return None, comment
+    if os.path.islink(name):
+        if not os.readlink(name) == target:
+            comment = 'Link {0} target is set to be changed to {1}'.format(
+                    name, target)
+            return None, comment
+        else:
+            return True, 'The symlink {0} is present'.format(name)
+    else:
+        if force:
+            return None, ('The file or directory {0} is set for removal to '
+                          'make way for a new symlink targeting {1}').format(
+                                  name, target)
+        return _error(ret, ('File or directory exists where the symlink {0} '
+                            'should be'.format(name)))
+
+
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
@@ -296,6 +320,10 @@ def symlink(name, target, force=False, makedirs=False):
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
+    
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _symlink_check(name, target, force)
+        return ret
 
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
@@ -351,6 +379,10 @@ def absent(name):
         return _error(ret, ('Specified file {0} is not an absolute'
                           ' path').format(name))
     if os.path.isfile(name) or os.path.islink(name):
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'File {0} is set for removal'.format(name)
+            return ret
         try:
             os.remove(name)
             ret['comment'] = 'Removed file {0}'.format(name)
