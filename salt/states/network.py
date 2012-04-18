@@ -127,26 +127,19 @@ def managed(
         'comment': 'Interface {0} is up to date.'.format(name)
     }
            
-    # build interface and vlans list
-    inames = [name]
-    if type in ['eth', 'bond']:
-        inames += ['%s.%s' % (name, i) for i in kwargs.get('vlans',[])]
-
-    # Build each interface
-    for iname in inames:
-        try:
-            change = '%s interface' % iname
-            old = __salt__['network.get_interface'](iname)
-            new = __salt__['network.build_interface'](iname, type, kwargs)
-            if not old and new:
-                ret['changes'][change] = 'Added network interface'
-            elif old != new:
-                diff = difflib.unified_diff(old, new)
-                ret['changes'][change] = ''.join(diff)
-        except AttributeError, error:
-            ret['result'] = False
-            ret['comment'] = error.message
-            return ret
+    # Build interface
+    try:
+        old = __salt__['network.get_interface'](name)
+        new = __salt__['network.build_interface'](name, type, kwargs)
+        if not old and new:
+            ret['changes']['interface'] = 'Added network interface'
+        elif old != new:
+            diff = difflib.unified_diff(old, new)
+            ret['changes']['interface'] = ''.join(diff)
+    except AttributeError, error:
+        ret['result'] = False
+        ret['comment'] = error.message
+        return ret
 
     # Setup up bond modprobe script if required
     if type == 'bond':
@@ -164,17 +157,16 @@ def managed(
             ret['comment'] = error.message
             return ret
 
-    #Bring up/shutdown interfaces
-    for iname in inames:
-        try:
-            if enabled:
-                __salt__['network.up'](iname)
-            else:
-                __salt__['network.down'](iname)
-        except Exception, error:
-            ret['result'] = False
-            ret['comment'] = error.message
-            return ret
+    #Bring up/shutdown interface
+    try:
+        if enabled:
+            __salt__['network.up'](name)
+        else:
+            __salt__['network.down'](name)
+    except Exception, error:
+        ret['result'] = False
+        ret['comment'] = error.message
+        return ret
 
     return ret
            

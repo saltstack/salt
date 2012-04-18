@@ -49,7 +49,7 @@ _CONFIG_TRUE = [ 'yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = [ 'no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone', 
-    'ipsec', 'dialup', 'slave'
+    'ipsec', 'dialup', 'slave', 'vlan',
 ]
 
 def _error_msg(iface, option, expected):
@@ -484,7 +484,7 @@ def _parse_settings_eth(opts, iface):
             result[opt] = opts[opt]
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onboot', 'peerdns', 'slave', 'userctl']:
+    for opt in ['onboot', 'peerdns', 'slave', 'userctl', 'vlan']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
@@ -551,11 +551,12 @@ def build_interface(iface, type, settings):
             msg = 'master is a required setting for slave interfaces'
             log.error(msg)
             raise AttributeError(msg)
+    
+    if type == 'vlan':
+        settings['vlan'] = 'yes'
 
-    if type in ['eth', 'bond', 'slave']:
+    if type in ['eth', 'bond', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface)
-        if name.find('.') >= 0:
-            opts['vlan'] = 'yes'
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
