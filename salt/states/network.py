@@ -111,18 +111,23 @@ def managed(
     # get current iface run through settings filter
     # get proposed iface submit to builder
     # diff iface
-    try:
-        old = __salt__['network.get_interface'](name)
-        new = __salt__['network.build_interface'](name, type, kwargs)
-        if not old and new:
-            ret['changes']['interface'] = 'Added network interface'
-        elif old != new:
-            diff = difflib.unified_diff(old, new)
-            ret['changes']['interface'] = ''.join(diff)
-    except AttributeError, error:
-        ret['result'] = False
-        ret['comment'] = error.message
-        return ret
+    inames = [name]
+    if type in ['eth', 'bond']:
+        inames += ['%s.%s' % (name, i) for i in kwargs.get('vlans',[])]
+    for iname in inames:
+        try:
+            change = '%s interface' % iname
+            old = __salt__['network.get_interface'](iname)
+            new = __salt__['network.build_interface'](iname, type, kwargs)
+            if not old and new:
+                ret['changes'][change] = 'Added network interface'
+            elif old != new:
+                diff = difflib.unified_diff(old, new)
+                ret['changes'][change] = ''.join(diff)
+        except AttributeError, error:
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
 
     if type == 'bond':
         try:
@@ -139,15 +144,16 @@ def managed(
             ret['comment'] = error.message
             return ret
 
-    try:
-        if enabled:
-            __salt__['network.up'](name)
-        else:
-            __salt__['network.down'](name)
-    except Exception, error:
-        ret['result'] = False
-        ret['comment'] = error.message
-        return ret
+    for iname in inames:
+        try:
+            if enabled:
+                __salt__['network.up'](iname)
+            else:
+                __salt__['network.down'](iname)
+        except Exception, error:
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
 
     return ret
            
