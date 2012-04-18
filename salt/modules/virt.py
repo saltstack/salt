@@ -59,7 +59,7 @@ def _get_dom(vm_):
     '''
     conn = __get_conn()
     if vm_ not in list_vms():
-        raise Exception('The specified vm is not present')
+        raise CommandExecutionError('The specified vm is not present')
     return conn.lookupByName(vm_)
 
 
@@ -152,6 +152,19 @@ def vm_info():
                      'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
     return info
 
+def vm_state(vm_):
+    '''
+    Return the status of the named VM.
+
+    CLI Example::
+
+        salt '*' virt.vm_state <vm name>
+    '''
+    state = ''
+    dom = _get_dom(vm_)
+    raw = dom.info()
+    state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
+    return state
 
 def node_info():
     '''
@@ -279,10 +292,13 @@ def get_disks(vm_):
             disks[target.getAttribute('dev')] = \
                     {'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
-            + disks[dev]['file'],
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]))
+        try:
+            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
+                + disks[dev]['file'],
+                shell=True,
+                stdout=subprocess.PIPE).communicate()[0]))
+        except TypeError:
+            disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
 
 
