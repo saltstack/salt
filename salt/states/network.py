@@ -139,5 +139,15 @@ def managed(
             ret['comment'] = error.message
             return ret
 
+    try:
+        if enabled:
+            __salt__['network.up'](name)
+        else:
+            __salt__['network.down'](name)
+    except Exception, error:
+        ret['result'] = False
+        ret['comment'] = error.message
+        return ret
+
     return ret
            

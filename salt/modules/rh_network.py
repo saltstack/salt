@@ -490,6 +490,9 @@ def build_interface(iface, type, settings):
     path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
     return _read_file(path)
 
+def down(iface):
+    __salt__['cmd.run']('ifdown %s' % iface)
+
 def get_bond(iface):
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
     return _read_file(path)
@@ -497,3 +500,6 @@ def get_bond(iface):
 def get_interface(iface):
     path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
     return _read_file(path)
+
+def up(iface):
+    __salt__['cmd.run']('ifup %s' % iface)
