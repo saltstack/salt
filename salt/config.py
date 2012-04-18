@@ -24,6 +24,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.pillar
+from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
@@ -178,7 +179,10 @@ def minion_config(path):
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
 
-    opts['master_ip'] = salt.utils.dns_check(opts['master'])
+    try:
+        opts['master_ip'] = salt.utils.dns_check(opts['master'], True)
+    except SaltClientError:
+        opts['master_ip'] = '127.0.0.1'
 
     opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['master_ip'],
                                                     port=opts['master_port'])

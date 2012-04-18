@@ -25,12 +25,16 @@ eth2:
     - managed
     - type: slave
     - master: bond0
+    - use:
+      - network: bond0
     
 eth3:
   network:
     - managed
     - type: slave
     - master: bond0
+    - use:
+      - network: bond0
 
 bond0:
   network:
@@ -43,9 +47,9 @@ bond0:
       - 8.8.4.4
     - ipv6:
     - enabled: False
-    - used_in:
-      - network: eth2
-      - network: eth3
+    - slaves:
+      - eth2
+      - eth3
     - mode: 802.3ad
     - miimon: 100
     - arp_interval: 250
@@ -104,23 +108,46 @@ def managed(
         'comment': 'Interface {0} is up to date.'.format(name)
     }
            
-    if type = 'slave' and 'slave' not in kwargs:
-        kwargs['slave'] = 'yes'
+    # get current iface run through settings filter
+    # get proposed iface submit to builder
+    # diff iface
     try:
-        old = __salt__['network.get'](name)
-        new = __salt__['network.build'](name, type, kwargs)
+        old = __salt__['network.get_interface'](name)
+        new = __salt__['network.build_interface'](name, type, kwargs)
         if not old and new:
-            ret['changes']['diff'] = 'Added ifcfg script'
+            ret['changes']['interface'] = 'Added network interface'
         elif old != new:
             diff = difflib.unified_diff(old, new)
-            ret['changes']['diff'] = ''.join(diff)
+            ret['changes']['interface'] = ''.join(diff)
     except AttributeError, error:
         ret['result'] = False
         ret['comment'] = error.message
+        return ret
 
     if type == 'bond':
-        pass
-        # Start the bond, this will be something in the rh_network module.
+        try:
+            old = __salt__['network.get_bond'](name)
+            new = __salt__['network.build_bond'](name, kwargs)
+            if not old and new:
+                ret['changes']['bond'] = 'Added bond'
+            elif old != new:
+                diff = difflib.unified_diff(old, new)
+                ret['changes']['bond'] = ''.join(diff)
+        except AttributeError, error:
+            #TODO Add a way of reversing the interface changes.
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
+
+    try:
+        if enabled:
+            __salt__['network.up'](name)
+        else:
+            __salt__['network.down'](name)
+    except Exception, error:
+        ret['result'] = False
+        ret['comment'] = error.message
+        return ret
 
     return ret
            

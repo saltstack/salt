@@ -215,6 +215,7 @@ class SaltCMD(object):
             else:
                 opts['tgt'] = args[0]
 
+            # Detect compound command and set up the data for it
             if ',' in args[1]:
                 opts['fun'] = args[1].split(',')
                 opts['arg'] = []
@@ -495,16 +496,19 @@ class SaltKey(object):
         parser.add_option('-l',
                 '--list',
                 dest='list',
-                default=False,
-                action='store_true',
-                help='List the unaccepted public keys')
+                default='',
+                help=('List the public keys. Takes the args: '
+                      '"pre", "un", "unaccepted": Unaccepted/unsigned keys '
+                      '"acc", "accepted": Accepted/signed keys '
+                      '"rej", "rejected": Rejected keys '
+                      '"all": all keys'))
 
         parser.add_option('-L',
                 '--list-all',
                 dest='list_all',
                 default=False,
                 action='store_true',
-                help='List all public keys')
+                help='List all public keys.  Deprecated: use "--list all"')
 
         parser.add_option('-a',
                 '--accept',

@@ -3,7 +3,7 @@
 {% for server in dns -%}
 DNS{{loop.index}}={{server}}
 {% endfor -%}
-{% if ethtool %}ETHTOOL_OPTS={{ethtool}}
+{% if ethtool %}ETHTOOL_OPTS={%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}
 {%endif%}{% if gateway %}GATEWAY={{gateway}}
 {%endif%}{% if addr %}HWADDR={{addr}}
 {%endif%}{% if ipaddr %}IPADDR={{ipaddr}}

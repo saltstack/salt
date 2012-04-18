@@ -75,7 +75,7 @@ def status(name, sig=None):
         salt '*' service.status <service name>
     '''
     cmd = 'service {0} status'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return 'start/running' in __salt__['cmd.run'](cmd)
 
 
 def _get_service_exec():

@@ -18,6 +18,10 @@ master in the foreground:
   # salt-master -l debug
   # salt-minion -l debug
 
+Anyone wanting to run salt daemons via a process supervisor such as monit,
+runit, or supervisord, should omit the ``-d`` argument to the daemons and
+run them in the foreground.
+
 
 What Ports do the Master and Minion Need Open?
 ==============================================
@@ -37,20 +41,29 @@ You can check port connectivity from the minion with the nc command:
 There is also a :doc:`firewall configuration</topics/tutorials/firewall>`
 document that might help as well.
 
+If you've enabled the right ports on your operating system or Linux
+distribution's firewall and still aren't seeing connections, check that no
+additional access control such as SELinux or AppArmor are blocking salt.
+
 
 Using salt-call
 ===============
 
 The ``salt-call`` command was originally developed for aiding in the development
-of new salt modules. Since then many applications have arisen for the salt-call
-command that is bundled with the salt minion. These range from the original
-intent of the salt-call, development assistance, to gathering large amounts of
-data from complex calls like
-:doc:`state.highstate</ref/modules/all/salt.modules.state>`.
+of new salt modules. Since then, many applications have arisen for running any
+salt module locally on a minion. These range from the original intent of
+salt-call, development assistance, to gathering more verbose output from calls
+like :doc:`state.highstate</ref/modules/all/salt.modules.state>`.
 
 When developing the state tree it is generally recommended to invoke
-state.highstate with salt-call, this displays a great deal more information
-about the highstate execution than if it is called remotely.
+state.highstate with salt-call. This displays a great deal more information
+about the highstate execution than if it is called remotely. For even more
+verbosity, increase the loglevel with the same argument as ``salt-minion``:
+
+.. code-block:: sh
+
+    salt-call -l debug state.highstate
+
 
 Too many open files
 ===================
@@ -61,9 +74,9 @@ scaling up the number of minions accessing a given master, encounter:
 
 .. code-block:: sh
 
-        12:45:29,289 [salt.master    ][INFO    ] Starting Salt worker process 38
-        Too many open files
-        sock != -1 (tcp_listener.cpp:335)
+    12:45:29,289 [salt.master    ][INFO    ] Starting Salt worker process 38
+    Too many open files
+    sock != -1 (tcp_listener.cpp:335)
 
 The solution to this would be to check the number of files allowed to be
 opened by the user running salt-master (root by default):
@@ -123,6 +136,13 @@ Or with the following salt state:
         - present
         - value: 4096 87380 16777216
 
+Red Hat Enterprise Linux 5
+==========================
+
+Salt requires Python 2.6 or 2.7. RHEL 5 and variants come with python 2.4 by
+default, when installing on RHEL 5 from the EPEL repository this is handled
+for you. But if running Salt from git, be advised that the deps needs to be
+installed from EPEL and salt needs to be run with the ``python26`` executable.
 
 Common YAML Gotchas
 ===================

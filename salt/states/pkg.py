@@ -38,6 +38,8 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False, **k
         Specify a non-default repository to install from
     skip_verify : False
         Skip the GPG verification check for the package to be installed
+    version : None
+        Install a specific version of a package
 
     Usage::
 
@@ -46,6 +48,7 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False, **k
             - installed
             - repo: mycustomrepo
             - skip_verify: True
+            - version: 2.0.6~ubuntu3
     '''
     rtag = __gen_rtag()
     cver = __salt__['pkg.version'](name)

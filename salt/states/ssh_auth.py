@@ -3,7 +3,9 @@ SSH Authorized Key Management
 =============================
 
 The information stored in a user's ssh authorized key file can be easily
-controlled via the ssh_auth state:
+controlled via the ssh_auth state. Defaults can be set by the enc, options,
+and comment keys. These defaults can be overridden by including them in the
+name.
 
 .. code-block:: yaml
 
@@ -18,8 +20,23 @@ controlled via the ssh_auth state:
         - present
         - user: root
         - source: salt://ssh_keys/thatch.id_rsa.pub
-'''
 
+    sshkeys:
+      ssh_auth:
+        - present
+        - user: root
+        - enc: ssh-rsa
+        - options:
+          - option1="value1"
+          - option2="value2 flag2"
+        - comment: myuser
+        - names:
+          - AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==
+          - ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== user@domain
+          - option3="value3" ssh-dss AAAAB3NzaC1kcQ9fJ5bYTEyY== other@testdomain
+          - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
+'''
+import re
 
 def present(
         name,
@@ -67,6 +84,26 @@ def present(
                 source,
                 config)
     else:
+        # check if this is of form {options} {enc} {key} {comment}
+        sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
+        fullkey = sshre.search(name)
+        # if it is {key} [comment]
+        if not fullkey:
+            key_and_comment = name.split()
+            name = key_and_comment[0]
+            if len(key_and_comment) == 2:
+                comment = key_and_comment[1]
+        else:
+            # if there are options, set them
+            if fullkey.group(1):
+                options = fullkey.group(1).split(',')
+            # key is of format: {enc} {key} [comment]
+            comps = fullkey.group(2).split()
+            enc = comps[0]
+            name = comps[1]
+            if len(comps) == 3:
+                comment = comps[2]
+
         data = __salt__['ssh.set_auth_key'](
                 user,
                 name,
@@ -91,6 +128,9 @@ def present(
         ret['result'] = False
         ret['comment'] = ('Failed to add the ssh key, is the home directory'
                           ' available and/or does the key file exist?')
+    elif data == 'invalid':
+        ret['result'] = False
+        ret['comment'] = ('Invalid public ssh key, most likely has spaces')
 
     return ret
 

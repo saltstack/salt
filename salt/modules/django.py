@@ -30,7 +30,8 @@ def command(settings_module,
         cmd = "{0} --{1}".format(cmd, arg)
 
     for key, value in kwargs.iteritems():
-        cmd = '{0} --{1}={2}'.format(cmd, key, value)
+        if not key.startswith("__"):
+            cmd = '{0} --{1}={2}'.format(cmd, key, value)
 
     return __salt__['cmd.run'](cmd)
 
@@ -110,7 +111,6 @@ def collectstatic(settings_module,
                   link=False,
                   no_default_ignore=False,
                   pythonpath=None):
-
     da = _get_django_admin(bin_env)
     cmd = "{0} collectstatic --settings={1} --noinput".format(
             da, settings_module)

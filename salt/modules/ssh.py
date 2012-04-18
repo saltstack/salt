@@ -61,6 +61,7 @@ def _replace_auth_key(
                 enc,
                 comment,
                 options)
+
     lines = []
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
@@ -161,13 +162,8 @@ def _validate_keys(key_file):
                 options = []
 
             enc = comps[0]
-            # check if key has a space
-            if len(comps) == 3:
-                key = comps[1] + ' ' + comps[2]
-                comment = ' '.join(comps[3:])
-            else:
-                key = comps[1]
-                comment = ' '.join(comps[2:])
+            key = comps[1]
+            comment = ' '.join(comps[2:])
 
             ret[key] = {'enc': enc,
                         'comment': comment,
@@ -221,10 +217,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
             else:
                 options = []
 
-            if len(comps) == 3:
-                pkey = comps[1] + ' ' + comps[2]
-            else:
-                pkey = comps[1]
+            pkey = comps[1]
 
             if pkey == key:
                 continue
@@ -281,6 +274,9 @@ def set_auth_key(
 
         salt '*' ssh.set_auth_key <user> <key> dsa 'my key' '[]' .ssh/authorized_keys
     '''
+    if len(key.split()) > 1:
+        return "invalid"
+
     enc = _refine_enc(enc)
     replace = False
     uinfo = __salt__['user.info'](user)
