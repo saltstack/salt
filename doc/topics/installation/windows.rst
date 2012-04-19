@@ -48,50 +48,48 @@ Install on Windows XP 32bit
 
 7.  Install `pyzmq-2.1.11.win32-py2.7.msi`_
 
-8.  Install `M2Crypto-0.21.1.win32-py2.7.msi`_
+8.  Install `pycrypto-2.3.win32-py2.7.msi`_
 
-9.  Install `pycrypto-2.3.win32-py2.7.msi`_
+9.  Install `PyYAML-3.10.win32-py2.7.msi`_
 
-10.  Install `PyYAML-3.10.win32-py2.7.msi`_
+10.  Install `Cython-0.15.1.win32-py2.79.exe`_
 
-11.  Install `Cython-0.15.1.win32-py2.79.exe`_
-
-12.  Download and run `distribute_setup.py`_
+11.  Download and run `distribute_setup.py`_
 
 .. code-block:: bash
 
     python distribute_setup.py
 
-13.  Download and run `pip`_
+12.  Download and run `pip`_
 
 .. code-block:: bash
 
         python get-pip.py
 
-14.  Add c:\\python27\\scripts to your path
+13.  Add c:\\python27\\scripts to your path
 
-15.  Close terminal window and open a new terminal window (cmd)
+14.  Close terminal window and open a new terminal window (cmd)
 
-16.  Install jinja2
+15.  Install jinja2
         
 .. code-block:: bash
 
         pip install jinja2
 
-17.  Install Messagepack
+16.  Install Messagepack
         
 .. code-block:: bash
 
         pip install msgpack-python
 
-18.  Install Salt
+17.  Install Salt
 
 .. code-block:: bash
 
         cd ./salt
         python setup.py install
 
-19.  Edit c:\\etc\\salt\\minon
+18.  Edit c:\\etc\\salt\\minon
 
 .. code-block:: bash
 
@@ -104,14 +102,14 @@ Install on Windows XP 32bit
         open_mode: False
         multiprocessing: False
 
-20.  Start the salt-minion
+19.  Start the salt-minion
 
 .. code-block:: bash
 
         cd c:\python27\scripts
         python salt-minion
 
-21.  On the salt-master accept the new minion's key
+20.  On the salt-master accept the new minion's key
 
 .. code-block:: bash
 
@@ -119,7 +117,7 @@ Install on Windows XP 32bit
         
         (This accepts all unaccepted keys. If you're concerned about security just accept the key for this specific minion)
 
-22.  Test that your minion is responding
+21.  Test that your minion is responding
         
         a.  On the salt-master run:
 
@@ -138,7 +136,6 @@ Install on Windows XP 32bit
 .. _vcredist_x86: http://www.microsoft.com/download/en/details.aspx?id=5582
 .. _Win32OpenSSL-1_0_0e.exe: http://www.slproweb.com/products/Win32OpenSSL.html
 .. _pyzmq-2.1.11.win32-py2.7.msi: https://github.com/zeromq/pyzmq/downloads
-.. _M2Crypto-0.21.1.win32-py2.7.msi: http://chandlerproject.org/Projects/MeTooCrypto#Downloads
 .. _pycrypto-2.3.win32-py2.7.msi: http://www.voidspace.org.uk/python/modules.shtml#pycrypto
 .. _PyYAML-3.10.win32-py2.7.msi: http://pyyaml.org/wiki/PyYAML
 .. _Cython-0.15.1.win32-py2.79.exe: http://www.lfd.uci.edu/~gohlke/pythonlibs/#cython

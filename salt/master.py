@@ -18,10 +18,14 @@ import subprocess
 
 # Import zeromq
 import zmq
-from M2Crypto import RSA
 
 # Import Third Party Libs
 import yaml
+
+# RSA Support
+from Crypto.Hash import MD5
+from Crypto.PublicKey import RSA
+from Crypto import Random
 
 # Import salt modules
 import salt.crypt
@@ -405,18 +409,14 @@ class AESFuncs(object):
 
     def __verify_minion(self, id_, token):
         '''
-        Take a minion id and a string encrypted with the minion private key
-        The string needs to decrypt as 'salt' with the minion public key
+        Take a minion id and a string signed with the minion private key
+        The string needs to verify as 'salt' with the minion public key
         '''
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with open(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
-        tmp_pub = tempfile.mktemp()
-        with open(tmp_pub, 'w+') as fp_:
-            fp_.write(minion_pub)
-        pub = RSA.load_pub_key(tmp_pub)
-        os.remove(tmp_pub)
-        if pub.public_decrypt(token, 5) == 'salt':
+        pub = RSA.PublicKey.import_key(minion_pub)
+        if pub.verify("salt", token):
             return True
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
@@ -940,13 +940,13 @@ class ClearFuncs(object):
         log.info('Authentication accepted from %(id)s', load)
         with open(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
-        key = RSA.load_pub_key(pubfn)
+        pub = RSA.importKey(load['pub'])
         ret = {'enc': 'pub',
-               'pub_key': self.master_key.pub_str,
+               'pub_key': self.master_key.get_pub_str(),
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
-        ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
+        ret['aes'] = pub.encrypt(self.opts['aes'], Random.new().read)
         if self.opts['cluster_masters']:
             self._send_cluster()
         return ret
