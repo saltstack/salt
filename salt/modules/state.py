@@ -3,6 +3,7 @@ Control the state system on the minion
 '''
 
 # Import Python libs
+import copy
 import os
 import sys
 
@@ -70,7 +71,7 @@ def template_str(tem):
     return st_.call_template_str(tem)
 
 
-def highstate(**kwargs):
+def highstate(test=None, **kwargs):
     '''
     Retrive the state data from the salt master for this minion and execute it
 
@@ -79,11 +80,14 @@ def highstate(**kwargs):
         salt '*' state.highstate
     '''
     salt.utils.daemonize_if(__opts__, **kwargs)
-    st_ = salt.state.HighState(__opts__)
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    st_ = salt.state.HighState(opts)
     return st_.call_highstate()
 
 
-def sls(mods, env='base', **kwargs):
+def sls(mods, env='base', test=None, **kwargs):
     '''
     Execute a set list of state modules from an environment, default
     environment is base
@@ -92,8 +96,11 @@ def sls(mods, env='base', **kwargs):
 
         salt '*' state.sls core,edit.vim dev
     '''
-    salt.utils.daemonize_if(__opts__, **kwargs)
-    st_ = salt.state.HighState(__opts__)
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    salt.utils.daemonize_if(opts, **kwargs)
+    st_ = salt.state.HighState(opts)
     if isinstance(mods, basestring):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
