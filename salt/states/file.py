@@ -445,7 +445,7 @@ def _check_recurse(
                     source_sum,
                     user,
                     group,
-                    mode)
+                    file_mode)
             if tchange:
                 changes[name] = tchange
             keep.add(dest)
