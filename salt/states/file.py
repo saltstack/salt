@@ -598,6 +598,10 @@ def absent(name):
             return _error(ret, 'Failed to remove file {0}'.format(name))
 
     elif os.path.isdir(name):
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Directory {0} is set for removal'.format(name)
+            return ret
         try:
             shutil.rmtree(name)
             ret['comment'] = 'Removed directory {0}'.format(name)
