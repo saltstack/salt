@@ -209,6 +209,136 @@ def _error(ret, err_msg):
     return ret
 
 
+def _source_list(source, source_hash, env):
+    '''
+    Check the source list and return the source to use
+    '''
+    if isinstance(source, list):
+        # get the master file list
+        mfiles = __salt__['cp.list_master'](env)
+        for single in source:
+            if isinstance(single, dict):
+                # check the proto, if it is http or ftp then download the file
+                # to check, if it is salt then check the master list
+                if len(single) != 1:
+                    continue
+                single_src = single.keys()[0]
+                single_hash = single[single_src]
+                proto = urlparse.urlparse(single_src).scheme
+                if proto == 'salt':
+                    if single_src in mfiles:
+                        source = single_src
+                        break
+                elif proto.startswith('http') or proto == 'ftp':
+                    dest = tempfile.mkstemp()[1]
+                    fn_ = __salt__['cp.get_url'](single_src, dest)
+                    os.remove(fn_)
+                    if fn_:
+                        source = single_src
+                        source_hash = single_hash
+                        break
+            elif isinstance(single, basestring):
+                if single in mfiles:
+                    source = single
+                    break
+    return source, source_hash
+
+def _get_managed(
+        name,
+        template,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        env,
+        context,
+        defaults,
+        **kwargs):
+    '''
+    Return the managed file data for file.managed
+    '''
+    # If the file is a template and the contents is managed
+    # then make sure to copy it down and templatize  things.
+    sfn = ''
+    source_sum = {}
+    if template and source:
+        sfn = __salt__['cp.cache_file'](source, env)
+        if not os.path.exists(sfn):
+            return sfn, {}, 'File "{0}" could not be found'.format(sfn)
+        if template in salt.utils.templates.template_registry:
+            context_dict = defaults if defaults else {}
+            if context:
+                context_dict.update(context)
+            data = salt.utils.templates.template_registry[template](
+                    sfn,
+                    name=name,
+                    source=source,
+                    user=user,
+                    group=group,
+                    mode=mode,
+                    env=env,
+                    context=context_dict,
+                    salt=__salt__,
+                    pillar=__pillar__,
+                    grains=__grains__,
+                    opts=__opts__,
+                    **kwargs
+                    )
+        else:
+            return sfn, {}, ('Specified template format {0} is not supported'
+                      ).format(template)
+
+        if data['result']:
+            sfn = data['data']
+            hsum = ''
+            with open(sfn, 'r') as source:
+                hsum = hashlib.md5(source.read()).hexdigest()
+            source_sum = {'hash_type': 'md5',
+                          'hsum': hsum}
+        else:
+            __clean_tmp(sfn)
+            return sfn, {}, data['data']
+    else:
+        # Copy the file down if there is a source
+        if source:
+            if urlparse.urlparse(source).scheme == 'salt':
+                source_sum = __salt__['cp.hash_file'](source, env)
+                if not source_sum:
+                    return '', {}, 'Source file {0} not found'.format(source)
+            elif source_hash:
+                protos = ['salt', 'http', 'ftp']
+                if urlparse.urlparse(source_hash).scheme in protos:
+                    # The sourc_hash is a file on a server
+                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    if not hash_fn:
+                        return '', {}, 'Source hash file {0} not found'.format(
+                             source_hash)
+                    comps = []
+                    with open(hash_fn, 'r') as hashfile:
+                        comps = hashfile.read().split('=')
+                    if len(comps) < 2:
+                        return '', {}, ('Source hash file {0} contains an '
+                                  ' invalid hash format, it must be in '
+                                  ' the format <hash type>=<hash>'
+                                  ).format(source_hash)
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+                else:
+                    # The source_hash is a hash string
+                    comps = source_hash.split('=')
+                    if len(comps) < 2:
+                        return '', {},('Source hash file {0} contains an '
+                                  ' invalid hash format, it must be in '
+                                  ' the format <hash type>=<hash>'
+                                  ).format(source_hash)
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+            else:
+                return '', {}, ('Unable to determine upstream hash of'
+                          ' source file {0}').format(source)
+    return sfn, source_sum, ''
+
 def _check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
@@ -269,6 +399,25 @@ def _check_perms(name, ret, user, group, mode):
     return ret, perms
 
 
+def _check_managed(
+        name,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        template,
+        makedirs,
+        context,
+        defaults,
+        env,
+        **kwargs):
+    '''
+    Check to see what changes need to be made for a file
+    '''
+    stats = __salt__['file.stats'](name)
+
+
 def _check_touch(name, atime, mtime):
     '''
     Check to see if a file needs to be updated or created
@@ -283,6 +432,7 @@ def _check_touch(name, atime, mtime):
         if str(mtime) != str(stats['mtime']):
             return None, 'Times set to be updated on file {0}'.format(name)
     return True, 'File {0} exists and has the correct times'.format(name)
+
 
 def _symlink_check(name, target, force):
     '''
@@ -483,6 +633,7 @@ def managed(name,
     defaults
         Default context passed to the template.
     '''
+    # Initial set up
     mode = __manage_mode(mode)
     ret = {'changes': {},
            'comment': '',
@@ -494,130 +645,48 @@ def managed(name,
                   ' path').format(name))
     if env is None:
         env = kwargs.get('__env__', 'base')
-    # Gather the source file from the server
-    sfn = ''
-    source_sum = {}
 
     if os.path.isdir(name):
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
         ret['result'] = False
         return ret
 
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _check_managed(
+                name,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                template,
+                makedirs,
+                context,
+                defaults,
+                env,
+                **kwargs
+                )
+        return ret
+
     # If the source is a list then find which file exists
-    if isinstance(source, list):
-        # get the master file list
-        mfiles = __salt__['cp.list_master'](env)
-        for single in source:
-            if isinstance(single, dict):
-                # check the proto, if it is http or ftp then download the file
-                # to check, if it is salt then check the master list
-                if len(single) != 1:
-                    continue
-                single_src = single.keys()[0]
-                single_hash = single[single_src]
-                proto = urlparse.urlparse(single_src).scheme
-                if proto == 'salt':
-                    if single_src in mfiles:
-                        source = single_src
-                        break
-                elif proto.startswith('http') or proto == 'ftp':
-                    dest = tempfile.mkstemp()[1]
-                    fn_ = __salt__['cp.get_url'](single_src, dest)
-                    os.remove(fn_)
-                    if fn_:
-                        source = single_src
-                        source_hash = single_hash
-                        break
-            elif isinstance(single, basestring):
-                if single in mfiles:
-                    source = single
-                    break
-
-    # If the file is a template and the contents is managed
-    # then make sure to copy it down and templatize  things.
-    if template and source:
-        sfn = __salt__['cp.cache_file'](source, env)
-        if not os.path.exists(sfn):
-            return _error(
-                ret, ('File "{sfn}" could not be found').format(sfn=sfn))
-        if template in salt.utils.templates.template_registry:
-            context_dict = defaults if defaults else {}
-            if context:
-                context_dict.update(context)
-            data = salt.utils.templates.template_registry[template](
-                    sfn,
-                    name=name,
-                    source=source,
-                    user=user,
-                    group=group,
-                    mode=mode,
-                    env=env,
-                    context=context_dict,
-                    salt=__salt__,
-                    pillar=__pillar__,
-                    grains=__grains__,
-                    opts=__opts__,
-                    **kwargs
-                    )
-        else:
-            return _error(
-                ret, ('Specified template format {0} is not supported'
-                      ).format(template))
-
-        if data['result']:
-            sfn = data['data']
-            hsum = ''
-            with open(sfn, 'r') as source:
-                hsum = hashlib.md5(source.read()).hexdigest()
-            source_sum = {'hash_type': 'md5',
-                          'hsum': hsum}
-        else:
-            __clean_tmp(sfn)
-            return _error(ret, data['data'])
-    else:
-        # Copy the file down if there is a source
-        if source:
-            if urlparse.urlparse(source).scheme == 'salt':
-                source_sum = __salt__['cp.hash_file'](source, env)
-                if not source_sum:
-                    return _error(
-                        ret, 'Source file {0} not found'.format(source))
-            elif source_hash:
-                protos = ['salt', 'http', 'ftp']
-                if urlparse.urlparse(source_hash).scheme in protos:
-                    # The sourc_hash is a file on a server
-                    hash_fn = __salt__['cp.cache_file'](source_hash)
-                    if not hash_fn:
-                        return _error(
-                            ret, 'Source hash file {0} not found'.format(
-                             source_hash
-                             ))
-                    comps = []
-                    with open(hash_fn, 'r') as hashfile:
-                        comps = hashfile.read().split('=')
-                    if len(comps) < 2:
-                        return _error(
-                            ret, ('Source hash file {0} contains an '
-                                  ' invalid hash format, it must be in '
-                                  ' the format <hash type>=<hash>'
-                                  ).format(source_hash))
-                    source_sum['hsum'] = comps[1].strip()
-                    source_sum['hash_type'] = comps[0].strip()
-                else:
-                    # The source_hash is a hash string
-                    comps = source_hash.split('=')
-                    if len(comps) < 2:
-                        return _error(
-                            ret, ('Source hash file {0} contains an '
-                                  ' invalid hash format, it must be in '
-                                  ' the format <hash type>=<hash>'
-                                  ).format(source_hash))
-                    source_sum['hsum'] = comps[1].strip()
-                    source_sum['hash_type'] = comps[0].strip()
-            else:
-                return _error(
-                    ret, ('Unable to determine upstream hash of'
-                          ' source file {0}').format(source))
+    source, source_hash = _source_list(source, source_hash, env)
+    
+    # Gather the source file from the server
+    sfn, source_sum, comment = _get_managed(
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            env,
+            context,
+            defaults,
+            **kwargs
+            )
+    if comment:
+        return _error(ret, comment)
 
     # Check changes if the target file exists
     if os.path.isfile(name):
