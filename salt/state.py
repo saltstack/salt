@@ -26,6 +26,7 @@ import zmq
 import salt.utils
 import salt.loader
 import salt.minion
+import salt.pillar
 import salt.fileclient
 
 from salt.template import (
@@ -76,7 +77,6 @@ def state_args(id_, state, high):
             continue
         if len(item) != 1:
             continue
-        print item
         args.add(item.keys()[0])
     return args
 
@@ -200,9 +200,21 @@ class State(object):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.opts['pillar'] = self.__gather_pillar()
         self.load_modules()
         self.mod_init = set()
         self.__run_num = 0
+
+    def __gather_pillar(self):
+        '''
+        Whenever a state run starts, gather the pillar data fresh
+        '''
+        pillar = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id']
+                )
+        return pillar.compile_pillar()
 
     def _mod_init(self, low):
         '''
@@ -704,27 +716,7 @@ class State(object):
                                 _state = ind.keys()[0]
                                 name = ind[_state]
                                 if key == 'use_in':
-                                    # 1. Extend the running state to watch
-                                    # the use_in state
-                                    found = False
-                                    rkey = 'watch'
-                                    if not id_ in extend:
-                                        extend[id_] = {}
-                                    if not state in extend[id_]:
-                                        extend[id_][state] = []
-                                    for ind in range(len(extend[id_][state])):
-                                        if extend[id_][state][ind].keys()[0] == rkey:
-                                            # Extending again
-                                            extend[id_][state][ind][rkey].append(
-                                                    {_state: name}
-                                                    )
-                                            found = True
-                                    # The rkey is not present yet, create it
-                                    if not found:
-                                        extend[id_][state].append(
-                                                {rkey: [{_state: name}]}
-                                                )
-                                    # 2. Add the running states args to the
+                                    # Add the running states args to the
                                     # use_in states
                                     ext_id = find_name(name, _state, high)
                                     if not ext_id:
@@ -744,27 +736,7 @@ class State(object):
                                         extend[ext_id][_state].append(arg)
                                     continue
                                 if key == 'use':
-                                    # 1. Extend the use state to watch
-                                    # the running state
-                                    found = False
-                                    rkey = 'watch'
-                                    if not name in extend:
-                                        extend[name] = {}
-                                    if not _state in extend[name]:
-                                        extend[name][_state] = []
-                                    for ind in range(len(extend[name][_state])):
-                                        if extend[name][_state][ind].keys()[0] == rkey:
-                                            # Extending again
-                                            extend[name][_state][ind][rkey].append(
-                                                    {state: id_}
-                                                    )
-                                            found = True
-                                    # The rkey is not present yet, create it
-                                    if not found:
-                                        extend[name][_state].append(
-                                                {rkey: [{state: id_}]}
-                                                )
-                                    # 2. Add the use state's args to the
+                                    # Add the use state's args to the
                                     # running state
                                     ext_id = find_name(name, _state, high)
                                     if not ext_id:

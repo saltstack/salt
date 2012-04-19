@@ -68,6 +68,11 @@ def manage(name,
                     '{0} -V'.format(venv_py)).strip('\n')
 
     # Create (or clear) the virtualenv
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Virtualenv {0} is set to be created or cleared'
+        return ret
+
     if not venv_exists or (venv_exists and clear):
         __salt__['virtualenv.create'](name,
                 venv_bin=venv_bin,

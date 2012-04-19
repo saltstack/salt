@@ -1,0 +1,15 @@
+python:
+  - '2.6'
+  - '2.7'
+
+branches:
+  only:
+    - develop
+
+before-install:
+  - sudo add-apt-repository ppa:saltstack/salt
+  - sudo apt-get update -y
+  - sudo apt-get install salt-master salt-syndic salt-minion
+
+script: cd tests && python runtests.py
+after_script: python setup.py bdist

@@ -141,15 +141,17 @@ def rm_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = comps[0] + '\t'
+            newline = '{0}\t'.format(comps[0])
             for existing in comps[1:]:
                 if existing == alias:
                     continue
-                newline += '\t' + existing
+                newline += '\t{0}'.format(existing)
             if newline.strip() == ip:
+                # No aliases exist for the line, make it empty
                 lines[ind] = ''
             else:
-                lines[ind] = newline
+                # Only an alias was removed
+                lines[ind] = '{0}\n'.format(newline)
     open(hfn, 'w+').writelines(lines)
     return True
 
@@ -178,7 +180,8 @@ def add_host(ip, alias):
             newline = comps[0] + '\t'
             for existing in comps[1:]:
                 newline += '\t' + existing
-            newline += '\t' + alias
+            newline += '\t' + alias + '\n'
+            lines.remove(lines[ind])
             lines.append(newline)
             ovr = True
             # leave any other matching entries alone

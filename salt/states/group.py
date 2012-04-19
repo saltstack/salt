@@ -39,6 +39,11 @@ def present(name, gid=None):
                     ret['comment'] = 'No change'
                     return ret
                 else:
+                    if __opts__['test']:
+                        ret['result'] = None
+                        ret['comment'] = ('Group {0} exists but the gid will '
+                                          'be changed to {1}').format(name, gid)
+                        return ret
                     ret['result'] = __salt__['group.chgid'](name, gid)
                     if ret['result']:
                         ret['comment'] = ('Changed gid to {0} for group {1}'
@@ -53,6 +58,11 @@ def present(name, gid=None):
                 ret['comment'] = 'Group {0} is already present'.format(name)
                 return ret
     # Group is not present, make it!
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Group {0} is not present and should be created'
+                ).format(name)
+        return ret
     ret['result'] = __salt__['group.add'](name, gid)
     if ret['result']:
         ret['changes'] = __salt__['group.info'](name)
@@ -78,6 +88,10 @@ def absent(name):
         # Scan over the groups
         if lgrp['name'] == name:
             # The group is present, DESTROY!!
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Group {0} is set for removal'.format(name)
+                return ret
             ret['result'] = __salt__['group.delete'](name)
             if ret['result']:
                 ret['changes'] = {name: ''}

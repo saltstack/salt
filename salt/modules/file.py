@@ -6,13 +6,16 @@ data
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
+# Import python libs
 import os
 import grp
 import pwd
 import time
 import hashlib
 import sys
+import stat
 
+# Import salt libs
 import salt.utils.find
 from salt.exceptions import SaltInvocationError
 
@@ -407,6 +410,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
 
     return __salt__['cmd.run'](cmd)
 
+
 def uncomment(path, regex, char='#', backup='.bak'):
     '''
     Uncomment specified commented lines in a file
@@ -440,6 +444,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         limit=regex.lstrip('^'),
         backup=backup)
 
+
 def comment(path, regex, char='#', backup='.bak'):
     '''
     Comment out specified lines in a file
@@ -471,7 +476,7 @@ def comment(path, regex, char='#', backup='.bak'):
     '''
     # Largely inspired by Fabric's contrib.files.comment()
 
-    regex = "{0}({1}){2}".format(
+    regex = '{0}({1}){2}'.format(
             '^' if regex.startswith('^') else '',
             regex.lstrip('^').rstrip('$'),
             '$' if regex.endswith('$') else '')
@@ -481,6 +486,7 @@ def comment(path, regex, char='#', backup='.bak'):
         before=regex,
         after=r'{0}\1'.format(char),
         backup=backup)
+
 
 def contains(path, text, limit='', escape=False):
     '''
@@ -509,6 +515,7 @@ def contains(path, text, limit='', escape=False):
 
     return bool(result)
 
+
 def append(path, *args):
     '''
     Append text to the end of a file
@@ -527,7 +534,8 @@ def append(path, *args):
         for line in args:
             f.write('{0}\n'.format(line))
 
-    return "Wrote {0} lines to '{1}'".format(len(args), path)
+    return 'Wrote {0} lines to "{1}"'.format(len(args), path)
+
 
 def touch(name, atime=None, mtime=None):
     '''
@@ -550,7 +558,7 @@ def touch(name, atime=None, mtime=None):
     if mtime and mtime.isdigit():
         mtime = int(mtime)
     try:
-        with open(name, "a"):
+        with open(name, 'a'):
             if not atime and not mtime:
                 times = None
             elif not mtime and atime:
@@ -561,9 +569,53 @@ def touch(name, atime=None, mtime=None):
                 times = (atime, mtime)
             os.utime(name, times)
     except TypeError as exc:
-        msg = "atime and mtime must be integers"
+        msg = 'atime and mtime must be integers'
         raise SaltInvocationError(msg)
     except (IOError, OSError) as exc:
         return False
 
     return os.path.exists(name)
+
+
+def stats(path, hash_type='md5', follow_symlink=False):
+    '''
+    Return a dict containing the stats for a given file
+
+    CLI Example::
+
+        salt '*' file.stats /etc/passwd
+    '''
+    ret = {}
+    if not os.path.exists(path):
+        return ret
+    if follow_symlink:
+        pstat = os.stat(path)
+    else:
+        pstat = os.lstat(path)
+    ret['inode'] = pstat.st_ino
+    ret['uid'] = pstat.st_uid
+    ret['gid'] = pstat.st_gid
+    ret['atime'] = pstat.st_atime
+    ret['mtime'] = pstat.st_mtime
+    ret['ctime'] = pstat.st_ctime
+    ret['size'] = pstat.st_size
+    ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['sum'] = get_sum(path, hash_type)
+    ret['type'] = 'file'
+    if stat.S_ISDIR(pstat.st_mode):
+        ret['type'] = 'dir'
+    if stat.S_ISCHR(pstat.st_mode):
+        ret['type'] = 'char'
+    if stat.S_ISBLK(pstat.st_mode):
+        ret['type'] = 'block'
+    if stat.S_ISREG(pstat.st_mode):
+        ret['type'] = 'file'
+    if stat.S_ISLNK(pstat.st_mode):
+        ret['type'] = 'link'
+    if stat.S_ISFIFO(pstat.st_mode):
+        ret['type'] = 'pipe'
+    if stat.S_ISSOCK(pstat.st_mode):
+        ret['type'] = 'socket'
+    ret['target'] = os.path.realpath(path)
+    return ret
+

@@ -36,7 +36,41 @@ name.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9fJ5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
+
+# Import python libs
 import re
+
+def _present_test(user, name, enc, comment, options, source, config):
+    '''
+    Run checks for "present"
+    '''
+    result = None
+    if source:
+        keys = __salt__['check_key_file'](user, source, config)
+        if keys:
+            comment = ('A number of keys are going to be updated from the '
+                       'keyfile: {0}').format(source)
+        else:
+            result = True
+            comment = (
+                    'All host keys in file {0} are already present'
+                    ).format(source)
+    check = __salt__['check_key'](user, name, enc, comment, options, config)
+    if check == 'update':
+        comment = (
+                'Key {0} for user {1} is set to be updated'
+                ).format(name, user)
+    elif check == 'add':
+        comment = (
+                'Key {0} for user {1} is set to be added'
+                ).format(name, user)
+    elif check == 'exists':
+        result = True
+        comment = ('The authorized host key {0} is already present '
+                          'for user {1}'.format(name, user))
+
+    return result, comment
+
 
 def present(
         name,
@@ -44,7 +78,7 @@ def present(
         enc='ssh-rsa',
         comment='',
         source='',
-        options=[],       # FIXME: mutable type; http://goo.gl/ToU2z
+        options=[],
         config='.ssh/authorized_keys'):
     '''
     Verifies that the specified ssh key is present for the specified user
@@ -77,6 +111,18 @@ def present(
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _present_test(
+                user,
+                name,
+                enc,
+                comment,
+                options,
+                source,
+                config
+                )
+        return ret
 
     if source != '':
         data = __salt__['ssh.set_auth_key_from_file'](
@@ -153,6 +199,22 @@ def absent(name, user, config='.ssh/authorized_keys'):
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if __opts__['test']:
+        check = __salt__['check_key'](
+                user,
+                name,
+                '',
+                '',
+                [],
+                config)
+        if check == 'update' or check == 'exists':
+            ret['return'] = None
+            ret['comment'] = 'Key {0} is set for removal'.format(name)
+            return ret
+        else:
+            ret['comment'] = 'Key is already absent'
+            return ret
 
     ret['comment'] = __salt__['ssh.rm_auth_key'](user, name, config)
 

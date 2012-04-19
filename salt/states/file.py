@@ -209,6 +209,136 @@ def _error(ret, err_msg):
     return ret
 
 
+def _source_list(source, source_hash, env):
+    '''
+    Check the source list and return the source to use
+    '''
+    if isinstance(source, list):
+        # get the master file list
+        mfiles = __salt__['cp.list_master'](env)
+        for single in source:
+            if isinstance(single, dict):
+                # check the proto, if it is http or ftp then download the file
+                # to check, if it is salt then check the master list
+                if len(single) != 1:
+                    continue
+                single_src = single.keys()[0]
+                single_hash = single[single_src]
+                proto = urlparse.urlparse(single_src).scheme
+                if proto == 'salt':
+                    if single_src in mfiles:
+                        source = single_src
+                        break
+                elif proto.startswith('http') or proto == 'ftp':
+                    dest = tempfile.mkstemp()[1]
+                    fn_ = __salt__['cp.get_url'](single_src, dest)
+                    os.remove(fn_)
+                    if fn_:
+                        source = single_src
+                        source_hash = single_hash
+                        break
+            elif isinstance(single, basestring):
+                if single in mfiles:
+                    source = single
+                    break
+    return source, source_hash
+
+def _get_managed(
+        name,
+        template,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        env,
+        context,
+        defaults,
+        **kwargs):
+    '''
+    Return the managed file data for file.managed
+    '''
+    # If the file is a template and the contents is managed
+    # then make sure to copy it down and templatize  things.
+    sfn = ''
+    source_sum = {}
+    if template and source:
+        sfn = __salt__['cp.cache_file'](source, env)
+        if not os.path.exists(sfn):
+            return sfn, {}, 'File "{0}" could not be found'.format(sfn)
+        if template in salt.utils.templates.template_registry:
+            context_dict = defaults if defaults else {}
+            if context:
+                context_dict.update(context)
+            data = salt.utils.templates.template_registry[template](
+                    sfn,
+                    name=name,
+                    source=source,
+                    user=user,
+                    group=group,
+                    mode=mode,
+                    env=env,
+                    context=context_dict,
+                    salt=__salt__,
+                    pillar=__pillar__,
+                    grains=__grains__,
+                    opts=__opts__,
+                    **kwargs
+                    )
+        else:
+            return sfn, {}, ('Specified template format {0} is not supported'
+                      ).format(template)
+
+        if data['result']:
+            sfn = data['data']
+            hsum = ''
+            with open(sfn, 'r') as source:
+                hsum = hashlib.md5(source.read()).hexdigest()
+            source_sum = {'hash_type': 'md5',
+                          'hsum': hsum}
+        else:
+            __clean_tmp(sfn)
+            return sfn, {}, data['data']
+    else:
+        # Copy the file down if there is a source
+        if source:
+            if urlparse.urlparse(source).scheme == 'salt':
+                source_sum = __salt__['cp.hash_file'](source, env)
+                if not source_sum:
+                    return '', {}, 'Source file {0} not found'.format(source)
+            elif source_hash:
+                protos = ['salt', 'http', 'ftp']
+                if urlparse.urlparse(source_hash).scheme in protos:
+                    # The sourc_hash is a file on a server
+                    hash_fn = __salt__['cp.cache_file'](source_hash)
+                    if not hash_fn:
+                        return '', {}, 'Source hash file {0} not found'.format(
+                             source_hash)
+                    comps = []
+                    with open(hash_fn, 'r') as hashfile:
+                        comps = hashfile.read().split('=')
+                    if len(comps) < 2:
+                        return '', {}, ('Source hash file {0} contains an '
+                                  ' invalid hash format, it must be in '
+                                  ' the format <hash type>=<hash>'
+                                  ).format(source_hash)
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+                else:
+                    # The source_hash is a hash string
+                    comps = source_hash.split('=')
+                    if len(comps) < 2:
+                        return '', {},('Source hash file {0} contains an '
+                                  ' invalid hash format, it must be in '
+                                  ' the format <hash type>=<hash>'
+                                  ).format(source_hash)
+                    source_sum['hsum'] = comps[1].strip()
+                    source_sum['hash_type'] = comps[0].strip()
+            else:
+                return '', {}, ('Unable to determine upstream hash of'
+                          ' source file {0}').format(source)
+    return sfn, source_sum, ''
+
 def _check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
@@ -269,6 +399,65 @@ def _check_perms(name, ret, user, group, mode):
     return ret, perms
 
 
+def _check_managed(
+        name,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        template,
+        makedirs,
+        context,
+        defaults,
+        env,
+        **kwargs):
+    '''
+    Check to see what changes need to be made for a file
+    '''
+    stats = __salt__['file.stats'](name)
+
+
+def _check_touch(name, atime, mtime):
+    '''
+    Check to see if a file needs to be updated or created
+    '''
+    if not os.path.exists(name):
+        return None, 'File {0} is set to be created'
+    stats = __salt__['file.stats'](name)
+    if not atime is None:
+        if str(atime) != str(stats['atime']):
+            return None, 'Times set to be updated on file {0}'.format(name)
+    if not mtime is None:
+        if str(mtime) != str(stats['mtime']):
+            return None, 'Times set to be updated on file {0}'.format(name)
+    return True, 'File {0} exists and has the correct times'.format(name)
+
+
+def _symlink_check(name, target, force):
+    '''
+    Check the symlink function
+    '''
+    ret = None
+    if not os.path.exists(name):
+        comment = 'Symlink {0} to {1} is set for creation'.format(name, target)
+        return None, comment
+    if os.path.islink(name):
+        if not os.readlink(name) == target:
+            comment = 'Link {0} target is set to be changed to {1}'.format(
+                    name, target)
+            return None, comment
+        else:
+            return True, 'The symlink {0} is present'.format(name)
+    else:
+        if force:
+            return None, ('The file or directory {0} is set for removal to '
+                          'make way for a new symlink targeting {1}').format(
+                                  name, target)
+        return _error(ret, ('File or directory exists where the symlink {0} '
+                            'should be'.format(name)))
+
+
 def symlink(name, target, force=False, makedirs=False):
     '''
     Create a symlink
@@ -296,6 +485,10 @@ def symlink(name, target, force=False, makedirs=False):
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
+    
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _symlink_check(name, target, force)
+        return ret
 
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
@@ -351,6 +544,10 @@ def absent(name):
         return _error(ret, ('Specified file {0} is not an absolute'
                           ' path').format(name))
     if os.path.isfile(name) or os.path.islink(name):
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'File {0} is set for removal'.format(name)
+            return ret
         try:
             os.remove(name)
             ret['comment'] = 'Removed file {0}'.format(name)
@@ -436,6 +633,7 @@ def managed(name,
     defaults
         Default context passed to the template.
     '''
+    # Initial set up
     mode = __manage_mode(mode)
     ret = {'changes': {},
            'comment': '',
@@ -447,130 +645,48 @@ def managed(name,
                   ' path').format(name))
     if env is None:
         env = kwargs.get('__env__', 'base')
-    # Gather the source file from the server
-    sfn = ''
-    source_sum = {}
 
     if os.path.isdir(name):
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
         ret['result'] = False
         return ret
 
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _check_managed(
+                name,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                template,
+                makedirs,
+                context,
+                defaults,
+                env,
+                **kwargs
+                )
+        return ret
+
     # If the source is a list then find which file exists
-    if isinstance(source, list):
-        # get the master file list
-        mfiles = __salt__['cp.list_master'](env)
-        for single in source:
-            if isinstance(single, dict):
-                # check the proto, if it is http or ftp then download the file
-                # to check, if it is salt then check the master list
-                if len(single) != 1:
-                    continue
-                single_src = single.keys()[0]
-                single_hash = single[single_src]
-                proto = urlparse.urlparse(single_src).scheme
-                if proto == 'salt':
-                    if single_src in mfiles:
-                        source = single_src
-                        break
-                elif proto.startswith('http') or proto == 'ftp':
-                    dest = tempfile.mkstemp()[1]
-                    fn_ = __salt__['cp.get_url'](single_src, dest)
-                    os.remove(fn_)
-                    if fn_:
-                        source = single_src
-                        source_hash = single_hash
-                        break
-            elif isinstance(single, basestring):
-                if single in mfiles:
-                    source = single
-                    break
-
-    # If the file is a template and the contents is managed
-    # then make sure to copy it down and templatize  things.
-    if template and source:
-        sfn = __salt__['cp.cache_file'](source, env)
-        if not os.path.exists(sfn):
-            return _error(
-                ret, ('File "{sfn}" could not be found').format(sfn=sfn))
-        if template in salt.utils.templates.template_registry:
-            context_dict = defaults if defaults else {}
-            if context:
-                context_dict.update(context)
-            data = salt.utils.templates.template_registry[template](
-                    sfn,
-                    name=name,
-                    source=source,
-                    user=user,
-                    group=group,
-                    mode=mode,
-                    env=env,
-                    context=context_dict,
-                    salt=__salt__,
-                    pillar=__pillar__,
-                    grains=__grains__,
-                    opts=__opts__,
-                    **kwargs
-                    )
-        else:
-            return _error(
-                ret, ('Specified template format {0} is not supported'
-                      ).format(template))
-
-        if data['result']:
-            sfn = data['data']
-            hsum = ''
-            with open(sfn, 'r') as source:
-                hsum = hashlib.md5(source.read()).hexdigest()
-            source_sum = {'hash_type': 'md5',
-                          'hsum': hsum}
-        else:
-            __clean_tmp(sfn)
-            return _error(ret, data['data'])
-    else:
-        # Copy the file down if there is a source
-        if source:
-            if urlparse.urlparse(source).scheme == 'salt':
-                source_sum = __salt__['cp.hash_file'](source, env)
-                if not source_sum:
-                    return _error(
-                        ret, 'Source file {0} not found'.format(source))
-            elif source_hash:
-                protos = ['salt', 'http', 'ftp']
-                if urlparse.urlparse(source_hash).scheme in protos:
-                    # The sourc_hash is a file on a server
-                    hash_fn = __salt__['cp.cache_file'](source_hash)
-                    if not hash_fn:
-                        return _error(
-                            ret, 'Source hash file {0} not found'.format(
-                             source_hash
-                             ))
-                    comps = []
-                    with open(hash_fn, 'r') as hashfile:
-                        comps = hashfile.read().split('=')
-                    if len(comps) < 2:
-                        return _error(
-                            ret, ('Source hash file {0} contains an '
-                                  ' invalid hash format, it must be in '
-                                  ' the format <hash type>=<hash>'
-                                  ).format(source_hash))
-                    source_sum['hsum'] = comps[1].strip()
-                    source_sum['hash_type'] = comps[0].strip()
-                else:
-                    # The source_hash is a hash string
-                    comps = source_hash.split('=')
-                    if len(comps) < 2:
-                        return _error(
-                            ret, ('Source hash file {0} contains an '
-                                  ' invalid hash format, it must be in '
-                                  ' the format <hash type>=<hash>'
-                                  ).format(source_hash))
-                    source_sum['hsum'] = comps[1].strip()
-                    source_sum['hash_type'] = comps[0].strip()
-            else:
-                return _error(
-                    ret, ('Unable to determine upstream hash of'
-                          ' source file {0}').format(source))
+    source, source_hash = _source_list(source, source_hash, env)
+    
+    # Gather the source file from the server
+    sfn, source_sum, comment = _get_managed(
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            env,
+            context,
+            defaults,
+            **kwargs
+            )
+    if comment:
+        return _error(ret, comment)
 
     # Check changes if the target file exists
     if os.path.isfile(name):
@@ -1006,13 +1122,17 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     if not __salt__['file.contains'](name, before, limit):
         # Pattern not found; try to guess why
         if __salt__['file.contains'](name, after, limit):
-            ret['comment'] = "Edit already performed"
+            ret['comment'] = 'Edit already performed'
             ret['result'] = True
             return ret
         else:
-            ret['comment'] = "Pattern not matched"
+            ret['comment'] = 'Pattern not matched'
             return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['result'] = None
+        return ret
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
 
@@ -1020,10 +1140,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     ret['result'] = __salt__['file.contains'](name, after, limit)
 
     if ret['result']:
-        ret['comment'] = "File successfully edited"
+        ret['comment'] = 'File successfully edited'
         ret['changes'].update({'old': before, 'new': after})
     else:
-        ret['comment'] = "Expected edit does not appear in file"
+        ret['comment'] = 'Expected edit does not appear in file'
 
     return ret
 
@@ -1049,12 +1169,16 @@ def comment(name, regex, char='#', backup='.bak'):
     if not __salt__['file.contains'](name, regex):
         if __salt__['file.contains'](name, unanchor_regex,
                 limit=COMMENT_REGEX.format(char)):
-            ret['comment'] = "Pattern already commented"
+            ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
         else:
             return _error(ret, '{0}: Pattern not found'.format(unanchor_regex))
 
+    if __opts__['test']:
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['result'] = None
+        return ret
     # Perform the edit
     __salt__['file.comment'](name, regex, char, backup)
 
@@ -1065,11 +1189,11 @@ def comment(name, regex, char='#', backup='.bak'):
             limit=COMMENT_REGEX.format(char))
 
     if ret['result']:
-        ret['comment'] = "Commented lines successfully"
+        ret['comment'] = 'Commented lines successfully'
         ret['changes'] = {'old': '',
                 'new': 'Commented lines matching: {0}'.format(regex)}
     else:
-        ret['comment'] = "Expected commented lines not found"
+        ret['comment'] = 'Expected commented lines not found'
 
     return ret
 
@@ -1095,12 +1219,16 @@ def uncomment(name, regex, char='#', backup='.bak'):
     if not __salt__['file.contains'](name, unanchor_regex,
             limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char)):
         if __salt__['file.contains'](name, regex):
-            ret['comment'] = "Pattern already uncommented"
+            ret['comment'] = 'Pattern already uncommented'
             ret['result'] = True
             return ret
         else:
             return _error(ret, '{0}: Pattern not found'.format(regex))
 
+    if __opts__['test']:
+        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['result'] = None
+        return ret
     # Perform the edit
     __salt__['file.uncomment'](name, regex, char, backup)
 
@@ -1108,11 +1236,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
     ret['result'] = __salt__['file.contains'](name, regex)
 
     if ret['result']:
-        ret['comment'] = "Uncommented lines successfully"
+        ret['comment'] = 'Uncommented lines successfully'
         ret['changes'] = {'old': '',
                 'new': 'Uncommented lines matching: {0}'.format(regex)}
     else:
-        ret['comment'] = "Expected uncommented lines not found"
+        ret['comment'] = 'Expected uncommented lines not found'
 
     return ret
 
@@ -1155,27 +1283,32 @@ def append(name, text):
         try:
             lines = chunk.split('\n')
         except AttributeError:
-            logger.debug("Error appending text to %s; given object is: %s",
+            logger.debug('Error appending text to %s; given object is: %s',
                     name, type(chunk))
-            return _error(ret, "Given text is not a string")
+            return _error(ret, 'Given text is not a string')
 
         for line in lines:
             if __salt__['file.contains'](name, line, escape=True):
                 continue
             else:
+                if __opts__['test']:
+                    ret['comment'] = 'File {0} is set to be updated'.format(
+                            name)
+                    ret['result'] = None
+                    return ret
                 __salt__['file.append'](name, line)
                 cgs = ret['changes'].setdefault('new', [])
                 cgs.append(line)
 
     count = len(ret['changes'].get('new', []))
 
-    ret['comment'] = "Appended {0} lines".format(count)
+    ret['comment'] = 'Appended {0} lines'.format(count)
     ret['result'] = True
     return ret
 
 
 def touch(name, atime=None, mtime=None, makedirs=False):
-    """
+    '''
     Replicate the 'nix "touch" command to create a new empty
     file or update the atime and mtime of an existing  file.
 
@@ -1185,7 +1318,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
           file.touch
 
     .. versionadded:: 0.9.5
-    """
+    '''
     ret = {
         'name': name,
         'changes': {},
@@ -1193,6 +1326,10 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     if not os.path.isabs(name):
         _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
+
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _check_touch(name, atime, mtime)
+        return ret
 
     if makedirs:
         _makedirs(name)
@@ -1203,9 +1340,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
     if not exists and ret['result']:
-        ret["comment"] = 'Created empty file {0}'.format(name)
-        ret["changes"]['new'] = name
+        ret['comment'] = 'Created empty file {0}'.format(name)
+        ret['changes']['new'] = name
     elif exists and ret['result']:
-        ret["comment"] = 'Updated times on file {0}'.format(name)
+        ret['comment'] = 'Updated times on file {0}'.format(name)
 
     return ret

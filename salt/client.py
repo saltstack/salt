@@ -410,7 +410,14 @@ class LocalClient(object):
                         continue
                     while fn_ not in ret:
                         try:
+                            check = True
                             ret_data = self.serial.load(open(retp, 'r'))
+                            if ret_data is None:
+                                # Sometimes the ret data is read at the wrong
+                                # time and returns None, do a quick re-read
+                                if check:
+                                    check = False
+                                    continue
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(open(outp, 'r'))

@@ -364,7 +364,11 @@ class Minion(object):
         if self.opts['multiprocessing']:
             fn_ = os.path.join(self.proc_dir, ret['jid'])
             if os.path.isfile(fn_):
-                os.remove(fn_)
+                try:
+                    os.remove(fn_)
+                except (OSError, IOError):
+                    # The file is gone already
+                    pass
         log.info('Returning information for job: {0}'.format(ret['jid']))
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
@@ -469,6 +473,7 @@ class Minion(object):
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
+        socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
         if self.opts['sub_timeout']:
             last = time.time()
@@ -494,6 +499,7 @@ class Minion(object):
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
+                    socket.setsockopt(zmq.IDENTITY, self.opts['id'])
                     socket.connect(self.master_pub)
                     last = time.time()
                 time.sleep(0.05)
