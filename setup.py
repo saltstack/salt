@@ -14,7 +14,7 @@ from distutils.sysconfig import get_python_lib, PREFIX
 if os.environ.get('VIRTUAL_ENV'):
     from setuptools import setup
 
-execfile('salt/version.py')
+exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
 
 class TestCommand(Command):
     description = 'Run tests'
