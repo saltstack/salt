@@ -467,6 +467,45 @@ def _check_recurse(
     return True, 'The directory {0} in in the correct state'.format(name)
 
 
+def _check_directory(
+        name,
+        user,
+        group,
+        recurse,
+        mode,
+        clean,
+        require):
+    '''
+    Check what changes need to be made on a directory
+    '''
+    changes = {}
+    if recurse:
+        if not set(['user', 'group']) >= set(recurse):
+            return False, 'Types for "recurse" limited to "user" and "group"'
+        if not 'user' in recurse:
+            user = None
+        if not 'group' in recurse:
+            group = None
+        for root, dirs, files in os.walk(name):
+            for name in files:
+                path = os.path.join(root, name)
+                fchange = _check_dir_meta(path, user, group, None)
+                if fchange:
+                    changes[path] = fchange
+            for name in dirs:
+                path = os.path.join(root, name)
+                fchange = _check_dir_meta(path, user, group, None)
+                if fchange:
+                    changes[path] = fchange
+    if changes:
+        comment = 'The following files will be changed:\n'
+        for fn_ in changes:
+            for key, val in changes[fn_].items():
+                cpmment += '{0}: {1} - {2}'.format(fn_, key, val)
+        return None, comment
+    return True, 'The directory {0} is in the correct state'.format(name)
+
+
 def _check_managed(
         name,
         source,
@@ -504,6 +543,30 @@ def _check_managed(
     return _check_file_meta(name, source_sum, user, group, mode)
 
 
+def _check_dir_meta(
+        name,
+        user,
+        group,
+        mode):
+    '''
+    Check the changes in directory metadata
+    '''
+    stats = __salt__['file.stats'](name, source_sum['hash_type'])
+    changes = {}
+    if not user is None and user != stats['user']:
+        changes['user'] = user
+    if not group is None and group != stats['group']:
+        changes['group'] = group
+    if not mode is None and mode != stats['mode']:
+        changes['mode'] = mode
+    if changes:
+        comment = 'The following values are set to be changed:\n'
+        for key, val in changes.items():
+            comment += '{0}: {1}\n'.format(key, val)
+        return None, comment
+    return True, 'The directory {0} is in the correct state'.format(name)
+
+
 def _check_file_meta(
         name,
         source_sum,
@@ -513,9 +576,8 @@ def _check_file_meta(
     '''
     Check for the changes in the file metadata
     '''
+    changes = {}
     stats = __salt__['file.stats'](name, source_sum['hash_type'])
-    if comment:
-        return False, comment
     if source_sum['hsum'] != stats['sum']:
         with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
             slines = src.readlines()
@@ -527,14 +589,12 @@ def _check_file_meta(
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
-    if not user is None and user != stats['user']:
-        changes['user'] = user
     if not mode is None and mode != stats['mode']:
         changes['mode'] = mode
     if changes:
         comment = 'The following values are set to be changed:\n'
         for key, val in changes.items():
-            comment += '{0}: {1}'.format(key, val)
+            comment += '{0}: {1}\n'.format(key, val)
         return None, comment
     return True, 'The file {0} is in the correct state'.format(name)
 
@@ -972,6 +1032,17 @@ def directory(name,
     if os.path.isfile(name):
         return _error(
             ret, 'Specified location {0} exists and is a file'.format(name))
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _check_directory(
+                name,
+                user,
+                group,
+                recurse,
+                mode,
+                clean,
+                require)
+        return ret
+
     if not os.path.isdir(name):
         # The dir does not exist, make it
         if not os.path.isdir(os.path.dirname(name)):
