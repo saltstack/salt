@@ -194,12 +194,14 @@ def _clean_dir(root, keep):
             nfn = os.path.join(roots, name)
             if not nfn in real_keep:
                 removed.add(nfn)
-                os.remove(nfn)
+                if not __opts__['test']:
+                    os.remove(nfn)
         for name in dirs:
             nfn = os.path.join(roots, name)
             if not nfn in real_keep:
                 removed.add(nfn)
-                shutil.rmtree(nfn)
+                if not __opts__['test']:
+                    shutil.rmtree(nfn)
     return list(removed)
 
 
@@ -399,6 +401,66 @@ def _check_perms(name, ret, user, group, mode):
     return ret, perms
 
 
+def _check_recurse(
+        name,
+        source,
+        clean,
+        require,
+        user,
+        group,
+        dir_mode,
+        file_mode,
+        env):
+    '''
+    Check what files will be changed by a recurse call
+    '''
+    vdir = set()
+    keep = set()
+    changes = {}
+    for fn_ in __salt__['cp.cache_dir'](source, env):
+        if not fn_.strip():
+            continue
+        dest = os.path.join(name,
+                os.path.relpath(
+                    fn_,
+                    os.path.join(
+                        __opts__['cachedir'],
+                        'files',
+                        env,
+                        source[7:]
+                        )
+                    )
+                )
+        dirname = os.path.dirname(dest)
+        if not dirname in vdir:
+            # verify the directory perms if they are set
+            vdir.add(dirname)
+        if os.path.isfile(dest):
+            with open(fn_, 'r') as source:
+                hsum = hashlib.md5(source.read()).hexdigest()
+            source_sum = {'hash_type': 'md5',
+                          'hsum': hsum}
+            tchange = _check_file_meta(
+                    name,
+                    source_sum,
+                    user,
+                    group,
+                    mode)
+            if tchange:
+                changes[name] = tchange
+            keep.add(dest)
+        else:
+            keep.add(dest)
+            # The destination file is not present, make it
+            changes[name] = {'diff': 'New File'}
+    keep = list(keep)
+    if clean:
+        keep += _gen_keep_files(name, require)
+        for fn_ in _clean_dir(name, list(keep)):
+            changes[fn_] = {'diff', 'Remove'}
+    return ret
+
+
 def _check_managed(
         name,
         source,
@@ -433,6 +495,18 @@ def _check_managed(
             defaults,
             **kwargs
             )
+    return _check_file_meta(name, source_sum, user, group, mode)
+
+
+def _check_file_meta(
+        name,
+        source_sum,
+        user,
+        group,
+        mode):
+    '''
+    Check for the changes in the file metadata
+    '''
     stats = __salt__['file.stats'](name, source_sum['hash_type'])
     if comment:
         return False, comment
@@ -1069,6 +1143,18 @@ def recurse(name,
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
         os.makedirs(name)
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _check_recurse(
+                name,
+                source,
+                clean,
+                require,
+                user,
+                group,
+                dir_mode,
+                file_mode,
+                env)
+        return ret
     vdir = set()
     for fn_ in __salt__['cp.cache_dir'](source, env):
         if not fn_.strip():
