@@ -458,7 +458,13 @@ def _check_recurse(
         keep += _gen_keep_files(name, require)
         for fn_ in _clean_dir(name, list(keep)):
             changes[fn_] = {'diff', 'Remove'}
-    return ret
+    if changes:
+        comment = 'The following files are set to change:\n'
+        for fn_ in changes:
+            for key, val in chages[fn_].items():
+                comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
+        return None, comment
+    return True, 'The directory {0} in in the correct state'.format(name)
 
 
 def _check_managed(
