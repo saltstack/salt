@@ -662,6 +662,7 @@ class State(object):
         Extend the data reference with requisite_in arguments
         '''
         req_in = set(['require_in', 'watch_in', 'use', 'use_in'])
+        req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
         for id_, body in high.items():
             for state, run in body.items():
@@ -726,12 +727,13 @@ class State(object):
                                         extend[ext_id] = {}
                                     if not _state in extend[ext_id]:
                                         extend[ext_id][_state] = []
+                                    ignore_args = req_in_all.union(ext_args)
                                     for arg in high[id_][state]:
                                         if not isinstance(arg, dict):
                                             continue
                                         if len(arg) != 1:
                                             continue
-                                        if arg.keys()[0] in ext_args:
+                                        if arg.keys()[0] in ignore_args:
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -746,12 +748,13 @@ class State(object):
                                         extend[id_] = {}
                                     if not state in extend[id_]:
                                         extend[id_][state] = []
+                                    ignore_args = req_in_all.union(loc_args)
                                     for arg in high[ext_id][_state]:
                                         if not isinstance(arg, dict):
                                             continue
                                         if len(arg) != 1:
                                             continue
-                                        if arg.keys()[0] in loc_args:
+                                        if arg.keys()[0] in ignore_args:
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
