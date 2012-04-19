@@ -415,7 +415,48 @@ def _check_managed(
     '''
     Check to see what changes need to be made for a file
     '''
-    stats = __salt__['file.stats'](name)
+    changes = {}
+    # If the source is a list then find which file exists
+    source, source_hash = _source_list(source, source_hash, env)
+    
+    # Gather the source file from the server
+    sfn, source_sum, comment = _get_managed(
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            env,
+            context,
+            defaults,
+            **kwargs
+            )
+    stats = __salt__['file.stats'](name, source_sum['hash_type'])
+    if comment:
+        return False, comment
+    if source_sum['hsum'] != stats['sum']:
+        with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
+            slines = src.readlines()
+            nlines = name_.readlines()
+        changes['diff'] = (
+                ''.join(difflib.unified_diff(nlines, slines))
+                )
+    if not user is None and user != stats['user']:
+        changes['user'] = user
+    if not group is None and group != stats['group']:
+        changes['group'] = group
+    if not user is None and user != stats['user']:
+        changes['user'] = user
+    if not mode is None and mode != stats['mode']:
+        changes['mode'] = mode
+    if changes:
+        comment = 'The following values are set to be changed:\n'
+        for key, val in changes.items():
+            comment += '{0}: {1}'.format(key, val)
+        return None, comment
+    return True, 'The file {0} is in the correct state'.format(name)
 
 
 def _check_touch(name, atime, mtime):
