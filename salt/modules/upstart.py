@@ -106,5 +106,5 @@ def disable(name):
         salt '*' service.disable <service name>
     '''
     executable = _get_service_exec()
-    cmd = '{0} -f {1} defaults'.format(executable, name)
+    cmd = '{0} -f {1} remove'.format(executable, name)
     return not __salt__['cmd.retcode'](cmd)
