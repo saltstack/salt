@@ -19,9 +19,9 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
         file = open(maclist, 'r')
         for mac in file:
             wol(mac.strip(), bcast, destport)
-            print "Waking up %s" % mac.strip()
+            print("Waking up %s" % mac.strip())
     except Exception as inst:
-        print "Failed to open the MAC file. Error: %s" % inst
+        print("Failed to open the MAC file. Error: %s" % inst)
 
 def wol(mac, bcast='255.255.255.255', destport=9):
     '''
@@ -49,4 +49,4 @@ def wol(mac, bcast='255.255.255.255', destport=9):
             ('\\x' + mac[8:10]).decode('string_escape') + \
             ('\\x' + mac[10:12]).decode('string_escape')
     s.sendto('\xff'*6 + dest*16, (bcast,  int(destport)))
-    print "Sent magic packet to minion."
+    print("Sent magic packet to minion.")
