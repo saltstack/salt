@@ -17,7 +17,7 @@ def down():
     keys = key._keys('acc')
 
     for minion in sorted(keys - set(minions.keys())):
-        print minion
+        print(minion)
 
 
 def up():
@@ -28,4 +28,4 @@ def up():
     minions = client.cmd('*', 'test.ping', timeout=1)
 
     for minion in sorted(minions):
-        print minion
+        print(minion)
