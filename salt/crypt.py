@@ -11,6 +11,7 @@ import hmac
 import hashlib
 import logging
 import tempfile
+import base64
 
 # Import Cryptography libs
 from Crypto.Cipher import AES
@@ -43,10 +44,10 @@ def gen_keys(keydir, keyname, keysize):
     pubkey = privkey.publickey()
     cumask = os.umask(191)
     with open(priv, "w") as priv_file:
-        priv_file.write(privkey.exportKey())
+        priv_file.write(str(privkey.exportKey()))
     os.umask(cumask)
     with open(pub, "w") as pub_file:
-        pub_file.write(pubkey.exportKey())
+        pub_file.write(str(pubkey.exportKey()))
     os.chmod(priv, 256)
     return (pubkey, privkey)
 
@@ -86,7 +87,8 @@ class MasterKeys(dict):
         '''
         Generate the authentication token
         '''
-        return str(self.key.sign('salty bacon', Random.new().read)[0])
+        return str(self.key.sign(MD5.new('salty bacon').digest(),
+                                 Random.new().read)[0])
 
     def get_pub_str(self):
         '''
@@ -181,7 +183,7 @@ class Auth(object):
         else:
             open(m_pub_fn, 'w+').write(master_pub)
         pub = RSA.importKey(master_pub)
-        if pub.verify('salty bacon', (int(token),)):
+        if pub.verify(MD5.new('salty bacon').digest(), (int(token),)):
             return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')
@@ -253,7 +255,7 @@ class Crypticle(object):
 
     @classmethod
     def generate_key_string(cls, key_size=192):
-        key = os.urandom(key_size / 8 + cls.SIG_SIZE)
+        key = os.urandom(key_size // 8 + cls.SIG_SIZE)
         return key.encode('base64').replace('\n', '')
 
     @classmethod

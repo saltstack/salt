@@ -3,7 +3,6 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python modules
-from contextlib import nested
 import glob
 import os
 import socket
@@ -38,7 +37,7 @@ def _validate_file_roots(file_roots):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': ['/srv/salt']}
-    for env, dirs in file_roots.items():
+    for env, dirs in list(file_roots.items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             file_roots[env] = []
     return file_roots
@@ -76,15 +75,16 @@ def load_config(opts, path, env_var):
     if not os.path.isfile(path):
         template = '{0}.template'.format(path)
         if os.path.isfile(template):
-            with nested(open(path, 'w'), open(template, 'r')) as (out, f):
-                f.readline() # skip first line
-                out.write(f.read())
+            with open(path, 'w') as out:
+                with open(template, 'r') as f:
+                    f.readline() # skip first line
+                    out.write(f.read())
 
     if os.path.isfile(path):
         try:
             opts.update(_read_conf_file(path))
             opts['conf_file'] = path
-        except Exception, e:
+        except Exception as e:
             msg = 'Error parsing configuration file: {0} - {1}'
             log.warn(msg.format(path, e))
     else:
@@ -97,7 +97,7 @@ def include_config(opts, orig_path):
     main config file.
     '''
     include = opts.get('include', [])
-    if isinstance(include, basestring):
+    if isinstance(include, str):
         include = [include]
     for path in include:
         if not os.path.isabs(path):
@@ -105,7 +105,7 @@ def include_config(opts, orig_path):
         for fn_ in glob.glob(path):
             try:
                 opts.update(_read_conf_file(path))
-            except Exception, e:
+            except Exception as e:
                 msg = 'Error parsing configuration file: {0} - {1}'
                 log.warn(msg.format(fn_, e))
     return opts
