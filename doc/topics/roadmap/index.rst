@@ -137,12 +137,6 @@ requirements are met.
 Refine Security
 ---------------
 
-Only One Crypt Backend
-``````````````````````
-
-Right now we have pycrypto and m2crypto, we need to pick just one. So far
-the plan is to dump m2crypto and use just pycrypto.
-
 Make the iv explicit
 ````````````````````
 

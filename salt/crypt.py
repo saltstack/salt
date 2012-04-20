@@ -13,8 +13,12 @@ import logging
 import tempfile
 
 # Import Cryptography libs
-from M2Crypto import RSA
 from Crypto.Cipher import AES
+
+# RSA Support
+from Crypto.Hash import MD5
+from Crypto.PublicKey import RSA
+from Crypto import Random
 
 # Import zeromq libs
 import zmq
@@ -27,13 +31,6 @@ from salt.exceptions import AuthenticationError
 log = logging.getLogger(__name__)
 
 
-def foo_pass(self, data=''):
-    '''
-    used as a workaround for the no-passphrase issue in M2Crypto.RSA
-    '''
-    return 'foo'
-
-
 def gen_keys(keydir, keyname, keysize):
     '''
     Generate a keypair for use with salt
@@ -41,14 +38,17 @@ def gen_keys(keydir, keyname, keysize):
     base = os.path.join(keydir, keyname)
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
-    gen = RSA.gen_key(keysize, 1)
+
+    privkey = RSA.generate(keysize, Random.new().read)
+    pubkey = privkey.publickey()
     cumask = os.umask(191)
-    gen.save_key(priv, callback=foo_pass)
+    with open(priv, "w") as priv_file:
+        priv_file.write(privkey.exportKey())
     os.umask(cumask)
-    gen.save_pub_key(pub)
-    key = RSA.load_key(priv, callback=foo_pass)
+    with open(pub, "w") as pub_file:
+        pub_file.write(pubkey.exportKey())
     os.chmod(priv, 256)
-    return key
+    return (pubkey, privkey)
 
 
 class MasterKeys(dict):
@@ -60,37 +60,39 @@ class MasterKeys(dict):
         self.opts = opts
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
-        self.key = self.__get_priv_key()
-        self.pub_str = self.__get_pub_str()
+        (self.pub_key, self.key) = self.__get_keys()
         self.token = self.__gen_token()
 
-    def __get_priv_key(self):
+    def __get_keys(self):
         '''
-        Returns a private key object for the master
+        Returns a key objects for the master
         '''
         key = None
-        try:
-            key = RSA.load_key(self.rsa_path, callback=foo_pass)
+        if os.path.exists(self.rsa_path):
+            try:
+                key = RSA.importKey(open(self.rsa_path, 'r').read())
+            except:
+                key = RSA.importKey(open(self.rsa_path, 'r').read(),
+                                    passphrase='foo')
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
-        except:
-            log.info('Generating master key: {0}'.format(self.rsa_path))
-            key = gen_keys(self.opts['pki_dir'], 'master', 4096)
-        return key
-
-    def __get_pub_str(self):
-        '''
-        Returns the string contents of the public key
-        '''
-        if not os.path.isfile(self.pub_path):
-            key = self.__get_priv_key()
-            key.save_pub_key(self.pub_path)
-        return open(self.pub_path, 'r').read()
+            pub_key = RSA.importKey(open(self.pub_path, 'r').read())
+            log.debug('Loaded master public key: {0}'.format(self.pub_path))
+        else:
+            log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
+            (pubkey, key) = gen_keys(self.opts['pki_dir'], 'master', 4096)
+        return (pubkey, key)
 
     def __gen_token(self):
         '''
         Generate the authentication token
         '''
-        return self.key.private_encrypt('salty bacon', 5)
+        return self.key.sign('salty bacon', Random.new().read)
+
+    def get_pub_str(self):
+        '''
+        Return the string representation of the public key
+        '''
+        return self.pub_key.exportKey()
 
 
 class Auth(object):
@@ -101,6 +103,7 @@ class Auth(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
+        self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
         if 'syndic_master' in self.opts:
             self.mpub = 'syndic_master.pub'
@@ -109,18 +112,24 @@ class Auth(object):
         else:
             self.mpub = 'minion_master.pub'
 
-    def get_priv_key(self):
+    def get_keys(self):
         '''
-        Returns a private key object for the minion
+        Returns a key objects for the minion
         '''
         key = None
-        try:
-            key = RSA.load_key(self.rsa_path, callback=foo_pass)
+        if os.path.exists(self.rsa_path):
+            try:
+                key = RSA.importKey(open(self.rsa_path, 'r').read())
+            except:
+                key = RSA.importKey(open(self.rsa_path, 'r').read(),
+                                    passphrase='foo')
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
-        except:
-            log.info('Generating minion key: {0}'.format(self.rsa_path))
-            key = gen_keys(self.opts['pki_dir'], 'minion', 4096)
-        return key
+            pub_key = RSA.importKey(open(self.pub_path, 'r').read())
+            log.debug('Loaded minion public key: {0}'.format(self.pub_path))
+        else:
+            log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
+            (pubkey, key) = gen_keys(self.opts['pki_dir'], 'minion', 4096)
+        return (pubkey, key)
 
     def minion_sign_in_payload(self):
         '''
@@ -129,15 +138,12 @@ class Auth(object):
         public key to encrypt the AES key sent back form the master.
         '''
         payload = {}
-        key = self.get_priv_key()
-        tmp_pub = tempfile.mktemp()
-        key.save_pub_key(tmp_pub)
+        (pub, key) = self.get_keys()
         payload['enc'] = 'clear'
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
-        payload['load']['pub'] = open(tmp_pub, 'r').read()
-        os.remove(tmp_pub)
+        payload['load']['pub'] = pub.exportKey()
         return payload
 
     def decrypt_aes(self, aes):
@@ -150,24 +156,20 @@ class Auth(object):
         Returns the decrypted aes seed key, a string
         '''
         log.debug('Decrypting the current master AES key')
-        key = self.get_priv_key()
-        return key.private_decrypt(aes, 4)
+        (pub, key) = self.get_keys()
+        return key.decrypt(aes)
 
     def verify_master(self, master_pub, token):
         '''
         Takes the master pubkey and compares it to the saved master pubkey,
-        the token is encrypted with the master private key and must be
-        decrypted successfully to verify that the master has been connected
-        to.  The token must decrypt with the public key, and it must say:
-        'salty bacon'
+        the token is sign with the master private key and must be
+        verified successfully to verify that the master has been connected
+        to.  The token must verify as signature of the phrase 'salty bacon'
+        with the public key.
 
         Returns a bool
         '''
-        tmp_pub = tempfile.mktemp()
-        open(tmp_pub, 'w+').write(master_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-        pub = RSA.load_pub_key(tmp_pub)
-        os.remove(tmp_pub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = open(m_pub_fn).read()
             if not master_pub == local_master_pub:
@@ -178,7 +180,8 @@ class Auth(object):
                 return False
         else:
             open(m_pub_fn, 'w+').write(master_pub)
-        if pub.public_decrypt(token, 5) == 'salty bacon':
+        pub = RSA.importKey(master_pub)
+        if pub.verify('salty bacon', token):
             return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')
@@ -333,4 +336,5 @@ class SAuth(Auth):
         Encrypt a string with the minion private key to verify identity
         with the master.
         '''
-        return self.get_priv_key().private_encrypt(clear_tok, 5)
+        (pub, key) = self.get_keys()
+        return key.sign(clear_tok, Random.new().read)
