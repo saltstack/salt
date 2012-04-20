@@ -315,6 +315,7 @@ class SAuth(Auth):
     '''
     def __init__(self, opts):
         super(SAuth, self).__init__(opts)
+        Random.atfork()
         self.crypticle = self.__authenticate()
 
     def __authenticate(self):
