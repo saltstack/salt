@@ -590,6 +590,9 @@ def _check_file_meta(
     stats = __salt__['file.stats'](
             name,
             source_sum.get('hash_type'), 'md5')
+    if not stats:
+        changes['newfile'] = name
+        return changes
     if 'hsum' in source_sum:
         if source_sum['hsum'] != stats['sum']:
             with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
