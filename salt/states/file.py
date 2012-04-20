@@ -458,7 +458,7 @@ def _check_recurse(
     if clean:
         keep += _gen_keep_files(name, require)
         for fn_ in _clean_dir(name, list(keep)):
-            changes[fn_] = {'diff', 'Remove'}
+            changes[fn_] = {'diff': 'Remove'}
     if changes:
         comment = 'The following files are set to change:\n'
         for fn_ in changes:
