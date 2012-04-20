@@ -415,7 +415,7 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with open(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
-        pub = RSA.PublicKey.import_key(minion_pub)
+        pub = RSA.importKey(minion_pub)
         if pub.verify("salt", (int(token),)):
             return True
         log.error('Salt minion claiming to be {0} has attempted to'
@@ -676,8 +676,8 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            jid = clear_load['jid']
-            msg = 'Minion id {0} is not who it says it is!'.format(jid)
+            msg = 'Minion id {0} is not who it says it is!'.format(
+                    clear_load['id'])
             log.warn(msg)
             return {}
         perms = set()
