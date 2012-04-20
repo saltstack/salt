@@ -48,7 +48,7 @@ class Batch(object):
         fret = []
         for ret in self.local.cmd_iter(*args):
             for minion in ret:
-                print '{0} Detected for this batch run'.format(minion)
+                print('{0} Detected for this batch run'.format(minion))
                 fret.append(minion)
         return sorted(fret)
 
@@ -67,8 +67,8 @@ class Batch(object):
             else:
                 return int(self.opts['batch'])
         except ValueError:
-            print ('Invalid batch data sent: {0}\nData must be in the form'
-                   'of %10, 10% or 3').format(self.opts['batch'])
+            print(('Invalid batch data sent: {0}\nData must be in the form'
+                   'of %10, 10% or 3').format(self.opts['batch']))
 
     def run(self):
         '''
@@ -99,7 +99,7 @@ class Batch(object):
             active += next_
             args[0] = next_
             if next_:
-                print '\nExecuting run on {0}\n'.format(next_)
+                print('\nExecuting run on {0}\n'.format(next_))
                 iters.append(
                         self.local.cmd_iter_no_block(*args))
             else:

@@ -35,9 +35,9 @@ class Runner(object):
         '''
         for fun in sorted(self.functions):
             if fun.startswith(self.opts['fun']):
-                print fun + ':'
-                print self.functions[fun].__doc__
-                print ''
+                print(fun + ':')
+                print(self.functions[fun].__doc__)
+                print('')
 
     def run(self):
         '''

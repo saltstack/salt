@@ -52,7 +52,7 @@ class Key(object):
             log_msg = getattr(log, level)
             log_msg(message)
         if not self.opts['quiet']:
-            print message
+            print(message)
 
     def _list_pre(self, header=True):
         '''
