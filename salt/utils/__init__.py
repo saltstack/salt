@@ -17,6 +17,8 @@ import salt.minion
 import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
+# Import Random so we can re-init around forks
+from Crypto import Random
 
 log = logging.getLogger(__name__)
 
@@ -130,6 +132,7 @@ def daemonize():
         if pid > 0:
             # exit first parent
             sys.exit(0)
+        Random.atfork()
     except OSError as exc:
         msg = 'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
         log.error(msg)
@@ -145,6 +148,7 @@ def daemonize():
         pid = os.fork()
         if pid > 0:
             sys.exit(0)
+        Random.atfork()
     except OSError as exc:
         msg = 'fork #2 failed: {0} ({1})'
         log.error(msg.format(exc.errno, exc.strerror))
