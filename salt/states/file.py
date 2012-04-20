@@ -436,8 +436,8 @@ def _check_recurse(
             # verify the directory perms if they are set
             vdir.add(dirname)
         if os.path.isfile(dest):
-            with open(fn_, 'r') as source:
-                hsum = hashlib.md5(source.read()).hexdigest()
+            with open(fn_, 'r') as source_:
+                hsum = hashlib.md5(source_.read()).hexdigest()
             source_sum = {'hash_type': 'md5',
                           'hsum': hsum}
             tchange = _check_file_meta(
