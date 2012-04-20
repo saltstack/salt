@@ -559,7 +559,7 @@ def find(path, options):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("usage: {0} path [options]".format(sys.argv[0]), file=sys.stderr)
+        sys.stderr.write('usage: {0} path [options]\n'.format(sys.argv[0]))
         sys.exit(1)
 
     path = sys.argv[1]
