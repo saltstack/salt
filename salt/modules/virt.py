@@ -125,31 +125,45 @@ def list_inactive_vms():
         vms.append(id_)
     return vms
 
-def vm_info():
+def vm_info(vm_=None):
     '''
-    Return detailed information about the vms on this hyper in a dict::
+    Return detailed information about the vms on this hyper in a
+    list of dicts:
 
-        {'cpu': <int>,
-        'maxMem': <int>,
-        'mem': <int>,
-        'state': '<state>',
-        'cputime' <int>}
+        [
+            'your-vm': {
+                'cpu': <int>,
+                'maxMem': <int>,
+                'mem': <int>,
+                'state': '<state>',
+                'cputime' <int>
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
 
     CLI Example::
 
         salt '*' virt.vm_info
     '''
-    info = {}
-    for vm_ in list_vms():
+    def _info(vm_):
         dom = _get_dom(vm_)
         raw = dom.info()
-        info[vm_] = {'cpu': raw[3],
-                     'cputime': int(raw[4]),
-                     'disks': get_disks(vm_),
-                     'graphics': get_graphics(vm_),
-                     'maxMem': int(raw[1]),
-                     'mem': int(raw[2]),
-                     'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
+        return {'cpu': raw[3],
+                'cputime': int(raw[4]),
+                'disks': get_disks(vm_),
+                'graphics': get_graphics(vm_),
+                'maxMem': int(raw[1]),
+                'mem': int(raw[2]),
+                'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
     return info
 
 def vm_state(vm_):
