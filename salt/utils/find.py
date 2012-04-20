@@ -571,7 +571,7 @@ if __name__ == '__main__':
     try:
         f = Finder(criteria)
     except ValueError, ex:
-        print('error: {0}'.format(ex), file=sys.stderr)
+        sys.stderr.write('error: {0}\n'.format(ex))
         sys.exit(1)
 
     for result in f.find(path):
