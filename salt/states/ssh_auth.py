@@ -46,7 +46,7 @@ def _present_test(user, name, enc, comment, options, source, config):
     '''
     result = None
     if source:
-        keys = __salt__['check_key_file'](user, source, config)
+        keys = __salt__['ssh.check_key_file'](user, source, config)
         if keys:
             comment = ('A number of keys are going to be updated from the '
                        'keyfile: {0}').format(source)
@@ -55,7 +55,13 @@ def _present_test(user, name, enc, comment, options, source, config):
             comment = (
                     'All host keys in file {0} are already present'
                     ).format(source)
-    check = __salt__['check_key'](user, name, enc, comment, options, config)
+    check = __salt__['ssh.check_key'](
+            user,
+            name,
+            enc,
+            comment,
+            options,
+            config)
     if check == 'update':
         comment = (
                 'Key {0} for user {1} is set to be updated'
@@ -201,7 +207,7 @@ def absent(name, user, config='.ssh/authorized_keys'):
            'comment': ''}
 
     if __opts__['test']:
-        check = __salt__['check_key'](
+        check = __salt__['ssh.check_key'](
                 user,
                 name,
                 '',
