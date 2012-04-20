@@ -868,7 +868,7 @@ class State(object):
                 if tag not in running:
                     fun_stats.add('unmet')
                     continue
-                if not running[tag]['result']:
+                if running[tag]['result'] is False:
                     fun_stats.add('fail')
                     continue
                 if r_state == 'watch' and running[tag]['changes']:
