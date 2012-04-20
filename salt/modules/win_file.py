@@ -231,13 +231,13 @@ def get_sum(path, form='md5'):
         return 'File not found'
     try:
         return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         return 'File Error: %s' % (str(e))
-    except AttributeError, e:
+    except AttributeError as e:
         return 'Hash ' + form + ' not supported'
-    except NameError, e:
+    except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
-    except Exception, e:
+    except Exception as e:
         return str(e)
 
 
@@ -334,7 +334,7 @@ def find(path, **kwargs):
     '''
     try:
         f = salt.utils.find.Finder(kwargs)
-    except ValueError, ex:
+    except ValueError as ex:
         return 'error: {0}'.format(ex)
 
     ret = [p for p in f.find(path)]
