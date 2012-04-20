@@ -79,14 +79,14 @@ class MasterKeys(dict):
             log.debug('Loaded master public key: {0}'.format(self.pub_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            (pubkey, key) = gen_keys(self.opts['pki_dir'], 'master', 4096)
-        return (pubkey, key)
+            (pub_key, key) = gen_keys(self.opts['pki_dir'], 'master', 4096)
+        return (pub_key, key)
 
     def __gen_token(self):
         '''
         Generate the authentication token
         '''
-        return self.key.sign('salty bacon', Random.new().read)
+        return str(self.key.sign('salty bacon', Random.new().read)[0])
 
     def get_pub_str(self):
         '''
@@ -128,8 +128,8 @@ class Auth(object):
             log.debug('Loaded minion public key: {0}'.format(self.pub_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            (pubkey, key) = gen_keys(self.opts['pki_dir'], 'minion', 4096)
-        return (pubkey, key)
+            (pub_key, key) = gen_keys(self.opts['pki_dir'], 'minion', 4096)
+        return (pub_key, key)
 
     def minion_sign_in_payload(self):
         '''
@@ -181,7 +181,7 @@ class Auth(object):
         else:
             open(m_pub_fn, 'w+').write(master_pub)
         pub = RSA.importKey(master_pub)
-        if pub.verify('salty bacon', token):
+        if pub.verify('salty bacon', (int(token),)):
             return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')
@@ -337,4 +337,4 @@ class SAuth(Auth):
         with the master.
         '''
         (pub, key) = self.get_keys()
-        return key.sign(clear_tok, Random.new().read)
+        return str(key.sign(clear_tok, Random.new().read)[0])

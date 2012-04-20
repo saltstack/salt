@@ -416,7 +416,7 @@ class AESFuncs(object):
         with open(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
         pub = RSA.PublicKey.import_key(minion_pub)
-        if pub.verify("salt", token):
+        if pub.verify("salt", (int(token),)):
             return True
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
@@ -946,7 +946,7 @@ class ClearFuncs(object):
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
-        ret['aes'] = pub.encrypt(self.opts['aes'], Random.new().read)
+        ret['aes'] = pub.encrypt(self.opts['aes'], Random.new().read)[0]
         if self.opts['cluster_masters']:
             self._send_cluster()
         return ret
