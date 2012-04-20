@@ -46,6 +46,9 @@ bond0:
     - use_in:
       - network: eth2
       - network: eth3
+    - require:
+      - network: eth2
+      - network: eth3
     - mode: 802.3ad
     - miimon: 100
     - arp_interval: 250
@@ -75,6 +78,8 @@ bond0.2:
     - ipaddr: 10.1.0.2
     - use:
       - network: bond0
+    - require:
+      - network: bond0
 
 bond0.3:
   network:
@@ -82,6 +87,8 @@ bond0.3:
     - type: vlan
     - ipaddr: 10.1.0.3
     - use:
+      - network: bond0
+    - require:
       - network: bond0
 
 bond0.10:
@@ -91,6 +98,8 @@ bond0.10:
     - ipaddr: 10.1.0.4
     - use:
       - network: bond0
+    - require:
+      - network: bond0
 
 bond0.12:
   network:
@@ -98,6 +107,8 @@ bond0.12:
     - type: vlan
     - ipaddr: 10.1.0.5
     - use:
+      - network: bond0
+    - require:
       - network: bond0
 '''
 
