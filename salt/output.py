@@ -88,7 +88,7 @@ class HighStateOutputter(Outputter):
                         err = ('The State execution failed to record the order '
                                'in which all states were executed. The state '
                                'return missing data is:')
-                        print err
+                        print(err)
                         pprint.pprint(info)
                 # Everything rendered as it should display the output
                 for tname in sorted(
@@ -142,9 +142,9 @@ class HighStateOutputter(Outputter):
                                         '\n                   ')
                     hstrs.append(('{0}{1}{2[ENDC]}'
                                   .format(tcolor, changes, colors)))
-            print('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors))
+            print(('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
             for hstr in hstrs:
-                print hstr
+                print(hstr)
 
 
 class RawOutputter(Outputter):
@@ -154,7 +154,7 @@ class RawOutputter(Outputter):
     supports = 'raw'
 
     def __call__(self, data, **kwargs):
-        print data
+        print(data)
 
 
 class TxtOutputter(Outputter):
@@ -171,9 +171,9 @@ class TxtOutputter(Outputter):
                 # Don't blow up on non-strings
                 try:
                     for line in value.split('\n'):
-                        print '{0}: {1}'.format(key, line)
+                        print('{0}: {1}'.format(key, line))
                 except AttributeError:
-                    print '{0}: {1}'.format(key, value)
+                    print('{0}: {1}'.format(key, value))
         else:
             # For non-dictionary data, just use print
             RawOutputter()(data)
@@ -196,7 +196,7 @@ class JSONOutputter(Outputter):
         except TypeError:
             # Return valid json for unserializable objects
             ret = json.dumps({})
-        print ret
+        print(ret)
 
 
 class YamlOutputter(Outputter):
@@ -208,7 +208,7 @@ class YamlOutputter(Outputter):
     def __call__(self, data, **kwargs):
         if 'color' in kwargs:
             kwargs.pop('color')
-        print yaml.dump(data, **kwargs)
+        print(yaml.dump(data, **kwargs))
 
 
 def get_outputter(name=None):

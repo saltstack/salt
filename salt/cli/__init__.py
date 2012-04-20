@@ -262,9 +262,9 @@ class SaltCMD(object):
                     else:
                         printout = get_outputter(None)
 
-                    print 'Return data for job {0}:'.format(jid)
+                    print('Return data for job {0}:'.format(jid))
                     printout(ret[jid])
-                    print ''
+                    print('')
         elif self.opts['batch']:
             batch = salt.cli.batch.Batch(self.opts)
             batch.run()
@@ -376,9 +376,9 @@ class SaltCMD(object):
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
-            print fun + ':'
-            print docs[fun]
-            print ''
+            print(fun + ':')
+            print(docs[fun])
+            print('')
 
 
 class SaltCP(object):

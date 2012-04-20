@@ -18,7 +18,7 @@ if sys.version_info[0:2] < (2,7):
                               TestCase, expectedFailure, \
                               TestSuite
     except ImportError:
-        print "You need to install unittest2 to run the salt tests"
+        print("You need to install unittest2 to run the salt tests")
         sys.exit(1)
 else:
     from unittest import TestLoader, TextTestRunner,\
