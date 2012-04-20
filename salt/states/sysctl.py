@@ -34,7 +34,7 @@ def present(name, value, config='/etc/sysctl.conf'):
     current = __salt__['sysctl.show']()
     if __opts__['test']:
         if name in current:
-            if current['name'] != value:
+            if current[name] != value:
                 ret['result'] = None
                 ret['comment'] = (
                         'Sysctl option {0} set to be changed to {1}'

@@ -132,7 +132,10 @@ class Master(SMaster):
                         continue
                     with open(jid_file, 'r') as fn_:
                         jid = fn_.read()
-                    if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                    if len(jid) < 18:
+                        # Invalid jid, scrub the dir
+                        shutil.rmtree(f_path)
+                    elif int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
                         shutil.rmtree(f_path)
             try:
                 time.sleep(60)
@@ -202,6 +205,7 @@ class Publisher(multiprocessing.Process):
         '''
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
+        pub_sock.setsockopt(zmq.HWM, 1)
         pull_sock = context.socket(zmq.PULL)
         pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
         pull_uri = 'ipc://{0}'.format(

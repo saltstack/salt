@@ -662,6 +662,7 @@ class State(object):
         Extend the data reference with requisite_in arguments
         '''
         req_in = set(['require_in', 'watch_in', 'use', 'use_in'])
+        req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
         for id_, body in high.items():
             for state, run in body.items():
@@ -716,27 +717,7 @@ class State(object):
                                 _state = ind.keys()[0]
                                 name = ind[_state]
                                 if key == 'use_in':
-                                    # 1. Extend the running state to watch
-                                    # the use_in state
-                                    found = False
-                                    rkey = 'watch'
-                                    if not id_ in extend:
-                                        extend[id_] = {}
-                                    if not state in extend[id_]:
-                                        extend[id_][state] = []
-                                    for ind in range(len(extend[id_][state])):
-                                        if extend[id_][state][ind].keys()[0] == rkey:
-                                            # Extending again
-                                            extend[id_][state][ind][rkey].append(
-                                                    {_state: name}
-                                                    )
-                                            found = True
-                                    # The rkey is not present yet, create it
-                                    if not found:
-                                        extend[id_][state].append(
-                                                {rkey: [{_state: name}]}
-                                                )
-                                    # 2. Add the running states args to the
+                                    # Add the running states args to the
                                     # use_in states
                                     ext_id = find_name(name, _state, high)
                                     if not ext_id:
@@ -746,37 +727,18 @@ class State(object):
                                         extend[ext_id] = {}
                                     if not _state in extend[ext_id]:
                                         extend[ext_id][_state] = []
+                                    ignore_args = req_in_all.union(ext_args)
                                     for arg in high[id_][state]:
                                         if not isinstance(arg, dict):
                                             continue
                                         if len(arg) != 1:
                                             continue
-                                        if arg.keys()[0] in ext_args:
+                                        if arg.keys()[0] in ignore_args:
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
                                 if key == 'use':
-                                    # 1. Extend the use state to watch
-                                    # the running state
-                                    found = False
-                                    rkey = 'watch'
-                                    if not name in extend:
-                                        extend[name] = {}
-                                    if not _state in extend[name]:
-                                        extend[name][_state] = []
-                                    for ind in range(len(extend[name][_state])):
-                                        if extend[name][_state][ind].keys()[0] == rkey:
-                                            # Extending again
-                                            extend[name][_state][ind][rkey].append(
-                                                    {state: id_}
-                                                    )
-                                            found = True
-                                    # The rkey is not present yet, create it
-                                    if not found:
-                                        extend[name][_state].append(
-                                                {rkey: [{state: id_}]}
-                                                )
-                                    # 2. Add the use state's args to the
+                                    # Add the use state's args to the
                                     # running state
                                     ext_id = find_name(name, _state, high)
                                     if not ext_id:
@@ -786,12 +748,13 @@ class State(object):
                                         extend[id_] = {}
                                     if not state in extend[id_]:
                                         extend[id_][state] = []
+                                    ignore_args = req_in_all.union(loc_args)
                                     for arg in high[ext_id][_state]:
                                         if not isinstance(arg, dict):
                                             continue
                                         if len(arg) != 1:
                                             continue
-                                        if arg.keys()[0] in loc_args:
+                                        if arg.keys()[0] in ignore_args:
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -905,7 +868,7 @@ class State(object):
                 if tag not in running:
                     fun_stats.add('unmet')
                     continue
-                if not running[tag]['result']:
+                if running[tag]['result'] is False:
                     fun_stats.add('fail')
                     continue
                 if r_state == 'watch' and running[tag]['changes']:
