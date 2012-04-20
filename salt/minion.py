@@ -14,7 +14,7 @@ import threading
 import time
 import traceback
 
-# Import zeromq libs
+# Import third party libs
 import zmq
 
 # Import salt libs
