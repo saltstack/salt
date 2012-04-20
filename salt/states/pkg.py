@@ -75,7 +75,7 @@ def installed(
     if __opts__['test']:
         return {'name': name,
                 'changes': {},
-                'result': True,
+                'result': None,
                 'comment': 'Package {0} is set to be installed'.format(name)}
 
     if refresh or os.path.isfile(rtag):
@@ -195,7 +195,7 @@ def removed(name):
         if __opts__['test']:
             return {'name': name,
                     'changes': {},
-                    'result': True,
+                    'result': None,
                     'comment': 'Package {0} is set to be installed'.format(
                         name)}
         changes['removed'] = __salt__['pkg.remove'](name)
@@ -228,7 +228,7 @@ def purged(name):
         if __opts__['test']:
             return {'name': name,
                     'changes': {},
-                    'result': True,
+                    'result': None,
                     'comment': 'Package {0} is set to be purged'.format(name)}
         changes['removed'] = __salt__['pkg.purge'](name)
 
