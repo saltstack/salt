@@ -441,7 +441,8 @@ def _check_recurse(
             source_sum = {'hash_type': 'md5',
                           'hsum': hsum}
             tchange = _check_file_meta(
-                    name,
+                    dest,
+                    fn_,
                     source_sum,
                     user,
                     group,
@@ -461,7 +462,7 @@ def _check_recurse(
     if changes:
         comment = 'The following files are set to change:\n'
         for fn_ in changes:
-            for key, val in chages[fn_].items():
+            for key, val in changes[fn_].items():
                 comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} in in the correct state'.format(name)
@@ -540,7 +541,15 @@ def _check_managed(
             defaults,
             **kwargs
             )
-    return _check_file_meta(name, source_sum, user, group, mode)
+    if comment:
+        return False, comment
+    changes = _check_file_meta(name, sfn, source_sum, user, group, mode)
+    if changes:
+        comment = 'The following values are set to be changed:\n'
+        for key, val in changes.items():
+            comment += '{0}: {1}\n'.format(key, val)
+        return None, comment
+    return True, 'The file {0} is in the correct state'.format(name)
 
 
 def _check_dir_meta(
@@ -569,6 +578,7 @@ def _check_dir_meta(
 
 def _check_file_meta(
         name,
+        sfn,
         source_sum,
         user,
         group,
@@ -577,26 +587,24 @@ def _check_file_meta(
     Check for the changes in the file metadata
     '''
     changes = {}
-    stats = __salt__['file.stats'](name, source_sum['hash_type'])
-    if source_sum['hsum'] != stats['sum']:
-        with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
-            slines = src.readlines()
-            nlines = name_.readlines()
-        changes['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
-                )
+    stats = __salt__['file.stats'](
+            name,
+            source_sum.get('hash_type'), 'md5')
+    if 'hsum' in source_sum:
+        if source_sum['hsum'] != stats['sum']:
+            with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
+                slines = src.readlines()
+                nlines = name_.readlines()
+            changes['diff'] = (
+                    ''.join(difflib.unified_diff(nlines, slines))
+                    )
     if not user is None and user != stats['user']:
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
     if not mode is None and mode != stats['mode']:
         changes['mode'] = mode
-    if changes:
-        comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
-            comment += '{0}: {1}\n'.format(key, val)
-        return None, comment
-    return True, 'The file {0} is in the correct state'.format(name)
+    return changes
 
 
 def _check_touch(name, atime, mtime):
