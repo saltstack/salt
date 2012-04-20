@@ -10,6 +10,8 @@ import optparse
 import subprocess
 import tempfile
 import shutil
+import random
+import hashlib
 
 # Import third party libs
 import yaml
@@ -60,6 +62,9 @@ class Swarm(object):
         Create a config file for a single minion
         '''
         fd, path = tempfile.mkstemp()
+        path = '{0}{1}'.format(
+                path,
+                hashlib.md5(str(random.randint(0, 999999))).hexdigest())
         os.close(fd)
         dpath = '{0}.d'.format(path)
         os.makedirs(dpath)
