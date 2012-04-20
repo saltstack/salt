@@ -400,7 +400,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     after = _sed_esc(after, escape_all)
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
-            backup = '-i{0} '.format(backup) if backup else '',
+            backup = '-i{0} '.format(backup) if backup else '-i',
             options = options,
             limit = '/{0}/ '.format(limit) if limit else '',
             before = before,
