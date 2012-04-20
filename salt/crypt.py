@@ -15,11 +15,10 @@ import base64
 
 # Import Cryptography libs
 from Crypto.Cipher import AES
-
-# RSA Support
 from Crypto.Hash import MD5
 from Crypto.PublicKey import RSA
 from Crypto import Random
+from Crypto.Protocol.KDF import PBKDF2
 
 # Import zeromq libs
 import zmq
@@ -30,6 +29,19 @@ import salt.utils
 from salt.exceptions import AuthenticationError
 
 log = logging.getLogger(__name__)
+
+
+def clean_old_key(rsa_path):
+    '''
+    Read in an old m2crypto key and save it back in the clear so
+    pycrypto can handle it
+    '''
+    def foo_pass(self, data=''):
+        return 'foo'
+    import M2Crypto.RSA
+    mkey = M2Crypto.RSA.load_key(rsa_path, callback=foo_pass)
+    mkey.save_key(rsa_path, None)
+    return RSA.importKey(open(rsa_path, 'r').read())
 
 
 def gen_keys(keydir, keyname, keysize):
@@ -73,8 +85,10 @@ class MasterKeys(dict):
             try:
                 key = RSA.importKey(open(self.rsa_path, 'r').read())
             except:
-                key = RSA.importKey(open(self.rsa_path, 'r').read(),
-                                    passphrase='foo')
+                # This is probably an "old key", we need to use m2crypto to
+                # open it and then save it back without a passphrase
+                key = clean_old_key(self.rsa_path)
+
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
             pub_key = RSA.importKey(open(self.pub_path, 'r').read())
             log.debug('Loaded master public key: {0}'.format(self.pub_path))
@@ -123,8 +137,9 @@ class Auth(object):
             try:
                 key = RSA.importKey(open(self.rsa_path, 'r').read())
             except:
-                key = RSA.importKey(open(self.rsa_path, 'r').read(),
-                                    passphrase='foo')
+                # This is probably an "old key", we need to use m2crypto to
+                # open it and then save it back without a passphrase
+                key = clean_old_key(self.rsa_path)
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
             pub_key = RSA.importKey(open(self.pub_path, 'r').read())
             log.debug('Loaded minion public key: {0}'.format(self.pub_path))
