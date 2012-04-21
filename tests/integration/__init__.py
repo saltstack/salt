@@ -192,7 +192,7 @@ class SyndicCase(TestCase):
         orig = self.client.cmd('minion', function, arg)
         return orig['minion']
 
-class CliCase(TestCase):
+class ShellCase(TestCase):
     '''
     Execute a test for a shell command
     '''
@@ -211,6 +211,22 @@ class CliCase(TestCase):
                 stdout=subprocess.PIPE
                 ).communicate()[0].split('\n')
         return data
+
+    def run_salt(self, arg_str):
+        '''
+        Execute salt-key
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt', arg_str)
+
+    def run_salt(self, arg_str):
+        '''
+        Execute salt-key
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-run', arg_str)
 
     def run_key(self, arg_str):
         '''
