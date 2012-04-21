@@ -18,7 +18,6 @@ from Crypto.Cipher import AES
 from Crypto.Hash import MD5
 from Crypto.PublicKey import RSA
 from Crypto import Random
-from Crypto.Protocol.KDF import PBKDF2
 
 # Import zeromq libs
 import zmq
