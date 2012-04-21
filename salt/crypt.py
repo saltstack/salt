@@ -17,7 +17,6 @@ import base64
 from Crypto.Cipher import AES
 from Crypto.Hash import MD5
 import Crypto.PublicKey.RSA
-from Crypto import Random
 from M2Crypto import RSA
 
 # Import zeromq libs
@@ -55,7 +54,7 @@ def gen_keys(keydir, keyname, keysize):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    privkey = Crypto.PublicKey.RSA.generate(keysize, Random.new().read)
+    privkey = Crypto.PublicKey.RSA.generate(keysize)
     pubkey = privkey.publickey()
     cumask = os.umask(191)
     if os.path.isfile(priv):
@@ -345,7 +344,6 @@ class SAuth(Auth):
     '''
     def __init__(self, opts):
         super(SAuth, self).__init__(opts)
-        Random.atfork()
         self.crypticle = self.__authenticate()
 
     def __authenticate(self):
