@@ -92,7 +92,7 @@ class MasterKeys(dict):
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'], 'master', 4096)
-            key = RSA.load_key(self.rsa_path, None)
+            key = RSA.load_key(self.rsa_path)
         return key
 
     def __gen_token(self):
