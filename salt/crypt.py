@@ -207,7 +207,6 @@ class Auth(object):
                 return False
         else:
             open(m_pub_fn, 'w+').write(master_pub)
-        pub = RSA.importKey(master_pub)
         if pub.public_decrypt(token, 5) == 'salty bacon':
             return True
         log.error('The salt master has failed verification for an unknown '
