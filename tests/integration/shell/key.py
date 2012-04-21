@@ -1,7 +1,7 @@
 # Import salt libs
 import integration
 
-class KeyTest(integration.CliCase):
+class KeyTest(integration.ShellCase):
     '''
     Test salt-key script
     '''
