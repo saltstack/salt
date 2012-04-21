@@ -104,7 +104,7 @@ class MasterKeys(dict):
         '''
         return self.key.private_encrypt('salty bacon', 5)
 
-    def pub_str(self):
+    def get_pub_str(self):
         '''
         Return the string representation of the public key
         '''
