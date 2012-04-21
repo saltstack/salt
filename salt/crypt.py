@@ -16,8 +16,9 @@ import base64
 # Import Cryptography libs
 from Crypto.Cipher import AES
 from Crypto.Hash import MD5
-from Crypto.PublicKey import RSA
+import Crypto.PublicKey.RSA
 from Crypto import Random
+from M2Crypto import RSA
 
 # Import zeromq libs
 import zmq
@@ -37,8 +38,7 @@ def clean_old_key(rsa_path):
     '''
     def foo_pass(self, data=''):
         return 'foo'
-    import M2Crypto.RSA
-    mkey = M2Crypto.RSA.load_key(rsa_path, callback=foo_pass)
+    mkey = RSA.load_key(rsa_path, callback=foo_pass)
     mkey.save_key(rsa_path, None)
     return RSA.importKey(open(rsa_path, 'r').read())
 
@@ -51,16 +51,16 @@ def gen_keys(keydir, keyname, keysize):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    privkey = RSA.generate(keysize, Random.new().read)
+    privkey = Crypto.PublicKey.RSA.generate(keysize, Random.new().read)
     pubkey = privkey.publickey()
     cumask = os.umask(191)
-    with open(priv, "w") as priv_file:
+    with open(priv, 'w+') as priv_file:
         priv_file.write(str(privkey.exportKey()))
     os.umask(cumask)
-    with open(pub, "w") as pub_file:
+    with open(pub, 'w+') as pub_file:
         pub_file.write(str(pubkey.exportKey()))
     os.chmod(priv, 256)
-    return (pubkey, privkey)
+    return priv
 
 
 class MasterKeys(dict):
@@ -72,7 +72,7 @@ class MasterKeys(dict):
         self.opts = opts
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
-        (self.pub_key, self.key) = self.__get_keys()
+        self.key = self.__get_keys()
         self.token = self.__gen_token()
 
     def __get_keys(self):
@@ -82,32 +82,34 @@ class MasterKeys(dict):
         key = None
         if os.path.exists(self.rsa_path):
             try:
-                key = RSA.importKey(open(self.rsa_path, 'r').read())
+                key = RSA.load_key(self.rsa, None)
             except:
                 # This is probably an "old key", we need to use m2crypto to
                 # open it and then save it back without a passphrase
                 key = clean_old_key(self.rsa_path)
 
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
-            pub_key = RSA.importKey(open(self.pub_path, 'r').read())
-            log.debug('Loaded master public key: {0}'.format(self.pub_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            (pub_key, key) = gen_keys(self.opts['pki_dir'], 'master', 4096)
-        return (pub_key, key)
+            gen_keys(self.opts['pki_dir'], 'master', 4096)
+            key = RSA.load_key(self.rsa, None)
+        return key
 
     def __gen_token(self):
         '''
         Generate the authentication token
         '''
-        return str(self.key.sign(MD5.new('salty bacon').digest(),
-                                 Random.new().read)[0])
+        return self.key.private_encrypt('salty bacon', 5)
 
-    def get_pub_str(self):
+    def pub_str(self):
         '''
         Return the string representation of the public key
         '''
-        return self.pub_key.exportKey()
+        if not os.path.isfile(self.pub_path):
+            key = self.__get_keys()
+            key.save_pub_key(self.pub_path)
+        return open(self.pub_path, 'r').read()
+
 
 
 class Auth(object):
@@ -134,18 +136,17 @@ class Auth(object):
         key = None
         if os.path.exists(self.rsa_path):
             try:
-                key = RSA.importKey(open(self.rsa_path, 'r').read())
+                key = RSA.load_key(self.rsa, None)
             except:
                 # This is probably an "old key", we need to use m2crypto to
                 # open it and then save it back without a passphrase
                 key = clean_old_key(self.rsa_path)
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
-            pub_key = RSA.importKey(open(self.pub_path, 'r').read())
-            log.debug('Loaded minion public key: {0}'.format(self.pub_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
-            (pub_key, key) = gen_keys(self.opts['pki_dir'], 'minion', 4096)
-        return (pub_key, key)
+            gen_keys(self.opts['pki_dir'], 'master', 4096)
+            key = RSA.load_key(self.rsa, None)
+        return key
 
     def minion_sign_in_payload(self):
         '''
@@ -172,8 +173,8 @@ class Auth(object):
         Returns the decrypted aes seed key, a string
         '''
         log.debug('Decrypting the current master AES key')
-        (pub, key) = self.get_keys()
-        return key.decrypt(aes)
+        key = self.get_keys()
+        return key.private_decrypt(aes, 4)
 
     def verify_master(self, master_pub, token):
         '''
@@ -185,7 +186,10 @@ class Auth(object):
 
         Returns a bool
         '''
+        tmp_pub = tempfile.mktemp()
+        open(tmp_pub, 'w+').write(master_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+        pub = RSA.load_pub_key(tmp_pub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = open(m_pub_fn).read()
             if not master_pub == local_master_pub:
@@ -197,7 +201,7 @@ class Auth(object):
         else:
             open(m_pub_fn, 'w+').write(master_pub)
         pub = RSA.importKey(master_pub)
-        if pub.verify(MD5.new('salty bacon').digest(), (int(token),)):
+        if pub.public_decrypt(token, 5) == 'salty bacon':
             return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')
@@ -353,5 +357,4 @@ class SAuth(Auth):
         Encrypt a string with the minion private key to verify identity
         with the master.
         '''
-        (pub, key) = self.get_keys()
-        return str(key.sign(clear_tok, Random.new().read)[0])
+        return self.get_keys().private_encrypt(clear_tok, 5)
