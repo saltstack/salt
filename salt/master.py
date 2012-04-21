@@ -23,9 +23,7 @@ import zmq
 import yaml
 
 # RSA Support
-from Crypto.Hash import MD5
-from Crypto.PublicKey import RSA
-from Crypto import Random
+from M2Crypto import RSA
 
 # Import salt modules
 import salt.crypt
@@ -415,8 +413,12 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with open(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
-        pub = RSA.importKey(minion_pub)
-        if pub.verify("salt", (int(token),)):
+        tmp_pub = tempfile.mktemp()
+        with open(tmp_pub, 'w+') as fp_:
+            fp_.write(minion_pub)
+        pub = RSA.load_pub_key(tmp_pub)
+        os.remove(tmp_pub)
+        if pub.public_decrypt(token, 5) == 'salt':
             return True
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
@@ -940,15 +942,13 @@ class ClearFuncs(object):
         log.info('Authentication accepted from %(id)s', load)
         with open(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
-        pub = RSA.importKey(load['pub'])
+        pub = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
-        ret['aes'] = pub.encrypt(self.opts['aes'], Random.new().read)[0]
-        if self.opts['cluster_masters']:
-            self._send_cluster()
+        ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
         return ret
 
     def publish(self, clear_load):
