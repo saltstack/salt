@@ -155,12 +155,16 @@ class Auth(object):
         public key to encrypt the AES key sent back form the master.
         '''
         payload = {}
-        (pub, key) = self.get_keys()
+        key = self.get_keys()
+        tmp_pub = tempfile.mktemp()
+        key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
-        payload['load']['pub'] = pub.exportKey()
+        with open(tmp_pub, 'r') as fp_:
+            payload['load']['pub'] = fp_.read()
+        os.remove(tmp_pub)
         return payload
 
     def decrypt_aes(self, aes):
