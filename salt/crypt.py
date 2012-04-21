@@ -148,7 +148,7 @@ class Auth(object):
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'], 'minion', 4096)
-            key = RSA.load_key(self.rsa_path, None)
+            key = RSA.load_key(self.rsa_path)
         return key
 
     def minion_sign_in_payload(self):
