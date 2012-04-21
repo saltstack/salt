@@ -39,8 +39,12 @@ def clean_old_key(rsa_path):
     def foo_pass(self, data=''):
         return 'foo'
     mkey = RSA.load_key(rsa_path, callback=foo_pass)
+    try:
+        os.remove(rsa_path)
+    except (IOError, OSError):
+        pass
     mkey.save_key(rsa_path, None)
-    return RSA.importKey(open(rsa_path, 'r').read())
+    return mkey
 
 
 def gen_keys(keydir, keyname, keysize):
@@ -85,7 +89,7 @@ class MasterKeys(dict):
         key = None
         if os.path.exists(self.rsa_path):
             try:
-                key = RSA.load_key(self.rsa, None)
+                key = RSA.load_key(self.rsa_path, None)
             except:
                 # This is probably an "old key", we need to use m2crypto to
                 # open it and then save it back without a passphrase
@@ -139,7 +143,7 @@ class Auth(object):
         key = None
         if os.path.exists(self.rsa_path):
             try:
-                key = RSA.load_key(self.rsa, None)
+                key = RSA.load_key(self.rsa_path, None)
             except:
                 # This is probably an "old key", we need to use m2crypto to
                 # open it and then save it back without a passphrase
