@@ -5,6 +5,7 @@ Set up the Salt integration test suite
 # Import Python libs
 import multiprocessing
 import os
+import sys
 import shutil
 import signal
 import subprocess
@@ -191,7 +192,7 @@ class SyndicCase(TestCase):
         orig = self.client.cmd('minion', function, arg)
         return orig['minion']
 
-class CLICase(TestCase):
+class CliCase(TestCase):
     '''
     Execute a test for a shell command
     '''
@@ -210,3 +211,11 @@ class CLICase(TestCase):
                 stdout=subprocess.PIPE
                 ).communicate()[0].split('\n')
         return data
+
+    def run_key(self, arg_str):
+        '''
+        Execute salt-key
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-key', arg_str)

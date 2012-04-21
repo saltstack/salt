@@ -36,11 +36,24 @@ def run_integration_tests(opts=None):
             saltunittest.TextTestRunner(verbosity=1).run(moduletests)
         if opts.get('client', True):
             clientloader = saltunittest.TestLoader()
-            clienttests = clientloader.discover(os.path.join(TEST_DIR, 'integration', 'client'), '*.py')
+            clienttests = clientloader.discover(
+                    os.path.join(TEST_DIR, 'integration', 'client'),
+                    '*.py'
+                    )
             print('~' * PNUM)
             print('Starting Client Tests')
             print('~' * PNUM)
             saltunittest.TextTestRunner(verbosity=1).run(clienttests)
+        if opts.get('shell', True):
+            shellloader = saltunittest.TestLoader()
+            shelltests = shellloader.discover(
+                    os.path.join(TEST_DIR, 'integration', 'shell'),
+                    '*.py'
+                    )
+            print('~' * PNUM)
+            print('Starting Shell Tests')
+            print('~' * PNUM)
+            saltunittest.TextTestRunner(verbosity=1).run(shelltests)
 
 
 def run_unit_tests(opts=None):
@@ -85,6 +98,12 @@ def parse_opts():
             default=False,
             action='store_true',
             help='Run unit tests')
+    parser.add_option('-s',
+            '--shell',
+            dest='shell',
+            default=False,
+            action='store_true',
+            help='Run shell tests')
 
     options, args = parser.parse_args()
 
