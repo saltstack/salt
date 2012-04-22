@@ -966,10 +966,12 @@ class State(object):
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
         errors += ext_errors
+        errors += self.verify_high(high)
+        if errors:
+            return errors
         high, req_in_errors = self.requisite_in(high)
         errors += req_in_errors
         # Verify that the high data is structurally sound
-        errors += self.verify_high(high)
         if errors:
             return errors
         # Compile and verify the raw chunks
