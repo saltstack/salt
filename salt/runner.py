@@ -22,11 +22,11 @@ class Runner(object):
         '''
         if not self.opts['fun']:
             err = 'Must pass a runner function'
-            sys.stderr.write('%s\n' % err)
+            sys.stderr.write('{0}\n'.format(err))
             sys.exit(1)
         if self.opts['fun'] not in self.functions:
             err = 'Passed function is unavailable'
-            sys.stderr.write('%s\n' % err)
+            sys.stderr.write('{0}\n'.format(err))
             sys.exit(1)
 
     def _print_docs(self):
@@ -35,7 +35,7 @@ class Runner(object):
         '''
         for fun in sorted(self.functions):
             if fun.startswith(self.opts['fun']):
-                print(fun + ':')
+                print('{0}:'.format(fun))
                 print(self.functions[fun].__doc__)
                 print('')
 
