@@ -391,14 +391,18 @@ class Loader(object):
                 if attr.startswith('_'):
                     continue
                 if callable(getattr(mod, attr)):
+                    func = getattr(mod, attr)
+                    if isinstance(func, type):
+                        if any([
+                            'Error' in func.__name__,
+                            'Exception' in func.__name__]):
+                            continue
                     if virtual:
-                        func = getattr(mod, attr)
-                        funcs[virtual + '.' + attr] = func
+                        funcs['{0}.{1}'.format(virtual, attr)] = func
                         self._apply_outputter(func, mod)
                     elif virtual is False:
                         pass
                     else:
-                        func = getattr(mod, attr)
                         funcs[
                                 '{0}.{1}'.format(
                                     mod.__name__[:mod.__name__.rindex('_')],
