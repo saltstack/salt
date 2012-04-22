@@ -1,3 +1,7 @@
+'''
+Tests for the salt-run command
+'''
+# Import Salt Modules
 import integration
 
 class RunTest(integration.ShellCase):
