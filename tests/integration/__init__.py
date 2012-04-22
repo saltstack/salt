@@ -220,7 +220,7 @@ class ShellCase(TestCase):
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt', arg_str)
 
-    def run_salt(self, arg_str):
+    def run_run(self, arg_str):
         '''
         Execute salt-key
         '''
