@@ -56,6 +56,7 @@ def gen_keys(keydir, keyname, keysize):
     gen = RSA.gen_key(keysize, 1)
     cumask = os.umask(191)
     gen.save_key(priv, None)
+    os.umask(cumask)
     gen.save_pub_key(pub)
     os.chmod(priv, 256)
     return priv
