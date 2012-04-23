@@ -413,7 +413,8 @@ class AESFuncs(object):
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with open(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
-        tmp_pub = tempfile.mktemp()
+        fd_, tmp_pub = tempfile.mkstemp()
+        fd_.close()
         with open(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
         pub = RSA.load_pub_key(tmp_pub)
