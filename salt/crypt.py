@@ -193,7 +193,7 @@ class Auth(object):
         fd_, tmp_pub = tempfile.mkstemp()
         fd_.close()
         with open(tmp_pub, 'w+') as fp_:
-            fp_..write(master_pub)
+            fp_.write(master_pub)
         os.remove(tmp_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         pub = RSA.load_pub_key(tmp_pub)
