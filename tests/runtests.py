@@ -20,9 +20,9 @@ def run_integration_tests(opts=None):
     '''
     if not opts:
         opts = {}
-    print '~' * PNUM
-    print 'Setting up Salt daemons to execute tests'
-    print '~' * PNUM
+    print('~' * PNUM)
+    print('Setting up Salt daemons to execute tests')
+    print('~' * PNUM)
     with TestDaemon():
         if opts.get('module', True):
             moduleloader = saltunittest.TestLoader()
@@ -30,17 +30,30 @@ def run_integration_tests(opts=None):
                     os.path.join(TEST_DIR, 'integration', 'modules'),
                     '*.py'
                     )
-            print '~' * PNUM
-            print 'Starting Module Tests'
-            print '~' * PNUM
+            print('~' * PNUM)
+            print('Starting Module Tests')
+            print('~' * PNUM)
             saltunittest.TextTestRunner(verbosity=1).run(moduletests)
         if opts.get('client', True):
             clientloader = saltunittest.TestLoader()
-            clienttests = clientloader.discover(os.path.join(TEST_DIR, 'integration', 'client'), '*.py')
-            print '~' * PNUM
-            print 'Starting Client Tests'
-            print '~' * PNUM
+            clienttests = clientloader.discover(
+                    os.path.join(TEST_DIR, 'integration', 'client'),
+                    '*.py'
+                    )
+            print('~' * PNUM)
+            print('Starting Client Tests')
+            print('~' * PNUM)
             saltunittest.TextTestRunner(verbosity=1).run(clienttests)
+        if opts.get('shell', True):
+            shellloader = saltunittest.TestLoader()
+            shelltests = shellloader.discover(
+                    os.path.join(TEST_DIR, 'integration', 'shell'),
+                    '*.py'
+                    )
+            print('~' * PNUM)
+            print('Starting Shell Tests')
+            print('~' * PNUM)
+            saltunittest.TextTestRunner(verbosity=1).run(shelltests)
 
 
 def run_unit_tests(opts=None):
@@ -53,9 +66,9 @@ def run_unit_tests(opts=None):
         return
     loader = saltunittest.TestLoader()
     tests = loader.discover(os.path.join(TEST_DIR, 'unit', 'templates'), '*.py')
-    print '~' * PNUM
-    print 'Starting Unit Tests'
-    print '~' * PNUM
+    print('~' * PNUM)
+    print('Starting Unit Tests')
+    print('~' * PNUM)
     saltunittest.TextTestRunner(verbosity=1).run(tests)
 
 
@@ -85,6 +98,12 @@ def parse_opts():
             default=False,
             action='store_true',
             help='Run unit tests')
+    parser.add_option('-s',
+            '--shell',
+            dest='shell',
+            default=False,
+            action='store_true',
+            help='Run shell tests')
 
     options, args = parser.parse_args()
 
@@ -92,13 +111,13 @@ def parse_opts():
 
     opts = {}
 
-    for key, val in options.__dict__.items():
+    for key, val in list(options.__dict__.items()):
         if val:
             reverse = True
         opts[key] = not val
 
     if reverse:
-        for key, val in opts.items():
+        for key, val in list(opts.items()):
             opts[key] = not opts[key]
 
     return opts

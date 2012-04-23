@@ -1,5 +1,3 @@
-# Import python libs
-import subprocess
 # Import salt libs
 import integration
 

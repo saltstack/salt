@@ -2,7 +2,10 @@
 Classes that manage file clients
 '''
 # Import python libs
-import BaseHTTPServer
+try:
+    import BaseHTTPServer
+except:
+    import http.server as BaseHTTPServer
 import contextlib
 import logging
 import hashlib
@@ -11,8 +14,12 @@ import shutil
 import stat
 import string
 import subprocess
-import urllib2
-import urlparse
+try:
+    import urllib2
+    import urlparse
+except:
+    import urllib.request as urllib2
+    import urllib.parse as urlparse
 
 # Import third-party libs
 import yaml
@@ -280,12 +287,12 @@ class Client(object):
                 with open(dest, 'wb') as destfp:
                     shutil.copyfileobj(srcfp, destfp)
             return dest
-        except urllib2.HTTPError, ex:
+        except urllib2.HTTPError as ex:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                     ex.code,
                     url,
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
-        except urllib2.URLError, ex:
+        except urllib2.URLError as ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
         return ''
 

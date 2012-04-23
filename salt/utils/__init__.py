@@ -17,7 +17,6 @@ import salt.minion
 import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
-
 log = logging.getLogger(__name__)
 
 # Do not use these color declarations, use get_colors()
@@ -115,7 +114,7 @@ def daemonize():
                 servicename = 'salt-minion'
                 try:
                     status = win32serviceutil.QueryServiceStatus(servicename)
-                except win32service.error, details:
+                except win32service.error as details:
                     if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
                         saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
                         sys.exit(0)
@@ -138,7 +137,7 @@ def daemonize():
     # decouple from parent environment
     os.chdir("/")
     os.setsid()
-    os.umask(022)
+    os.umask(0x022)
 
     # do second fork
     try:

@@ -4,7 +4,7 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 '''
 
-import cPickle as pickle
+import pickle
 
 try:
     # Attempt to import msgpack

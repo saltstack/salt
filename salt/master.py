@@ -18,10 +18,12 @@ import subprocess
 
 # Import zeromq
 import zmq
-from M2Crypto import RSA
 
 # Import Third Party Libs
 import yaml
+
+# RSA Support
+from M2Crypto import RSA
 
 # Import salt modules
 import salt.crypt
@@ -405,8 +407,8 @@ class AESFuncs(object):
 
     def __verify_minion(self, id_, token):
         '''
-        Take a minion id and a string encrypted with the minion private key
-        The string needs to decrypt as 'salt' with the minion public key
+        Take a minion id and a string signed with the minion private key
+        The string needs to verify as 'salt' with the minion public key
         '''
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
         with open(pub_path, 'r') as fp_:
@@ -676,8 +678,8 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            jid = clear_load['jid']
-            msg = 'Minion id {0} is not who it says it is!'.format(jid)
+            msg = 'Minion id {0} is not who it says it is!'.format(
+                    clear_load['id'])
             log.warn(msg)
             return {}
         perms = set()
@@ -940,15 +942,13 @@ class ClearFuncs(object):
         log.info('Authentication accepted from %(id)s', load)
         with open(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
-        key = RSA.load_pub_key(pubfn)
+        pub = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
-               'pub_key': self.master_key.pub_str,
+               'pub_key': self.master_key.get_pub_str(),
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
-        ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
-        if self.opts['cluster_masters']:
-            self._send_cluster()
+        ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
         return ret
 
     def publish(self, clear_load):

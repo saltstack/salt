@@ -458,7 +458,7 @@ def _check_recurse(
     if clean:
         keep += _gen_keep_files(name, require)
         for fn_ in _clean_dir(name, list(keep)):
-            changes[fn_] = {'diff', 'Remove'}
+            changes[fn_] = {'diff': 'Remove'}
     if changes:
         comment = 'The following files are set to change:\n'
         for fn_ in changes:
@@ -1336,6 +1336,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
+
+    # Mandate that before and afetr are strings
+    before = str(before)
+    after = str(after)
 
     # Look for the pattern before attempting the edit
     if not __salt__['file.contains'](name, before, limit):

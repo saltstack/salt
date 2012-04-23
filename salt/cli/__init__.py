@@ -262,9 +262,9 @@ class SaltCMD(object):
                     else:
                         printout = get_outputter(None)
 
-                    print 'Return data for job {0}:'.format(jid)
+                    print('Return data for job {0}:'.format(jid))
                     printout(ret[jid])
-                    print ''
+                    print('')
         elif self.opts['batch']:
             batch = salt.cli.batch.Batch(self.opts)
             batch.run()
@@ -305,6 +305,12 @@ class SaltCMD(object):
                     if self.opts['static']:
                         full_ret = local.cmd_full_return(*args)
                         ret, out = self._format_ret(full_ret)
+                        self._output_ret(ret, out)
+                    elif self.opts['fun'] == 'sys.doc':
+                        ret = {}
+                        for full_ret in local.cmd_cli(*args):
+                            ret_, out = self._format_ret(full_ret)
+                            ret.update(ret_)
                         self._output_ret(ret, out)
                     else:
                         if self.opts['verbose']:
@@ -370,9 +376,9 @@ class SaltCMD(object):
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
-            print fun + ':'
-            print docs[fun]
-            print ''
+            print(fun + ':')
+            print(docs[fun])
+            print('')
 
 
 class SaltCP(object):

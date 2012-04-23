@@ -1,5 +1,4 @@
 import codecs
-from contextlib import nested  # For < 2.7 compat
 import os
 import shutil
 import difflib
@@ -8,7 +7,10 @@ import imp
 import logging
 import tempfile
 import traceback
-import urlparse
+try:
+    import urlparse
+except:
+    import urllib.parse as urlparse
 import copy
 
 logger = logging.getLogger(__name__)

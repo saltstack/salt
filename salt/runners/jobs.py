@@ -49,7 +49,7 @@ def active():
                 continue
             if os.path.exists(os.path.join(jid_dir, minion)):
                 ret[jid]['Returned'].append(minion)
-    print yaml.dump(ret)
+    print(yaml.dump(ret))
 
 
 def lookup_jid(jid):
@@ -111,5 +111,5 @@ def list_jobs():
                         'Arguments': list(load['arg']),
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type']}
-    print yaml.dump(ret)
+    print(yaml.dump(ret))
 

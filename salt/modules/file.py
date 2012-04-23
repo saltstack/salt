@@ -237,13 +237,13 @@ def get_sum(path, form='md5'):
     try:
         with open(path, 'rb') as f:
             return getattr(hashlib, form)(f.read()).hexdigest()
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         return 'File Error: %s' % (str(e))
-    except AttributeError, e:
+    except AttributeError as e:
         return 'Hash ' + form + ' not supported'
-    except NameError, e:
+    except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
-    except Exception, e:
+    except Exception as e:
         return str(e)
 
 
@@ -340,7 +340,7 @@ def find(path, **kwargs):
     '''
     try:
         f = salt.utils.find.Finder(kwargs)
-    except ValueError, ex:
+    except ValueError as ex:
         return 'error: {0}'.format(ex)
 
     ret = [p for p in f.find(path)]
@@ -396,11 +396,15 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
+    #
+    # Mandate that before and after are strings
+    before = str(before)
+    after = str(after)
     before = _sed_esc(before, escape_all)
     after = _sed_esc(after, escape_all)
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
-            backup = '-i{0} '.format(backup) if backup else '',
+            backup = '-i{0} '.format(backup) if backup else '-i ',
             options = options,
             limit = '/{0}/ '.format(limit) if limit else '',
             before = before,

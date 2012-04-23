@@ -15,7 +15,7 @@ try:
     from salt.utils.process import set_pidfile
     from salt.utils.verify import check_user, verify_env
 except ImportError as e:
-    if e.message != 'No module named _msgpack':
+    if e.args[0] != 'No module named _msgpack':
         raise
 
 

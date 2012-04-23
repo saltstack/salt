@@ -56,7 +56,7 @@ class SaltCP(object):
             if os.path.isfile(fn_):
                 files.update(self._file_dict(fn_))
             elif os.path.isdir(fn_):
-                print fn_ + ' is a directory, only files are supported.'
+                print(fn_ + ' is a directory, only files are supported.')
                 #files.update(self._recurse_dir(fn_))
         return files
 
