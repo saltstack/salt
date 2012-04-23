@@ -1337,7 +1337,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
 
-    # Mandate that before and afetr are strings
+    # Mandate that before and after are strings
     before = str(before)
     after = str(after)
 
