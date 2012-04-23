@@ -242,8 +242,10 @@ def exec_code(lang, code, cwd=None):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    fd, codefile = tempfile.mkstemp()
-    open(codefile, 'w+').write(code)
+    fd_, codefile = tempfile.mkstemp()
+    fd_.close()
+    with open(codefile, 'w+') as fp_:
+        fp_.write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
     ret = run(cmd, cwd=cwd)
