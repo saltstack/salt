@@ -155,7 +155,8 @@ class Auth(object):
         '''
         payload = {}
         key = self.get_keys()
-        tmp_pub = tempfile.mktemp()
+        fd_, tmp_pub = tempfile.mkstemp()
+        fd_.colse()
         key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}
@@ -189,8 +190,11 @@ class Auth(object):
 
         Returns a bool
         '''
-        tmp_pub = tempfile.mktemp()
-        open(tmp_pub, 'w+').write(master_pub)
+        fd_, tmp_pub = tempfile.mkstemp()
+        fd_.close()
+        with open(tmp_pub, 'w+') as fp_:
+            fp_..write(master_pub)
+        os.remove(tmp_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         pub = RSA.load_pub_key(tmp_pub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
