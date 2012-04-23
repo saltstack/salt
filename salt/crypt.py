@@ -16,7 +16,6 @@ import base64
 # Import Cryptography libs
 from Crypto.Cipher import AES
 from Crypto.Hash import MD5
-import Crypto.PublicKey.RSA
 from M2Crypto import RSA
 
 # Import zeromq libs
@@ -54,17 +53,10 @@ def gen_keys(keydir, keyname, keysize):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    privkey = Crypto.PublicKey.RSA.generate(keysize)
-    pubkey = privkey.publickey()
+    gen = RSA.gen_key(keysize, 1)
     cumask = os.umask(191)
-    if os.path.isfile(priv):
-        # Open mode is turned on and the file is being overwritten
-        os.remove(priv)
-    with open(priv, 'w') as priv_file:
-        priv_file.write(str(privkey.exportKey()))
-    os.umask(cumask)
-    with open(pub, 'w') as pub_file:
-        pub_file.write(str(pubkey.exportKey()))
+    gen.save_key(priv, None)
+    gen.save_pub_key(pub)
     os.chmod(priv, 256)
     return priv
 
