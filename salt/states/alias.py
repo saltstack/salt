@@ -30,6 +30,12 @@ def present(name, target):
         ret['result'] = True
         ret['comment'] = 'Alias {0} already present'.format(name)
         return ret
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Alias {0} -> {1} is set to be added'.format(
+                name, target
+                )
+        return ret
     if __salt__['aliases.set_target'](name, target):
         ret['changes'] = {'alias': name}
         ret['result'] = True
@@ -55,6 +61,10 @@ def absent(name):
     if not __salt__['aliases.get_target'](name):
         ret['result'] = True
         ret['comment'] = 'Alias {0} already absent'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Alias {0} is set to be removed'.format(name)
         return ret
     if __salt__['aliases.rm_alias'](name):
         ret['changes'] = {'alias': name}
