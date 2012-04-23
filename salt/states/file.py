@@ -1337,6 +1337,10 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
 
+    # Mandate that before and afetr are strings
+    before = str(before)
+    after = str(after)
+
     # Look for the pattern before attempting the edit
     if not __salt__['file.contains'](name, before, limit):
         # Pattern not found; try to guess why
