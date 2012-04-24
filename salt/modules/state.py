@@ -15,6 +15,7 @@ __outputter__ = {
                  'highstate': 'highstate',
                  'sls': 'highstate',
                  'top': 'highstate',
+                 'single': 'highstate',
                  }
 
 
@@ -154,19 +155,25 @@ def show_masterstate():
 
 def single(fun=None, **kwargs):
     '''
-    Execute a single state function with the named kwargs
+    Execute a single state function with the named kwargs, returns False if
+    insufficient data is sent to the command
 
     CLI Example::
         salt '*' state.single pkg.installed name=vim
     '''
+    if not 'name' in kwargs:
+        return False
     if fun:
         comps = fun.split('.')
         if len(comps) < 2:
             return False
-    kwargs.update({'state': comps[0], 'fun': comps[1]})
+    kwargs.update({'state': comps[0],
+                   'fun': comps[1],
+                   '__id__': kwargs['name']})
     
     st_ = salt.state.State(__opts__)
     err = st_.verify_data(kwargs)
     if err:
         return err
-    return st_.call(kwargs)
+    return {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+            st_.call(kwargs)}
