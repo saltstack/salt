@@ -153,7 +153,7 @@ def show_masterstate():
     st_ = salt.state.RemoteHighState(__opts__, __grains__)
     return st_.compile_master()
 
-def single(fun=None, **kwargs):
+def single(fun=None, test=None, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
@@ -170,8 +170,10 @@ def single(fun=None, **kwargs):
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
                    '__id__': kwargs['name']})
-    
-    st_ = salt.state.State(__opts__)
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    st_ = salt.state.State(opts)
     err = st_.verify_data(kwargs)
     if err:
         return err
