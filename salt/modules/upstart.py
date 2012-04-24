@@ -33,6 +33,9 @@ DO NOT use this module on red hat systems, as red hat systems should use the
 rh_service module, since red hat systems support chkconfig
 '''
 
+import glob
+import os
+
 from salt import utils
 
 
@@ -56,6 +59,10 @@ def _runlevel():
     return out.split()[1]
 
 
+def _is_symlink(name):
+    return not os.path.abspath(name) == os.path.realpath(name)
+
+
 def _service_is_upstart(name):
     '''
     From "Writing Jobs" at
@@ -64,9 +71,7 @@ def _service_is_upstart(name):
     Jobs are defined in files placed in /etc/init, the name of the job
     is the filename under this directory without the .conf extension.
     '''
-    if not __salt__['cmd.retcode']('test -f /etc/init/{0}.conf'.format(name)):
-        return True
-    return False
+    return os.access('/etc/init/{0}.conf'.format(name), os.R_OK)
 
 
 def _upstart_is_disabled(name):
@@ -76,9 +81,7 @@ def _upstart_is_disabled(name):
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     '''
-    if not __salt__['cmd.retcode']('test -f /etc/init/{0}.conf.override'.format(name)):
-        return True
-    return False
+    return os.access('/etc/init/{0}.conf.override'.format(name), os.R_OK)
 
 
 def _upstart_is_enabled(name):
@@ -94,11 +97,11 @@ def _service_is_sysv(name):
     A System-V style service will have a control script in
     /etc/init.d. We make sure to skip over symbolic links that point
     to Upstart's /lib/init/upstart-job, and anything that isn't an
-    executable, like README or skelton.
+    executable, like README or skeleton.
     '''
-    if not __salt__['cmd.retcode']('test -f /etc/init.d/{0}'.format(name)):
-        if not __salt__['cmd.retcode']('test -x /etc/init.d/{0}'.format(name)):
-            return True
+    script = '/etc/init.d/{0}'.format(name)
+    if not _is_symlink(script):
+        return os.access(script, os.X_OK)
     return False
 
 
@@ -108,10 +111,7 @@ def _sysv_is_disabled(name):
     start-up link (starts with "S") to its script in /etc/init.d in
     the current runlevel.
     '''
-    cmd = 'ls /etc/rc{0}.d/S*{1}'.format(_runlevel(), name)
-    if not __salt__['cmd.run'](cmd).strip().endswith(name):
-        return True
-    return False
+    return not bool(glob.glob('/etc/rc{0}.d/S*{1}'.format(_runlevel(), name)))
 
 
 def _sysv_is_enabled(name):
@@ -131,9 +131,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = set()
-    cmd = '(cd /etc/init.d; ls -1 *)'
-    lines = __salt__['cmd.run'](cmd).split('\n')
-    for line in lines:
+    for line in glob.glob('/etc/init.d/*'):
         name = line
         if _service_is_upstart(name):
             if _upstart_is_enabled(name):
@@ -154,9 +152,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = set()
-    cmd = '(cd /etc/init.d; ls -1 *)'
-    lines = __salt__['cmd.run'](cmd).split('\n')
-    for line in lines:
+    for line in glob.glob('/etc/init.d/*'):
         name = line
         if _service_is_upstart(name):
             if _upstart_is_disabled(name):
@@ -242,7 +238,9 @@ def _upstart_disable(name):
     '''
     Disable an Upstart service.
     '''
-    __salt__['cmd.run']('echo manual > /etc/init/{0}.conf.override'.format(name))
+    override = '/etc/init/{0}.conf.override'.format(name)
+    with file(override, 'w') as fd:
+        fd.write('manual')
     return _upstart_is_disabled(name)
 
 
@@ -250,7 +248,9 @@ def _upstart_enable(name):
     '''
     Enable an Upstart service.
     '''
-    __salt__['cmd.run']('rm -f /etc/init/{0}.conf.override'.format(name))
+    override = '/etc/init/{0}.conf.override'.format(name)
+    if os.access(override, os.R_OK):
+        os.unlink(override)
     return _upstart_is_enabled(name)
 
 
