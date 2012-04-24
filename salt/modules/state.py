@@ -151,3 +151,22 @@ def show_masterstate():
     '''
     st_ = salt.state.RemoteHighState(__opts__, __grains__)
     return st_.compile_master()
+
+def single(fun=None, **kwargs):
+    '''
+    Execute a single state function with the named kwargs
+
+    CLI Example::
+        salt '*' state.single pkg.installed name=vim
+    '''
+    if fun:
+        comps = fun.split('.')
+        if len(comps) < 2:
+            return False
+    kwargs.update({'state': comps[0], 'fun': comps[1]})
+    
+    st_ = salt.state.State(__opts__)
+    err = st_.verify_data(kwargs)
+    if err:
+        return err
+    return st_.call(kwargs)
