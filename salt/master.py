@@ -414,7 +414,7 @@ class AESFuncs(object):
         with open(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
         fd_, tmp_pub = tempfile.mkstemp()
-        fd_.close()
+        os.close(fd_)
         with open(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
         pub = RSA.load_pub_key(tmp_pub)

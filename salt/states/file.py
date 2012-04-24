@@ -233,7 +233,7 @@ def _source_list(source, source_hash, env):
                         break
                 elif proto.startswith('http') or proto == 'ftp':
                     fd_, dest = tempfile.mkstemp()
-                    fd_.close()
+                    os.close(fd_)
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
