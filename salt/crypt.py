@@ -194,9 +194,7 @@ class Auth(object):
         os.close(fd_)
         with open(tmp_pub, 'w+') as fp_:
             fp_.write(master_pub)
-        os.remove(tmp_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-        pub = RSA.load_pub_key(tmp_pub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = open(m_pub_fn).read()
             if not master_pub == local_master_pub:
@@ -207,7 +205,10 @@ class Auth(object):
                 return False
         else:
             open(m_pub_fn, 'w+').write(master_pub)
-        if pub.public_decrypt(token, 5) == 'salty bacon':
+        pub = RSA.load_pub_key(tmp_pub)
+        plaintext = pub.public_decrypt(token, 5)
+        os.remove(tmp_pub)
+        if plaintext == 'salty bacon':
             return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')

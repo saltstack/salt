@@ -42,7 +42,7 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     version = ''
-    cmd = 'apt-cache -q show {0} | grep Version'.format(name)
+    cmd = 'apt-cache -q show {0} | grep ^Version'.format(name)
 
     out = __salt__['cmd.run_stdout'](cmd)
 
