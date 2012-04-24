@@ -49,28 +49,53 @@ def __virtual__():
 def _runlevel():
     '''
     Return the current runlevel
+    TODO: Should this return the "default" runlevel? For example, bad
+    things will likely happen when 'salt' is run in single-user mode.
     '''
     out = __salt__['cmd.run']('runlevel').strip()
     return out.split()[1]
 
 
 def _service_is_upstart(name):
+    '''
+    From "Writing Jobs" at
+    http://upstart.ubuntu.com/getting-started.html:
+
+    Jobs are defined in files placed in /etc/init, the name of the job
+    is the filename under this directory without the .conf extension.
+    '''
     if not __salt__['cmd.retcode']('test -f /etc/init/{0}.conf'.format(name)):
         return True
     return False
 
 
 def _upstart_is_disabled(name):
+    '''
+    An Upstart service is assumed disabled if a manual stanza is
+    placed in /etc/init/[name].conf.override.
+    NOTE: An Upstart service can also be disabled by placing "manual"
+    in /etc/init/[name].conf.
+    '''
     if not __salt__['cmd.retcode']('test -f /etc/init/{0}.conf.override'.format(name)):
         return True
     return False
 
 
 def _upstart_is_enabled(name):
+    '''
+    Assume that if an Upstart service is not disabled then it must be
+    enabled.
+    '''
     return not _upstart_is_disabled(name)
 
 
 def _service_is_sysv(name):
+    '''
+    A System-V style service will have a control script in
+    /etc/init.d. We make sure to skip over symbolic links that point
+    to Upstart's /lib/init/upstart-job, and anything that isn't an
+    executable, like README or skelton.
+    '''
     if not __salt__['cmd.retcode']('test -f /etc/init.d/{0}'.format(name)):
         if not __salt__['cmd.retcode']('test -x /etc/init.d/{0}'.format(name)):
             return True
@@ -78,6 +103,11 @@ def _service_is_sysv(name):
 
 
 def _sysv_is_disabled(name):
+    '''
+    A System-V style service is assumed disabled if there is no
+    start-up link (starts with "S") to its script in /etc/init.d in
+    the current runlevel.
+    '''
     cmd = 'ls /etc/rc{0}.d/S*{1}'.format(_runlevel(), name)
     if not __salt__['cmd.run'](cmd).strip().endswith(name):
         return True
@@ -85,6 +115,10 @@ def _sysv_is_disabled(name):
 
 
 def _sysv_is_enabled(name):
+    '''
+    Assume that if a System-V style service is not disabled then it
+    must be enabled.
+    '''
     return not _sysv_is_disabled(name)
 
 
@@ -195,17 +229,27 @@ def status(name, sig=None):
 
 
 def _get_service_exec():
+    '''
+    Debian uses update-rc.d to manage System-V style services.
+    http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.3.3
+    '''
     executable = 'update-rc.d'
     utils.check_or_die(executable)
     return executable
 
 
 def _upstart_disable(name):
+    '''
+    Disable an Upstart service.
+    '''
     __salt__['cmd.run']('echo manual > /etc/init/{0}.conf.override'.format(name))
     return _upstart_is_disabled(name)
 
 
 def _upstart_enable(name):
+    '''
+    Enable an Upstart service.
+    '''
     __salt__['cmd.run']('rm -f /etc/init/{0}.conf.override'.format(name))
     return _upstart_is_enabled(name)
 
