@@ -156,7 +156,7 @@ class Auth(object):
         payload = {}
         key = self.get_keys()
         fd_, tmp_pub = tempfile.mkstemp()
-        fd_.colse()
+        os.close(fd_)
         key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}
@@ -191,7 +191,7 @@ class Auth(object):
         Returns a bool
         '''
         fd_, tmp_pub = tempfile.mkstemp()
-        fd_.close()
+        os.close(fd_)
         with open(tmp_pub, 'w+') as fp_:
             fp_.write(master_pub)
         os.remove(tmp_pub)
