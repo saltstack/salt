@@ -232,7 +232,8 @@ def _source_list(source, source_hash, env):
                         source = single_src
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    dest = tempfile.mkstemp()[1]
+                    fd_, dest = tempfile.mkstemp()
+                    os.close(fd_)
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
@@ -1337,7 +1338,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
 
-    # Mandate that before and afetr are strings
+    # Mandate that before and after are strings
     before = str(before)
     after = str(after)
 

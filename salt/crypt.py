@@ -16,7 +16,6 @@ import base64
 # Import Cryptography libs
 from Crypto.Cipher import AES
 from Crypto.Hash import MD5
-import Crypto.PublicKey.RSA
 from M2Crypto import RSA
 
 # Import zeromq libs
@@ -54,17 +53,11 @@ def gen_keys(keydir, keyname, keysize):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    privkey = Crypto.PublicKey.RSA.generate(keysize)
-    pubkey = privkey.publickey()
+    gen = RSA.gen_key(keysize, 1)
     cumask = os.umask(191)
-    if os.path.isfile(priv):
-        # Open mode is turned on and the file is being overwritten
-        os.remove(priv)
-    with open(priv, 'w') as priv_file:
-        priv_file.write(str(privkey.exportKey()))
+    gen.save_key(priv, None)
     os.umask(cumask)
-    with open(pub, 'w') as pub_file:
-        pub_file.write(str(pubkey.exportKey()))
+    gen.save_pub_key(pub)
     os.chmod(priv, 256)
     return priv
 
@@ -162,7 +155,8 @@ class Auth(object):
         '''
         payload = {}
         key = self.get_keys()
-        tmp_pub = tempfile.mktemp()
+        fd_, tmp_pub = tempfile.mkstemp()
+        os.close(fd_)
         key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}
@@ -196,8 +190,11 @@ class Auth(object):
 
         Returns a bool
         '''
-        tmp_pub = tempfile.mktemp()
-        open(tmp_pub, 'w+').write(master_pub)
+        fd_, tmp_pub = tempfile.mkstemp()
+        os.close(fd_)
+        with open(tmp_pub, 'w+') as fp_:
+            fp_.write(master_pub)
+        os.remove(tmp_pub)
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         pub = RSA.load_pub_key(tmp_pub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
