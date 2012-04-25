@@ -508,11 +508,8 @@ def contains(path, text):
 
     try:
         with open(path, 'r') as fp_:
-            while True:
-                data = fp_.readline()
-                if not data:
-                    break
-                if text.strip() == data.strip():
+            for line in fp_:
+                if text.strip() == line.strip():
                     return True
         return False
     except (IOError, OSError):
