@@ -13,32 +13,8 @@ import jinja2
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Set up template environment and template strings
-conf_jinja = '''alias {{name}} bonding
-options {{name}} {% for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}
-'''
-
-eth_jinja = '''{% if proto %}BOOTPROTO={{proto}}
-{%endif%}DEVICE={{name}}
-{% for server in dns -%}
-DNS{{loop.index}}={{server}}
-{% endfor -%}
-{% if ethtool %}ETHTOOL_OPTS={%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}
-{%endif%}{%if bonding %}BONDING_OPTS={%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}
-{%endif%}{% if gateway %}GATEWAY={{gateway}}
-{%endif%}{% if addr %}HWADDR={{addr}}
-{%endif%}{% if ipaddr %}IPADDR={{ipaddr}}
-{%endif%}{% if master %}MASTER={{master}}
-{%endif%}{% if netmask %}NETMASK={{netmask}}
-{%endif%}{% if onboot %}ONBOOT={{onboot}}
-{%endif%}{% if peerdns %}PEERDNS={{peerdns}}
-{%endif%}{% if slave %}SLAVE={{slave}}
-{%endif%}{% if srcaddr %}SRCADDR={{srcaddr}}
-{%endif%}{% if userctl %}USERCTL={{userctl}}
-{%endif%}{% if userctl %}VLAN={{vlan}}{%endif%}
-'''
-
-env = jinja2.Environment()
+# Set up template environment
+env = jinja2.Environment(loader=jinja2.PackageLoader('salt.modules', 'rh_ip'))
 
 def __virtual__():
     '''
@@ -48,9 +24,6 @@ def __virtual__():
     if __grains__['os'] in dists:
         return 'ip'
     return False
-
-        
-    
 
 # Setup networking attributes
 _ETHTOOL_CONFIG_OPTS = [
@@ -557,7 +530,7 @@ def build_bond(iface, settings):
     Create a bond script in /etc/modprobe.d
     '''
     opts = _parse_settings_bond(settings, iface)
-    template = env.from_string(conf_jinja)
+    template = env.get_template('conf.jinja')
     data = template.render({'name': iface, 'bonding': opts})
     _write_file(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
@@ -582,7 +555,7 @@ def build_interface(iface, type, settings):
 
     if type in ['eth', 'bond', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface)
-        template = env.from_string(eth_jinja)
+        template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
     _write_file(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s')
