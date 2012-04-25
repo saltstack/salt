@@ -45,6 +45,10 @@ def mako(sfn, string=False, **kwargs):
             template = Template(src.read())
             data = template.render(**passthrough)
         if string:
+            try
+                os.remove(tgt)
+            except (IOError, OSError):
+                pass
             return {'result': True,
                     'data': data}
         with open(tgt, 'w+') as target:
@@ -89,6 +93,10 @@ def jinja(sfn, string=False, **kwargs):
         try:
             data = template.render(**passthrough)
             if string:
+                try
+                    os.remove(tgt)
+                except (IOError, OSError):
+                    pass
                 return {'result': True,
                         'data': data}
             with open(tgt, 'w+') as target:
