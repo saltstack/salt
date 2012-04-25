@@ -42,6 +42,16 @@ RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
 
+def safe_rm(tgt):
+    '''
+    Safely remove a file
+    '''
+    try
+        os.remove(tgt)
+    except (IOError, OSError):
+        pass
+
+
 def is_empty(filename):
     '''
     Is a file empty?
@@ -52,6 +62,12 @@ def is_empty(filename):
         # Non-existant file or permission denied to the parent dir
         return False
 
+
+
+                try
+                    os.remove(tgt)
+                except (IOError, OSError):
+                    pass
 
 def get_colors(use=True):
     '''
