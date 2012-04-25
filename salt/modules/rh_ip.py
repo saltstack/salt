@@ -14,7 +14,7 @@ import jinja2
 log = logging.getLogger(__name__)
 
 # Set up template environment
-env = jinja.Environment(loader=jinja.PackageLoader('salt.modules', 'rh_network'))
+env = jinja.Environment(loader=jinja.PackageLoader('salt.modules', 'rh_ip'))
 
 def __virtual__():
     '''
