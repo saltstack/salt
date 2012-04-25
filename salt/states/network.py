@@ -144,8 +144,8 @@ def managed(
            
     # Build interface
     try:
-        old = __salt__['netcfg.get_interface'](name)
-        new = __salt__['netcfg.build_interface'](name, type, kwargs)
+        old = __salt__['ip.get_interface'](name)
+        new = __salt__['ipip.build_interface'](name, type, kwargs)
         if not old and new:
             ret['changes']['interface'] = 'Added network interface'
         elif old != new:
@@ -159,8 +159,8 @@ def managed(
     # Setup up bond modprobe script if required
     if type == 'bond':
         try:
-            old = __salt__['netcfg.get_bond'](name)
-            new = __salt__['netcfg.build_bond'](name, kwargs)
+            old = __salt__['ip.get_bond'](name)
+            new = __salt__['ipip.build_bond'](name, kwargs)
             if not old and new:
                 ret['changes']['bond'] = 'Added bond'
             elif old != new:
@@ -175,9 +175,9 @@ def managed(
     #Bring up/shutdown interface
     try:
         if enabled:
-            __salt__['netcfg.up'](name)
+            __salt__['ip.up'](name)
         else:
-            __salt__['netcfg.down'](name)
+            __salt__['ip.down'](name)
     except Exception, error:
         ret['result'] = False
         ret['comment'] = error.message

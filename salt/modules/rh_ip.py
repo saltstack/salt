@@ -46,7 +46,7 @@ def __virtual__():
     '''
     dists = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
     if __grains__['os'] in dists:
-        return 'netcfg'
+        return 'ip'
     return False
 
         
