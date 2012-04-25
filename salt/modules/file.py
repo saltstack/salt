@@ -516,7 +516,7 @@ def contains(path, text):
         return False
 
 
-def contains_regex(path, regex):
+def contains_regex(path, regex, lchar=''):
     '''
     Return True if the given regular expression matches anything in the text
     of a given file
@@ -530,11 +530,10 @@ def contains_regex(path, regex):
 
     try:
         with open(path, 'r') as fp_:
-            data = fp_.read()
-            if re.match(regex, data):
-                return True
-            else:
-                return False
+            for line in  fp_:
+                if re.match(regex, line.lstrip(lchar)):
+                    return True
+            return False
     except (IOError, OSError):
         return False
 
