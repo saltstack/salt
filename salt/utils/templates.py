@@ -32,7 +32,8 @@ def mako(sfn, string=False, **kwargs):
                 'data': 'Failed to import mako'}
     try:
         passthrough = {}
-        tgt = tempfile.mkstemp()[1]
+        fd_, tgt = tempfile.mkstemp()
+        os.close(fd_)
         if 'context' in kwargs:
             passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
         for kwarg in kwargs:
@@ -76,7 +77,8 @@ def jinja(sfn, string=False, **kwargs):
         with open(sfn, 'rb') as source:
             if source.read().endswith('\n'):
                 newline = True
-        tgt = tempfile.mkstemp()[1]
+        fd_, tgt = tempfile.mkstemp()
+        os.close(fd_)
         if 'context' in kwargs:
             passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
         for kwarg in kwargs:
@@ -130,7 +132,8 @@ def py(sfn, string=False, **kwargs):
         if string:
             return {'result': True,
                     'data': data}
-        tgt = tempfile.mkstemp()[1]
+        fd_, tgt = tempfile.mkstemp()
+        os.close(fd_)
         with open(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,
