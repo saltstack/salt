@@ -583,7 +583,6 @@ def build_interface(iface, type, settings):
     if type in ['eth', 'bond', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface)
         template = env.from_string(eth_jinja)
-        print template
         ifcfg = template.render(opts)
 
     _write_file(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s')
