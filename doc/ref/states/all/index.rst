@@ -10,6 +10,7 @@ Full list of builtin states
     :toctree:
     :template: autosummary.rst.tmpl
 
+    alias
     cmd
     cron
     file
