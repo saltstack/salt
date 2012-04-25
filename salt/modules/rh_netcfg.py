@@ -1,27 +1,52 @@
 '''
 The networking module for RHEL/Fedora based distros 
 '''
-
+# Import python libs
 import logging
 import os
 import re
 from os.path import exists, dirname, join
 
-from jinja2 import Environment, PackageLoader
+# import third party libs
+import jinja2
 
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Set up template environment
-env = Environment(loader=PackageLoader('salt.modules', 'rh_network'))
+# Set up template environment and template strings
+conf_jinja = '''alias {{name}} bonding
+options {{name}} {% for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}
+'''
+
+eth_jinja = '''{% if proto %}BOOTPROTO={{proto}}
+{%endif%}DEVICE={{name}}
+{% for server in dns -%}
+DNS{{loop.index}}={{server}}
+{% endfor -%}
+{% if ethtool %}ETHTOOL_OPTS={%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}
+{%endif%}{%if bonding %}BONDING_OPTS={%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}
+{%endif%}{% if gateway %}GATEWAY={{gateway}}
+{%endif%}{% if addr %}HWADDR={{addr}}
+{%endif%}{% if ipaddr %}IPADDR={{ipaddr}}
+{%endif%}{% if master %}MASTER={{master}}
+{%endif%}{% if netmask %}NETMASK={{netmask}}
+{%endif%}{% if onboot %}ONBOOT={{onboot}}
+{%endif%}{% if peerdns %}PEERDNS={{peerdns}}
+{%endif%}{% if slave %}SLAVE={{slave}}
+{%endif%}{% if srcaddr %}SRCADDR={{srcaddr}}
+{%endif%}{% if userctl %}USERCTL={{userctl}}
+{%endif%}{% if userctl %}VLAN={{vlan}}{%endif%}
+'''
+
+env = jinja2.Environment()
 
 def __virtual__():
     '''
     Confine this module to RHEL/Fedora based distros$
     '''
-    dists = ('CentOS', 'Scientific', 'RedHat')
+    dists = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
     if __grains__['os'] in dists:
-        return 'network'
+        return 'netcfg'
     return False
 
         
@@ -532,7 +557,7 @@ def build_bond(iface, settings):
     Create a bond script in /etc/modprobe.d
     '''
     opts = _parse_settings_bond(settings, iface)
-    template = env.get_template('conf.jinja')
+    template = env.from_string(conf_jinja)
     data = template.render({'name': iface, 'bonding': opts})
     _write_file(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
@@ -557,7 +582,8 @@ def build_interface(iface, type, settings):
 
     if type in ['eth', 'bond', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface)
-        template = env.get_template('eth.jinja')
+        template = env.from_string(eth_jinja)
+        print template
         ifcfg = template.render(opts)
 
     _write_file(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s')
