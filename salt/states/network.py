@@ -146,6 +146,18 @@ def managed(
     try:
         old = __salt__['ip.get_interface'](name)
         new = __salt__['ip.build_interface'](name, type, kwargs)
+        if __opts__['test']:
+            if old == new:
+                return ret
+            if not old and new:
+                ret['result'] = None
+                ret['comment'] = 'Interface {0} is set to be added'.format(name)
+                return ret
+            elif old != new:
+                ret['result'] = None
+                ret['comment'] = 'Interface 0{} is set to be updated'.format(
+                    name)
+                return ret
         if not old and new:
             ret['changes']['interface'] = 'Added network interface'
         elif old != new:
