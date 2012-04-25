@@ -90,7 +90,7 @@ setup(
                 'salt.utils',
                 ],
       package_data = {
-          'salt.modules': ['rh_network/*.jinja'],
+          'salt.modules': ['rh_ip/*.jinja'],
       },
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
