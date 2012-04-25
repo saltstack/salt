@@ -1,3 +1,7 @@
+'''
+Template render systems
+'''
+# Import python libs
 import codecs
 import os
 import shutil
@@ -12,6 +16,9 @@ try:
 except:
     import urllib.parse as urlparse
 import copy
+
+# Import salt libs
+import salt.utils
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +52,7 @@ def mako(sfn, string=False, **kwargs):
             template = Template(src.read())
             data = template.render(**passthrough)
         if string:
-            try
-                os.remove(tgt)
-            except (IOError, OSError):
-                pass
+            salt.utils.safe_rm(tgt)
             return {'result': True,
                     'data': data}
         with open(tgt, 'w+') as target:
@@ -93,10 +97,7 @@ def jinja(sfn, string=False, **kwargs):
         try:
             data = template.render(**passthrough)
             if string:
-                try
-                    os.remove(tgt)
-                except (IOError, OSError):
-                    pass
+                salt.utils.safe_rm(tgt)
                 return {'result': True,
                         'data': data}
             with open(tgt, 'w+') as target:
