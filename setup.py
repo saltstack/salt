@@ -89,6 +89,9 @@ setup(
                 'salt.states',
                 'salt.utils',
                 ],
+      package_data = {
+          'salt.modules': ['rh_ip/*.jinja'],
+      },
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
                'scripts/salt-syndic',
