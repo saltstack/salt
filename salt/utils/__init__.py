@@ -46,7 +46,7 @@ def safe_rm(tgt):
     '''
     Safely remove a file
     '''
-    try
+    try:
         os.remove(tgt)
     except (IOError, OSError):
         pass
