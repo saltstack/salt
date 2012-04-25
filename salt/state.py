@@ -18,6 +18,7 @@ import inspect
 import fnmatch
 import logging
 import collections
+import traceback
 
 # Import Third Party libs
 import zmq
@@ -794,10 +795,20 @@ class State(object):
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
-        if 'kwargs' in cdata:
-            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
-        else:
-            ret = self.states[cdata['full']](*cdata['args'])
+        try:
+            if 'kwargs' in cdata:
+                ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
+            else:
+                ret = self.states[cdata['full']](*cdata['args'])
+        except:
+            trb = traceback.format_exc()
+            ret = {
+                'result': False,
+                'name': cdata['args'][0],
+                'changes': {},
+                'comment': 'An exception occured in this state: {0}'.format(
+                    trb)
+                }
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
