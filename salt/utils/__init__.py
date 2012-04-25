@@ -63,12 +63,6 @@ def is_empty(filename):
         return False
 
 
-
-                try
-                    os.remove(tgt)
-                except (IOError, OSError):
-                    pass
-
 def get_colors(use=True):
     '''
     Return the colors as an easy to use dict, pass False to return the colors
