@@ -1343,9 +1343,9 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
 
     # Look for the pattern before attempting the edit
-    if not __salt__['file.contains'](name, before, limit):
+    if not __salt__['file.contains_regex'](name, before):
         # Pattern not found; try to guess why
-        if __salt__['file.contains'](name, after, limit):
+        if __salt__['file.contains_regex'](name, after):
             ret['comment'] = 'Edit already performed'
             ret['result'] = True
             return ret
@@ -1361,7 +1361,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
 
     # check the result
-    ret['result'] = __salt__['file.contains'](name, after, limit)
+    ret['result'] = __salt__['file.contains_regex'](name, after)
 
     if ret['result']:
         ret['comment'] = 'File successfully edited'
@@ -1390,9 +1390,8 @@ def comment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.contains'](name, regex):
-        if __salt__['file.contains'](name, unanchor_regex,
-                limit=COMMENT_REGEX.format(char)):
+    if not __salt__['file.contains_regex'](name, regex):
+        if __salt__['file.contains_regex'](name, unanchor_regex):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -1407,10 +1406,7 @@ def comment(name, regex, char='#', backup='.bak'):
     __salt__['file.comment'](name, regex, char, backup)
 
     # Check the result
-    ret['result'] = __salt__['file.contains'](name, unanchor_regex,
-            limit=COMMENT_REGEX.format(char))
-    ret['result'] = __salt__['file.contains'](name, unanchor_regex,
-            limit=COMMENT_REGEX.format(char))
+    ret['result'] = __salt__['file.contains_regex'](name, unanchor_regex)
 
     if ret['result']:
         ret['comment'] = 'Commented lines successfully'
@@ -1440,9 +1436,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^')
 
     # Make sure the pattern appears in the file
-    if not __salt__['file.contains'](name, unanchor_regex,
-            limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char)):
-        if __salt__['file.contains'](name, regex):
+    if not __salt__['file.contains_regex'](name, unanchor_regex):
+        if __salt__['file.contains_regex'](name, regex):
             ret['comment'] = 'Pattern already uncommented'
             ret['result'] = True
             return ret
@@ -1457,7 +1452,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     __salt__['file.uncomment'](name, regex, char, backup)
 
     # Check the result
-    ret['result'] = __salt__['file.contains'](name, regex)
+    ret['result'] = __salt__['file.contains_regex'](name, regex)
 
     if ret['result']:
         ret['comment'] = 'Uncommented lines successfully'
@@ -1512,7 +1507,7 @@ def append(name, text):
             return _error(ret, 'Given text is not a string')
 
         for line in lines:
-            if __salt__['file.contains'](name, line, escape=True):
+            if __salt__['file.contains'](name, line):
                 continue
             else:
                 if __opts__['test']:
