@@ -8,6 +8,7 @@ data
 
 # Import python libs
 import os
+import re
 import grp
 import pwd
 import time
@@ -492,7 +493,7 @@ def comment(path, regex, char='#', backup='.bak'):
         backup=backup)
 
 
-def contains(path, text, limit='', escape=False):
+def contains(path, text):
     '''
     Return True if the file at ``path`` contains ``text``
 
@@ -502,22 +503,63 @@ def contains(path, text, limit='', escape=False):
 
     .. versionadded:: 0.9.5
     '''
-    # Largely inspired by Fabric's contrib.files.contains()
-
     if not os.path.exists(path):
         return False
 
-    if 'linux' in sys.platform:
-        options = '-n -r -e'
-    elif 'darwin' in sys.platform:
-        options = '-n -E -e'
-    else:
-        options = '-n -e'
+    try:
+        with open(path, 'r') as fp_:
+            data = fp_.read()
+            if text in data:
+                return True
+            else:
+                return False
+    except (IOError, OSError):
+        return False
 
-    result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options=options, flags='gp', escape_all=escape)
 
-    return bool(result)
+def contains_regex(path, regex):
+    '''
+    Return True if the given regular expression matches anything in the text
+    of a given file
+
+    CLI Example::
+
+        salt '*' /etc/crontab '^maint'
+    '''
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, 'r') as fp_:
+            data = fp_.read()
+            if re.match(regex, data):
+                return True
+            else:
+                return False
+    except (IOError, OSError):
+        return False
+
+
+def contains_glob(path, glob):
+    '''
+    Return True if the given glob matches a string in the named file
+
+    CLI Example::
+
+        salt '*' /etc/foobar '*cheese*'
+    '''
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, 'r') as fp_:
+            data = fp_.read()
+            if fnmatch(data, glob):
+                return True
+            else:
+                return False
+    except (IOError, OSError):
+        return False
 
 
 def append(path, *args):
