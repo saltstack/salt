@@ -280,7 +280,8 @@ def set_auth_key_from_file(
 
     CLI Example::
 
-        salt '*' ssh.set_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
+        salt '*' ssh.set_auth_key_from_file <user>\
+                salt://ssh_keys/<user>.id_rsa.pub
     '''
     # TODO: add support for pulling keys from other file sources as well
     lfile = __salt__['cp.cache_file'](source)
@@ -291,10 +292,18 @@ def set_auth_key_from_file(
     rval = ''
     newkey = _validate_keys(lfile)
     for k in newkey.keys():
-        rval += set_auth_key(user, k, newkey[k]['enc'], newkey[k]['comment'], newkey[k]['options'], config)
-    # Due to the ability for a single file to have multiple keys, it's possible for a single call
-    # to this function to have both "replace" and "new" as possible valid returns. I ordered the
-    # following as I thought best.
+        rval += set_auth_key(
+                user,
+                k,
+                newkey[k]['enc'],
+                newkey[k]['comment'],
+                newkey[k]['options'],
+                config
+                )
+    # Due to the ability for a single file to have multiple keys, it's
+    # possible for a single call to this function to have both "replace" and
+    # "new" as possible valid returns. I ordered the following as I thought
+    # best.
     if 'fail' in rval:
         return 'fail'
     elif 'replace' in rval:
@@ -316,7 +325,8 @@ def set_auth_key(
 
     CLI Example::
 
-        salt '*' ssh.set_auth_key <user> <key> dsa 'my key' '[]' .ssh/authorized_keys
+        salt '*' ssh.set_auth_key <user> key='<key>' enc='dsa'\
+                comment='my key' options='[]' config='.ssh/authorized_keys'
     '''
     if len(key.split()) > 1:
         return 'invalid'
