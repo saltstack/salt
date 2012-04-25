@@ -145,7 +145,7 @@ def managed(
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
-        new = __salt__['ipip.build_interface'](name, type, kwargs)
+        new = __salt__['ip.build_interface'](name, type, kwargs)
         if not old and new:
             ret['changes']['interface'] = 'Added network interface'
         elif old != new:
@@ -160,7 +160,7 @@ def managed(
     if type == 'bond':
         try:
             old = __salt__['ip.get_bond'](name)
-            new = __salt__['ipip.build_bond'](name, kwargs)
+            new = __salt__['ip.build_bond'](name, kwargs)
             if not old and new:
                 ret['changes']['bond'] = 'Added bond'
             elif old != new:
