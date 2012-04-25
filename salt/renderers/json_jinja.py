@@ -5,8 +5,11 @@ This renderer will take a json file with the jinja template and render it to a
 high data format for salt states.
 '''
 
+# Import python libs
 import json
 import os
+
+# Import salt libs
 from salt.utils.jinja import get_template
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
