@@ -4,6 +4,7 @@
 DNS{{loop.index}}={{server}}
 {% endfor -%}
 {% if ethtool %}ETHTOOL_OPTS={%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}
+{%endif%}{%if bonding %}BONDING_OPTS={%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}
 {%endif%}{% if gateway %}GATEWAY={{gateway}}
 {%endif%}{% if addr %}HWADDR={{addr}}
 {%endif%}{% if ipaddr %}IPADDR={{ipaddr}}
@@ -13,4 +14,5 @@ DNS{{loop.index}}={{server}}
 {%endif%}{% if peerdns %}PEERDNS={{peerdns}}
 {%endif%}{% if slave %}SLAVE={{slave}}
 {%endif%}{% if srcaddr %}SRCADDR={{srcaddr}}
-{%endif%}{% if userctl %}USERCTL={{userctl}}{%endif%}
+{%endif%}{% if userctl %}USERCTL={{userctl}}
+{%endif%}{% if userctl %}VLAN={{vlan}}{%endif%}

@@ -64,6 +64,12 @@ def installed(name,
         ret['comment'] = 'Package already installed'
         return ret
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Python package {0} is set to be installed'.format(
+                name)
+        return ret
+
     if __salt__['pip.install'](pkgs=name,
                                requirements=requirements,
                                bin_env=bin_env,
@@ -122,6 +128,11 @@ def removed(name,
     if name not in __salt__["pip.list"](packages=name, bin_env=bin_env):
         ret["result"] = True
         ret["comment"] = "Pacakge is not installed."
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
     if __salt__["pip.uninstall"](packages=name,

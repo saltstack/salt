@@ -98,4 +98,16 @@ modules in the top file and include statements:
       - users.dev.*
       - apache.ser*
 
+Use Requisite System
+--------------------
 
+The new use and use_in requisites allow for data from one state to be set
+as defaults for another state
+
+External Pillar
+---------------
+
+Since the pillar data is just, data, it does not need to come expressly from
+the pillar interface. The external pillar system allows for hooks to be added
+making it possible to extract pillar data drom any arbitrairy external
+interface.

@@ -49,7 +49,7 @@ def create(path,
 
     CLI Example::
 
-        salt '*' pip.virtualenv /path/to/new/virtualenv
+        salt '*' virtualenv.create /path/to/new/virtualenv
     '''
     # raise CommandNotFoundError if venv_bin is missing
     utils.check_or_die(venv_bin)

@@ -25,16 +25,12 @@ eth2:
     - managed
     - type: slave
     - master: bond0
-    - use:
-      - network: bond0
     
 eth3:
   network:
     - managed
     - type: slave
     - master: bond0
-    - use:
-      - network: bond0
 
 bond0:
   network:
@@ -47,9 +43,12 @@ bond0:
       - 8.8.4.4
     - ipv6:
     - enabled: False
-    - slaves:
-      - eth2
-      - eth3
+    - use_in:
+      - network: eth2
+      - network: eth3
+    - require:
+      - network: eth2
+      - network: eth3
     - mode: 802.3ad
     - miimon: 100
     - arp_interval: 250
@@ -71,11 +70,46 @@ bond0:
     - gso: off
     - gro: off
     - lro: off
-    - vlans:
-      - 2
-      - 3
-      - 10
-      - 12                
+
+bond0.2:
+  network:
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.2
+    - use:
+      - network: bond0
+    - require:
+      - network: bond0
+
+bond0.3:
+  network:
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.3
+    - use:
+      - network: bond0
+    - require:
+      - network: bond0
+
+bond0.10:
+  network:
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.4
+    - use:
+      - network: bond0
+    - require:
+      - network: bond0
+
+bond0.12:
+  network:
+    - managed
+    - type: vlan
+    - ipaddr: 10.1.0.5
+    - use:
+      - network: bond0
+    - require:
+      - network: bond0
 '''
 
 def managed(
@@ -108,9 +142,7 @@ def managed(
         'comment': 'Interface {0} is up to date.'.format(name)
     }
            
-    # get current iface run through settings filter
-    # get proposed iface submit to builder
-    # diff iface
+    # Build interface
     try:
         old = __salt__['network.get_interface'](name)
         new = __salt__['network.build_interface'](name, type, kwargs)
@@ -124,6 +156,7 @@ def managed(
         ret['comment'] = error.message
         return ret
 
+    # Setup up bond modprobe script if required
     if type == 'bond':
         try:
             old = __salt__['network.get_bond'](name)
@@ -139,6 +172,7 @@ def managed(
             ret['comment'] = error.message
             return ret
 
+    #Bring up/shutdown interface
     try:
         if enabled:
             __salt__['network.up'](name)

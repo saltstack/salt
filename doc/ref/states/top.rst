@@ -172,7 +172,7 @@ Here is a slightly more complex top file example:
 In this example ``top.sls``, all minions get the ldap-client, networking and
 salt.minion states. Any minion with an id matching the ``salt-master*`` glob
 will get the salt.master state. Minions with ids matching the nag1* glob or
-with a grain named _role_ equal to _monitoring_ will get the nagios.server
+with a grain named ``role`` equal to ``monitoring`` will get the nagios.server
 state. Finally, any minion with ids matching the regular expression
 ``^(memcache|web).(qa|prod).loc$``, will get the nagios.mon.web and
 apache.server states.

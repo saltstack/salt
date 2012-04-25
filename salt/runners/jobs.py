@@ -56,19 +56,17 @@ def lookup_jid(jid):
     '''
     Return the printout from a previousely executed job
     '''
-
-    out = None
-
     def _format_ret(full_ret):
         '''
         Take the full return data and format it to simple output
         '''
+        out = None
         ret = {}
         for key, data in full_ret.items():
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
-            return ret, out
+        return ret, out
 
     client = salt.client.LocalClient(__opts__['conf_file'])
     full_ret = client.get_full_returns(jid, [], 0)

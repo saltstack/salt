@@ -125,6 +125,10 @@
 #  base:
 #    - /srv/pillar
 #
+#ext_pillar:
+#  - hiera: /etc/hiera.yaml
+#  - cmd: cat /etc/salt/yaml
+#
 
 #####          Syndic settings       #####
 ##########################################

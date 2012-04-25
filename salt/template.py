@@ -1,3 +1,7 @@
+'''
+Manage basic template commands
+'''
+import time
 import os.path
 import tempfile
 
@@ -22,8 +26,16 @@ def compile_template(template, renderers, default, env='', sls=''):
     with open(template) as f:
         if not f.read().strip():
             return {}
-    return renderers[
+    ret = renderers[
         template_shebang(template, renderers, default)](template, env, sls)
+    if ret is None:
+        # The file is empty or is being written elsewhere
+        time.sleep(0.01)
+        ret = renderers[
+            template_shebang(template, renderers, default)](template, env, sls)
+        if ret is None:
+            ret = {}
+    return ret
 
 
 def compile_template_str(template, renderers, default):
