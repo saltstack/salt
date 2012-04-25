@@ -61,11 +61,11 @@ class Swarm(object):
         '''
         Create a config file for a single minion
         '''
-        fd, path = tempfile.mkstemp()
+        fd_, path = tempfile.mkstemp()
         path = '{0}{1}'.format(
                 path,
                 hashlib.md5(str(random.randint(0, 999999))).hexdigest())
-        os.close(fd)
+        os.close(fd_)
         dpath = '{0}.d'.format(path)
         os.makedirs(dpath)
         data = {'id': os.path.basename(path),
