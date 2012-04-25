@@ -1436,13 +1436,15 @@ def uncomment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^')
 
     # Make sure the pattern appears in the file
-    if not __salt__['file.contains_regex'](name, unanchor_regex):
-        if __salt__['file.contains_regex'](name, regex):
-            ret['comment'] = 'Pattern already uncommented'
-            ret['result'] = True
-            return ret
-        else:
-            return _error(ret, '{0}: Pattern not found'.format(regex))
+    if __salt__['file.contains_regex'](name, regex):
+        ret['comment'] = 'Pattern already uncommented'
+        ret['result'] = True
+        return ret
+    elif __salt__['file.contains_regex'](name, regex, lchar=char):
+        # Line exists and is commented
+        pass
+    else:
+        return _error(ret, '{0}: Pattern not found'.format(regex))
 
     if __opts__['test']:
         ret['comment'] = 'File {0} is set to be updated'.format(name)
