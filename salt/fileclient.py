@@ -97,7 +97,7 @@ class Client(object):
             path
             )
         destdir = os.path.dirname(dest)
-        cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
+        cumask = os.umask(63)
         if not os.path.isdir(destdir):
             os.makedirs(destdir)
         yield dest

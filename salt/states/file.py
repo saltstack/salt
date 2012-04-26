@@ -958,7 +958,7 @@ def managed(name,
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
             if mode:
-                current_umask = os.umask(077)
+                current_umask = os.umask(63)
 
             # Create a new file when test is False and source is None
             if not __opts__['test']:
