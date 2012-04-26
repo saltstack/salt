@@ -115,7 +115,7 @@ def setsebools(pairs, persist=False):
 
     CLI Example::
 
-    salt '*' selinux.setsebools '{virt_use_usb: on, squid_use_tproxy: off}'
+        salt '*' selinux.setsebools '{virt_use_usb: on, squid_use_tproxy: off}'
     '''
     if not isinstance(pairs, dict):
         return {}

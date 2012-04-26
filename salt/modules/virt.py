@@ -128,7 +128,7 @@ def list_inactive_vms():
 def vm_info(vm_=None):
     '''
     Return detailed information about the vms on this hyper in a
-    list of dicts:
+    list of dicts::
 
         [
             'your-vm': {

@@ -7,7 +7,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-def manage(name,
+def managed(name,
         venv_bin='virtualenv',
         requirements='',
         no_site_packages=False,
@@ -133,3 +133,5 @@ def manage(name,
 
     ret['result'] = True
     return ret
+
+manage = managed
