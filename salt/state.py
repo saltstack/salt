@@ -64,6 +64,15 @@ def _getargs(func):
     return aspec
 
 
+def trim_req(req):
+    '''
+    Trim any function off of a requisite
+    '''
+    if '.' in req.keys()[0]:
+        return {req.keys()[0].split('.')[0]: req[req.keys()[0]]}
+    return req
+
+
 def state_args(id_, state, high):
     '''
     Return a set of the arguments passed to the named state
@@ -861,6 +870,7 @@ class State(object):
         for r_state in reqs.keys():
             if r_state in low:
                 for req in low[r_state]:
+                    req = trim_req(req)
                     found = False
                     for chunk in chunks:
                         req_key = req.keys()[0]
@@ -913,6 +923,7 @@ class State(object):
                 if not requisite in low:
                     continue
                 for req in low[requisite]:
+                    req = trim_req(req)
                     found = False
                     for chunk in chunks:
                         req_key = req.keys()[0]
