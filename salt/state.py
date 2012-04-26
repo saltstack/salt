@@ -1056,6 +1056,7 @@ class BaseHighState(object):
         else:
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
         opts['nodegroups'] = mopts.get('nodegroups', {})
+        opts['file_roots'] = mopts['file_roots']
         return opts
 
     def _get_envs(self):
