@@ -190,6 +190,10 @@ class Minion(object):
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion cound halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
             salt.utils.daemonize()
         minion = salt.minion.Minion(self.opts)
         set_pidfile(self.cli['pidfile'])
