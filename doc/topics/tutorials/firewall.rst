@@ -46,7 +46,7 @@ Create a file named ``/etc/ufw/applications.d/salt-master`` ::
 		[Salt Master]
 		title=Salt master
 		description=Salt is a remote execution and configuration management tool.
-		ports=4205,4206/tcp
+		ports=4505,4506/tcp
 
 pf.conf
 =======
