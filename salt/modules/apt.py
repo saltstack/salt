@@ -140,6 +140,8 @@ def install(pkg, refresh=False, repo='', skip_verify=False,
 
     if version:
         pkg = "{0}={1}".format(pkg, version)
+    elif 'eq' in kwargs:
+        pkg = "{0}={1}".format(pkg, kwargs['eq'])
 
     cmd = 'apt-get -q -y {confold}{verify}{target} install {pkg}'.format(
             confold=' -o DPkg::Options::=--force-confold',
