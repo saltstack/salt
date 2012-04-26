@@ -1288,17 +1288,19 @@ class BaseHighState(object):
                                'as a list'.format(sls))
                         errors.append(err)
                     else:
-                        for sub_sls in state.pop('include'):
-                            if sub_sls not in mods:
-                                nstate, mods, err = self.render_state(
-                                        sub_sls,
-                                        env,
-                                        mods
-                                        )
-                            if nstate:
-                                state.update(nstate)
-                            if err:
-                                errors += err
+                        for inc_sls in state.pop('include'):
+                            for sub_sls in fnmatch.filter(
+                                    self.avail[env], inc_sls):
+                                if sub_sls not in mods:
+                                    nstate, mods, err = self.render_state(
+                                            sub_sls,
+                                            env,
+                                            mods
+                                            )
+                                if nstate:
+                                    state.update(nstate)
+                                if err:
+                                    errors += err
                 if 'extend' in state:
                     ext = state.pop('extend')
                     for name in ext:
