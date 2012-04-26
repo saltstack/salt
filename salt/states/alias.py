@@ -1,7 +1,9 @@
 '''
 Aliases File Management
-=====================
-The mail aliases file can be managed to contain definitions for specific email aliases:
+=======================
+
+The mail aliases file can be managed to contain definitions for specific email
+aliases:
 
 .. code-block:: yaml
 
