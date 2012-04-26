@@ -148,6 +148,8 @@ def install(name, refresh=False, **kwargs):
         fname = '"{0}<{1}"'.format(name, kwargs['lt'])
     if 'eq' in kwargs:
         fname = '"{0}={1}"'.format(name, kwargs['eq'])
+    if 'version' in kwargs:
+        fname = '"{0}={1}"'.format(name, kwargs['version'])
     old = list_pkgs()
     cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
     if refresh:
