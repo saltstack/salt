@@ -187,11 +187,11 @@ class Minion(object):
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
-        minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
             salt.utils.daemonize()
+        minion = salt.minion.Minion(self.opts)
         set_pidfile(self.cli['pidfile'])
         if check_user(self.opts['user'], log):
             try:
