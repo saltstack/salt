@@ -39,6 +39,26 @@ those changes.
 
 Now states that would have made changes report them back in yellow.
 
+State Syntax Update
+-------------------
+
+A shorthand syntax has been added to sls files, and it will be the default
+syntax in documentation going forward. The old syntax is still fully supported
+and will not be deprecated, but it is recommended to move to the new syntax in
+the future. This change moves the state function up into the state name using
+a dot notation. This is in-line with how state functions are generally referred
+to as well:
+
+The new way:
+
+.. code-block:: yaml
+
+    /etc/sudoers:
+      file.present:
+        - source: salt://sudo/sudoers
+        - user: root
+        - mode: 400
+
 Use and Use_in Requisites
 -------------------------
 
