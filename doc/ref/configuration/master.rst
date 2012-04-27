@@ -230,6 +230,9 @@ The renderer to use on the minions to render the state data
 
 .. conf_master:: failhard
 
+``failhard``
+------------
+
 Default:: ``False``
 
 Set the global failhard flag, this informs all states to stop running states
@@ -238,6 +241,20 @@ at the moment a single state fails
 .. code-block:: yaml
 
     failhard: False
+
+.. conf_master:: test
+
+``test``
+--------
+
+Default:: ``False``
+
+Set all state calls to only test if they are going to acctually make changes
+or just post what changes are going to be made
+
+.. code-block:: yaml
+
+    test: False
 
 Master File Server Settings
 ---------------------------
@@ -302,6 +319,53 @@ The buffer size in the file server in bytes
 .. code-block:: yaml
 
     file_buffer_size: 1048576
+
+Pillar Configuration
+--------------------
+
+.. conf_master:: pillar_roots
+
+``pillar_roots``
+----------------
+
+Set the environments and directorirs used to hold pillar sls data. This
+configuration is the same as file_roots:
+
+Default: ``base: [/srv/pillar]``
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/pillar/
+      dev:
+        - /srv/pillar/dev/
+      prod:
+        - /srv/pillar/prod/
+
+.. code-block:: yaml
+
+    base:
+      - /srv/pillar
+
+.. conf_master:: ext_pillar
+
+``ext_pillar``
+--------------
+
+The ext_pillar option allows for any number of external pillar interfaces to be
+called when populating pillar data. The configuration is based on ext_pillar
+functions. The available ext_pillar functions are: hiera, cmd_yaml. By default
+the ext_pillar interface is not configued to run.
+
+Default:: ``None``
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - hiera: /etc/hiera.yaml
+      - cmd: cat /etc/salt/yaml
+
 
 Syndic Server Settings
 ----------------------
