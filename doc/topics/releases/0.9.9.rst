@@ -2,8 +2,6 @@
 Salt 0.9.9 Release Notes
 ========================
 
-THIS RELEASE IS A WORK IN PROGRESS - 0.9.9 IS NOT RELEASED YET!!!!!
-
 0.9.9 is out and comes with some serious bug fixes and even more serious
 features. This release is the last major feature release before 1.0.0 and
 could be considered the 1.0.0 release candidate.
@@ -29,9 +27,9 @@ changed was to print out the highstate with state.show_highstate and manually
 look it over. But now states can be run to discover what is going to be
 changed.
 
-Passing the option test=True to many of the state functions will cause the
-salt state system to only check for what is going to be changed and report on
-those changes.
+Passing the option ``test=True`` to many of the state functions will now cause
+the salt state system to only check for what is going to be changed and report
+on those changes.
 
 .. code-block:: bash
 
@@ -211,7 +209,20 @@ External Pillar
 Since the pillar data is just, data, it does not need to come expressly from
 the pillar interface. The external pillar system allows for hooks to be added
 making it possible to extract pillar data from any arbitrary external
-interface.
+interface. The external pillar interface is configured via the ``ext_pillar``
+option. Currently interfaces exist to gather external pillar data via hiera
+or via a shell command that sends yaml data to the terminal:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - cmd_yaml: cat /etc/salt/ext.yaml
+      - hiera: /etc/hirea.yaml
+
+The initial external pillar interfaces and extra interfaces can be added to
+the file salt/pillar.py, it is planned to add more external pillar interfaces.
+If the need arises a new module loader interface will be created in the future
+to manage external pillar interfaces.
 
 Single State Executions
 -----------------------
@@ -224,8 +235,8 @@ testing out the behavior of single states:
 
     # salt \* state.single user.present name=wade uid=2000
 
-The test interface function here as well, so changes can be tested against as
-well:
+The test interface functions here as well, so changes can also be tested
+against as:
 
 .. code-block:: bash
 
@@ -273,4 +284,4 @@ Client Tests
 ------------
 
 Tests have been added to test the aspects of the client apis and ensure that
-the client calls work, and that they managed passed data, in a desirable way.
+the client calls work, and that they manage passed data, in a desirable way.
