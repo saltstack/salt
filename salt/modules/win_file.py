@@ -231,17 +231,17 @@ def get_sum(path, form='md5'):
         return 'File not found'
     try:
         return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         return 'File Error: %s' % (str(e))
-    except AttributeError, e:
+    except AttributeError as e:
         return 'Hash ' + form + ' not supported'
-    except NameError, e:
+    except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
-    except Exception, e:
+    except Exception as e:
         return str(e)
 
 
-def find(path, *opts):
+def find(path, **kwargs):
     '''
     Approximate the Unix find(1) command and return a list of paths that
     meet the specified critera.
@@ -332,13 +332,9 @@ def find(path, *opts):
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
         salt '*' file.find /var/log name=\*.[0-9] mtime=+30d size=+10m delete
     '''
-    opts_dict = {}
-    for opt in opts:
-        key, value = opt.split('=', 1)
-        opts_dict[key] = value
     try:
-        f = salt.utils.find.Finder(opts_dict)
-    except ValueError, ex:
+        f = salt.utils.find.Finder(kwargs)
+    except ValueError as ex:
         return 'error: {0}'.format(ex)
 
     ret = [p for p in f.find(path)]
