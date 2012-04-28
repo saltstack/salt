@@ -21,6 +21,77 @@ as either absent or present
 '''
 
 
+def _changes(
+        name,
+        uid=None,
+        gid=None,
+        groups=None,
+        home=True,
+        password=None,
+        enforce_password=True,
+        shell=None,
+        fullname=None,
+        roomnumber=None,
+        workphone=None,
+        homephone=None,
+        other=None,
+        unique=True,
+        ):
+    '''
+    Return a dict of the changes required for a user if the user is present,
+    otherwise return False.
+    '''
+    
+    change = {}
+    found = False
+
+    if __grains__['os'] != 'FreeBSD':
+        lshad = __salt__['shadow.info'](name)
+
+    for lusr in __salt__['user.getent']():
+        # Scan over the users
+        if lusr['name'] == name:
+            found = True
+            if uid:
+                if lusr['uid'] != uid:
+                    change['uid'] = uid
+            if gid:
+                if lusr['gid'] != gid:
+                    change['gid'] = gid
+            if groups:
+                if lusr['groups'] != sorted(groups):
+                    change['groups'] = groups
+            if home:
+                if lusr['home'] != home:
+                    change['home'] = home
+            if shell:
+                if lusr['shell'] != shell:
+                    change['shell'] = shell
+            if password:
+                if __grains__['os'] != 'FreeBSD':
+                    if lshad['pwd'] == '!' or \
+                            lshad['pwd'] != '!' and enforce_password:
+                        if lshad['pwd'] != password:
+                            change['passwd'] = password
+            if fullname:
+                if lusr['fullname'] != fullname:
+                    change['fullname'] = fullname
+            if roomnumber:
+                if lusr['roomnumber'] != roomnumber:
+                    change['roomnumber'] = roomnumber
+            if workphone:
+                if lusr['workphone'] != workphone:
+                    change['workphone'] = workphone
+            if homephone:
+                if lusr['homephone'] != homephone:
+                    change['homephone'] = homephone
+            if other:
+                if lusr['other'] != other:
+                    change['other'] = other
+    if not found:
+        return False
+    return change
+
 def present(
         name,
         uid=None,
@@ -35,6 +106,7 @@ def present(
         workphone=None,
         homephone=None,
         other=None,
+        unique=True,
         ):
     '''
     Ensure that the named user is present with the specified properties
@@ -88,109 +160,96 @@ def present(
 
     other
         The user's "other" GECOS field
+
+    unique
+        Require a unique UID, True by default
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
 
-    if __grains__['os'] != 'FreeBSD':
-        lshad = __salt__['shadow.info'](name)
-
-    for lusr in __salt__['user.getent']():
-        # Scan over the users
-        if lusr['name'] == name:
-            # The user is present, verify the params
-            pre = __salt__['user.info'](name)
-            if uid:
-                if lusr['uid'] != uid:
-                    # Fix the uid
-                    __salt__['user.chuid'](name, uid)
-            if gid:
-                if lusr['gid'] != gid:
-                    # Fix the gid
-                    __salt__['user.chgid'](name, gid)
-            if groups:
-                if lusr['groups'] != sorted(groups):
-                    # Fix the groups
-                    __salt__['user.chgroups'](name, groups)
-            if home:
-                if lusr['home'] != home:
-                    # Fix the home dir
-                    __salt__['user.chhome'](name, home, True)
-            if shell:
-                if lusr['shell'] != shell:
-                    # Fix the shell
-                    __salt__['user.chshell'](name, shell)
-            if password:
-                if __grains__['os'] != 'FreeBSD':
-                    if lshad['pwd'] == '!' or \
-                            lshad['pwd'] != '!' and enforce_password:
-                        if lshad['pwd'] != password:
-                            # Set the new password
-                            __salt__['shadow.set_password'](name, password)
-            if fullname:
-                if lusr['fullname'] != fullname:
-                    # Fix the fullname
-                    __salt__['user.chfullname'](name, fullname)
-            if roomnumber:
-                if lusr['roomnumber'] != roomnumber:
-                    # Fix the roomnumber
-                    __salt__['user.chroomnumber'](name, roomnumber)
-            if workphone:
-                if lusr['workphone'] != workphone:
-                    # Fix the workphone
-                    __salt__['user.chworkphone'](name, workphone)
-            if homephone:
-                if lusr['homephone'] != homephone:
-                    # Fix the homephone
-                    __salt__['user.chhomephone'](name, homephone)
-            if other:
-                if lusr['other'] != other:
-                    # Fix the other
-                    __salt__['user.chother'](name, other)
-            post = __salt__['user.info'](name)
-            spost = {}
-            if __grains__['os'] != 'FreeBSD':
-                if lshad['pwd'] != password:
-                    spost = __salt__['shadow.info'](name)
-            # See if anything changed
-            for key in post:
-                if post[key] != pre[key]:
-                    ret['changes'][key] = post[key]
-            if __grains__['os'] != 'FreeBSD':
-                for key in spost:
-                    if lshad[key] != spost[key]:
-                        ret['changes'][key] = spost[key]
-            if ret['changes']:
-                ret['comment'] = 'Updated user {0}'.format(name)
+    changes = _changes(
+            name,
+            uid,
+            gid,
+            groups,
+            home,
+            password,
+            enforce_password,
+            shell,
+            fullname,
+            roomnumber,
+            workphone,
+            homephone,
+            other,
+            unique)
+    if changes:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The following user attributes are set to be '
+                              'changed:\n')
+            for key, val in changes.items():
+                ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
+        # The user is present
+        if __grains__['os'] != 'FreeBSD':
+            lshad = __salt__['shadow.info'](name)
+        pre = __salt__['user.info'](name)
+        for key, val in changes.items():
+            if key == 'passwd':
+                __salt__['shadow.set_password'](name, password)
+                continue
+            __salt__['user.ch{0}'.format(key)](name, val)
 
-    # The user is not present, make it!
-    if __salt__['user.add'](name,
-                            uid=uid,
-                            gid=gid,
-                            groups=groups,
-                            home=home,
-                            shell=shell,
-                            fullname=fullname,
-                            roomnumber=roomnumber,
-                            workphone=workphone,
-                            homephone=homephone,
-                            other=other):
-        ret['comment'] = 'New user {0} created'.format(name)
-        ret['changes'] = __salt__['user.info'](name)
-        if password:
-            __salt__['shadow.set_password'](name, password)
-            spost = __salt__['shadow.info'](name)
-            if spost['pwd'] != password:
-                ret['comment'] = ('User {0} created but failed to set'
-                ' password to {1}').format(name, password)
-                ret['result'] = False
-            ret['changes']['password'] = password
-    else:
-        ret['comment'] = 'Failed to create new user {0}'.format(name)
-        ret['result'] = False
+        post = __salt__['user.info'](name)
+        spost = {}
+        if __grains__['os'] != 'FreeBSD':
+            if lshad['pwd'] != password:
+                spost = __salt__['shadow.info'](name)
+        # See if anything changed
+        for key in post:
+            if post[key] != pre[key]:
+                ret['changes'][key] = post[key]
+        if __grains__['os'] != 'FreeBSD':
+            for key in spost:
+                if lshad[key] != spost[key]:
+                    ret['changes'][key] = spost[key]
+        if ret['changes']:
+            ret['comment'] = 'Updated user {0}'.format(name)
+        return ret
+ 
+    if changes is False:
+        # The user is not present, make it!
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'User {0} set to be added'.format(name)
+            return ret
+        if __salt__['user.add'](name,
+                                uid=uid,
+                                gid=gid,
+                                groups=groups,
+                                home=home,
+                                shell=shell,
+                                fullname=fullname,
+                                roomnumber=roomnumber,
+                                workphone=workphone,
+                                homephone=homephone,
+                                other=other,
+                                unique=unique):
+            ret['comment'] = 'New user {0} created'.format(name)
+            ret['changes'] = __salt__['user.info'](name)
+            if password:
+                __salt__['shadow.set_password'](name, password)
+                spost = __salt__['shadow.info'](name)
+                if spost['pwd'] != password:
+                    ret['comment'] = ('User {0} created but failed to set'
+                    ' password to {1}').format(name, password)
+                    ret['result'] = False
+                ret['changes']['password'] = password
+        else:
+            ret['comment'] = 'Failed to create new user {0}'.format(name)
+            ret['result'] = False
 
     return ret
 
@@ -218,6 +277,10 @@ def absent(name, purge=False, force=False):
         # Scan over the users
         if lusr['name'] == name:
             # The user is present, make it not present
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'User {0} set for removal'.format(name)
+                return ret
             ret['result'] = __salt__['user.delete'](name, purge, force)
             if ret['result']:
                 ret['changes'] = {name: 'removed'}

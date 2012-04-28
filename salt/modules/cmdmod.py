@@ -81,6 +81,7 @@ def _run(cmd,
         # Load the 'nix environment
         if with_env:
             cmd_prefix += ' - '
+            cmd = 'cd ' + cwd + ' && ' + cmd
 
         cmd_prefix += runas + ' -c'
         cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
@@ -241,8 +242,10 @@ def exec_code(lang, code, cwd=None):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    fd, codefile = tempfile.mkstemp()
-    open(codefile, 'w+').write(code)
+    fd_, codefile = tempfile.mkstemp()
+    os.close(fd_)
+    with open(codefile, 'w+') as fp_:
+        fp_.write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
     ret = run(cmd, cwd=cwd)

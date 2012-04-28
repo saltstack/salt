@@ -1,0 +1,5 @@
+/var/log/salt/minion {
+	missingok
+	sharedscripts
+	endscript
+}

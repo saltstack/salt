@@ -36,6 +36,9 @@ MOCK_MODULES = [
     'zmq',
     'Crypto',
     'Crypto.Cipher',
+    'Crypto.Hash',
+    'Crypto.PublicKey',
+    'Crypto.Random',
     'M2Crypto',
     # modules, renderers, states, returners, et al
     'MySQLdb',

@@ -2,7 +2,10 @@
 Classes that manage file clients
 '''
 # Import python libs
-import BaseHTTPServer
+try:
+    import BaseHTTPServer
+except:
+    import http.server as BaseHTTPServer
 import contextlib
 import logging
 import hashlib
@@ -11,8 +14,12 @@ import shutil
 import stat
 import string
 import subprocess
-import urllib2
-import urlparse
+try:
+    import urllib2
+    import urlparse
+except:
+    import urllib.request as urllib2
+    import urllib.parse as urlparse
 
 # Import third-party libs
 import yaml
@@ -25,6 +32,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils.templates
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +97,7 @@ class Client(object):
             path
             )
         destdir = os.path.dirname(dest)
-        cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
+        cumask = os.umask(63)
         if not os.path.isdir(destdir):
             os.makedirs(destdir)
         yield dest
@@ -182,6 +190,21 @@ class Client(object):
 
         return ''
 
+    def list_states(self, env):
+        '''
+        Return a list of all available sls modules on the master for a given
+        environment
+        '''
+        states = []
+        for path in self.file_list(env):
+            if path.endswith('.sls'):
+                # is an sls module!
+                if path.endswith('{0}init.sls'.format(os.sep)):
+                    states.append(path.replace(os.sep, '.')[:-9])
+                else:
+                    states.append(path.replace(os.sep, '.')[:-4])
+        return states
+
     def get_state(self, sls, env):
         '''
         Get a state file from the master and store it in the local minion
@@ -264,14 +287,65 @@ class Client(object):
                 with open(dest, 'wb') as destfp:
                     shutil.copyfileobj(srcfp, destfp)
             return dest
-        except urllib2.HTTPError, ex:
+        except urllib2.HTTPError as ex:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                     ex.code,
                     url,
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
-        except urllib2.URLError, ex:
+        except urllib2.URLError as ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
         return ''
+
+    def get_template(
+            self,
+            url,
+            dest,
+            template='jinja',
+            makedirs=False,
+            env='base',
+            **kwargs):
+        '''
+        Cache a file then process it as a template
+        '''
+        kwargs['env'] = env
+        url_data = urlparse.urlparse(url)
+        sfn = self.cache_file(url, env)
+        if not os.path.exists(sfn):
+            return ''
+        if template in salt.utils.templates.template_registry:
+            data = salt.utils.templates.template_registry[template](
+                    sfn,
+                    **kwargs
+                    )
+        else:
+            log.error('Attempted to render template with unavailable engine '
+                      '{0}'.format(template))
+            salt.utils.safe_rm(data['data'])
+            return ''
+        if not data['result']:
+            # Failed to render the template
+            log.error('Failed to render template with error: {0}'.format(
+                data['data']
+                ))
+            return ''
+        if not dest:
+            # No destination passed, set the dest as an extrn_files cache
+            dest = os.path.normpath(
+                os.sep.join([
+                    self.opts['cachedir'],
+                    'extrn_files',
+                    env,
+                    url_data.netloc,
+                    url_data.path]))
+        destdir = os.path.dirname(dest)
+        if not os.path.isdir(destdir):
+            if makedirs:
+                os.makedirs(destdir)
+            else:
+                salt.utils.safe_rm(data['data'])
+                return ''
+        shutil.move(data['data'], dest)
+        return dest
 
 
 class LocalClient(Client):

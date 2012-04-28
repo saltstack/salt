@@ -18,10 +18,12 @@ import subprocess
 
 # Import zeromq
 import zmq
-from M2Crypto import RSA
 
 # Import Third Party Libs
 import yaml
+
+# RSA Support
+from M2Crypto import RSA
 
 # Import salt modules
 import salt.crypt
@@ -34,23 +36,6 @@ import salt.state
 
 log = logging.getLogger(__name__)
 
-
-def prep_jid(opts, load):
-    '''
-    Parses the job return directory, generates a job id and sets up the
-    job id directory.
-    '''
-    serial = salt.payload.Serial(opts)
-    jid_root = os.path.join(opts['cachedir'], 'jobs')
-    jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
-
-    jid_dir = os.path.join(jid_root, jid)
-    if not os.path.isdir(jid_dir):
-        os.makedirs(jid_dir)
-        serial.dump(load, open(os.path.join(jid_dir, '.load.p'), 'w+'))
-    else:
-        return prep_jid(opts['cachedir'], load)
-    return jid
 
 def clean_proc(proc, wait_for_kill=10):
     '''
@@ -108,11 +93,13 @@ class SMaster(object):
         log.info('Preparing the root key for local communication')
         keyfile = os.path.join(self.opts['cachedir'], '.root_key')
         if os.path.isfile(keyfile):
-            return open(keyfile, 'r').read()
+            with open(keyfile, 'r') as fp_:
+                return fp_.read()
         else:
             key = salt.crypt.Crypticle.generate_key_string()
             cumask = os.umask(191)
-            open(keyfile, 'w+').write(key)
+            with open(keyfile, 'w+') as fp_:
+                fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
             return key
@@ -132,15 +119,26 @@ class Master(SMaster):
         '''
         Clean out the old jobs
         '''
+        if self.opts['keep_jobs'] == 0:
+            return
+        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         while True:
             cur = "{0:%Y%m%d%H}".format(datetime.datetime.now())
 
-            if self.opts['keep_jobs'] == 0:
-                return
-            jid_root = os.path.join(self.opts['cachedir'], 'jobs')
-            for jid in os.listdir(jid_root):
-                if int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
-                    shutil.rmtree(os.path.join(jid_root, jid))
+            for top in os.listdir(jid_root):
+                t_path = os.path.join(jid_root, top)
+                for final in os.listdir(t_path):
+                    f_path = os.path.join(t_path, final)
+                    jid_file = os.path.join(f_path, 'jid')
+                    if not os.path.isfile(jid_file):
+                        continue
+                    with open(jid_file, 'r') as fn_:
+                        jid = fn_.read()
+                    if len(jid) < 18:
+                        # Invalid jid, scrub the dir
+                        shutil.rmtree(f_path)
+                    elif int(cur) - int(jid[:10]) > self.opts['keep_jobs']:
+                        shutil.rmtree(f_path)
             try:
                 time.sleep(60)
             except KeyboardInterrupt:
@@ -209,6 +207,7 @@ class Publisher(multiprocessing.Process):
         '''
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
+        pub_sock.setsockopt(zmq.HWM, 1)
         pull_sock = context.socket(zmq.PULL)
         pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
         pull_uri = 'ipc://{0}'.format(
@@ -408,19 +407,16 @@ class AESFuncs(object):
 
     def __verify_minion(self, id_, token):
         '''
-        Take a minion id and a string encrypted with the minion private key
-        The string needs to decrypt as 'salt' with the minion public key
+        Take a minion id and a string signed with the minion private key
+        The string needs to verify as 'salt' with the minion public key
         '''
-        minion_pub = open(
-                os.path.join(
-                    self.opts['pki_dir'],
-                    'minions',
-                    id_
-                    ),
-                'r'
-                ).read()
-        tmp_pub = tempfile.mktemp()
-        open(tmp_pub, 'w+').write(minion_pub)
+        pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
+        with open(pub_path, 'r') as fp_:
+            minion_pub = fp_.read()
+        fd_, tmp_pub = tempfile.mkstemp()
+        os.close(fd_)
+        with open(tmp_pub, 'w+') as fp_:
+            fp_.write(minion_pub)
         pub = RSA.load_pub_key(tmp_pub)
         os.remove(tmp_pub)
         if pub.public_decrypt(token, 5) == 'salt':
@@ -480,9 +476,9 @@ class AESFuncs(object):
         if not fnd['path']:
             return ret
         ret['dest'] = fnd['rel']
-        fn_ = open(fnd['path'], 'rb')
-        fn_.seek(load['loc'])
-        ret['data'] = fn_.read(self.opts['file_buffer_size'])
+        with open(fnd['path'], 'rb') as fp_:
+            fp_.seek(load['loc'])
+            ret['data'] = fp_.read(self.opts['file_buffer_size'])
         return ret
 
     def _file_hash(self, load):
@@ -495,8 +491,9 @@ class AESFuncs(object):
         if not path:
             return {}
         ret = {}
-        ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
-                open(path, 'rb').read()).hexdigest()
+        with open(path, 'rb') as fp_:
+            ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
+                    fp_.read()).hexdigest()
         ret['hash_type'] = self.opts['hash_type']
         return ret
 
@@ -509,7 +506,7 @@ class AESFuncs(object):
         if load['env'] not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 for fn in files:
                     ret.append(
                         os.path.relpath(
@@ -530,7 +527,7 @@ class AESFuncs(object):
         if load['env'] not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 if len(dirs)==0 and len(files)==0:
                     ret.append(os.path.relpath(root,path))
         return ret
@@ -575,7 +572,11 @@ class AESFuncs(object):
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
         log.info('Got return from %(id)s for job %(jid)s', load)
-        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        jid_dir = salt.utils.jid_dir(
+                load['jid'],
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
@@ -609,7 +610,11 @@ class AESFuncs(object):
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return None
         # set the write flag
-        jid_dir = os.path.join(self.opts['cachedir'], 'jobs', load['jid'])
+        jid_dir = salt.utils.jid_dir(
+                load['jid'],
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
@@ -618,7 +623,8 @@ class AESFuncs(object):
             return False
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
-            open(wtag, 'w+').write('')
+            with open(wtag, 'w+') as fp_:
+                fp_.write('')
         except (IOError, OSError):
             log.error(
                     ('Failed to commit the write tag for the syndic return,'
@@ -659,7 +665,6 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer'], dict):
             return {}
-        # FIXME: rewrite this ugly monster using eg any()
         if 'fun' not in clear_load\
                 or 'arg' not in clear_load\
                 or 'tgt' not in clear_load\
@@ -674,8 +679,8 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            jid = clear_load['jid']
-            msg = 'Minion id {0} is not who it says it is!'.format(jid)
+            msg = 'Minion id {0} is not who it says it is!'.format(
+                    clear_load['id'])
             log.warn(msg)
             return {}
         perms = set()
@@ -685,31 +690,65 @@ class AESFuncs(object):
                 if isinstance(self.opts['peer'][match], list):
                     perms.update(self.opts['peer'][match])
         good = False
+        if ',' in clear_load['fun']:
+            # 'arg': [['cat', '/proc/cpuinfo'], [], ['foo']]
+            clear_load['fun'] = clear_load['fun'].split(',')
+            arg_ = []
+            for arg in clear_load['arg']:
+                arg_.append(arg.split())
+            clear_load['arg'] = arg_
         for perm in perms:
-            if re.match(perm, clear_load['fun']):
+            if isinstance(clear_load['fun'], list):
                 good = True
+                for fun in clear_load['fun']:
+                    if not re.match(perm, fun):
+                        good = False
+            else:
+                if re.match(perm, clear_load['fun']):
+                    good = True
         if not good:
             return {}
         # Set up the publication payload
-        jid = prep_jid(self.opts, clear_load)
-        payload = {'enc': 'aes'}
+        jid = salt.utils.prep_jid(
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
         load = {
                 'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
+                'tgt_type': clear_load.get('tgt_type', 'glob'),
                 'tgt': clear_load['tgt'],
                 'jid': jid,
                 'ret': clear_load['ret'],
                 'id': clear_load['id'],
                }
+        self.serial.dump(
+                load, open(
+                    os.path.join(
+                        salt.utils.jid_dir(
+                            jid,
+                            self.opts['cachedir'],
+                            self.opts['hash_type']
+                            ),
+                        '.load.p'
+                        ),
+                    'w+')
+                )
+        payload = {'enc': 'aes'}
         expr_form = 'glob'
         timeout = 5
         if 'tmo' in clear_load:
-            timeout = int(clear_load['tmo'])
+            try:
+                timeout = int(clear_load['tmo'])
+            except ValueError:
+                msg = 'Failed to parse timeout value: {0}'.format(clear_load['tmo'])
+                log.warn(msg)
+                return {}
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
             expr_form = load['tgt_type']
         if 'timeout' in clear_load:
-            timeout = clear_load('timeout')
+            timeout = clear_load['timeout']
         # Encrypt!
         payload['load'] = self.crypticle.dumps(load)
         # Connect to the publisher
@@ -807,14 +846,15 @@ class ClearFuncs(object):
         '''
         minions = {}
         master_pem = ''
-        master_conf = open(self.opts['conf_file'], 'r').read()
+        with open(self.opts['conf_file'], 'r') as fp_:
+            master_conf = fp_.read()
         minion_dir = os.path.join(self.opts['pki_dir'], 'minions')
         for host in os.listdir(minion_dir):
             pub = os.path.join(minion_dir, host)
             minions[host] = open(pub, 'r').read()
         if self.opts['cluster_mode'] == 'full':
-            master_pem = open(os.path.join(self.opts['pki_dir'],
-                'master.pem')).read()
+            with open(os.path.join(self.opts['pki_dir'], 'master.pem')) as fp_:
+                master_pem = fp_.read()
         return [minions,
                 master_conf,
                 master_pem,
@@ -865,7 +905,8 @@ class ClearFuncs(object):
                 and not self.opts['auto_accept']:
             # This is a new key, stick it in pre
             log.info('New public key placed in pending for %(id)s', load)
-            open(pubfn_pend, 'w+').write(load['pub'])
+            with open(pubfn_pend, 'w+') as fp_:
+                fp_.write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
             return ret
@@ -900,16 +941,15 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
 
         log.info('Authentication accepted from %(id)s', load)
-        open(pubfn, 'w+').write(load['pub'])
-        key = RSA.load_pub_key(pubfn)
+        with open(pubfn, 'w+') as fp_:
+            fp_.write(load['pub'])
+        pub = RSA.load_pub_key(pubfn)
         ret = {'enc': 'pub',
-               'pub_key': self.master_key.pub_str,
+               'pub_key': self.master_key.get_pub_str(),
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
-        ret['aes'] = key.public_encrypt(self.opts['aes'], 4)
-        if self.opts['cluster_masters']:
-            self._send_cluster()
+        ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
         return ret
 
     def publish(self, clear_load):
@@ -920,8 +960,11 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         if not clear_load.pop('key') == self.key:
             return ''
-        jid_dir = (os.path.join(self.opts['cachedir'],
-                   'jobs', clear_load['jid']))
+        jid_dir = salt.utils.jid_dir(
+                clear_load['jid'],
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
         # Verify the jid dir
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)

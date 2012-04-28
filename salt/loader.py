@@ -79,7 +79,7 @@ def returners(opts):
 
 def states(opts, functions):
     '''
-    Returns the returner modules
+    Returns the state modules
     '''
     load = _create_loader(opts, 'states', 'state')
     pack = {'name': '__salt__',
@@ -289,6 +289,10 @@ class Loader(object):
                 continue
             if callable(getattr(mod, attr)):
                 func = getattr(mod, attr)
+                if hasattr(func, '__bases__'):
+                    if 'BaseException' in func.__bases__:
+                        # the callable object is an exception, don't load it
+                        continue
                 funcs[
                         '{0}.{1}'.format(
                             mod.__name__[:mod.__name__.rindex('_')],
@@ -332,7 +336,10 @@ class Loader(object):
                 if names[name].endswith('.pyx'):
                     # If there's a name which ends in .pyx it means the above
                     # cython_enabled is True. Continue...
-                    mod = pyximport.load_module(name, names[name], '/tmp')
+                    mod = pyximport.load_module(
+                            '{0}_{1}'.format(name, self.tag),
+                            names[name],
+                            '/tmp')
                 else:
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
@@ -384,14 +391,18 @@ class Loader(object):
                 if attr.startswith('_'):
                     continue
                 if callable(getattr(mod, attr)):
+                    func = getattr(mod, attr)
+                    if isinstance(func, type):
+                        if any([
+                            'Error' in func.__name__,
+                            'Exception' in func.__name__]):
+                            continue
                     if virtual:
-                        func = getattr(mod, attr)
-                        funcs[virtual + '.' + attr] = func
+                        funcs['{0}.{1}'.format(virtual, attr)] = func
                         self._apply_outputter(func, mod)
                     elif virtual is False:
                         pass
                     else:
-                        func = getattr(mod, attr)
                         funcs[
                                 '{0}.{1}'.format(
                                     mod.__name__[:mod.__name__.rindex('_')],

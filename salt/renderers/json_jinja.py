@@ -5,9 +5,14 @@ This renderer will take a json file with the jinja template and render it to a
 high data format for salt states.
 '''
 
+# Import python libs
 import json
 import os
+
+# Import salt libs
 from salt.utils.jinja import get_template
+from salt.exceptions import SaltRenderError
+import salt.utils.templates
 
 def render(template_file, env='', sls=''):
     '''
@@ -16,15 +21,16 @@ def render(template_file, env='', sls=''):
     if not os.path.isfile(template_file):
         return {}
 
-    passthrough = {}
-    passthrough['salt'] = __salt__
-    passthrough['grains'] = __grains__
-    passthrough['pillar'] = __pillar__
-    passthrough['env'] = env
-    passthrough['sls'] = sls
-
-    template = get_template(template_file, __opts__, env)
-
-    json_data = template.render(**passthrough)
-
-    return json.loads(json_data)
+    tmp_data = salt.utils.templates.jinja(
+            template_file,
+            True,
+            salt=__salt__,
+            grains=__grains__,
+            opts=__opts__,
+            pillar=__pillar__,
+            env=env,
+            sls=sls)
+    if not tmp_data.get('result', False):
+        raise SaltRenderError(tmp_data.get('data',
+            'Unknown render error in yaml_jinja renderer'))
+    return json.loads(tmp_data['data'])

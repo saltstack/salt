@@ -14,7 +14,7 @@ import threading
 import time
 import traceback
 
-# Import zeromq libs
+# Import third party libs
 import zmq
 
 # Import salt libs
@@ -52,6 +52,36 @@ def get_proc_dir(cachedir):
             os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
+def detect_kwargs(func, args, data=None):
+    '''
+    Detect the args and kwargs that need to be passed to a function call
+    '''
+    spec_args, _, has_kwargs, defaults = salt.state._getargs(func)
+    defaults = [] if defaults is None else defaults
+    starti = len(spec_args) - len(defaults)
+    kwarg_spec = set()
+    for ind in xrange(len(defaults)):
+        kwarg_spec.add(spec_args[starti])
+        starti += 1
+    _args = []
+    kwargs = {}
+    for arg in args:
+        if isinstance(arg, basestring):
+            if '=' in arg:
+                comps = arg.split('=')
+                if has_kwargs:
+                    kwargs[comps[0]] = '='.join(comps[1:])
+                    continue
+                if comps[0] in kwarg_spec:
+                    kwargs[comps[0]] = '='.join(comps[1:])
+                    continue
+        _args.append(arg)
+    if has_kwargs and isinstance(data, dict):
+        # this function accepts kwargs, pack in the publish data
+        for key, val in data.items():
+            kwargs['__pub_{0}'.format(key)] = val
+    return _args, kwargs
+
 
 class SMinion(object):
     '''
@@ -69,6 +99,12 @@ class SMinion(object):
         '''
         Load all of the modules for the minion
         '''
+        self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts)
         self.returners = salt.loader.returners(self.opts)
         self.states = salt.loader.states(self.opts, self.functions)
@@ -237,7 +273,7 @@ class Minion(object):
         if function_name in self.functions:
             try:
                 func = self.functions[data['fun']]
-                args, kw = salt.state.build_args(func, data['arg'], data)
+                args, kw = detect_kwargs(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
@@ -296,7 +332,7 @@ class Minion(object):
 
             try:
                 func = self.functions[data['fun'][ind]]
-                args, kw = salt.state.build_args(func, data['arg'][ind], data)
+                args, kw = detect_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kw)
             except Exception as exc:
                 trb = traceback.format_exc()
@@ -328,7 +364,11 @@ class Minion(object):
         if self.opts['multiprocessing']:
             fn_ = os.path.join(self.proc_dir, ret['jid'])
             if os.path.isfile(fn_):
-                os.remove(fn_)
+                try:
+                    os.remove(fn_)
+                except (OSError, IOError):
+                    # The file is gone already
+                    pass
         log.info('Returning information for job: {0}'.format(ret['jid']))
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
@@ -433,6 +473,7 @@ class Minion(object):
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
+        socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
         if self.opts['sub_timeout']:
             last = time.time()
@@ -458,6 +499,7 @@ class Minion(object):
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
+                    socket.setsockopt(zmq.IDENTITY, self.opts['id'])
                     socket.connect(self.master_pub)
                     last = time.time()
                 time.sleep(0.05)
@@ -572,6 +614,10 @@ class Matcher(object):
         data matches this minion
         '''
         matcher = 'glob'
+        if not data:
+            log.error('Recived bad data when setting the match from the top '
+                      'file')
+            return False
         for item in data:
             if isinstance(item, dict):
                 if 'match' in item:
@@ -618,12 +664,12 @@ class Matcher(object):
         if isinstance(self.opts['grains'][comps[0]], list):
             # We are matching a single component to a single list member
             for member in self.opts['grains'][comps[0]]:
-                if fnmatch.fnmatch(str(member), comps[1]):
+                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
         return bool(fnmatch.fnmatch(
-            str(self.opts['grains'][comps[0]]),
-            comps[1],
+            str(self.opts['grains'][comps[0]]).lower(),
+            comps[1].lower(),
             ))
 
     def grain_pcre_match(self, tgt):
@@ -640,10 +686,15 @@ class Matcher(object):
         if isinstance(self.opts['grains'][comps[0]], list):
             # We are matching a single component to a single list member
             for member in self.opts['grains'][comps[0]]:
-                if re.match(comps[1], str(member)):
+                if re.match(comps[1].lower(), str(member).lower()):
                     return True
             return False
-        return bool(re.match(comps[1], str(self.opts['grains'][comps[0]])))
+        return bool(
+                re.match(
+                    comps[1].lower(),
+                    str(self.opts['grains'][comps[0]]).lower()
+                    )
+                )
 
     def exsel_match(self, tgt):
         '''

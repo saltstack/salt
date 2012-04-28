@@ -13,7 +13,6 @@ import salt
 import salt.utils
 import salt.loader
 import salt.minion
-import salt.state
 
 # Custom exceptions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -41,7 +40,7 @@ class Caller(object):
             sys.stderr.write('Function {0} is not available\n'.format(fun))
             sys.exit(1)
         try:
-            args, kw = salt.state.build_args(
+            args, kw = salt.minion.detect_kwargs(
                 self.minion.functions[fun], self.opts['arg'])
             ret['return'] = self.minion.functions[fun](*args, **kw)
         except (TypeError, CommandExecutionError) as exc:
@@ -71,7 +70,7 @@ class Caller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts['fun']):
-                print '{0}:\n{1}\n'.format(name, docs[name])
+                print('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''

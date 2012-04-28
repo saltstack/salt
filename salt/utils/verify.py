@@ -71,15 +71,23 @@ def verify_env(dirs):
                 cumask = os.umask(63)  # 077
                 os.makedirs(dir_)
                 os.umask(cumask)
-            except OSError, e:
+            except OSError as e:
                 sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
 
         mode = os.stat(dir_)
-        # TODO: Should this log if it can't set the permissions
-        #       to very secure for these PKI cert directories?
-        if not stat.S_IMODE(mode.st_mode) == 448:
+        # Allow the pki dir to be 700 or 750, but nothing else.
+        # This prevents other users from writing out keys, while
+        # allowing the use-case of 3rd-party software (like django)
+        # to read in what it needs to integrate. 
+        #
+        # If the permissions aren't correct, default to the more secure 700.
+        smode = stat.S_IMODE(mode.st_mode)
+        if not smode == 448 and not smode == 488:
             if os.access(dir_, os.W_OK):
                 os.chmod(dir_, 448)
+            else:
+                msg = 'Unable to securely set the permissions of "{0}".'.format(dir_)
+                log.critical(msg)
     # Run the extra verification checks
     zmq_version()
 

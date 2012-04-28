@@ -57,6 +57,7 @@ Full list of builtin modules
     puppet
     pw_group
     pw_user
+    rh_ip
     rh_service
     rvm
     saltutil

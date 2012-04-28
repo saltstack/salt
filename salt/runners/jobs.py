@@ -22,9 +22,9 @@ def active():
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
     client = salt.client.LocalClient(__opts__['conf_file'])
-    active = client.cmd('*', 'saltutil.running', timeout=1)
-    for minion, data in active.items():
-        if not isinstance(data, tuple):
+    active_ = client.cmd('*', 'saltutil.running', timeout=1)
+    for minion, data in active_.items():
+        if not isinstance(data, list):
             continue
         for job in data:
             if not job['jid'] in ret:
@@ -36,38 +36,37 @@ def active():
                                    'Target-type': job['tgt_type']}
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
-    if os.path.isdir(job_dir):
-        for jid in os.listdir(job_dir):
-            if not jid in ret:
+    for jid in ret:
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                __opts__['cachedir'],
+                __opts__['hash_type']
+                )
+        if not os.path.isdir(jid_dir):
+            continue
+        for minion in os.listdir(jid_dir):
+            if minion.startswith('.'):
                 continue
-            jid_dir = os.path.join(job_dir, jid)
-            if not os.path.isdir(jid_dir):
-                continue
-            for minion in os.listdir(jid_dir):
-                if minion.startswith('.'):
-                    continue
-                if os.path.exists(os.path.join(jid_dir, minion)):
-                    ret[jid]['Returned'].append(minion)
-    print yaml.dump(ret)
+            if os.path.exists(os.path.join(jid_dir, minion)):
+                ret[jid]['Returned'].append(minion)
+    print(yaml.dump(ret))
 
 
 def lookup_jid(jid):
     '''
     Return the printout from a previousely executed job
     '''
-
-    out = None
-
     def _format_ret(full_ret):
         '''
         Take the full return data and format it to simple output
         '''
+        out = None
         ret = {}
         for key, data in full_ret.items():
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
-            return ret, out
+        return ret, out
 
     client = salt.client.LocalClient(__opts__['conf_file'])
     full_ret = client.get_full_returns(jid, [], 0)
@@ -99,15 +98,18 @@ def list_jobs():
     serial = salt.payload.Serial(__opts__)
     ret = {}
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid in os.listdir(job_dir):
-        loadpath = os.path.join(job_dir, jid, '.load.p')
-        if not os.path.isfile(loadpath):
-            continue
-        load = serial.load(open(loadpath, 'rb'))
-        ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
-                    'Function': load['fun'],
-                    'Arguments': list(load['arg']),
-                    'Target': load['tgt'],
-                    'Target-type': load['tgt_type']}
-    print yaml.dump(ret)
+    for top in os.listdir(job_dir):
+        t_path = os.path.join(job_dir, top)
+        for final in os.listdir(t_path):
+            loadpath = os.path.join(t_path, final, '.load.p')
+            if not os.path.isfile(loadpath):
+                continue
+            load = serial.load(open(loadpath, 'rb'))
+            jid = load['jid']
+            ret[jid] = {'Start Time': salt.utils.jid_to_time(jid),
+                        'Function': load['fun'],
+                        'Arguments': list(load['arg']),
+                        'Target': load['tgt'],
+                        'Target-type': load['tgt_type']}
+    print(yaml.dump(ret))
 

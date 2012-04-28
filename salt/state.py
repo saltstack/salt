@@ -18,6 +18,7 @@ import inspect
 import fnmatch
 import logging
 import collections
+import traceback
 
 # Import Third Party libs
 import zmq
@@ -26,6 +27,7 @@ import zmq
 import salt.utils
 import salt.loader
 import salt.minion
+import salt.pillar
 import salt.fileclient
 
 from salt.template import (
@@ -61,6 +63,56 @@ def _getargs(func):
 
     return aspec
 
+
+def trim_req(req):
+    '''
+    Trim any function off of a requisite
+    '''
+    if '.' in req.keys()[0]:
+        return {req.keys()[0].split('.')[0]: req[req.keys()[0]]}
+    return req
+
+
+def state_args(id_, state, high):
+    '''
+    Return a set of the arguments passed to the named state
+    '''
+    args = set()
+    if not id_ in high:
+        return args
+    if not state in high[id_]:
+        return args
+    for item in high[id_][state]:
+        if not isinstance(item, dict):
+            continue
+        if len(item) != 1:
+            continue
+        args.add(item.keys()[0])
+    return args
+
+
+def find_name(name, state, high):
+    '''
+    Scan high data for the id referencing the given name
+    '''
+    ext_id = ''
+    if name in high:
+        ext_id = name
+    else:
+        # We need to scan for the name
+        for nid in high:
+            if state in high[nid]:
+                if isinstance(
+                        high[nid][_state],
+                        list):
+                    for arg in high[nid][state]:
+                        if not isinstance(arg, dict):
+                            continue
+                        if len(arg) != 1:
+                            continue
+                        if arg[arg.keys()[0]] == name:
+                            ext_id = nid
+    return ext_id
 
 def build_args(func, args, data=None):
     '''
@@ -134,6 +186,7 @@ def master_compile(master_opts, minion_opts, grains, id_, env):
     st_ = MasterHighState(master_opts, minion_opts, grains, id_, env)
     return st_.compile_highstate()
 
+
 def ishashable(obj):
     try:
         hash(obj)
@@ -146,7 +199,6 @@ class StateError(Exception):
     '''
     Custom exception class.
     '''
-
     pass
 
 
@@ -158,9 +210,21 @@ class State(object):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.opts['pillar'] = self.__gather_pillar()
         self.load_modules()
         self.mod_init = set()
         self.__run_num = 0
+
+    def __gather_pillar(self):
+        '''
+        Whenever a state run starts, gather the pillar data fresh
+        '''
+        pillar = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id']
+                )
+        return pillar.compile_pillar()
 
     def _mod_init(self, low):
         '''
@@ -354,6 +418,8 @@ class State(object):
                     errors.append(err)
                 else:
                     fun = 0
+                    if '.' in state:
+                        fun += 1
                     for arg in body[state]:
                         if isinstance(arg, basestring):
                             fun += 1
@@ -508,6 +574,8 @@ class State(object):
             if name.startswith('__'):
                 continue
             for state, run in body.items():
+                funcs = set()
+                names = set()
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
@@ -517,8 +585,6 @@ class State(object):
                 if '__env__' in body:
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
-                funcs = set()
-                names = set()
                 for arg in run:
                     if isinstance(arg, basestring):
                         funcs.add(arg)
@@ -605,7 +671,8 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set(['require_in', 'watch_in'])
+        req_in = set(['require_in', 'watch_in', 'use', 'use_in'])
+        req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
         for id_, body in high.items():
             for state, run in body.items():
@@ -623,11 +690,13 @@ class State(object):
                         key = arg.keys()[0]
                         if not key in req_in:
                             continue
-                        rkey = key[:-3]
+                        rkey = key.split('_')[0]
                         items = arg[key]
                         if isinstance(items, dict):
                             # Formated as a single req_in
                             for _state, name in items.items():
+
+                                # Not a use requisite_in
                                 found = False
                                 if not name in extend:
                                     extend[name] = {}
@@ -646,6 +715,7 @@ class State(object):
                                 extend[name][_state].append(
                                         {rkey: [{state: id_}]}
                                         )
+
                         if isinstance(items, list):
                             # Formed as a list of requisite additions
                             for ind in items:
@@ -656,6 +726,48 @@ class State(object):
                                     continue
                                 _state = ind.keys()[0]
                                 name = ind[_state]
+                                if key == 'use_in':
+                                    # Add the running states args to the
+                                    # use_in states
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    ext_args = state_args(ext_id, _state, high)
+                                    if not ext_id in extend:
+                                        extend[ext_id] = {}
+                                    if not _state in extend[ext_id]:
+                                        extend[ext_id][_state] = []
+                                    ignore_args = req_in_all.union(ext_args)
+                                    for arg in high[id_][state]:
+                                        if not isinstance(arg, dict):
+                                            continue
+                                        if len(arg) != 1:
+                                            continue
+                                        if arg.keys()[0] in ignore_args:
+                                            continue
+                                        extend[ext_id][_state].append(arg)
+                                    continue
+                                if key == 'use':
+                                    # Add the use state's args to the
+                                    # running state
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    loc_args = state_args(id_, state, high)
+                                    if not id_ in extend:
+                                        extend[id_] = {}
+                                    if not state in extend[id_]:
+                                        extend[id_][state] = []
+                                    ignore_args = req_in_all.union(loc_args)
+                                    for arg in high[ext_id][_state]:
+                                        if not isinstance(arg, dict):
+                                            continue
+                                        if len(arg) != 1:
+                                            continue
+                                        if arg.keys()[0] in ignore_args:
+                                            continue
+                                        extend[id_][state].append(arg)
+                                    continue
                                 found = False
                                 if not name in extend:
                                     extend[name] = {}
@@ -692,10 +804,20 @@ class State(object):
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
-        if 'kwargs' in cdata:
-            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
-        else:
-            ret = self.states[cdata['full']](*cdata['args'])
+        try:
+            if 'kwargs' in cdata:
+                ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
+            else:
+                ret = self.states[cdata['full']](*cdata['args'])
+        except:
+            trb = traceback.format_exc()
+            ret = {
+                'result': False,
+                'name': cdata['args'][0],
+                'changes': {},
+                'comment': 'An exception occured in this state: {0}'.format(
+                    trb)
+                }
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
@@ -748,6 +870,7 @@ class State(object):
         for r_state in reqs.keys():
             if r_state in low:
                 for req in low[r_state]:
+                    req = trim_req(req)
                     found = False
                     for chunk in chunks:
                         req_key = req.keys()[0]
@@ -766,7 +889,7 @@ class State(object):
                 if tag not in running:
                     fun_stats.add('unmet')
                     continue
-                if not running[tag]['result']:
+                if running[tag]['result'] is False:
                     fun_stats.add('fail')
                     continue
                 if r_state == 'watch' and running[tag]['changes']:
@@ -800,6 +923,7 @@ class State(object):
                 if not requisite in low:
                     continue
                 for req in low[requisite]:
+                    req = trim_req(req)
                     found = False
                     for chunk in chunks:
                         req_key = req.keys()[0]
@@ -864,10 +988,12 @@ class State(object):
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
         errors += ext_errors
+        errors += self.verify_high(high)
+        if errors:
+            return errors
         high, req_in_errors = self.requisite_in(high)
         errors += req_in_errors
         # Verify that the high data is structurally sound
-        errors += self.verify_high(high)
         if errors:
             return errors
         # Compile and verify the raw chunks
@@ -904,10 +1030,20 @@ class State(object):
 class BaseHighState(object):
     '''
     The BaseHighState is the foundation of running a highstate, extend it and
-    add a self.state opbject of type State
+    add a self.state object of type State
     '''
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
+        self.avail = self.__gather_avail()
+
+    def __gather_avail(self):
+        '''
+        Gather the lists of available sls data from the master
+        '''
+        avail = {}
+        for env in self._get_envs():
+            avail[env] = self.client.list_states(env)
+        return avail
 
     def __gen_opts(self, opts):
         '''
@@ -931,6 +1067,7 @@ class BaseHighState(object):
         else:
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
         opts['nodegroups'] = mopts.get('nodegroups', {})
+        opts['file_roots'] = mopts['file_roots']
         return opts
 
     def _get_envs(self):
@@ -991,25 +1128,25 @@ class BaseHighState(object):
                 pops.append(env)
                 if not states:
                     continue
-                for sls in states:
-                    if sls in done[env]:
-                        continue
-                    tops[env].append(
-                            compile_template(
-                                self.client.get_state(
-                                    sls,
-                                    env
-                                    ),
-                                self.state.rend,
-                                self.state.opts['renderer'],
-                                env=env
+                for sls_match in states:
+                    for sls in fnmatch.filter(self.avail[env], sls_match):
+                        if sls in done[env]:
+                            continue
+                        tops[env].append(
+                                compile_template(
+                                    self.client.get_state(
+                                        sls,
+                                        env
+                                        ),
+                                    self.state.rend,
+                                    self.state.opts['renderer'],
+                                    env=env
+                                    )
                                 )
-                            )
-                    done[env].append(sls)
+                        done[env].append(sls)
             for env in pops:
                 if env in include:
                     include.pop(env)
-
         return tops
 
     def merge_tops(self, tops):
@@ -1036,6 +1173,50 @@ class BaseHighState(object):
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
         return top
+
+    def verify_tops(self, tops):
+        '''
+        Verify the contents of the top file data
+        '''
+        errors = []
+        if not isinstance(tops, dict):
+            errors.append('Top data was not formed as a dict')
+            # No further checks will work, bail out
+            return errors
+        for env, matches in tops.items():
+            if env == 'include':
+                continue
+            if not isinstance(env, basestring):
+                err = ('Environment {0} in top file is not formed as a '
+                       'string').format(env)
+                errors.append(err)
+            if env == '':
+                errors.append('Empty environment statement in top file')
+            if not isinstance(matches, dict):
+                err = ('The top file matches for environment {0} are not '
+                       'laid out as a dict').format(env)
+                errors.append(err)
+            for match, slsmods in matches.items():
+                for slsmod in slsmods:
+                    if isinstance(slsmod, dict):
+                        # This value is a match option
+                        for key, val in slsmod.items():
+                            if not val:
+                                err = ('Improperly formatted top file matcher '
+                                       'in environment {0}: {1} file'.format(
+                                           slsmod,
+                                           val
+                                           )
+                                       )
+                                errors.append(err)
+                    elif isinstance(slsmod, basestring):
+                        # This is a sls module
+                        if not slsmod:
+                            err = ('Environment {0} contains an empty sls '
+                                   'index').format(env)
+                            errors.append(err)
+
+        return errors
 
     def get_top(self):
         '''
@@ -1089,18 +1270,6 @@ class BaseHighState(object):
         faux = {'state': 'file', 'fun': 'recurse'}
         self.state.module_refresh(faux)
 
-    def gather_states(self, matches):
-        '''
-        Gather the template files from the master
-        '''
-        group = []
-        for env, states in matches.items():
-            for sls in states:
-                state = self.client.get_state(sls, env)
-                if state:
-                    group.append(state)
-        return group
-
     def render_state(self, sls, env, mods):
         '''
         Render a state file and retrieve all of the include states
@@ -1131,17 +1300,19 @@ class BaseHighState(object):
                                'as a list'.format(sls))
                         errors.append(err)
                     else:
-                        for sub_sls in state.pop('include'):
-                            if sub_sls not in mods:
-                                nstate, mods, err = self.render_state(
-                                        sub_sls,
-                                        env,
-                                        mods
-                                        )
-                            if nstate:
-                                state.update(nstate)
-                            if err:
-                                errors += err
+                        for inc_sls in state.pop('include'):
+                            for sub_sls in fnmatch.filter(
+                                    self.avail[env], inc_sls):
+                                if sub_sls not in mods:
+                                    nstate, mods, err = self.render_state(
+                                            sub_sls,
+                                            env,
+                                            mods
+                                            )
+                                if nstate:
+                                    state.update(nstate)
+                                if err:
+                                    errors += err
                 if 'extend' in state:
                     ext = state.pop('extend')
                     for name in ext:
@@ -1162,9 +1333,27 @@ class BaseHighState(object):
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
                             continue
+                        
+                        if isinstance(state[name], basestring):
+                            # Is this is a short state, it needs to be padded
+                            if '.' in state[name]:
+                                comps = state[name].split('.')
+                                state[name] = {'__sls__': sls,
+                                               '__env__': env,
+                                               comps[0]: [comps[1]]}
+                                continue
                         errors.append(('Name {0} in sls {1} is not a dictionary'
                                        .format(name, sls)))
                         continue
+                    for key in state[name]:
+                        if key.startswith('_'):
+                            continue
+                        if not isinstance(state[name][key], list):
+                            continue
+                        if '.' in key:
+                            comps = key.split('.')
+                            state[name][comps[0]] = state[name].pop(key)
+                            state[name][comps[0]].append(comps[1])
                     if '__sls__' not in state[name]:
                         state[name]['__sls__'] = sls
                     if '__env__' not in state[name]:
@@ -1182,26 +1371,27 @@ class BaseHighState(object):
         errors = []
         for env, states in matches.items():
             mods = set()
-            for sls in states:
-                state, mods, err = self.render_state(sls, env, mods)
-                # The extend members can not be treated as globally unique:
-                if '__extend__' in state and '__extend__' in highstate:
-                    highstate['__extend__'].extend(state.pop('__extend__'))
-                for id_ in state:
-                    if id_ in highstate:
-                        if highstate[id_] != state[id_]:
-                            errors.append(('Detected conflicting IDs, SLS IDs'
-                            ' need to be globally unique.\n    The'
-                            ' conflicting ID is "{0}" and is found in SLS'
-                            ' "{1}" and SLS "{2}"').format(
-                                    id_,
-                                    highstate[id_]['__sls__'],
-                                    state[id_]['__sls__'])
-                            )
-                if state:
-                    highstate.update(state)
-                if err:
-                    errors += err
+            for sls_match in states:
+                for sls in fnmatch.filter(self.avail[env], sls_match):
+                    state, mods, err = self.render_state(sls, env, mods)
+                    # The extend members can not be treated as globally unique:
+                    if '__extend__' in state and '__extend__' in highstate:
+                        highstate['__extend__'].extend(state.pop('__extend__'))
+                    for id_ in state:
+                        if id_ in highstate:
+                            if highstate[id_] != state[id_]:
+                                errors.append(('Detected conflicting IDs, SLS'
+                                ' IDs need to be globally unique.\n    The'
+                                ' conflicting ID is "{0}" and is found in SLS'
+                                ' "{1}" and SLS "{2}"').format(
+                                        id_,
+                                        highstate[id_]['__sls__'],
+                                        state[id_]['__sls__'])
+                                )
+                    if state:
+                        highstate.update(state)
+                    if err:
+                        errors += err
         # Clean out duplicate extend data 
         if '__extend__' in highstate:
             highext = []
@@ -1220,12 +1410,15 @@ class BaseHighState(object):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
+        err = []
         top = self.get_top()
+        err += self.verify_tops(top)
         matches = self.top_matches(top)
         self.load_dynamic(matches)
         high, errors = self.render_highstate(matches)
-        if errors:
-            return errors
+        err += errors
+        if err:
+            return err
         if not high:
             return {'no_|-states_|-states_|-None': {
                         'result': False,

@@ -26,7 +26,13 @@ def __gen_rtag():
     return os.path.join(__opts__['cachedir'], 'pkg_refresh')
 
 
-def installed(name, version=None, refresh=False, repo='', skip_verify=False, **kwargs):
+def installed(
+        name,
+        version=None,
+        refresh=False,
+        repo='',
+        skip_verify=False,
+        **kwargs):
     '''
     Verify that the package is installed, and only that it is installed. This
     state will not upgrade an existing package and only verify that it is
@@ -38,6 +44,8 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False, **k
         Specify a non-default repository to install from
     skip_verify : False
         Skip the GPG verification check for the package to be installed
+    version : None
+        Install a specific version of a package
 
     Usage::
 
@@ -46,6 +54,7 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False, **k
             - installed
             - repo: mycustomrepo
             - skip_verify: True
+            - version: 2.0.6~ubuntu3
     '''
     rtag = __gen_rtag()
     cver = __salt__['pkg.version'](name)
@@ -54,13 +63,21 @@ def installed(name, version=None, refresh=False, repo='', skip_verify=False, **k
         return {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': 'Package {0} is already installed and is the correct version'.format(name)}
+                'comment': ('Package {0} is already installed and is the '
+                            'correct version').format(name)}
     elif cver:
         # The package is installed
         return {'name': name,
                 'changes': {},
                 'result': True,
                 'comment': 'Package {0} is already installed'.format(name)}
+    
+    if __opts__['test']:
+        return {'name': name,
+                'changes': {},
+                'result': None,
+                'comment': 'Package {0} is set to be installed'.format(name)}
+
     if refresh or os.path.isfile(rtag):
         changes = __salt__['pkg.install'](name,
                           True,
@@ -118,12 +135,19 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
         try:
             has_newer = LooseVersion(avail) > LooseVersion(version)
         except AttributeError:
-            logger.debug("Error comparing versions for '%s' (%s > %s)",
+            logger.debug(
+                    'Error comparing versions for "{0}" ({1} > {2})'.format(
                     name, avail, version)
-            ret['comment'] = "No version could be retrieved for '{0}'".format(name)
+                    )
+            ret['comment'] = 'No version could be retrieved for "{0}"'.format(
+                    name)
             return ret
 
     if has_newer:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Package {0} is set to be upgraded'.format(name)
+            return ret
         if refresh or os.path.isfile(rtag):
             ret['changes'] = __salt__['pkg.install'](name,
                              True,
@@ -168,6 +192,12 @@ def removed(name):
                 'result': True,
                 'comment': 'Package {0} is not installed'.format(name)}
     else:
+        if __opts__['test']:
+            return {'name': name,
+                    'changes': {},
+                    'result': None,
+                    'comment': 'Package {0} is set to be installed'.format(
+                        name)}
         changes['removed'] = __salt__['pkg.remove'](name)
     if not changes:
         return {'name': name,
@@ -195,6 +225,11 @@ def purged(name):
                 'result': True,
                 'comment': 'Package {0} is not installed'.format(name)}
     else:
+        if __opts__['test']:
+            return {'name': name,
+                    'changes': {},
+                    'result': None,
+                    'comment': 'Package {0} is set to be purged'.format(name)}
         changes['removed'] = __salt__['pkg.purge'](name)
 
     if not changes:

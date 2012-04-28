@@ -21,7 +21,7 @@ try:
     import libvirt
     has_libvirt = True
 except ImportError:
-    has_libvirt = True
+    has_libvirt = False
 
 # Import Third party modules
 import yaml
@@ -45,6 +45,10 @@ def __virtual__():
     if 'virtual' not in __grains__:
         return False
     if __grains__['virtual'] != 'physical':
+        return False
+    if __grains__['kernel'] != 'Linux':
+        return False
+    if not os.path.exists('/proc/modules'):
         return False
     if 'kvm_' not in open('/proc/modules').read():
         return False

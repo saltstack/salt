@@ -125,6 +125,10 @@
 #  base:
 #    - /srv/pillar
 #
+#ext_pillar:
+#  - hiera: /etc/hiera.yaml
+#  - cmd: cat /etc/salt/yaml
+#
 
 #####          Syndic settings       #####
 ##########################################
@@ -212,8 +216,8 @@
 # A group consists of a group name and a compound target.
 #
 # nodegroups:
-#   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com',
-#   group2: 'G@os:Debian and foo.domain.com',
+#   group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+#   group2: 'G@os:Debian and foo.domain.com'
 
 #####     Range Cluster settings     #####
 ##########################################

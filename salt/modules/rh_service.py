@@ -30,7 +30,14 @@ def _runlevel():
     Return the current runlevel
     '''
     out = __salt__['cmd.run']('runlevel').strip()
-    return out.split()[1]
+    # unknown will be returned while inside a kickstart environment, since
+    # this is usually a server deployment it should be safe to assume runlevel
+    # 3.  If not all service related states will throw an out of range 
+    # exception here which will cause other functions to fail.
+    if 'unknown' in out:
+        return '3'
+    else:
+        return out.split()[1]
 
 
 def get_enabled():
@@ -43,7 +50,7 @@ def get_enabled():
     '''
     rlevel = _runlevel()
     ret = set()
-    cmd = 'chkconfig --list'
+    cmd = '/sbin/chkconfig --list'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
@@ -63,7 +70,7 @@ def get_disabled():
     '''
     rlevel = _runlevel()
     ret = set()
-    cmd = 'chkconfig --list'
+    cmd = '/sbin/chkconfig --list'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
@@ -91,7 +98,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'service {0} start'.format(name)
+    cmd = '/sbin/service {0} start'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -103,7 +110,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'service {0} stop'.format(name)
+    cmd = '/sbin/service {0} stop'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -115,7 +122,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = 'service {0} restart'.format(name)
+    cmd = '/sbin/service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -128,7 +135,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
-    cmd = 'service {0} status'.format(name)
+    cmd = '/sbin/service {0} status'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -140,7 +147,7 @@ def enable(name):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'chkconfig {0} on'.format(name)
+    cmd = '/sbin/chkconfig {0} on'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -152,7 +159,7 @@ def disable(name):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'chkconfig {0} off'.format(name)
+    cmd = '/sbin/chkconfig {0} off'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 

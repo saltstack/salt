@@ -31,7 +31,7 @@ def version():
     cmd = __detect_os() + ' -v'
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
-    return ret[2]
+    return ret[-1]
 
 def signal(signal=None):
     '''

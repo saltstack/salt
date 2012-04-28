@@ -2,8 +2,12 @@
 Control the state system on the minion
 '''
 
+# Import Python libs
+import copy
 import os
+import sys
 
+# Import Salt libs
 import salt.state
 
 
@@ -11,6 +15,7 @@ __outputter__ = {
                  'highstate': 'highstate',
                  'sls': 'highstate',
                  'top': 'highstate',
+                 'single': 'highstate',
                  }
 
 
@@ -67,7 +72,7 @@ def template_str(tem):
     return st_.call_template_str(tem)
 
 
-def highstate():
+def highstate(test=None, **kwargs):
     '''
     Retrive the state data from the salt master for this minion and execute it
 
@@ -75,11 +80,15 @@ def highstate():
 
         salt '*' state.highstate
     '''
-    st_ = salt.state.HighState(__opts__)
+    salt.utils.daemonize_if(__opts__, **kwargs)
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    st_ = salt.state.HighState(opts)
     return st_.call_highstate()
 
 
-def sls(mods, env='base'):
+def sls(mods, env='base', test=None, **kwargs):
     '''
     Execute a set list of state modules from an environment, default
     environment is base
@@ -88,7 +97,11 @@ def sls(mods, env='base'):
 
         salt '*' state.sls core,edit.vim dev
     '''
-    st_ = salt.state.HighState(__opts__)
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    salt.utils.daemonize_if(opts, **kwargs)
+    st_ = salt.state.HighState(opts)
     if isinstance(mods, basestring):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
@@ -139,3 +152,30 @@ def show_masterstate():
     '''
     st_ = salt.state.RemoteHighState(__opts__, __grains__)
     return st_.compile_master()
+
+def single(fun=None, test=None, **kwargs):
+    '''
+    Execute a single state function with the named kwargs, returns False if
+    insufficient data is sent to the command
+
+    CLI Example::
+        salt '*' state.single pkg.installed name=vim
+    '''
+    if not 'name' in kwargs:
+        return False
+    if fun:
+        comps = fun.split('.')
+        if len(comps) < 2:
+            return False
+    kwargs.update({'state': comps[0],
+                   'fun': comps[1],
+                   '__id__': kwargs['name']})
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    st_ = salt.state.State(opts)
+    err = st_.verify_data(kwargs)
+    if err:
+        return err
+    return {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+            st_.call(kwargs)}

@@ -61,6 +61,7 @@ def _replace_auth_key(
                 enc,
                 comment,
                 options)
+
     lines = []
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
@@ -82,6 +83,50 @@ def _replace_auth_key(
         else:
             lines.append(line)
     open(full, 'w+').writelines(lines)
+
+
+def _validate_keys(key_file):
+    '''
+    Return a dict containing validated keys in the passed file
+    '''
+    ret = {}
+    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
+    try:
+        for line in open(key_file, 'r').readlines():
+            if line.startswith('#'):
+                # Commented Line
+                continue
+
+            # get "{options} key"
+            ln = re.search(linere, line)
+            if not ln:
+                # not an auth ssh key, perhaps a blank line
+                continue
+
+            opts = ln.group(1)
+            comps = ln.group(2).split()
+
+            if len(comps) < 2:
+                # Not a valid line
+                continue
+
+            if opts:
+                # It has options, grab them
+                options = opts.split(',')
+            else:
+                options = []
+
+            enc = comps[0]
+            key = comps[1]
+            comment = ' '.join(comps[2:])
+
+            ret[key] = {'enc': enc,
+                        'comment': comment,
+                        'options': options}
+    except IOError:
+        return {}
+
+    return ret
 
 
 def host_keys(keydir=None):
@@ -129,53 +174,48 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     return _validate_keys(full)
 
 
-def _validate_keys(key_file):
+def check_key_file(user, keysource, config='.ssh/authorized_keys'):
     '''
-    Return a dict containing validated keys in the passed file
+    Check a keyfile from a source destination against the local keys and
+    return the keys to change
     '''
     ret = {}
-    linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')
-    try:
-        for line in open(key_file, 'r').readlines():
-            if line.startswith('#'):
-                # Commented Line
-                continue
-
-            # get "{options} key"
-            ln = re.search(linere, line)
-            if not ln:
-                # not an auth ssh key, perhaps a blank line
-                continue
-
-            opts = ln.group(1)
-            comps = ln.group(2).split()
-
-            if len(comps) < 2:
-                # Not a valid line
-                continue
-
-            if opts:
-                # It has options, grab them
-                options = opts.split(',')
-            else:
-                options = []
-
-            enc = comps[0]
-            # check if key has a space
-            if len(comps) == 3:
-                key = comps[1] + ' ' + comps[2]
-                comment = ' '.join(comps[3:])
-            else:
-                key = comps[1]
-                comment = ' '.join(comps[2:])
-
-            ret[key] = {'enc': enc,
-                        'comment': comment,
-                        'options': options}
-    except IOError:
-        return "fail"
-
+    keyfile = __salt__['cp.cache_file'](keysource)
+    if not keyfile:
+        return ret
+    s_keys = _validate_keys(keyfile)
+    for key in s_keys:
+        ret[key] = check_key(
+                user,
+                key,
+                s_keys['enc'],
+                s_keys['comment'],
+                s_keys['options'],
+                config)
     return ret
+
+
+def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
+    '''
+    Check to see if a key needs updating, returns "update", "add" or "exists"
+
+    CLI Example::
+
+        salt '*' ssh.check_key <user> <key>
+    '''
+    current = auth_keys(user, config)
+    nline = _format_auth_line(key, enc, comment, options)
+    if key in current:
+        cline = _format_auth_line(
+                key,
+                current[key]['enc'],
+                current[key]['comment'],
+                current[key]['options'])
+        if cline != nline:
+            return 'update'
+    else:
+        return 'add'
+    return 'exists'
 
 
 def rm_auth_key(user, key, config='.ssh/authorized_keys'):
@@ -221,10 +261,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
             else:
                 options = []
 
-            if len(comps) == 3:
-                pkey = comps[1] + ' ' + comps[2]
-            else:
-                pkey = comps[1]
+            pkey = comps[1]
 
             if pkey == key:
                 continue
@@ -243,7 +280,8 @@ def set_auth_key_from_file(
 
     CLI Example::
 
-        salt '*' ssh.set_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
+        salt '*' ssh.set_auth_key_from_file <user>\
+                salt://ssh_keys/<user>.id_rsa.pub
     '''
     # TODO: add support for pulling keys from other file sources as well
     lfile = __salt__['cp.cache_file'](source)
@@ -251,13 +289,21 @@ def set_auth_key_from_file(
         return 'fail'
 
     newkey = {}
-    rval = ""
+    rval = ''
     newkey = _validate_keys(lfile)
     for k in newkey.keys():
-        rval += set_auth_key(user, k, newkey[k]['enc'], newkey[k]['comment'], newkey[k]['options'], config)
-    # Due to the ability for a single file to have multiple keys, it's possible for a single call
-    # to this function to have both "replace" and "new" as possible valid returns. I ordered the
-    # following as I thought best.
+        rval += set_auth_key(
+                user,
+                k,
+                newkey[k]['enc'],
+                newkey[k]['comment'],
+                newkey[k]['options'],
+                config
+                )
+    # Due to the ability for a single file to have multiple keys, it's
+    # possible for a single call to this function to have both "replace" and
+    # "new" as possible valid returns. I ordered the following as I thought
+    # best.
     if 'fail' in rval:
         return 'fail'
     elif 'replace' in rval:
@@ -279,31 +325,26 @@ def set_auth_key(
 
     CLI Example::
 
-        salt '*' ssh.set_auth_key <user> <key> dsa 'my key' '[]' .ssh/authorized_keys
+        salt '*' ssh.set_auth_key <user> key='<key>' enc='dsa'\
+                comment='my key' options='[]' config='.ssh/authorized_keys'
     '''
+    if len(key.split()) > 1:
+        return 'invalid'
+
     enc = _refine_enc(enc)
-    replace = False
     uinfo = __salt__['user.info'](user)
-    current = auth_keys(user, config)
-    if key in current:
-        if not set(current[key]['options']) == set(options):
-            replace = True
-        if not current[key]['enc'] == enc:
-            replace = True
-        if not current[key]['comment'] == comment:
-            if comment:
-                replace = True
-        if replace:
-            _replace_auth_key(
-                    user,
-                    key,
-                    enc,
-                    comment,
-                    options,
-                    config)
-            return 'replace'
-        else:
-            return 'no change'
+    status = check_key(user, key, enc, comment, options, config)
+    if status == 'update':
+        _replace_auth_key(
+                user,
+                key,
+                enc,
+                comment,
+                options,
+                config)
+        return 'replace'
+    elif status == 'exists':
+        return 'no change'
     else:
         auth_line = _format_auth_line(
                     key,

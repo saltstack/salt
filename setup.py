@@ -14,7 +14,7 @@ from distutils.sysconfig import get_python_lib, PREFIX
 if os.environ.get('VIRTUAL_ENV'):
     from setuptools import setup
 
-execfile('salt/version.py')
+exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
 
 class TestCommand(Command):
     description = 'Run tests'
@@ -89,6 +89,9 @@ setup(
                 'salt.states',
                 'salt.utils',
                 ],
+      package_data = {
+          'salt.modules': ['rh_ip/*.jinja'],
+      },
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
                'scripts/salt-syndic',
@@ -97,11 +100,7 @@ setup(
                'scripts/salt-call',
                'scripts/salt-run',
                'scripts/salt'],
-      data_files=[(os.path.join(etc_path, 'salt'),
-                    ['conf/master.template',
-                     'conf/minion.template',
-                    ]),
-                ('share/man/man1',
+      data_files=[('share/man/man1',
                     ['doc/man/salt-master.1',
                      'doc/man/salt-key.1',
                      'doc/man/salt.1',

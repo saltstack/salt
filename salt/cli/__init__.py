@@ -215,6 +215,7 @@ class SaltCMD(object):
             else:
                 opts['tgt'] = args[0]
 
+            # Detect compound command and set up the data for it
             if ',' in args[1]:
                 opts['fun'] = args[1].split(',')
                 opts['arg'] = []
@@ -261,9 +262,9 @@ class SaltCMD(object):
                     else:
                         printout = get_outputter(None)
 
-                    print 'Return data for job {0}:'.format(jid)
+                    print('Return data for job {0}:'.format(jid))
                     printout(ret[jid])
-                    print ''
+                    print('')
         elif self.opts['batch']:
             batch = salt.cli.batch.Batch(self.opts)
             batch.run()
@@ -304,6 +305,12 @@ class SaltCMD(object):
                     if self.opts['static']:
                         full_ret = local.cmd_full_return(*args)
                         ret, out = self._format_ret(full_ret)
+                        self._output_ret(ret, out)
+                    elif self.opts['fun'] == 'sys.doc':
+                        ret = {}
+                        for full_ret in local.cmd_cli(*args):
+                            ret_, out = self._format_ret(full_ret)
+                            ret.update(ret_)
                         self._output_ret(ret, out)
                     else:
                         if self.opts['verbose']:
@@ -369,9 +376,9 @@ class SaltCMD(object):
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
-            print fun + ':'
-            print docs[fun]
-            print ''
+            print(fun + ':')
+            print(docs[fun])
+            print('')
 
 
 class SaltCP(object):
@@ -495,16 +502,19 @@ class SaltKey(object):
         parser.add_option('-l',
                 '--list',
                 dest='list',
-                default=False,
-                action='store_true',
-                help='List the unaccepted public keys')
+                default='',
+                help=('List the public keys. Takes the args: '
+                      '"pre", "un", "unaccepted": Unaccepted/unsigned keys '
+                      '"acc", "accepted": Accepted/signed keys '
+                      '"rej", "rejected": Rejected keys '
+                      '"all": all keys'))
 
         parser.add_option('-L',
                 '--list-all',
                 dest='list_all',
                 default=False,
                 action='store_true',
-                help='List all public keys')
+                help='List all public keys.  Deprecated: use "--list all"')
 
         parser.add_option('-a',
                 '--accept',

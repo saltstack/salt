@@ -35,8 +35,8 @@ class Key(object):
             subdir = 'minions'
         dir_ = os.path.join(self.opts['pki_dir'], subdir)
         if not os.path.isdir(dir_):
-            err = ('The ' + subdir + ' directory is not present, ensure that '
-                   'the master server has been started')
+            err = ('The {0} directory is not present, ensure that '
+                   'the master server has been started').format(subdir)
             self._log(err, level='error')
             sys.exit(42)
         keys = os.listdir(dir_)
@@ -52,40 +52,54 @@ class Key(object):
             log_msg = getattr(log, level)
             log_msg(message)
         if not self.opts['quiet']:
-            print message
+            print(message)
 
-    def _list_pre(self):
+    def _list_pre(self, header=True):
         '''
         List the unaccepted keys
         '''
-        self._log(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
+        if header == True:
+            self._log(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('pre')):
             output = utils.RED + key + utils.ENDC
             self._log(output)
 
-    def _list_accepted(self):
+    def _list_accepted(self, header=True):
         '''
         List the accepted public keys
         '''
-        self._log(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
+        if header == True:
+            self._log(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
         for key in sorted(self._keys('acc')):
             self._log(utils.GREEN + key + utils.ENDC)
 
-    def _list_rejected(self):
+    def _list_rejected(self, header=True):
         '''
         List the unaccepted keys
         '''
-        self._log(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
+        if header == True:
+            self._log(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
         for key in sorted(self._keys('rej')):
             self._log(utils.BLUE + key + utils.ENDC)
 
-    def _list_all(self):
+    def _list(self, name):
         '''
-        List all keys
+        List keys
         '''
-        self._list_pre()
-        self._list_accepted()
-        self._list_rejected()
+        if name in ('pre', 'un', 'unaccept', 'unaccepted'):
+            self._list_pre(False)
+        elif name in ('acc', 'accept', 'accepted'):
+            self._list_accepted(False)
+        elif name in ('rej', 'reject', 'rejected'):
+            self._list_rejected(False)
+        elif name in ('all',):
+            self._list_pre()
+            self._list_accepted()
+            self._list_rejected()
+        else:
+            err = ('Unrecognized key type "{0}".  Run with -h for options.'
+                    ).format(name)
+            self._log(err, level='error')
 
     def _print_key(self, name):
         '''
@@ -94,7 +108,8 @@ class Key(object):
         keys = self._keys('pre', True).union(self._keys('acc', True))
         for key in sorted(keys):
             if key.endswith(name):
-                self._log(open(key, 'r').read())
+                with open(key, 'r') as kfn:
+                    self._log(kfn.read())
 
     def _print_all(self):
         '''
@@ -103,17 +118,20 @@ class Key(object):
         self._log(utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
             self._log('  ' + utils.RED + os.path.basename(key) + utils.ENDC)
-            self._log(open(key, 'r').read())
+            with open(key, 'r') as kfn:
+                self._log(kfn.read())
         self._log(utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC)
         for key in sorted(self._keys('acc', True)):
             self._log('  ' + utils.GREEN + os.path.basename(key) + 
                          utils.ENDC)
-            self._log(open(key, 'r').read())
+            with open(key, 'r') as kfn:
+                self._log(kfn.read())
         self._log(utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
             self._log('  ' + utils.BLUE + os.path.basename(key) + 
                          utils.ENDC)
-            self._log(open(key, 'r').read())
+            with open(key, 'r') as kfn:
+                self._log(kfn.read())
 
     def _accept(self, key):
         '''
@@ -124,14 +142,17 @@ class Key(object):
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
         if key not in pre:
-            err = ('The key named %s does not exist, please accept an '
-                   'available key' %(key))
+            err = ('The key named {0} does not exist, please accept an '
+                   'available key').format(key)
             #log.error(err)
             self._log(err, level='error')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_accepted, key))
-        self._log('Key for %s accepted.' %(key), level='info')
+        self._log(
+                'Key for {0} accepted.'.format(key),
+                level='info'
+                )
 
     def _accept_all(self):
         '''
@@ -157,15 +178,15 @@ class Key(object):
         rej = os.path.join(minions_rejected, delete)
         if os.path.exists(pre):
             os.remove(pre)
-            self._log('Removed pending key %s' % delete, 
+            self._log('Removed pending key {0}'.format(delete),
                          level='info')
         if os.path.exists(acc):
             os.remove(acc)
-            self._log('Removed accepted key %s' % delete, 
+            self._log('Removed accepted key {0}'.format(delete),
                          level='info')
         if os.path.exists(rej):
             os.remove(rej)
-            self._log('Removed rejected key %s' % delete, 
+            self._log('Removed rejected key {0}'.format(delete),
                          level='info')
     def _delete_all(self):
         '''
@@ -185,13 +206,13 @@ class Key(object):
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
         if key not in pre:
-            err = ('The host named %s is unavailable, please accept an '
-                   'available key' %(key))
+            err = ('The host named {0} is unavailable, please accept an '
+                   'available key').format(key)
             self._log(err, level='error')
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_rejected, key))
-        self._log('%s key rejected.' %(key), level='info')
+        self._log('{0} key rejected.'.format(key), level='info')
 
     def _reject_all(self):
         '''
@@ -208,10 +229,10 @@ class Key(object):
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions_rejected = os.path.join(self.opts['pki_dir'], 
                                         'minions_rejected')
-        for dir in [minions_accepted, minions_pre, minions_rejected]:
-            if not os.path.isdir(dir):
+        for dir_ in [minions_accepted, minions_pre, minions_rejected]:
+            if not os.path.isdir(dir_):
                 err = ('The minions directory {0} is not present, ensure '
-                       'that the master server has been started'.format(dir))
+                       'that the master server has been started'.format(dir_))
                 self._log(err, level='error')
                 sys.exit(42)
         return minions_accepted, minions_pre, minions_rejected
@@ -227,9 +248,9 @@ class Key(object):
                     self.opts['keysize'])
             return
         if self.opts['list']:
-            self._list_pre()
+            self._list(self.opts['list'])
         elif self.opts['list_all']:
-            self._list_all()
+            self._list('all')
         elif self.opts['print']:
             self._print_key(self.opts['print'])
         elif self.opts['print_all']:
@@ -247,4 +268,4 @@ class Key(object):
         elif self.opts['delete_all']:
             self._delete_all()
         else:
-            self._list_all()
+            self._list('all')

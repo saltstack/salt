@@ -15,7 +15,7 @@ try:
     from salt.utils.process import set_pidfile
     from salt.utils.verify import check_user, verify_env
 except ImportError as e:
-    if e.message != 'No module named _msgpack':
+    if e.args[0] != 'No module named _msgpack':
         raise
 
 
@@ -190,11 +190,15 @@ class Minion(object):
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion cound halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
             salt.utils.daemonize()
+        minion = salt.minion.Minion(self.opts)
         set_pidfile(self.cli['pidfile'])
         if check_user(self.opts['user'], log):
             try:
-                minion = salt.minion.Minion(self.opts)
                 minion.tune_in()
             except KeyboardInterrupt:
                 log.warn('Stopping the Salt Minion')
@@ -223,7 +227,7 @@ class Syndic(object):
             # Some of the opts need to be changed to match the needed opts
             # in the minion class.
             opts['master'] = opts['syndic_master']
-            opts['master_ip'] = salt.config.dns_check(opts['master'])
+            opts['master_ip'] = salt.utils.dns_check(opts['master'])
 
             opts['master_uri'] = ('tcp://' + opts['master_ip'] +
                                   ':' + str(opts['master_port']))

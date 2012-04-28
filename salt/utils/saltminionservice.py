@@ -24,7 +24,7 @@ if __name__ == '__main__':
     servicename = 'salt-minion'
     try:
         status = win32serviceutil.QueryServiceStatus(servicename)
-    except win32service.error, details:
+    except win32service.error as details:
         if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
             instart(MinionService, servicename, 'Salt Minion')
             sys.exit(0)

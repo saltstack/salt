@@ -44,8 +44,10 @@ def _write_cron(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
-    tmpd, path = tempfile.mkstemp()
-    open(path, 'w+').writelines(lines)
+    fd_, path = tempfile.mkstemp()
+    os.close(fd_)
+    with open(path, 'w+') as fp_:
+        fp_.writelines(lines)
     cmd = 'crontab -u {0} {1}'.format(user, path)
     ret = __salt__['cmd.run_all'](cmd)
     os.remove(path)
@@ -130,7 +132,6 @@ def set_special(user, special, cmd):
     return 'new'
 
 
-# FIXME: Too many arguments; see pylint; use *args, **kwargs
 def set_job(user, minute, hour, dom, month, dow, cmd):
     '''
     Sets a cron job up for a specified user.

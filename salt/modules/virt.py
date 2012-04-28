@@ -59,7 +59,7 @@ def _get_dom(vm_):
     '''
     conn = __get_conn()
     if vm_ not in list_vms():
-        raise Exception('The specified vm is not present')
+        raise CommandExecutionError('The specified vm is not present')
     return conn.lookupByName(vm_)
 
 
@@ -125,33 +125,60 @@ def list_inactive_vms():
         vms.append(id_)
     return vms
 
-def vm_info():
+def vm_info(vm_=None):
     '''
-    Return detailed information about the vms on this hyper in a dict::
+    Return detailed information about the vms on this hyper in a
+    list of dicts::
 
-        {'cpu': <int>,
-        'maxMem': <int>,
-        'mem': <int>,
-        'state': '<state>',
-        'cputime' <int>}
+        [
+            'your-vm': {
+                'cpu': <int>,
+                'maxMem': <int>,
+                'mem': <int>,
+                'state': '<state>',
+                'cputime' <int>
+                },
+            ...
+            ]
+
+    If you pass a VM name in as an argument then it will return info
+    for just the named VM, otherwise it will return all VMs.
 
     CLI Example::
 
         salt '*' virt.vm_info
     '''
-    info = {}
-    for vm_ in list_vms():
+    def _info(vm_):
         dom = _get_dom(vm_)
         raw = dom.info()
-        info[vm_] = {'cpu': raw[3],
-                     'cputime': int(raw[4]),
-                     'disks': get_disks(vm_),
-                     'graphics': get_graphics(vm_),
-                     'maxMem': int(raw[1]),
-                     'mem': int(raw[2]),
-                     'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
+        return {'cpu': raw[3],
+                'cputime': int(raw[4]),
+                'disks': get_disks(vm_),
+                'graphics': get_graphics(vm_),
+                'maxMem': int(raw[1]),
+                'mem': int(raw[2]),
+                'state': VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')}
+    info = {}
+    if vm_:
+        info[vm_] = _info(vm_)
+    else:
+        for vm_ in list_vms():
+            info[vm_] = _info(vm_)
     return info
 
+def vm_state(vm_):
+    '''
+    Return the status of the named VM.
+
+    CLI Example::
+
+        salt '*' virt.vm_state <vm name>
+    '''
+    state = ''
+    dom = _get_dom(vm_)
+    raw = dom.info()
+    state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
+    return state
 
 def node_info():
     '''
@@ -279,10 +306,13 @@ def get_disks(vm_):
             disks[target.getAttribute('dev')] = \
                     {'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
-            + disks[dev]['file'],
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]))
+        try:
+            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
+                + disks[dev]['file'],
+                shell=True,
+                stdout=subprocess.PIPE).communicate()[0]))
+        except TypeError:
+            disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
 
 

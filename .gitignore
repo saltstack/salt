@@ -17,3 +17,5 @@ lib/
 pip/
 share/
 
+# tox - ignore any tox-created virtualenv dirs
+.tox
