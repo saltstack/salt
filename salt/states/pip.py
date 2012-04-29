@@ -39,7 +39,8 @@ def installed(name,
               no_install=False,
               no_download=False,
               install_options=None,
-              user=None):
+              user=None,
+              cwd=None):
     '''
     Make sure the package is installed
 
@@ -59,7 +60,7 @@ def installed(name,
         bin_env = env
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name in __salt__['pip.list'](name, bin_env):
+    if name in __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd):
         ret['result'] = True
         ret['comment'] = 'Package already installed'
         return ret
@@ -94,8 +95,9 @@ def installed(name,
                                no_install=no_install,
                                no_download=no_download,
                                install_options=install_options,
-                               runas=user):
-        pkg_list = __salt__['pip.list'](name, bin_env) 
+                               runas=user,
+                               cwd=cwd):
+        pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
         version = pkg_list.values()[0]
         pkg_name = pkg_list.keys()[0]
         ret['result'] = True
@@ -114,7 +116,9 @@ def removed(name,
             bin_env=None,
             log=None,
             proxy=None,
-            timeout=None):
+            timeout=None,
+            user=None,
+            cwd=None):
     """
     Make sure that a package is not installed.
 
@@ -125,7 +129,8 @@ def removed(name,
     """
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name not in __salt__["pip.list"](packages=name, bin_env=bin_env):
+    if name not in __salt__["pip.list"](packages=name, bin_env=bin_env,
+                                        runas=user, cwd=cwd):
         ret["result"] = True
         ret["comment"] = "Pacakge is not installed."
         return ret
@@ -140,7 +145,9 @@ def removed(name,
                                  bin_env=bin_env,
                                  log=log,
                                  proxy=proxy,
-                                 timeout=timeout):
+                                 timeout=timeout,
+                                 runas=user,
+                                 cwd=cwd):
         ret["result"] = True
         ret["changes"][name] = "Removed"
         ret["comment"] = "Package was successfully removed."
