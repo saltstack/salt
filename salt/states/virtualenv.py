@@ -1,7 +1,6 @@
 '''
 virtualenv management
 '''
-import hashlib
 import logging
 import os
 
@@ -19,7 +18,8 @@ def managed(name,
         never_download=False,
         prompt='',
         __env__='base',
-        runas=None):
+        runas=None,
+        cwd=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -28,6 +28,8 @@ def managed(name,
     requirements
         Path to a pip requirements file. If the path begins with ``salt://``
         the file will be transfered from the master file server.
+    cwd
+        Path to the working directory where "pip install" is executed.
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -99,38 +101,19 @@ def managed(name,
 
     # Populate the venv via a requirements file
     if requirements:
-        reqs_cached = __salt__['cp.is_cached'](requirements)
+        if requirements.startswith('salt://'):
+            requirements = __salt__['cp.cache_file'](requirements, __env__)
+        before = set(__salt__['pip.freeze'](bin_env=name))
+        __salt__['pip.install'](requirements=requirements, bin_env=name, runas=runas, cwd=cwd)
+        after = set(__salt__['pip.freeze'](bin_env=name))
 
-        # If we already have a local cache, we've already run pip against it
-        if reqs_cached and not clear:
-            reqs_cached_hash = __salt__['cp.hash_file'](reqs_cached)
-            is_new = reqs_hash['hsum'] != reqs_cached_hash['hsum']
-        else:
-            # We don't have a local cache, so anything is new :)
-            is_new = True
+        new = list(after - before)
+        old = list(before - after)
 
-        # reqs file changed, cache the latest version and run pip against it
-        if is_new:
-            if requirements.startswith('salt://'):
-                new_reqs = __salt__['cp.cache_file'](requirements, __env__)
-            else:
-                new_reqs = __salt__['cp.cache_local_file'](requirements)
-
-            before = set(__salt__['pip.freeze'](bin_env=name))
-            __salt__['pip.install'](requirements=new_reqs, bin_env=name)
-            after = set(__salt__['pip.freeze'](bin_env=name))
-
-            new = list(after - before)
-            old = list(before - after)
-
-            if new or old:
-                ret['changes']['packages'] = {
-                    'new': new if new else '',
-                    'old': old if old else ''}
-        else:
-            logger.debug("Requirements file '{0}' not changed since last "
-                    "invocation; skipping pip".format(requirements))
-
+        if new or old:
+            ret['changes']['packages'] = {
+                'new': new if new else '',
+                'old': old if old else ''}
     ret['result'] = True
     return ret
 
