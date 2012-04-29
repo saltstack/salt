@@ -1,5 +1,20 @@
 '''
-Manage SELinux booleans and enforcing mode
+SELinux Management
+==================
+
+If SELinux is available for the running system, the mode can be managed and
+booleans can be set.
+
+.. code-block:: yaml
+
+    enforcing:
+        selinux.mode
+
+    samba_create_home_dirs:
+        selinx.boolean:
+          - value: True
+          - persist: True
+
 '''
 
 def _refine_mode(mode):

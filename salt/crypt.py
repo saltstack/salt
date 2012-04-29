@@ -24,7 +24,7 @@ import zmq
 # Import salt utils
 import salt.payload
 import salt.utils
-from salt.exceptions import AuthenticationError
+from salt.exceptions import AuthenticationError, SaltClientError
 
 log = logging.getLogger(__name__)
 
@@ -221,6 +221,10 @@ class Auth(object):
         and the decrypted aes key for transport decryption.
         '''
         auth = {}
+        try:
+            self.opts['master_ip'] = salt.utils.dns_check(self.opts['master'], True)
+        except SaltClientError:
+            return 'retry'
         context = zmq.Context()
         socket = context.socket(zmq.REQ)
         socket.connect(self.opts['master_uri'])

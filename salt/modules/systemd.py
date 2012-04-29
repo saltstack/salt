@@ -31,6 +31,7 @@ def get_enabled():
             ret.append(serv)
     return sorted(ret)
 
+
 def get_disabled():
     '''
     Return a list of all disabled services
@@ -45,6 +46,7 @@ def get_disabled():
         if __salt__['cmd.retcode'](cmd):
             ret.append(serv)
     return sorted(ret)
+
 
 def get_all():
     '''
@@ -62,6 +64,7 @@ def get_all():
         if fn_.endswith('.service'):
             ret.add(fn_[:fn_.rindex('.')])
     return sorted(list(ret))
+
 
 def start(name):
     '''
@@ -89,13 +92,25 @@ def stop(name):
 
 def restart(name):
     '''
-    Start the specified service with systemd
+    Restart the specified service with systemd
 
     CLI Example::
 
-        salt '*' service.start <service name>
+        salt '*' service.restart <service name>
     '''
     cmd = 'systemctl restart {0}.service'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def reload(name):
+    '''
+    Reload the specified service with systemd
+
+    CLI Example::
+
+        salt '*' service.reload <service name>
+    '''
+    cmd = 'systemctl reload {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 

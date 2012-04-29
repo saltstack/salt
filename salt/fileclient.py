@@ -97,7 +97,7 @@ class Client(object):
             path
             )
         destdir = os.path.dirname(dest)
-        cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
+        cumask = os.umask(63)
         if not os.path.isdir(destdir):
             os.makedirs(destdir)
         yield dest
@@ -320,6 +320,7 @@ class Client(object):
         else:
             log.error('Attempted to render template with unavailable engine '
                       '{0}'.format(template))
+            salt.utils.safe_rm(data['data'])
             return ''
         if not data['result']:
             # Failed to render the template
@@ -341,6 +342,7 @@ class Client(object):
             if makedirs:
                 os.makedirs(destdir)
             else:
+                salt.utils.safe_rm(data['data'])
                 return ''
         shutil.move(data['data'], dest)
         return dest

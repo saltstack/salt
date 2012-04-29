@@ -29,5 +29,6 @@ else:
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 SALT_LIBS = os.path.dirname(TEST_DIR)
 
-sys.path.insert(0, TEST_DIR)
-sys.path.insert(0, SALT_LIBS)
+for dir_ in [TEST_DIR, SALT_LIBS]:
+    if not dir_ in sys.path:
+        sys.path.insert(0, dir_)

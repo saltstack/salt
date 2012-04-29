@@ -329,6 +329,14 @@ def _windows_platform_data(osdata):
             grains[get_these_grains[item]] = value
     return grains
 
+
+def id_():
+    '''
+    Return the id
+    '''
+    return {'id', __opts__['id']}
+
+
 def os_data():
     '''
     Return grains pertaining to the operating system
