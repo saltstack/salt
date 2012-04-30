@@ -10,3 +10,9 @@ branches:
 
 install: pip install -r requirements.txt --use-mirrors
 script: python setup.py test
+
+notifications:
+  irc:
+    channels: "irc.freenode.org#salt"
+    on_success: change
+    on_failure: change
