@@ -334,7 +334,7 @@ def id_():
     '''
     Return the id
     '''
-    return {'id', __opts__['id']}
+    return {'id': __opts__['id']}
 
 
 def os_data():
