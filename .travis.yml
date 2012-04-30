@@ -1,3 +1,5 @@
+language: python
+
 python:
   - '2.6'
   - '2.7'
@@ -6,10 +8,11 @@ branches:
   only:
     - develop
 
-before-install:
-  - sudo add-apt-repository ppa:saltstack/salt
-  - sudo apt-get update -y
-  - sudo apt-get install salt-master salt-syndic salt-minion
+install: pip install -r requirements.txt --use-mirrors
+script: python setup.py test
 
-script: cd tests && python runtests.py
-after_script: python setup.py bdist
+notifications:
+  irc:
+    channels: "irc.freenode.org#salt"
+    on_success: change
+    on_failure: change
