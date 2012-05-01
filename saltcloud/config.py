@@ -47,4 +47,10 @@ def vm_config(path):
     if 'include' in opts:
         opts = include_config(opts, path)
 
-    return opts
+    vms = []
+
+    for key, val in opts.items():
+        val['name'] = key
+        vms.append(val)
+
+    return vms
