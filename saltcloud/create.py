@@ -5,6 +5,9 @@ cloud virtual machines
 
 # Import python libs
 import os
+import tempfile
+import shutil
+
 #
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -13,6 +16,8 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 
 # Import salt libs
 import saltcloud.utils
+import salt.crypt
+
 
 class Create(object):
     '''
@@ -110,3 +115,38 @@ class Create(object):
                 image=image,
                 size=size,
                 deploy=msd)
+
+    def gen_keys(self):
+        '''
+        Generate the minion keys and return them as strings
+        '''
+        tdir = tempfile.mkdtemp()
+        salt.crypt.gen_keys(
+                tdir,
+                'minion',
+                self.opts['keysize'])
+        priv_path = os.path.join(tdir, 'minion.pem')
+        pup_path = os.path.join(tdir, 'minion.pub')
+        with open(priv_path) as fp_:
+            priv = fp_.read()
+        with open(pub_path) as fp_:
+            pub = fp_.read()
+        shutil.rmtree(tdir)
+        return priv, pub
+
+    def accept_key(self, pub, id_):
+        '''
+        If the master config was available then we will have a pki_dir key in
+        the opts directory, this method places the pub key in the accepted
+        keys dir if that is the case.
+        '''
+        if not 'pki_dir' in self.opts:
+            return False
+        key =  = os.path.join(
+                self.opts['pki_dir'],
+                'minions/{0}.pub'.format(id_)
+                )
+        open(key, 'w+') as fp_:
+            fp_.write(pub)
+
+
