@@ -109,9 +109,6 @@ Jeff Hutchins and Bret Palsson from Jive Communications.
 Currently the only network configuration backend available is for Red Hat
 based systems, like Red Hat Enterprise, CentOS, and Fedora.
 
-Future releases will see the addition of more platforms and more interface
-types like vlans.
-
 Exponential Jobs
 ----------------
 

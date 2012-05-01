@@ -66,7 +66,7 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
         - context: {
           custom_var: "override" }
         - defaults: {
-          custom_var: "default value"
+          custom_var: "default value",
           other_var: 123 }
 
 Integers are Parsed as Integers
