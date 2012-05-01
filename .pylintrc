@@ -162,7 +162,7 @@ dummy-variables-rgx=_|dummy
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=
+additional-builtins=__opts__,__salt__,__pillar__,__grains__
 
 
 [SIMILARITIES]
