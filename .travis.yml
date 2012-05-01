@@ -9,6 +9,7 @@ branches:
     - develop
 
 before_install:
+  - sudo apt-get update
   - sudo apt-get install swig libssl-dev libzmq-dev
 
 install: pip install -r requirements.txt --use-mirrors
