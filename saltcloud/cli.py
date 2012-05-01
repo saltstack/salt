@@ -71,3 +71,19 @@ class SaltCloud(object):
                 cli[k] = v
         return cli
 
+    def run(self):
+        '''
+        Exeute the salt cloud execution run
+        '''
+        import salt.log
+        salt.log.setup_logfile_logger(
+            self.opts['log_file'], self.opts['log_level']
+            )
+        for name, level in self.opts['log_granular_levels'].iteritems():
+            salt.log.set_logger_level(name, level)
+        import logging
+        # If statement here for when cloud query is added
+        import saltcloud.create
+        create = saltcloud.create.Create(self.opts)
+        create.run_data()
+
