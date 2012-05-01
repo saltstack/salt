@@ -27,14 +27,18 @@ class SaltCloud(object):
         '''
         Parse the command line and merge the config
         '''
+        # Grab data from the 4 sources
         cli = self._parse_cli()
-        cloud = saltcloud.config.cloud(cli['cloud_config'])
-        opts = saltcloud.config.master(cli['master_config'])
-        vms = saltcloud.config.vms(cli['vm_config'])
+        cloud = saltcloud.config.cloud_config(cli['cloud_config'])
+        opts = salt.config.master_config(cli['master_config'])
+        vms = saltcloud.config.vm_config(cli['vm_config'])
+        
+        # Load the data in order
         opts.update(cloud)
         opts.update(cli)
         opts['vm'] = vms
-
+        
+        return opts
 
     def _parse_cli(self):
         '''
