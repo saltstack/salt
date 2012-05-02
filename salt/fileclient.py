@@ -103,6 +103,18 @@ class Client(object):
         yield dest
         os.umask(cumask)
 
+    def get_file(self, path, dest='', makedirs=False, env='base'):
+        '''
+        Copies a file from the local files or master depending on implementation
+        '''
+        raise NotImplementedError
+
+    def file_list_emptydirs(self, env='base'):
+        '''
+        List the empty dirs
+        '''
+        raise NotImplementedError
+
     def cache_file(self, path, env='base'):
         '''
         Pull a file down from the file server and store it in the minion
