@@ -6,9 +6,9 @@ import os
 import re
 import stat
 import tempfile
-import subprocess
 
 __ALIAS_RE = re.compile(r'([^:#]*)\s*:?\s*([^#]*?)(\s+#.*|$)')
+
 
 def __get_aliases_filename():
     '''
@@ -18,6 +18,7 @@ def __get_aliases_filename():
         return __opts__['aliases.file']
     else:
         return '/etc/aliases'
+
 
 def __parse_aliases():
     '''
@@ -39,6 +40,7 @@ def __parse_aliases():
         else:
             ret.append((None, None, line.strip()))
     return ret
+
 
 def __write_aliases_file(lines):
     '''
@@ -70,11 +72,10 @@ def __write_aliases_file(lines):
     
     newaliases_path = '/usr/bin/newaliases'
     if os.path.exists(newaliases_path):
-        p = subprocess.Popen([newaliases_path], stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-        (out, nothing) = p.communicate()
+        __salt__['cmd.run'](newaliases_path)
 
     return True
+
 
 def list_aliases():
     '''
@@ -145,6 +146,7 @@ def set_target(alias, target):
 
     __write_aliases_file(out)
     return True
+
 
 def rm_alias(alias):
     '''
