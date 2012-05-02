@@ -228,6 +228,19 @@ def which(exe=None):
     return None
 
 
+def which_bin(exes):
+    '''
+    Scan over some possible executables and return the first one that is found
+    '''
+    if not isinstance(exes, list) or not isinstance(execs, tuple):
+        return None
+    for exe in exes:
+        path = which(exe)
+        if not path:
+            continue
+        return path
+
+
 def list_files(directory):
     '''
     Return a list of all files found under directory
