@@ -5,6 +5,7 @@ Some of the utils used by salt
 # Import Python libs
 import os
 import imp
+import random
 import sys
 import socket
 import logging
