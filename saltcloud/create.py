@@ -149,4 +149,11 @@ class Create(object):
         open(key, 'w+') as fp_:
             fp_.write(pub)
 
+    def run_data(self):
+        '''
+        Create/Verify the vms in the vm data
+        '''
+        for vm_ in self.opts['vm']:
+            self.create(vm_)
+
 
