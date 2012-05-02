@@ -173,7 +173,7 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
 
 def rm_job(user, minute, hour, dom, month, dow, cmd):
     '''
-    Remove a cron job up for a specified user.
+    Remove a cron job for a specified user.
     '''
     # Scrub the types
     minute = str(minute)
