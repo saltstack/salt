@@ -275,14 +275,14 @@ def list_pkgs(regex_string=""):
         salt '*' pkg.list_pkgs httpd
     '''
     ret = {}
-    cmd = 'dpkg --list {0}'.format(regex_string)
+    cmd = 'dpkg-query --showformat='${Status} ${Package} ${Version}\n' -W {0}'.format(regex_string)
 
     out = __salt__['cmd.run_stdout'](cmd)
 
     for line in out.split('\n'):
         cols = line.split()
-        if len(cols) and 'ii' in cols[0]:
-            ret[cols[1]] = cols[2]
+        if len(cols) and 'install' in cols[0] and 'installed' in cols[2]:
+            ret[cols[3]] = cols[4]
 
     # If ret is empty at this point, check to see if the package is virtual.
     # We also need aptitude past this point.
