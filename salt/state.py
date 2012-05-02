@@ -103,7 +103,7 @@ def find_name(name, state, high):
         for nid in high:
             if state in high[nid]:
                 if isinstance(
-                        high[nid][_state],
+                        high[nid][state],
                         list):
                     for arg in high[nid][state]:
                         if not isinstance(arg, dict):
