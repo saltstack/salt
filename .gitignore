@@ -19,3 +19,6 @@ share/
 
 # tox - ignore any tox-created virtualenv dirs
 .tox
+
+# setuptools stuff
+*.egg-info
