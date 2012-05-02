@@ -509,7 +509,7 @@ class Minion(object):
             while True:
                 payload = None
                 try:
-                    payload = self.serial(socket.recv(1))
+                    payload = self.serial.loads(socket.recv(1))
                     self._handle_payload(payload)
                 except:
                     pass
