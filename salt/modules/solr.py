@@ -498,7 +498,7 @@ def version(core_name=None):
         if resp['success']:
             version = resp['data']['lucene']['solr-spec-version']
             return _get_return_dict(True, {'version':version},
-                                    reps['errors'], resp['warnings'])
+                                    resp['errors'], resp['warnings'])
         else:
             return resp
 
