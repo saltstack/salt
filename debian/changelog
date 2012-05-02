@@ -1,3 +1,9 @@
+salt (0.9.9.1) precise; urgency=low
+
+  * New upstream version
+
+ -- Tom Vaughan <thomas.david.vaughan@gmail.com>  Wed, 02 May 2012 18:45:15 -0400
+
 salt (0.9.9) precise; urgency=low
 
   * New upstream version
