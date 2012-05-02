@@ -275,7 +275,7 @@ def list_pkgs(regex_string=""):
         salt '*' pkg.list_pkgs httpd
     '''
     ret = {}
-    cmd = 'dpkg-query --showformat='${Status} ${Package} ${Version}\n' -W {0}'.format(regex_string)
+    cmd = 'dpkg-query --showformat=\'${Status} ${Package} ${Version}\n\' -W {0}'.format(regex_string)
 
     out = __salt__['cmd.run_stdout'](cmd)
 
