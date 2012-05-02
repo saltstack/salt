@@ -142,11 +142,11 @@ class Create(object):
         '''
         if not 'pki_dir' in self.opts:
             return False
-        key =  = os.path.join(
+        key = os.path.join(
                 self.opts['pki_dir'],
                 'minions/{0}.pub'.format(id_)
                 )
-        open(key, 'w+') as fp_:
+        with open(key, 'w+') as fp_:
             fp_.write(pub)
 
     def run_data(self):
