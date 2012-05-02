@@ -1,0 +1,36 @@
+# DO NOT MODIFY THIS FILE.  Copy it to: /etc/salt/cloud
+#####          VM Defaults           #####
+##########################################
+# Set the default cloud provider, this can still be overridden on a per vm
+# basis
+#provider: RACKSPACE
+#
+# Set the default location for the passed cloud provider, this can be
+# overridden on a per vm basis
+#location: US_EAST
+#
+# Set the size of minion keys to generate, defaults to 4096
+#keysize: 4096
+#
+# Set the location of the default ssh public key to embed in minions, this
+# setting must be applied
+#ssh_auth: /etc/salt/cloud/pubkey
+#
+# Set the default os being deployed, this sets which deployment script to
+# apply, this must be set here or in all vm configurations
+#os: RHEL
+
+
+#####   Users, Passwords and Keys    #####
+##########################################
+# Rackspace creds take the following options:
+#RACKSPACE_USER: arthur
+#RACKSPACE_KEY: foobarbaz
+#
+# EC2 Accepts these options:
+#EC2_user: <EC2 access id>
+#EC2_key: <EC2 access key>
+#
+# Linode takes the single api_key
+#LINODE_apikey: <Linode api key>
+
