@@ -1,3 +1,8 @@
+
+"""
+Manage Django sites
+"""
+
 import os
 
 def _get_django_admin(bin_env):
