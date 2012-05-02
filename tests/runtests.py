@@ -65,7 +65,7 @@ def run_unit_tests(opts=None):
     if not opts.get('unit', True):
         return
     loader = saltunittest.TestLoader()
-    tests = loader.discover(os.path.join(TEST_DIR, 'unit', 'templates'), '*.py')
+    tests = loader.discover(os.path.join(TEST_DIR, 'unit'), '*_test.py')
     print('~' * PNUM)
     print('Starting Unit Tests')
     print('~' * PNUM)
