@@ -39,7 +39,8 @@ class Create(object):
             if 'provider' in self.opts:
                 prov = self.opts['provider']
                 if 'location' in self.opts:
-                    prov += '_{0}'.format(self.opts['location'])
+                    if self.opts['location']:
+                        prov += '_{0}'.format(self.opts['location'])
         if not hasattr(Provider, prov):
             return None
         driver = get_driver(getattr(Provider, prov.split('_')[0]))
@@ -91,7 +92,7 @@ class Create(object):
         '''
         Return the vm's size object
         '''
-        sizes = conn.list.sizes()
+        sizes = conn.list_sizes()
         if not 'size' in vm_:
             return sizes[0]
         if isinstance(vm_['size'], int):
