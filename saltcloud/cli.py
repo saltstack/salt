@@ -54,7 +54,7 @@ class SaltCloud(object):
                 help='The location of the saltcloud config file')
         parser.add_option('-M',
                 '--master-config',
-                dest='vm_config',
+                dest='master_config',
                 default='/etc/salt/master',
                 help='The location of the salt master config file')
         parser.add_option('-V',
