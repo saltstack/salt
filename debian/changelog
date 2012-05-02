@@ -1,3 +1,9 @@
+salt (0.9.9) precise; urgency=low
+
+  * New upstream version
+
+ -- Tom Vaughan <thomas.david.vaughan@gmail.com>  Tue, 01 May 2012 19:11:23 -0400
+
 salt (0.9.8-1) unstable; urgency=low
 
   * Initial upload to Debian unstable
