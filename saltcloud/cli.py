@@ -15,6 +15,7 @@ import os
 
 # Import salt libs
 import saltcloud.config
+import salt.config
 
 class SaltCloud(object):
     '''
