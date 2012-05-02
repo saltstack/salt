@@ -17,7 +17,7 @@ def os_script(os_):
         full = os.path.join(deploy_path, fn_)
         if not os.path.isfile(full):
             continue
-        if os.lower() == fn_.split('.')[0].lower():
+        if os_.lower() == fn_.split('.')[0].lower():
             # found the right script to embed, go for it
             try:
                 with open(full, 'r') as fp_:
