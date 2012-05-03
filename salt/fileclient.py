@@ -11,7 +11,6 @@ import logging
 import hashlib
 import os
 import shutil
-import stat
 import string
 import subprocess
 try:

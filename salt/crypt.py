@@ -11,11 +11,9 @@ import hmac
 import hashlib
 import logging
 import tempfile
-import base64
 
 # Import Cryptography libs
 from Crypto.Cipher import AES
-from Crypto.Hash import MD5
 from M2Crypto import RSA
 
 # Import zeromq libs
