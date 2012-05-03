@@ -6,6 +6,7 @@ import os
 import re
 import stat
 import tempfile
+import subprocess
 
 __ALIAS_RE = re.compile(r'([^:#]*)\s*:?\s*([^#]*?)(\s+#.*|$)')
 
