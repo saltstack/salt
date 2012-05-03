@@ -15,6 +15,7 @@ import time
 import hashlib
 import sys
 import stat
+import fnmatch
 
 # Import salt libs
 import salt.utils.find
@@ -552,7 +553,7 @@ def contains_glob(path, glob):
     try:
         with open(path, 'r') as fp_:
             data = fp_.read()
-            if fnmatch(data, glob):
+            if fnmatch.fnmatch(data, glob):
                 return True
             else:
                 return False
