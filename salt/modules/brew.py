@@ -64,4 +64,11 @@ def install(pkgs):
     return __salt__['cmd.run'](cmd, runas=user)
 
 
+def list_upgrades():
+    cmd = '/usr/local/bin/brew outdated'
 
+    return __salt__['cmd.run'](cmd).splitlines()
+
+
+def upgrade_available(pkg):
+    return pkg in list_upgrades()
