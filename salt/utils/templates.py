@@ -4,18 +4,10 @@ Template render systems
 # Import python libs
 import codecs
 import os
-import shutil
-import difflib
-import hashlib
 import imp
 import logging
 import tempfile
 import traceback
-try:
-    import urlparse
-except:
-    import urllib.parse as urlparse
-import copy
 
 # Import salt libs
 import salt.utils

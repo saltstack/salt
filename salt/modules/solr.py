@@ -62,7 +62,6 @@ verbose : True
 # Import Python Libs
 import urllib2
 import json
-import socket
 import os
 
 # Import Salt libs

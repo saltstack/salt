@@ -3,8 +3,6 @@ Top level package command wrapper, used to translate the os detected by the
 grains to the correct service manager
 '''
 
-import os
-
 
 def __virtual__():
     '''

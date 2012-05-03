@@ -18,7 +18,7 @@ import traceback
 import zmq
 
 # Import salt libs
-from salt.exceptions import AuthenticationError, MinionError, \
+from salt.exceptions import AuthenticationError, \
     CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
     SaltClientError
 import salt.client

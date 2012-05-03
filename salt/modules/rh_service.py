@@ -4,8 +4,6 @@ service command (so it is compatible with upstart systems) and the chkconfig
 command.
 '''
 
-import os
-
 
 def __virtual__():
     '''

@@ -13,7 +13,6 @@ import grp
 import pwd
 import time
 import hashlib
-import sys
 import stat
 import fnmatch
 

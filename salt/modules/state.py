@@ -5,7 +5,6 @@ Control the state system on the minion
 # Import Python libs
 import copy
 import os
-import sys
 
 # Import Salt libs
 import salt.state

@@ -11,7 +11,6 @@ import logging
 import warnings
 
 # Import Salt libs
-from salt.utils.jinja import get_template
 from salt.utils.yaml import CustomLoader, load
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
