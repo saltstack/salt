@@ -12,8 +12,6 @@ import hashlib
 import logging
 
 try:
-    import win32api
-    import win32con
     import win32security
     import ntsecuritycon as con
     has_windows_modules = True
