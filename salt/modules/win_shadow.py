@@ -2,7 +2,6 @@
 Manage the shadow file
 '''
 
-import os
 
 def __virtual__():
     '''

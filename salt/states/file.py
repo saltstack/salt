@@ -76,16 +76,13 @@ something like this:
         - source: salt://code/flask
 '''
 # Import Python libs
-import codecs
 from contextlib import nested  # For < 2.7 compat
 import os
 import shutil
 import difflib
 import hashlib
-import imp
 import logging
 import tempfile
-import traceback
 import urlparse
 import copy
 
@@ -503,7 +500,7 @@ def _check_directory(
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
             for key, val in changes[fn_].items():
-                cpmment += '{0}: {1} - {2}'.format(fn_, key, val)
+                comment += '{0}: {1} - {2}'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 

@@ -2,7 +2,6 @@ from winservice import Service, instart
 import win32serviceutil
 import win32service
 import winerror
-import os
 import salt
 import sys
 

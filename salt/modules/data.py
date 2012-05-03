@@ -1,5 +1,5 @@
 '''
-Manage a local persistent data structure that can hold any arbitrairy data
+Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion
 '''
 

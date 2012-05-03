@@ -5,6 +5,7 @@ Some of the utils used by salt
 # Import Python libs
 import os
 import imp
+import random
 import sys
 import socket
 import logging
@@ -226,6 +227,19 @@ def which(exe=None):
             if os.access(full_path, os.X_OK):
                 return full_path
     return None
+
+
+def which_bin(exes):
+    '''
+    Scan over some possible executables and return the first one that is found
+    '''
+    if not isinstance(exes, (list, tuple)):
+        return None
+    for exe in exes:
+        path = which(exe)
+        if not path:
+            continue
+        return path
 
 
 def list_files(directory):

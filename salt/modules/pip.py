@@ -2,6 +2,7 @@
 Install Python packages with pip to either the system or a virtualenv
 '''
 
+# Import python libs
 import os
 
 def _get_pip_bin(bin_env):
@@ -10,7 +11,10 @@ def _get_pip_bin(bin_env):
     passed in, or from the global modules options
     '''
     if not bin_env:
-        pip_bin = 'pip'
+        pips = ['pip2',
+                'pip',
+                'pip-python']
+        return __salt__['cmd.which_bin'](pips)
     else:
         # try to get pip bin from env
         if os.path.exists(os.path.join(bin_env, 'bin', 'pip')):

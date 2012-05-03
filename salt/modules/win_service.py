@@ -2,7 +2,6 @@
 Windows Service module. 
 '''
 
-import os
 import time
 
 

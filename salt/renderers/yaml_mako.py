@@ -9,7 +9,6 @@ high data format for salt states.
 import os
 
 # Import Third Party libs
-from mako.template import Template
 
 from salt.utils.yaml import CustomLoader, load
 from salt.exceptions import SaltRenderError

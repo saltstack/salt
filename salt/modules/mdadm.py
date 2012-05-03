@@ -3,7 +3,6 @@ Salt module to manage RAID arrays with mdadm
 '''
 
 import logging
-import os
 
 
 # Set up logger

@@ -33,7 +33,6 @@ import salt.fileclient
 from salt.template import (
     compile_template,
     compile_template_str,
-    template_shebang,
     )
 
 log = logging.getLogger(__name__)
@@ -103,7 +102,7 @@ def find_name(name, state, high):
         for nid in high:
             if state in high[nid]:
                 if isinstance(
-                        high[nid][_state],
+                        high[nid][state],
                         list):
                     for arg in high[nid][state]:
                         if not isinstance(arg, dict):

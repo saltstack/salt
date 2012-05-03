@@ -33,7 +33,6 @@ import re
 import sys
 import glob
 import time
-import datetime
 import getpass
 
 # Import zmq modules

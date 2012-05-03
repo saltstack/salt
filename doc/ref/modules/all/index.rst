@@ -28,6 +28,7 @@ Full list of builtin modules
     data
     debconfmod
     disk
+    django
     ebuild
     file
     freebsdkmod

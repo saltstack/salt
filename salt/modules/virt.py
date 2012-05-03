@@ -7,6 +7,7 @@ Required python modules: libvirt
 # of his in the virt func module have been used
 
 import os
+import re
 import shutil
 import StringIO
 import subprocess
