@@ -743,7 +743,6 @@ class SaltCall(object):
         salt.log.setup_console_logger(
             self.opts['log_level']
         )
-        import logging
         caller = salt.cli.caller.Caller(self.opts)
         caller.run()
 

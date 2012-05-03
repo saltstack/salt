@@ -4,7 +4,6 @@ Support for YUM
 import logging
 from collections import namedtuple
 
-from salt.exceptions import PkgParseError
 
 logger = logging.getLogger(__name__)
 

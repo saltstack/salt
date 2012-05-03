@@ -3,9 +3,8 @@ The networking module for RHEL/Fedora based distros
 '''
 # Import python libs
 import logging
-import os
 import re
-from os.path import exists, dirname, join
+from os.path import exists, join
 
 # import third party libs
 import jinja2

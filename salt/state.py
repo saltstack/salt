@@ -33,7 +33,6 @@ import salt.fileclient
 from salt.template import (
     compile_template,
     compile_template_str,
-    template_shebang,
     )
 
 log = logging.getLogger(__name__)

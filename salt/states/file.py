@@ -76,16 +76,13 @@ something like this:
         - source: salt://code/flask
 '''
 # Import Python libs
-import codecs
 from contextlib import nested  # For < 2.7 compat
 import os
 import shutil
 import difflib
 import hashlib
-import imp
 import logging
 import tempfile
-import traceback
 import urlparse
 import copy
 
