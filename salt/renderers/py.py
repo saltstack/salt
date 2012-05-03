@@ -6,7 +6,6 @@ data
 '''
 
 # Import python libs
-import imp
 import os
 
 # Import Salt libs
