@@ -31,13 +31,11 @@ def list():
             continue
         comps = line.split()
         device = comps[1]
-        print comps
         ret[device] = {"device": device}
         for comp in comps[2:]:
              key = comp.split('=')[0].lower()
              value = comp.split('=')[1]
              ret[device][key] = value
-
     return ret
 
 
