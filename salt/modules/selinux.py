@@ -19,7 +19,7 @@ def __virtual__():
         return False
     if not salt.utils.which('seinfo'):
         return False
-        
+
     global __selinux_fs_path__
     if __grains__['kernel'] == 'Linux':
         # systems running systemd (e.g. Fedora 15 and newer)
@@ -103,9 +103,9 @@ def setsebool(boolean, value, persist=False):
         salt '*' selinux.setsebool virt_use_usb off
     '''
     if persist:
-    	cmd = 'setsebool -P {0} {1}'.format(boolean, value)
+        cmd = 'setsebool -P {0} {1}'.format(boolean, value)
     else:
-    	cmd = 'setsebool {0} {1}'.format(boolean, value)
+        cmd = 'setsebool {0} {1}'.format(boolean, value)
     return not __salt__['cmd.retcode'](cmd)
 
 
