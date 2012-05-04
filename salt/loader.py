@@ -31,7 +31,7 @@ def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
     ext_type_types = []
     if ext_dirs:
         if ext_type_dirs == None:
-            ext_type_dirs = '{0}_dirs'.format(ext_type)
+            ext_type_dirs = '{0}_dirs'.format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
 
@@ -81,7 +81,7 @@ def states(opts, functions):
     '''
     Returns the state modules
     '''
-    load = _create_loader(opts, 'states', 'state')
+    load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
     return load.gen_functions(pack)
