@@ -1,4 +1,5 @@
 import salt
+from salt.modules.yumpkg import _compare_versions
 
 
 def __virtual__():
@@ -57,11 +58,21 @@ def install(pkgs):
     Do brew install
     '''
 
-    formulas = ' '.join(pkgs.split(','))
+    if ',' in pkgs:
+        pkgs = pkgs.split(',')
+    else:
+        pkgs = pkgs.split(' ')
+
+    old = list_pkgs(*pkgs)
+
+    formulas = ' '.join(pkgs)
     user = __salt__['file.get_user']('/usr/local')
     cmd = '/usr/local/bin/brew install {0}'.format(formulas)
+    __salt__['cmd.run'](cmd, runas=user)
 
-    return __salt__['cmd.run'](cmd, runas=user)
+    new = list_pkgs(*pkgs)
+
+    return _compare_versions(old, new)
 
 
 def list_upgrades():
