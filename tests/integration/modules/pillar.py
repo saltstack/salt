@@ -1,5 +1,11 @@
+# Import python libs
+import sys
+
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class PillarModuleTest(integration.ModuleCase):
     '''
@@ -25,3 +31,11 @@ class PillarModuleTest(integration.ModuleCase):
         self.assertEqual(
                 self.run_function('pillar.data')['ext_spam'], 'eggs'
                 )
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(PillarModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

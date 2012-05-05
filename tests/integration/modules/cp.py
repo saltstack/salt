@@ -1,9 +1,13 @@
 # Import python libs
 import os
+import sys
 import hashlib
 
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class CPModuleTest(integration.ModuleCase):
     '''
@@ -194,3 +198,11 @@ class CPModuleTest(integration.ModuleCase):
                     md5_hash['hsum'],
                     hashlib.md5(fn_.read()).hexdigest()
                     )
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(CPModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())
