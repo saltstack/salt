@@ -30,8 +30,9 @@ def _git_environ(identity=None, **kwargs):
         if env in os.environ:
             del os.environ[env]
     if identity:
+        git_ssh = os.path.join(__grains__['saltpath'],"modules/git/salt-git-ssh")
         os.environ['GIT_SSH_IDENTITY'] = identity
-        os.environ['GIT_SSH']='salt-git-ssh'
+        os.environ['GIT_SSH'] = git_ssh
 
 def revision(cwd, rev='HEAD', short=False, user=None):
     '''
