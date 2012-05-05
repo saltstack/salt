@@ -15,18 +15,16 @@ TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 PNUM = 50
 
 
-def run_integration_tests(opts=None):
+def run_integration_tests(opts):
     '''
     Execute the integration tests suite
     '''
-    if not opts:
-        opts = {}
     print('~' * PNUM)
     print('Setting up Salt daemons to execute tests')
     print('~' * PNUM)
     status = []
     with TestDaemon():
-        if opts.get('module', True):
+        if opts.module:
             moduleloader = saltunittest.TestLoader()
             moduletests = moduleloader.discover(
                     os.path.join(TEST_DIR, 'integration', 'modules'),
@@ -35,9 +33,9 @@ def run_integration_tests(opts=None):
             print('~' * PNUM)
             print('Starting Module Tests')
             print('~' * PNUM)
-            runner = saltunittest.TextTestRunner(verbosity=1).run(moduletests)
+            runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(moduletests)
             status.append(runner.wasSuccessful())
-        if opts.get('client', True):
+        if opts.client:
             clientloader = saltunittest.TestLoader()
             clienttests = clientloader.discover(
                     os.path.join(TEST_DIR, 'integration', 'client'),
@@ -46,9 +44,9 @@ def run_integration_tests(opts=None):
             print('~' * PNUM)
             print('Starting Client Tests')
             print('~' * PNUM)
-            runner = saltunittest.TextTestRunner(verbosity=1).run(clienttests)
+            runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(clienttests)
             status.append(runner.wasSuccessful())
-        if opts.get('shell', True):
+        if opts.shell:
             shellloader = saltunittest.TestLoader()
             shelltests = shellloader.discover(
                     os.path.join(TEST_DIR, 'integration', 'shell'),
@@ -57,19 +55,17 @@ def run_integration_tests(opts=None):
             print('~' * PNUM)
             print('Starting Shell Tests')
             print('~' * PNUM)
-            runner = saltunittest.TextTestRunner(verbosity=1).run(shelltests)
+            runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(shelltests)
             status.append(runner.wasSuccessful())
 
     return status
 
 
-def run_unit_tests(opts=None):
+def run_unit_tests(opts):
     '''
     Execute the unit tests
     '''
-    if not opts:
-        opts = {}
-    if not opts.get('unit', True):
+    if not opts.unit:
         return [True]
     status = []
     loader = saltunittest.TestLoader()
@@ -77,7 +73,7 @@ def run_unit_tests(opts=None):
     print('~' * PNUM)
     print('Starting Unit Tests')
     print('~' * PNUM)
-    runner = saltunittest.TextTestRunner(verbosity=1).run(tests)
+    runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(tests)
     status.append(runner.wasSuccessful())
     return status
 
@@ -101,6 +97,12 @@ def parse_opts():
             default=False,
             action='store_true',
             help='Run tests for client')
+    parser.add_option('-s',
+            '--shell',
+            dest='shell',
+            default=False,
+            action='store_true',
+            help='Run shell tests')
     parser.add_option('-u',
             '--unit',
             '--unit-tests',
@@ -108,29 +110,21 @@ def parse_opts():
             default=False,
             action='store_true',
             help='Run unit tests')
-    parser.add_option('-s',
-            '--shell',
-            dest='shell',
-            default=False,
-            action='store_true',
-            help='Run shell tests')
+    parser.add_option('-v',
+            '--verbose',
+            dest='verbosity',
+            default=1,
+            action='count',
+            help='Verbose test runner output')
 
     options, args = parser.parse_args()
-
-    reverse = False
-
-    opts = {}
-
-    for key, val in list(options.__dict__.items()):
-        if val:
-            reverse = True
-        opts[key] = not val
-
-    if reverse:
-        for key, val in list(opts.items()):
-            opts[key] = not opts[key]
-
-    return opts
+    if all((not options.module, not options.client,
+            not options.shell, not options.unit)):
+        options.module = True
+        options.client = True
+        options.shell = True
+        options.unit = True
+    return options
 
 
 if __name__ == "__main__":
