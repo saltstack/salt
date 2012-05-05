@@ -23,13 +23,15 @@ def _check_git():
     utils.check_or_die('git')
 
 def _git_environ(identity=None, **kwargs):
+    '''
+    Clean out and then set environment variables for working with Git.
+    '''
+    for env in ['GIT_SSH', 'GIT_SSH_IDENTITY']:
+        if env in os.environ:
+            del os.environ[env]
     if identity:
-        os.environ["GIT_SSH_IDENTITY"] = identity
+        os.environ['GIT_SSH_IDENTITY'] = identity
         os.environ['GIT_SSH']='salt-git-ssh'
-    else:
-        del os.environ['GIT_SSH']
-        del os.environ["GIT_SSH_IDENTITY"]
-
 
 def revision(cwd, rev='HEAD', short=False, user=None):
     '''
@@ -202,7 +204,7 @@ def pull(cwd, opts=None, user=None, **kwargs):
 
     if not opts:
         opts = ''
-    return __salt__['cmd.run']('git pull {0}'.format(opts),cwd=cwd, runas=user)
+    return __salt__['cmd.run']('git pull {0}'.format(opts), cwd=cwd, runas=user)
 
 def rebase(cwd, rev='master', opts=None, user=None):
     '''
