@@ -6,9 +6,15 @@ Discover all instances of unittest.TestCase in this directory.
 import sys
 import os
 import optparse
+
 # Import salt libs
 import saltunittest
 from integration import TestDaemon
+
+try:
+    import xmlrunner
+except ImportError:
+    pass
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
@@ -33,7 +39,10 @@ def run_integration_tests(opts):
             print('~' * PNUM)
             print('Starting Module Tests')
             print('~' * PNUM)
-            runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(moduletests)
+            if opts.xmlout:
+                runner = xmlrunner.XMLTestRunner(output='test-reports').run(moduletests)
+            else:
+                runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(moduletests)
             status.append(runner.wasSuccessful())
         if opts.client:
             clientloader = saltunittest.TestLoader()
@@ -44,7 +53,10 @@ def run_integration_tests(opts):
             print('~' * PNUM)
             print('Starting Client Tests')
             print('~' * PNUM)
-            runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(clienttests)
+            if opts.xmlout:
+                runner = xmlrunner.XMLTestRunner(output='test-reports').run(clienttests)
+            else:
+                runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(clienttests)
             status.append(runner.wasSuccessful())
         if opts.shell:
             shellloader = saltunittest.TestLoader()
@@ -55,7 +67,10 @@ def run_integration_tests(opts):
             print('~' * PNUM)
             print('Starting Shell Tests')
             print('~' * PNUM)
-            runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(shelltests)
+            if opts.xmlout:
+                runner = xmlrunner.XMLTestRunner(output='test-reports').run(shelltests)
+            else:
+                runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(shelltests)
             status.append(runner.wasSuccessful())
 
     return status
@@ -73,7 +88,10 @@ def run_unit_tests(opts):
     print('~' * PNUM)
     print('Starting Unit Tests')
     print('~' * PNUM)
-    runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(tests)
+    if opts.xmlout:
+        runner = xmlrunner.XMLTestRunner(output='test-reports').run(tests)
+    else:
+        runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(tests)
     status.append(runner.wasSuccessful())
     return status
 
@@ -115,6 +133,13 @@ def parse_opts():
             dest='verbosity',
             default=1,
             action='count',
+            help='Verbose test runner output')
+
+    parser.add_option('-x',
+            '--xml',
+            dest='xmlout',
+            default=False,
+            action='store_true',
             help='Verbose test runner output')
 
     options, args = parser.parse_args()
