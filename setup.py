@@ -34,6 +34,7 @@ class TestCommand(Command):
             cwd=build_cmd.build_lib
         )
         test_process.communicate()
+        sys.exit(test_process.returncode)
 
 NAME = 'salt'
 VER = __version__
