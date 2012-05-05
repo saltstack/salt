@@ -30,7 +30,7 @@ def version():
     '''
     Return server version from grub --version
 
-    CLI Example:
+    CLI Example::
 
         salt '*' grub.version
     '''
@@ -42,7 +42,7 @@ def conf():
     '''
     Parse GRUB conf file
 
-    CLI Example:
+    CLI Example::
 
         salt '*' grub.conf
     '''
