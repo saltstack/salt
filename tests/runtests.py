@@ -3,6 +3,7 @@
 Discover all instances of unittest.TestCase in this directory.
 '''
 # Import python libs
+import sys
 import os
 import optparse
 # Import salt libs
@@ -23,6 +24,7 @@ def run_integration_tests(opts=None):
     print('~' * PNUM)
     print('Setting up Salt daemons to execute tests')
     print('~' * PNUM)
+    status = []
     with TestDaemon():
         if opts.get('module', True):
             moduleloader = saltunittest.TestLoader()
@@ -33,7 +35,8 @@ def run_integration_tests(opts=None):
             print('~' * PNUM)
             print('Starting Module Tests')
             print('~' * PNUM)
-            saltunittest.TextTestRunner(verbosity=1).run(moduletests)
+            runner = saltunittest.TextTestRunner(verbosity=1).run(moduletests)
+            status.append(runner.wasSuccessful())
         if opts.get('client', True):
             clientloader = saltunittest.TestLoader()
             clienttests = clientloader.discover(
@@ -43,7 +46,8 @@ def run_integration_tests(opts=None):
             print('~' * PNUM)
             print('Starting Client Tests')
             print('~' * PNUM)
-            saltunittest.TextTestRunner(verbosity=1).run(clienttests)
+            runner = saltunittest.TextTestRunner(verbosity=1).run(clienttests)
+            status.append(runner.wasSuccessful())
         if opts.get('shell', True):
             shellloader = saltunittest.TestLoader()
             shelltests = shellloader.discover(
@@ -53,7 +57,10 @@ def run_integration_tests(opts=None):
             print('~' * PNUM)
             print('Starting Shell Tests')
             print('~' * PNUM)
-            saltunittest.TextTestRunner(verbosity=1).run(shelltests)
+            runner = saltunittest.TextTestRunner(verbosity=1).run(shelltests)
+            status.append(runner.wasSuccessful())
+
+    return status
 
 
 def run_unit_tests(opts=None):
@@ -63,13 +70,16 @@ def run_unit_tests(opts=None):
     if not opts:
         opts = {}
     if not opts.get('unit', True):
-        return
+        return [True]
+    status = []
     loader = saltunittest.TestLoader()
     tests = loader.discover(os.path.join(TEST_DIR, 'unit'), '*_test.py')
     print('~' * PNUM)
     print('Starting Unit Tests')
     print('~' * PNUM)
-    saltunittest.TextTestRunner(verbosity=1).run(tests)
+    runner = saltunittest.TextTestRunner(verbosity=1).run(tests)
+    status.append(runner.wasSuccessful())
+    return status
 
 
 def parse_opts():
@@ -125,5 +135,13 @@ def parse_opts():
 
 if __name__ == "__main__":
     opts = parse_opts()
-    run_integration_tests(opts)
-    run_unit_tests(opts)
+    overall_status = []
+    status = run_integration_tests(opts)
+    overall_status.extend(status)
+    status = run_unit_tests(opts)
+    overall_status.extend(status)
+    false_count = overall_status.count(False)
+    if false_count > 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)
