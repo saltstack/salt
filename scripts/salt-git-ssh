@@ -1,0 +1,9 @@
+#!/bin/bash
+
+IDENTITY=""
+
+if [ "x$GIT_SSH_IDENTITY" != "x" ]; then
+	IDENTITY="-i $GIT_SSH_IDENTITY"
+fi
+
+ssh $IDENTITY -o StrictHostKeyChecking=no -o PasswordAuthentication=no $@
