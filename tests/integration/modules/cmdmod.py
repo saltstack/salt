@@ -1,8 +1,12 @@
 # Import python libs
 import os
+import sys
 
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class CMDModuleTest(integration.ModuleCase):
     '''
@@ -89,3 +93,11 @@ sys.stdout.write('cheese')
                 self.run_function('cmd.exec_code', ['python', code]),
                 'cheese'
                 )
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(CMDModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())
