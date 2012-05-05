@@ -202,7 +202,7 @@ def pull(cwd, opts=None, user=None, **kwargs):
 
     if not opts:
         opts = ''
-    return __salt__['cmd.run']('git pull {1}'.format(opts),cwd=cwd, runas=user)
+    return __salt__['cmd.run']('git pull {0}'.format(opts),cwd=cwd, runas=user)
 
 def rebase(cwd, rev='master', opts=None, user=None):
     '''
