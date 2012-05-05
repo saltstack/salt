@@ -1,5 +1,11 @@
+# Import python libs
+import sys
+
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class StateModuleTest(integration.ModuleCase):
     '''
@@ -22,3 +28,10 @@ class StateModuleTest(integration.ModuleCase):
         self.assertTrue(isinstance(low, list))
         self.assertTrue(isinstance(low[0], dict))
 
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(StateModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

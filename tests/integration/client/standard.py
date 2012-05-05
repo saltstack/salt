@@ -1,10 +1,17 @@
+# Import python libs
+import sys
+
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class StdTest(integration.ModuleCase):
     '''
     Test standard client calls
     '''
+
     def test_cli(self):
         '''
         Test cli function
@@ -49,3 +56,11 @@ class StdTest(integration.ModuleCase):
                 'test.ping',
                 )
         self.assertTrue(ret['minion'])
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(StdTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

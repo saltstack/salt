@@ -20,7 +20,7 @@ def render(template, env='', sls=''):
         return {}
 
     tmp_data = salt.utils.templates.py(
-            template_file,
+            template,
             True,
             salt=__salt__,
             grains=__grains__,
