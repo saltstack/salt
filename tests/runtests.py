@@ -70,7 +70,7 @@ def run_unit_tests(opts=None):
     if not opts:
         opts = {}
     if not opts.get('unit', True):
-        return
+        return [True]
     status = []
     loader = saltunittest.TestLoader()
     tests = loader.discover(os.path.join(TEST_DIR, 'unit'), '*_test.py')
