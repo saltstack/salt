@@ -3,12 +3,16 @@ Test the hosts module
 '''
 # Import python libs
 import os
+import sys
 import shutil
 
 # Import Salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
 
 HFN = os.path.join(integration.TMP, 'hosts')
+
 
 class HostsModuleTest(integration.ModuleCase):
     '''
@@ -138,3 +142,11 @@ class HostsModuleTest(integration.ModuleCase):
             "192.168.1.2\t\thost2.fqdn.com\thost2\toldhost2\thost2-reorder\n",
             "192.168.1.1\t\thost1.fqdn.com\thost1\thost1-reorder\n",
             ])
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(HostsModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

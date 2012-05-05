@@ -1,10 +1,13 @@
 # Import python libs
-import os
+import sys
 
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
 
-class TestSyndicTest(integration.SyndicCase):
+
+class TestSyndic(integration.SyndicCase):
     '''
     Validate the syndic interface by testing the test module
     '''
@@ -26,3 +29,10 @@ class TestSyndicTest(integration.SyndicCase):
                 34
                 )
 
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(TestSyndic)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())
