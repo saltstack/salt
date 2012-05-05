@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 def latest(name,
            rev=None,
            target=None,
+           identity=None,
            runas=None):
     '''
     Make sure the repository is cloned to the given directory and is up to date
@@ -57,7 +58,7 @@ def latest(name,
                     'revision is {1})').format(target, current_rev))
         if rev:
             __salt__['git.checkout'](target, rev)
-        __salt__['git.pull'](target, user=runas)
+        __salt__['git.pull'](target, user=runas, identity=identity)
         new_rev = __salt__['git.revision'](cwd=target, user=runas)
         if current_rev != new_rev:
             log.info('Repository {0} updated: {1} => {2}'.format(target,
@@ -77,7 +78,7 @@ def latest(name,
                     'Repository {0} is about to be cloned to {1}'.format(
                         name, target))
         # make the clone
-        result = __salt__['git.clone'](target, name, user=runas)
+        result = __salt__['git.clone'](target, name, user=runas, identity=identity)
         if not os.path.isdir(target):
             return _fail(ret, result)
         if rev:

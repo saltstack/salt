@@ -22,6 +22,15 @@ def _git_getdir(cwd, user=None):
 def _check_git():
     utils.check_or_die('git')
 
+def _git_environ(identity=None, **kwargs):
+    if identity:
+        os.environ["GIT_SSH_IDENTITY"] = identity
+        os.environ['GIT_SSH']='salt-git-ssh'
+    else:
+        del os.environ['GIT_SSH']
+        del os.environ["GIT_SSH_IDENTITY"]
+
+
 def revision(cwd, rev='HEAD', short=False, user=None):
     '''
     Returns the long hash of a given identifier (hash, branch, tag, HEAD, etc)
@@ -52,7 +61,7 @@ def revision(cwd, rev='HEAD', short=False, user=None):
     else:
         return ''
 
-def clone(cwd, repository, opts=None, user=None):
+def clone(cwd, repository, opts=None, user=None, **kwargs):
     '''
     Clone a new repository
 
@@ -77,6 +86,7 @@ def clone(cwd, repository, opts=None, user=None):
 
     '''
     _check_git()
+    _git_environ(**kwargs)
 
     if not opts:
         opts = ''
@@ -142,7 +152,7 @@ def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
 
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 
-def fetch(cwd, opts=None, user=None):
+def fetch(cwd, opts=None, user=None, **kwargs):
     '''
     Perform a fetch on the given repository
 
@@ -162,6 +172,7 @@ def fetch(cwd, opts=None, user=None):
         salt '*' git.fetch cwd=/path/to/repo opts='--all' user=johnny
     '''
     _check_git()
+    _git_environ(**kwargs)
 
     if not opts:
         opts = ''
@@ -169,7 +180,7 @@ def fetch(cwd, opts=None, user=None):
 
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 
-def pull(cwd, opts=None, user=None):
+def pull(cwd, opts=None, user=None, **kwargs):
     '''
     Perform a pull on the given repository
 
@@ -187,10 +198,11 @@ def pull(cwd, opts=None, user=None):
         salt '*' git.pull /path/to/repo opts='--rebase origin master'
     '''
     _check_git()
+    _git_environ(**kwargs)
 
     if not opts:
         opts = ''
-    return __salt__['cmd.run']('git pull {0}'.format(opts), cwd=cwd, runas=user)
+    return __salt__['cmd.run']('git pull {1}'.format(opts),cwd=cwd, runas=user)
 
 def rebase(cwd, rev='master', opts=None, user=None):
     '''

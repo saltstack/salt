@@ -100,6 +100,7 @@ setup(
                'scripts/salt-cp',
                'scripts/salt-call',
                'scripts/salt-run',
+               'scripts/salt-git-ssh',
                'scripts/salt'],
       data_files=[('share/man/man1',
                     ['doc/man/salt-master.1',
