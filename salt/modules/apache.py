@@ -14,7 +14,7 @@ def __virtual__():
     '''
     Only load the module if apache is installed
     '''
-    cmd = __detect_os()
+    cmd = _detect_os()
     if salt.utils.which(cmd):
         return 'apache'
     return False
