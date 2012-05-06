@@ -40,7 +40,7 @@ def recv(files, dest):
 def get_file(path, dest, env='base'):
     '''
     Used to get a single file from the salt master
-    
+
     CLI Example::
 
         salt '*' cp.get_file salt://path/to/file /minion/dest
@@ -76,7 +76,7 @@ def get_dir(path, dest, env='base'):
     '''
     Used to recursively copy a directory from the salt master
 
-    CLI Example:
+    CLI Example::
 
         salt '*' cp.get_dir salt://path/to/dir/ /minion/dest
     '''
@@ -128,7 +128,7 @@ def cache_dir(path, env='base'):
     Download and cache everything under a directory from the master
 
     CLI Example::
-    
+
         salt '*' cp.cache_dir salt://path/to/dir
     '''
     client = salt.fileclient.get_file_client(__opts__)

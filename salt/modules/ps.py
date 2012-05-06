@@ -139,7 +139,7 @@ def virtual_memory_usage():
 
     CLI Example::
 
-        salt '*' virtual_memory_usage
+        salt '*' ps.virtual_memory_usage
     '''
     return dict(psutil.virtmem_usage()._asdict())
 

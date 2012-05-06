@@ -99,7 +99,7 @@ def freemem():
 
     CLI Example::
 
-        salt '*' virt.freemem
+        salt '*' hyper.freemem
     '''
     conn = __get_conn()
     mem = conn.getInfo()[1]
@@ -119,7 +119,7 @@ def freecpu():
 
     CLI Example::
 
-        salt '*' virt.freemem
+        salt '*' hyper.freecpu
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
@@ -136,7 +136,7 @@ def list_virts():
 
     CLI Example::
 
-        salt '*' virt.list_virts
+        salt '*' hyper.list_virts
     '''
     # Expand to include down vms
     conn = __get_conn()
@@ -158,7 +158,7 @@ def virt_info():
 
     CLI Example::
 
-        salt '*' virt.vm_info
+        salt '*' hyper.virt_info
     '''
     info = {}
     for vm_ in list_virts():
@@ -181,7 +181,7 @@ def hyper_info():
 
     CLI Example::
 
-        salt '*' virt.node_info
+        salt '*' hyper.hyper_info
     '''
     conn = __get_conn()
     raw = conn.getInfo()
@@ -331,7 +331,7 @@ def init(
 
     CLI Example:
 
-        salt node1 webserver 2 2048 salt://fedora/f16.img:virt /srv/vm/images
+        salt '*' hyper.init webserver 2 2048 salt://fedora/f16.img:virt /srv/vm/images
     '''
     vmdir = os.path.join(storage_dir, name)
     if not os.path.exists(vmdir):
@@ -424,7 +424,7 @@ def get_disks(name):
 
     CLI Example::
 
-        salt '*' virt.get_disks <vm name>
+        salt '*' hyper.get_disks <vm name>
     '''
     disks = {}
     doc = minidom.parse(StringIO.StringIO(get_conf(name)))
@@ -457,7 +457,7 @@ def get_conf(name):
 
     CLI Example::
 
-        salt '*' virt.get_conf <vm name>
+        salt '*' hyper.get_conf <vm name>
     '''
     dom = _get_dom(name)
     return dom.XMLDesc(0)

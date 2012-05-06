@@ -88,7 +88,7 @@ def sls(mods, env='base', **kwargs):
     Execute a set list of state modules from an environment, default
     environment is base
 
-    CLI Example:
+    CLI Example::
 
         salt '*' state.sls core,edit.vim dev
     '''

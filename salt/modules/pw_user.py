@@ -210,7 +210,7 @@ def list_groups(name):
 
     CLI Example::
 
-        salt '*' user.groups foo
+        salt '*' user.list_groups foo
     '''
     ugrp = set()
     for group in grp.getgrall():

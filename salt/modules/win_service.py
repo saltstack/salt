@@ -75,7 +75,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
 

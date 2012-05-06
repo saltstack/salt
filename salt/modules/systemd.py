@@ -89,11 +89,11 @@ def stop(name):
 
 def restart(name):
     '''
-    Start the specified service with systemd
+    Restart the specified service with systemd
 
     CLI Example::
 
-        salt '*' service.start <service name>
+        salt '*' service.restart <service name>
     '''
     cmd = 'systemctl restart {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)

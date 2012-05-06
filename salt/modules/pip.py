@@ -377,6 +377,3 @@ def list(prefix='', bin_env=None):
             else:
                 packages[name]=version
     return packages
-
-
-

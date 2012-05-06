@@ -385,7 +385,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
 
@@ -426,7 +426,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    Usage::
+    CLI Example::
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
 
@@ -463,7 +463,7 @@ def comment(path, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.comment /etc/modules pcspkr
 
@@ -486,7 +486,7 @@ def contains(path, text, limit='', escape=False):
     '''
     Return True if the file at ``path`` contains ``text``
 
-    Usage::
+    CLI Example::
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
 
@@ -513,7 +513,7 @@ def append(path, *args):
     '''
     Append text to the end of a file
 
-    Usage::
+    CLI Example::
 
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt."\\
@@ -540,7 +540,7 @@ def touch(name, atime=None, mtime=None):
     mtime:
         Last modification in Unix epoch time
 
-    Usage::
+    CLI Example::
         salt '*' file.touch /var/log/emptyfile
 
     .. versionadded:: 0.9.5

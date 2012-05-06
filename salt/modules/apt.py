@@ -331,7 +331,7 @@ def list_upgrades():
     List all available package upgrades.
 
     CLI Example::
-        salt '*' pkg.check_update
+        salt '*' pkg.list_upgrades
     '''
     r = _get_upgradable()
     return r

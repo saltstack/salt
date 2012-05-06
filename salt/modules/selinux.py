@@ -29,7 +29,7 @@ def getenforce():
     '''
     Return the mode selinux is running in
 
-    CLE Example::
+    CLI Example::
 
         salt '*' selinux.getenforce
     '''
