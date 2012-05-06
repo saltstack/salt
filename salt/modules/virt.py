@@ -558,7 +558,8 @@ def set_autostart(vm_, state='on'):
     system on reboot.
 
     CLI Example::
-        salt "*" virt.enable_autostart <vm name> <on | off>
+
+        salt "*" virt.set_autostart <vm name> <on | off>
     '''
 
     dom = _get_dom(vm_)

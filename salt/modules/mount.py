@@ -66,7 +66,7 @@ def rm_fstab(name, config='/etc/fstab'):
 
     CLI Example::
 
-        salt '*' /mnt/foo
+        salt '*' mount.rm_fstab /mnt/foo
     '''
     contents = fstab(config)
     if name not in contents:

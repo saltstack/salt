@@ -57,8 +57,9 @@ def assign(name, value):
     '''
     Assign a single sysctl parameter for this minion
 
-    CLI Example:
-    salt '*' sysctl.assign net.ipv4.ip_forward 1
+    CLI Example::
+
+        salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
     sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
     if not os.path.exists(sysctl_file):
