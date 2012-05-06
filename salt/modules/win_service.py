@@ -146,6 +146,10 @@ def status(name, sig=None):
 def getsid(name):
     '''
     Return the sid for this windows service
+
+    CLI Example::
+
+        salt '*' service.getsid <service name>
     '''
     cmd = 'sc showsid "{0}"'.format(name)
     lines = __salt__['cmd.run'](cmd).split('\n')

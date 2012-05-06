@@ -105,6 +105,10 @@ def sls(mods, env='base', **kwargs):
 def top(topfn):
     '''
     Execute a specific top file instead of the default
+
+    CLI Example::
+
+        salt '*' state.top reverse_top.sls
     '''
     st_ = salt.state.HighState(__opts__)
     st_.opts['state_top'] = os.path.join('salt://', topfn)

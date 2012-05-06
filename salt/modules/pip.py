@@ -348,6 +348,10 @@ def freeze(bin_env=None):
         pip-2.6, etc..) just specify the pip bin you want.
         If uninstalling from a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
+
+    CLI Example::
+
+        salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
 
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
@@ -359,6 +363,10 @@ def list(prefix='', bin_env=None):
     '''
     Filter list of instaslled apps from ``freeze`` and check to see if ``prefix``
     exists in the list of packages installed.
+
+    CLI Example::
+
+        salt '*' pip.list salt
     '''
     packages = {}
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))

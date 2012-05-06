@@ -23,6 +23,13 @@ def __virtual__():
     return False
 
 def selinux_fs_path():
+    '''
+    Return the selinux base path
+
+    CLI Example::
+
+        salt '*' selinux.selinux_fs_path
+    '''
     return __selinux_fs_path__
 
 def getenforce():
@@ -42,6 +49,10 @@ def getenforce():
 def setenforce(mode):
     '''
     Set the enforcing mode
+
+    CLI Example::
+
+        salt '*' selinux.setenforce 1
     '''
     if isinstance(mode, basestring):
         if mode.lower() == 'enforcing':

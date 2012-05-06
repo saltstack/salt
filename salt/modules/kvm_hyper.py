@@ -88,6 +88,10 @@ def _get_dom(vm_):
 def hyper_type():
     '''
     Return that type of hypervisor this is
+
+    CLI Example::
+
+        salt '*' hyper.hyper_type
     '''
     return 'kvm'
 
@@ -348,6 +352,10 @@ def init(
 def start(config):
     '''
     Start an already defined virtual machine that has been shut down
+
+    CLI Example::
+
+        salt '*' hyper.start webserver
     '''
     # change this to use the libvirt api and add more logging and a verbose
     # return
@@ -357,6 +365,10 @@ def start(config):
 def halt(name):
     '''
     Hard power down a virtual machine
+
+    CLI Example::
+
+        salt '*' hyper.halt webserver
     '''
     try:
         dom = _get_dom(name)
@@ -370,6 +382,10 @@ def purge(name):
     '''
     Hard power down and purge a virtual machine, this will destroy a vm and
     all associated vm data
+
+    CLI Example::
+
+        salt '*' hyper.purge webserver
     '''
     disks = get_disks(name)
     halt(name)
@@ -386,6 +402,10 @@ def purge(name):
 def pause(name):
     '''
     Pause the named virtual machine
+
+    CLI Example::
+
+        salt '*' hyper.pause webserver
     '''
     dom = _get_dom(name)
     dom.suspend()
@@ -395,6 +415,10 @@ def pause(name):
 def resume(name):
     '''
     Resume the named virtual machine
+
+    CLI Example::
+
+        salt '*' hyper.resume webserver
     '''
     dom = _get_dom(name)
     dom.resume()
@@ -404,6 +428,10 @@ def resume(name):
 def set_autostart(name):
     '''
     Set the named virtual machine to autostart when the hypervisor boots
+
+    CLI Example::
+
+        salt '*' hyper.set_autostart webserver
     '''
     dom = _get_dom(name)
 
