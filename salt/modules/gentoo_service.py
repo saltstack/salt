@@ -40,7 +40,7 @@ def get_disabled():
     
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_disabled
     '''
     ret = set()
     lines = __salt__['cmd.run']('rc-update -v show').strip().split('\n')
@@ -60,7 +60,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
 
@@ -154,6 +154,6 @@ def disabled(name):
 
     CLI Example::
 
-        salt '*' service.enabled <service name>
+        salt '*' service.disabled <service name>
     '''
     return name in get_disabled()
