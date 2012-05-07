@@ -92,7 +92,7 @@ def sls(mods, env='base', test=None, **kwargs):
     Execute a set list of state modules from an environment, default
     environment is base
 
-    CLI Example:
+    CLI Example::
 
         salt '*' state.sls core,edit.vim dev
     '''
@@ -112,6 +112,10 @@ def sls(mods, env='base', test=None, **kwargs):
 def top(topfn):
     '''
     Execute a specific top file instead of the default
+
+    CLI Example::
+
+        salt '*' state.top reverse_top.sls
     '''
     st_ = salt.state.HighState(__opts__)
     st_.opts['state_top'] = os.path.join('salt://', topfn)
