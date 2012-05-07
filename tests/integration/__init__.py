@@ -5,8 +5,10 @@ Set up the Salt integration test suite
 # Import Python libs
 import multiprocessing
 import os
+import sys
 import shutil
 import signal
+import subprocess
 
 # Import Salt libs
 import salt
@@ -17,6 +19,10 @@ from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
 INTEGRATION_TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
+SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
+
+PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
 TMP = os.path.join(INTEGRATION_TEST_DIR, 'tmp')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
@@ -185,3 +191,47 @@ class SyndicCase(TestCase):
         '''
         orig = self.client.cmd('minion', function, arg)
         return orig['minion']
+
+class ShellCase(TestCase):
+    '''
+    Execute a test for a shell command
+    '''
+    def run_script(self, script, arg_str):
+        '''
+        Execute a script with the given argument string
+        '''
+        path = os.path.join(SCRIPT_DIR, script)
+        if not os.path.isfile(path):
+            return False
+        ppath = 'PYTHONPATH={0}'.format(':'.join(sys.path[1:]))
+        cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
+        data = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE
+                ).communicate()[0].split('\n')
+        return data
+
+    def run_salt(self, arg_str):
+        '''
+        Execute salt-key
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt', arg_str)
+
+    def run_run(self, arg_str):
+        '''
+        Execute salt-key
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-run', arg_str)
+
+    def run_key(self, arg_str):
+        '''
+        Execute salt-key
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        arg_str = '-c {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-key', arg_str)
