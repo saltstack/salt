@@ -222,7 +222,7 @@ def status(name, sig=None):
     '''
     cmd = 'service {0} status'.format(name)
     if _service_is_sysv(name):
-        return not bool(__salt__['cmd.retcode'](cmd))
+        return 'not\ running' in __salt__['cmd.run'](cmd)
     return 'start/running' in __salt__['cmd.run'](cmd)
 
 
