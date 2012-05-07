@@ -3,6 +3,9 @@
 The setup script for salt
 '''
 
+# For Python 2.5.  A no-op on 2.6 and above.
+from __future__ import with_statement
+
 import os
 import sys
 from glob import glob
