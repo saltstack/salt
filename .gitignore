@@ -22,3 +22,8 @@ share/
 
 # setuptools stuff
 *.egg-info
+
+# code coverage outputs genereated by coverage.py
+.coverage
+coverage.xml
+htmlcov/
