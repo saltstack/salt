@@ -12,8 +12,6 @@ import hashlib
 import logging
 
 try:
-    import win32api
-    import win32con
     import win32security
     import ntsecuritycon as con
     has_windows_modules = True
@@ -231,13 +229,13 @@ def get_sum(path, form='md5'):
         return 'File not found'
     try:
         return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         return 'File Error: %s' % (str(e))
-    except AttributeError, e:
+    except AttributeError as e:
         return 'Hash ' + form + ' not supported'
-    except NameError, e:
+    except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
-    except Exception, e:
+    except Exception as e:
         return str(e)
 
 
@@ -334,7 +332,7 @@ def find(path, **kwargs):
     '''
     try:
         f = salt.utils.find.Finder(kwargs)
-    except ValueError, ex:
+    except ValueError as ex:
         return 'error: {0}'.format(ex)
 
     ret = [p for p in f.find(path)]
@@ -377,7 +375,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
 
@@ -418,7 +416,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    Usage::
+    CLI Example::
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
 
@@ -455,7 +453,7 @@ def comment(path, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.comment /etc/modules pcspkr
 
@@ -478,7 +476,7 @@ def contains(path, text, limit=''):
     '''
     Return True if the file at ``path`` contains ``text``
 
-    Usage::
+    CLI Example::
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
 
@@ -498,7 +496,7 @@ def append(path, *args):
     '''
     Append text to the end of a file
 
-    Usage::
+    CLI Example::
 
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt."\\
@@ -525,7 +523,7 @@ def touch(name, atime=None, mtime=None):
     mtime:
         Last modification in Unix epoch time
 
-    Usage::
+    CLI Example::
         salt '*' file.touch /var/log/emptyfile
 
     .. versionadded:: 0.9.5

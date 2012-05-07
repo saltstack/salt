@@ -33,7 +33,6 @@ import re
 import sys
 import glob
 import time
-import datetime
 import getpass
 
 # Import zmq modules
@@ -158,8 +157,8 @@ class LocalClient(object):
         range = seco.range.Range(self.opts['range_server'])
         try:
           return range.expand(tgt)
-        except seco.range.RangeException, e:
-          print "Range server exception: %s" % e
+        except seco.range.RangeException as e:
+          print(("Range server exception: {0}".format(e)))
           return []
 
     def gather_job_info(self, jid, tgt, tgt_type):
@@ -237,10 +236,10 @@ class LocalClient(object):
             jid=jid,
             timeout=timeout)
         if pub_data['jid'] == '0':
-            print 'Failed to connect to the Master, is the Salt Master running?'
+            print('Failed to connect to the Master, is the Salt Master running?')
             yield {}
         elif not pub_data['jid']:
-            print 'No minions match the target'
+            print('No minions match the target')
             yield {}
         else:
             for fn_ret in self.get_cli_returns(pub_data['jid'],
@@ -380,8 +379,8 @@ class LocalClient(object):
         a specified jid, it returns all of the information for the jid
         '''
         if verbose:
-            print 'Executing job with jid {0}'.format(jid)
-            print '------------------------------------\n'
+            print('Executing job with jid {0}'.format(jid))
+            print('------------------------------------\n')
         if timeout is None:
             timeout = self.opts['timeout']
         fret = {}
@@ -441,7 +440,7 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print 'Execution is still running on {0}'.format(id_)
+                            print('Execution is still running on {0}'.format(id_))
                         more_time = True
                 if more_time:
                     timeout += inc_timeout

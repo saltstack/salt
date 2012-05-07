@@ -97,6 +97,12 @@ def describe(cwd, rev='HEAD', user=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    CLI Examples::
+
+        salt '*' git.describe /path/to/repo
+
+        salt '*' git.describe /path/to/repo develop
     '''
     cmd = 'git describe {0}'.format(rev)
     return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)

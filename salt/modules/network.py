@@ -5,7 +5,6 @@ Module for gathering and managing network information
 from string import ascii_letters, digits
 import socket
 import re
-import salt.utils
 
 __outputter__ = {
     'dig':     'txt',
@@ -346,7 +345,7 @@ def up(interface):
     else:
         return None
 
-def ipaddr(interface):
+def ipaddr(interface=None):
     '''
     Returns the IP address for a given interface
 
@@ -354,7 +353,18 @@ def ipaddr(interface):
 
         salt '*' network.ipaddr eth0
     '''
-    data = interfaces().get(interface)
+    interfaces_dict = interfaces()
+
+    if not interface:
+        result_dict = {}
+
+        for interface, data in interfaces_dict.items():
+            if data.get('ipaddr'):
+                result_dict[interface] = data.get('ipaddr')
+
+        return result_dict
+
+    data = interfaces_dict.get(interface)
     if data:
         return data['ipaddr']
     else:

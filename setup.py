@@ -3,6 +3,9 @@
 The setup script for salt
 '''
 
+# For Python 2.5.  A no-op on 2.6 and above.
+from __future__ import with_statement
+
 import os
 import sys
 from glob import glob
@@ -14,7 +17,7 @@ from distutils.sysconfig import get_python_lib, PREFIX
 if os.environ.get('VIRTUAL_ENV'):
     from setuptools import setup
 
-execfile('salt/version.py')
+exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
 
 class TestCommand(Command):
     description = 'Run tests'
@@ -34,6 +37,7 @@ class TestCommand(Command):
             cwd=build_cmd.build_lib
         )
         test_process.communicate()
+        sys.exit(test_process.returncode)
 
 NAME = 'salt'
 VER = __version__
@@ -89,6 +93,9 @@ setup(
                 'salt.states',
                 'salt.utils',
                 ],
+      package_data = {
+          'salt.modules': ['rh_ip/*.jinja'],
+      },
       scripts=['scripts/salt-master',
                'scripts/salt-minion',
                'scripts/salt-syndic',

@@ -66,7 +66,7 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
         - context: {
           custom_var: "override" }
         - defaults: {
-          custom_var: "default value"
+          custom_var: "default value",
           other_var: 123 }
 
 Integers are Parsed as Integers
@@ -102,3 +102,63 @@ preceded by a 0 then it needs to be passed as a string:
         - user: root
         - group: root
         - mode: '0644'
+
+Yaml does not like "Double Short Decs"
+======================================
+
+If I can find a way to make yaml accept "Double Short Decs" then I will, since
+I think that double short decs would be awesome. So what is a "Double Short
+Dec"? It is when you declare a multiple short decs in one ID. Here is a
+standard short dec, it works great:
+
+.. code-block:: yaml
+
+    vim:
+      pkg.installed
+
+The short dec means that there are no arguments to pass, so it is not required
+to add any arguments, and it can save space.
+
+Yaml though, gets upset when declaring multiple short decs, for the record...
+
+THIS DOES NOT WORK:
+
+.. code-block:: yaml
+
+    vim:
+      pkg.installed
+      user.present
+
+Similarly declaring a short dec in the same ID dec as a standard dec does not
+work either...
+
+ALSO DOES NOT WORK:
+
+.. code-block:: yaml
+
+    fred:
+      user.present
+      ssh.present:
+        - name: AAAAB3NzaC...
+        - enc: dsa
+
+So, to make these work they would need to be defined the "old way", or with
+multiple "full decs"
+
+WORKS:
+
+.. code-block:: yaml
+
+    vim:
+      pkg:
+        - installed
+      user:
+        - present
+
+    fred:
+      user:
+        - present
+      ssh.present:
+        - name: AAAAB3NzaC...
+        - enc: dsa
+

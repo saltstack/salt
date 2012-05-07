@@ -31,7 +31,7 @@ def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
     ext_type_types = []
     if ext_dirs:
         if ext_type_dirs == None:
-            ext_type_dirs = '{0}_dirs'.format(ext_type)
+            ext_type_dirs = '{0}_dirs'.format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
 
@@ -81,7 +81,7 @@ def states(opts, functions):
     '''
     Returns the state modules
     '''
-    load = _create_loader(opts, 'states', 'state')
+    load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
     return load.gen_functions(pack)
@@ -391,14 +391,18 @@ class Loader(object):
                 if attr.startswith('_'):
                     continue
                 if callable(getattr(mod, attr)):
+                    func = getattr(mod, attr)
+                    if isinstance(func, type):
+                        if any([
+                            'Error' in func.__name__,
+                            'Exception' in func.__name__]):
+                            continue
                     if virtual:
-                        func = getattr(mod, attr)
-                        funcs[virtual + '.' + attr] = func
+                        funcs['{0}.{1}'.format(virtual, attr)] = func
                         self._apply_outputter(func, mod)
                     elif virtual is False:
                         pass
                     else:
-                        func = getattr(mod, attr)
                         funcs[
                                 '{0}.{1}'.format(
                                     mod.__name__[:mod.__name__.rindex('_')],

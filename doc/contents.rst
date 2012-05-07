@@ -50,5 +50,4 @@ Full Table of Contents
     ref/cli/salt-syndic
 
     topics/specs/salt_auth_proto_abs
-    topics/roadmap/index
     topics/releases/index

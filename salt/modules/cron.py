@@ -44,8 +44,10 @@ def _write_cron(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
-    tmpd, path = tempfile.mkstemp()
-    open(path, 'w+').writelines(lines)
+    fd_, path = tempfile.mkstemp()
+    os.close(fd_)
+    with open(path, 'w+') as fp_:
+        fp_.writelines(lines)
     cmd = 'crontab -u {0} {1}'.format(user, path)
     ret = __salt__['cmd.run_all'](cmd)
     os.remove(path)
@@ -55,6 +57,10 @@ def _write_cron(user, lines):
 def raw_cron(user):
     '''
     Return the contents of the user's crontab
+
+    CLI Example::
+
+        salt '*' cron.raw_cron root
     '''
     cmd = 'crontab -l -u {0}'.format(user)
     return __salt__['cmd.run_stdout'](cmd)
@@ -133,6 +139,10 @@ def set_special(user, special, cmd):
 def set_job(user, minute, hour, dom, month, dow, cmd):
     '''
     Sets a cron job up for a specified user.
+
+    CLI Example::
+
+        salt '*' cron.set_job root \* \* \* \* 1 /usr/local/weekly
     '''
     # Scrub the types
     minute = str(minute)
@@ -171,7 +181,11 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
 
 def rm_job(user, minute, hour, dom, month, dow, cmd):
     '''
-    Remove a cron job up for a specified user.
+    Remove a cron job for a specified user.
+
+    CLI Example::
+
+        salt '*' cron.rm_job root \* \* \* \* 1 /usr/local/weekly
     '''
     # Scrub the types
     minute = str(minute)

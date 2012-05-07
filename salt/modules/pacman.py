@@ -142,12 +142,10 @@ def install(name, refresh=False, **kwargs):
         salt '*' pkg.install <package name>
     '''
     fname = name
-    if 'gt' in kwargs:
-        fname = '"{0}>{1}"'.format(name, kwargs['gt'])
-    if 'lt' in kwargs:
-        fname = '"{0}<{1}"'.format(name, kwargs['lt'])
-    if 'eq' in kwargs:
-        fname = '"{0}={1}"'.format(name, kwargs['eq'])
+    for vkey, vsign in (('gt', '>'), ('lt', '<'), ('eq', '='), ('version', '=')):
+        if vkey in kwargs and kwargs[vkey] is not None:
+            fname = '"{0}{1}{2}"'.format(name, vsign, kwargs[vkey])
+            break
     old = list_pkgs()
     cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
     if refresh:

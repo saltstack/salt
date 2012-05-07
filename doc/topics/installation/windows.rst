@@ -1,6 +1,6 @@
-==========
+=======
 Windows
-==========
+=======
 
 Salt currently has experimental support for Salt Minions on Windows.
 
@@ -12,7 +12,7 @@ Many of the standard Salt modules have been ported to work on Windows
 and many of the Salt States currently work on Windows, as well.
 
 Installation from source
-============
+========================
 
 Work is under way to create a Windows installer for Salt, but for now
 one must install each dependency separately and configure Salt to

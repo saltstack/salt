@@ -5,6 +5,7 @@ Some of the utils used by salt
 # Import Python libs
 import os
 import imp
+import random
 import sys
 import socket
 import logging
@@ -16,9 +17,6 @@ from calendar import month_abbr as months
 import salt.minion
 import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
-
-# Import Random so we can re-init around forks
-from Crypto import Random
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +41,16 @@ WHITE = '\033[1;37m'
 DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
+
+
+def safe_rm(tgt):
+    '''
+    Safely remove a file
+    '''
+    try:
+        os.remove(tgt)
+    except (IOError, OSError):
+        pass
 
 
 def is_empty(filename):
@@ -117,7 +125,7 @@ def daemonize():
                 servicename = 'salt-minion'
                 try:
                     status = win32serviceutil.QueryServiceStatus(servicename)
-                except win32service.error, details:
+                except win32service.error as details:
                     if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
                         saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
                         sys.exit(0)
@@ -132,7 +140,6 @@ def daemonize():
         if pid > 0:
             # exit first parent
             sys.exit(0)
-        Random.atfork()
     except OSError as exc:
         msg = 'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
         log.error(msg)
@@ -141,14 +148,13 @@ def daemonize():
     # decouple from parent environment
     os.chdir("/")
     os.setsid()
-    os.umask(022)
+    os.umask(18)
 
     # do second fork
     try:
         pid = os.fork()
         if pid > 0:
             sys.exit(0)
-        Random.atfork()
     except OSError as exc:
         msg = 'fork #2 failed: {0} ({1})'
         log.error(msg.format(exc.errno, exc.strerror))
@@ -221,6 +227,19 @@ def which(exe=None):
             if os.access(full_path, os.X_OK):
                 return full_path
     return None
+
+
+def which_bin(exes):
+    '''
+    Scan over some possible executables and return the first one that is found
+    '''
+    if not isinstance(exes, (list, tuple)):
+        return None
+    for exe in exes:
+        path = which(exe)
+        if not path:
+            continue
+        return path
 
 
 def list_files(directory):

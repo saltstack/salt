@@ -18,6 +18,7 @@ import inspect
 import fnmatch
 import logging
 import collections
+import traceback
 
 # Import Third Party libs
 import zmq
@@ -32,7 +33,6 @@ import salt.fileclient
 from salt.template import (
     compile_template,
     compile_template_str,
-    template_shebang,
     )
 
 log = logging.getLogger(__name__)
@@ -61,6 +61,15 @@ def _getargs(func):
         raise TypeError("Cannot inspect argument list for '{0}'".format(func))
 
     return aspec
+
+
+def trim_req(req):
+    '''
+    Trim any function off of a requisite
+    '''
+    if '.' in req.keys()[0]:
+        return {req.keys()[0].split('.')[0]: req[req.keys()[0]]}
+    return req
 
 
 def state_args(id_, state, high):
@@ -93,7 +102,7 @@ def find_name(name, state, high):
         for nid in high:
             if state in high[nid]:
                 if isinstance(
-                        high[nid][_state],
+                        high[nid][state],
                         list):
                     for arg in high[nid][state]:
                         if not isinstance(arg, dict):
@@ -794,10 +803,20 @@ class State(object):
         if 'provider' in data:
             self.load_modules(data)
         cdata = self.format_call(data)
-        if 'kwargs' in cdata:
-            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
-        else:
-            ret = self.states[cdata['full']](*cdata['args'])
+        try:
+            if 'kwargs' in cdata:
+                ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
+            else:
+                ret = self.states[cdata['full']](*cdata['args'])
+        except:
+            trb = traceback.format_exc()
+            ret = {
+                'result': False,
+                'name': cdata['args'][0],
+                'changes': {},
+                'comment': 'An exception occured in this state: {0}'.format(
+                    trb)
+                }
         ret['__run_num__'] = self.__run_num
         self.__run_num += 1
         format_log(ret)
@@ -850,6 +869,7 @@ class State(object):
         for r_state in reqs.keys():
             if r_state in low:
                 for req in low[r_state]:
+                    req = trim_req(req)
                     found = False
                     for chunk in chunks:
                         req_key = req.keys()[0]
@@ -902,6 +922,7 @@ class State(object):
                 if not requisite in low:
                     continue
                 for req in low[requisite]:
+                    req = trim_req(req)
                     found = False
                     for chunk in chunks:
                         req_key = req.keys()[0]
@@ -966,10 +987,12 @@ class State(object):
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
         errors += ext_errors
+        errors += self.verify_high(high)
+        if errors:
+            return errors
         high, req_in_errors = self.requisite_in(high)
         errors += req_in_errors
         # Verify that the high data is structurally sound
-        errors += self.verify_high(high)
         if errors:
             return errors
         # Compile and verify the raw chunks
@@ -1043,6 +1066,7 @@ class BaseHighState(object):
         else:
             opts['state_top'] = os.path.join('salt://', mopts['state_top'])
         opts['nodegroups'] = mopts.get('nodegroups', {})
+        opts['file_roots'] = mopts['file_roots']
         return opts
 
     def _get_envs(self):
@@ -1275,17 +1299,19 @@ class BaseHighState(object):
                                'as a list'.format(sls))
                         errors.append(err)
                     else:
-                        for sub_sls in state.pop('include'):
-                            if sub_sls not in mods:
-                                nstate, mods, err = self.render_state(
-                                        sub_sls,
-                                        env,
-                                        mods
-                                        )
-                            if nstate:
-                                state.update(nstate)
-                            if err:
-                                errors += err
+                        for inc_sls in state.pop('include'):
+                            for sub_sls in fnmatch.filter(
+                                    self.avail[env], inc_sls):
+                                if sub_sls not in mods:
+                                    nstate, mods, err = self.render_state(
+                                            sub_sls,
+                                            env,
+                                            mods
+                                            )
+                                if nstate:
+                                    state.update(nstate)
+                                if err:
+                                    errors += err
                 if 'extend' in state:
                     ext = state.pop('extend')
                     for name in ext:

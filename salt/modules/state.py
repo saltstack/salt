@@ -5,7 +5,6 @@ Control the state system on the minion
 # Import Python libs
 import copy
 import os
-import sys
 
 # Import Salt libs
 import salt.state
@@ -15,6 +14,7 @@ __outputter__ = {
                  'highstate': 'highstate',
                  'sls': 'highstate',
                  'top': 'highstate',
+                 'single': 'highstate',
                  }
 
 
@@ -92,7 +92,7 @@ def sls(mods, env='base', test=None, **kwargs):
     Execute a set list of state modules from an environment, default
     environment is base
 
-    CLI Example:
+    CLI Example::
 
         salt '*' state.sls core,edit.vim dev
     '''
@@ -112,6 +112,10 @@ def sls(mods, env='base', test=None, **kwargs):
 def top(topfn):
     '''
     Execute a specific top file instead of the default
+
+    CLI Example::
+
+        salt '*' state.top reverse_top.sls
     '''
     st_ = salt.state.HighState(__opts__)
     st_.opts['state_top'] = os.path.join('salt://', topfn)
@@ -151,3 +155,30 @@ def show_masterstate():
     '''
     st_ = salt.state.RemoteHighState(__opts__, __grains__)
     return st_.compile_master()
+
+def single(fun=None, test=None, **kwargs):
+    '''
+    Execute a single state function with the named kwargs, returns False if
+    insufficient data is sent to the command
+
+    CLI Example::
+        salt '*' state.single pkg.installed name=vim
+    '''
+    if not 'name' in kwargs:
+        return False
+    if fun:
+        comps = fun.split('.')
+        if len(comps) < 2:
+            return False
+    kwargs.update({'state': comps[0],
+                   'fun': comps[1],
+                   '__id__': kwargs['name']})
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    st_ = salt.state.State(opts)
+    err = st_.verify_data(kwargs)
+    if err:
+        return err
+    return {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+            st_.call(kwargs)}

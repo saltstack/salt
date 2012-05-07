@@ -559,7 +559,7 @@ def find(path, options):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print >> sys.stderr, "usage: {0} path [options]".format(sys.argv[0])
+        sys.stderr.write('usage: {0} path [options]\n'.format(sys.argv[0]))
         sys.exit(1)
 
     path = sys.argv[1]
@@ -571,8 +571,8 @@ if __name__ == '__main__':
     try:
         f = Finder(criteria)
     except ValueError, ex:
-        print >> sys.stderr, 'error: {0}'.format(ex)
+        sys.stderr.write('error: {0}\n'.format(ex))
         sys.exit(1)
 
     for result in f.find(path):
-        print result
+        print(result)

@@ -2,6 +2,7 @@
 Install Python packages with pip to either the system or a virtualenv
 '''
 
+# Import python libs
 import os
 
 def _get_pip_bin(bin_env):
@@ -10,7 +11,10 @@ def _get_pip_bin(bin_env):
     passed in, or from the global modules options
     '''
     if not bin_env:
-        pip_bin = 'pip'
+        pips = ['pip2',
+                'pip',
+                'pip-python']
+        return __salt__['cmd.which_bin'](pips)
     else:
         # try to get pip bin from env
         if os.path.exists(os.path.join(bin_env, 'bin', 'pip')):
@@ -45,7 +49,8 @@ def install(pkgs=None,
             no_install=False,
             no_download=False,
             install_options=None,
-            runas=None):
+            runas=None,
+            cwd=None):
     '''
     Install packages with pip
 
@@ -120,6 +125,8 @@ def install(pkgs=None,
         path, be sure to use absolute path.
     runas
         User to run pip as
+    cwd
+        Current working directory to run pip from
 
 
     CLI Example::
@@ -253,7 +260,7 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    return __salt__['cmd.run'](cmd, runas=runas)
+    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
 
 
 def uninstall(pkgs=None,
@@ -261,7 +268,9 @@ def uninstall(pkgs=None,
               bin_env=None,
               log=None,
               proxy=None,
-              timeout=None):
+              timeout=None,
+              runas=None,
+              cwd=None):
     '''
     Uninstall packages with pip
 
@@ -289,7 +298,10 @@ def uninstall(pkgs=None,
         password.
     timeout
         Set the socket timeout (default 15 seconds)
-
+    runas
+        User to run pip as
+    cwd
+        Current working directory to run pip from
 
     CLI Example::
 
@@ -334,10 +346,12 @@ def uninstall(pkgs=None,
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
-    return __salt__['cmd.run'](cmd).split('\n')
+    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
 
 
-def freeze(bin_env=None):
+def freeze(bin_env=None,
+           runas=None,
+           cwd=None):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -348,21 +362,36 @@ def freeze(bin_env=None):
         pip-2.6, etc..) just specify the pip bin you want.
         If uninstalling from a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
+    runas
+        User to run pip as
+    cwd
+        Current working directory to run pip from
+
+    CLI Example::
+
+        salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
 
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
 
-    return __salt__['cmd.run'](cmd).split('\n')
+    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
 
 
-def list(prefix='', bin_env=None):
+def list(prefix='',
+         bin_env=None,
+         runas=None,
+         cwd=None):
     '''
     Filter list of instaslled apps from ``freeze`` and check to see if ``prefix``
     exists in the list of packages installed.
+
+    CLI Example::
+
+        salt '*' pip.list salt
     '''
     packages = {}
     cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
-    for line in __salt__['cmd.run'](cmd).split("\n"):
+    for line in __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split("\n"):
         if line.startswith('-e'):
             line = line.split('-e ')[1]
             line, name = line.split('#egg=')
@@ -377,6 +406,3 @@ def list(prefix='', bin_env=None):
             else:
                 packages[name]=version
     return packages
-
-
-

@@ -76,16 +76,13 @@ something like this:
         - source: salt://code/flask
 '''
 # Import Python libs
-import codecs
 from contextlib import nested  # For < 2.7 compat
 import os
 import shutil
 import difflib
 import hashlib
-import imp
 import logging
 import tempfile
-import traceback
 import urlparse
 import copy
 
@@ -232,7 +229,8 @@ def _source_list(source, source_hash, env):
                         source = single_src
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    dest = tempfile.mkstemp()[1]
+                    fd_, dest = tempfile.mkstemp()
+                    os.close(fd_)
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
@@ -502,7 +500,7 @@ def _check_directory(
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
             for key, val in changes[fn_].items():
-                cpmment += '{0}: {1} - {2}'.format(fn_, key, val)
+                comment += '{0}: {1} - {2}'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 
@@ -957,7 +955,7 @@ def managed(name,
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
             if mode:
-                current_umask = os.umask(077)
+                current_umask = os.umask(63)
 
             # Create a new file when test is False and source is None
             if not __opts__['test']:
@@ -1337,10 +1335,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     # sed returns no output if the edit matches anything or not so we'll have
     # to look for ourselves
 
+    # Mandate that before and after are strings
+    before = str(before)
+    after = str(after)
+
     # Look for the pattern before attempting the edit
-    if not __salt__['file.contains'](name, before, limit):
+    if not __salt__['file.contains_regex'](name, before):
         # Pattern not found; try to guess why
-        if __salt__['file.contains'](name, after, limit):
+        if __salt__['file.contains_regex'](name, after):
             ret['comment'] = 'Edit already performed'
             ret['result'] = True
             return ret
@@ -1356,7 +1358,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
 
     # check the result
-    ret['result'] = __salt__['file.contains'](name, after, limit)
+    ret['result'] = __salt__['file.contains_regex'](name, after)
 
     if ret['result']:
         ret['comment'] = 'File successfully edited'
@@ -1385,9 +1387,8 @@ def comment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.contains'](name, regex):
-        if __salt__['file.contains'](name, unanchor_regex,
-                limit=COMMENT_REGEX.format(char)):
+    if not __salt__['file.contains_regex'](name, regex):
+        if __salt__['file.contains_regex'](name, unanchor_regex):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -1402,10 +1403,7 @@ def comment(name, regex, char='#', backup='.bak'):
     __salt__['file.comment'](name, regex, char, backup)
 
     # Check the result
-    ret['result'] = __salt__['file.contains'](name, unanchor_regex,
-            limit=COMMENT_REGEX.format(char))
-    ret['result'] = __salt__['file.contains'](name, unanchor_regex,
-            limit=COMMENT_REGEX.format(char))
+    ret['result'] = __salt__['file.contains_regex'](name, unanchor_regex)
 
     if ret['result']:
         ret['comment'] = 'Commented lines successfully'
@@ -1435,14 +1433,15 @@ def uncomment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^')
 
     # Make sure the pattern appears in the file
-    if not __salt__['file.contains'](name, unanchor_regex,
-            limit=r'^([[:space:]]*){0}[[:space:]]?'.format(char)):
-        if __salt__['file.contains'](name, regex):
-            ret['comment'] = 'Pattern already uncommented'
-            ret['result'] = True
-            return ret
-        else:
-            return _error(ret, '{0}: Pattern not found'.format(regex))
+    if __salt__['file.contains_regex'](name, regex):
+        ret['comment'] = 'Pattern already uncommented'
+        ret['result'] = True
+        return ret
+    elif __salt__['file.contains_regex'](name, regex, lchar=char):
+        # Line exists and is commented
+        pass
+    else:
+        return _error(ret, '{0}: Pattern not found'.format(regex))
 
     if __opts__['test']:
         ret['comment'] = 'File {0} is set to be updated'.format(name)
@@ -1452,7 +1451,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     __salt__['file.uncomment'](name, regex, char, backup)
 
     # Check the result
-    ret['result'] = __salt__['file.contains'](name, regex)
+    ret['result'] = __salt__['file.contains_regex'](name, regex)
 
     if ret['result']:
         ret['comment'] = 'Uncommented lines successfully'
@@ -1507,7 +1506,7 @@ def append(name, text):
             return _error(ret, 'Given text is not a string')
 
         for line in lines:
-            if __salt__['file.contains'](name, line, escape=True):
+            if __salt__['file.contains'](name, line):
                 continue
             else:
                 if __opts__['test']:

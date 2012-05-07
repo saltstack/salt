@@ -1,5 +1,11 @@
+# Import python libs
+import sys
+
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class PublishModuleTest(integration.ModuleCase):
     '''
@@ -25,7 +31,7 @@ class PublishModuleTest(integration.ModuleCase):
                 ]
                 )
         self.assertEqual(ret['minion']['ret'][0][-1], 34)
-        
+
     def test_kwarg(self):
         '''
         Verify that the pub data is making it to the minion functions
@@ -64,3 +70,11 @@ class PublishModuleTest(integration.ModuleCase):
                 ]
                 )
         self.assertEqual(ret, {})
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(PublishModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

@@ -221,6 +221,17 @@ def which(cmd):
     return salt.utils.which(cmd)
 
 
+def which_bin(cmds):
+    '''
+    Returns the first command found in a list of commands
+
+    CLI Example::
+
+        salt '*' cmd.which_bin '[pip2, pip, pip-python]'
+    '''
+    return salt.utils.which_bin(cmds)
+
+
 def has_exec(cmd):
     '''
     Returns true if the executable is available on the minion, false otherwise
@@ -242,8 +253,10 @@ def exec_code(lang, code, cwd=None):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    fd, codefile = tempfile.mkstemp()
-    open(codefile, 'w+').write(code)
+    fd_, codefile = tempfile.mkstemp()
+    os.close(fd_)
+    with open(codefile, 'w+') as fp_:
+        fp_.write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
     ret = run(cmd, cwd=cwd)

@@ -154,9 +154,9 @@ def _check_ruby(ret, ruby, runas=None):
     match_version = True
     match_micro_version = False
     micro_version_regex = re.compile('-([0-9]{4}\.[0-9]{2}|p[0-9]+)$')
-    if micro_version_regex.match(ruby):
+    if micro_version_regex.search(ruby):
         match_micro_version = True
-    if re.match('^[a-z]+$', ruby):
+    if re.search('^[a-z]+$', ruby):
         match_version = False
     ruby = re.sub('^ruby-', '', ruby)
 
@@ -166,7 +166,7 @@ def _check_ruby(ret, ruby, runas=None):
         if not match_micro_version:
             version = micro_version_regex.sub('', version)
         if not match_version:
-            version = re.sub('-.*', '')
+            version = re.sub('-.*', '', version)
         if version == ruby:
             ret['result'] = True
             ret['comment'] = 'Requested ruby exists.'

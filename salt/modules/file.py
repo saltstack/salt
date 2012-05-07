@@ -8,12 +8,13 @@ data
 
 # Import python libs
 import os
+import re
 import grp
 import pwd
 import time
 import hashlib
-import sys
 import stat
+import fnmatch
 
 # Import salt libs
 import salt.utils.find
@@ -237,13 +238,13 @@ def get_sum(path, form='md5'):
     try:
         with open(path, 'rb') as f:
             return getattr(hashlib, form)(f.read()).hexdigest()
-    except (IOError, OSError), e:
+    except (IOError, OSError) as e:
         return 'File Error: %s' % (str(e))
-    except AttributeError, e:
+    except AttributeError as e:
         return 'Hash ' + form + ' not supported'
-    except NameError, e:
+    except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
-    except Exception, e:
+    except Exception as e:
         return str(e)
 
 
@@ -340,7 +341,7 @@ def find(path, **kwargs):
     '''
     try:
         f = salt.utils.find.Finder(kwargs)
-    except ValueError, ex:
+    except ValueError as ex:
         return 'error: {0}'.format(ex)
 
     ret = [p for p in f.find(path)]
@@ -388,7 +389,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
 
@@ -396,6 +397,10 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     '''
     # Largely inspired by Fabric's contrib.files.sed()
     # XXX:dc: Do we really want to always force escaping?
+    #
+    # Mandate that before and after are strings
+    before = str(before)
+    after = str(after)
     before = _sed_esc(before, escape_all)
     after = _sed_esc(after, escape_all)
 
@@ -430,7 +435,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    Usage::
+    CLI Example::
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
 
@@ -468,7 +473,7 @@ def comment(path, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.comment /etc/modules pcspkr
 
@@ -488,39 +493,78 @@ def comment(path, regex, char='#', backup='.bak'):
         backup=backup)
 
 
-def contains(path, text, limit='', escape=False):
+def contains(path, text):
     '''
     Return True if the file at ``path`` contains ``text``
 
-    Usage::
+    CLI Example::
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
 
     .. versionadded:: 0.9.5
     '''
-    # Largely inspired by Fabric's contrib.files.contains()
-
     if not os.path.exists(path):
         return False
 
-    if 'linux' in sys.platform:
-        options = '-n -r -e'
-    elif 'darwin' in sys.platform:
-        options = '-n -E -e'
-    else:
-        options = '-n -e'
+    try:
+        with open(path, 'r') as fp_:
+            for line in fp_:
+                if text.strip() == line.strip():
+                    return True
+        return False
+    except (IOError, OSError):
+        return False
 
-    result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options=options, flags='gp', escape_all=escape)
 
-    return bool(result)
+def contains_regex(path, regex, lchar=''):
+    '''
+    Return True if the given regular expression matches anything in the text
+    of a given file
+
+    CLI Example::
+
+        salt '*' /etc/crontab '^maint'
+    '''
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, 'r') as fp_:
+            for line in  fp_:
+                if re.match(regex, line.lstrip(lchar)):
+                    return True
+            return False
+    except (IOError, OSError):
+        return False
+
+
+def contains_glob(path, glob):
+    '''
+    Return True if the given glob matches a string in the named file
+
+    CLI Example::
+
+        salt '*' /etc/foobar '*cheese*'
+    '''
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, 'r') as fp_:
+            data = fp_.read()
+            if fnmatch.fnmatch(data, glob):
+                return True
+            else:
+                return False
+    except (IOError, OSError):
+        return False
 
 
 def append(path, *args):
     '''
     Append text to the end of a file
 
-    Usage::
+    CLI Example::
 
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt."\\
@@ -548,7 +592,7 @@ def touch(name, atime=None, mtime=None):
     mtime:
         Last modification in Unix epoch time
 
-    Usage::
+    CLI Example::
         salt '*' file.touch /var/log/emptyfile
 
     .. versionadded:: 0.9.5

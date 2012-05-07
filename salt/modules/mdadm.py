@@ -3,7 +3,6 @@ Salt module to manage RAID arrays with mdadm
 '''
 
 import logging
-import os
 
 
 # Set up logger
@@ -31,15 +30,12 @@ def list():
         if ' ' not in line:
             continue
         comps = line.split()
-        metadata = comps[2].split('=')
-        raidname = comps[3].split('=')
-        raiduuid = comps[4].split('=')
-        ret[comps[1]] = {
-            'device': comps[1],
-            'metadata': metadata[1],
-            'name': raidname[1],
-            'uuid': raiduuid[1],
-        }
+        device = comps[1]
+        ret[device] = {"device": device}
+        for comp in comps[2:]:
+             key = comp.split('=')[0].lower()
+             value = comp.split('=')[1]
+             ret[device][key] = value
     return ret
 
 

@@ -199,9 +199,6 @@ Reference
 More information about the project
 ----------------------------------
 
-:doc:`Roadmap </topics/roadmap/index>`
-    Where we're headed.
-
 :doc:`Release notes </topics/releases/index>`
     Where we've been.
 

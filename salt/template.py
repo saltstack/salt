@@ -2,7 +2,7 @@
 Manage basic template commands
 '''
 import time
-import os.path
+import os
 import tempfile
 
 import salt.utils
@@ -43,7 +43,8 @@ def compile_template_str(template, renderers, default):
     Take the path to a template and return the high data structure
     derived from the template.
     '''
-    fn_ = tempfile.mkstemp()[1]
+    fd_, fn_ = tempfile.mkstemp()
+    os.close(fd_)
     with open(fn_, 'w+') as f:
         f.write(template)
     high = renderers[template_shebang(fn_, renderers, default)](fn_)

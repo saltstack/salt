@@ -1,8 +1,12 @@
 # Import python libs
 import os
+import sys
 
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class CMDModuleTest(integration.ModuleCase):
     '''
@@ -12,11 +16,12 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run
         '''
+        shell = os.environ['SHELL']
         self.assertTrue(self.run_function('cmd.run', ['echo $SHELL']))
         self.assertEqual(
                 self.run_function('cmd.run',
-                    ['echo $SHELL', 'shell=/bin/bash']),
-                '/bin/bash')
+                    ['echo $SHELL', 'shell={0}'.format(shell)]),
+                shell)
 
     def test_stdout(self):
         '''
@@ -88,3 +93,11 @@ sys.stdout.write('cheese')
                 self.run_function('cmd.exec_code', ['python', code]),
                 'cheese'
                 )
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(CMDModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

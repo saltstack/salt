@@ -71,7 +71,7 @@ def verify_env(dirs):
                 cumask = os.umask(63)  # 077
                 os.makedirs(dir_)
                 os.umask(cumask)
-            except OSError, e:
+            except OSError as e:
                 sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
 
         mode = os.stat(dir_)

@@ -43,7 +43,7 @@ def add(name,
         if home is True:
             cmd += '-m '
         else:
-            cmd += '-m -b {0} '.format(os.dirname(home))
+            cmd += '-m -b {0} '.format(os.path.dirname(home))
     cmd += '-n {0}'.format(name)
     ret = __salt__['cmd.run_all'](cmd)
 
@@ -210,7 +210,7 @@ def list_groups(name):
 
     CLI Example::
 
-        salt '*' user.groups foo
+        salt '*' user.list_groups foo
     '''
     ugrp = set()
     for group in grp.getgrall():

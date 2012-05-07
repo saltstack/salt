@@ -2,17 +2,23 @@
 Classes that manage file clients
 '''
 # Import python libs
-import BaseHTTPServer
+try:
+    import BaseHTTPServer
+except:
+    import http.server as BaseHTTPServer
 import contextlib
 import logging
 import hashlib
 import os
 import shutil
-import stat
 import string
 import subprocess
-import urllib2
-import urlparse
+try:
+    import urllib2
+    import urlparse
+except:
+    import urllib.request as urllib2
+    import urllib.parse as urlparse
 
 # Import third-party libs
 import yaml
@@ -90,11 +96,23 @@ class Client(object):
             path
             )
         destdir = os.path.dirname(dest)
-        cumask = os.umask(stat.S_IRWXG | stat.S_IRWXO)
+        cumask = os.umask(63)
         if not os.path.isdir(destdir):
             os.makedirs(destdir)
         yield dest
         os.umask(cumask)
+
+    def get_file(self, path, dest='', makedirs=False, env='base'):
+        '''
+        Copies a file from the local files or master depending on implementation
+        '''
+        raise NotImplementedError
+
+    def file_list_emptydirs(self, env='base'):
+        '''
+        List the empty dirs
+        '''
+        raise NotImplementedError
 
     def cache_file(self, path, env='base'):
         '''
@@ -280,12 +298,12 @@ class Client(object):
                 with open(dest, 'wb') as destfp:
                     shutil.copyfileobj(srcfp, destfp)
             return dest
-        except urllib2.HTTPError, ex:
+        except urllib2.HTTPError as ex:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                     ex.code,
                     url,
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
-        except urllib2.URLError, ex:
+        except urllib2.URLError as ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
         return ''
 
@@ -313,6 +331,7 @@ class Client(object):
         else:
             log.error('Attempted to render template with unavailable engine '
                       '{0}'.format(template))
+            salt.utils.safe_rm(data['data'])
             return ''
         if not data['result']:
             # Failed to render the template
@@ -334,6 +353,7 @@ class Client(object):
             if makedirs:
                 os.makedirs(destdir)
             else:
+                salt.utils.safe_rm(data['data'])
                 return ''
         shutil.move(data['data'], dest)
         return dest

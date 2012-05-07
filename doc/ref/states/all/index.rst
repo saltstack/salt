@@ -10,6 +10,7 @@ Full list of builtin states
     :toctree:
     :template: autosummary.rst.tmpl
 
+    alias
     cmd
     cron
     file
@@ -21,6 +22,7 @@ Full list of builtin states
     mysql_database
     mysql_grants
     mysql_user
+    network
     pip
     pkg
     postgres_database

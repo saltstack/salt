@@ -15,7 +15,7 @@ try:
     from salt.utils.process import set_pidfile
     from salt.utils.verify import check_user, verify_env
 except ImportError as e:
-    if e.message != 'No module named _msgpack':
+    if e.args[0] != 'No module named _msgpack':
         raise
 
 
@@ -29,8 +29,8 @@ class Master(object):
         # command line overrides config
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
-        
-	# Send the pidfile location to the opts
+
+        # Send the pidfile location to the opts
         if self.cli['pidfile']:
             self.opts['pidfile'] = self.cli['pidfile']
 
@@ -187,11 +187,15 @@ class Minion(object):
         # Late import so logging works correctly
         import salt.minion
         log = logging.getLogger(__name__)
-        minion = salt.minion.Minion(self.opts)
         if self.cli['daemon']:
             # Late import so logging works correctly
             import salt.utils
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion cound halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
             salt.utils.daemonize()
+        minion = salt.minion.Minion(self.opts)
         set_pidfile(self.cli['pidfile'])
         if check_user(self.opts['user'], log):
             try:

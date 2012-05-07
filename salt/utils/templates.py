@@ -1,15 +1,16 @@
+'''
+Template render systems
+'''
+# Import python libs
 import codecs
-from contextlib import nested  # For < 2.7 compat
 import os
-import shutil
-import difflib
-import hashlib
 import imp
 import logging
 import tempfile
 import traceback
-import urlparse
-import copy
+
+# Import salt libs
+import salt.utils
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,8 @@ def mako(sfn, string=False, **kwargs):
                 'data': 'Failed to import mako'}
     try:
         passthrough = {}
-        tgt = tempfile.mkstemp()[1]
+        fd_, tgt = tempfile.mkstemp()
+        os.close(fd_)
         if 'context' in kwargs:
             passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
         for kwarg in kwargs:
@@ -42,6 +44,7 @@ def mako(sfn, string=False, **kwargs):
             template = Template(src.read())
             data = template.render(**passthrough)
         if string:
+            salt.utils.safe_rm(tgt)
             return {'result': True,
                     'data': data}
         with open(tgt, 'w+') as target:
@@ -74,7 +77,8 @@ def jinja(sfn, string=False, **kwargs):
         with open(sfn, 'rb') as source:
             if source.read().endswith('\n'):
                 newline = True
-        tgt = tempfile.mkstemp()[1]
+        fd_, tgt = tempfile.mkstemp()
+        os.close(fd_)
         if 'context' in kwargs:
             passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
         for kwarg in kwargs:
@@ -85,6 +89,7 @@ def jinja(sfn, string=False, **kwargs):
         try:
             data = template.render(**passthrough)
             if string:
+                salt.utils.safe_rm(tgt)
                 return {'result': True,
                         'data': data}
             with open(tgt, 'w+') as target:
@@ -128,7 +133,8 @@ def py(sfn, string=False, **kwargs):
         if string:
             return {'result': True,
                     'data': data}
-        tgt = tempfile.mkstemp()[1]
+        fd_, tgt = tempfile.mkstemp()
+        os.close(fd_)
         with open(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,

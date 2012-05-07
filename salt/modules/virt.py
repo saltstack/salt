@@ -7,6 +7,7 @@ Required python modules: libvirt
 # of his in the virt func module have been used
 
 import os
+import re
 import shutil
 import StringIO
 import subprocess
@@ -128,7 +129,7 @@ def list_inactive_vms():
 def vm_info(vm_=None):
     '''
     Return detailed information about the vms on this hyper in a
-    list of dicts:
+    list of dicts::
 
         [
             'your-vm': {
@@ -557,7 +558,8 @@ def set_autostart(vm_, state='on'):
     system on reboot.
 
     CLI Example::
-        salt "*" virt.enable_autostart <vm name> <on | off>
+
+        salt "*" virt.set_autostart <vm name> <on | off>
     '''
 
     dom = _get_dom(vm_)

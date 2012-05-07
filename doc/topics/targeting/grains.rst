@@ -16,6 +16,14 @@ information in grains is unchanging, therefore the nature of the data is
 static. So grains information are things like the running kernel, or the
 operating system.
 
+Match all CentOS minions::
+
+    salt -G 'os:CentOS' test.ping
+
+Match all minions with 64 bit CPUs and return number of available cores::
+
+    salt -G 'cpuarch:x86_64' grains.item num_cpus
+
 Grains in the Minion Config
 ===========================
 

@@ -70,7 +70,7 @@ class Caller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts['fun']):
-                print '{0}:\n{1}\n'.format(name, docs[name])
+                print('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''
