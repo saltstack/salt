@@ -118,32 +118,9 @@ def run(name,
            'result': False,
            'comment': ''}
 
-    if onlyif:
-        if __salt__['cmd.retcode'](onlyif) != 0:
-            ret['comment'] = 'onlyif exec failed'
-            ret['result'] = True
-            return ret
-
-    if unless:
-        if __salt__['cmd.retcode'](unless) == 0:
-            ret['comment'] = 'unless executed successfully'
-            ret['result'] = True
-            return ret
-
     if not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory is not available'
         return ret
-
-    pgid = os.getegid()
-
-    if group:
-        try:
-            egid = grp.getgrnam(group).gr_gid
-            if not __opts__['test']:
-                os.setegid(egid)
-        except KeyError:
-            ret['comment'] = 'The group {0} is not available'.format(group)
-            return ret
 
     if env:
         _env = {}
@@ -156,22 +133,52 @@ def run(name,
                 return ret
         env = _env
 
-    # Wow, we passed the test, run this sucker!
-    if not __opts__['test']:
-        try:
-            cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user,
-                                              shell=shell, env=env)
-        except CommandExecutionError as e:
-            ret['comment'] = e
-            return ret
+    pgid = os.getegid()
 
-        ret['changes'] = cmd_all
-        ret['result'] = not bool(cmd_all['retcode'])
-        ret['comment'] = 'Command "{0}" run'.format(name)
-        os.setegid(pgid)
+    try:
+        if group:
+            try:
+                egid = grp.getgrnam(group).gr_gid
+                if not __opts__['test']:
+                    os.setegid(egid)
+            except KeyError:
+                ret['comment'] = 'The group {0} is not available'.format(group)
+                return ret
+
+        cmd_kwargs = {'cwd': cwd,
+                      'runas': user,
+                      'shell': shell,
+                      'env': env}
+
+        if onlyif:
+            if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+                ret['comment'] = 'onlyif exec failed'
+                ret['result'] = True
+                return ret
+
+        if unless:
+            if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+                ret['comment'] = 'unless executed successfully'
+                ret['result'] = True
+                return ret
+
+        # Wow, we passed the test, run this sucker!
+        if not __opts__['test']:
+            try:
+                cmd_all = __salt__['cmd.run_all'](name, **cmd_kwargs)
+            except CommandExecutionError as e:
+                ret['comment'] = e
+                return ret
+
+            ret['changes'] = cmd_all
+            ret['result'] = not bool(cmd_all['retcode'])
+            ret['comment'] = 'Command "{0}" run'.format(name)
+            return ret
+        ret['result'] = None
+        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
         return ret
-    ret['result'] = None
-    ret['comment'] = 'Command "{0}" would have been executed'.format(name)
-    return ret
+
+    finally:
+        os.setegid(pgid)
 
 mod_watch = run
