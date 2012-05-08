@@ -3,6 +3,9 @@
 The setup script for salt
 '''
 
+# For Python 2.5.  A no-op on 2.6 and above.
+from __future__ import with_statement
+
 import os
 import sys
 from glob import glob
@@ -34,6 +37,7 @@ class TestCommand(Command):
             cwd=build_cmd.build_lib
         )
         test_process.communicate()
+        sys.exit(test_process.returncode)
 
 NAME = 'salt'
 VER = __version__

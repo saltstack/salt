@@ -108,11 +108,8 @@ def check_user(user, log):
             os.setgid(p.pw_gid)
             os.setuid(p.pw_uid)
         except OSError:
-            if user == 'root':
-                msg = 'Sorry, the salt must run as root.  http://xkcd.com/838'
-            else:
-                msg = 'Salt must be run from root or user "{0}"'.format(user)
-            log.critical(msg)
+            msg = 'Salt configured to run as user "{0}" but unable to switch.'
+            log.critical(msg.format(user))
             return False
     except KeyError:
         msg = 'User not found: "{0}"'.format(user)

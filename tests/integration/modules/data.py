@@ -1,5 +1,11 @@
+# Import python libs
+import sys
+
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class DataModuleTest(integration.ModuleCase):
     '''
@@ -56,3 +62,10 @@ class DataModuleTest(integration.ModuleCase):
                 )
         self._clear_db()
 
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(DataModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

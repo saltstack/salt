@@ -1,7 +1,11 @@
 # Import python libs
-import subprocess
+import sys
+
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class StdTest(integration.ModuleCase):
     '''
@@ -83,3 +87,11 @@ class StdTest(integration.ModuleCase):
         self.assertEqual(data['foo'], 'bar')
         self.assertEqual(data['baz'], 'quo')
         self.assertEqual(data['qux'], 'quux')
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(StdTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

@@ -31,6 +31,12 @@ def top(num_processes=5, interval=3):
     Return a list of top CPU consuming processes during the interval.
     num_processes = return the top N CPU consuming processes
     interval = the number of seconds to sample CPU usage over
+
+    CLI Examples::
+
+        salt '*' ps.top
+
+        salt '*' ps.top 5 10
     '''
     result = []
     start_usage = {}
@@ -139,7 +145,7 @@ def virtual_memory_usage():
 
     CLI Example::
 
-        salt '*' virtual_memory_usage
+        salt '*' ps.virtual_memory_usage
     '''
     return dict(psutil.virtmem_usage()._asdict())
 
