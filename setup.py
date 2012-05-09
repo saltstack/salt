@@ -117,6 +117,10 @@ setup(
                 ('share/man/man7',
                     ['doc/man/salt.7',
                     ]),
+                ('/etc/salt',
+                    ['conf/master.template',
+                     'conf/minion.template',
+                    ]),
                  ],
       install_requires=requirements,
      )
