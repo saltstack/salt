@@ -239,13 +239,18 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
         sysctl = salt.utils.which('sysctl')
+        kenv = salt.utils.which('kenv')
+        if kenv:
+            product = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv)).strip()
+            if product.startswith('VMware'):
+                grains['virtual'] = 'VMware'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl)).strip()
-            jail  = __salt__['cmd.run']('{0} security.jail.jailed'.format(sysctl)).strip()
+            jail  = __salt__['cmd.run']('{0} -n security.jail.jailed'.format(sysctl)).strip()
             if jail:
                 grains['virtual_subtype'] = 'jail'
-        if 'QEMU Virtual CPU' in model:
-            grains['virtual'] = 'kvm'
+            if 'QEMU Virtual CPU' in model:
+                grains['virtual'] = 'kvm'
     return grains
 
 
@@ -596,6 +601,15 @@ def _hw_data(osdata):
             },
         }
         grains.update(_dmidecode_data(linux_dmi_regex))
+    # On FreeBSD /bin/kenv (already in base system) can be used instead of dmidecode
+    elif osdata['kernel'] == 'FreeBSD':
+        kenv = salt.utils.which('kenv')
+        if kenv:
+            grains['biosreleasedate'] = __salt__['cmd.run']('{0} smbios.bios.reldate'.format(kenv)).strip()
+            grains['biosversion'] = __salt__['cmd.run']('{0} smbios.bios.version'.format(kenv)).strip()
+            grains['manufacturer'] = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv)).strip()
+            grains['serialnumber'] = __salt__['cmd.run']('{0} smbios.system.serial'.format(kenv)).strip()
+            grains['productname'] = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv)).strip()
     return grains
 
 def get_server_id():
