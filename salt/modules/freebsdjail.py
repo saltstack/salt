@@ -42,7 +42,7 @@ def restart(jail=''):
 
     CLI Example::
 
-        salt '*' jail.restart <jail name>
+        salt '*' jail.restart [<jail name>]
     '''
     cmd = 'service jail onerestart ${0}'.format(jail)
     return not __salt__['cmd.retcode'](cmd)
