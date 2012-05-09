@@ -30,18 +30,11 @@ syslog if there is no disk space:
       cmd:
         - run
         - unless: echo 'foo' > /tmp/.test
-
-.. warning::
-
-    Please be advised that on Unix systems the shell being used by python
-    to run executions is /bin/sh, this requires that commands are formatted
-    to execute under /bin/sh. Some capabilities of newer shells such as bash,
-    zsh and ksh will not always be available on minions.
-
 '''
 
 import grp
 import os
+import os.path
 from salt.exceptions import CommandExecutionError
 
 def wait(name,
@@ -112,6 +105,9 @@ def run(name,
 
     group
         The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to /bin/sh
     '''
     ret = {'name': name,
            'changes': {},
@@ -144,6 +140,10 @@ def run(name,
             except KeyError:
                 ret['comment'] = 'The group {0} is not available'.format(group)
                 return ret
+
+        if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
+            ret['comment'] = 'The shell {0} is not available'.format(shell)
+            return ret
 
         cmd_kwargs = {'cwd': cwd,
                       'runas': user,
