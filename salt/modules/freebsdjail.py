@@ -12,33 +12,33 @@ def __virtual__():
     return 'jail' if __grains__['os'] == 'FreeBSD' else False
 
 
-def start(jail):
+def start(jail=''):
     '''
-    Start the specified jail
+    Start the specified jail or all, if none specified
 
     CLI Example::
 
-        salt '*' jail.start <jail name>
+        salt '*' jail.start [<jail name>]
     '''
     cmd = 'service jail onestart {0}'.format(jail)
     return not __salt__['cmd.retcode'](cmd)
 
 
-def stop(jail):
+def stop(jail=''):
     '''
-    Stop the specified jail
+    Stop the specified jail or all, if none specified
 
     CLI Example::
 
-        salt '*' jail.stop <jail name>
+        salt '*' jail.stop [<jail name>]
     '''
     cmd = 'service jail onestop {0}'.format(jail)
     return not __salt__['cmd.retcode'](cmd)
 
 
-def restart(jail):
+def restart(jail=''):
     '''
-    Restart the specified jail
+    Restart the specified jail or all, if none specified
 
     CLI Example::
 
