@@ -44,7 +44,7 @@ def restart(jail=''):
 
         salt '*' jail.restart [<jail name>]
     '''
-    cmd = 'service jail onerestart ${0}'.format(jail)
+    cmd = 'service jail onerestart {0}'.format(jail)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -71,6 +71,27 @@ def get_enabled():
                 jails = line.split('"')[1].split()
                 for j in jails:
                     ret.append(j)
+    return ret
+
+
+def show_config(jail):
+    '''
+    Display specified jail's configuration
+
+    CLI Example::
+
+        salt '*' jail.show_config <jail name>
+    '''
+    ret = {}
+    for rconf in ('/etc/rc.conf', '/etc/rc.conf.local'):
+        if os.path.isfile(rconf):
+            for line in open(rconf, 'r').readlines():
+                if not line.strip():
+                    continue
+                if not line.startswith('jail_{0}_'.format(jail)):
+                    continue
+                k, v = line.split('=')
+                ret[k.split('_',2)[2]] = v.split('"')[1]
     return ret
 
 
