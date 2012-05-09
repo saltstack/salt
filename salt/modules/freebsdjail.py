@@ -66,11 +66,11 @@ def get_enabled():
             for line in open(rconf, 'r').readlines():
                 if not line.strip():
                     continue
-		if not line.startswith('jail_list='):
+                if not line.startswith('jail_list='):
                     continue
                 jails = line.split('"')[1].split()
-		for j in jails:
-		    ret.append(j)
+                for j in jails:
+                    ret.append(j)
     return ret
 
 
