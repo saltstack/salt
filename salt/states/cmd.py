@@ -42,8 +42,7 @@ def wait(name,
         cwd='/root',
         user=None,
         group=None,
-        shell='/bin/sh',
-        env=()):
+        shell=None):
     '''
     Run the given command only if the watch statement calls it
 
@@ -83,7 +82,7 @@ def run(name,
         cwd='/root',
         user=None,
         group=None,
-        shell='/bin/sh',
+        shell=None,
         env=()):
     '''
     Run a command if certain circumstances are met
@@ -111,7 +110,7 @@ def run(name,
         The group context to run the command as
 
     shell
-        The shell to use for execution, defaults to /bin/sh
+        The shell to use for execution, defaults to the shell grain
     '''
     ret = {'name': name,
            'changes': {},
@@ -147,7 +146,7 @@ def run(name,
 
         cmd_kwargs = {'cwd': cwd,
                       'runas': user,
-                      'shell': shell,
+                      'shell': shell or __grains__['shell'],
                       'env': env}
 
         if onlyif:
