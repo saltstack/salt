@@ -44,17 +44,22 @@ class PublishModuleTest(integration.ModuleCase):
                     'cheese=spam',
                 ]
                 )['minion']['ret']
-        self.assertTrue('__pub_arg' in ret)
-        self.assertTrue('__pub_id' in ret)
-        self.assertTrue('__pub_fun' in ret)
-        self.assertTrue('__pub_jid' in ret)
-        self.assertTrue('__pub_tgt' in ret)
-        self.assertTrue('__pub_tgt_type' in ret)
-        self.assertTrue('__pub_ret' in ret)
-        self.assertTrue('cheese' in ret)
-        self.assertEqual(ret['cheese'], 'spam')
+        check_true = (
+            'cheese',
+            '__pub_arg',
+            '__pub_fun',
+            '__pub_id',
+            '__pub_jid',
+            '__pub_ret',
+            '__pub_tgt',
+            '__pub_tgt_type',
+        )
+        for name in check_true:
+            self.assertTrue(name in ret)
+
+        self.assertEqual(ret['cheese'],    'spam')
         self.assertEqual(ret['__pub_arg'], ['cheese=spam'])
-        self.assertEqual(ret['__pub_id'], 'minion')
+        self.assertEqual(ret['__pub_id'],  'minion')
         self.assertEqual(ret['__pub_fun'], 'test.kwarg')
 
     def test_reject_minion(self):
