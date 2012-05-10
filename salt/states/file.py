@@ -772,6 +772,7 @@ def managed(name,
         template=None,
         makedirs=False,
         context=None,
+        replace=True,
         defaults=None,
         env=None,
         **kwargs):
@@ -821,6 +822,10 @@ def managed(name,
         directories will be created to facilitate the creation of the named
         file.
 
+    replace
+        If this file should be replaced, if false then this command will
+        be ignored if the file exists already. Default is true.
+
     context
         Overrides default context variables passed to the template.
 
@@ -844,6 +849,13 @@ def managed(name,
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
         ret['result'] = False
         return ret
+
+    if not replace:
+        if os.path.exists(name):
+            ret['comment'] = 'File {0} exists. No changes made'.format(name)
+            return ret
+        if not source:
+            return touch(name, makedirs=makedirs)
 
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_managed(
