@@ -1331,7 +1331,27 @@ class BaseHighState(object):
                 for name in state:
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
-                            continue
+                            for name_ in state[name]:
+                                if isinstance(state[name][name_], basestring):
+                                    # Is this is a short state, it needs to be
+                                    # padded
+                                    if '.' in state[name][name_]:
+                                        comps = state[name][name_].split('.')
+                                        state[name][name_] = {comps[0]: [comps[1]]}
+                                        continue
+                                errors.append(('Name {0} in sls {1} is not a dictionary'
+                                               .format(name_, sls)))
+
+                                # TODO add extend support for new dotted standrd decs
+                                for key in state[name][name_]:
+                                    if key.startswith('_'):
+                                        continue
+                                    if not isinstance(state[name][name_][key], list):
+                                        continue
+                                    if '.' in key:
+                                        comps = key.split('.')
+                                        state[name][name_][comps[0]] = state[name].pop(key)
+                                        state[name][name_][comps[0]].append(comps[1])
                         
                         if isinstance(state[name], basestring):
                             # Is this is a short state, it needs to be padded
