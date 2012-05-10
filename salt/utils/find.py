@@ -495,6 +495,9 @@ class Finder(object):
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
         for key, value in options.iteritems():
+            if key.startswith('_'):
+                # this is a passthrough object, continue
+                continue
             if value is None or len(value) == 0:
                 raise ValueError('missing value for "{0}" option'.format(key))
             try:

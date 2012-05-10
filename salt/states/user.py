@@ -63,7 +63,8 @@ def _changes(
                     change['groups'] = groups
             if home:
                 if lusr['home'] != home:
-                    change['home'] = home
+                    if not home is True:
+                        change['home'] = home
             if shell:
                 if lusr['shell'] != shell:
                     change['shell'] = shell

@@ -216,7 +216,7 @@ def purge(pkg):
     return ret_pkgs
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 

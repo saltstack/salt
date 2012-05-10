@@ -36,23 +36,23 @@ class TestDaemon(object):
         Start a master and minion
         '''
         self.master_opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master'))
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
         self.minion_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/minion'))
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'))
         self.smaster_opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/syndic_master'))
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'))
         self.syndic_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files/conf/syndic'))
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'))
         self.syndic_opts['_master_conf_file'] = os.path.join(
                 INTEGRATION_TEST_DIR,
                 'files/conf/master'
                 )
         # Set up config options that require internal data
         self.master_opts['pillar_roots'] = {
-                'base': [os.path.join(FILES, 'pillar/base')]
+                'base': [os.path.join(FILES, 'pillar', 'base')]
                 }
         self.master_opts['file_roots'] = {
-                'base': [os.path.join(FILES, 'file/base')]
+                'base': [os.path.join(FILES, 'file', 'base')]
                 }
         self.master_opts['ext_pillar'] = [
                 {'cmd_yaml': 'cat {0}'.format(
@@ -135,7 +135,7 @@ class ModuleCase(TestCase):
         self.client = salt.client.LocalClient(
                 os.path.join(
                     INTEGRATION_TEST_DIR,
-                    'files/conf/master'
+                    'files', 'conf', 'master'
                     )
                 )
 
@@ -154,7 +154,7 @@ class ModuleCase(TestCase):
         return salt.config.minion_config(
                 os.path.join(
                     INTEGRATION_TEST_DIR,
-                    'files/conf/minion'
+                    'files', 'conf', 'minion'
                     )
                 )
 
@@ -165,7 +165,7 @@ class ModuleCase(TestCase):
         return salt.config.minion_config(
                 os.path.join(
                     INTEGRATION_TEST_DIR,
-                    'files/conf/master'
+                    'files', 'conf', 'master'
                     )
                 )
 
@@ -180,7 +180,7 @@ class SyndicCase(TestCase):
         self.client = salt.client.LocalClient(
                 os.path.join(
                     INTEGRATION_TEST_DIR,
-                    'files/conf/syndic_master'
+                    'files', 'conf', 'syndic_master'
                     )
                 )
 
@@ -216,7 +216,7 @@ class ShellCase(TestCase):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt', arg_str)
 
@@ -224,7 +224,7 @@ class ShellCase(TestCase):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-run', arg_str)
 
@@ -232,6 +232,6 @@ class ShellCase(TestCase):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files/conf/master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-key', arg_str)
