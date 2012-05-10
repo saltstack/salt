@@ -34,7 +34,6 @@ syslog if there is no disk space:
 
 import grp
 import os
-import os.path
 from salt.exceptions import CommandExecutionError
 
 def wait(name,
@@ -145,10 +144,6 @@ def run(name,
             except KeyError:
                 ret['comment'] = 'The group {0} is not available'.format(group)
                 return ret
-
-        if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
-            ret['comment'] = 'The shell {0} is not available'.format(shell)
-            return ret
 
         cmd_kwargs = {'cwd': cwd,
                       'runas': user,
