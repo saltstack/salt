@@ -167,7 +167,7 @@ def run(name,
             try:
                 cmd_all = __salt__['cmd.run_all'](name, **cmd_kwargs)
             except CommandExecutionError as e:
-                ret['comment'] = e.message
+                ret['comment'] = str(e)
                 return ret
 
             ret['changes'] = cmd_all
