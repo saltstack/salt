@@ -19,8 +19,11 @@
 #
 # processname: /usr/bin/salt-master
 
+SALTMASTER=/usr/bin/salt-master
+PYTHON=/usr/bin/python
+
 # Sanity checks.
-[ -x /usr/bin/salt-master ] || exit 0
+[ -x $SALTMASTER ] || exit 0
 
 DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
@@ -42,18 +45,18 @@ RETVAL=0
 start() {
     echo -n $"Starting salt-master daemon: "
     if [ -f $SUSE_RELEASE ]; then
-        startproc -f -p /var/run/$SERVICE.pid /usr/bin/salt-master -d $CONFIG_ARGS
+        startproc -f -p /var/run/$SERVICE.pid $SALTMASTER -d $CONFIG_ARGS
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
             echo -n "already started, lock file found" 
             RETVAL=1
-        elif /usr/bin/python /usr/bin/salt-master -d; then
+        elif $PYTHON $SALTMASTER -d; then
             echo -n "OK"
             RETVAL=0
         fi
     else
-        daemon --check $SERVICE $PROCESS -d $CONFIG_ARGS
+        daemon --check $SERVICE $SALTMASTER -d $CONFIG_ARGS
     fi
     RETVAL=$?
     echo
@@ -63,11 +66,11 @@ start() {
 stop() {
     echo -n $"Stopping salt-master daemon: "
     if [ -f $SUSE_RELEASE ]; then
-        killproc -TERM /usr/bin/salt-master
+        killproc -TERM $SALTMASTER
         rc_status -v
     elif [ -f $DEBIAN_VERSION ]; then
         # Added this since Debian's start-stop-daemon doesn't support spawned processes
-        if ps -ef | grep "/usr/bin/python /usr/bin/salt-master" | grep -v grep | awk '{print $2}' | xargs kill &> /dev/null; then
+        if ps -ef | grep "$PYTHON $SALTMASTER" | grep -v grep | awk '{print $2}' | xargs kill &> /dev/null; then
             echo -n "OK"
             RETVAL=0
         else
@@ -94,7 +97,7 @@ case "$1" in
     status)
         if [ -f $SUSE_RELEASE ]; then
             echo -n "Checking for service salt-master "
-            checkproc /usr/bin/salt-master
+            checkproc $SALTMASTER
             rc_status -v
         elif [ -f $DEBIAN_VERSION ]; then
             if [ -f $LOCKFILE ]; then
