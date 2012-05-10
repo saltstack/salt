@@ -7,14 +7,15 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import re
 import time
+import errno
+import signal
 import shutil
 import logging
 import hashlib
 import tempfile
 import datetime
-import signal
-import multiprocessing
 import subprocess
+import multiprocessing
 
 # Import zeromq
 import zmq
@@ -32,6 +33,7 @@ import salt.client
 import salt.payload
 import salt.pillar
 import salt.state
+from salt.utils.debug import enable_sigusr1_handler
 
 
 log = logging.getLogger(__name__)
@@ -148,6 +150,8 @@ class Master(SMaster):
         '''
         Turn on the master server components
         '''
+        enable_sigusr1_handler()
+
         log.warn('Starting the Salt Master')
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
@@ -219,8 +223,15 @@ class Publisher(multiprocessing.Process):
 
         try:
             while True:
-                package = pull_sock.recv()
-                pub_sock.send(package)
+                # Catch and handle EINTR from when this process is sent
+                # SIGUSR1 gracefully so we don't choke and die horribly
+                try:
+                    package = pull_sock.recv()
+                    pub_sock.send(package)
+                except zmq.ZMQError as exc:
+                    if exc.errno == errno.EINTR:
+                        continue
+                    raise exc
         except KeyboardInterrupt:
             pub_sock.close()
             pull_sock.close()
@@ -270,7 +281,13 @@ class ReqServer(object):
 
         self.workers.bind(self.w_uri)
 
-        zmq.device(zmq.QUEUE, self.clients, self.workers)
+        while True:
+            try:
+                zmq.device(zmq.QUEUE, self.clients, self.workers)
+            except zmq.ZMQError as exc:
+                if exc.errno == errno.EINTR:
+                    continue
+                raise exc
 
     def start_publisher(self):
         '''
@@ -320,10 +337,16 @@ class MWorker(multiprocessing.Process):
             socket.connect(w_uri)
 
             while True:
-                package = socket.recv()
-                payload = self.serial.loads(package)
-                ret = self.serial.dumps(self._handle_payload(payload))
-                socket.send(ret)
+                try:
+                    package = socket.recv()
+                    payload = self.serial.loads(package)
+                    ret = self.serial.dumps(self._handle_payload(payload))
+                    socket.send(ret)
+                # Properly handle EINTR from SIGUSR1
+                except zmq.ZMQError as exc:
+                    if exc.errno == errno.EINTR:
+                        continue
+                    raise exc
         except KeyboardInterrupt:
             socket.close()
 
@@ -976,7 +999,7 @@ class ClearFuncs(object):
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
-        # break compatibility with minion/master versions and even tiny 
+        # break compatibility with minion/master versions and even tiny
         # additions can have serious implications on the performance of the
         # publish commands.
         #
