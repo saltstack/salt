@@ -350,6 +350,7 @@ def os_data():
     if 'os' in os.environ:
         if os.environ['os'].startswith('Windows'):
             grains['os'] = 'Windows'
+            grains['os_family'] = 'Windows'
             grains['kernel'] = 'Windows'
             grains.update(_memdata(grains))
             grains.update(_windows_platform_data(grains))
@@ -376,8 +377,10 @@ def os_data():
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
+            grains['os_family'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
+            grains['os_family'] = 'Debian'
             if 'lsb_distrib_id' in grains:
                 if 'Ubuntu' in grains['lsb_distrib_id']:
                     grains['os'] = 'Ubuntu'
@@ -386,30 +389,42 @@ def os_data():
                     grains['os'] = 'Ubuntu'
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
+            grains['os_family'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-release'):
             grains['os'] = 'Fedora'
+            grains['os_family'] = 'RedHat'
         elif os.path.isfile('/etc/mandriva-version'):
             grains['os'] = 'Mandriva'
+            grains['os_family'] = 'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
             grains['os'] = 'Mandrake'
+            grains['os_family'] = 'Mandriva'
         elif os.path.isfile('/etc/mageia-version'):
             grains['os'] = 'Mageia'
+            grains['os_family'] = 'Mageia'
         elif os.path.isfile('/etc/meego-version'):
             grains['os'] = 'MeeGo'
+            grains['os_family'] = 'MeeGo'
         elif os.path.isfile('/etc/vmware-version'):
             grains['os'] = 'VMWareESX'
+            grains['os_family'] = 'VMWare'
         elif os.path.isfile('/etc/bluewhite64-version'):
             grains['os'] = 'Bluewhite64'
+            grains['os_family'] = 'Bluewhite'
         elif os.path.isfile('/etc/slamd64-version'):
             grains['os'] = 'Slamd64'
+            grains['os_family'] = 'Slackware'
         elif os.path.isfile('/etc/slackware-version'):
             grains['os'] = 'Slackware'
+            grains['os_family'] = 'Slackware'
         elif os.path.isfile('/etc/enterprise-release'):
+            grains['os_family'] = 'Oracle'
             if os.path.isfile('/etc/ovs-release'):
                 grains['os'] = 'OVS'
             else:
                 grains['os'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
+            grains['os_family'] = 'RedHat'
             data = open('/etc/redhat-release', 'r').read()
             if 'centos' in data.lower():
                 grains['os'] = 'CentOS'
@@ -418,6 +433,7 @@ def os_data():
             else:
                 grains['os'] = 'RedHat'
         elif os.path.isfile('/etc/SuSE-release'):
+            grains['os_family'] = 'Suse'
             data = open('/etc/SuSE-release', 'r').read()
             if 'SUSE LINUX Enterprise Server' in data:
                 grains['os'] = 'SLES'
@@ -432,15 +448,20 @@ def os_data():
         # If the Linux version can not be determined
         if not 'os' in grains:
             grains['os'] = 'Unknown {0}'.format(grains['kernel'])
+            grains['os_family'] = 'Unknown'
     elif grains['kernel'] == 'sunos':
         grains['os'] = 'Solaris'
+        grains['os_family'] = 'Solaris'
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
+        grains['os_family'] = 'VMWare'
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
+        grains['os_family'] = 'MacOS'
         grains.update(_freebsd_cpudata())
     else:
         grains['os'] = grains['kernel']
+        grains['os_family'] = grains['kernel']
     if grains['kernel'] == 'Linux':
         grains.update(_linux_cpudata())
     elif grains['kernel'] in ('FreeBSD', 'OpenBSD'):
