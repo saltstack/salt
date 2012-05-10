@@ -30,14 +30,6 @@ syslog if there is no disk space:
       cmd:
         - run
         - unless: echo 'foo' > /tmp/.test
-
-.. warning::
-
-    Please be advised that on Unix systems the shell being used by python
-    to run executions is /bin/sh, this requires that commands are formatted
-    to execute under /bin/sh. Some capabilities of newer shells such as bash,
-    zsh and ksh will not always be available on minions.
-
 '''
 
 import grp
@@ -49,7 +41,9 @@ def wait(name,
         unless=None,
         cwd='/root',
         user=None,
-        group=None):
+        group=None,
+        shell='/bin/sh',
+        env=()):
     '''
     Run the given command only if the watch statement calls it
 
@@ -74,6 +68,9 @@ def wait(name,
 
     group
         The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to /bin/sh
     '''
     return {'name': name,
             'changes': {},
@@ -112,6 +109,9 @@ def run(name,
 
     group
         The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to /bin/sh
     '''
     ret = {'name': name,
            'changes': {},
@@ -167,7 +167,7 @@ def run(name,
             try:
                 cmd_all = __salt__['cmd.run_all'](name, **cmd_kwargs)
             except CommandExecutionError as e:
-                ret['comment'] = e
+                ret['comment'] = e.message
                 return ret
 
             ret['changes'] = cmd_all
