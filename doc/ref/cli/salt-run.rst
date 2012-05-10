@@ -32,3 +32,10 @@ Options
     The location of the salt master configuration file, the salt master
     settings are required to know where the connections are;
     default=/etc/salt/master
+
+See also
+========
+
+:manpage:`salt(1)`
+:manpage:`salt-master(1)`
+:manpage:`salt-minion(1)`
