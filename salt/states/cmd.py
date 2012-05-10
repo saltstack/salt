@@ -42,8 +42,7 @@ def wait(name,
         cwd='/root',
         user=None,
         group=None,
-        shell='/bin/sh',
-        env=()):
+        shell='/bin/sh'):
     '''
     Run the given command only if the watch statement calls it
 
