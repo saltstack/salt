@@ -45,3 +45,10 @@ Options
     Console log level. One of ``info``, ``none``, ``garbage``,
     ``trace``, ``warning``, ``error``, ``debug``. For the logfile
     settings see the config file. Default: ``warning``.
+
+See also
+========
+
+:manpage:`salt(1)`
+:manpage:`salt(7)`
+:manpage:`salt-master(1)`
