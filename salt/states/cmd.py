@@ -42,7 +42,9 @@ def wait(name,
         unless=None,
         cwd='/root',
         user=None,
-        group=None):
+        group=None,
+        shell='/bin/sh',
+        env=()):
     '''
     Run the given command only if the watch statement calls it
 
@@ -67,6 +69,9 @@ def wait(name,
 
     group
         The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to /bin/sh
     '''
     return {'name': name,
             'changes': {},
