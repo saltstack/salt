@@ -440,10 +440,20 @@ class AESFuncs(object):
         os.close(fd_)
         with open(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
-        pub = RSA.load_pub_key(tmp_pub)
-        os.remove(tmp_pub)
-        if pub.public_decrypt(token, 5) == 'salt':
-            return True
+
+        pub = None
+        try:
+            pub = RSA.load_pub_key(tmp_pub)
+        except RSA.RSAError, e:
+            log.error('Unable to load temporary public key "{0}": {1}'
+                      .format(tmp_pub, e))
+        try:
+            os.remove(tmp_pub)
+            if pub.public_decrypt(token, 5) == 'salt':
+                return True
+        except RSA.RSAError, e:
+            log.error('Unable to decrypt token: {0}'.format(e))
+
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
                   .format(id_))
@@ -966,7 +976,17 @@ class ClearFuncs(object):
         log.info('Authentication accepted from %(id)s', load)
         with open(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
-        pub = RSA.load_pub_key(pubfn)
+        pub = None
+
+        # The key payload may sometimes be corrupt when using auto-accept
+        # and an empty request comes in
+        try:
+            pub = RSA.load_pub_key(pubfn)
+        except RSA.RSAError, e:
+            log.error('Corrupt public key "{0}": {1}'.format(pubfn, e))
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
+
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
                'token': self.master_key.token,
