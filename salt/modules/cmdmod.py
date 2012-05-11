@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt.grains.extra import shell as shell_grain
 
 # Only available on posix systems, nonfatal on windows
 try:
@@ -27,8 +28,7 @@ __outputter__ = {
     'run': 'txt',
 }
 
-
-DEFAULT_SHELL = '/bin/sh'
+DEFAULT_SHELL = shell_grain()['shell']
 
 def __virtual__():
     '''
