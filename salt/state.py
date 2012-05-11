@@ -1432,7 +1432,7 @@ class BaseHighState(object):
         state_top = os.path.basename(self.opts['state_top'])
         state_top = os.path.join(file_roots, state_top)
         if not os.path.exists(state_top):
-            msg = 'Top file not found at {0}'.format(state_top)
+            msg = 'top.sls not found. Expected at {0}'.format(state_top)
             ret[crazy_name]['comment'] = msg
             return ret
 
