@@ -6,8 +6,4 @@ def shell():
     '''
     # Provides:
     #   shell
-    ret = {'shell': '/bin/sh'}
-    if 'SHELL' in os.environ:
-        ret['shell'] = os.environ['SHELL']
-    return ret
-
+    return {'shell': os.environ.get('SHELL', '/bin/sh'}
