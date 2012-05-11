@@ -523,17 +523,6 @@ def saltversion():
     from salt import __version__
     return {'saltversion': __version__}
 
-def shell():
-    '''
-    Return the default shell to use on this system
-    '''
-    # Provides:
-    #   shell
-    ret = {'shell': '/bin/sh'}
-    if 'SHELL' in os.environ:
-        ret['shell'] = os.environ['SHELL']
-    return ret
-
 # Relatively complex mini-algorithm to iterate over the various
 # sections of dmidecode output and return matches for  specific
 # lines containing data we want, but only in the right section.
