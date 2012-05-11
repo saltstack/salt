@@ -1409,6 +1409,25 @@ class BaseHighState(object):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
+        #Check that top file exists
+        crazy_name = 'no_|-states_|-states_|-None'
+        ret = {crazy_name: {
+                   'result': False,
+                   'comment': 'No states found for this minion',
+                   'name': 'No States',
+                   'changes': {},
+                   '__run_num__': 0,
+                   }
+              }
+        file_roots = self.opts['file_roots']['base'][0]
+        state_top = os.path.basename(self.opts['state_top'])
+        state_top = os.path.join(file_roots, state_top)
+        if not os.path.exists(state_top):
+            msg = 'Top file not found at {0}'.format(state_top)
+            ret[crazy_name]['comment'] = msg
+            return ret
+
+        #File exists so continue
         err = []
         top = self.get_top()
         err += self.verify_tops(top)
@@ -1419,14 +1438,7 @@ class BaseHighState(object):
         if err:
             return err
         if not high:
-            return {'no_|-states_|-states_|-None': {
-                        'result': False,
-                        'comment': 'No states found for this minion',
-                        'name': 'No States',
-                        'changes': {},
-                        '__run_num__': 0,
-                        }
-                   }
+            return ret
         return self.state.call_high(high)
 
     def compile_highstate(self):
