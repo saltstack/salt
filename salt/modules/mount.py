@@ -19,26 +19,19 @@ def active():
         salt '*' mount.active
     '''
     ret = {}
-    for line in __salt__['cmd.run_stdout']('mount').split('\n'):
-        comps = line.split()
-        if not len(comps) == 6:
-            # Invalid entry
-            continue
-        ret[comps[2]] = {'device': comps[0],
-                         'fstype': comps[4],
-                         'opts': comps[5][1:-1].split(',')}
-
-    # Fill in some blanks for extra device reporting
-    for line in open('/proc/self/mountinfo').readlines():
-        comps = line.split()
-        device = comps[2].split(':')
-        ret[comps[4]]['mountid'] = comps[0]
-        ret[comps[4]]['parentid'] = comps[1]
-        ret[comps[4]]['major'] = device[0]
-        ret[comps[4]]['minor'] = device[1]
-        ret[comps[4]]['root'] = comps[3]
-        ret[comps[4]]['source'] = comps[8]
-        ret[comps[4]]['superopts'] = comps[9].split(',')
+    with open('/proc/self/mountinfo') as fh:
+        for line in fh:
+            comps = line.split()
+            device = comps[2].split(':')
+            ret[comps[4]] = {'mountid': comps[0],
+                             'parentid': comps[1],
+                             'major': device[0],
+                             'minor': device[1],
+                             'root': comps[3],
+                             'opts': comps[5].split(','),
+                             'fstype': comps[7],
+                             'device': comps[8],
+                             'superopts': comps[9].split(',')}
     return ret
 
 
