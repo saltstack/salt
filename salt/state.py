@@ -1341,7 +1341,7 @@ class BaseHighState(object):
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
                             continue
-                        
+
                         if isinstance(state[name], basestring):
                             # Is this is a short state, it needs to be padded
                             if '.' in state[name]:
@@ -1361,6 +1361,16 @@ class BaseHighState(object):
                             continue
                         if '.' in key:
                             comps = key.split('.')
+                            # Salt doesn't support state files such as:
+                            #
+                            #     /etc/redis/redis.conf:
+                            #       file.managed:
+                            #         - source: salt://redis/redis.conf
+                            #         - user: redis
+                            #         - group: redis
+                            #         - mode: 644
+                            #       file.comment:
+                            #           - regex: ^requirepass
                             if comps[0] in skeys:
                                 err = ('Name "{0}" in sls "{1}" contains '
                                        'multiple state decs of the same type'
@@ -1410,7 +1420,7 @@ class BaseHighState(object):
                         highstate.update(state)
                     if err:
                         errors += err
-        # Clean out duplicate extend data 
+        # Clean out duplicate extend data
         if '__extend__' in highstate:
             highext = []
             for ext in highstate['__extend__']:
