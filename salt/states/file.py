@@ -117,12 +117,19 @@ def __clean_tmp(sfn):
             os.remove(sfn)
 
 
-def _makedirs(path):
+def _makedirs(path, user=None, group=None, mode=None):
     '''
     Ensure that the directory containing this path is available.
     '''
-    if not os.path.isdir(os.path.dirname(path)):
-        os.makedirs(os.path.dirname(path))
+    directory = os.path.dirname(path)
+
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+        # If a caller such as managed() is invoked  with
+        # makedirs=True, make sure that any created dirs
+        # are created with the same user  and  group  to
+        # follow the principal of least surprise method.
+        _check_perms(directory, None, user, group, mode)
 
 
 def _is_bin(path):
@@ -524,7 +531,7 @@ def _check_managed(
     changes = {}
     # If the source is a list then find which file exists
     source, source_hash = _source_list(source, source_hash, env)
-    
+
     # Gather the source file from the server
     sfn, source_sum, comment = _get_managed(
             name,
@@ -685,7 +692,7 @@ def symlink(name, target, force=False, makedirs=False):
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _symlink_check(name, target, force)
         return ret
@@ -886,7 +893,7 @@ def managed(name,
 
     # If the source is a list then find which file exists
     source, source_hash = _source_list(source, source_hash, env)
-    
+
     # Gather the source file from the server
     sfn, source_sum, comment = _get_managed(
             name,
@@ -962,14 +969,14 @@ def managed(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    _makedirs(name)
+                    _makedirs(name, user=user, group=group, mode=mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    _makedirs(name)
+                    _makedirs(name, user=user, group=group, mode=mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
@@ -1078,12 +1085,12 @@ def directory(name,
         # The dir does not exist, make it
         if not os.path.isdir(os.path.dirname(name)):
             if makedirs:
-                _makedirs(name)
+                _makedirs(name, user=user, group=group, mode=mode)
             else:
                 return _error(
                     ret, 'No directory to create {0} in'.format(name))
     if not os.path.isdir(name):
-        _makedirs(name)
+        _makedirs(name, user=user, group=group, mode=mode)
         os.makedirs(name)
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
@@ -1280,7 +1287,7 @@ def recurse(name,
                 )
         dirname = os.path.dirname(dest)
         if not os.path.isdir(dirname):
-            _makedirs(dest)
+            _makedirs(dest, user=user, group=group)
         if not dirname in vdir:
             # verify the directory perms if they are set
             # _check_perms(name, ret, user, group, mode)
