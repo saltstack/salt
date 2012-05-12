@@ -42,7 +42,5 @@ def enable_sigusr1_handler():
     '''
     #  Skip setting up this signal on Windows
     #  SIGUSR1 doesn't exist on Windows and causes the minion to crash
-    if os.environ['os'].startswith('Windows'):
-        pass
-    else:
+    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
         signal.signal(signal.SIGUSR1, _handle_sigusr1)

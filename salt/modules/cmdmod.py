@@ -56,9 +56,7 @@ def _run(cmd,
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
     
-    if os.environ['os'].startswith('Windows'):
-        pass
-    else:
+    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
