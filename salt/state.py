@@ -1353,6 +1353,7 @@ class BaseHighState(object):
                         errors.append(('Name {0} in sls {1} is not a dictionary'
                                        .format(name, sls)))
                         continue
+                    skeys = set()
                     for key in state[name]:
                         if key.startswith('_'):
                             continue
@@ -1360,8 +1361,17 @@ class BaseHighState(object):
                             continue
                         if '.' in key:
                             comps = key.split('.')
+                            if comps[0] in skeys:
+                                err = ('Name "{0}" in sls "{1}" contains '
+                                       'multiple state decs of the same type'
+                                      ).format(name, sls)
+                                errors.append(err)
+                                continue
                             state[name][comps[0]] = state[name].pop(key)
                             state[name][comps[0]].append(comps[1])
+                            skeys.add(comps[0])
+                            continue
+                        skeys.add(key)
                     if '__sls__' not in state[name]:
                         state[name]['__sls__'] = sls
                     if '__env__' not in state[name]:
