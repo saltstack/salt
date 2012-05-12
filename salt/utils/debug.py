@@ -40,4 +40,7 @@ def enable_sigusr1_handler():
     Pretty print a stack trace to the console or a debug log under /tmp
     when any of the salt daemons such as salt-master are sent a SIGUSR1
     '''
-    signal.signal(signal.SIGUSR1, _handle_sigusr1)
+    #  Skip setting up this signal on Windows
+    #  SIGUSR1 doesn't exist on Windows and causes the minion to crash
+    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+        signal.signal(signal.SIGUSR1, _handle_sigusr1)
