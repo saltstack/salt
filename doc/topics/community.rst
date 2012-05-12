@@ -100,3 +100,7 @@ The goal here it to make contributions clear, make sure there is a trail for
 where the code has come from, but most importantly, to give credit where credit
 is due!
 
+The `Open Comparison Contributing Docs`__ has some good suggestions and tips for
+those who are looking forward to contribute.
+
+.. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
