@@ -63,8 +63,10 @@ Example Salt States
 The official ``salt-states`` repository is:
 https://github.com/saltstack/salt-states
 
-Another good example from one of our users is:
-https://github.com/blast-hardcheese/blast-salt-states
+A few examples of salt states from the community:
+
+* https://github.com/blast-hardcheese/blast-salt-states
+* https://github.com/kevingranade/kevingranade-salt-state
 
 Follow on ohloh
 ===============
