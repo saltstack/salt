@@ -6,4 +6,4 @@ def shell():
     '''
     # Provides:
     #   shell
-    return {'shell': os.environ.get('SHELL', '/bin/sh'}
+    return {'shell': os.environ.get('SHELL', '/bin/sh')}
