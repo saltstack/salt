@@ -596,12 +596,16 @@ def _check_file_meta(
         return changes
     if 'hsum' in source_sum:
         if source_sum['hsum'] != stats['sum']:
-            with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
-                slines = src.readlines()
-                nlines = name_.readlines()
-            changes['diff'] = (
-                    ''.join(difflib.unified_diff(nlines, slines))
-                    )
+            if sfn:
+                with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
+                    slines = src.readlines()
+                    nlines = name_.readlines()
+                changes['diff'] = (
+                        ''.join(difflib.unified_diff(nlines, slines))
+                        )
+            else:
+                # TODO Evaluate diff without downloading file from master
+                changes['sum'] = 'Checksum differs'
     if not user is None and user != stats['user']:
         changes['user'] = user
     if not group is None and group != stats['group']:
