@@ -603,7 +603,12 @@ def _check_file_meta(
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
-    if not mode is None and mode != stats['mode']:
+    # Normalize the file mode
+    smode = __manage_mode(stats['mode'])
+    mode = __manage_mode(mode)
+    print type(smode)
+    print type(mode)
+    if not mode is None and mode != smode:
         changes['mode'] = mode
     return changes
 
