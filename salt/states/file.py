@@ -564,7 +564,10 @@ def _check_dir_meta(
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
-    if not mode is None and mode != stats['mode']:
+    # Normalize the dir mode
+    smode = __manage_mode(stats['mode'])
+    mode = __manage_mode(mode)
+    if not mode is None and mode != smode:
         changes['mode'] = mode
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -606,8 +609,6 @@ def _check_file_meta(
     # Normalize the file mode
     smode = __manage_mode(stats['mode'])
     mode = __manage_mode(mode)
-    print type(smode)
-    print type(mode)
     if not mode is None and mode != smode:
         changes['mode'] = mode
     return changes
