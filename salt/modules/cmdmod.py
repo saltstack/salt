@@ -55,10 +55,13 @@ def _run(cmd,
     # of the user salt-minion is running as.  Default:  /root
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
-
-    if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
-        msg = 'The shell {0} is not available'.format(shell)
-        raise CommandExecutionError(msg)
+    
+    if os.environ['os'].startswith('Windows'):
+        pass
+    else:
+        if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
+            msg = 'The shell {0} is not available'.format(shell)
+            raise CommandExecutionError(msg)
 
     # TODO: Figure out the proper way to do this in windows
     disable_runas = [
