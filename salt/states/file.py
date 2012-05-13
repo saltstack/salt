@@ -503,6 +503,11 @@ def _check_directory(
                 fchange = _check_dir_meta(path, user, group, None)
                 if fchange:
                     changes[path] = fchange
+    else:
+        if not os.path.isdir(name):
+            changes[name] = 'new'
+            return None, 'A new directory is set to be made at {0}'.format(
+                    name)
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
