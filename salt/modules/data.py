@@ -53,10 +53,9 @@ def dump(new_data):
             return False
 
     try:
-        fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "w")
-
-        serial = salt.payload.Serial(__opts__)
-        serial.dump(new_data, fn_)
+        with open(os.path.join(__opts__['cachedir'], 'datastore'), "w") as fn_:
+            serial = salt.payload.Serial(__opts__)
+            serial.dump(new_data, fn_)
 
         return True
 
