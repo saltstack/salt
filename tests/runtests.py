@@ -108,6 +108,13 @@ def parse_opts():
             default=False,
             action='store_true',
             help='Run tests for modules')
+    parser.add_option('-S',
+            '--state',
+            '--state-tests',
+            dest='state',
+            default=False,
+            action='store_true',
+            help='Run tests for states')
     parser.add_option('-c',
             '--client',
             '--client-tests',
