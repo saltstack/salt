@@ -78,7 +78,7 @@ def list_upgrades(*args):
         salt '*' pkg.list_upgrades
     '''
     pkgs=list_pkgs()
-    
+
     yb=yum.YumBase()
     versions_list={}
     for pkgtype in ['updates']:
@@ -88,7 +88,7 @@ def list_upgrades(*args):
             for pkg in exactmatch:
                 if pkg.arch == getBaseArch():
                     versions_list[pkg['name']] = '-'.join([pkg['version'],pkg['release']])
-    return versions_list    
+    return versions_list
 
 def available_version(name):
     '''

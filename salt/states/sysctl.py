@@ -46,7 +46,7 @@ def present(name, value, config='/etc/sysctl.conf'):
                     value
                     )
             return ret
-    
+
     update = __salt__['sysctl.persist'](name, value, config)
 
     if update == 'Updated':

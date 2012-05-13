@@ -162,7 +162,7 @@ def disable(name):
 def enabled(name):
     '''
     Return if the named service is enabled to start on boot
-    
+
     CLI Example::
 
         salt '*' service.enabled <service name>

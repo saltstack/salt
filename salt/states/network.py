@@ -3,8 +3,8 @@ import difflib
 '''
 Network Management
 ==================
-The network module is used to create and manage network settings, 
-interfaces can be set as either managed or ignored. By default 
+The network module is used to create and manage network settings,
+interfaces can be set as either managed or ignored. By default
 all interfaces are ignored unless specified.
 
 .. code-block:: yaml
@@ -25,7 +25,7 @@ eth2:
     - managed
     - type: slave
     - master: bond0
-    
+
 eth3:
   network:
     - managed
@@ -120,28 +120,28 @@ def managed(
         ):
     '''
     Ensure that the named interface is configured properly.
-    
+
     name
         The name of the interface to manage
-    
+
     type
         Type of interface and configuration.
-    
+
     enabled
         Designates the state of this interface.
-        
+
     kwargs
         The IP parameters for this interface.
-        
+
     '''
-    
+
     ret = {
         'name': name,
         'changes': {},
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name)
     }
-           
+
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)

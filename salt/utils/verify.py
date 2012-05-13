@@ -78,7 +78,7 @@ def verify_env(dirs):
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
-        # to read in what it needs to integrate. 
+        # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
         smode = stat.S_IMODE(mode.st_mode)
