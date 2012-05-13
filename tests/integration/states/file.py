@@ -328,3 +328,16 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertTrue(result)
 
+    def test_test_touch(self):
+        '''
+        file.touch test interface
+        '''
+        name = os.path.join(integration.TMP, 'touch_test')
+        ret = self.run_state(
+                'file.touch',
+                test=True,
+                name=name,
+                )
+        self.assertFalse(os.path.isfile(name))
+        result = ret[ret.keys()[0]]['result']
+        self.assertIsNone(result)
