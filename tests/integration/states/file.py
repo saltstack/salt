@@ -195,7 +195,7 @@ class FileTest(integration.ModuleCase):
         '''
         file.sed test integration
         '''
-        name = os.path.join(integration.TMP, 'sed_test')
+        name = os.path.join(integration.TMP, 'sed_test_test')
         with open(name, 'w+') as fp_:
             fp_.write('change_me')
         ret = self.run_state(
@@ -209,3 +209,20 @@ class FileTest(integration.ModuleCase):
             self.assertIn('change', fp_.read())
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
+
+    def test_comment(self):
+        '''
+        file.comment
+        '''
+        name = os.path.join(integration.TMP, 'comment_test')
+        with open(name, 'w+') as fp_:
+            fp_.write('comment_me')
+        ret = self.run_state(
+                'file.comment',
+                name=name,
+                regex='.*comment.*',
+                )
+        with open(name, 'r') as fp_:
+            self.assertIn('#comment', fp_.read())
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
