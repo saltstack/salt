@@ -147,6 +147,14 @@ class ModuleCase(TestCase):
         orig = self.client.cmd('minion', function, arg)
         return orig['minion']
 
+
+    def run_state(self, function, **kwargs):
+        '''
+        Run the state.single command and return the state return structure
+        '''
+        return self.run_function('state.single', **kwargs)
+
+
     def minion_opts(self):
         '''
         Return the options used for the minion
@@ -191,6 +199,7 @@ class SyndicCase(TestCase):
         '''
         orig = self.client.cmd('minion', function, arg)
         return orig['minion']
+
 
 class ShellCase(TestCase):
     '''
