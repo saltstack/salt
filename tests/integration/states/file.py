@@ -158,3 +158,18 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertTrue(result)
 
+    def test_test_recurse(self):
+        '''
+        file.recurse test interface
+        '''
+        name = os.path.join(integration.TMP, 'recurse_test_dir')
+        ret = self.run_state(
+                'file.recurse',
+                test=True,
+                name=name,
+                source='salt://grail',
+                )
+        self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
+        result = ret[ret.keys()[0]]['result']
+        self.assertIsNone(result)
+
