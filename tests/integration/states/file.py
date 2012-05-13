@@ -244,3 +244,38 @@ class FileTest(integration.ModuleCase):
             self.assertNotIn('#comment', fp_.read())
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
+
+    def test_uncomment(self):
+        '''
+        file.uncomment
+        '''
+        name = os.path.join(integration.TMP, 'uncomment_test')
+        with open(name, 'w+') as fp_:
+            fp_.write('#comment_me')
+        ret = self.run_state(
+                'file.uncomment',
+                name=name,
+                regex='comment.*',
+                )
+        with open(name, 'r') as fp_:
+            self.assertNotIn('#comment', fp_.read())
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+
+    def test_test_uncomment(self):
+        '''
+        file.comment test interface
+        '''
+        name = os.path.join(integration.TMP, 'uncomment_test_test')
+        with open(name, 'w+') as fp_:
+            fp_.write('#comment_me')
+        ret = self.run_state(
+                'file.uncomment',
+                test=True,
+                name=name,
+                regex='^comment.*',
+                )
+        with open(name, 'r') as fp_:
+            self.assertIn('#comment', fp_.read())
+        result = ret[ret.keys()[0]]['result']
+        self.assertIsNone(result)
