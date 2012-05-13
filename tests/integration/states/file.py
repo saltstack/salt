@@ -279,3 +279,21 @@ class FileTest(integration.ModuleCase):
             self.assertIn('#comment', fp_.read())
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
+
+    def test_append(self):
+        '''
+        file.append
+        '''
+        name = os.path.join(integration.TMP, 'append_test')
+        with open(name, 'w+') as fp_:
+            fp_.write('#salty!')
+        ret = self.run_state(
+                'file.append',
+                name=name,
+                text='cheese',
+                )
+        with open(name, 'r') as fp_:
+            self.assertIn('cheese', fp_.read())
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+
