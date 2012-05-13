@@ -78,17 +78,17 @@ def version(name):
 def list_pkgs(*args):
     '''
         List the packages currently installed in a dict::
-    
+
             {'<package_name>': '<version>'}
-    
+
         CLI Example::
-    
+
             salt '*' pkg.list_pkgs
     '''
     pythoncom.CoInitialize()
     if len(args) == 0:
         pkgs = dict(
-                   _get_reg_software().items() + 
+                   _get_reg_software().items() +
                    _get_msi_software().items())
     else:
         # get package version for each package in *args
@@ -106,7 +106,7 @@ def _search_software(target):
     '''
     search_results = {}
     software = dict(
-                    _get_reg_software().items() + 
+                    _get_reg_software().items() +
                     _get_msi_software().items())
     for key, value in software.iteritems():
         if key is not None:
@@ -151,9 +151,9 @@ def _get_reg_software():
                    'SchedulingAgent',
                    'WIC'
                    ]
-    #attempt to corral the wild west of the multiple ways to install 
+    #attempt to corral the wild west of the multiple ways to install
     #software in windows
-    reg_entries = dict(_get_user_keys().items() + 
+    reg_entries = dict(_get_user_keys().items() +
                        _get_machine_keys().items())
     for reg_hive, reg_keys in reg_entries.iteritems():
         for reg_key in reg_keys:
@@ -186,8 +186,8 @@ def _get_reg_software():
 
 def _get_machine_keys():
     '''
-    This will return the hive 'const' value and some registry keys where 
-    installed software information has been known to exist for the 
+    This will return the hive 'const' value and some registry keys where
+    installed software information has been known to exist for the
     HKEY_LOCAL_MACHINE hive
     '''
     machine_hive_and_keys = {}
@@ -201,8 +201,8 @@ def _get_machine_keys():
 
 def _get_user_keys():
     '''
-    This will return the hive 'const' value and some registry keys where 
-    installed software information has been known to exist for the 
+    This will return the hive 'const' value and some registry keys where
+    installed software information has been known to exist for the
     HKEY_USERS hive
     '''
     user_hive_and_keys = {}
@@ -295,7 +295,7 @@ def upgrade():
 
 def remove(name):
     '''
-    Remove a single package 
+    Remove a single package
 
     Return a list containing the removed packages.
 

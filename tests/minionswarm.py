@@ -40,7 +40,7 @@ def parse():
                   'the terminal'))
 
     options, args = parser.parse_args()
-    
+
     opts = {}
 
     for key, val in options.__dict__.items():

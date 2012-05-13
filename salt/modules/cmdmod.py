@@ -55,7 +55,7 @@ def _run(cmd,
     # of the user salt-minion is running as.  Default:  /root
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
-    
+
     if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
