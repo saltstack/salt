@@ -23,7 +23,7 @@ def __get_aliases_filename():
 def __parse_aliases():
     '''
     Parse the aliases file, and return a list of line components:
-    
+
     [
       (alias1, target1, comment1),
       (alias2, target2, comment2),
@@ -69,7 +69,7 @@ def __write_aliases_file(lines):
 
     out.close()
     os.rename(out.name, afn)
-    
+
     newaliases_path = '/usr/bin/newaliases'
     if os.path.exists(newaliases_path):
         __salt__['cmd.run'](newaliases_path)
