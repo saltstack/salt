@@ -67,7 +67,7 @@ class FileTest(integration.ModuleCase):
         self.assertTrue(result)
         self.assertFalse(os.path.islink(name))
 
-    def test_test_abset(self):
+    def test_test_absent(self):
         '''
         file.absent test interface
         '''
@@ -78,3 +78,28 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
         self.assertTrue(os.path.isfile(name))
+
+    def test_managed(self):
+        '''
+        file.managed
+        '''
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+                'file.managed',
+                name=name,
+                source='salt://grail/scene33')
+        src = os.path.join(
+                integration.FILES,
+                'file',
+                'base',
+                'grail',
+                'scene33'
+                )
+        with open(src, 'r') as fp_:
+            master_data = fp_.read()
+        with open(name, 'r') as fp_:
+            minion_data = fp_.read()
+        self.assertEqual(master_data, minion_data)
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+
