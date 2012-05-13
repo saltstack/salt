@@ -6,7 +6,7 @@ NOTE: This currently only works with local user accounts, not domain accounts
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Windows 
+    Set the user module if the kernel is Windows
     '''
     return 'user' if __grains__['kernel'] == 'Windows' else False
 
@@ -31,7 +31,7 @@ def delete(name):
 
     CLI Example::
 
-        salt '*' user.delete name 
+        salt '*' user.delete name
     '''
     cmd = 'net user {0} /delete'.format(name)
     ret = __salt__['cmd.run_all'](cmd)
