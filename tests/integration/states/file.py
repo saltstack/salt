@@ -33,3 +33,36 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
 
+    def test_absent_file(self):
+        '''
+        file.absent
+        '''
+        name = os.path.join(integration.TMP, 'file_to_kill')
+        with open(name, 'w+') as fp_:
+            fp_.write('killme')
+        ret = self.run_state('file.absent', name=name)
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+        self.assertFalse(os.path.isfile(name))
+
+    def test_absent_dir(self):
+        '''
+        file.absent
+        '''
+        name = os.path.join(integration.TMP, 'dir_to_kill')
+        os.makedirs(name)
+        ret = self.run_state('file.absent', name=name)
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+        self.assertFalse(os.path.isdir(name))
+    
+    def test_absent_link(self):
+        '''
+        file.absent
+        '''
+        name = os.path.join(integration.TMP, 'link_to_kill')
+        os.symlink(name, '{0}.tgt'.format(name))
+        ret = self.run_state('file.absent', name=name)
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+        self.assertFalse(os.path.islink(name))
