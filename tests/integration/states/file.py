@@ -116,3 +116,17 @@ class FileTest(integration.ModuleCase):
         self.assertFalse(os.path.isfile(name))
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
+
+    def test_directory(self):
+        '''
+        file.directory
+        '''
+        name = os.path.join(integration.TMP, 'a_new_dir')
+        ret = self.run_state(
+                'file.directory',
+                name=name,
+                )
+        self.assertTrue(os.path.isdir(name))
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+
