@@ -103,3 +103,16 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertTrue(result)
 
+    def test_test_managed(self):
+        '''
+        file.managed test interface
+        '''
+        name = os.path.join(integration.TMP, 'grail_not_scene33')
+        ret = self.run_state(
+                'file.managed',
+                test=True,
+                name=name,
+                source='salt://grail/scene33')
+        self.assertFalse(os.path.isfile(name))
+        result = ret[ret.keys()[0]]['result']
+        self.assertIsNone(result)
