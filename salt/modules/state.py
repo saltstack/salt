@@ -170,6 +170,8 @@ def single(fun=None, test=None, **kwargs):
         comps = fun.split('.')
         if len(comps) < 2:
             return False
+    else:
+        return False
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
                    '__id__': kwargs['name']})
