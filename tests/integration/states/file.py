@@ -173,3 +173,20 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
 
+    def test_sed(self):
+        '''
+        file.sed
+        '''
+        name = os.path.join(integration.TMP, 'sed_test')
+        with open(name, 'w+') as fp_:
+            fp_.write('change_me')
+        ret = self.run_state(
+                'file.sed',
+                name=name,
+                before='change',
+                after='salt'
+                )
+        with open(name, 'r') as fp_:
+            self.assertIn('salt', fp_.read())
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
