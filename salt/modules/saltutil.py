@@ -162,7 +162,7 @@ def refresh_pillar():
         return True
     except IOError:
         return False
-    
+
 
 def running():
     '''

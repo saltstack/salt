@@ -222,7 +222,7 @@ def user_create(username,
 
     if sub_cmd.endswith("WITH"):
         sub_cmd = sub_cmd.replace(" WITH", "")
-    
+
     cmd = 'psql -h {host} -U {user} -p {port} -c "{sub_cmd}"'.format(
         host=host, user=user, port=port, sub_cmd=sub_cmd)
     return __salt__['cmd.run'](cmd)

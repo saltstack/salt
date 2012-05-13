@@ -304,7 +304,7 @@ def _windows_platform_data(osdata):
     #    inputlocale
     #    timezone
     #    windowsdomain
-        
+
     grains = {}
     (osname, hostname, osrelease, osversion, machine, processor) = platform.uname()
     if 'os' not in osdata and osname:
@@ -315,7 +315,7 @@ def _windows_platform_data(osdata):
         grains['osversion'] = osversion
     get_these_grains = {
         'OS Manufacturer': 'osmanufacturer',
-        'System Manufacturer': 'manufacturer', 
+        'System Manufacturer': 'manufacturer',
         'System Model': 'productname',
         'BIOS Version': 'biosversion',
         'OS Name': 'osfullname',
@@ -635,9 +635,9 @@ def _hw_data(osdata):
 
 def get_server_id():
     '''
-    Provides an integer based on the FQDN of a machine. 
+    Provides an integer based on the FQDN of a machine.
     Useful as server-id in MySQL replication or anywhere else you'll need an ID like this.
     '''
     # Provides:
-    #   server_id    
+    #   server_id
     return { 'server_id': abs(hash(__opts__['id']) % 2**31) }

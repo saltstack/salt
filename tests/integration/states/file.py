@@ -55,7 +55,7 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertTrue(result)
         self.assertFalse(os.path.isdir(name))
-    
+
     def test_absent_link(self):
         '''
         file.absent

@@ -46,7 +46,7 @@ class Key(object):
         else:
             ret = set(keys)
         return ret
-    
+
     def _log(self, message, level=''):
         if hasattr(log, level):
             log_msg = getattr(log, level)
@@ -122,13 +122,13 @@ class Key(object):
                 self._log(kfn.read())
         self._log(utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC)
         for key in sorted(self._keys('acc', True)):
-            self._log('  ' + utils.GREEN + os.path.basename(key) + 
+            self._log('  ' + utils.GREEN + os.path.basename(key) +
                          utils.ENDC)
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
         self._log(utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC)
         for key in sorted(self._keys('pre', True)):
-            self._log('  ' + utils.BLUE + os.path.basename(key) + 
+            self._log('  ' + utils.BLUE + os.path.basename(key) +
                          utils.ENDC)
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
@@ -190,7 +190,7 @@ class Key(object):
                          level='info')
     def _delete_all(self):
         '''
-        Delete all keys 
+        Delete all keys
         '''
         for dir in ("acc", "rej", "pre"):
             for key in self._keys(dir):
@@ -227,7 +227,7 @@ class Key(object):
     def _check_minions_directories(self):
         minions_accepted = os.path.join(self.opts['pki_dir'], 'minions')
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
-        minions_rejected = os.path.join(self.opts['pki_dir'], 
+        minions_rejected = os.path.join(self.opts['pki_dir'],
                                         'minions_rejected')
         for dir_ in [minions_accepted, minions_pre, minions_rejected]:
             if not os.path.isdir(dir_):
