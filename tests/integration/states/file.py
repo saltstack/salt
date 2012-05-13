@@ -66,3 +66,15 @@ class FileTest(integration.ModuleCase):
         result = ret[ret.keys()[0]]['result']
         self.assertTrue(result)
         self.assertFalse(os.path.islink(name))
+
+    def test_test_abset(self):
+        '''
+        file.absent test interface
+        '''
+        name = os.path.join(integration.TMP, 'file_to_kill')
+        with open(name, 'w+') as fp_:
+            fp_.write('killme')
+        ret = self.run_state('file.absent', test=True, name=name)
+        result = ret[ret.keys()[0]]['result']
+        self.assertIsNone(result)
+        self.assertTrue(os.path.isfile(name))
