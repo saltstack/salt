@@ -139,12 +139,12 @@ class ModuleCase(TestCase):
                     )
                 )
 
-    def run_function(self, function, arg=()):
+    def run_function(self, function, arg=(), **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg)
+        orig = self.client.cmd('minion', function, arg, kwarg=kwargs)
         return orig['minion']
 
 
@@ -152,7 +152,7 @@ class ModuleCase(TestCase):
         '''
         Run the state.single command and return the state return structure
         '''
-        return self.run_function('state.single', **kwargs)
+        return self.run_function('state.single', [function], **kwargs)
 
 
     def minion_opts(self):
