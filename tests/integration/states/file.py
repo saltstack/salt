@@ -301,7 +301,7 @@ class FileTest(integration.ModuleCase):
         '''
         file.append test interface
         '''
-        name = os.path.join(integration.TMP, 'append_test')
+        name = os.path.join(integration.TMP, 'append_test_test')
         with open(name, 'w+') as fp_:
             fp_.write('#salty!')
         ret = self.run_state(
@@ -314,3 +314,17 @@ class FileTest(integration.ModuleCase):
             self.assertNotIn('cheese', fp_.read())
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
+
+    def test_touch(self):
+        '''
+        file.touch
+        '''
+        name = os.path.join(integration.TMP, 'touch_test')
+        ret = self.run_state(
+                'file.touch',
+                name=name,
+                )
+        self.assertTrue(os.path.isfile(name))
+        result = ret[ret.keys()[0]]['result']
+        self.assertTrue(result)
+
