@@ -123,6 +123,8 @@ class TestDaemon(object):
                 shutil.rmtree(path)
             elif os.path.isfile(path):
                 os.remove(path)
+            elif os.path.islink(path):
+                os.remove(path)
 
 class ModuleCase(TestCase):
     '''
