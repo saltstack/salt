@@ -628,7 +628,7 @@ class SaltKey(object):
         '''
         Execute saltkey
         '''
-        salt.utils.verifyverify_env([
+        verify_env([
             os.path.join(self.opts['pki_dir'], 'minions'),
             os.path.join(self.opts['pki_dir'], 'minions_pre'),
             os.path.join(self.opts['pki_dir'], 'minions_rejected'),
