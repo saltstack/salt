@@ -22,3 +22,14 @@ class FileTest(integration.ModuleCase):
         ret = self.run_state('file.symlink', name=name, target=tgt)
         result = ret[ret.keys()[0]]['result']
         self.assertTrue(result)
+
+    def test_test_symlink(self):
+        '''
+        file.symlink test interface
+        '''
+        name = os.path.join(integration.TMP, 'symlink')
+        tgt = os.path.join(integration.TMP, 'target')
+        ret = self.run_state('file.symlink', test=True, name=name, target=tgt)
+        result = ret[ret.keys()[0]]['result']
+        self.assertIsNone(result)
+
