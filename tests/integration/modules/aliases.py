@@ -25,3 +25,18 @@ class AliasesTest(integration.ModuleCase):
                 'aliases.get_target',
                 alias='fred')
         self.assertEqual(tgt_ret, 'target=bob')
+
+    def test_has_target(self):
+        '''
+        aliases.set_target and aliases.has_target
+        '''
+        set_ret = self.run_function(
+                'aliases.set_target',
+                alias='fred',
+                target='bob')
+        self.assertTrue(set_ret)
+        tgt_ret = self.run_function(
+                'aliases.has_target',
+                alias='fred',
+                target='bob')
+        self.assertTrue(tgt_ret)
