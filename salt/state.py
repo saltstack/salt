@@ -395,6 +395,7 @@ class State(object):
         errors = []
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
+        reqs = {}
         for name, body in high.items():
             if name.startswith('__'):
                 continue
@@ -434,6 +435,9 @@ class State(object):
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
                             # watch, it must be a list.
+                            #
+                            # Add the requires to the reqs dict and check them
+                            # all for recursive requisites.
                             if arg.keys()[0] == 'require' \
                                     or arg.keys()[0] == 'watch':
                                 if not isinstance(arg[arg.keys()[0]], list):
@@ -446,6 +450,7 @@ class State(object):
                                 # It is a list, verify that the members of the
                                 # list are all single key dicts.
                                 else:
+                                    reqs[name] = {}
                                     for req in arg[arg.keys()[0]]:
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
@@ -460,6 +465,21 @@ class State(object):
                                             errors.append((
                                                 'Illegal requisite "{0}", please check your syntax.\n'
                                                 ).format(str(req_val)))
+
+                                        # Check for global recursive requisites
+                                        reqs[name][req_val] = req_key
+                                        if req_val in reqs:
+                                            if name in reqs[req_val]:
+                                                if reqs[req_val][name] == state:
+                                                    err = ('A recursive '
+                                                    'requisite was found, SLS '
+                                                    '"{0}" ID "{1}" ID "{2}"'
+                                                    ).format(
+                                                            body['__sls__'],
+                                                            name,
+                                                            req_val
+                                                            )
+                                                    errors.append(err)
                                 # Make sure that there is only one key in the dict
                                 if len(arg.keys()) != 1:
                                     errors.append(('Multiple dictionaries defined'
