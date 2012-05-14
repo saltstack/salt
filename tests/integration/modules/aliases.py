@@ -40,3 +40,17 @@ class AliasesTest(integration.ModuleCase):
                 alias='fred',
                 target='bob')
         self.assertTrue(tgt_ret)
+
+    def test_list_aliases(self):
+        '''
+        aliases.list_aliases
+        '''
+        set_ret = self.run_function(
+                'aliases.set_target',
+                alias='fred',
+                target='bob')
+        self.assertTrue(set_ret)
+        tgt_ret = self.run_function(
+                'aliases.list_aliases')
+        self.assertIsInstance(tgt_ret, dict)
+        self.assertIn('alias=fred', tgt_ret)
