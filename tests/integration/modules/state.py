@@ -33,7 +33,7 @@ class StateModuleTest(integration.ModuleCase):
         state.show_sls used to catch a recursive ref
         '''
         err = self.run_function('state.sls', mods='recurse_fail')
-        print err
+        self.assertIn('recursive', err[0])
 
 if __name__ == "__main__":
     loader = TestLoader()
