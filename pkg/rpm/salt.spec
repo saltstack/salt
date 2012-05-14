@@ -1,16 +1,15 @@
-%if ! (0%{?rhel} >= 6 || 0%{?fedora} > 12)
-%global with_python26 1
-%define pybasever 2.6
-%define __python_ver 26
+%define _bindir /usr/local/bin
+%define _mandir /usr/local/share/man
+%define pybasever 2.7
+%define __python_ver 27
 %define __python %{_bindir}/python%{?pybasever}
-%endif
 
-%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
+%global python_sitelib /usr/local/lib/python2.7/site-packages
+%global python_sitearch /usr/local/lib/python2.7/site-packages
 
 Name: salt
-Version: 0.9.9.1
-Release: 1%{?dist}
+Version: 0.9.9dev
+Release: 1talkos
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -20,9 +19,9 @@ Source0: https://github.com/downloads/saltstack/%{name}/%{name}-%{version}.tar.g
 Source1: %{name}-master
 Source2: %{name}-syndic
 Source3: %{name}-minion
-Source4: %{name}-master.service
-Source5: %{name}-syndic.service
-Source6: %{name}-minion.service
+#Source4: %{name}-master.service
+#Source5: %{name}-syndic.service
+#Source6: %{name}-minion.service
 Source7: README.fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -32,55 +31,28 @@ BuildArch: noarch
  Requires: dmidecode
 %endif
 
-%if 0%{?with_python26}
-BuildRequires: python26-zmq
-BuildRequires: python26-crypto
-BuildRequires: python26-devel
-BuildRequires: python26-PyYAML
-BuildRequires: python26-m2crypto
-BuildRequires: python26-msgpack
+BuildRequires: python27-pyzmq
+BuildRequires: python27-pycrypto
+BuildRequires: python27
+BuildRequires: python27-PyYAML
+BuildRequires: python27-M2Crypto
+BuildRequires: python27-msgpack
 
-Requires: python26-crypto
-Requires: python26-zmq
-Requires: python26-jinja2
-Requires: python26-PyYAML
-Requires: python26-m2crypto
-Requires: python26-PyXML
-Requires: python26-msgpack
-
-%else
-
-BuildRequires: python-zmq
-BuildRequires: python-crypto
-BuildRequires: python-devel
-BuildRequires: PyYAML
-BuildRequires: m2crypto
-BuildRequires: python-msgpack
-
-Requires: python-crypto
-Requires: python-zmq
-Requires: python-jinja2
-Requires: PyYAML
-Requires: m2crypto
-Requires: PyXML
-Requires: python-msgpack
-
-%endif
-
-%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+Requires: python27-pycrypto
+Requires: python27-pyzmq
+Requires: python27-Jinja2
+Requires: python27-PyYAML
+Requires: python27-M2Crypto
+Requires: python27-PyXML
+Requires: python27-msgpack
 
 Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 Requires(postun): initscripts
 
-%else
-
-BuildRequires: systemd-units
-
-%endif
-
 #Requires: MySQL-python libvirt-python yum
+Requires: libvirt-python yum
 
 %description
 Salt is a distributed remote execution system used to execute commands and 
@@ -116,17 +88,10 @@ Salt minion is queried and controlled from the master.
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --root $RPM_BUILD_ROOT
 
-%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 mkdir -p $RPM_BUILD_ROOT%{_initrddir}
 install -p %{SOURCE1} $RPM_BUILD_ROOT%{_initrddir}/
 install -p %{SOURCE2} $RPM_BUILD_ROOT%{_initrddir}/
 install -p %{SOURCE3} $RPM_BUILD_ROOT%{_initrddir}/
-%else
-mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-install -p -m 0644 %{SOURCE4} $RPM_BUILD_ROOT%{_unitdir}/
-install -p -m 0644 %{SOURCE5} $RPM_BUILD_ROOT%{_unitdir}/
-install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
-%endif
 
 install -p %{SOURCE7} .
 
@@ -143,51 +108,38 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc LICENSE
 %{python_sitelib}/%{name}/*
-%{python_sitelib}/%{name}-%{version}-py?.?.egg-info
-%doc %{_mandir}/man7/salt.7.*
+%{python_sitelib}/%{name}-*-py?.?.egg-info
+%doc %{_mandir}/man7/salt.7
 %doc README.fedora
 
 %files -n salt-minion
 %defattr(-,root,root)
-%doc %{_mandir}/man1/salt-call.1.*
-%doc %{_mandir}/man1/salt-minion.1.*
+%doc %{_mandir}/man1/salt-call.1
+%doc %{_mandir}/man1/salt-minion.1
 %{_bindir}/salt-minion
 %{_bindir}/salt-call
-
-%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/salt-minion
-%else
-%{_unitdir}/salt-minion.service
-%endif
-
 %config(noreplace) %{_sysconfdir}/salt/minion
 %config %{_sysconfdir}/salt/minion.template
 
 %files -n salt-master
 %defattr(-,root,root)
-%doc %{_mandir}/man1/salt-master.1.*
-%doc %{_mandir}/man1/salt.1.*
-%doc %{_mandir}/man1/salt-cp.1.*
-%doc %{_mandir}/man1/salt-key.1.*
-%doc %{_mandir}/man1/salt-run.1.*
-%doc %{_mandir}/man1/salt-syndic.1.*
+%doc %{_mandir}/man1/salt-master.1
+%doc %{_mandir}/man1/salt.1
+%doc %{_mandir}/man1/salt-cp.1
+%doc %{_mandir}/man1/salt-key.1
+%doc %{_mandir}/man1/salt-run.1
+%doc %{_mandir}/man1/salt-syndic.1
 %{_bindir}/salt
 %{_bindir}/salt-master
 %{_bindir}/salt-syndic
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-run
-%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/salt-master
 %attr(0755, root, root) %{_initrddir}/salt-syndic
-%else
-%{_unitdir}/salt-master.service
-%{_unitdir}/salt-syndic.service
-%endif
 %config(noreplace) %{_sysconfdir}/salt/master
 %config %{_sysconfdir}/salt/master.template
-
-%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 
 %preun -n salt-master
 if [ $1 -eq 0 ] ; then
@@ -222,45 +174,10 @@ if [ "$1" -ge "1" ] ; then
     /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
 fi
 
-%else
-
-%preun -n salt-master
-if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
-    /bin/systemctl --no-reload disable salt-master.service > /dev/null 2>&1 || :
-    /bin/systemctl stop salt-master.service > /dev/null 2>&1 || :
-
-    /bin/systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
-    /bin/systemctl stop salt-syndic.service > /dev/null 2>&1 || :
-fi
-
-%preun -n salt-minion
-if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
-    /bin/systemctl --no-reload disable salt-master.service > /dev/null 2>&1 || :
-    /bin/systemctl stop salt-master.service > /dev/null 2>&1 || :
-
-fi
-
-%post -n salt-master
-/bin/systemctl daemon-reload &>/dev/null || :
-
-%post -n salt-minion
-/bin/systemctl daemon-reload &>/dev/null || :
-
-%postun -n salt-master
-/bin/systemctl daemon-reload &>/dev/null
-[ $1 -gt 0 ] && /bin/systemctl try-restart salt-master.service &>/dev/null || :
-[ $1 -gt 0 ] && /bin/systemctl try-restart salt-syndic.service &>/dev/null || :
-
-%postun -n salt-minion
-/bin/systemctl daemon-reload &>/dev/null
-[ $1 -gt 0 ] && /bin/systemctl try-restart salt-master.service &>/dev/null || :
-[ $1 -gt 0 ] && /bin/systemctl try-restart salt-syndic.service &>/dev/null || :
-
-%endif
-
 %changelog
+* Wed May 9 2012 Mike Chesnut <mikec@talksum.com> - 0.9.9dev-1talkos
+- customizing for TalkOS environment (package names, prereqs, initscripts)
+
 * Sat Apr 28 2012 Clint Savage <herlo1@gmail.com> - 0.9.9.1-1
 - Moved to upstream release 0.9.9.1
 
