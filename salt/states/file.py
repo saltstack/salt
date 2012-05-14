@@ -950,9 +950,7 @@ def managed(name,
             except IOError:
                 __clean_tmp(sfn)
                 return _error(
-                    ret,
-                    'Failed to commit change, permission error'.format(source)
-                    )
+                    ret, 'Failed to commit change, permission error')
 
         ret, perms = _check_perms(name, ret, user, group, mode)
 
