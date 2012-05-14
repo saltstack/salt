@@ -12,6 +12,7 @@ log_file: minion
 # module extension
 test.foo: baz
 hosts.file: integration/tmp/hosts
+aliases.file: integration/tmp/aliases
 
 # Grains addons
 grains:
