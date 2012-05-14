@@ -28,6 +28,13 @@ class StateModuleTest(integration.ModuleCase):
         self.assertTrue(isinstance(low, list))
         self.assertTrue(isinstance(low[0], dict))
 
+    def test_catch_recurse(self):
+        '''
+        state.show_sls used to catch a recursive ref
+        '''
+        err = self.run_function('state.sls', mods='recurse_fail')
+        print err
+
 if __name__ == "__main__":
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(StateModuleTest)
