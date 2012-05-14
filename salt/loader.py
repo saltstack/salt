@@ -245,8 +245,19 @@ class Loader(object):
                     full = full_test
         if not full:
             return None
+        cython_enabled = False
+        if self.opts.get('cython_enable', True) is True:
+            try:
+                import pyximport
+                pyximport.install()
+                cython_enabled = True
+            except ImportError:
+                log.info('Cython is enabled in the options but not present '
+                         'in the system path. Skipping Cython modules.')
         try:
-            if full.endswith('.pyx') and self.opts['cython_enable']:
+            if full.endswith('.pyx'):
+                # If there's a name which ends in .pyx it means the above
+                # cython_enabled is True. Continue...
                 mod = pyximport.load_module(name, full, tempfile.gettempdir())
             else:
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
