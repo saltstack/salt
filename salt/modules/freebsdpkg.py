@@ -190,7 +190,7 @@ def remove(name):
     if name in old:
         name = '{0}-{1}'.format(name, old[name])
         if _check_pkgng():
-            pkg_command = 'pkg_delete'
+            pkg_command = 'pkg delete'
         else:
             pkg_command - 'pkg_delete'
         __salt__['cmd.retcode']('%s {0}'.format(name)% pkg_command)
