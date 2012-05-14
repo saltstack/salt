@@ -1453,10 +1453,10 @@ class BaseHighState(object):
         err = []
         top = self.get_top()
         if not top:
-	    msg = ('Top data not found. Either this minion is not matched '
+            msg = ('Top data not found. Either this minion is not matched '
                    'in the top file or the top file was not found on the '
                    'master')
-	    ret[tag_name]['comment'] = msg
+            ret[tag_name]['comment'] = msg
 	    return ret
         err += self.verify_tops(top)
         matches = self.top_matches(top)
