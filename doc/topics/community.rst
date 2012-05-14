@@ -67,6 +67,7 @@ A few examples of salt states from the community:
 
 * https://github.com/blast-hardcheese/blast-salt-states
 * https://github.com/kevingranade/kevingranade-salt-state
+* https://github.com/uggedal/states
 
 Follow on ohloh
 ===============
