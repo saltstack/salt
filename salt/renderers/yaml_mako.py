@@ -7,18 +7,20 @@ high data format for salt states.
 
 # Import Python Modules
 import os
+import logging
+import warnings
 
-# Import Third Party libs
+# Import Third Party and Salt libs
 from mako.template import Template
-
 from salt.utils.yaml import CustomLoader, load
 
+log = logging.getLogger(__name__)
 
-def render(template, env='', sls=''):
+def render(template_file, env='', sls=''):
     '''
     Render the data passing the functions and grains into the rendering system
     '''
-    if not os.path.isfile(template):
+    if not os.path.isfile(template_file):
         return {}
 
     passthrough = {}
@@ -28,9 +30,7 @@ def render(template, env='', sls=''):
     passthrough['env'] = env
     passthrough['sls'] = sls
 
-    template = Template(open(template, 'r').read())
-    yaml_data = template.render(**passthrough)
-
+    template = Template(open(template_file, 'r').read())
 
     yaml_data = template.render(**passthrough)
     with warnings.catch_warnings(record=True) as warn_list:
