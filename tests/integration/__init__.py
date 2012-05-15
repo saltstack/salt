@@ -149,6 +149,11 @@ class ModuleCase(TestCase):
         orig = self.client.cmd('minion', function, arg, kwarg=kwargs)
         return orig['minion']
 
+    def state_result(self, ret):
+        '''
+        Return the result data from a single state return
+        '''
+        return ret[ret.keys()[0]]['result']
 
     def run_state(self, function, **kwargs):
         '''
