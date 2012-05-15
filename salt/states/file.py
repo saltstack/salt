@@ -945,17 +945,18 @@ def managed(name,
                                                       .unified_diff(nlines,
                                                                     slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
-            if not __opts__['test']:
+            try:
                 shutil.copyfile(sfn, name)
+            except IOError:
                 __clean_tmp(sfn)
+                return _error(
+                    ret, 'Failed to commit change, permission error')
 
         ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
 
-        if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
         __clean_tmp(sfn)

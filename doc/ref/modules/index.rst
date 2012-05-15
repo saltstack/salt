@@ -176,8 +176,9 @@ Documenting Salt modules is easy! Just add a python docstring to the function.
         '''
         A function to make some spam with eggs!
 
-        CLI Example:
-        salt '*' test.spam eggs
+        CLI Example::
+
+            salt '*' test.spam eggs
         '''
         return eggs
 
@@ -201,7 +202,7 @@ Objects Loaded Into the Salt Minion
 
     class baz:
         def __init__(self, quo):
-            return quo
+            pass
 
 Objects NOT Loaded into the Salt Minion
 ---------------------------------------
@@ -234,7 +235,8 @@ function, test.ping:
         Just used to make sure the minion is up and responding
         Return True
 
-        CLI Example:
-        salt '*' test.ping
+        CLI Example::
+
+            salt '*' test.ping
         '''
         return True
