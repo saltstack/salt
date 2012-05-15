@@ -20,6 +20,13 @@ def _check_pkgng():
         return False
     return False
 
+def pkgng_update():
+    '''
+    use pkg update to get latest repo.txz
+    '''
+    if _check_pkgng():
+        __salt__['cmd.run']('pkg update')
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
