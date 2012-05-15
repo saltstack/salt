@@ -91,7 +91,7 @@ def get_colors(use=True):
             'ENDC': '\033[0m',
             }
 
-    if not use:
+    if not use or not os.isatty(sys.stdout.fileno()):
         for color in colors:
             colors[color] = ''
 
