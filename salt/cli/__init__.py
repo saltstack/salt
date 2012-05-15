@@ -308,6 +308,7 @@ class SaltCMD(object):
                         self._output_ret(ret, out)
                     elif self.opts['fun'] == 'sys.doc':
                         ret = {}
+                        out = ''
                         for full_ret in local.cmd_cli(*args):
                             ret_, out = self._format_ret(full_ret)
                             ret.update(ret_)
