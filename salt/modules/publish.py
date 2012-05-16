@@ -65,7 +65,7 @@ def _publish(
             'fun': fun,
             'arg': arg,
             'tgt': tgt,
-            'expr_form': expr_form,
+            'tgt_type': expr_form,
             'ret': returner,
             'tok': tok,
             'tmo': timeout,
