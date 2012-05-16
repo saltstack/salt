@@ -4,6 +4,29 @@ Package support for FreeBSD
 
 import os
 
+def _check_pkgng():
+    '''
+    Looks to see if pkgng is being used if so sets global var.
+    '''
+    make_file = "/etc/make.conf"
+    if os.path.isfile(make_file):
+        try:
+            for line in open(make_file,'r').readlines():
+                if 'WITH_PKGNG=yes' in line:
+                    return True
+        except IOError:
+            # issue opening file
+            pass
+        return False
+    return False
+
+def pkgng_update():
+    '''
+    use pkg update to get latest repo.txz
+    '''
+    if _check_pkgng():
+        __salt__['cmd.run']('pkg update')
+    return ""
 
 def __virtual__():
     '''
@@ -60,8 +83,12 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    if _check_pkgng():
+        pkg_command = "pkg info"
+    else:
+        pkg_command = "pkg_info"
     ret = {}
-    for line in __salt__['cmd.run']('pkg_info').split('\n'):
+    for line in __salt__['cmd.run'](pkg_command).split('\n'):
         if not line:
             continue
         comps = line.split(' ')[0].split('-')
@@ -98,8 +125,12 @@ def install(name, *args, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
+    if _check_pkgng:
+        pkg_command = 'pkg install -y'
+    else:
+        pkg_command = 'pkg_add -r'
     old = list_pkgs()
-    __salt__['cmd.retcode']('pkg_add -r {0}'.format(name))
+    __salt__['cmd.retcode']('%s {0}'.format(name) % pkg_command)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -166,7 +197,11 @@ def remove(name):
     old = list_pkgs()
     if name in old:
         name = '{0}-{1}'.format(name, old[name])
-        __salt__['cmd.retcode']('pkg_delete {0}'.format(name))
+        if _check_pkgng():
+            pkg_command = 'pkg delete -y'
+        else:
+            pkg_command - 'pkg_delete'
+        __salt__['cmd.retcode']('%s {0}'.format(name)% pkg_command)
     new = list_pkgs()
     return _list_removed(old, new)
 
