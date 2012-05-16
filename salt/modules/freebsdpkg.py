@@ -26,6 +26,7 @@ def pkgng_update():
     '''
     if _check_pkgng():
         __salt__['cmd.run']('pkg update')
+    return ""
 
 def __virtual__():
     '''
