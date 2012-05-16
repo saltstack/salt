@@ -125,7 +125,7 @@ def install(name, *args, **kwargs):
         salt '*' pkg.install <package name>
     '''
     if _check_pkgng:
-        pkg_command = 'pkg install'
+        pkg_command = 'pkg install -y'
     else:
         pkg_command = 'pkg_add -r'
     old = list_pkgs()
@@ -197,7 +197,7 @@ def remove(name):
     if name in old:
         name = '{0}-{1}'.format(name, old[name])
         if _check_pkgng():
-            pkg_command = 'pkg delete'
+            pkg_command = 'pkg delete -y'
         else:
             pkg_command - 'pkg_delete'
         __salt__['cmd.retcode']('%s {0}'.format(name)% pkg_command)
