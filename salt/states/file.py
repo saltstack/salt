@@ -117,12 +117,19 @@ def __clean_tmp(sfn):
             os.remove(sfn)
 
 
-def _makedirs(path):
+def _makedirs(path, user=None, group=None, mode=None):
     '''
     Ensure that the directory containing this path is available.
     '''
-    if not os.path.isdir(os.path.dirname(path)):
-        os.makedirs(os.path.dirname(path))
+    directory = os.path.dirname(path)
+
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+        # If a caller such as managed() is invoked  with
+        # makedirs=True, make sure that any created dirs
+        # are created with the same user  and  group  to
+        # follow the principal of least surprise method.
+        _check_perms(directory, None, user, group, mode)
 
 
 def _is_bin(path):
@@ -496,6 +503,11 @@ def _check_directory(
                 fchange = _check_dir_meta(path, user, group, None)
                 if fchange:
                     changes[path] = fchange
+    else:
+        if not os.path.isdir(name):
+            changes[name] = 'new'
+            return None, 'A new directory is set to be made at {0}'.format(
+                    name)
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
@@ -524,7 +536,7 @@ def _check_managed(
     changes = {}
     # If the source is a list then find which file exists
     source, source_hash = _source_list(source, source_hash, env)
-    
+
     # Gather the source file from the server
     sfn, source_sum, comment = _get_managed(
             name,
@@ -564,7 +576,10 @@ def _check_dir_meta(
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
-    if not mode is None and mode != stats['mode']:
+    # Normalize the dir mode
+    smode = __manage_mode(stats['mode'])
+    mode = __manage_mode(mode)
+    if not mode is None and mode != smode:
         changes['mode'] = mode
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -593,17 +608,24 @@ def _check_file_meta(
         return changes
     if 'hsum' in source_sum:
         if source_sum['hsum'] != stats['sum']:
-            with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
-                slines = src.readlines()
-                nlines = name_.readlines()
-            changes['diff'] = (
-                    ''.join(difflib.unified_diff(nlines, slines))
-                    )
+            if sfn:
+                with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
+                    slines = src.readlines()
+                    nlines = name_.readlines()
+                changes['diff'] = (
+                        ''.join(difflib.unified_diff(nlines, slines))
+                        )
+            else:
+                # TODO Evaluate diff without downloading file from master
+                changes['sum'] = 'Checksum differs'
     if not user is None and user != stats['user']:
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
-    if not mode is None and mode != stats['mode']:
+    # Normalize the file mode
+    smode = __manage_mode(stats['mode'])
+    mode = __manage_mode(mode)
+    if not mode is None and mode != smode:
         changes['mode'] = mode
     return changes
 
@@ -675,7 +697,7 @@ def symlink(name, target, force=False, makedirs=False):
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _symlink_check(name, target, force)
         return ret
@@ -772,6 +794,7 @@ def managed(name,
         template=None,
         makedirs=False,
         context=None,
+        replace=True,
         defaults=None,
         env=None,
         **kwargs):
@@ -821,6 +844,10 @@ def managed(name,
         directories will be created to facilitate the creation of the named
         file.
 
+    replace
+        If this file should be replaced, if false then this command will
+        be ignored if the file exists already. Default is true.
+
     context
         Overrides default context variables passed to the template.
 
@@ -845,6 +872,13 @@ def managed(name,
         ret['result'] = False
         return ret
 
+    if not replace:
+        if os.path.exists(name):
+            ret['comment'] = 'File {0} exists. No changes made'.format(name)
+            return ret
+        if not source:
+            return touch(name, makedirs=makedirs)
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_managed(
                 name,
@@ -864,7 +898,7 @@ def managed(name,
 
     # If the source is a list then find which file exists
     source, source_hash = _source_list(source, source_hash, env)
-    
+
     # Gather the source file from the server
     sfn, source_sum, comment = _get_managed(
             name,
@@ -911,17 +945,18 @@ def managed(name,
                                                       .unified_diff(nlines,
                                                                     slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
-            if not __opts__['test']:
+            try:
                 shutil.copyfile(sfn, name)
+            except IOError:
                 __clean_tmp(sfn)
+                return _error(
+                    ret, 'Failed to commit change, permission error')
 
         ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
 
-        if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
         __clean_tmp(sfn)
@@ -940,14 +975,14 @@ def managed(name,
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    _makedirs(name)
+                    _makedirs(name, user=user, group=group, mode=mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    _makedirs(name)
+                    _makedirs(name, user=user, group=group, mode=mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
@@ -1056,12 +1091,12 @@ def directory(name,
         # The dir does not exist, make it
         if not os.path.isdir(os.path.dirname(name)):
             if makedirs:
-                _makedirs(name)
+                _makedirs(name, user=user, group=group, mode=mode)
             else:
                 return _error(
                     ret, 'No directory to create {0} in'.format(name))
     if not os.path.isdir(name):
-        _makedirs(name)
+        _makedirs(name, user=user, group=group, mode=mode)
         os.makedirs(name)
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
@@ -1258,7 +1293,7 @@ def recurse(name,
                 )
         dirname = os.path.dirname(dest)
         if not os.path.isdir(dirname):
-            _makedirs(dest)
+            _makedirs(dest, user=user, group=group)
         if not dirname in vdir:
             # verify the directory perms if they are set
             # _check_perms(name, ret, user, group, mode)

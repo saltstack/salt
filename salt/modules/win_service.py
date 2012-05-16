@@ -1,5 +1,5 @@
 '''
-Windows Service module. 
+Windows Service module.
 '''
 
 import time

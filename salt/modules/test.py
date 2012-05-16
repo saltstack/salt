@@ -7,12 +7,19 @@ import time
 
 # Load in default options for the module
 __opts__ = {
-            'test.foo': 'foo'
-            }
+    'test.foo': 'foo'
+}
 # Load the outputters for the module
 __outputter__ = {
-                 'outputter': 'txt'
-                 }
+    'echo': 'txt',
+    'ping': 'txt',
+    'fib': 'yaml',
+    'version': 'txt',
+    'collatz': 'yaml',
+    'conf_test': 'txt',
+    'get_opts': 'yaml',
+    'outputter': 'txt',
+}
 
 
 def echo(text):

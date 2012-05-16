@@ -308,6 +308,7 @@ class SaltCMD(object):
                         self._output_ret(ret, out)
                     elif self.opts['fun'] == 'sys.doc':
                         ret = {}
+                        out = ''
                         for full_ret in local.cmd_cli(*args):
                             ret_, out = self._format_ret(full_ret)
                             ret.update(ret_)
@@ -628,6 +629,12 @@ class SaltKey(object):
         '''
         Execute saltkey
         '''
+        verify_env([
+            os.path.join(self.opts['pki_dir'], 'minions'),
+            os.path.join(self.opts['pki_dir'], 'minions_pre'),
+            os.path.join(self.opts['pki_dir'], 'minions_rejected'),
+            os.path.dirname(self.opts['log_file']),
+            ])
         import salt.log
         salt.log.setup_logfile_logger(self.opts['key_logfile'],
                                       self.opts['loglevel'])

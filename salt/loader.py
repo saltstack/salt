@@ -7,10 +7,11 @@ Routines to set up a minion
 
 
 # Import python libs
-import imp
-import logging
 import os
+import imp
 import salt
+import logging
+import tempfile
 from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
@@ -244,9 +245,20 @@ class Loader(object):
                     full = full_test
         if not full:
             return None
+        cython_enabled = False
+        if self.opts.get('cython_enable', True) is True:
+            try:
+                import pyximport
+                pyximport.install()
+                cython_enabled = True
+            except ImportError:
+                log.info('Cython is enabled in the options but not present '
+                         'in the system path. Skipping Cython modules.')
         try:
-            if full.endswith('.pyx') and self.opts['cython_enable']:
-                mod = pyximport.load_module(name, full, '/tmp')
+            if full.endswith('.pyx'):
+                # If there's a name which ends in .pyx it means the above
+                # cython_enabled is True. Continue...
+                mod = pyximport.load_module(name, full, tempfile.gettempdir())
             else:
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
                 mod = imp.load_module(
@@ -339,7 +351,7 @@ class Loader(object):
                     mod = pyximport.load_module(
                             '{0}_{1}'.format(name, self.tag),
                             names[name],
-                            '/tmp')
+                            tempfile.gettempdir())
                 else:
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(

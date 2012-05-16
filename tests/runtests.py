@@ -44,6 +44,20 @@ def run_integration_tests(opts):
             else:
                 runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(moduletests)
             status.append(runner.wasSuccessful())
+        if opts.state:
+            stateloader = saltunittest.TestLoader()
+            statetests = stateloader.discover(
+                    os.path.join(TEST_DIR, 'integration', 'states'),
+                    '*.py'
+                    )
+            print('~' * PNUM)
+            print('Starting State Tests')
+            print('~' * PNUM)
+            if opts.xmlout:
+                runner = xmlrunner.XMLTestRunner(output='test-reports').run(statetests)
+            else:
+                runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(statetests)
+            status.append(runner.wasSuccessful())
         if opts.client:
             clientloader = saltunittest.TestLoader()
             clienttests = clientloader.discover(
@@ -108,6 +122,13 @@ def parse_opts():
             default=False,
             action='store_true',
             help='Run tests for modules')
+    parser.add_option('-S',
+            '--state',
+            '--state-tests',
+            dest='state',
+            default=False,
+            action='store_true',
+            help='Run tests for states')
     parser.add_option('-c',
             '--client',
             '--client-tests',
@@ -144,7 +165,8 @@ def parse_opts():
 
     options, args = parser.parse_args()
     if all((not options.module, not options.client,
-            not options.shell, not options.unit)):
+            not options.shell, not options.unit,
+            not options.state)):
         options.module = True
         options.client = True
         options.shell = True

@@ -71,7 +71,7 @@ def installed(
                 'changes': {},
                 'result': True,
                 'comment': 'Package {0} is already installed'.format(name)}
-    
+
     if __opts__['test']:
         return {'name': name,
                 'changes': {},

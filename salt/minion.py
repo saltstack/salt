@@ -26,6 +26,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+from salt.utils.debug import enable_sigusr1_handler
 
 log = logging.getLogger(__name__)
 
@@ -475,6 +476,10 @@ class Minion(object):
         socket.setsockopt(zmq.SUBSCRIBE, '')
         socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
+
+        # Make sure to gracefully handle SIGUSR1
+        enable_sigusr1_handler()
+
         if self.opts['sub_timeout']:
             last = time.time()
             while True:

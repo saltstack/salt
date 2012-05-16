@@ -37,7 +37,7 @@ then a new cron job will be added to the user's crontab.
 
 def _check_cron(cmd, user, minute, hour, dom, month, dow):
     '''
-    Return the changes 
+    Return the changes
     '''
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
@@ -201,7 +201,7 @@ def absent(name,
         elif status == 'present' or status == 'update':
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
-    
+
     data = __salt__['cron.rm_job'](
             user,
             minute,

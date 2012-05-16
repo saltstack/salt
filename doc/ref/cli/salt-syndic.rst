@@ -40,3 +40,10 @@ Options
 .. option:: --minion-config=MINION_CONFIG
 
     The minion configuration file to use, the default is /etc/salt/minion
+
+See also
+========
+
+:manpage:`salt(1)`
+:manpage:`salt-master(1)`
+:manpage:`salt-minion(1)`

@@ -395,6 +395,7 @@ class State(object):
         errors = []
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
+        reqs = {}
         for name, body in high.items():
             if name.startswith('__'):
                 continue
@@ -434,6 +435,9 @@ class State(object):
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
                             # watch, it must be a list.
+                            #
+                            # Add the requires to the reqs dict and check them
+                            # all for recursive requisites.
                             if arg.keys()[0] == 'require' \
                                     or arg.keys()[0] == 'watch':
                                 if not isinstance(arg[arg.keys()[0]], list):
@@ -446,6 +450,7 @@ class State(object):
                                 # It is a list, verify that the members of the
                                 # list are all single key dicts.
                                 else:
+                                    reqs[name] = {}
                                     for req in arg[arg.keys()[0]]:
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
@@ -460,6 +465,21 @@ class State(object):
                                             errors.append((
                                                 'Illegal requisite "{0}", please check your syntax.\n'
                                                 ).format(str(req_val)))
+
+                                        # Check for global recursive requisites
+                                        reqs[name][req_val] = req_key
+                                        if req_val in reqs:
+                                            if name in reqs[req_val]:
+                                                if reqs[req_val][name] == state:
+                                                    err = ('A recursive '
+                                                    'requisite was found, SLS '
+                                                    '"{0}" ID "{1}" ID "{2}"'
+                                                    ).format(
+                                                            body['__sls__'],
+                                                            name,
+                                                            req_val
+                                                            )
+                                                    errors.append(err)
                                 # Make sure that there is only one key in the dict
                                 if len(arg.keys()) != 1:
                                     errors.append(('Multiple dictionaries defined'
@@ -1324,6 +1344,15 @@ class BaseHighState(object):
                             ext[name]['__sls__'] = sls
                         if '__env__' not in ext[name]:
                             ext[name]['__env__'] = env
+                        for key in ext[name]:
+                            if key.startswith('_'):
+                                continue
+                            if not isinstance(ext[name][key], list):
+                                continue
+                            if '.' in key:
+                                comps = key.split('.')
+                                ext[name][comps[0]] = ext[name].pop(key)
+                                ext[name][comps[0]].append(comps[1])
                         if '__extend__' not in state:
                             state['__extend__'] = [ext]
                         else:
@@ -1332,7 +1361,7 @@ class BaseHighState(object):
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
                             continue
-                        
+
                         if isinstance(state[name], basestring):
                             # Is this is a short state, it needs to be padded
                             if '.' in state[name]:
@@ -1344,6 +1373,7 @@ class BaseHighState(object):
                         errors.append(('Name {0} in sls {1} is not a dictionary'
                                        .format(name, sls)))
                         continue
+                    skeys = set()
                     for key in state[name]:
                         if key.startswith('_'):
                             continue
@@ -1351,8 +1381,27 @@ class BaseHighState(object):
                             continue
                         if '.' in key:
                             comps = key.split('.')
+                            # Salt doesn't support state files such as:
+                            #
+                            #     /etc/redis/redis.conf:
+                            #       file.managed:
+                            #         - source: salt://redis/redis.conf
+                            #         - user: redis
+                            #         - group: redis
+                            #         - mode: 644
+                            #       file.comment:
+                            #           - regex: ^requirepass
+                            if comps[0] in skeys:
+                                err = ('Name "{0}" in sls "{1}" contains '
+                                       'multiple state decs of the same type'
+                                      ).format(name, sls)
+                                errors.append(err)
+                                continue
                             state[name][comps[0]] = state[name].pop(key)
                             state[name][comps[0]].append(comps[1])
+                            skeys.add(comps[0])
+                            continue
+                        skeys.add(key)
                     if '__sls__' not in state[name]:
                         state[name]['__sls__'] = sls
                     if '__env__' not in state[name]:
@@ -1391,7 +1440,7 @@ class BaseHighState(object):
                         highstate.update(state)
                     if err:
                         errors += err
-        # Clean out duplicate extend data 
+        # Clean out duplicate extend data
         if '__extend__' in highstate:
             highext = []
             for ext in highstate['__extend__']:
@@ -1409,8 +1458,26 @@ class BaseHighState(object):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
+        #Check that top file exists
+        tag_name = 'no_|-states_|-states_|-None'
+        ret = {tag_name: {
+                   'result': False,
+                   'comment': 'No states found for this minion',
+                   'name': 'No States',
+                   'changes': {},
+                   '__run_num__': 0,
+                   }
+              }
+
+        #File exists so continue
         err = []
         top = self.get_top()
+        if not top:
+            msg = ('Top data not found. Either this minion is not matched '
+                   'in the top file or the top file was not found on the '
+                   'master')
+            ret[tag_name]['comment'] = msg
+	    return ret
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         self.load_dynamic(matches)
@@ -1419,14 +1486,7 @@ class BaseHighState(object):
         if err:
             return err
         if not high:
-            return {'no_|-states_|-states_|-None': {
-                        'result': False,
-                        'comment': 'No states found for this minion',
-                        'name': 'No States',
-                        'changes': {},
-                        '__run_num__': 0,
-                        }
-                   }
+            return ret
         return self.state.call_high(high)
 
     def compile_highstate(self):

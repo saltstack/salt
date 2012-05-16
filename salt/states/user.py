@@ -41,7 +41,7 @@ def _changes(
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
     '''
-    
+
     change = {}
     found = False
 
@@ -63,7 +63,8 @@ def _changes(
                     change['groups'] = groups
             if home:
                 if lusr['home'] != home:
-                    change['home'] = home
+                    if not home is True:
+                        change['home'] = home
             if shell:
                 if lusr['shell'] != shell:
                     change['shell'] = shell
@@ -141,7 +142,7 @@ def present(
 
 
     User comment field (GECOS) support (currently Linux-only):
-    
+
     The below values should be specified as strings to avoid ambiguities when
     the values are loaded. (Especially the phone and room number fields which
     are likely to contain numeric data)
@@ -151,10 +152,10 @@ def present(
 
     roomnumber
         The user's room number
-    
+
     workphone
         The user's work phone number
-    
+
     homephone
         The user's home phone number
 
@@ -218,7 +219,7 @@ def present(
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         return ret
- 
+
     if changes is False:
         # The user is not present, make it!
         if __opts__['test']:
