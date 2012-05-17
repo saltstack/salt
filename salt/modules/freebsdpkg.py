@@ -20,6 +20,19 @@ def pkgng_update():
         __salt__['cmd.run']('pkg update')
     return ""
 
+
+def pkgng_search(pkg_name):
+    '''
+    Use `pkg search` if pkg is being used.
+
+    CLI Example::$
+        salt '*' pkg.pkgng_search 'mysql-server'
+    '''
+    if _check_pkgng():
+        res = __salt__['cmd.run']('pkg search {0}'.format(pkg_name))
+        res = [ x for x in res.split('\n') ]
+        return { "Results" : res }
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
