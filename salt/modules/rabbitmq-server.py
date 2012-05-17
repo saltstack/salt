@@ -8,7 +8,7 @@ def list_users():
     List a a users
     '''
     d = {}
-    res = __salt__['cmd.run']('list_users')
+    res = __salt__['cmd.run']('rabitmqctl list_users')
     for line in res.split('\n'):
         if '...' not in line or line == '\n': d[ line.split('\t')[0] ] = line.split('\t')[1]
     return d
