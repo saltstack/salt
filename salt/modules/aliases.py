@@ -2,7 +2,9 @@
 Manage the information in the aliases file
 '''
 
+# Import python libs
 import os
+import sys
 import re
 import stat
 import tempfile
@@ -51,13 +53,15 @@ def __write_aliases_file(lines):
     adir = os.path.dirname(afn)
 
     out = tempfile.NamedTemporaryFile(dir=adir, delete=False)
-    if os.path.isfile(afn):
-        st = os.stat(afn)
-        os.chmod(out.name, stat.S_IMODE(st.st_mode))
-        os.chown(out.name, st.st_uid, st.st_gid)
-    else:
-        os.chmod(out.name, 0644)
-        os.chown(out.name, 0, 0)
+
+    if not __opts__['integration.test']:
+        if os.path.isfile(afn):
+            st = os.stat(afn)
+            os.chmod(out.name, stat.S_IMODE(st.st_mode))
+            os.chown(out.name, st.st_uid, st.st_gid)
+        else:
+            os.chmod(out.name, 0644)
+            os.chown(out.name, 0, 0)
 
     for (line_alias, line_target, line_comment) in lines:
         if not line_comment:
