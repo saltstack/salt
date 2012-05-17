@@ -5,10 +5,14 @@ Todo: Alot, need to add cluster support, logging, and minion configuration data.
 
 def list_users():
     '''
-    List a a users
+    Return a list of users based off of rabbitmqctl user_list.
+
+    CLI Example::
+
+        salt '*' rabbitmq-server.list_users
     '''
     d = {}
-    res = __salt__['cmd.run']('rabitmqctl list_users')
+    res = __salt__['cmd.run']('rabbitmqctl list_users')
     for line in res.split('\n'):
         if '...' not in line or line == '\n': d[ line.split('\t')[0] ] = line.split('\t')[1]
     return d
@@ -16,11 +20,16 @@ def list_users():
 
 def list_vhosts():
     '''
-    Get vhost listing.
+    Return a list of vhost based of of rabbitmqctl list_vhosts.
+
+    CLI Example::
+        salt '*' rabbitmq-server.list_vhosts
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_vhosts')
     r = res.split('\n')
-    return { 'vhost' : r }
+    vhost = []
+    [vhost.append(x) for x in r if '...' not in x]
+    return { 'vhost_list' : vhost }
 
 
 def add_user(name, password):
