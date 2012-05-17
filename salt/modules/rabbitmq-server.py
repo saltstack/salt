@@ -47,10 +47,10 @@ def add_user(name, password):
 
 def delete_user(name):
     '''
-    Deletes a user via rabbitmqctl user_delete_user.
+    Deletes a user via rabbitmqctl delete_user.
 
     CLI Example::
-        salt '*' rabbitmqctl.delete_user 'meow'
+        salt '*' rabbitmq-server.delete_user 'meow'
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name))
     if 'Error' in res:
@@ -60,31 +60,47 @@ def delete_user(name):
 
 def add_vhost(vhost):
     '''
-    Adds a vhost to the service.
+    Adds a vhost via rabbitmqctl add_vhost.
+
+    CLI Example::
+        salt '*' rabbitmq-server add_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost))
-    return {'add_vhost' : res}
+    if 'Error' in res:
+        return { 'Error' : res.replace('\n', '') }
+    return { 'added_vhost' : res.replace('\n', '') }
 
 
 def delete_vhost(vhost):
     '''
-    Deletes a vhost.
+    Deletes a vhost rabbitmqctl delete_vhost.
+
+    CLI Example::
+        salt '*' rabbitmq-server.delete_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost))
-    return {'delete' : res}
+    if 'Error' in res:
+        return { 'Error' : res.replace('\n', '') }
+    return { 'deleted_vhost' : res.replace('\n','') }
 
 
 def set_permissions(vhost,user,conf='.*',write='.*',read='.*'):
     '''
-    Sets permissions for vhost.
+    Sets permissions for vhost via rabbitmqctl set_permissions
+
+    CLI Example::
+        salt '*' rabbitmq-server.set_permissions 'myvhost' 'myuser'
     '''
     res = __salt__['cmd.run']('rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(vhost,user,conf,write,read))
-    return { 'set_permissions': res }
+    return { 'set_permissions': res.replace('\n', '') }
 
 
 def list_user_permissions(name):
     '''
-    List permissions for a user.
+    List permissions for a user via rabbitmqctl list_user_permissions
+
+    Example::
+        salt '*' rabbitmq-server.list_user_permissions 'user'.
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_user_permissions {0}'.format(name))
     return { 'user_permissions' : [ r.split('\t') for r in res.split('\n') ] }
