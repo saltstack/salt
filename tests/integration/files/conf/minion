@@ -13,6 +13,7 @@ log_file: minion
 test.foo: baz
 hosts.file: integration/tmp/hosts
 aliases.file: integration/tmp/aliases
+integration.test: True
 
 # Grains addons
 grains:
