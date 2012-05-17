@@ -34,18 +34,28 @@ def list_vhosts():
 
 def add_user(name, password):
     '''
-    Add a rabbitMQ user.
+    Add a rabbitMQ user via rabbitmqctl user_add <user> <password>
+
+    CLI Example::
+        salt '*' rabbitmq-server.add_user 'meow' 'mix'
     '''
     res = __salt__['cmd.run']('rabbitmqctl add_user {0} {1}'.format(name, password))
-    return { 'Added' : res }
+    if 'Error' in res:
+        return { 'Error' : res.replace('\n', '') }
+    return { 'Added' : res.replace('\n', '') }
 
 
 def delete_user(name):
     '''
-    Deletes a user.
+    Deletes a user via rabbitmqctl user_delete_user.
+
+    CLI Example::
+        salt '*' rabbitmqctl.delete_user 'meow'
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name))
-    return { 'delete' : res }
+    if 'Error' in res:
+        return { 'Error' : res.replace('\n', '') }
+    return { 'deleted' : res.replace('\n','') }
 
 
 def add_vhost(vhost):
