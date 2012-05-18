@@ -95,3 +95,57 @@ def show_config(jail):
     return ret
 
 
+def fstab(jail):
+    '''
+    Display contents of a fstab(5) file defined in specified
+    jail's configuration. If no file defined return False.
+
+    CLI Example::
+
+        salt '*' jail.fstab <jail name>
+    '''
+    ret = []
+    config = __salt__['jail.show_config'](jail)
+    if 'fstab' in config:
+        fstab = config['fstab']
+        if os.path.isfile(fstab):
+            for line in open(fstab, 'r').readlines():
+                if not line.strip():
+                    continue
+                if line.strip().startswith('#'):
+                    continue
+                dv, m, f, o, dm, p = line.split()
+                ret.append({
+                    'device': dv, 'mountpoint': m,
+                    'fstype': f,  'options': o,
+                    'dump': dm,   'pass': p
+                    })
+        else:
+            ret = False
+    else:
+        ret = False
+    return ret
+
+
+def status(jail):
+    '''
+    See if specified jail is currently running
+
+    CLI Example::
+
+        salt '*' jail.status <jail name>
+    '''
+    cmd='jls | grep {0}'.format(jail)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def sysctl():
+    '''
+    Dump all jail related kernel states (sysctl)
+    '''
+    ret = {}
+    sysctl=__salt__['cmd.run']('sysctl security.jail')
+    for s in sysctl.split('\n'):
+        k, v = s.split(':')
+        ret[k.strip()] = v.strip()
+    return ret
