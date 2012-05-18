@@ -6,18 +6,10 @@ import os
 
 def _check_pkgng():
     '''
-    Looks to see if pkgng is being used if so sets global var.
+    Looks to see if pkgng is being used by checking if database exists
     '''
-    make_file = "/etc/make.conf"
-    if os.path.isfile(make_file):
-        try:
-            for line in open(make_file,'r').readlines():
-                if 'WITH_PKGNG=yes' in line:
-                    return True
-        except IOError:
-            # issue opening file
-            pass
-        return False
+    if os.path.isfile('/var/db/pkg/repo.sqlite'):
+        return True
     return False
 
 def pkgng_update():
