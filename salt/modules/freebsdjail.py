@@ -94,4 +94,14 @@ def show_config(jail):
                 ret[k.split('_',2)[2]] = v.split('"')[1]
     return ret
 
+def status(jail):
+    '''
+    See if specified jail is currently running
+
+    CLI Example::
+
+        salt '*' jail.status <jail name>
+    '''
+    cmd='jls | grep {0}'.format(jail)
+    return not __salt__['cmd.retcode'](cmd)
 
