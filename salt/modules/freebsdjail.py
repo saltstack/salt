@@ -138,3 +138,14 @@ def status(jail):
     cmd='jls | grep {0}'.format(jail)
     return not __salt__['cmd.retcode'](cmd)
 
+
+def sysctl():
+    '''
+    Dump all jail related kernel states (sysctl)
+    '''
+    ret = {}
+    sysctl=__salt__['cmd.run']('sysctl security.jail')
+    for s in sysctl.split('\n'):
+        k, v = s.split(':')
+        ret[k.strip()] = v.strip()
+    return ret
