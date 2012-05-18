@@ -14,18 +14,19 @@ def _check_pkgng():
 
 def pkgng_update():
     '''
-    use pkg update to get latest repo.txz
+    Use pkg update to get latest repo.txz
     '''
     if _check_pkgng():
         __salt__['cmd.run']('pkg update')
     return ""
 
 
-def pkgng_search(pkg_name):
+def search(pkg_name):
     '''
     Use `pkg search` if pkg is being used.
 
-    CLI Example::$
+    CLI Example::
+
         salt '*' pkg.pkgng_search 'mysql-server'
     '''
     if _check_pkgng():
