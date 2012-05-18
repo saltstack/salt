@@ -105,6 +105,15 @@ class SaltCMD(object):
                 action='store_true',
                 help=('Instead of using shell globs use the return code '
                       'of a function.'))
+        parser.add_option('-I',
+                '--pillar',
+                default=False,
+                dest='pillar',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use a pillar value to identify targets, the syntax '
+                      'for the target is the pillar key followed by a glob'
+                      'expression:\n"role:production*"'))
         parser.add_option('-N',
                 '--nodegroup',
                 default=False,
@@ -286,6 +295,8 @@ class SaltCMD(object):
                 args.append('grain_pcre')
             elif self.opts['exsel']:
                 args.append('exsel')
+            elif self.opts['pillar']:
+                args.append('pillar')
             elif self.opts['nodegroup']:
                 args.append('nodegroup')
             elif self.opts['range']:

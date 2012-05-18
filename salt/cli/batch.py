@@ -38,6 +38,8 @@ class Batch(object):
             args.append('grain_pcre')
         elif self.opts['exsel']:
             args.append('exsel')
+        elif self.opts['pillar']:
+            args.append('pillar')
         elif self.opts['nodegroup']:
             args.append('nodegroup')
         elif self.opts['compound']:
