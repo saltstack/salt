@@ -19,7 +19,8 @@ salt_base_path = os.path.dirname(salt.__file__)
 
 
 def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
-    '''Creates Loader instance
+    '''
+    Creates Loader instance
 
     Order of module_dirs:
         opts[ext_type_dirs],
@@ -148,10 +149,12 @@ def runner(opts):
     '''
     Directly call a function inside a loader directory
     '''
-    module_dirs = [
-        os.path.join(salt_base_path, 'runners'),
-        ]
-    load = Loader(module_dirs, opts)
+    load = _create_loader(
+            opts,
+            'runners',
+            'runner',
+            ext_type_dirs='runner_dirs'
+            )
     return load.gen_functions()
 
 
