@@ -1,5 +1,3 @@
-import difflib
-
 '''
 Network Management
 ==================
@@ -111,6 +109,8 @@ bond0.12:
     - require:
       - network: bond0
 '''
+import difflib
+
 
 def managed(
         name,
