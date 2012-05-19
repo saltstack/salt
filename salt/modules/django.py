@@ -51,9 +51,13 @@ def syncdb(settings_module,
     '''
     Run syncdb
 
-    If you have south installed, you can pass in the optional
-    ``migrate`` kwarg and run the migrations after the syncdb
-    finishes.
+    Execute the Django-Admin syncdb command, if South is available on the
+    minion the ``migrate`` option can be passed as ``True`` calling the
+    migrations to run after the syncdb completes
+
+    CLI Example::
+
+        salt '*' django.syncdb settings.py
     '''
     da = _get_django_admin(bin_env)
     cmd = '{0} syncdb --settings={1}'.format(da, settings_module)
@@ -74,8 +78,12 @@ def createsuperuser(settings_module,
                     pythonpath=None):
     '''
     Create a super user for the database.
-    this defaults to use the ``--noinput`` flag which will
-    not create a password for the superuser.
+    This function defaults to use the ``--noinput`` flag which prevents the
+    creation of a password for the superuser.
+
+    CLI Example::
+
+        salt '*' django.createsuperuser settings.py user user@example.com
     '''
     da = _get_django_admin(bin_env)
     cmd = "{0} createsuperuser --settings={1} --noinput --email='{2}' --username={3}".format(
@@ -98,6 +106,10 @@ def loaddata(settings_module,
     Fixtures:
         comma separated list of fixtures to load
 
+    CLI Example::
+
+        salt '*' django.loaddata settings.py <comma delimited list of fixtures>
+
     '''
     da = _get_django_admin(bin_env)
     cmd = '{0} loaddata --settings={1} {2}'.format(
@@ -118,6 +130,14 @@ def collectstatic(settings_module,
                   link=False,
                   no_default_ignore=False,
                   pythonpath=None):
+    '''
+    Collect static files from each of your applications into a single location
+    that can easily be served in production.
+
+    CLI Example::
+    
+        salt '*' django.collectstatic settings.py
+    '''
     da = _get_django_admin(bin_env)
     cmd = '{0} collectstatic --settings={1} --noinput'.format(
             da, settings_module)
