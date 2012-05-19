@@ -526,7 +526,11 @@ def _write_file(iface, data, folder, pattern):
 
 def build_bond(iface, settings):
     '''
-    Create a bond script in /etc/modprobe.d
+    Create a bond script in /etc/modprobe.d with the passed settings
+
+    CLI Example::
+
+        salt '*' ip.build_bond br0 mode=balance-alb
     '''
     opts = _parse_settings_bond(settings, iface)
     template = env.get_template('conf.jinja')
@@ -538,6 +542,10 @@ def build_bond(iface, settings):
 def build_interface(iface, type, settings):
     '''
     Build an interface script for a network interface.
+
+    CLI Example::
+
+        salt '*' ip.build_interface eth0 eth <settings>
     '''
     if type not in _IFACE_TYPES:
         _raise_error(iface, type, _IFACE_TYPES)
@@ -564,12 +572,20 @@ def build_interface(iface, type, settings):
 def down(iface):
     '''
     Shutdown a network interface
+
+    CLI Example::
+
+        salt '*' ip.down eth0
     '''
     __salt__['cmd.run']('ifdown %s' % iface)
 
 def get_bond(iface):
     '''
     Return the content of a bond script
+
+    CLI Example::
+
+        salt '*' ip.get_bond br0
     '''
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
     return _read_file(path)
@@ -577,6 +593,10 @@ def get_bond(iface):
 def get_interface(iface):
     '''
     Return the contents of an interface script
+
+    CLI Example::
+
+        salt '*' ip.get_interface eth0
     '''
     path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
     return _read_file(path)
@@ -584,5 +604,9 @@ def get_interface(iface):
 def up(iface):
     '''
     Start up a network interface
+
+    CLI Example::
+
+        salt '*' ip.up eth0
     '''
     __salt__['cmd.run']('ifup %s' % iface)
