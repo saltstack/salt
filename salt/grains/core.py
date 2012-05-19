@@ -45,6 +45,7 @@ def _kernel():
         grains['kernel'] = 'Unknown'
     return grains
 
+
 def _windows_cpudata():
     '''
     Return the cpu information for Windows systems architecture
@@ -59,6 +60,7 @@ def _windows_cpudata():
         grains['num_cpus'] = os.environ['NUMBER_OF_PROCESSORS']
     grains['cpu_model'] = platform.processor()
     return grains
+
 
 def _linux_cpudata():
     '''
@@ -114,8 +116,8 @@ def _freebsd_cpudata():
 
     if sysctl:
         machine_cmd = '{0} -n hw.machine'.format(sysctl)
-        ncpu_cmd    = '{0} -n hw.ncpu'.format(sysctl)
-        model_cpu   = '{0} -n hw.model'.format(sysctl)
+        ncpu_cmd = '{0} -n hw.ncpu'.format(sysctl)
+        model_cpu = '{0} -n hw.model'.format(sysctl)
         grains['num_cpus'] = __salt__['cmd.run'](ncpu_cmd).strip()
         grains['cpu_model'] = __salt__['cmd.run'](model_cpu).strip()
         grains['cpuarch'] = __salt__['cmd.run'](machine_cmd).strip()
@@ -140,20 +142,20 @@ def _memdata(osdata):
                     continue
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
     elif osdata['kernel'] == 'Windows':
-       for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
-           comps = line.split(':')
-           if not len(comps) > 1:
-               continue
-           if comps[0].strip() == 'Total Physical Memory':
-               grains['mem_total'] = int(comps[1].split()[0].replace(',', ''))
-               break
-
+        for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
+            comps = line.split(':')
+            if not len(comps) > 1:
+                continue
+            if comps[0].strip() == 'Total Physical Memory':
+                # Windows XP use '.' as separator and Windows 2008 Server R2 use ','
+                grains['mem_total'] = int(comps[1].split()[0].replace('.', '').replace(',', ''))
+                break
     return grains
 
 
@@ -194,7 +196,7 @@ def _virtual(osdata):
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
             grains['virtual'] = 'kvm'
-    choices =  ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
+    choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
@@ -246,7 +248,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'VMware'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl)).strip()
-            jail  = __salt__['cmd.run']('{0} -n security.jail.jailed'.format(sysctl)).strip()
+            jail = __salt__['cmd.run']('{0} -n security.jail.jailed'.format(sysctl)).strip()
             if jail:
                 grains['virtual_subtype'] = 'jail'
             if 'QEMU Virtual CPU' in model:
@@ -288,6 +290,7 @@ def _linux_platform_data(osdata):
     if oscodename:
         grains['oscodename'] = oscodename
     return grains
+
 
 def _windows_platform_data(osdata):
     '''
@@ -510,6 +513,7 @@ def path():
     #   path
     return {'path': os.environ['PATH'].strip()}
 
+
 def pythonversion():
     '''
     Return the Python version
@@ -518,6 +522,7 @@ def pythonversion():
     #   pythonversion
     return {'pythonversion': list(sys.version_info)}
 
+
 def pythonpath():
     '''
     Return the Python path
@@ -525,6 +530,7 @@ def pythonpath():
     # Provides:
     #   pythonpath
     return {'pythonpath': sys.path}
+
 
 def saltpath():
     '''
@@ -535,6 +541,7 @@ def saltpath():
     path = os.path.abspath(os.path.join(__file__, os.path.pardir))
     return {'saltpath': os.path.dirname(path)}
 
+
 def saltversion():
     '''
     Return the version of salt
@@ -543,6 +550,7 @@ def saltversion():
     #   saltversion
     from salt import __version__
     return {'saltversion': __version__}
+
 
 # Relatively complex mini-algorithm to iterate over the various
 # sections of dmidecode output and return matches for  specific
@@ -567,7 +575,8 @@ def _dmidecode_data(regex_dict):
 
         # Look at every line for the right section
         for line in out.split('\n'):
-            if not line: continue
+            if not line:
+                continue
             # We've found it, woohoo!
             if re.match(section, line):
                 section_found = True
@@ -584,7 +593,8 @@ def _dmidecode_data(regex_dict):
                 grain = regex_dict[section][item]
                 # Skip to the next iteration if this grain
                 # has been found in the dmidecode output.
-                if grain in ret: continue
+                if grain in ret:
+                    continue
 
                 match = regex.match(line)
 
@@ -633,6 +643,7 @@ def _hw_data(osdata):
             grains['productname'] = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv)).strip()
     return grains
 
+
 def get_server_id():
     '''
     Provides an integer based on the FQDN of a machine.
@@ -640,4 +651,4 @@ def get_server_id():
     '''
     # Provides:
     #   server_id
-    return { 'server_id': abs(hash(__opts__['id']) % 2**31) }
+    return {'server_id': abs(hash(__opts__['id']) % (2 ** 31))}
