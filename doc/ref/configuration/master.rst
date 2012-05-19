@@ -180,6 +180,19 @@ public keys from the minions
 
     auto_accept: False
 
+
+Master Module Management
+------------------------
+
+.. conf_master:: runner_dirs
+
+``runner_dirs``
+---------------
+
+Default: ``[]``
+
+Set additional directories to search for runner modules
+
 Master State System Settings
 ----------------------------
 
