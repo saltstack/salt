@@ -151,7 +151,8 @@ def _memdata(osdata):
            if not len(comps) > 1:
                continue
            if comps[0].strip() == 'Total Physical Memory':
-               grains['mem_total'] = int(comps[1].split()[0].replace('.', ''))
+               # Windows XP use '.' as separator and Windows 2008 Server R2 use ','
+               grains['mem_total'] = int(comps[1].split()[0].replace('.', '').replace(',', ''))
                break
 
     return grains
