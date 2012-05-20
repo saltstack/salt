@@ -17,9 +17,9 @@ Join the `salt-users mailing list`_. It is the best place to ask questions
 about Salt and see whats going on with Salt development! The Salt mailing list
 is hosted by Google Groups. It is open to new members.
 
-http://groups.google.com/group/salt-users
+https://groups.google.com/forum/#!forum/salt-users
 
-.. _`salt-users mailing list`: http://groups.google.com/group/salt-users
+.. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
 .. _community-irc:
 
