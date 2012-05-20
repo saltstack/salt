@@ -12,64 +12,64 @@ To install Salt on Ubuntu, use the following command:
 
 .. code-block:: bash
 
-	add-aptrepository ppa:saltstack/salt
-	apt-get install salt-master
-	apt-get install salt-minion
+    add-aptrepository ppa:saltstack/salt
+    apt-get install salt-master
+    apt-get install salt-minion
 
-After insallation you'll need to make a few changes to the configuration files.
+After installation you'll need to make a few changes to the configuration files.
 
 Configuration
 =============
 
-To configure your salt files we must modify both master and minion configuratio
-n files. We need to set where the master binds, by default salt listens on all 
-interfaces. If you have a need to bind to a specific local IP, make the change 
-as needed. To edit the master type in the following command:
+To configure your salt files we must modify both master and minion 
+configuration files. We need to set where the master binds, by default salt 
+listens on all interfaces. If you have a need to bind to a specific local IP, 
+make the change as needed. To edit the master type in the following command:
 
 .. code-block:: bash
 
-	sudo vim /etc/salt/master
+    sudo vim /etc/salt/master
 
 From here make the following changes:
 
 .. code-block:: diff
 
-	- interface: 0.0.0.0
-	+ interface: 127.0.0.1
+    - interface: 0.0.0.0
+    + interface: 192.168.0.10
 
 To configure the minion type in the following command:
 
 .. code-block:: bash
 
-	sudo vim /etc/salt/minion
+    sudo vim /etc/salt/minion
 
 Once inside the editor make the following changes:
 
 .. code-block:: diff
 
-	- master: salt
-	+ master: 127.0.0.1
+    - master: salt
+    + master: 192.168.0.10
 
 After making the following changes you need to restart both the master and the 
 minion. To do so type in the following commands:
 
 .. code-block:: bash
 
-	sudo /etc/init.d/salt-master restart
-        sudo /etc/inti.d/salt-minion restart
+    sudo /etc/init.d/salt-master restart
+    sudo /etc/inti.d/salt-minion restart
 
 Test
 ====
 
 To test salt we must first sign the key of the minion to the master. To see the
- pending keys type in the following command:
+pending keys type in the following command:
 
 .. code-block:: bash
 
         sudo salt-key -L
 
-From here you will should see a key name underneath the Unaccepted Keys portion
-. To sign the minion key to the master type in the follwoing command:
+From here you will should see a key name underneath the Unaccepted Keys 
+portion. To sign the minion key to the master type in the following command:
 
 .. code-block:: baash
 
@@ -78,11 +78,11 @@ From here you will should see a key name underneath the Unaccepted Keys portion
 Where ``$minion`` is the unaccepted key.
 
 
-Now that you have signed the key we need to see if the key was accepted and tha
-t we can ping the minion and get a response. To do this you can type in one of 
-the previous commands ``sudo salt-key -L`` and see if the key has been accepted
-, then also ping the minion to see if it's working by typing in the following c
-ommand:
+Now that you have signed the key we need to see if the key was accepted and 
+that we can ping the minion and get a response. To do this you can type in one 
+of the previous commands ``sudo salt-key -L`` and see if the key has been 
+accepted, then also ping the minion to see if it's working by typing in the 
+following command:
 
 .. code-block:: bash
 
@@ -103,29 +103,28 @@ To see if the master is running properly type in the following command:
 
         netstat -natp | grep 450
 
-This should return ``127.0.0.1:4505`` and ``127.0.0.1:4506`` if the master was 
-configured properly. If this does not return those values recheck your master a
-nd minion config files for mistakes.
+This should return ``192.168.0.10:4505`` and ``192.168.0.10:4506`` if the master was 
+configured properly. If this does not return those values recheck your master 
+and minion config files for mistakes.
 
-To see if both master and minion are running properly type in the folliwng comm
-and:
+To see if both master and minion are running properly type in the following 
+command:
 
 .. code-block:: bash
 
         ps -efH | grep sal[t]
 
-This should return 8 salt masters and 1 salt minion if both are configured prop
-erly.
+This should return 8 salt masters and 1 salt minion if both are configured 
+properly.
 
 What Now?
 =========
 
-Congratulations you have just successfully setup salt on your Ubuntu machine an
-d configured both the master and the minion. From this point you are now able t
-o send remote commands. Depending on the primary way you want to manage your ma
-chines you may either want to visit the section regarding Salt States, or the s
-ection on Modules.
-
+Congratulations you have just successfully setup salt on your Ubuntu machine 
+and configured both the master and the minion. From this point you are now 
+able to send remote commands. Depending on the primary way you want to 
+manage your machines you may either want to visit the section regarding Salt 
+States, or the section on Modules.
 
 Debian
 ------
@@ -138,8 +137,6 @@ accepted you can install Salt by downloading the latest ``.deb`` in the
 .. __: https://github.com/saltstack/salt/downloads
 
 .. admonition:: Installing ZeroMQ on Squeeze (Debian 6)
-n the primary way you want to manage your machines you may either want to visit
- the section regarding Salt States, or the section on Modules.
 
     There is a `python-zmq`__ package available in Debian \"wheezy (testing)\".
     If you don't have that repo enabled the best way to install Salt and pyzmq
