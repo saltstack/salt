@@ -1,9 +1,10 @@
 '''
 Manage client ssh components
 '''
-
 import os
 import re
+import binascii
+import hashlib
 
 
 def _refine_enc(enc):
@@ -119,14 +120,36 @@ def _validate_keys(key_file):
             enc = comps[0]
             key = comps[1]
             comment = ' '.join(comps[2:])
+            fingerprint = _fingeprint(key)
+            if fingerprint is None:
+                continue
 
             ret[key] = {'enc': enc,
                         'comment': comment,
-                        'options': options}
+                        'options': options,
+                        'fingerprint': fingerprint}
     except IOError:
         return {}
 
     return ret
+
+
+def _fingeprint(public_key):
+    """
+    Return a public key fingerprint based on its base64-encoded representation
+
+    The fingerprint string is formatted according to RFC 4716 (ch.4), that is,
+    in the form "xx:xx:...:xx"
+
+    If the key is invalid (incorrect base64 string), return None
+    """
+    try:
+        raw_key = public_key.decode('base64')
+    except binascii.Error:
+        return None
+    ret = hashlib.md5(raw_key).hexdigest()
+    chunks = [ret[i:i+2] for i in range(0, len(ret), 2)]
+    return ':'.join(chunks)
 
 
 def host_keys(keydir=None):
