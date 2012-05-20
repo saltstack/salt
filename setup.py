@@ -23,11 +23,10 @@ setup(
       version=VER,
       description=DESC,
       author='Thomas S Hatch',
-      author_email='thatch45@gmail.com',
+      author_email='thatch@saltstack.com',
       url='http://saltstack.org',
       classifiers=[
           'Programming Language :: Python',
-          'Programming Language :: Cython',
           'Programming Language :: Python :: 2.6',
           'Programming Language :: Python :: 2.7',
           'Development Status :: 2 - Pre-Alpha'
@@ -35,7 +34,7 @@ setup(
           'Intended Audience :: Developers',
           'Intended Audience :: Information Technology',
           'Intended Audience :: System Administrators',
-          'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+          'License :: OSI Approved :: Apache Software License',
           'Operating System :: POSIX :: Linux',
           'Topic :: System :: Distributed Computing',
           ],
