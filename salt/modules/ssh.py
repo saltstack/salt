@@ -120,7 +120,7 @@ def _validate_keys(key_file):
             enc = comps[0]
             key = comps[1]
             comment = ' '.join(comps[2:])
-            fingerprint = _fingeprint(key)
+            fingerprint = _fingerprint(key)
             if fingerprint is None:
                 continue
 
@@ -134,7 +134,7 @@ def _validate_keys(key_file):
     return ret
 
 
-def _fingeprint(public_key):
+def _fingerprint(public_key):
     """
     Return a public key fingerprint based on its base64-encoded representation
 
@@ -404,7 +404,7 @@ def _parse_openssh_output(lines):
             hostname, enc, key = line.split()
         except ValueError:  # incorrect format
             continue
-        fingerprint = _fingeprint(key)
+        fingerprint = _fingerprint(key)
         if not fingerprint:
             continue
         yield {'hostname': hostname, 'key': key, 'enc': enc,
