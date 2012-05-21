@@ -116,10 +116,7 @@ command:
 
 This should return 8 salt masters and 1 salt minion if both are configured 
 properly. If you are still having issues with your salt configuration please 
-reference the trouble shooting page:
-
-.. __: http://readthedocs.org/docs/salt/en/latest/topics/troubleshooting/
-
+reference the trouble shooting page :doc:`Troubleshooting</topics/troubleshooting/index>`.
 
 What Now?
 =========
