@@ -193,6 +193,20 @@ Default: ``[]``
 
 Set additional directories to search for runner modules
 
+.. conf_master:: cython_enable
+
+``cython_enable``
+-----------------
+
+Default: ``False``
+
+Set to true to enable cython modules (.pyx files) to be compiled on the fly on
+the salt master
+
+.. code-block:: yaml
+
+    cython_enable: False
+
 Master State System Settings
 ----------------------------
 
