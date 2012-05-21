@@ -116,11 +116,7 @@ command:
 
 This should return 8 salt masters and 1 salt minion if both are configured 
 properly. If you are still having issues with your salt configuration please 
-reference the trouble shooting page:
-
-.. code-block:: bash
-
-    vim salt/doc/topic/troubleshooting/index.rst
+reference the trouble shooting page :doc:`Troubleshooting</topics/troubleshooting/index>`.
 
 What Now?
 =========
