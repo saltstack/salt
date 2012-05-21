@@ -246,6 +246,7 @@ def master_config(path):
             'range_server': 'range:80',
             'serial': 'msgpack',
             'nodegroups': {},
+            'cython_enable': False,
             'key_logfile': '/var/log/salt/key.log',
     }
 
