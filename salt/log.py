@@ -9,6 +9,7 @@
     :license: Apache 2.0, see LICENSE for more details.
 '''
 
+import sys
 import logging
 import logging.handlers
 
@@ -88,11 +89,17 @@ def setup_logfile_logger(log_path, log_level='error'):
     init()
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    rootLogger = logging.getLogger()
-    handler = getattr(
-        logging.handlers, 'WatchedFileHandler', logging.FileHandler)(
-            log_path, 'a', 'utf-8', delay=0
-    )
+    try:
+        rootLogger = logging.getLogger()
+        handler = getattr(
+            logging.handlers, 'WatchedFileHandler', logging.FileHandler)(
+                log_path, 'a', 'utf-8', delay=0
+        )
+    except (IOError, OSError):
+        err = ('Failed to open log file, do you have permission to write to '
+               '{0}'.format(log_path))
+        sys.stderr.write('{0}\n'.format(err))
+        sys.exit(2)
 
     handler.setLevel(level)
     formatter = logging.Formatter(

@@ -709,6 +709,29 @@ class Matcher(object):
             return False
         return(self.functions[tgt]())
 
+    def pillar_match(self, tgt):
+        '''
+        Reads in the pillar glob match
+        '''
+        log.debug('tgt {0}'.format(tgt))
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            log.error('Got insufficient arguments for pillar match statement from master')
+            return False
+        if comps[0] not in self.opts['pillar']:
+            log.error('Got unknown pillar match statement from master: {0}'.format(comps[0]))
+            return False
+        if isinstance(self.opts['pillar'][comps[0]], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['pillar'][comps[0]]:
+                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            str(self.opts['pillar'][comps[0]]).lower(),
+            comps[1].lower(),
+            ))
+
     def compound_match(self, tgt):
         '''
         Runs the compound target check
@@ -719,13 +742,14 @@ class Matcher(object):
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'X': 'exsel',
+               'I': 'pillar',
                'L': 'list',
                'E': 'pcre'}
         results = []
         opers = ['and', 'or', 'not']
         for match in tgt.split():
             # Try to match tokens from the compound target, first by using
-            # the 'G, X, L, E' matcher types, then by hostname glob.
+            # the 'G, X, I, L, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
                 comps = match.split('@')
                 matcher = ref.get(comps[0])

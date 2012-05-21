@@ -59,6 +59,13 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
+#####    Master Module Management    #####
+##########################################
+# Manage how master side modules are loaded
+#
+# Add any additional locations to look for master runners
+#runner_dirs: []
+
 #####      State System settings     #####
 ##########################################
 # The state system uses a "top" file to tell the minions what environment to
