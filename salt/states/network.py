@@ -155,7 +155,7 @@ def managed(
                 return ret
             elif old != new:
                 ret['result'] = None
-                ret['comment'] = 'Interface 0{} is set to be updated'.format(
+                ret['comment'] = 'Interface {0} is set to be updated'.format(
                     name)
                 return ret
         if not old and new:
