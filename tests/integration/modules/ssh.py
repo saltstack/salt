@@ -27,11 +27,11 @@ class SSHModuleTest(integration.ModuleCase):
             self.key = fd.read().strip()
 
     def tearDown(self):
-        super(SSHModuleTest, self).tearDown()
         if os.path.isfile(AUTHORIZED_KEYS):
             os.remove(AUTHORIZED_KEYS)
         if os.path.isfile(KNOWN_HOSTS):
             os.remove(KNOWN_HOSTS)
+        super(SSHModuleTest, self).tearDown()
 
     def test_auth_keys(self):
         shutil.copyfile(

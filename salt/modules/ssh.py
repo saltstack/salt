@@ -492,9 +492,11 @@ def rm_known_host(user, hostname, config='.ssh/known_hosts'):
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
     if not os.path.isfile(full):
-        return 'Known hosts file {0} does not exist'.format(full)
+        return {'status': 'error',
+                'error': 'Known hosts file {0} does not exist'.format(full)}
     cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(hostname, full)
-    return  __salt__['cmd.run'](cmd).strip()
+    cmd_result = __salt__['cmd.run'](cmd).strip()
+    return {'status': 'removed', 'comment': cmd_result}
 
 
 def set_known_host(user, hostname,
