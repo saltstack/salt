@@ -39,7 +39,17 @@ def clean_old_key(rsa_path):
         os.remove(rsa_path)
     except (IOError, OSError):
         pass
+    # Set write permission for minion.pem file - reverted after saving the key
+    if sys.platform == 'win32':
+        import win32api
+        import win32con
+        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
     mkey.save_key(rsa_path, None)
+    # Set read-only permission for minion.pem file
+    if sys.platform == 'win32':
+        import win32api
+        import win32con
+        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_READONLY)
     return mkey
 
 
