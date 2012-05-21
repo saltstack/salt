@@ -66,14 +66,14 @@ pending keys type in the following command:
 
 .. code-block:: bash
 
-        sudo salt-key -L
+    sudo salt-key -L
 
 From here you will should see a key name underneath the Unaccepted Keys 
 portion. To sign the minion key to the master type in the following command:
 
 .. code-block:: baash
 
-        sudo salt-key -a $minion
+    sudo salt-key -a $minion
 
 Where ``$minion`` is the unaccepted key.
 
@@ -86,13 +86,13 @@ following command:
 
 .. code-block:: bash
 
-        sudo salt \* test.ping
+    sudo salt \* test.ping
 
 If it is working properly you should see this result:
 
 .. code-block:: bash
 
-        {'$minion': True}
+    {'$minion': True}
 
 Troubleshooting
 ===============
@@ -101,7 +101,7 @@ To see if the master is running properly type in the following command:
 
 .. code-block:: bash
 
-        netstat -natp | grep 450
+    netstat -natp | grep 450
 
 This should return ``192.168.0.10:4505`` and ``192.168.0.10:4506`` if the master was 
 configured properly. If this does not return those values recheck your master 
@@ -112,10 +112,14 @@ command:
 
 .. code-block:: bash
 
-        ps -efH | grep sal[t]
+    ps -efH | grep sal[t]
 
 This should return 8 salt masters and 1 salt minion if both are configured 
-properly.
+properly. If you are still having issues with your salt configuration please 
+reference the trouble shooting page:
+
+.. __: http://readthedocs.org/docs/salt/en/latest/topics/troubleshooting/
+
 
 What Now?
 =========
