@@ -390,3 +390,165 @@ def set_auth_key(
         else:
             open(fconfig, 'a+').write('{0}'.format(auth_line))
         return 'new'
+
+
+def _parse_openssh_output(lines):
+    '''
+    Helper function which parses ssh-keygen -F and ssh-keyscan function output
+    and yield dict with keys information, one by one.
+    '''
+    for line in lines:
+        if line.startswith('#'):
+            continue
+        try:
+            hostname, enc, key = line.split()
+        except ValueError:  # incorrect format
+            continue
+        fingerprint = _fingeprint(key)
+        if not fingerprint:
+            continue
+        yield {'hostname': hostname, 'key': key, 'enc': enc,
+               'fingerprint': fingerprint}
+
+
+def get_known_host(user, hostname, config='.ssh/known_hosts'):
+    '''
+    Return information about known host from the configfile, if any.
+    If there is no such key, return None.
+
+    CLI Example::
+
+        salt '*' ssh.get_known_host <user> <hostname>
+    '''
+    uinfo = __salt__['user.info'](user)
+    full = os.path.join(uinfo['home'], config)
+    if not os.path.isfile(full):
+        return None
+    cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    known_hosts = list(_parse_openssh_output(lines))
+    return known_hosts[0] if known_hosts else None
+
+
+def recv_known_host(user, hostname, enc=None, port=None, hash_hostname=False):
+    '''
+    Retreive information about host public key from remote server
+
+    CLI Example::
+
+        salt '*' ssh.recv_known_host <user> <hostname> enc=<enc> port=<port>
+    '''
+    chunks = ['ssh-keyscan', ]
+    if port:
+        chunks += ['-p', str(port)]
+    if enc:
+        chunks += ['-t', str(enc)]
+    if hash_hostname:
+        chunks.append('-H')
+    chunks.append(str(hostname))
+    cmd = ' '.join(chunks)
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    known_hosts = list(_parse_openssh_output(lines))
+    return known_hosts[0] if known_hosts else None
+
+
+def check_known_host(user, hostname, key=None, fingerprint=None,
+                                               config='.ssh/known_hosts'):
+    '''
+    Check the record in known_hosts file, either by its value or by fingerprint
+    (it's enough to set up either key or fingerprint, you don't need to set up
+    both).
+
+    If provided key or fingerprint doesn't match with stored value, return
+    "update", if no value is found for a given host, return "add", otherwise
+    return "exists".
+
+    If neither key, nor fingerprint is defined, then additional validation is
+    not performed.
+
+    CLI Example::
+
+        salt '*' ssh.check_known_host <user> <hostname> key='AAAA...FAaQ=='
+    '''
+    known_host = get_known_host(user, hostname, config=config)
+    if not known_host:
+        return 'add'
+    if key:
+        return 'exists' if key == known_host['key'] else 'update'
+    elif fingerprint:
+        return 'exists' if fingerprint == known_host['fingerprint'] else 'update'
+    else:
+        return 'exists'
+
+
+def rm_known_host(user, hostname, config='.ssh/known_hosts'):
+    '''
+    Remove all keys belonging to hostname from a known_hosts file.
+
+    CLI Example::
+
+        salt '*' ssh.rm_known_host <user> <hostname>
+    '''
+    uinfo = __salt__['user.info'](user)
+    full = os.path.join(uinfo['home'], config)
+    if not os.path.isfile(full):
+        return 'Known hosts file {0} does not exist'.format(full)
+    cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(hostname, full)
+    return  __salt__['cmd.run'](cmd).strip()
+
+
+def set_known_host(user, hostname,
+        fingerprint=None,
+        port=None,
+        enc=None,
+        hash_hostname=True,
+        config='.ssh/known_hosts'):
+    '''
+    Download SSH public key from remote host "hostname", optionally validate
+    its fingerprint against "fingerprint" variable and save the record in the
+    known_hosts file.
+
+    If such a record does already exists in there, do nothing.
+
+
+    CLI Example::
+
+        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' enc='ssh-rsa'\
+                 config='.ssh/known_hosts'
+    '''
+    update_required = False
+    stored_host = get_known_host(user, hostname, config)
+
+    if not stored_host:
+        update_required = True
+    elif fingerprint and fingerprint != stored_host['fingerprint']:
+        update_required = True
+
+    if not update_required:
+        return {'status': 'exists', 'key': stored_host}
+
+    remote_host = recv_known_host(user, hostname, enc=enc, port=port,
+                                  hash_hostname=True)
+    if not remote_host:
+        return {'status': 'error',
+                'error': 'Unable to receive remote host key'}
+
+    if fingerprint and fingerprint != remote_host['fingerprint']:
+        return {'status': 'error',
+                'error': ('Remote host public key found but its fingerprint '
+                          'does not match one you have provided')}
+
+    # remove everything we had in the config so far
+    rm_known_host(user, hostname, config=config)
+    # set up new value
+    uinfo = __salt__['user.info'](user)
+    full = os.path.join(uinfo['home'], config)
+    line = '{hostname} {enc} {key}\n'.format(**remote_host)
+    with open(full, 'w') as fd:
+        fd.write(line)
+    return {'status': 'updated', 'old': stored_host, 'new': remote_host}
+
+    status = check_known_host(user, hostname, fingerprint=fingerprint,
+                                               config=config)
+    if status == 'exists':
+        return None
