@@ -12,14 +12,6 @@ def _check_pkgng():
         return True
     return False
 
-def pkgng_update():
-    '''
-    Use pkg update to get latest repo.txz
-    '''
-    if _check_pkgng():
-        __salt__['cmd.run']('pkg update')
-    return ""
-
 
 def search(pkg_name):
     '''
@@ -76,6 +68,15 @@ def version(name):
         return pkgs[name]
     else:
         return ''
+
+
+def refresh_db():
+    '''
+    Use pkg update to get latest repo.txz
+    '''
+    if _check_pkgng():
+        __salt__['cmd.run']('pkg update')
+    return {}
 
 
 def list_pkgs():
