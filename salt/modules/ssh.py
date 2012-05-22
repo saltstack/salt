@@ -174,13 +174,13 @@ def auth_keys(user, config='.ssh/authorized_keys'):
     return _validate_keys(full)
 
 
-def check_key_file(user, keysource, config='.ssh/authorized_keys'):
+def check_key_file(user, keysource, config='.ssh/authorized_keys', env='base'):
     '''
     Check a keyfile from a source destination against the local keys and
     return the keys to change
     '''
     ret = {}
-    keyfile = __salt__['cp.cache_file'](keysource)
+    keyfile = __salt__['cp.cache_file'](keysource, env)
     if not keyfile:
         return ret
     s_keys = _validate_keys(keyfile)
