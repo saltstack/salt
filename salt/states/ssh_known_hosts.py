@@ -54,6 +54,21 @@ def present(
            'changes': {},
            'result': True,
            'comment': ''}
+    if __opts__['test']:
+        result = __salt__['ssh.check_known_host'](user, name,
+                                                  fingerprint=fingerprint,
+                                                  config=config)
+        if result == 'exists':
+            comment = 'Host {0} is already in {1}'.format(name, config)
+            return dict(ret, result=None, comment=comment)
+        elif result == 'add':
+            comment = 'Key for {0} is set to be added to {1}'.format(name,
+                                                                     config)
+            return dict(ret, comment=comment)
+        else:  # 'update'
+            comment = 'Key for {0} is set to be updated in {1}'.format(name,
+                                                                     config)
+            return dict(ret, comment=comment)
 
     result = __salt__['ssh.set_known_host'](user, name,
                 fingerprint=fingerprint,
@@ -97,6 +112,12 @@ def absent(name, user, config='.ssh/known_hosts'):
     known_host = __salt__['ssh.get_known_host'](user, name, config=config)
     if not known_host:
         return dict(ret, result=None, comment='Host is already absent')
+
+    if __opts__['test']:
+        comment = 'Key for {0} is set to be removed from {1}'.format(name,
+                                                                     config)
+        return dict(ret, comment=comment)
+
     rm_result = __salt__['ssh.rm_known_host'](user, name, config=config)
     if rm_result['status'] == 'error':
         return dict(ret, result=False, comment=rm_result['error'])
