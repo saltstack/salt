@@ -188,9 +188,9 @@ def check_key_file(user, keysource, config='.ssh/authorized_keys', env='base'):
         ret[key] = check_key(
                 user,
                 key,
-                s_keys['enc'],
-                s_keys['comment'],
-                s_keys['options'],
+                s_keys[key]['enc'],
+                s_keys[key]['comment'],
+                s_keys[key]['options'],
                 config)
     return ret
 
