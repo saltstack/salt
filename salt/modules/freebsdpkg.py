@@ -52,7 +52,6 @@ def _list_removed(old, new):
     return pkgs
 
 
-# FIXME: Unused argument 'name' (pylint is your friend)
 def available_version(name):
     '''
     The available version of the package in the repository
