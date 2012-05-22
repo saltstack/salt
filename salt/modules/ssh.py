@@ -274,7 +274,8 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
 def set_auth_key_from_file(
         user,
         source,
-        config='.ssh/authorized_keys'):
+        config='.ssh/authorized_keys',
+        env='base'):
     '''
     Add a key to the authorized_keys file, using a file as the source.
 
@@ -284,7 +285,7 @@ def set_auth_key_from_file(
                 salt://ssh_keys/<user>.id_rsa.pub
     '''
     # TODO: add support for pulling keys from other file sources as well
-    lfile = __salt__['cp.cache_file'](source)
+    lfile = __salt__['cp.cache_file'](source, env)
     if not os.path.isfile(lfile):
         return 'fail'
 
