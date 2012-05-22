@@ -23,20 +23,25 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         '''
         ssh_known_hosts.present
         '''
+        kwargs = {'name': 'github.com',
+                  'user': 'root',
+                  'fingerprint': GITHUB_FINGERPRINT,
+                  'config': KNOWN_HOSTS
+        }
+        # test first
+        _ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
+        ret = _ret.values()[0]
+        self.assertTrue(ret['result'], ret)
         # save once
-        _ret = self.run_state('ssh_known_hosts.present',
-                       name='github.com',
-                       user='root',
-                       fingerprint=GITHUB_FINGERPRINT,
-                       config=KNOWN_HOSTS)
+        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
         ret = _ret.values()[0]
         self.assertTrue(ret['result'], ret)
         # save twice
-        _ret = self.run_state('ssh_known_hosts.present',
-                       name='github.com',
-                       user='root',
-                       fingerprint=GITHUB_FINGERPRINT,
-                       config=KNOWN_HOSTS)
+        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
+        ret = _ret.values()[0]
+        self.assertEqual(ret['result'], None, ret)
+        # test again, nothing is about to be changed
+        _ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
         ret = _ret.values()[0]
         self.assertEqual(ret['result'], None, ret)
 
@@ -57,17 +62,22 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         shutil.copyfile(
              os.path.join(integration.FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
+        kwargs = {'name': 'github.com',
+                  'user': 'root',
+                  'config': KNOWN_HOSTS}
+        # test first
+        _ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
+        ret = _ret.values()[0]
+        self.assertTrue(ret['result'], ret)
         # remove once
-        _ret = self.run_state('ssh_known_hosts.absent',
-                       name='github.com',
-                       user='root',
-                       config=KNOWN_HOSTS)
+        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
         ret = _ret.values()[0]
         self.assertTrue(ret['result'], ret)
         # remove twice
-        _ret = self.run_state('ssh_known_hosts.absent',
-                       name='github.com',
-                       user='root',
-                       config=KNOWN_HOSTS)
+        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
+        ret = _ret.values()[0]
+        self.assertEqual(ret['result'], None, ret)
+        # test again
+        _ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
         ret = _ret.values()[0]
         self.assertEqual(ret['result'], None, ret)
