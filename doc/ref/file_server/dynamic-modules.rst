@@ -28,6 +28,13 @@ which defaults to True. This option makes the state system refresh all
 dynamic modules when states are run. To disable this behavior set
 ``autoload_dynamic_modules`` to False in the minion config.
 
+When dynamic modules are autoloaded via states, modules only pertinant to
+the environmetns matched in the master's top file are downloaded.
+
+This is important to remember, because modules can be manually loaded from
+any specific environment that environment sopecific modules will be loaded
+when a state run is executed.
+
 Sync Via the saltutil Module
 ============================
 
