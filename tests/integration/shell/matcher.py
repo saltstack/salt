@@ -76,6 +76,23 @@ class MatchTest(integration.ShellCase):
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
 
+    def test_compound(self):
+        '''
+        test compound matcher
+        '''
+        match = 'P@test_grain:^cheese$ and * and G@test_grain:cheese'
+        data = self.run_salt('-t 1 -C \'{0}\' test.ping'.format(match))
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        match = 'L@sub_minion and E@.*'
+        data = self.run_salt('-t 1 -C "{0}" test.ping'.format(match))
+        data = '\n'.join(data)
+        self.assertIn('sub_minion', data)
+        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        
+
+
 if __name__ == "__main__":
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(KeyTest)
