@@ -42,7 +42,6 @@ def latest(name,
     if not target:
         return _fail(ret, '"target" option is required')
 
-
     if os.path.isdir(target) and os.path.isdir('{0}/.git'.format(target)):
         # git pull is probably required
         log.debug(
@@ -103,10 +102,12 @@ def latest(name,
             ret['changes']['new'] = name
     return ret
 
+
 def _fail(ret, comment):
     ret['result'] = False
     ret['comment'] = comment
     return ret
+
 
 def _neutral_test(ret, comment):
     ret['result'] = None

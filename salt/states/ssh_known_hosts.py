@@ -18,6 +18,7 @@ Manage the information stored in the known_hosts files
         - user: root
 '''
 
+
 def present(
         name,
         user,

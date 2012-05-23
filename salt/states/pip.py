@@ -155,4 +155,3 @@ def removed(name,
         ret["result"] = False
         ret["comment"] = "Could not remove package."
     return ret
-

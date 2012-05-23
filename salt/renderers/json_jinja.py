@@ -13,6 +13,7 @@ import os
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
+
 def render(template_file, env='', sls=''):
     '''
     Render the data passing the functions and grains into the rendering system
