@@ -2,7 +2,16 @@
 Support for SQLite3
 '''
 
-import sqlite3
+try:
+    import sqlite3
+    has_sqlite3 = True
+except ImportError:
+    has_sqlite3 = False
+
+def __virtual__():
+    if not has_sqlite3:
+        return False
+    return 'sqlite3'
 
 def version():
     '''
@@ -38,6 +47,7 @@ def query(db=None, sql=None):
     con = sqlite3.connect(db)
     cur = con.cursor()
     cur.execute(sql)
+    return True
 
 def select(db=None, sql=None):
     '''
