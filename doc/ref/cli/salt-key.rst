@@ -10,7 +10,7 @@ salt-key [ options ]
 Description
 ===========
 
-Salt-key executes simple management of salt server public keys used for
+Salt-key executes simple management of Salt server public keys used for
 authentication.
 
 Options
@@ -28,7 +28,7 @@ Options
 
 .. option:: -L, --list-all
 
-    List all public keys on this salt master: accepted, pending,
+    List all public keys on this Salt master: accepted, pending,
     and rejected.
 
 .. option:: -a ACCEPT, --accept=ACCEPT
@@ -57,6 +57,6 @@ Options
 
 .. option:: -c CONFIG, --config=CONFIG
 
-    The master configuration file needs to be read to determine where the salt
+    The master configuration file needs to be read to determine where the Salt
     keys are stored via the pki_dir configuration value;
     default=/etc/salt/master

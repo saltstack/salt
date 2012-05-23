@@ -4,7 +4,7 @@ Dynamic Module Distribution
 
 .. versionadded:: 0.9.5
 
-Salt python modules can be distributed automatically via the salt file server.
+Salt Python modules can be distributed automatically via the Salt file server.
 Under the root of any environment defined via the file_roots option on the
 master server directories corresponding to the type of module can be used.
 
@@ -17,7 +17,7 @@ The directories are prepended with an underscore:
   5. _states
 
 The contents of these directories need to be synced over to the minions after
-python modules have been created in them. There are a number of ways to sync
+Python modules have been created in them. There are a number of ways to sync
 the modules.
 
 Sync Via States

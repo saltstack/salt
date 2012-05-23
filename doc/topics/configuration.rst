@@ -66,7 +66,7 @@ Salt manages authentication with RSA public keys. The keys are managed on the
 checks into the master the master will save a copy of the minion key. Before
 the master can send commands to the minion the key needs to be "accepted".
 
-1.  List the accepted and unaccepted salt keys::
+1.  List the accepted and unaccepted Salt keys::
 
         salt-key -L
 

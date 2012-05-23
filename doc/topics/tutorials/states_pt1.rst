@@ -71,7 +71,7 @@ Create an ``sls`` module
 ========================
 
 In the same directory as your :term:`top file`, create an empty file, called an
-:term:`sls module`, named ``webserver.sls``. Type the following and save the
+:term:`SLS module`, named ``webserver.sls``. Type the following and save the
 file:
 
 .. code-block:: yaml
