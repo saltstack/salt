@@ -40,6 +40,7 @@ specification as defined in the MySQL documentation:
        - user: joe
 '''
 
+
 def present(name,
             grant=None,
             database=None,
