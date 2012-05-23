@@ -1,5 +1,5 @@
 '''
-This module contains all foo the routines needed to set up a master server, this
+This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
@@ -62,11 +62,13 @@ def clean_proc(proc, wait_for_kill=10):
         # and proc.terminate() and turns into a NoneType
         pass
 
+
 class MasterExit(SystemExit):
     '''
     Named exit exception for the master process exiting
     '''
     pass
+
 
 class SMaster(object):
     '''
@@ -486,7 +488,6 @@ class AESFuncs(object):
                 return ret
         return ret
 
-
     def _serve_file(self, load):
         '''
         Return a chunk from a file based on the data received
@@ -551,8 +552,8 @@ class AESFuncs(object):
             return ret
         for path in self.opts['file_roots'][load['env']]:
             for root, dirs, files in os.walk(path, followlinks=True):
-                if len(dirs)==0 and len(files)==0:
-                    ret.append(os.path.relpath(root,path))
+                if len(dirs) == 0 and len(files) == 0:
+                    ret.append(os.path.relpath(root, path))
         return ret
 
     def _master_opts(self, load):

@@ -20,6 +20,7 @@ from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
 
+
 def display_output(ret, out, opts):
     '''
     Display the output of a command in the terminal

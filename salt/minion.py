@@ -53,6 +53,7 @@ def get_proc_dir(cachedir):
             os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
+
 def detect_kwargs(func, args, data=None):
     '''
     Detect the args and kwargs that need to be passed to a function call
@@ -113,6 +114,7 @@ class SMinion(object):
         self.matcher = Matcher(self.opts, self.functions)
         self.functions['sys.reload_modules'] = self.gen_modules
 
+
 class Minion(object):
     '''
     This class instantiates a minion, runs connections for a minion,
@@ -128,7 +130,7 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        if hasattr(self,'_syndic') and self._syndic:
+        if hasattr(self, '_syndic') and self._syndic:
             log.warn('Starting the Salt Syndic Minion')
         else:
             log.warn('Starting the Salt Minion')
