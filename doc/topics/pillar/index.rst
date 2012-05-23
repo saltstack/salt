@@ -2,9 +2,9 @@
 Pillar of Salt
 ==============
 
-Pillar is an interface for Salt designed to offer global values to be
+Pillar is an interface for Salt designed to offer global values that can be
 distributed to all minions. Pillar data is managed in a similar way to
-the salt state tree.
+the Salt State Tree.
 
 Pillar was added to Salt in version 0.9.8 as an experimental add on.
 
@@ -29,7 +29,7 @@ behavior and function as the ``file_roots`` configuration:
 
 This example configuration declares that the base environment will be located
 in the ``/srv/pillar`` directory. The top file used matches the name of the top file
-used for states, and has the same structure:
+used for States, and has the same structure:
 
 ``/srv/pillar/top.sls``
 
@@ -65,8 +65,8 @@ for one special minion.
 
     somekey: specialvalue
 
-Now this data can be used from within modules, renderers, state sls files and
-more via the shared pillar dict:
+Now this data can be used from within modules, renderers, State SLS files, and
+more via the shared pillar `dict`_:
 
 .. code-block:: yaml
 
@@ -110,6 +110,8 @@ this:
     This will yield 'globalvalue' on all minions but will yield 'specialvalue'
     on 'someminion':
     somekey has value: {{ pillar['somekey'] }}
+
+.. _`dict`: http://docs.python.org/library/stdtypes.html#mapping-types-dict
 
 Footnotes
 ---------

@@ -19,12 +19,12 @@ target
 ------
 
 The target component allows you to filter which minions should run the
-following function. The default filter is a glob on the minion id. E.g.::
+following function. The default filter is a glob on the minion id. For example::
 
     salt '*' test.ping
     salt '*.example.org' test.ping
 
-Targets can be based on minion system information using the grains system::
+Targets can be based on minion system information using the Grains system::
 
     salt -G 'os:Ubuntu' test.ping
 

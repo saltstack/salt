@@ -6,7 +6,7 @@ Since the Salt minion contains such extensive functionality it can be useful
 to run it standalone. A standalone minion can be used to do a number of
 things:
 
-- Stand up a master server via states (Salting a Salt Master)
+- Stand up a master server via States (Salting a Salt Master)
 - Use salt-call commands on a system without connectivity to a master
 - Masterless States, run states entirely from files local to the minion
 
@@ -34,9 +34,9 @@ local system has all of the file ad pillar resources.
 Running States Masterless
 =========================
 
-The state system can be easily run without a salt master, with all needed files
-local to the minion. to do this the minion config file needs to be set up to
-know how to return file_roots information like the master. The file_roots
+The state system can be easily run without a Salt master, with all needed files
+local to the minion. To do this the minion configuration file needs to be set
+up to know how to return file_roots information like the master. The file_roots
 setting defaults to /srv/salt for the base environment just like on the master:
 
 .. code-block:: yaml
@@ -45,16 +45,16 @@ setting defaults to /srv/salt for the base environment just like on the master:
       base:
         - /srv/salt
 
-Now set up the salt state tree, top file and sls modules in the same way that
+Now set up the Salt State Tree, top file, and SLS modules in the same way that
 they would be set up on a master. Now, with the ``file_client`` option set to
 ``local`` and an available state tree then calls to functions in the state
 module will use the information in the file_roots on the minion instead of
 checking in with the master.
 
 Remember that when creating a state tree on a minion there are no syntax or
-path changes needed, sls modules written to be used from a master do not need
+path changes needed, SLS modules written to be used from a master do not need
 to be modified in any way to work with a minion.
 
-This makes it easy to "script" deployments with salt states without having to
-set up a master, and allows for these sls modules to be easily moved into a
-salt master as the deployment grows.
+This makes it easy to "script" deployments with Salt states without having to
+set up a master, and allows for these SLS modules to be easily moved into a
+Salt master as the deployment grows.

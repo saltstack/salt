@@ -45,7 +45,7 @@ The network port to set up the publication interface
 .. conf_master:: user
 
 ``user``
-----------------
+--------
 
 Default: ``root``
 
@@ -201,7 +201,7 @@ Set additional directories to search for runner modules
 Default: ``False``
 
 Set to true to enable cython modules (.pyx files) to be compiled on the fly on
-the salt master
+the Salt master
 
 .. code-block:: yaml
 
@@ -296,6 +296,7 @@ Default: ``base: [/srv/salt]``
 Salt runs a lightweight file server written in zeromq to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
+
 The file server works on environments passed to the master. Each environment
 can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
@@ -524,7 +525,7 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 Default: ``{}``
 
 Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the salt library at the 'warning' level, but you
+Imagine you want to have the Salt library at the 'warning' level, but you
 still wish to have 'salt.modules' at the 'debug' level:
 
 .. code-block:: yaml

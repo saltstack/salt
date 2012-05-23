@@ -16,7 +16,7 @@ Sending information through the client is simple:
 
 .. code-block:: python
 
-    # Import the salt client library
+    # Import the Salt client library
     import salt.client
     # create a local client object
     client = salt.client.LocalClient()
@@ -25,7 +25,7 @@ Sending information through the client is simple:
 
 
 The LocalClient object only works running as root on the salt-master, it is the
-same interface used by the salt command line tool.
+same interface used by the ``salt`` command line tool.
 
 .. function:: LocalClient.cmd(tgt, fun, arg=[], timeout=5, expr_form='glob', ret='')
 
@@ -36,7 +36,7 @@ same interface used by the salt command line tool.
 
     The tgt option is the target specification, by default a target is passed
     in as a bash shell glob. The expr_form option allows the tgt to be passed
-    as either a pcre regular expression or as a python list.
+    as either a pcre regular expression or as a Python list.
 
 .. cmdoption:: fun
 
@@ -77,7 +77,7 @@ same interface used by the salt command line tool.
 
     The tgt option is the target specification, by default a target is passed
     in as a bash shell glob. The expr_form option allows the tgt to be passed
-    as either a pcre regular expression or as a python list.
+    as either a pcre regular expression or as a Python list.
 
 .. cmdoption:: fun
 
@@ -121,7 +121,7 @@ same interface used by the salt command line tool.
 
     The tgt option is the target specification, by default a target is passed
     in as a bash shell glob. The expr_form option allows the tgt to be passed
-    as either a pcre regular expression or as a python list.
+    as either a pcre regular expression or as a Python list.
 
 .. cmdoption:: fun
 
@@ -162,7 +162,7 @@ same interface used by the salt command line tool.
 
     The tgt option is the target specification, by default a target is passed
     in as a bash shell glob. The expr_form option allows the tgt to be passed
-    as either a pcre regular expression or as a python list.
+    as either a pcre regular expression or as a Python list.
 
 .. cmdoption:: fun
 
@@ -216,7 +216,7 @@ All client command methods can execute compound commands.
 
 .. code-block:: python
 
-    # Import the salt client library
+    # Import the Salt client library
     import salt.client
     # create a local client object
     client = salt.client.LocalClient()

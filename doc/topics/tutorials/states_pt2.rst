@@ -32,7 +32,7 @@ the output.
 Expand the SLS module
 =====================
 
-As you have seen, sls modules are appended with the file extension ``.sls`` and
+As you have seen, SLS modules are appended with the file extension ``.sls`` and
 are referenced by name starting at the root of the state tree. An SLS module
 can be also defined as a directory. Demonstrate that now by creating a
 directory named ``webserver`` and moving and renaming ``webserver.sls`` to

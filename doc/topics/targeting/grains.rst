@@ -20,7 +20,7 @@ Match all CentOS minions::
 
     salt -G 'os:CentOS' test.ping
 
-Match all minions with 64 bit CPUs and return number of available cores::
+Match all minions with 64-bit CPUs and return number of available cores::
 
     salt -G 'cpuarch:x86_64' grains.item num_cpus
 
@@ -41,7 +41,7 @@ Just add the option ``grains`` and pass options to it:
       cab_u: 14-15
 
 Then status data specific to your servers can be retrieved via Salt, or used
-inside of the state system for matching. It also makes targeting, in the case
+inside of the State system for matching. It also makes targeting, in the case
 of the example above, simply based on specific data about your deployment.
 
 Writing Grains
@@ -50,18 +50,20 @@ Writing Grains
 Grains are easy to write. The grains interface is derived by executing
 all of the "public" functions found in the modules located in the grains
 package or the custom grains directory. The functions in the modules of
-the grains must return a python dict, where the keys in the dict are the
+the grains must return a Python `dict`_, where the keys in the dict are the
 names of the grains and the values are the values.
 
 Custom grains should be placed in a ``_grains`` directory located under
-your :conf_master:`file_roots`. Before adding a grain to salt, consider
+your :conf_master:`file_roots`. Before adding a grain to Salt, consider
 what the grain is and remember that grains need to be static data.
+
+.. _`dict`: http://docs.python.org/library/stdtypes.html#typesmapping
 
 Examples of Grains
 ------------------
 
 The core module in the grains package is where the main grains are loaded by
-the salt minion and the principal example of how to write grains:
+the Salt minion and provides the principal example of how to write grains:
 
 :blob:`salt/grains/core.py`
 

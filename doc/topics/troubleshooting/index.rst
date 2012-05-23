@@ -2,9 +2,9 @@
 Troubleshooting
 ===============
 
-The intent of the  troubleshooting section is to introduce solutions to a
+The intent of the troubleshooting section is to introduce solutions to a
 number of common issues encountered by users and the tools that are available
-to aid in developing states and salt code.
+to aid in developing States and Salt code.
 
 Running in the Foreground
 =========================
@@ -18,16 +18,19 @@ master in the foreground:
   # salt-master -l debug
   # salt-minion -l debug
 
-Anyone wanting to run salt daemons via a process supervisor such as monit,
-runit, or supervisord, should omit the ``-d`` argument to the daemons and
+Anyone wanting to run Salt daemons via a process supervisor such as `monit`_,
+`runit`_, or `supervisord`_, should omit the ``-d`` argument to the daemons and
 run them in the foreground.
 
+.. _`monit`: http://mmonit.com/monit/
+.. _`runit`: http://smarden.org/runit/
+.. _`supervisord`: http://supervisord.org/
 
 What Ports do the Master and Minion Need Open?
 ==============================================
 
-No ports need to be opened up on each minion. For the master, tcp ports 4505
-and 4506 need to be open. If you've put your salt master and minion both in
+No ports need to be opened up on each minion. For the master, TCP ports 4505
+and 4506 need to be open. If you've put both your Salt master and minion in
 debug mode and don't see an acknowledgement that your minion has connected,
 it could very well be a firewall.
 
@@ -41,23 +44,27 @@ You can check port connectivity from the minion with the nc command:
 There is also a :doc:`firewall configuration</topics/tutorials/firewall>`
 document that might help as well.
 
-If you've enabled the right ports on your operating system or Linux
+If you've enabled the right TCP ports on your operating system or Linux
 distribution's firewall and still aren't seeing connections, check that no
-additional access control such as SELinux or AppArmor are blocking salt.
+additional access control system such as `SELinux`_ or `AppArmor`_ is blocking
+Salt.
+
+.. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
+.. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
 
 
 Using salt-call
 ===============
 
 The ``salt-call`` command was originally developed for aiding in the development
-of new salt modules. Since then, many applications have arisen for running any
-salt module locally on a minion. These range from the original intent of
-salt-call, development assistance, to gathering more verbose output from calls
-like :doc:`state.highstate</ref/modules/all/salt.modules.state>`.
+of new Salt modules. Since then, many applications have been developed for
+running any Salt module locally on a minion. These range from the original
+intent of salt-call, development assistance, to gathering more verbose output
+from calls like :doc:`state.highstate</ref/modules/all/salt.modules.state>`.
 
-When developing the state tree it is generally recommended to invoke
-state.highstate with salt-call. This displays a great deal more information
-about the highstate execution than if it is called remotely. For even more
+When developing the State Tree it is generally recommended to invoke
+state.highstate with salt-call. This displays far more information
+about the highstate execution than calling it remotely. For even more
 verbosity, increase the loglevel with the same argument as ``salt-minion``:
 
 .. code-block:: sh
@@ -69,7 +76,7 @@ Too many open files
 ===================
 
 The salt-master needs at least 2 sockets per host that connects to it, one for
-the Publisher and one for response port. Thus, large installations may upon
+the Publisher and one for response port. Thus, large installations may, upon
 scaling up the number of minions accessing a given master, encounter:
 
 .. code-block:: sh
@@ -96,10 +103,10 @@ So, an environment with 1800 minions, would need 1800 x 2 = 3600 as a minimum.
 Salt Master Stops Responding
 ============================
 
-There are known bugs with ZeroMQ less than 2.1.11 which can cause the salt
-master to not respond properly. If you're running ZeroMQ greater than or equal
-to 2.1.9, you can work around the bug by setting the sysctls
-``net.core.rmem_max`` and ``net.core.wmem_max`` to 16777216. Next set the third
+There are known bugs with ZeroMQ versions less than 2.1.11 which can cause the
+Salt master to not respond properly. If you're running a ZeroMQ version greater
+than or equal to 2.1.9, you can work around the bug by setting the sysctls
+``net.core.rmem_max`` and ``net.core.wmem_max`` to 16777216. Next, set the third
 field in ``net.ipv4.tcp_rmem`` and ``net.ipv4.tcp_wmem`` to at least 16777216.
 
 You can do it manually with something like:
@@ -111,7 +118,7 @@ You can do it manually with something like:
     # echo "4096 87380 16777216" > /proc/sys/net/ipv4/tcp_rmem
     # echo "4096 87380 16777216" > /proc/sys/net/ipv4/tcp_wmem
 
-Or with the following salt state:
+Or with the following Salt state:
 
 .. code-block:: yaml
     :linenos:
@@ -139,14 +146,17 @@ Or with the following salt state:
 Red Hat Enterprise Linux 5
 ==========================
 
-Salt requires Python 2.6 or 2.7. RHEL 5 and variants come with python 2.4 by
-default, when installing on RHEL 5 from the EPEL repository this is handled
-for you. But if running Salt from git, be advised that the deps needs to be
-installed from EPEL and salt needs to be run with the ``python26`` executable.
+Salt requires Python 2.6 or 2.7. Red Hat Enterprise Linux 5 and its variants
+come with Python 2.4 installed by default. When installing on RHEL 5 from the
+`EPEL repository`_ this is handled for you. But, if you run Salt from git, be
+advised that its dependencies need to be installed from EPEL and that Salt
+needs to be run with the ``python26`` executable.
+
+.. _`EPEL repository`: http://fedoraproject.org/wiki/EPEL
 
 Common YAML Gotchas
 ===================
 
 An extensive list of
-:doc:`yaml idiosyncrasies</topics/troubleshooting/yaml_idiosyncrasies>`
+:doc:`YAML idiosyncrasies</topics/troubleshooting/yaml_idiosyncrasies>`
 has been compiled.
