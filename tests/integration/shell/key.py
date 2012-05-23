@@ -31,7 +31,11 @@ class KeyTest(integration.ShellCase):
         data = self.run_key('-l acc')
         self.assertEqual(
                 data,
-                ['\x1b[0;32mminion\x1b[0m', '']
+                [
+                    '\x1b[0;32mminion\x1b[0m',
+                    '\x1b[0;32msub_minion\x1b[0m',
+                    ''
+                    ]
                 )
 
     def test_list_un(self):
