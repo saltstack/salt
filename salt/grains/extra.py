@@ -1,5 +1,6 @@
 import os
 
+
 def shell():
     '''
     Return the default shell to use on this system

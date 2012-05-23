@@ -5,6 +5,7 @@ import winerror
 import salt
 import sys
 
+
 class MinionService(Service):
     def start(self):
         self.runflag=True
@@ -24,7 +25,7 @@ if __name__ == '__main__':
     try:
         status = win32serviceutil.QueryServiceStatus(servicename)
     except win32service.error as details:
-        if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
+        if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
             instart(MinionService, servicename, 'Salt Minion')
             sys.exit(0)
     if status[1] == win32service.SERVICE_RUNNING:
@@ -32,4 +33,3 @@ if __name__ == '__main__':
         win32serviceutil.StartService(servicename)
     else:
         win32serviceutil.StartService(servicename)
-
