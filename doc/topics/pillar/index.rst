@@ -131,9 +131,8 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 Targeting with Pillar
 =====================
 
-Pillar data can be used when targeting minions. This allows for the highest
-level of complexity and granularity when targeting minions. Highly complicated
-groupings can be made.
+Pillar data can be used when targeting minions. This allows for ultimate
+control and flexibility when targeting minions.
 
 .. code-block:: bash
 
