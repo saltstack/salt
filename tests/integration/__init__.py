@@ -240,7 +240,7 @@ class ShellCase(TestCase):
 
     def run_salt(self, arg_str):
         '''
-        Execute salt-key
+        Execute salt
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
@@ -248,7 +248,7 @@ class ShellCase(TestCase):
 
     def run_run(self, arg_str):
         '''
-        Execute salt-key
+        Execute salt-run
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
