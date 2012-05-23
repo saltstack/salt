@@ -8,6 +8,7 @@ import integration
 
 KNOWN_HOSTS = os.path.join(integration.TMP, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
+GITHUB_IP = '207.97.227.239'
 
 
 class SSHKnownHostsStateTest(integration.ModuleCase):
@@ -44,6 +45,18 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         _ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
         ret = _ret.values()[0]
         self.assertEqual(ret['result'], None, ret)
+        # then add a record for IP address
+        _ret = self.run_state('ssh_known_hosts.present',
+                              **dict(kwargs, name=GITHUB_IP ))
+        ret = _ret.values()[0]
+        self.assertTrue(ret['result'], ret)
+        # record for every host must be available
+        ret = self.run_function('ssh.get_known_host', ['root', 'github.com'],
+                                config=KNOWN_HOSTS)
+        self.assertFalse(ret is None)
+        ret = self.run_function('ssh.get_known_host', ['root', GITHUB_IP],
+                                config=KNOWN_HOSTS)
+        self.assertFalse(ret is None)
 
     def test_present_fail(self):
         # save something wrong
@@ -81,3 +94,17 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         _ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
         ret = _ret.values()[0]
         self.assertEqual(ret['result'], None, ret)
+
+
+if __name__ == "__main__":
+    import sys
+    from saltunittest import TestLoader, TextTestRunner
+    from integration import TestDaemon
+
+
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(SSHKnownHostsStateTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())
