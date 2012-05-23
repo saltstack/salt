@@ -35,6 +35,7 @@ Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 '''
 
+
 def _check_cron(cmd, user, minute, hour, dom, month, dow):
     '''
     Return the changes
@@ -50,6 +51,7 @@ def _check_cron(cmd, user, minute, hour, dom, month, dow):
                 return 'update'
             return 'present'
     return 'absent'
+
 
 def present(name,
         user='root',

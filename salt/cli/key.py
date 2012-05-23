@@ -13,6 +13,7 @@ import salt.utils as utils
 
 log = logging.getLogger(__name__)
 
+
 class Key(object):
     '''
     The object that encapsulates saltkey actions
@@ -188,6 +189,7 @@ class Key(object):
             os.remove(rej)
             self._log('Removed rejected key {0}'.format(delete),
                          level='info')
+
     def _delete_all(self):
         '''
         Delete all keys
@@ -195,7 +197,6 @@ class Key(object):
         for dir in ("acc", "rej", "pre"):
             for key in self._keys(dir):
                 self._delete_key(key)
-
 
     def _reject(self, key):
         '''

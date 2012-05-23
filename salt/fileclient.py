@@ -240,7 +240,7 @@ class Client(object):
         path = string.rstrip(self._check_proto(path), '/')
         # Break up the path into a list containing the bottom-level directory
         # (the one being recursively copied) and the directories preceding it
-        separated = string.rsplit(path,'/',1)
+        separated = string.rsplit(path, '/', 1)
         if len(separated) != 2:
             # No slashes in path. (This means all files in env will be copied)
             prefix = ''
@@ -252,17 +252,17 @@ class Client(object):
             if fn_.startswith(path):
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
-                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
+                minion_relpath = string.lstrip(fn_[len(prefix):], '/')
                 ret.append(self.get_file('salt://{0}'.format(fn_),
-                                         '%s/%s' % (dest,minion_relpath),
+                                         '%s/%s' % (dest, minion_relpath),
                                          True, env))
         # Replicate empty dirs from master
         for fn_ in self.file_list_emptydirs(env):
             if fn_.startswith(path):
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
-                minion_relpath = string.lstrip(fn_[len(prefix):],'/')
-                minion_mkdir = '%s/%s' % (dest,minion_relpath)
+                minion_relpath = string.lstrip(fn_[len(prefix):], '/')
+                minion_mkdir = '%s/%s' % (dest, minion_relpath)
                 os.makedirs(minion_mkdir)
                 ret.append(minion_mkdir)
         ret.sort()

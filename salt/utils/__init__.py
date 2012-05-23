@@ -126,7 +126,7 @@ def daemonize():
                 try:
                     status = win32serviceutil.QueryServiceStatus(servicename)
                 except win32service.error as details:
-                    if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
+                    if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
                         saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
                         sys.exit(0)
                 if status[1] == win32service.SERVICE_RUNNING:
@@ -334,7 +334,7 @@ def required_module_list(docstring=None):
     ret = []
     txt = 'Required python modules: '
     data = docstring.split('\n') if docstring else []
-    mod_list =  filter(lambda x: x.startswith(txt), data)
+    mod_list = filter(lambda x: x.startswith(txt), data)
     if not mod_list:
         return []
     modules = mod_list[0].replace(txt, '').split(', ')
@@ -358,6 +358,7 @@ def required_modules_error(name, docstring):
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
 
+
 def prep_jid(cachedir, sum_type):
     '''
     Return a job id and prepare the job id directory
@@ -373,12 +374,14 @@ def prep_jid(cachedir, sum_type):
         return prep_jid(cachedir, sum_type)
     return jid
 
+
 def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
+
 
 def check_or_die(command):
     '''

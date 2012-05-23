@@ -153,4 +153,3 @@ template_registry = {
     'mako': mako,
     'py': py,
 }
-

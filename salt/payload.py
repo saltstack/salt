@@ -41,6 +41,7 @@ def format_payload(enc, **kwargs):
     payload['load'] = load
     return package(payload)
 
+
 class Serial(object):
     '''
     Create a serialization object, this object manages all message

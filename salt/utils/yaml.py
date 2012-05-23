@@ -59,4 +59,3 @@ class CustomLoader(yaml.reader.Reader, yaml.scanner.Scanner, yaml.parser.Parser,
         yaml.composer.Composer.__init__(self)
         CustomeConstructor.__init__(self)
         yaml.resolver.Resolver.__init__(self)
-

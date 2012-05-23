@@ -23,6 +23,7 @@ import yaml
 
 log = logging.getLogger(__name__)
 
+
 def hiera(conf, grains=None):
     '''
     Execute hiera and return the data
@@ -68,6 +69,7 @@ def get_pillar(opts, grains, id_, env=None):
                }.get(opts['file_client'], 'local')(opts, grains, id_, env)
     except KeyError:
         return Pillar(opts, grains, id_, env)
+
 
 class RemotePillar(object):
     '''
@@ -367,7 +369,6 @@ class Pillar(object):
                 except Exception as e:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext
-
 
     def compile_pillar(self):
         '''

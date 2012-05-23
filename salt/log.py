@@ -73,10 +73,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     if not date_format:
         date_format = '%H:%M:%S'
 
-    formatter = logging.Formatter(
-        log_format,
-        datefmt = date_format
-    )
+    formatter = logging.Formatter(log_format, datefmt=date_format)
 
     handler.setFormatter(formatter)
     rootLogger.addHandler(handler)

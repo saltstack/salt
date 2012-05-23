@@ -93,6 +93,7 @@ def _changes(
         return False
     return change
 
+
 def present(
         name,
         uid=None,

@@ -56,7 +56,7 @@ def _getargs(func):
         aspec = inspect.getargspec(func)
     elif isinstance(func, object):
         aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0] # self
+        del aspec.args[0]  # self
     else:
         raise TypeError("Cannot inspect argument list for '{0}'".format(func))
 
@@ -112,6 +112,7 @@ def find_name(name, state, high):
                         if arg[arg.keys()[0]] == name:
                             ext_id = nid
     return ext_id
+
 
 def build_args(func, args, data=None):
     '''
@@ -307,7 +308,6 @@ class State(object):
         for tag in rm_tags:
             returns.pop(tag)
         return returns
-
 
     def verify_data(self, data):
         '''
@@ -528,7 +528,7 @@ class State(object):
                         chunk['order'] = cap
         chunks = sorted(
                 chunks,
-                key=lambda k:'{0[state]}{0[name]}{0[fun]}'.format(k)
+                key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k)
                 )
         chunks = sorted(
                 chunks,
@@ -1477,7 +1477,7 @@ class BaseHighState(object):
                    'in the top file or the top file was not found on the '
                    'master')
             ret[tag_name]['comment'] = msg
-	    return ret
+        return ret
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         self.load_dynamic(matches)

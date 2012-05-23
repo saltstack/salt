@@ -10,6 +10,7 @@ import datetime
 import tempfile
 import traceback
 
+
 def _makepretty(printout, stack):
     '''
     Pretty print the stack trace and environment information
@@ -34,6 +35,7 @@ def _handle_sigusr1(sig, stack):
         destfile = os.path.join(tempfile.gettempdir(), filename)
         with open(destfile, 'w') as output:
             _makepretty(output, stack)
+
 
 def enable_sigusr1_handler():
     '''
