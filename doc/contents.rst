@@ -35,7 +35,7 @@ Full Table of Contents
     ref/runners
     ref/peer
     ref/syndic
-    ref/Python-api
+    ref/python-api
     ref/file_server/index
     ref/file_server/file_roots
     ref/file_server/dynamic-modules
