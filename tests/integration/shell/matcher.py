@@ -76,6 +76,19 @@ class MatchTest(integration.ShellCase):
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
 
+    def test_pillar(self):
+        '''
+        test pillar matcher
+        '''
+        data = self.run_salt('-I "monty:python" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
+        data = self.run_salt('-I "sub:sub_minion" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('sub_minion', data)
+        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+
     def test_compound(self):
         '''
         test compound matcher
@@ -90,7 +103,6 @@ class MatchTest(integration.ShellCase):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
-        
 
 
 if __name__ == "__main__":
