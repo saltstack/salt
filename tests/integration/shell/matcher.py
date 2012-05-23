@@ -49,6 +49,19 @@ class MatchTest(integration.ShellCase):
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
+
+    def test_grain(self):
+        '''
+        test salt grain matcher
+        '''
+        data = self.run_salt('-t 1 -G "test_grain:cheese" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('-G "test_grain:spam" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('sub_minion', data)
+        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
             
 
 if __name__ == "__main__":
