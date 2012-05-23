@@ -127,3 +127,14 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 .. code-block:: yaml
 
     salt '*' saltutil.refresh_pillar
+
+Targeting with Pillar
+=====================
+
+Pillar data can be used when targeting minions. This allows for the highest
+level of complexity and granularity when targeting minions. Highly complicated
+groupings can be made.
+
+.. code-block:: bash
+
+    salt -I 'somekey:specialvalue' test.ping
