@@ -20,6 +20,7 @@ G      Grains glob match    ``G@os:Ubuntu``
 E      PCRE Minion id match ``E@web\d+\.(dev|qa|prod)\.loc``
 P      Grains PCRE match    ``P@os:(RedHat|Fedora|CentOS)``
 L      List of minions      ``L@minion1.example.com,minion3.domain.com and bl*.domain.com``
+I      Pillar glob match    ``I@pdata:foobar``
 ====== ==================== ===============================================================
 
 Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.
