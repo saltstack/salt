@@ -547,7 +547,7 @@ def set_known_host(user, hostname,
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
     line = '{hostname} {enc} {key}\n'.format(**remote_host)
-    with open(full, 'w') as fd:
+    with open(full, 'a') as fd:
         fd.write(line)
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 

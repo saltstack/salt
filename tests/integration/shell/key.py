@@ -20,6 +20,7 @@ class KeyTest(integration.ShellCase):
                 '\x1b[1;31mUnaccepted Keys:\x1b[0m',
                 '\x1b[1;32mAccepted Keys:\x1b[0m',
                 '\x1b[0;32mminion\x1b[0m',
+                '\x1b[0;32msub_minion\x1b[0m',
                 '\x1b[1;34mRejected:\x1b[0m', '']
         self.assertEqual(data, expect)
 
@@ -30,7 +31,11 @@ class KeyTest(integration.ShellCase):
         data = self.run_key('-l acc')
         self.assertEqual(
                 data,
-                ['\x1b[0;32mminion\x1b[0m', '']
+                [
+                    '\x1b[0;32mminion\x1b[0m',
+                    '\x1b[0;32msub_minion\x1b[0m',
+                    ''
+                    ]
                 )
 
     def test_list_un(self):

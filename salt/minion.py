@@ -655,6 +655,8 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
+        if isinstance(tgt, basestring):
+            tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
     def grain_match(self, tgt):

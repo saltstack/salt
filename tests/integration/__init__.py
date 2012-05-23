@@ -39,6 +39,8 @@ class TestDaemon(object):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
         self.minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'))
+        self.sub_minion_opts = salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion'))
         self.smaster_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'))
         self.syndic_opts = salt.config.minion_config(
@@ -77,6 +79,8 @@ class TestDaemon(object):
                     os.path.join(self.smaster_opts['cachedir'], 'jobs'),
                     os.path.dirname(self.master_opts['log_file']),
                     self.minion_opts['extension_modules'],
+                    self.sub_minion_opts['extension_modules'],
+                    self.sub_minion_opts['pki_dir'],
                     self.master_opts['sock_dir'],
                     self.smaster_opts['sock_dir'],
                     ])
@@ -88,6 +92,11 @@ class TestDaemon(object):
         minion = salt.minion.Minion(self.minion_opts)
         self.minion_process = multiprocessing.Process(target=minion.tune_in)
         self.minion_process.start()
+
+        sub_minion = salt.minion.Minion(self.sub_minion_opts)
+        self.sub_minion_process = multiprocessing.Process(
+                target=sub_minion.tune_in)
+        self.sub_minion_process.start()
 
         smaster = salt.master.Master(self.smaster_opts)
         self.smaster_process = multiprocessing.Process(target=smaster.start)
@@ -103,6 +112,7 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
+        self.sub_minion_process.terminate()
         self.minion_process.terminate()
         self.master_process.terminate()
         self.syndic_process.terminate()
@@ -230,7 +240,7 @@ class ShellCase(TestCase):
 
     def run_salt(self, arg_str):
         '''
-        Execute salt-key
+        Execute salt
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
@@ -238,7 +248,7 @@ class ShellCase(TestCase):
 
     def run_run(self, arg_str):
         '''
-        Execute salt-key
+        Execute salt-run
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)

@@ -1,11 +1,11 @@
 # basic config
 master: localhost
 master_port: 64506
-root_dir: /tmp/salttest
+root_dir: /tmp/subsalttest
 pki_dir: pki
-id: minion
+id: sub_minion
 cachedir: cachedir
-#acceptance_wait_time: = 1
+#acceptance_wait_time: 1
 open_mode: True
 log_file: minion
 
@@ -17,4 +17,5 @@ integration.test: True
 
 # Grains addons
 grains:
-  test_grain: cheese
+  test_grain: spam
+  role: sub
