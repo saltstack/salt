@@ -22,7 +22,7 @@ After installation you'll need to make a few changes to the configuration files.
 Configuration
 =============
 
-To configure your salt files we must modify both master and minion 
+To configure your Salt files we must modify both master and minion 
 configuration files. We need to set where the master binds, by default salt 
 listens on all interfaces. If you have a need to bind to a specific local IP, 
 make the change as needed. To edit the master type in the following command:
@@ -62,7 +62,7 @@ minion. To do so type in the following commands:
 Test
 ====
 
-To test salt we must first sign the key of the minion to the master. To see the
+To test Salt we must first sign the key of the minion to the master. To see the
 pending keys type in the following command:
 
 .. code-block:: bash
@@ -98,7 +98,7 @@ If it is working properly you should see this result:
 Troubleshooting
 ===============
 
-To see if the master is running properly type in the following command:
+To see if the Salt master is running properly type in the following command:
 
 .. code-block:: bash
 
@@ -115,14 +115,14 @@ command:
 
     ps -efH | grep sal[t]
 
-This should return 8 salt masters and 1 salt minion if both are configured 
-properly. If you are still having issues with your salt configuration please 
+This should return 8 Salt masters and 1 Salt minion if both are configured 
+properly. If you are still having issues with your Salt configuration please 
 reference the trouble shooting page :doc:`Troubleshooting</topics/troubleshooting/index>`.
 
 What Now?
 =========
 
-Congratulations you have just successfully setup salt on your Ubuntu machine 
+Congratulations you have just successfully installed Salt on your Ubuntu machine 
 and configured both the master and the minion. From this point you are now 
 able to send remote commands. Depending on the primary way you want to 
 manage your machines you may either want to visit the section regarding Salt 

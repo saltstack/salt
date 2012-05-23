@@ -106,7 +106,7 @@ Python State Renderer
 
 Until now Salt States could only be declared in yaml or json using jinja or
 mako. A new, very powerful, renderer has been added, making it possible to
-write Salt States in pure python:
+write Salt States in pure Python:
 
 .. code-block:: python
 
@@ -120,9 +120,9 @@ write Salt States in pure python:
                 'python-mako': {'pkg': ['installed']}}
 
 This renderer is used by making a run function that returns the Highstate data
-structure. Any capabilities of python can be used in pure python sls modules.
+structure. Any capabilities of Python can be used in pure Python sls modules.
 
-This example of a pure python sls module is the same as this example in yaml:
+This example of a pure Python sls module is the same as this example in yaml:
 
 .. code-block:: yaml
 

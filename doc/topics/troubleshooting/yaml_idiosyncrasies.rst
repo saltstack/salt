@@ -3,34 +3,38 @@ YAML Idiosyncrasies
 ===================
 
 One of Salt's strengths, the use of existing serialization systems for
-representing sls data, can also backfire. YAML is a general purpose system
+representing SLS data, can also backfire. `YAML`_ is a general purpose system
 and there are a number of things that would seem to make sense in an sls
 file that cause YAML issues. It is wise to be aware of these issues. While
 reports or running into them are generally rare they can still crop up at
 unexpected times.
 
+.. _`YAML`: http://yaml.org/spec/1.1/
+
 Spaces vs Tabs
 ==============
 
-Yaml uses spaces, period. Do not use tabs in your sls files! If strange
-errors are coming up in rendering sls files, make sure to check that
+`YAML uses spaces`_, period. Do not use tabs in your SLS files! If strange
+errors are coming up in rendering SLS files, make sure to check that
 no tabs have crept in! In vi / vim, you can check with ``:se spell``.
+
+.. _`YAML uses spaces`: http://yaml.org/spec/1.1/#id871998
 
 Indentation
 ===========
 The suggested syntax for YAML files is to use 2 spaces for indentation,
 but YAML will follow whatever indentation system that the individual file
-uses. Indentation of two spaces works very well for sls files given the
+uses. Indentation of two spaces works very well for SLS files given the
 fact that the data is uniform and not deeply nested.
 
 Nested Dicts (key=value)
 ------------------------
 
-When dicts are more deeply nested they no longer follow the same indentation
-logic. This is rarely something that comes up in Salt, since deeply nested
-options like these are discouraged when making state modules, but some do
-exist. A good example is the context and default options in the
-:doc:`file.managed</ref/states/all/salt.states.file>` state:
+When `dicts`_: are more deeply nested, they no longer follow the same
+indentation logic. This is rarely something that comes up in Salt,
+since deeply nested options like these are discouraged when making State
+modules, but some do exist. A good example is the context and default options
+in the :doc:`file.managed</ref/states/all/salt.states.file>` state:
 
 .. code-block:: yaml
 
@@ -69,10 +73,12 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
           custom_var: "default value",
           other_var: 123 }
 
+.. _`dicts`: http://docs.python.org/library/stdtypes.html#dict
+
 Integers are Parsed as Integers
 ===============================
 
-When passing integers into an sls file, they are passed as integers. This means
+When passing `integers`_ into an SLS file, they are passed as integers. This means
 that if a state accepts a string value and an integer is passed, that an
 integer will be sent. The solution here is to send the integer as a string.
 
@@ -102,11 +108,13 @@ preceded by a 0 then it needs to be passed as a string:
         - user: root
         - group: root
         - mode: '0644'
+        
+.. _`integers`: http://docs.python.org/library/functions.html#int
 
-Yaml does not like "Double Short Decs"
+YAML does not like "Double Short Decs"
 ======================================
 
-If I can find a way to make yaml accept "Double Short Decs" then I will, since
+If I can find a way to make YAML accept "Double Short Decs" then I will, since
 I think that double short decs would be awesome. So what is a "Double Short
 Dec"? It is when you declare a multiple short decs in one ID. Here is a
 standard short dec, it works great:
@@ -119,7 +127,7 @@ standard short dec, it works great:
 The short dec means that there are no arguments to pass, so it is not required
 to add any arguments, and it can save space.
 
-Yaml though, gets upset when declaring multiple short decs, for the record...
+YAML though, gets upset when declaring multiple short decs, for the record...
 
 THIS DOES NOT WORK:
 

@@ -18,9 +18,9 @@ The Salt State Tree
 .. glossary::
 
     State tree
-        A collection of ``sls`` files that live under the directory specified
+        A collection of ``SLS`` files that live under the directory specified
         in :conf_master:`file_roots`. A state tree can be organized into
-        :term:`sls modules`.
+        ``SLS modules``.
 
 Include declaration
 -------------------
@@ -29,7 +29,7 @@ Include declaration
 
     Include declaration
         Defines a list of :term:`module reference` strings to include in this
-        :term:`sls`.
+        :term:`SLS`.
 
         Occurs only in the top level of the highstate structure.
 
@@ -48,7 +48,7 @@ Module reference
 
     Module reference
         The name of a SLS module defined by a separate SLS file and residing on
-        the Salt Master. A module named ``edit.vim`` is a reference to the sls
+        the Salt Master. A module named ``edit.vim`` is a reference to the SLS
         file ``salt://edit/vim.sls``.
 
 ID declaration
@@ -80,15 +80,15 @@ Extend declaration
 .. glossary::
 
     Extend declaration
-        Extends a :term:`name declaration` from an included ``sls module``. The
+        Extends a :term:`name declaration` from an included ``SLS module``. The
         keys of the extend declaration always define existing :term:`ID
         declarations <ID declaration>` which have been defined in included
-        ``sls modules``.
+        ``SLS modules``.
 
         Occurs only in the top level and defines a dictionary.
 
 Extend declarations are useful for adding-to or overriding parts of a
-:term:`state declaration` that is defined in another ``sls`` files. In the
+:term:`state declaration` that is defined in another ``SLS`` file. In the
 following contrived example, the shown ``mywebsite.sls`` file is ``include``
 -ing and ``extend`` -ing the ``apache.sls`` module in order to add a ``watch``
 declaration that will restart Apache whenever the Apache configuration file,
@@ -276,7 +276,7 @@ For example, given the following state declaration:
           - python-crypto
           - python-yaml
 
-Once converted into the :term:`lowstate` data structure the above state
+Once converted into the lowstate data structure the above state
 declaration will be expanded into the following three state declarations:
 
 .. code-block:: yaml

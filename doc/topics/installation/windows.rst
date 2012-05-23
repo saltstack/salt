@@ -18,7 +18,7 @@ Work is under way to create a Windows installer for Salt, but for now
 one must install each dependency separately and configure Salt to
 run on your Windows host.
 
-Rather than send you on a wild goose chase across the internet, we've
+Rather than send you on a wild goose chase across the Internet, we've
 collected some of the more difficult to find installers in our github repo for you.
 
 
@@ -68,7 +68,7 @@ Install on Windows XP 32bit
 
 13.  Add c:\\python27\\scripts to your path
 
-14.  Close terminal window and open a new terminal window (cmd)
+14.  Close terminal window and open a new terminal window (*cmd*)
 
 15.  Install jinja2
         
