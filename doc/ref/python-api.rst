@@ -61,6 +61,12 @@ same interface used by the ``salt`` command line tool.
     * 'glob' - Bash glob completion - Default
     * 'pcre' - Perl style regular expression
     * 'list' - Python list of hosts
+    * 'grain' - Match based on a grain comparison
+    * 'grain_pcre' - Grain comparison with a regex
+    * 'pillar' - Pillar data comparison
+    * 'nodegroup' - Match on nodegroup
+    * 'range' - Use a Range server for matching
+    * 'compound' - Pass a compound match string
 
 .. cmdoption:: ret
 
@@ -102,6 +108,12 @@ same interface used by the ``salt`` command line tool.
     * 'glob' - Bash glob completion - Default
     * 'pcre' - Perl style regular expression
     * 'list' - Python list of hosts
+    * 'grain' - Match based on a grain comparison
+    * 'grain_pcre' - Grain comparison with a regex
+    * 'pillar' - Pillar data comparison
+    * 'nodegroup' - Match on nodegroup
+    * 'range' - Use a Range server for matching
+    * 'compound' - Pass a compound match string
 
 .. cmdoption:: ret
 
@@ -146,6 +158,12 @@ same interface used by the ``salt`` command line tool.
     * 'glob' - Bash glob completion - Default
     * 'pcre' - Perl style regular expression
     * 'list' - Python list of hosts
+    * 'grain' - Match based on a grain comparison
+    * 'grain_pcre' - Grain comparison with a regex
+    * 'pillar' - Pillar data comparison
+    * 'nodegroup' - Match on nodegroup
+    * 'range' - Use a Range server for matching
+    * 'compound' - Pass a compound match string
 
 .. cmdoption:: ret
 
@@ -187,6 +205,12 @@ same interface used by the ``salt`` command line tool.
     * 'glob' - Bash glob completion - Default
     * 'pcre' - Perl style regular expression
     * 'list' - Python list of hosts
+    * 'grain' - Match based on a grain comparison
+    * 'grain_pcre' - Grain comparison with a regex
+    * 'pillar' - Pillar data comparison
+    * 'nodegroup' - Match on nodegroup
+    * 'range' - Use a Range server for matching
+    * 'compound' - Pass a compound match string
 
 .. cmdoption:: ret
 
