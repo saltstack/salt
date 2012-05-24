@@ -15,11 +15,13 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 
+from salt._compat import string_types
 from salt.template import compile_template
 
 # Import third party libs
 import zmq
 import yaml
+
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ def hiera(conf, grains=None):
         grains = {}
     cmd = 'hiera {0}'.format(conf)
     for key, val in grains.items():
-        if isinstance(val, basestring):
+        if isinstance(val, string_types):
             cmd += ' {0}={1}'.format(key, val)
     out = subprocess.Popen(
             cmd,
@@ -236,7 +238,7 @@ class Pillar(object):
                         for comp in top[env][tgt]:
                             if isinstance(comp, dict):
                                 matches.append(comp)
-                            if isinstance(comp, basestring):
+                            if isinstance(comp, string_types):
                                 states.add(comp)
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
@@ -271,7 +273,7 @@ class Pillar(object):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
-                        if isinstance(item, basestring):
+                        if isinstance(item, string_types):
                             matches[env].append(item)
         ext_matches = self.client.ext_nodes()
         for env in ext_matches:

@@ -2,10 +2,7 @@
 Classes that manage file clients
 '''
 # Import python libs
-try:
-    import BaseHTTPServer
-except:
-    import http.server as BaseHTTPServer
+
 import contextlib
 import logging
 import hashlib
@@ -13,12 +10,6 @@ import os
 import shutil
 import string
 import subprocess
-try:
-    import urllib2
-    import urlparse
-except:
-    import urllib.request as urllib2
-    import urllib.parse as urlparse
 
 # Import third-party libs
 import yaml
@@ -32,6 +23,9 @@ import salt.loader
 import salt.utils
 import salt.payload
 import salt.utils.templates
+from salt._compat import (
+    BaseHTTPServer, HTTPError, URLError, urlparse, url_open as urlopen)
+
 
 log = logging.getLogger(__name__)
 
@@ -273,7 +267,7 @@ class Client(object):
         '''
         Get a single file from a URL.
         '''
-        url_data = urlparse.urlparse(url)
+        url_data = urlparse(url)
         if url_data.scheme == 'salt':
             return self.get_file(url, dest, makedirs, env)
         if dest:
@@ -295,16 +289,16 @@ class Client(object):
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
         try:
-            with contextlib.closing(urllib2.urlopen(url)) as srcfp:
+            with contextlib.closing(urlopen(url)) as srcfp:
                 with open(dest, 'wb') as destfp:
                     shutil.copyfileobj(srcfp, destfp)
             return dest
-        except urllib2.HTTPError as ex:
+        except HTTPError as ex:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                     ex.code,
                     url,
                     *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
-        except urllib2.URLError as ex:
+        except URLError as ex:
             raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
         return ''
 
