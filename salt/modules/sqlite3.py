@@ -13,6 +13,14 @@ def __virtual__():
         return False
     return 'sqlite3'
 
+def _connect(db=None):
+    if db == None:
+        return False
+
+    con = sqlite3.connect(db)
+    cur = con.cursor()
+    return cur
+
 def version():
     '''
     Return version of pysqlite
@@ -33,35 +41,81 @@ def sqlite_version():
     '''
     return sqlite3.sqlite_version
 
-def query(db=None, sql=None):
+def modify(db=None, sql=None):
     '''
-    Issue an SQL query to sqlite3 (with no return data)
+    Issue an SQL query to sqlite3 (with no return data), usually used
+    to modify the database in some way (insert, delete, create, etc)
 
     CLI Example::
 
-        salt '*' sqlite3.query /root/test.db 'CREATE TABLE test(id INT, testdata TEXT);'
+        salt '*' sqlite3.modify /root/test.db 'CREATE TABLE test(id INT, testdata TEXT);'
     '''
-    if db == None:
+    cur = _connect(db)
+
+    if cur == False:
         return False
 
-    con = sqlite3.connect(db)
-    cur = con.cursor()
     cur.execute(sql)
     return True
 
-def select(db=None, sql=None):
+def fetch(db=None, sql=None):
     '''
-    SELECT data from an sqlite3 db (returns all rows, be careful!)
+    Retrieve data from an sqlite3 db (returns all rows, be careful!)
 
     CLI Example::
 
-        salt '*' sqlite3.select /root/test.db 'SELECT * FROM test;'
+        salt '*' sqlite3.fetch /root/test.db 'SELECT * FROM test;'
     '''
-    if db == None:
+    cur = _connect(db)
+
+    if cur == False:
         return False
 
-    con = sqlite3.connect(db)
-    cur = con.cursor()
     cur.execute(sql)
     rows = cur.fetchall()
     return rows
+
+def tables(db=None):
+    '''
+    Show all tables in the database
+
+    CLI Example::
+
+        salt '*' sqlite3.tables /root/test.db
+    '''
+    cur = _connect(db)
+
+    if cur == False:
+        return False
+
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+    rows = cur.fetchall()
+    return rows
+
+def indices(db=None):
+    '''
+    Show all indices in the database
+
+    CLI Example::
+
+        salt '*' sqlite3.indices /root/test.db
+    '''
+    cur = _connect(db)
+
+    if cur == False:
+        return False
+
+    cur.execute("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name;")
+    rows = cur.fetchall()
+    return rows
+
+def indexes(db=None):
+    '''
+    Show all indices in the database, for people with poor spelling skills
+
+    CLI Example::
+
+        salt '*' sqlite3.indexes /root/test.db
+    '''
+    return indices(db)
+
