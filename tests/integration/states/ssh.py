@@ -32,15 +32,16 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         # test first
         _ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
         ret = _ret.values()[0]
-        self.assertTrue(ret['result'], ret)
-        # save once
-        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        ret = _ret.values()[0]
-        self.assertTrue(ret['result'], ret)
-        # save twice
-        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        ret = _ret.values()[0]
         self.assertEqual(ret['result'], None, ret)
+        # save once, new key appears
+        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
+        ret = _ret.values()[0]
+        self.assertEqual(ret['changes']['new']['fingerprint'],
+                         GITHUB_FINGERPRINT, ret)
+        # save twice, no changes
+        _ret = self.run_state('ssh_known_hosts.present', **kwargs)
+        ret = _ret.values()[0]
+        self.assertEqual(ret['changes'], {}, ret)
         # test again, nothing is about to be changed
         _ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
         ret = _ret.values()[0]
@@ -49,7 +50,8 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         _ret = self.run_state('ssh_known_hosts.present',
                               **dict(kwargs, name=GITHUB_IP ))
         ret = _ret.values()[0]
-        self.assertTrue(ret['result'], ret)
+        self.assertEqual(ret['changes']['new']['fingerprint'],
+                         GITHUB_FINGERPRINT, ret)
         # record for every host must be available
         ret = self.run_function('ssh.get_known_host', ['root', 'github.com'],
                                 config=KNOWN_HOSTS)
@@ -81,15 +83,16 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         # test first
         _ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
         ret = _ret.values()[0]
-        self.assertTrue(ret['result'], ret)
-        # remove once
-        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
-        ret = _ret.values()[0]
-        self.assertTrue(ret['result'], ret)
-        # remove twice
-        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
-        ret = _ret.values()[0]
         self.assertEqual(ret['result'], None, ret)
+        # remove once, the key is gone
+        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
+        ret = _ret.values()[0]
+        self.assertEqual(ret['changes']['old']['fingerprint'],
+                         GITHUB_FINGERPRINT, ret)
+        # remove twice, nothing has changed
+        _ret = self.run_state('ssh_known_hosts.absent', **kwargs)
+        ret = _ret.values()[0]
+        self.assertEqual(ret['changes'], {}, ret)
         # test again
         _ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
         ret = _ret.values()[0]
