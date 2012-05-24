@@ -50,5 +50,5 @@ def wol(mac, bcast='255.255.255.255', destport=9):
             ('\\x' + mac[6:8]).decode('string_escape') + \
             ('\\x' + mac[8:10]).decode('string_escape') + \
             ('\\x' + mac[10:12]).decode('string_escape')
-    s.sendto('\xff' * 6 + dest * 16, (bcast,  int(destport)))
+    s.sendto('\xff' * 6 + dest * 16, (bcast, int(destport)))
     print("Sent magic packet to minion.")
