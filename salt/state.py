@@ -1477,7 +1477,7 @@ class BaseHighState(object):
                    'in the top file or the top file was not found on the '
                    'master')
             ret[tag_name]['comment'] = msg
-        return ret
+            return ret
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         self.load_dynamic(matches)
