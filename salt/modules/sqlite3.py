@@ -52,7 +52,7 @@ def modify(db=None, sql=None):
     '''
     cur = _connect(db)
 
-    if cur == False:
+    if not cur:
         return False
 
     cur.execute(sql)
@@ -68,7 +68,7 @@ def fetch(db=None, sql=None):
     '''
     cur = _connect(db)
 
-    if cur == False:
+    if not cur:
         return False
 
     cur.execute(sql)
@@ -85,7 +85,7 @@ def tables(db=None):
     '''
     cur = _connect(db)
 
-    if cur == False:
+    if not cur:
         return False
 
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
@@ -102,7 +102,7 @@ def indices(db=None):
     '''
     cur = _connect(db)
 
-    if cur == False:
+    if not cur:
         return False
 
     cur.execute("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name;")
