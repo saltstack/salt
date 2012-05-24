@@ -19,11 +19,15 @@ if os.environ.get('VIRTUAL_ENV'):
 
 exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
 
+
 class TestCommand(Command):
     description = 'Run tests'
     user_options = []
+
     def initialize_options(self): pass
+
     def finalize_options(self): pass
+
     def run(self):
         from subprocess import Popen
         self.run_command('build')
@@ -55,7 +59,7 @@ else:
 
 libraries = ['ws2_32'] if sys.platform == 'win32' else []
 
-requirements=''
+requirements = ''
 with open('requirements.txt') as f:
     requirements = f.read()
 
@@ -93,7 +97,7 @@ setup(
                 'salt.states',
                 'salt.utils',
                 ],
-      package_data = {
+      package_data={
           'salt.modules': ['rh_ip/*.jinja'],
       },
       scripts=['scripts/salt-master',
