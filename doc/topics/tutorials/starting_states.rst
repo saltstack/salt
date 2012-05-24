@@ -142,8 +142,8 @@ combined to build out a State Tree. The above example also references a file
 with a strange source - ``salt://apache/httpd.conf``. That file will need to
 be available as well.
 
-The SLS files are laid out in a directory on the Salt master. Files are laid
-out as just files. A SLS is just a file and files to download are just files.
+The SLS files are laid out in a directory on the Salt master. A SLS is just a
+regular file and downloads like a regular file.
 
 The Apache example would be laid out in the root of the Salt file server like
 this: ::

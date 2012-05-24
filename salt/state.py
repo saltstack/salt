@@ -379,7 +379,9 @@ class State(object):
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
                     if fnmatch.fnmatch(data['name'], req[req.keys()[0]]) \
-                            or fnmatch.fnmatch(data['__id__'], req[req.keys()[0]]):
+                            or fnmatch.fnmatch(
+                                data['__id__'], req[req.keys()[0]]
+                            ):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -463,7 +465,8 @@ class State(object):
                                         req_val = req[req_key]
                                         if not ishashable(req_val):
                                             errors.append((
-                                                'Illegal requisite "{0}", please check your syntax.\n'
+                                                'Illegal requisite "{0}", '
+                                                'please check your syntax.\n'
                                                 ).format(str(req_val)))
 
                                         # Check for global recursive requisites
@@ -480,10 +483,13 @@ class State(object):
                                                             req_val
                                                             )
                                                     errors.append(err)
-                                # Make sure that there is only one key in the dict
+                                # Make sure that there is only one key in the
+                                # dict
                                 if len(arg.keys()) != 1:
-                                    errors.append(('Multiple dictionaries defined'
-                                    ' in argument of state "{0}" in sls {1}').format(
+                                    errors.append((
+                                        'Multiple dictionaries defined'
+                                    ' in argument of state "{0}" in sls {1}'
+                                    ).format(
                                         name,
                                         body['__sls__']))
                     if not fun:
@@ -825,7 +831,8 @@ class State(object):
         cdata = self.format_call(data)
         try:
             if 'kwargs' in cdata:
-                ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
+                ret = self.states[cdata['full']](
+                    *cdata['args'], **cdata['kwargs'])
             else:
                 ret = self.states[cdata['full']](*cdata['args'])
         except:
@@ -958,7 +965,7 @@ class State(object):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     for lreq in lreqs:
-                        comment += '{0}{1}: {2}\n'.format(' '*19,
+                        comment += '{0}{1}: {2}\n'.format(' ' * 19,
                                 requisite,
                                 lreq)
                 running[tag] = {'changes': {},
@@ -1370,8 +1377,9 @@ class BaseHighState(object):
                                                '__env__': env,
                                                comps[0]: [comps[1]]}
                                 continue
-                        errors.append(('Name {0} in sls {1} is not a dictionary'
-                                       .format(name, sls)))
+                        errors.append((
+                            'Name {0} in sls {1} is not a dictionary'.format(
+                            name, sls)))
                         continue
                     skeys = set()
                     for key in state[name]:

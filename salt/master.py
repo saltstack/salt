@@ -765,7 +765,9 @@ class AESFuncs(object):
             try:
                 timeout = int(clear_load['tmo'])
             except ValueError:
-                msg = 'Failed to parse timeout value: {0}'.format(clear_load['tmo'])
+                msg = 'Failed to parse timeout value: {0}'.format(
+                    clear_load['tmo']
+                )
                 log.warn(msg)
                 return {}
         if 'tgt_type' in clear_load:

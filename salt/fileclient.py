@@ -104,7 +104,8 @@ class Client(object):
 
     def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
-        Copies a file from the local files or master depending on implementation
+        Copies a file from the local files or master depending on
+        implementation
         '''
         raise NotImplementedError
 
@@ -559,7 +560,9 @@ class RemoteClient(Client):
                 load['loc'] = fn_.tell()
             payload['load'] = self.auth.crypticle.dumps(load)
             self.socket.send(self.serial.dumps(payload))
-            data = self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+            data = self.auth.crypticle.loads(
+                self.serial.loads(self.socket.recv())
+            )
             if not data['data']:
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master

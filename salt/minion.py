@@ -289,7 +289,8 @@ class Minion(object):
             except SaltInvocationError as exc:
                 msg = 'Problem executing "{0}": {1}'
                 log.error(msg.format(function_name, str(exc)))
-                ret['return'] = 'ERROR executing {0}: {1}'.format(function_name, str(exc))
+                ret['return'] = 'ERROR executing {0}: {1}'.format(
+                    function_name, str(exc))
             except Exception as exc:
                 trb = traceback.format_exc()
                 msg = 'The minion function caused an exception: {0}'
@@ -631,7 +632,9 @@ class Matcher(object):
                     matcher = item['match']
         if hasattr(self, matcher + '_match'):
             if matcher == 'nodegroup':
-                return getattr(self, '{0}_match'.format(matcher))(match, nodegroups)
+                return getattr(self, '{0}_match'.format(matcher))(
+                    match, nodegroups
+                )
             return getattr(self, '{0}_match'.format(matcher))(match)
         else:
             log.error('Attempting to match with unknown matcher: {0}'.format(
@@ -720,10 +723,12 @@ class Matcher(object):
         log.debug('tgt {0}'.format(tgt))
         comps = tgt.split(':')
         if len(comps) < 2:
-            log.error('Got insufficient arguments for pillar match statement from master')
+            log.error('Got insufficient arguments for pillar match statement '
+                'from master')
             return False
         if comps[0] not in self.opts['pillar']:
-            log.error('Got unknown pillar match statement from master: {0}'.format(comps[0]))
+            log.error('Got unknown pillar match statement from master: '
+                '{0}'.format(comps[0]))
             return False
         if isinstance(self.opts['pillar'][comps[0]], list):
             # We are matching a single component to a single list member

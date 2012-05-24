@@ -229,7 +229,9 @@ class Auth(object):
         '''
         auth = {}
         try:
-            self.opts['master_ip'] = salt.utils.dns_check(self.opts['master'], True)
+            self.opts['master_ip'] = salt.utils.dns_check(
+                self.opts['master'], True
+            )
         except SaltClientError:
             return 'retry'
         context = zmq.Context()

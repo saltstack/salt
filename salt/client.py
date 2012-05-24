@@ -236,7 +236,9 @@ class LocalClient(object):
             jid=jid,
             timeout=timeout)
         if pub_data['jid'] == '0':
-            print('Failed to connect to the Master, is the Salt Master running?')
+            print(
+                'Failed to connect to the Master, is the Salt Master running?'
+            )
             yield {}
         elif not pub_data['jid']:
             print('No minions match the target')
@@ -419,7 +421,9 @@ class LocalClient(object):
                                     continue
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                    open(outp, 'r')
+                                )
                         except:
                             pass
                     found.add(fn_)
@@ -440,7 +444,8 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print('Execution is still running on {0}'.format(id_))
+                            print('Execution is still running on {0}'
+                            .format(id_))
                         more_time = True
                 if more_time:
                     timeout += inc_timeout
@@ -483,7 +488,9 @@ class LocalClient(object):
                             ret_data = self.serial.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                    open(outp, 'r')
+                                )
                         except:
                             pass
                     found.add(fn_)
@@ -593,7 +600,9 @@ class LocalClient(object):
                             ret_data = self.serial.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                    open(outp, 'r')
+                                )
                         except:
                             pass
             if ret and start == 999999999999:
@@ -686,8 +695,12 @@ class LocalClient(object):
         '''
         if expr_form == 'nodegroup':
             if tgt not in self.opts['nodegroups']:
-                conf_file = self.opts.get('conf_file', 'the master config file')
-                err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
+                conf_file = self.opts.get(
+                    'conf_file', 'the master config file'
+                )
+                err = 'Node group {0} unavailable in {1}'.format(
+                    tgt, conf_file
+                )
                 raise SaltInvocationError(err)
             tgt = self.opts['nodegroups'][tgt]
             expr_form = 'compound'

@@ -86,9 +86,9 @@ class HighStateOutputter(Outputter):
                 # Verify that the needed data is present
                 for tname, info in data[host].items():
                     if not '__run_num__' in info:
-                        err = ('The State execution failed to record the order '
-                               'in which all states were executed. The state '
-                               'return missing data is:')
+                        err = ('The State execution failed to record the '
+                               'order in which all states were executed. The '
+                               'state return missing data is:')
                         print(err)
                         pprint.pprint(info)
                 # Everything rendered as it should display the output
