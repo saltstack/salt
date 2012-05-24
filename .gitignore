@@ -27,3 +27,5 @@ share/
 .coverage
 coverage.xml
 htmlcov/
+/.project
+/.pydevproject

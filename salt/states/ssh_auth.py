@@ -40,6 +40,7 @@ name.
 # Import python libs
 import re
 
+
 def _present_test(user, name, enc, comment, options, source, config, env):
     '''
     Run checks for "present"

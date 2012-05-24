@@ -6,6 +6,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
+
 def managed(name,
         venv_bin='virtualenv',
         requirements='',

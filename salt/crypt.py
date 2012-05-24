@@ -118,7 +118,6 @@ class MasterKeys(dict):
         return open(self.pub_path, 'r').read()
 
 
-
 class Auth(object):
     '''
     The Auth class provides the sequence for setting up communication with

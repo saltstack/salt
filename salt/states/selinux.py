@@ -17,6 +17,7 @@ booleans can be set.
 
 '''
 
+
 def _refine_mode(mode):
     '''
     Return a mode value that is completely predictable
@@ -85,6 +86,7 @@ def mode(name):
         return ret
     ret['comment'] = 'Failed to set SELinux to {0} mode'.format(tmode)
     return ret
+
 
 def boolean(name, value, persist=False):
     '''

@@ -2,8 +2,8 @@
 File Management
 ===============
 
-Salt States can aggressively manipulate files on a system. There are a number of
-ways in which files can be managed.
+Salt States can aggressively manipulate files on a system. There are a number
+of ways in which files can be managed.
 
 Regular files can be enforced with the ``managed`` function. This function
 downloads files from the salt master and places them on the target system.
@@ -250,6 +250,7 @@ def _source_list(source, source_hash, env):
                     break
     return source, source_hash
 
+
 def _get_managed(
         name,
         template,
@@ -335,7 +336,7 @@ def _get_managed(
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
                     if len(comps) < 2:
-                        return '', {},('Source hash file {0} contains an '
+                        return '', {}, ('Source hash file {0} contains an '
                                   ' invalid hash format, it must be in '
                                   ' the format <hash type>=<hash>'
                                   ).format(source_hash)
@@ -345,6 +346,7 @@ def _get_managed(
                 return '', {}, ('Unable to determine upstream hash of'
                           ' source file {0}').format(source)
     return sfn, source_sum, ''
+
 
 def _check_perms(name, ret, user, group, mode):
     '''
@@ -1137,7 +1139,7 @@ def directory(name,
                     if type(gid).__name__ == 'str':
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'for group {0}'.format(group,user)
+                                         'for group {0}'.format(group, user)
                         # Remove 'group' from list of recurse targets
                         targets = filter(lambda x: x != 'group', targets)
                 else:
@@ -1161,10 +1163,10 @@ def directory(name,
 
             if needs_fixed.get('user'):
                 # Make sure the 'recurse' subdict exists
-                ret['changes'].setdefault('recurse',{})
+                ret['changes'].setdefault('recurse', {})
                 if 'user' in targets:
                     if __salt__['cmd.retcode']('chown -R {0} "{1}"'.format(
-                            user,name)) != 0:
+                            user, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership on ' \
                                          '{0} for user {1}'.format(name,group)
@@ -1172,7 +1174,7 @@ def directory(name,
                         ret['changes']['recurse']['user'] = \
                                 __salt__['file.uid_to_user'](uid)
             if needs_fixed.get('group'):
-                ret['changes'].setdefault('recurse',{})
+                ret['changes'].setdefault('recurse', {})
                 if 'group' in targets:
                     if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
                             group,name)) != 0:
@@ -1449,6 +1451,7 @@ def comment(name, regex, char='#', backup='.bak'):
 
     return ret
 
+
 def uncomment(name, regex, char='#', backup='.bak'):
     '''
     Usage::
@@ -1496,6 +1499,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'Expected uncommented lines not found'
 
     return ret
+
 
 def append(name, text):
     '''

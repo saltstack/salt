@@ -14,6 +14,7 @@ from salt.exceptions import SaltException
 # Import Third party libs
 import yaml
 
+
 def active():
     '''
     Return a report on all actively running jobs from a job id centric
@@ -91,6 +92,7 @@ def lookup_jid(jid):
     printout(ret)
     return ret
 
+
 def list_jobs():
     '''
     List all detectable jobs and associated functions
@@ -112,4 +114,3 @@ def list_jobs():
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type']}
     print(yaml.dump(ret))
-

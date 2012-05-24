@@ -1,8 +1,8 @@
 '''
 MySQL User Management
 =====================
-The mysql_database module is used to create and manage MySQL databases, databases can be set
-as either absent or present
+The mysql_database module is used to create and manage MySQL databases.
+Databases can be set as either absent or present
 
 .. code-block:: yaml
 
@@ -12,6 +12,7 @@ as either absent or present
         - host: localhost
         - password: bobcat
 '''
+
 
 def present(name,
             host='localhost',

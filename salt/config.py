@@ -17,7 +17,6 @@ try:
 except:
     pass
 
-
 # Import salt libs
 import salt.crypt
 import salt.loader
@@ -42,6 +41,7 @@ def _validate_file_roots(file_roots):
             file_roots[env] = []
     return file_roots
 
+
 def _append_domain(opts):
     '''
     Append a domain to the existing id if it doesn't already exist
@@ -53,6 +53,7 @@ def _append_domain(opts):
     if opts['id'].endswith('.'):
         return opts['id']
     return "{0[id]}.{0[append_domain]}".format(opts)
+
 
 def _read_conf_file(path):
     with open(path, 'r') as conf_file:
@@ -77,7 +78,7 @@ def load_config(opts, path, env_var):
         if os.path.isfile(template):
             with open(path, 'w') as out:
                 with open(template, 'r') as f:
-                    f.readline() # skip first line
+                    f.readline()  # skip first line
                     out.write(f.read())
 
     if os.path.isfile(path):
@@ -268,4 +269,3 @@ def master_config(path):
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
-

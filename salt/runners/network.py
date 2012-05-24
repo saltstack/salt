@@ -4,6 +4,7 @@ Network tools to run from the Master
 
 import socket
 
+
 def wollist(maclist, bcast='255.255.255.255', destport=9):
     '''
     Send a "Magic Packet" to wake up a list of Minions.
@@ -22,6 +23,7 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
             print("Waking up %s" % mac.strip())
     except Exception as inst:
         print("Failed to open the MAC file. Error: %s" % inst)
+
 
 def wol(mac, bcast='255.255.255.255', destport=9):
     '''
@@ -48,5 +50,5 @@ def wol(mac, bcast='255.255.255.255', destport=9):
             ('\\x' + mac[6:8]).decode('string_escape') + \
             ('\\x' + mac[8:10]).decode('string_escape') + \
             ('\\x' + mac[10:12]).decode('string_escape')
-    s.sendto('\xff'*6 + dest*16, (bcast,  int(destport)))
+    s.sendto('\xff' * 6 + dest * 16, (bcast,  int(destport)))
     print("Sent magic packet to minion.")

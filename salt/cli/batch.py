@@ -10,6 +10,7 @@ import copy
 import salt.client
 import salt.output
 
+
 class Batch(object):
     '''
     Manage the execution of batch runs
