@@ -177,7 +177,7 @@
 # peer:
 #   .*:
 #       - .*
-# This is not recomanded, since it would allow anyone who gets root on any
+# This is not recommended, since it would allow anyone who gets root on any
 # single minion to instantly have root on all of the minions!
 #
 
