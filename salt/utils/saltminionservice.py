@@ -7,8 +7,9 @@ import sys
 
 
 class MinionService(Service):
+
     def start(self):
-        self.runflag=True
+        self.runflag = True
         self.log("Starting the Salt Minion")
         minion = salt.Minion()
         minion.start()
@@ -16,8 +17,9 @@ class MinionService(Service):
             pass
             #self.sleep(10)
             #self.log("I'm alive ...")
+
     def stop(self):
-        self.runflag=False
+        self.runflag = False
         self.log("Shutting down the Salt Minion")
 
 if __name__ == '__main__':

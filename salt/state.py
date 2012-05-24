@@ -958,7 +958,7 @@ class State(object):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     for lreq in lreqs:
-                        comment += '{0}{1}: {2}\n'.format(' '*19,
+                        comment += '{0}{1}: {2}\n'.format(' ' * 19,
                                 requisite,
                                 lreq)
                 running[tag] = {'changes': {},
