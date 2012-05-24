@@ -1156,10 +1156,12 @@ def directory(name,
                     fstat = os.stat(path)
                     if 'user' in targets and fstat.st_uid != uid:
                             needs_fixed['user'] = True
-                            if needs_fixed.get('group'): break
+                            if needs_fixed.get('group'):
+                                break
                     if 'group' in targets and fstat.st_gid != gid:
                             needs_fixed['group'] = True
-                            if needs_fixed.get('user'): break
+                            if needs_fixed.get('user'):
+                                break
 
             if needs_fixed.get('user'):
                 # Make sure the 'recurse' subdict exists
@@ -1169,7 +1171,7 @@ def directory(name,
                             user, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership on ' \
-                                         '{0} for user {1}'.format(name,group)
+                                         '{0} for user {1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['user'] = \
                                 __salt__['file.uid_to_user'](uid)
@@ -1177,11 +1179,11 @@ def directory(name,
                 ret['changes'].setdefault('recurse', {})
                 if 'group' in targets:
                     if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
-                            group,name)) != 0:
+                            group, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'on {0} for group ' \
-                                         '{1}'.format(name,group)
+                                         '{1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['group'] = \
                                 __salt__['file.gid_to_group'](gid)
@@ -1334,6 +1336,7 @@ def recurse(name,
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
 
+
 def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         flags='g'):
     '''
@@ -1404,6 +1407,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         ret['comment'] = 'Expected edit does not appear in file'
 
     return ret
+
 
 def comment(name, regex, char='#', backup='.bak'):
     '''

@@ -140,9 +140,9 @@ def _parse_interval(value):
     resolution = None
     for name, multiplier in [('second', 1),
                              ('minute', 60),
-                             ('hour',   60 * 60),
-                             ('day',    60 * 60 * 24),
-                             ('week',   60 * 60 * 24 * 7)]:
+                             ('hour', 60 * 60),
+                             ('day', 60 * 60 * 24),
+                             ('week', 60 * 60 * 24 * 7)]:
         if m.group(name) is not None:
             result += float(m.group(name)) * multiplier
             if resolution is None:
