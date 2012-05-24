@@ -44,7 +44,13 @@ def clean_old_key(rsa_path):
         import win32api
         import win32con
         win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
-    mkey.save_key(rsa_path, None)
+    try:
+        mkey.save_key(rsa_path, None)
+    except IOError:
+        log.error(
+                ('Failed to update old RSA format for key {0}, future '
+                 'releases may not be able to use this key').format(rsa_path)
+                )
     # Set read-only permission for minion.pem file
     if sys.platform == 'win32':
         import win32api
