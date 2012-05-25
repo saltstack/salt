@@ -1415,7 +1415,7 @@ def comment(name, regex, char='#', backup='.bak'):
 
         /etc/fstab:
           file.comment:
-            - regex: ^//10.10.20.5
+            - regex: ^bind 127.0.0.1
 
     .. versionadded:: 0.9.5
     '''
