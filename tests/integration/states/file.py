@@ -5,9 +5,7 @@ Tests for the file state
 import os
 #
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 class FileTest(integration.ModuleCase):
     '''
@@ -215,17 +213,25 @@ class FileTest(integration.ModuleCase):
         file.comment
         '''
         name = os.path.join(integration.TMP, 'comment_test')
+        # write a line to file
         with open(name, 'w+') as fp_:
             fp_.write('comment_me')
-        ret = self.run_state(
-                'file.comment',
-                name=name,
-                regex='.*comment.*',
-                )
+        # comment once
+        _ret = self.run_state('file.comment', name=name, regex='^comment')
+        # line is commented
         with open(name, 'r') as fp_:
-            self.assertIn('#comment', fp_.read())
-        result = ret[ret.keys()[0]]['result']
-        self.assertTrue(result)
+            self.assertTrue(fp_.read().startswith('#comment'))
+        # result is positive
+        ret = _ret.values()[0]
+        self.assertTrue(ret['result'], ret)
+        # comment twice
+        _ret = self.run_state('file.comment', name=name, regex='^comment')
+        # line is still commented
+        with open(name, 'r') as fp_:
+            self.assertTrue(fp_.read().startswith('#comment'))
+        # result is still positive
+        ret = _ret.values()[0]
+        self.assertTrue(ret['result'], ret)
 
     def test_test_comment(self):
         '''
@@ -252,11 +258,7 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'uncomment_test')
         with open(name, 'w+') as fp_:
             fp_.write('#comment_me')
-        ret = self.run_state(
-                'file.uncomment',
-                name=name,
-                regex='comment.*',
-                )
+        ret = self.run_state('file.uncomment', name=name, regex='^comment')
         with open(name, 'r') as fp_:
             self.assertNotIn('#comment', fp_.read())
         result = ret[ret.keys()[0]]['result']
@@ -341,3 +343,17 @@ class FileTest(integration.ModuleCase):
         self.assertFalse(os.path.isfile(name))
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
+
+
+if __name__ == "__main__":
+    import sys
+    from saltunittest import TestLoader, TextTestRunner
+    from integration import TestDaemon
+
+
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(FileTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())
