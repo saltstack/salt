@@ -531,7 +531,7 @@ def contains_regex(path, regex, lchar=''):
     try:
         with open(path, 'r') as fp_:
             for line in  fp_:
-                if re.match(regex, line.lstrip(lchar)):
+                if re.search(regex, line.lstrip(lchar)):
                     return True
             return False
     except (IOError, OSError):
