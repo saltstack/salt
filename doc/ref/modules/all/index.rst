@@ -55,6 +55,7 @@ Full list of builtin modules
     mysql
     network
     nginx
+    osxdesktop
     pacman
     pillar
     pip
