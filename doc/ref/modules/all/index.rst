@@ -66,6 +66,7 @@ Full list of builtin modules
     pw_group
     pw_user
     rabbitmq_server
+    reg
     rh_ip
     rh_service
     rvm
