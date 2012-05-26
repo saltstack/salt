@@ -31,6 +31,7 @@ Full list of builtin states
     selinux
     service
     ssh_auth
+    ssh_known_hosts
     sysctl
     user
     virtualenv
