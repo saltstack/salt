@@ -15,6 +15,7 @@ Full list of builtin states
     cron
     file
     gem
+    git
     group
     host
     kmod
