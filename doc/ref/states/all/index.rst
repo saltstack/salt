@@ -28,6 +28,7 @@ Full list of builtin states
     pkg
     postgres_database
     rvm
+    selinux
     service
     ssh_auth
     sysctl
