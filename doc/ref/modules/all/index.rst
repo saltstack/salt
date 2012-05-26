@@ -88,6 +88,7 @@ Full list of builtin modules
     virtualenv
     win_disk
     win_file
+    win_groupadd
     win_network
     win_service
     win_shadow
