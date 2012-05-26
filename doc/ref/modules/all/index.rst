@@ -65,6 +65,7 @@ Full list of builtin modules
     puppet
     pw_group
     pw_user
+    rabbitmq_server
     rh_ip
     rh_service
     rvm
