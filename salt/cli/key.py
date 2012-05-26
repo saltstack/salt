@@ -55,52 +55,87 @@ class Key(object):
         if not self.opts['quiet']:
             print(message)
 
-    def _list_pre(self, header=True):
+    def _list_pre(self, header=True, printer=None):
         '''
         List the unaccepted keys
         '''
         if header == True:
             self._log(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
-        for key in sorted(self._keys('pre')):
-            output = utils.RED + key + utils.ENDC
-            self._log(output)
+        keys = self._keys('pre')
+        if printer is None:
+            for key in sorted(keys):
+                output = utils.RED + key + utils.ENDC
+                self._log(output)
+        else:
+            printer(list(keys))
 
-    def _list_accepted(self, header=True):
+    def _list_accepted(self, header=True, printer=None):
         '''
         List the accepted public keys
         '''
         if header == True:
             self._log(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
-        for key in sorted(self._keys('acc')):
-            self._log(utils.GREEN + key + utils.ENDC)
+        keys = self._keys('acc')
+        if printer is None:
+            for key in sorted(keys):
+                self._log(utils.GREEN + key + utils.ENDC)
+        else:
+            printer(list(keys))
 
-    def _list_rejected(self, header=True):
+    def _list_rejected(self, header=True, printer=None):
         '''
         List the unaccepted keys
         '''
         if header == True:
             self._log(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
-        for key in sorted(self._keys('rej')):
-            self._log(utils.BLUE + key + utils.ENDC)
+        keys = self._keys('rej')
+        if printer is None:
+            for key in sorted(keys):
+                self._log(utils.BLUE + key + utils.ENDC)
+        else:
+            printer(list(keys))
 
     def _list(self, name):
         '''
         List keys
         '''
+        printout = self._get_outputter()
+        if 'json_out' in self.opts and self.opts['json_out']:
+            printout.indent = 2
         if name in ('pre', 'un', 'unaccept', 'unaccepted'):
-            self._list_pre(False)
+            self._list_pre(header=False, printer=printout)
         elif name in ('acc', 'accept', 'accepted'):
-            self._list_accepted(False)
+            self._list_accepted(header=False, printer=printout)
         elif name in ('rej', 'reject', 'rejected'):
-            self._list_rejected(False)
+            self._list_rejected(header=False, printer=printout)
         elif name in ('all',):
-            self._list_pre()
-            self._list_accepted()
-            self._list_rejected()
+            if printout is not None:
+                keys = {
+                    'rejected': list(self._keys('rej')),
+                    'accepted': list(self._keys('acc')),
+                    'unaccepted': list(self._keys('pre')),
+                }
+                printout(keys)
+            else:
+                self._list_pre(printer=printout)
+                self._list_accepted(printer=printout)
+                self._list_rejected(printer=printout)
         else:
             err = ('Unrecognized key type "{0}".  Run with -h for options.'
                     ).format(name)
             self._log(err, level='error')
+
+    def _get_outputter(self):
+        get_outputter = salt.output.get_outputter
+        if self.opts['raw_out']:
+            printout = get_outputter('raw')
+        elif self.opts['json_out']:
+            printout = get_outputter('json')
+        elif self.opts['yaml_out']:
+            printout = get_outputter('yaml')
+        else:
+            printout = None # use default color output
+        return printout
 
     def _print_key(self, name):
         '''
