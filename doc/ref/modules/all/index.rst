@@ -17,6 +17,7 @@ Full list of builtin modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    aliases
     apache
     apt
     archive
