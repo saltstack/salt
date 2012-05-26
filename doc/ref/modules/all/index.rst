@@ -21,8 +21,8 @@ Full list of builtin modules
     apache
     apt
     archive
-    butterkvm
     brew
+    butterkvm
     cluster
     cmdmod
     cp
@@ -42,6 +42,7 @@ Full list of builtin modules
     git
     grains
     groupadd
+    grub
     hg
     hosts
     kmod
