@@ -47,6 +47,7 @@ Full list of builtin modules
     hosts
     kmod
     kvm_hyper
+    launchctl
     linux_sysctl
     mdadm
     moosefs
