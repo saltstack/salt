@@ -33,6 +33,7 @@ Full list of builtin modules
     django
     ebuild
     file
+    freebsdjail
     freebsdkmod
     freebsdpkg
     freebsdservice
