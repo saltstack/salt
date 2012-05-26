@@ -59,6 +59,7 @@ Full list of builtin modules
     pacman
     pillar
     pip
+    postgres
     ps
     publish
     puppet
