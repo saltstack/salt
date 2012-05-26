@@ -75,6 +75,7 @@ Full list of builtin modules
     service
     shadow
     solr
+    sqlite3
     ssh
     state
     status
