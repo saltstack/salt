@@ -22,6 +22,7 @@ Full list of builtin modules
     apt
     archive
     butterkvm
+    brew
     cluster
     cmdmod
     cp
