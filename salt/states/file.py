@@ -88,7 +88,6 @@ import copy
 
 # Import Salt libs
 import salt.utils.templates
-import pdb
 
 logger = logging.getLogger(__name__)
 
