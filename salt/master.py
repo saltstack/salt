@@ -33,6 +33,7 @@ import salt.client
 import salt.payload
 import salt.pillar
 import salt.state
+import salt.runner
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -702,8 +703,9 @@ class AESFuncs(object):
         opts = {'fun': clear_load['fun'],
                 'arg': clear_load['arg'],
                 'doc': False,
-                'conf_file': self.opts['conf']}
-        runner = salt.runner.Runner(self.opts)
+                'conf_file': self.opts['conf_file']}
+        opts.update(self.opts)
+        runner = salt.runner.Runner(opts)
         return runner.run()
         
 
