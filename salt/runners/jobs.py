@@ -51,6 +51,7 @@ def active():
             if os.path.exists(os.path.join(jid_dir, minion)):
                 ret[jid]['Returned'].append(minion)
     print(yaml.dump(ret))
+    return ret
 
 
 def lookup_jid(jid):
@@ -114,3 +115,4 @@ def list_jobs():
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type']}
     print(yaml.dump(ret))
+    return ret
