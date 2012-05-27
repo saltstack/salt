@@ -15,6 +15,13 @@ module:
 '''
 
 
+def __virtual__():
+    '''
+    only load if kmod is available
+    '''
+    return 'kmod' if 'kmod' in __salt__ else False
+
+
 def present(name):
     '''
     Ensure that the specified kernel module is loaded
