@@ -445,6 +445,13 @@ class LocalClient(object):
                 if more_time:
                     timeout += inc_timeout
                     continue
+                if verbose:
+                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                        if not len(fret) >= len(minions):
+                            print('\nThe following minions did not return:')
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                print(minion)
                 break
             time.sleep(0.01)
 
