@@ -123,7 +123,7 @@ def cache_files(paths, env='base'):
     return client.cache_files(paths, env)
 
 
-def cache_dir(path, env='base'):
+def cache_dir(path, env='base', include_empty=False):
     '''
     Download and cache everything under a directory from the master
 
@@ -132,7 +132,7 @@ def cache_dir(path, env='base'):
         salt '*' cp.cache_dir salt://path/to/dir
     '''
     client = salt.fileclient.get_file_client(__opts__)
-    return client.cache_dir(path, env)
+    return client.cache_dir(path, env, include_empty)
 
 
 def cache_master(env='base'):

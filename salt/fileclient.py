@@ -140,7 +140,7 @@ class Client(object):
             ret.append(self.cache_file('salt://{0}'.format(path), env))
         return ret
 
-    def cache_dir(self, path, env='base'):
+    def cache_dir(self, path, env='base', include_empty=False):
         '''
         Download all of the files in a subdir of the master
         '''
@@ -152,6 +152,27 @@ class Client(object):
                 if not fn_.strip():
                     continue
                 ret.append(local)
+
+        if include_empty:
+            # Break up the path into a list containing the bottom-level directory
+            # (the one being recursively copied) and the directories preceding it
+            separated = string.rsplit(path,'/',1)
+            if len(separated) != 2:
+                # No slashes in path. (This means all files in env will be copied)
+                prefix = ''
+            else:
+                prefix = separated[0]
+            for fn_ in self.file_list_emptydirs(env):
+                if fn_.startswith(path):
+                    dest = os.path.normpath(
+                      os.sep.join([
+                      self.opts['cachedir'],
+                      'files',
+                      env])) 
+                    minion_dir = '%s/%s' % (dest,fn_)
+                    if not os.path.isdir(minion_dir):
+                        os.makedirs(minion_dir)
+                    ret.append(minion_dir)
         return ret
 
     def cache_local_file(self, path, **kwargs):
