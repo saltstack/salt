@@ -363,7 +363,7 @@ class LocalClient(object):
             return {}
         elif not pub_data['jid']:
             return {}
-        return (self.get_returns(pub_data['jid'],
+        return (self.get_full_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
 
     def get_cli_returns(
