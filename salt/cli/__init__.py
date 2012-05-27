@@ -617,6 +617,24 @@ class SaltKey(object):
                 dest='conf_file',
                 default='/etc/salt/master',
                 help='Pass in an alternative configuration file')
+        
+        parser.add_option('--raw-out',
+                default=False,
+                action='store_true',
+                dest='raw_out',
+                help=('Print the output from the salt-key command in raw python '
+                      'form, this is suitable for re-reading the output into '
+                      'an executing python script with eval.'))
+        parser.add_option('--yaml-out',
+                default=False,
+                action='store_true',
+                dest='yaml_out',
+                help='Print the output from the salt-key command in yaml.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt-key command in json.')
 
         options, args = parser.parse_args()
 
