@@ -1,8 +1,7 @@
 '''
 MySQL User Management
 =====================
-The mysql_database module is used to create and manage MySQL databases.
-Databases can be set as either absent or present
+The mysql_user module is used manage MySQL users.
 
 .. code-block:: yaml
 
@@ -12,6 +11,13 @@ Databases can be set as either absent or present
         - host: localhost
         - password: bobcat
 '''
+
+
+def __virtual__():
+    '''
+    Olny load if the mysql module is in __salt__
+    '''
+    return 'mysql_user' if 'mysql.user_create' in __salt__ else False
 
 
 def present(name,
