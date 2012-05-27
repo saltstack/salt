@@ -12,6 +12,13 @@ Databases can be set as either absent or present
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the mysql module is available in __salt__
+    '''
+    return 'mysql_database' if 'mysql.db_exists' in __salt__ else False
+
+
 def present(name):
     '''
     Ensure that the named database is present with the specified properties
