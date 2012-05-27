@@ -88,6 +88,7 @@ import copy
 
 # Import Salt libs
 import salt.utils.templates
+import pdb
 
 logger = logging.getLogger(__name__)
 
@@ -417,14 +418,15 @@ def _check_recurse(
         group,
         dir_mode,
         file_mode,
-        env):
+        env,
+        include_empty):
     '''
     Check what files will be changed by a recurse call
     '''
     vdir = set()
     keep = set()
     changes = {}
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -1214,6 +1216,7 @@ def recurse(name,
         dir_mode=None,
         file_mode=None,
         env=None,
+        include_empty=False,
         **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -1249,6 +1252,10 @@ def recurse(name,
 
     file_mode
         The permissions mode to set any files created
+
+    include_empty
+        Set this to True if empty directories should also be created 
+        (default is False)
     '''
     ret = {'name': name,
            'changes': {},
@@ -1278,10 +1285,11 @@ def recurse(name,
                 group,
                 dir_mode,
                 file_mode,
-                env)
+                env,
+                include_empty)
         return ret
     vdir = set()
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -1321,11 +1329,21 @@ def recurse(name,
                 # FIXME: no metadata (ownership, permissions) available
                 shutil.copyfile(fn_, dest)
                 ret['changes'][dest] = 'updated'
+        elif os.path.isdir(dest) and include_empty:
+            #check perms
+            _ret, perms = _check_perms(dest, {}, user, group, dir_mode)
+            if _ret['changes']:
+                ret['changes'][dest] = 'updated'
+            keep.add(dest)
         else:
             keep.add(dest)
-            # The destination file is not present, make it
-            # FIXME: no metadata (ownership, permissions) available
-            shutil.copyfile(fn_, dest)
+            if os.path.isdir(fn_) and include_empty:
+                #create empty dir
+                os.mkdir(dest,dir_mode)
+            else:
+                # The destination file is not present, make it
+                # FIXME: no metadata (ownership, permissions) available
+                shutil.copyfile(fn_, dest)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
