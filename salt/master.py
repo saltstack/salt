@@ -666,6 +666,47 @@ class AESFuncs(object):
         if os.path.isfile(wtag):
             os.remove(wtag)
 
+    def minion_runner(self, clear_load):
+        '''
+        Execute a runner from a minion, return the runner's function data
+        '''
+        if 'peer_run' not in self.opts:
+            return {}
+        if not isinstance(self.opts['peer_run'], dict):
+            return {}
+        if 'fun' not in clear_load\
+                or 'arg' not in clear_load\
+                or 'id' not in clear_load\
+                or 'tok' not in clear_load:
+            return {}
+        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            msg = 'Minion id {0} is not who it says it is!'.format(
+                    clear_load['id'])
+            log.warn(msg)
+            return {}
+        perms = set()
+        for match in self.opts['peer_run']:
+            if re.match(match, clear_load['id']):
+                # This is the list of funcs/modules!
+                if isinstance(self.opts['peer_run'][match], list):
+                    perms.update(self.opts['peer_run'][match])
+        good = False
+        for perm in perms:
+            if re.match(perm, clear_load['fun']):
+                good = True
+        if not good:
+            return {}
+        # Prepare the runner object
+        opts = {'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'doc': False,
+                'conf_file': self.opts['conf']}
+        runner = salt.runner.Runner(self.opts)
+        return runner.run()
+        
+
     def minion_publish(self, clear_load):
         '''
         Publish a command initiated from a minion, this method executes minion
