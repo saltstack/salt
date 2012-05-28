@@ -7,6 +7,7 @@ import sys
 
 
 class MinionService(Service):
+
     def start(self):
         self.runflag = True
         self.log("Starting the Salt Minion")

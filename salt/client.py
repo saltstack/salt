@@ -365,7 +365,7 @@ class LocalClient(object):
             return {}
         elif not pub_data['jid']:
             return {}
-        return (self.get_returns(pub_data['jid'],
+        return (self.get_full_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
 
     def get_cli_returns(
@@ -450,6 +450,13 @@ class LocalClient(object):
                 if more_time:
                     timeout += inc_timeout
                     continue
+                if verbose:
+                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                        if not len(fret) >= len(minions):
+                            print('\nThe following minions did not return:')
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                print(minion)
                 break
             time.sleep(0.01)
 

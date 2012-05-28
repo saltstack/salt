@@ -116,7 +116,6 @@ def present(name,
             ret['comment'] = 'Cron {0} is set to be updated'.format(name)
         return ret
 
-
     data = __salt__['cron.set_job'](
             dom=daymonth,
             dow=dayweek,

@@ -19,6 +19,13 @@ import shutil
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    '''
+    Only load if git is available
+    '''
+    return 'git' if __salt__['cmd.has_exec']('git') else False
+
+
 def latest(name,
            rev=None,
            target=None,

@@ -417,14 +417,15 @@ def _check_recurse(
         group,
         dir_mode,
         file_mode,
-        env):
+        env,
+        include_empty):
     '''
     Check what files will be changed by a recurse call
     '''
     vdir = set()
     keep = set()
     changes = {}
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -1156,10 +1157,12 @@ def directory(name,
                     fstat = os.stat(path)
                     if 'user' in targets and fstat.st_uid != uid:
                             needs_fixed['user'] = True
-                            if needs_fixed.get('group'): break
+                            if needs_fixed.get('group'):
+                                break
                     if 'group' in targets and fstat.st_gid != gid:
                             needs_fixed['group'] = True
-                            if needs_fixed.get('user'): break
+                            if needs_fixed.get('user'):
+                                break
 
             if needs_fixed.get('user'):
                 # Make sure the 'recurse' subdict exists
@@ -1169,7 +1172,7 @@ def directory(name,
                             user, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership on ' \
-                                         '{0} for user {1}'.format(name,group)
+                                         '{0} for user {1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['user'] = \
                                 __salt__['file.uid_to_user'](uid)
@@ -1177,11 +1180,11 @@ def directory(name,
                 ret['changes'].setdefault('recurse', {})
                 if 'group' in targets:
                     if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
-                            group,name)) != 0:
+                            group, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'on {0} for group ' \
-                                         '{1}'.format(name,group)
+                                         '{1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['group'] = \
                                 __salt__['file.gid_to_group'](gid)
@@ -1212,6 +1215,7 @@ def recurse(name,
         dir_mode=None,
         file_mode=None,
         env=None,
+        include_empty=False,
         **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -1247,6 +1251,10 @@ def recurse(name,
 
     file_mode
         The permissions mode to set any files created
+
+    include_empty
+        Set this to True if empty directories should also be created 
+        (default is False)
     '''
     ret = {'name': name,
            'changes': {},
@@ -1276,10 +1284,11 @@ def recurse(name,
                 group,
                 dir_mode,
                 file_mode,
-                env)
+                env,
+                include_empty)
         return ret
     vdir = set()
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -1319,11 +1328,21 @@ def recurse(name,
                 # FIXME: no metadata (ownership, permissions) available
                 shutil.copyfile(fn_, dest)
                 ret['changes'][dest] = 'updated'
+        elif os.path.isdir(dest) and include_empty:
+            #check perms
+            _ret, perms = _check_perms(dest, {}, user, group, dir_mode)
+            if _ret['changes']:
+                ret['changes'][dest] = 'updated'
+            keep.add(dest)
         else:
             keep.add(dest)
-            # The destination file is not present, make it
-            # FIXME: no metadata (ownership, permissions) available
-            shutil.copyfile(fn_, dest)
+            if os.path.isdir(fn_) and include_empty:
+                #create empty dir
+                os.mkdir(dest,dir_mode)
+            else:
+                # The destination file is not present, make it
+                # FIXME: no metadata (ownership, permissions) available
+                shutil.copyfile(fn_, dest)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
@@ -1333,6 +1352,7 @@ def recurse(name,
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
+
 
 def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         flags='g'):
@@ -1405,13 +1425,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
     return ret
 
+
 def comment(name, regex, char='#', backup='.bak'):
     '''
     Usage::
 
         /etc/fstab:
           file.comment:
-            - regex: ^//10.10.20.5
+            - regex: ^bind 127.0.0.1
 
     .. versionadded:: 0.9.5
     '''

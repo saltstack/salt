@@ -53,7 +53,7 @@ def present(
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': None if __opts__['test'] else True,
            'comment': ''}
     if __opts__['test']:
         result = __salt__['ssh.check_known_host'](user, name,
@@ -61,7 +61,7 @@ def present(
                                                   config=config)
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
-            return dict(ret, result=None, comment=comment)
+            return dict(ret, comment=comment)
         elif result == 'add':
             comment = 'Key for {0} is set to be added to {1}'.format(name,
                                                                      config)
@@ -77,19 +77,17 @@ def present(
                 enc=enc,
                 config=config)
     if result['status'] == 'exists':
-        return {'name': name,
-                'result': None,
-                'comment': '{0} already exists in {1}'.format(name, config)}
+        return dict(ret,
+                    comment='{0} already exists in {1}'.format(name, config))
     elif result['status'] == 'error':
-        return {'name': name,
-                'result': False,
-                'comment': result['error']}
+        return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
-        return {'name': name,
-               'result': True,
-               'changes': {'old': result['old'], 'new': result['new']},
-               'comment': '{0}\'s key saved to {1} (fingerprint: {2})'.format(
-                           name, config, result['new']['fingerprint'])}
+        fingerprint = result['new']['fingerprint']
+        return dict(ret,
+                changes={'old': result['old'], 'new': result['new']},
+                comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
+                         name, config, fingerprint))
+
 
 
 def absent(name, user, config='.ssh/known_hosts'):
@@ -108,11 +106,11 @@ def absent(name, user, config='.ssh/known_hosts'):
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': None if __opts__['test'] else True,
            'comment': ''}
     known_host = __salt__['ssh.get_known_host'](user, name, config=config)
     if not known_host:
-        return dict(ret, result=None, comment='Host is already absent')
+        return dict(ret, comment='Host is already absent')
 
     if __opts__['test']:
         comment = 'Key for {0} is set to be removed from {1}'.format(name,
@@ -123,4 +121,7 @@ def absent(name, user, config='.ssh/known_hosts'):
     if rm_result['status'] == 'error':
         return dict(ret, result=False, comment=rm_result['error'])
     else:
-        return dict(ret, result=True, comment=rm_result['comment'])
+        return dict(ret,
+                    changes={'old': known_host, 'new': None},
+                    result=True,
+                    comment=rm_result['comment'])

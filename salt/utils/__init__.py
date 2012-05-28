@@ -115,7 +115,7 @@ def daemonize():
                     executablepath,
                     os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
                     os.path.join(pypath[0], os.sep, pypath[1]),
-                    0 )
+                    0)
                 sys.exit(0)
             else:
                 import saltminionservice
@@ -288,7 +288,8 @@ def gen_mac(prefix='52:54:'):
     '''
     Generates a mac addr with the defined prefix
     '''
-    src = ['1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f']
+    src = ['1', '2', '3', '4', '5', '6', '7', '8',
+            '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
     mac = prefix
     while len(mac) < 18:
         if len(mac) < 3:

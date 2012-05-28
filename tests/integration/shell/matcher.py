@@ -62,7 +62,7 @@ class MatchTest(integration.ShellCase):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
-            
+
     def test_regrain(self):
         '''
         test salt grain matcher
@@ -103,6 +103,14 @@ class MatchTest(integration.ShellCase):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+
+    def test_static(self):
+        '''
+        test salt static call
+        '''
+        data = self.run_salt('minion test.ping --static')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
 
 
 if __name__ == "__main__":
