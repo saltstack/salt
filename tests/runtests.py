@@ -86,6 +86,20 @@ def run_integration_tests(opts):
             else:
                 runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(shelltests)
             status.append(runner.wasSuccessful())
+        if opts.runner:
+            runnerloader = saltunittest.TestLoader()
+            runnertests = runnerloader.discover(
+                    os.path.join(TEST_DIR, 'integration', 'runners'),
+                    '*.py'
+                    )
+            print('~' * PNUM)
+            print('Starting Runner Tests')
+            print('~' * PNUM)
+            if opts.xmlout:
+                runner = xmlrunner.XMLTestRunner(output='test-reports').run(runnertests)
+            else:
+                runner = saltunittest.TextTestRunner(verbosity=opts.verbosity).run(runnertests)
+            status.append(runner.wasSuccessful())
 
     return status
 
@@ -142,6 +156,12 @@ def parse_opts():
             default=False,
             action='store_true',
             help='Run shell tests')
+    parser.add_option('-r',
+            '--runner',
+            dest='runner',
+            default=False,
+            action='store_true',
+            help='Run runner tests')
     parser.add_option('-u',
             '--unit',
             '--unit-tests',
@@ -166,15 +186,16 @@ def parse_opts():
     options, args = parser.parse_args()
     if all((not options.module, not options.client,
             not options.shell, not options.unit,
-            not options.state)):
+            not options.state, not options.runner)):
         options.module = True
         options.client = True
         options.shell = True
         options.unit = True
+        options.runner = True
     return options
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     opts = parse_opts()
     overall_status = []
     status = run_integration_tests(opts)

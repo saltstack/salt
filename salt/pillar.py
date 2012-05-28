@@ -113,7 +113,7 @@ class Pillar(object):
     '''
     def __init__(self, opts, grains, id_, env):
         # use the local file client
-        self.opts = self.__gen_opts(opts, grains, id_)
+        self.opts = self.__gen_opts(opts, grains, id_, env)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
         self.rend = salt.loader.render(self.opts, {})
@@ -129,7 +129,6 @@ class Pillar(object):
         opts['id'] = id_
         if 'environment' not in opts:
             opts['environment'] = env
-        opts
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
