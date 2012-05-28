@@ -30,6 +30,13 @@ class ManageTest(integration.ShellCase):
         self.assertFalse(ret['fun'])
         self.assertFalse(ret['out'][1])
 
+    def test_list_jobs(self):
+        '''
+        jobs.list_jobs
+        '''
+        ret = self.run_run_plus('jobs.list_jobs')
+        self.assertIsInstance(ret['fun'], dict)
+
 if __name__ == "__main__":
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(RunTest)
