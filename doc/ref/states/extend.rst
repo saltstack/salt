@@ -41,6 +41,31 @@ be extended are included, then the extend dec is defined. Under the extend dec
 and source. Than the ssh server is extended to watch the banner file in
 addition to anything it is already watching.
 
+Extend is a Top Level Declaration
+---------------------------------
+
+This means that ``extend`` can only be called once in an sls, if if is used
+twice then only one of the extend blocks will be read. So this is WRONG:
+
+.. code-block:: yaml
+
+    include:
+      - http
+      - ssh
+
+    extend:
+      apache:
+        file:
+          - name: /etc/httpd/conf/httpd.conf
+          - source: salt://http/httpd2.conf
+    # Second extend will overwrite the first!! Only make one
+    extend:
+      ssh-server:
+        service:
+          - watch:
+            - file: /etc/ssh/banner
+    
+
 The Requisite "in" Statement
 ----------------------------
 
