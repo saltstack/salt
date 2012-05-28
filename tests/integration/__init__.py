@@ -15,6 +15,7 @@ import salt
 import salt.config
 import salt.master
 import salt.minion
+import salt.runner
 from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
@@ -136,6 +137,7 @@ class TestDaemon(object):
             elif os.path.islink(path):
                 os.remove(path)
 
+
 class ModuleCase(TestCase):
     '''
     Execute a module function
@@ -253,6 +255,24 @@ class ShellCase(TestCase):
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-run', arg_str)
+
+    def run_run_plus(self, fun, options='', *arg):
+        '''
+        Execute Salt run and the salt run function and return the data from
+        each in a dict
+        '''
+        ret = {}
+        ret['out'] = self.run_run(
+                '{0} {1} {2}'.format(options, fun, ' '.join(arg))
+                )
+        opts = salt.config.master_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
+        opts.update({'doc': False,
+                     'fun': fun,
+                     'arg': arg})
+        runner = salt.runner.Runner(opts)
+        ret['fun'] = runner.run()
+        return ret
 
     def run_key(self, arg_str):
         '''
