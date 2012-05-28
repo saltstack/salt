@@ -337,7 +337,7 @@ def disabled(name):
     return _disable(name, None)
 
 
-def mod_watch(name, sig=None):
+def mod_watch(name, sig=None, reload=False):
     '''
     The service watcher, called to invoke the watch command.
 
@@ -348,7 +348,7 @@ def mod_watch(name, sig=None):
         The string to search for when looking for the service process with ps
     '''
     if __salt__['service.status'](name, sig):
-        if 'service.reload' in __salt__:
+        if 'service.reload' in __salt__ and reload:
             changes = {name: __salt__['service.reload'](name)}
         else:
             changes = {name: __salt__['service.restart'](name)}
