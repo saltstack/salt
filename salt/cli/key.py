@@ -207,7 +207,7 @@ class Key(object):
         (minions_accepted,
          minions_pre,
          minions_rejected) = self._check_minions_directories()
-        if delete == None:
+        if delete is None:
             delete = self.opts['delete']
         pre = os.path.join(minions_pre, delete)
         acc = os.path.join(minions_accepted, delete)
