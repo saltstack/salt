@@ -20,6 +20,8 @@ as either absent or present
           - games
 '''
 
+from salt._compat import iteritems_
+
 
 def _changes(
         name,
@@ -191,14 +193,14 @@ def present(
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in changes.items():
+            for key, val in iteritems_(changes):
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
         if __grains__['os'] != 'FreeBSD':
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
-        for key, val in changes.items():
+        for key, val in iteritems_(changes):
             if key == 'passwd':
                 __salt__['shadow.set_password'](name, password)
                 continue
@@ -270,10 +272,7 @@ def absent(name, purge=False, force=False):
         If the user is logged in the absent state will fail, set the force
         option to True to remove the user even if they are logged in
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     for lusr in __salt__['user.getent']():
         # Scan over the users
