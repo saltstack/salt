@@ -14,7 +14,7 @@ def __virtual__():
     return 'sqlite3'
 
 def _connect(db=None):
-    if db == None:
+    if db is None:
         return False
 
     con = sqlite3.connect(db)
