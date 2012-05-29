@@ -14,7 +14,7 @@ import logging
 import tempfile
 
 from salt.exceptions import LoaderError
-from salt._compat import iteritems_
+from salt._compat import iteritems_, callable
 
 log = logging.getLogger(__name__)
 salt_base_path = os.path.dirname(salt.__file__)

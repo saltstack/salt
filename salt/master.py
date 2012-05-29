@@ -35,7 +35,7 @@ import salt.pillar
 import salt.state
 import salt.runner
 from salt.utils.debug import enable_sigusr1_handler
-from salt._compat import xrange, iteritems_, iterkeys_
+from salt._compat import range, iteritems_, iterkeys_
 
 log = logging.getLogger(__name__)
 
@@ -270,7 +270,7 @@ class ReqServer(object):
         self.clients.bind(self.uri)
         self.work_procs = []
 
-        for ind in xrange(int(self.opts['worker_threads'])):
+        for ind in range(int(self.opts['worker_threads'])):
             self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,

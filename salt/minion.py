@@ -26,7 +26,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
-from salt._compat import string_types, iteritems_, xrange
+from salt._compat import string_types, iteritems_, range
 from salt.utils.debug import enable_sigusr1_handler
 
 log = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ def detect_kwargs(func, args, data=None):
     defaults = [] if defaults is None else defaults
     starti = len(spec_args) - len(defaults)
     kwarg_spec = set()
-    for _ in xrange(len(defaults)):
+    for _ in range(len(defaults)):
         kwarg_spec.add(spec_args[starti])
         starti += 1
     _args = []
@@ -262,7 +262,7 @@ class Minion(object):
             sdata.update(data)
             open(fn_, 'w+').write(self.serial.dumps(sdata))
         ret = {}
-        for ind in xrange(0, len(data['arg'])):
+        for ind in range(0, len(data['arg'])):
             try:
                 arg = eval(data['arg'][ind])
                 if isinstance(arg, bool):
@@ -323,8 +323,8 @@ class Minion(object):
         minion side execution.
         '''
         ret = {'return': {}}
-        for ind in xrange(0, len(data['fun'])):
-            for index in xrange(0, len(data['arg'][ind])):
+        for ind in range(0, len(data['fun'])):
+            for index in range(0, len(data['arg'][ind])):
                 try:
                     arg = eval(data['arg'][ind][index])
                     if isinstance(arg, bool):

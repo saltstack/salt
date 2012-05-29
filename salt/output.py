@@ -17,7 +17,7 @@ except:
 
 # Import Salt libs
 import salt.utils
-from salt._compat import string_types, iterkeys_
+from salt._compat import string_types, iterkeys_, iteritems_
 from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
@@ -86,7 +86,7 @@ class HighStateOutputter(Outputter):
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
                 # Verify that the needed data is present
-                for tname, info in data[host].items():
+                for tname, info in iteritems_(data[host]):
                     if not '__run_num__' in info:
                         err = ('The State execution failed to record the '
                                'order in which all states were executed. The '
@@ -174,9 +174,9 @@ class TxtOutputter(Outputter):
                 # Don't blow up on non-strings
                 try:
                     for line in value.split('\n'):
-                        print('{0}: {1}'.format(key, line))
+                        print(('{0}: {1}'.format(key, line)))
                 except AttributeError:
-                    print('{0}: {1}'.format(key, value))
+                    print(('{0}: {1}'.format(key, value)))
         else:
             # For non-dictionary data, just use print
             RawOutputter()(data)
@@ -211,7 +211,7 @@ class YamlOutputter(Outputter):
     def __call__(self, data, **kwargs):
         if 'color' in kwargs:
             kwargs.pop('color')
-        print(yaml.dump(data, **kwargs))
+        print((yaml.dump(data, **kwargs)))
 
 
 def get_outputter(name=None):

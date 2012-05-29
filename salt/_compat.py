@@ -27,9 +27,12 @@ else:
 
 
 if PY3:
-    xrange = range
+    range = range
+    def callable(obj):
+        return any('__call__' in klass.__dict__ for klass in type(obj).__mro__)
 else:
-    xrange = xrange
+    range = xrange
+    callable = callable
 
 
 def text_(s, encoding='latin-1', errors='strict'):
