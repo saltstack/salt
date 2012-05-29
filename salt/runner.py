@@ -35,8 +35,8 @@ class Runner(object):
         '''
         for fun in sorted(self.functions):
             if fun.startswith(self.opts['fun']):
-                print('{0}:'.format(fun))
-                print(self.functions[fun].__doc__)
+                print(('{0}:'.format(fun)))
+                print((self.functions[fun].__doc__))
                 print('')
 
     def run(self):

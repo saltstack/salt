@@ -24,7 +24,8 @@ import salt.utils
 import salt.payload
 import salt.utils.templates
 from salt._compat import (
-    BaseHTTPServer, HTTPError, URLError, urlparse, url_open as urlopen)
+    BaseHTTPServer, HTTPError, URLError, urlparse, url_open as urlopen,
+    iterkeys_)
 
 
 log = logging.getLogger(__name__)
@@ -521,7 +522,7 @@ class LocalClient(Client):
 
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
-                ret[env] = ndata['classes'].keys()
+                ret[env] = list(iterkeys_(ndata['classes']))
             elif isinstance(ndata['classes'], list):
                 ret[env] = ndata['classes']
             else:

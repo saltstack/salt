@@ -11,6 +11,7 @@ import errno
 import signal
 import shutil
 import logging
+import hashlib
 import tempfile
 import datetime
 import subprocess
