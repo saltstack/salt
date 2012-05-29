@@ -4,6 +4,9 @@ Manage Windows users with the net user command
 NOTE: This currently only works with local user accounts, not domain accounts
 '''
 
+from salt._compat import string_types
+
+
 def __virtual__():
     '''
     Set the user module if the kernel is Windows
@@ -142,7 +145,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
@@ -225,7 +228,6 @@ def getent():
         salt '*' user.getent
     '''
     ret = []
-    items = {}
     users = []
     startusers = False
     cmd = 'net user'
@@ -236,27 +238,26 @@ def getent():
             continue
         if startusers:
             if 'successfully' not in line:
-                comps = line.split()
-                users += comps
+                users += line.split()
                 ##if not len(comps) > 1:
                     #continue
                 #items[comps[0].strip()] = comps[1].strip()
     #return users
     for user in users:
-        stuff = {}
         info = __salt__['user.info'](user)
         uid = __salt__['file.user_to_uid'](info['name'])
 
-        stuff['gid'] = ''
-        stuff['groups'] = info['groups']
-        stuff['home'] = info['home']
-        stuff['name'] = info['name']
-        stuff['passwd'] = ''
-        stuff['shell'] = ''
-        stuff['uid'] = uid
+        stuff = dict(
+            gid='',
+            groups=info['groups'],
+            home=info['home'],
+            name=info['name'],
+            passwd='',
+            shell='',
+            uid=uid,
+        )
 
         ret.append(stuff)
-
 
     return ret
 
