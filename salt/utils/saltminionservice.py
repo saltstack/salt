@@ -1,9 +1,13 @@
-from winservice import Service, instart
+'''salt minion service for Win32'''
+
+import sys
+
 import win32serviceutil
 import win32service
 import winerror
+
 import salt
-import sys
+from salt.utils.winservice import Service, instart
 
 
 class MinionService(Service):
@@ -21,6 +25,7 @@ class MinionService(Service):
     def stop(self):
         self.runflag = False
         self.log("Shutting down the Salt Minion")
+
 
 if __name__ == '__main__':
     servicename = 'salt-minion'

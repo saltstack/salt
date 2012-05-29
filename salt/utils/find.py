@@ -88,6 +88,8 @@ import stat
 import sys
 import time
 
+from salt._compat import iteritems_
+
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -186,7 +188,7 @@ def _parse_size(value):
         max_size = num
     elif style == '+':
         min_size = num
-        max_size = sys.maxint
+        max_size = sys.maxsize
     else:
         min_size = num
         max_size = num + multiplier - 1
@@ -497,7 +499,7 @@ class Finder(object):
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
-        for key, value in options.iteritems():
+        for key, value in iteritems_(options):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue
@@ -520,9 +522,9 @@ class Finder(object):
         if len(self.actions) == 0:
             self.actions.append(PrintOption('print', ''))
         # order criteria so that least expensive checks are done first
-        self.criteria = criteria[_REQUIRES_PATH] + \
-                        criteria[_REQUIRES_STAT] + \
-                        criteria[_REQUIRES_CONTENTS]
+        self.criteria = (criteria[_REQUIRES_PATH] +
+                        criteria[_REQUIRES_STAT] +
+                        criteria[_REQUIRES_CONTENTS])
 
     def find(self, path):
         '''
@@ -576,7 +578,7 @@ if __name__ == '__main__':
         criteria[key] = value
     try:
         f = Finder(criteria)
-    except ValueError, ex:
+    except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
         sys.exit(1)
 
