@@ -43,6 +43,7 @@ import salt.config
 import salt.payload
 import salt.utils
 from salt.exceptions import SaltClientError, SaltInvocationError
+from salt._compat import iteritems_, range
 
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
@@ -58,9 +59,7 @@ def condition_kwarg(arg, kwarg):
     Return a single arg structure for the publisher to safely use
     '''
     if isinstance(kwarg, dict):
-        kw_ = []
-        for key, val in kwarg.items():
-            kw_.append('{0}={1}'.format(key, val))
+        kw_ = list('{0}={1}'.format(k, v) for k, v in iteritems_(kwarg))
         return list(arg) + kw_
     return arg
 
@@ -81,8 +80,7 @@ class LocalClient(object):
         '''
         try:
             keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-            key = open(keyfile, 'r').read()
-            return key
+            return open(keyfile, 'r').read()
         except (OSError, IOError):
             raise SaltClientError(('Problem reading the salt root key. Are'
                                    ' you root?'))
@@ -768,7 +766,7 @@ class LocalClient(object):
                 )
         socket.send(package)
         payload = None
-        for ind in range(100):
+        for _ in range(100):
             try:
                 payload = self.serial.loads(
                         socket.recv(
@@ -828,6 +826,5 @@ class FunctionWrapper(dict):
             Run a remote call
             '''
             args = list(args)
-            for _key, _val in kwargs:
-                args.append('{0}={1}'.format(_key, _val))
+            args.extend('{0}={1}'.format(k, v) for k, v in iteritems_(kwargs))
             return self.local.cmd(self.minion, key, args)
