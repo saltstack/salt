@@ -16,6 +16,8 @@ Mount any type of mountable filesystem with the mounted function:
           - defaults
 '''
 
+from salt._compat import string_types
+
 
 def mounted(
         name,
@@ -64,14 +66,11 @@ def mounted(
     persist
         Set if the mount should be saved in the fstab, default to True
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
-    if isinstance(opts, basestring):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
 
     # Get the active data
@@ -84,7 +83,7 @@ def mounted(
                               'be').format(name)
             return ret
         out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
-        if isinstance(out, basestring):
+        if isinstance(out, string_types):
             # Failed to remount, the state has failed!
             ret['comment'] = out
             ret['result'] = False
