@@ -8,6 +8,7 @@ from saltunittest import TestLoader, TextTestRunner
 import integration
 from integration import TestDaemon
 
+
 class AliasesTest(integration.ModuleCase):
     '''
     Validate aliases module
@@ -71,4 +72,3 @@ class AliasesTest(integration.ModuleCase):
                 'aliases.list_aliases')
         self.assertIsInstance(tgt_ret, dict)
         self.assertNotIn('alias=frank', tgt_ret)
-

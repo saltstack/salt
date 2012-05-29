@@ -48,23 +48,23 @@ class KeyTest(integration.ShellCase):
         '''
         data = self.run_key('-L --yaml-out')
         expect = [
-            'accepted: [minion, sub_minion]', 
-            'rejected: []', 
-            'unaccepted: []', 
-            '', 
+            'accepted: [minion, sub_minion]',
+            'rejected: []',
+            'unaccepted: []',
+            '',
             ''
         ]
         self.assertEqual(data, expect)
-    
+
     def test_list_raw_out(self):
         '''
         test salt-key -L --raw-out
         '''
         data = self.run_key('-L --raw-out')
         expect = [
-            "{'unaccepted': [], 'accepted': ['minion', 'sub_minion'], 'rejected': []}", 
+            "{'unaccepted': [], 'accepted': ['minion', 'sub_minion'], 'rejected': []}",
             ''
-        ] 
+        ]
         self.assertEqual(data, expect)
 
     def test_list_acc(self):
