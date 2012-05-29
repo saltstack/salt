@@ -77,7 +77,6 @@ class SSHModuleTest(integration.ModuleCase):
         ret = self.run_function('ssh.check_known_host', arg, **kwargs)
         self.assertEqual(ret, 'add')
 
-
     def test_check_known_host_update(self):
         shutil.copyfile(
              os.path.join(integration.FILES, 'ssh', 'known_hosts'),

@@ -100,7 +100,7 @@ class CPModuleTest(integration.ModuleCase):
         ret = self.run_function(
                 'cp.cache_files',
                 [
-                    ['salt://grail/scene33' ,'salt://grail/36/scene'],
+                    ['salt://grail/scene33', 'salt://grail/36/scene'],
                 ])
         for path in ret:
             with open(path, 'r') as scene:
