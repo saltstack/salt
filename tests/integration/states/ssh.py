@@ -48,7 +48,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase):
         self.assertEqual(ret['result'], None, ret)
         # then add a record for IP address
         _ret = self.run_state('ssh_known_hosts.present',
-                              **dict(kwargs, name=GITHUB_IP ))
+                              **dict(kwargs, name=GITHUB_IP))
         ret = _ret.values()[0]
         self.assertEqual(ret['changes']['new']['fingerprint'],
                          GITHUB_FINGERPRINT, ret)
@@ -103,7 +103,6 @@ if __name__ == "__main__":
     import sys
     from saltunittest import TestLoader, TextTestRunner
     from integration import TestDaemon
-
 
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(SSHKnownHostsStateTest)

@@ -28,6 +28,7 @@ PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 TMP = os.path.join(INTEGRATION_TEST_DIR, 'tmp')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 
+
 class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
@@ -173,7 +174,6 @@ class ModuleCase(TestCase):
         '''
         return self.run_function('state.single', [function], **kwargs)
 
-
     def minion_opts(self):
         '''
         Return the options used for the minion
@@ -195,6 +195,7 @@ class ModuleCase(TestCase):
                     'files', 'conf', 'master'
                     )
                 )
+
 
 class SyndicCase(TestCase):
     '''

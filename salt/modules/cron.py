@@ -20,13 +20,12 @@ def _render_tab(lst):
         if not ret[-1] == TAG:
             ret.append(TAG)
     for env in lst['env']:
-        if env['value'] == None or \
-            env['value'] == "":
-                ret.append(
-                    '{0}=""\n'.format(
-                        env['name']
-                        )
+        if (env['value'] == None) or (env['value'] == ""):
+            ret.append(
+                '{0}=""\n'.format(
+                    env['name']
                     )
+                )
         else:
             ret.append(
                 '{0}={1}\n'.format(
@@ -244,15 +243,15 @@ def set_env(user, name, value=None):
     '''
     lst = list_tab(user)
     for env in lst['env']:
-      if name == env['name']:
-          if not value == env['value']:
-              rm_env(user, name)
-              jret = set_env(user, name, value)
-              if jret == 'new':
-                  return 'updated'
-              else:
-                  return jret
-          return 'present'
+        if name == env['name']:
+            if not value == env['value']:
+                rm_env(user, name)
+                jret = set_env(user, name, value)
+                if jret == 'new':
+                    return 'updated'
+                else:
+                    return jret
+            return 'present'
     print value
     env = {'name': name, 'value': value}
     lst['env'].append(env)
