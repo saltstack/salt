@@ -17,7 +17,7 @@ except:
 
 # Import Salt libs
 import salt.utils
-from salt._compat import string_types
+from salt._compat import string_types, iterkeys_
 from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
@@ -169,7 +169,7 @@ class TxtOutputter(Outputter):
 
     def __call__(self, data, **kwargs):
         if hasattr(data, 'keys'):
-            for key in data.keys():
+            for key in iterkeys_(data):
                 value = data[key]
                 # Don't blow up on non-strings
                 try:
