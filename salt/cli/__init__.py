@@ -16,10 +16,11 @@ import salt.client
 import salt.output
 import salt.runner
 
+from salt._compat import iteritems_
 from salt.utils.verify import verify_env
 from salt import __version__ as VERSION
-from salt.exceptions import SaltInvocationError, SaltClientError, \
-    SaltException
+from salt.exceptions import (
+    SaltInvocationError, SaltClientError, SaltException)
 
 
 class SaltCMD(object):
@@ -37,7 +38,8 @@ class SaltCMD(object):
         Parse the command line
         '''
         usage = "%prog [options] '<target>' <function> [arguments]"
-        parser = optparse.OptionParser(version="%%prog %s" % VERSION, usage=usage)
+        parser = optparse.OptionParser(
+            version="%%prog %s" % VERSION, usage=usage)
 
         parser.add_option('-t',
                 '--timeout',
@@ -198,7 +200,7 @@ class SaltCMD(object):
 
         opts = {}
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if v is not None:
                 opts[k] = v
 
@@ -369,7 +371,7 @@ class SaltCMD(object):
         '''
         ret = {}
         out = ''
-        for key, data in full_ret.items():
+        for key, data in iteritems_(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
@@ -472,7 +474,7 @@ class SaltCP(object):
 
         opts = {}
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if v is not None:
                 opts[k] = v
 
@@ -617,12 +619,13 @@ class SaltKey(object):
                 dest='conf_file',
                 default='/etc/salt/master',
                 help='Pass in an alternative configuration file')
-        
+
         parser.add_option('--raw-out',
                 default=False,
                 action='store_true',
                 dest='raw_out',
-                help=('Print the output from the salt-key command in raw python '
+                help=(
+                    'Print the output from the salt-key command in raw python '
                       'form, this is suitable for re-reading the output into '
                       'an executing python script with eval.'))
         parser.add_option('--yaml-out',
@@ -630,18 +633,19 @@ class SaltKey(object):
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt-key command in yaml.')
+
         parser.add_option('--json-out',
                 default=False,
                 action='store_true',
                 dest='json_out',
                 help='Print the output from the salt-key command in json.')
 
-        options, args = parser.parse_args()
+        options, _ = parser.parse_args()
 
         opts = {}
         opts.update(salt.config.master_config(options.conf_file))
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if k == 'keysize':
                 if v < 2048:
                     opts[k] = v
@@ -683,7 +687,8 @@ class SaltCall(object):
         Parse the command line arguments
         '''
         usage = "%prog [options] <function> [arguments]"
-        parser = optparse.OptionParser(version='%%prog %s'.format(VERSION), usage=usage)
+        parser = optparse.OptionParser(
+            version='%%prog %s'.format(VERSION), usage=usage)
 
         parser.add_option('-g',
                 '--grains',
