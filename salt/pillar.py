@@ -15,7 +15,7 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_, iterkeys_, itervalues_
 from salt.template import compile_template
 
 # Import third party libs
@@ -32,12 +32,13 @@ def hiera(conf, grains=None):
     '''
     if not isinstance(grains, dict):
         grains = {}
-    cmd = 'hiera {0}'.format(conf)
-    for key, val in grains.items():
-        if isinstance(val, string_types):
-            cmd += ' {0}={1}'.format(key, val)
+    cmd = ['hiera {0}'.format(conf)]
+    cmd.extend(
+        ' {0}={1}'.format(k, v) for k, v in iteritems_(grains)
+        if isinstance(v, string_types)
+    )
     out = subprocess.Popen(
-            cmd,
+            ''.join(cmd),
             stdout=subprocess.PIPE,
             shell=True
             ).communicate()[0]
@@ -145,7 +146,7 @@ class Pillar(object):
         '''
         envs = set(['base'])
         if 'file_roots' in self.opts:
-            envs.update(self.opts['file_roots'].keys())
+            envs.update(iterkeys_(self.opts['file_roots']))
         return envs
 
     def get_tops(self):
@@ -183,7 +184,7 @@ class Pillar(object):
                         )
 
         # Search initial top files for includes
-        for env, ctops in tops.items():
+        for env, ctops in iteritems_(tops):
             for ctop in ctops:
                 if not 'include' in ctop:
                     continue
@@ -193,7 +194,7 @@ class Pillar(object):
         # Go through the includes and pull out the extra tops and add them
         while include:
             pops = []
-            for env, states in include.items():
+            for env, states in iteritems_(include):
                 pops.append(env)
                 if not states:
                     continue
@@ -223,9 +224,9 @@ class Pillar(object):
         Cleanly merge the top files
         '''
         top = collections.defaultdict(dict)
-        for sourceenv, ctops in tops.items():
+        for ctops in itervalues_(tops):
             for ctop in ctops:
-                for env, targets in ctop.items():
+                for env, targets in iteritems_(ctop):
                     if env == 'include':
                         continue
                     for tgt in targets:
@@ -259,11 +260,11 @@ class Pillar(object):
         {'env': ['state1', 'state2', ...]}
         '''
         matches = {}
-        for env, body in top.items():
+        for env, body in iteritems_(top):
             if self.opts['environment']:
                 if not env == self.opts['environment']:
                     continue
-            for match, data in body.items():
+            for match, data in iteritems_(body):
                 if self.matcher.confirm_top(
                         match,
                         data,
@@ -332,7 +333,7 @@ class Pillar(object):
         '''
         pillar = {}
         errors = []
-        for env, pstates in matches.items():
+        for env, pstates in iteritems_(matches):
             mods = set()
             for sls in pstates:
                 pstate, mods, err = self.render_pstate(sls, env, mods)
@@ -359,7 +360,7 @@ class Pillar(object):
             if len(run) != 1:
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
-            for key, val in run.items():
+            for key, val in iteritems_(run):
                 if key not in ext_pillar:
                     err = ('Specified ext_pillar interface {0} is '
                            'unavailable').format(key)
@@ -367,7 +368,7 @@ class Pillar(object):
                     return {}
                 try:
                     ext.update(ext_pillar[key](val, self.opts['grains']))
-                except Exception as e:
+                except Exception:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext
 

@@ -25,6 +25,7 @@ else:
     binary_type = str
     long = long
 
+
 def text_(s, encoding='latin-1', errors='strict'):
     """ If ``s`` is an instance of ``binary_type``, return
     ``s.decode(encoding, errors)``, otherwise return ``s``"""
@@ -98,9 +99,9 @@ if PY3:
     url_unquote_text = url_unquote
     url_unquote_native = url_unquote
 else:
-    import urlparse
+    from urlparse import urlparse
     import BaseHTTPServer
-    from urllib2 import HTTPError
+    from urllib2 import HTTPError, URLError
     from urllib import quote as url_quote
     from urllib import quote_plus as url_quote_plus
     from urllib import unquote as url_unquote
@@ -111,7 +112,6 @@ else:
         return v.decode(encoding, errors)
     def url_unquote_native(v, encoding='utf-8', errors='replace'):
         return native_(url_unquote_text(v, encoding, errors))
-
 
 if PY3:
     import builtins
