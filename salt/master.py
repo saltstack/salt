@@ -11,7 +11,6 @@ import errno
 import signal
 import shutil
 import logging
-import hashlib
 import tempfile
 import datetime
 import subprocess
@@ -35,7 +34,7 @@ import salt.pillar
 import salt.state
 import salt.runner
 from salt.utils.debug import enable_sigusr1_handler
-
+from salt._compat import xrange, iteritems_, iterkeys_
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +56,7 @@ def clean_proc(proc, wait_for_kill=10):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
                 os.kill(signal.SIGKILL, proc.pid)
-    except (AssertionError, AttributeError) as e:
+    except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
@@ -270,7 +269,7 @@ class ReqServer(object):
         self.clients.bind(self.uri)
         self.work_procs = []
 
-        for ind in range(int(self.opts['worker_threads'])):
+        for ind in xrange(int(self.opts['worker_threads'])):
             self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,
@@ -482,7 +481,7 @@ class AESFuncs(object):
 
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
-                ret[env] = ndata['classes'].keys()
+                ret[env] = iterkeys_(ndata['classes'])
             elif isinstance(ndata['classes'], list):
                 ret[env] = ndata['classes']
             else:
@@ -531,7 +530,7 @@ class AESFuncs(object):
         if load['env'] not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][load['env']]:
-            for root, dirs, files in os.walk(path, followlinks=True):
+            for root, _, files in os.walk(path, followlinks=True):
                 for fn in files:
                     ret.append(
                         os.path.relpath(
@@ -659,7 +658,7 @@ class AESFuncs(object):
             return False
 
         # Format individual return loads
-        for key, item in load['return'].items():
+        for key, item in iteritems_(load['return']):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
@@ -675,10 +674,8 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer_run'], dict):
             return {}
-        if 'fun' not in clear_load\
-                or 'arg' not in clear_load\
-                or 'id' not in clear_load\
-                or 'tok' not in clear_load:
+        if any(['fun' not in clear_load, 'arg' not in clear_load,
+            'id' not in clear_load, 'tok' not in clear_load]):
             return {}
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
@@ -707,7 +704,6 @@ class AESFuncs(object):
         opts.update(self.opts)
         runner = salt.runner.Runner(opts)
         return runner.run()
-        
 
     def minion_publish(self, clear_load):
         '''
@@ -732,12 +728,11 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer'], dict):
             return {}
-        if 'fun' not in clear_load\
-                or 'arg' not in clear_load\
-                or 'tgt' not in clear_load\
-                or 'ret' not in clear_load\
-                or 'tok' not in clear_load\
-                or 'id' not in clear_load:
+        if any(['fun' not in clear_load, 'arg' not in clear_load,
+             'tgt' not in clear_load,
+             'ret' not in clear_load,
+             'tok' not in clear_load,
+             'id' not in clear_load]):
             return {}
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
