@@ -20,10 +20,19 @@ def _render_tab(lst):
         if not ret[-1] == TAG:
             ret.append(TAG)
     for env in lst['env']:
-        if (env['value'] == None) or (env['value'] == ""):
-            ret.append('{0}=""\n'.format(env['name']))
+        if (env['value'] is None) or (env['value'] == ""):
+            ret.append(
+                '{0}=""\n'.format(
+                    env['name']
+                    )
+                )
         else:
-            ret.append('{0}={1}\n'.format(env['name'], env['value']))
+            ret.append(
+                '{0}={1}\n'.format(
+                    env['name'],
+                    env['value']
+                    )
+                )
     for cron in lst['crons']:
         ret.append(
             '{0} {1} {2} {3} {4} {5}\n'.format(
@@ -36,7 +45,12 @@ def _render_tab(lst):
                 )
             )
     for spec in lst['special']:
-        ret.append('{0} {1}\n'.format(spec['spec'], spec['cmd']))
+        ret.append(
+            '{0} {1}\n'.format(
+                spec['spec'],
+                spec['cmd']
+                )
+            )
     return ret
 
 
