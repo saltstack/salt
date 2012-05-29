@@ -33,9 +33,9 @@ def list():
         device = comps[1]
         ret[device] = {"device": device}
         for comp in comps[2:]:
-             key = comp.split('=')[0].lower()
-             value = comp.split('=')[1]
-             ret[device][key] = value
+            key = comp.split('=')[0].lower()
+            value = comp.split('=')[1]
+            ret[device][key] = value
     return ret
 
 
