@@ -26,6 +26,12 @@ else:
     long = long
 
 
+if PY3:
+    xrange = range
+else:
+    xrange = xrange
+
+
 def text_(s, encoding='latin-1', errors='strict'):
     """ If ``s`` is an instance of ``binary_type``, return
     ``s.decode(encoding, errors)``, otherwise return ``s``"""

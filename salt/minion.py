@@ -18,15 +18,15 @@ import traceback
 import zmq
 
 # Import salt libs
-from salt.exceptions import AuthenticationError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltClientError
+from salt.exceptions import (AuthenticationError,
+    CommandExecutionError, CommandNotFoundError, SaltInvocationError,
+    SaltClientError)
 import salt.client
 import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_, xrange
 from salt.utils.debug import enable_sigusr1_handler
 
 log = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ def detect_kwargs(func, args, data=None):
     defaults = [] if defaults is None else defaults
     starti = len(spec_args) - len(defaults)
     kwarg_spec = set()
-    for ind in xrange(len(defaults)):
+    for _ in xrange(len(defaults)):
         kwarg_spec.add(spec_args[starti])
         starti += 1
     _args = []
@@ -72,16 +72,17 @@ def detect_kwargs(func, args, data=None):
         if isinstance(arg, string_types):
             if '=' in arg:
                 comps = arg.split('=')
+                comps_first = comps[0]
                 if has_kwargs:
-                    kwargs[comps[0]] = '='.join(comps[1:])
+                    kwargs[comps_first] = '='.join(comps[1:])
                     continue
-                if comps[0] in kwarg_spec:
-                    kwargs[comps[0]] = '='.join(comps[1:])
+                if comps_first in kwarg_spec:
+                    kwargs[comps_first] = '='.join(comps[1:])
                     continue
         _args.append(arg)
     if has_kwargs and isinstance(data, dict):
         # this function accepts kwargs, pack in the publish data
-        for key, val in data.items():
+        for key, val in iteritems_(data):
             kwargs['__pub_{0}'.format(key)] = val
     return _args, kwargs
 
@@ -148,7 +149,7 @@ class Minion(object):
         Returns a deep copy of the opts with key bits stripped out
         '''
         mod_opts = {}
-        for key, val in self.opts.items():
+        for key, val in iteritems_(self.opts):
             if key == 'logger':
                 continue
             mod_opts[key] = val
@@ -185,8 +186,8 @@ class Minion(object):
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
-        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
-           or 'arg' not in data:
+        if any(['tgt' not in data, 'jid' not in data, 'fun' not in data,
+            'arg' not in data]):
             return
         # Verify that the publication applies to this minion
         if 'tgt_type' in data:
@@ -261,7 +262,7 @@ class Minion(object):
             sdata.update(data)
             open(fn_, 'w+').write(self.serial.dumps(sdata))
         ret = {}
-        for ind in range(0, len(data['arg'])):
+        for ind in xrange(0, len(data['arg'])):
             try:
                 arg = eval(data['arg'][ind])
                 if isinstance(arg, bool):
@@ -322,8 +323,8 @@ class Minion(object):
         minion side execution.
         '''
         ret = {'return': {}}
-        for ind in range(0, len(data['fun'])):
-            for index in range(0, len(data['arg'][ind])):
+        for ind in xrange(0, len(data['fun'])):
+            for index in xrange(0, len(data['arg'][ind])):
                 try:
                     arg = eval(data['arg'][ind][index])
                     if isinstance(arg, bool):
@@ -384,7 +385,7 @@ class Minion(object):
                     'jid': ret['jid'],
                     'id': self.opts['id']}
             load['return'] = {}
-            for key, value in ret.items():
+            for key, value in iteritems_(ret):
                 if key == 'jid' or key == 'fun':
                     continue
                 load['return'][key] = value
@@ -550,8 +551,8 @@ class Syndic(salt.client.LocalClient, Minion):
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
-        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
-           or 'to' not in data or 'arg' not in data:
+        if any(['tgt' not in data, 'jid' not in data, 'fun' not in data,
+           'to' not in data, 'arg' not in data]):
             return
         data['to'] = int(data['to']) - 1
         if 'user' in data:
@@ -671,17 +672,18 @@ class Matcher(object):
         if len(comps) < 2:
             log.error('Got insufficient arguments for grains from master')
             return False
-        if comps[0] not in self.opts['grains']:
-            log.error('Got unknown grain from master: {0}'.format(comps[0]))
+        comps_first = comps[0]
+        if comps_first not in self.opts['grains']:
+            log.error('Got unknown grain from master: {0}'.format(comps_first))
             return False
-        if isinstance(self.opts['grains'][comps[0]], list):
+        if isinstance(self.opts['grains'][comps_first], list):
             # We are matching a single component to a single list member
-            for member in self.opts['grains'][comps[0]]:
+            for member in self.opts['grains'][comps_first]:
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
         return bool(fnmatch.fnmatch(
-            str(self.opts['grains'][comps[0]]).lower(),
+            str(self.opts['grains'][comps_first]).lower(),
             comps[1].lower(),
             ))
 
@@ -693,12 +695,13 @@ class Matcher(object):
         if len(comps) < 2:
             log.error('Got insufficient arguments for grains from master')
             return False
-        if comps[0] not in self.opts['grains']:
+        comps_first = comps[0]
+        if comps_first not in self.opts['grains']:
             log.error('Got unknown grain from master: {0}'.format(comps[0]))
             return False
-        if isinstance(self.opts['grains'][comps[0]], list):
+        if isinstance(self.opts['grains'][comps_first], list):
             # We are matching a single component to a single list member
-            for member in self.opts['grains'][comps[0]]:
+            for member in self.opts['grains'][comps_first]:
                 if re.match(comps[1].lower(), str(member).lower()):
                     return True
             return False
@@ -727,18 +730,19 @@ class Matcher(object):
             log.error('Got insufficient arguments for pillar match statement '
                 'from master')
             return False
-        if comps[0] not in self.opts['pillar']:
+        comps_first = comps[0]
+        if comps_first not in self.opts['pillar']:
             log.error('Got unknown pillar match statement from master: '
-                '{0}'.format(comps[0]))
+                '{0}'.format(comps_first))
             return False
-        if isinstance(self.opts['pillar'][comps[0]], list):
+        if isinstance(self.opts['pillar'][comps_first], list):
             # We are matching a single component to a single list member
-            for member in self.opts['pillar'][comps[0]]:
+            for member in self.opts['pillar'][comps_first]:
                 if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                     return True
             return False
         return bool(fnmatch.fnmatch(
-            str(self.opts['pillar'][comps[0]]).lower(),
+            str(self.opts['pillar'][comps_first]).lower(),
             comps[1].lower(),
             ))
 
