@@ -12,7 +12,7 @@ import os
 import sys
 
 # support python < 2.7 via unittest2
-if sys.version_info[0:2] < (2,7):
+if sys.version_info[0:2] < (2, 7):
     try:
         from unittest2 import TestLoader, TextTestRunner,\
                               TestCase, expectedFailure, \

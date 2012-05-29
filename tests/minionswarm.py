@@ -16,6 +16,7 @@ import hashlib
 # Import third party libs
 import yaml
 
+
 def parse():
     '''
     Parse the cli options
