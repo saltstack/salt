@@ -74,7 +74,7 @@ def instart(cls, name, display_name=None, stay_alive=True):
         from sys import executable
         module_path = executable
     module_file = splitext(abspath(module_path))[0]
-    cls._svc_reg_class_ = '%s.%s' % (module_file, cls.__name__)
+    cls._svc_reg_class_ = '{0}.{1}'.format(module_file, cls.__name__)
     if stay_alive:
         win32api.SetConsoleCtrlHandler(lambda x: True, True)
     try:
@@ -85,9 +85,7 @@ def instart(cls, name, display_name=None, stay_alive=True):
                 startType=win32service.SERVICE_AUTO_START
                 )
         print('Install ok')
-        win32serviceutil.StartService(
-                cls._svc_name_
-                )
+        win32serviceutil.StartService(cls._svc_name_)
         print('Start ok')
     except Exception as x:
-        print(str(x))
+        print((str(x)))

@@ -43,6 +43,7 @@ import salt.config
 import salt.payload
 import salt.utils
 from salt.exceptions import SaltClientError, SaltInvocationError
+from salt._compat import iteritems_, range
 
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
@@ -58,9 +59,7 @@ def condition_kwarg(arg, kwarg):
     Return a single arg structure for the publisher to safely use
     '''
     if isinstance(kwarg, dict):
-        kw_ = []
-        for key, val in kwarg.items():
-            kw_.append('{0}={1}'.format(key, val))
+        kw_ = list('{0}={1}'.format(k, v) for k, v in iteritems_(kwarg))
         return list(arg) + kw_
     return arg
 
@@ -81,8 +80,7 @@ class LocalClient(object):
         '''
         try:
             keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-            key = open(keyfile, 'r').read()
-            return key
+            return open(keyfile, 'r').read()
         except (OSError, IOError):
             raise SaltClientError(('Problem reading the salt root key. Are'
                                    ' you root?'))
@@ -236,7 +234,9 @@ class LocalClient(object):
             jid=jid,
             timeout=timeout)
         if pub_data['jid'] == '0':
-            print('Failed to connect to the Master, is the Salt Master running?')
+            print(
+                'Failed to connect to the Master, is the Salt Master running?'
+            )
             yield {}
         elif not pub_data['jid']:
             print('No minions match the target')
@@ -379,7 +379,7 @@ class LocalClient(object):
         a specified jid, it returns all of the information for the jid
         '''
         if verbose:
-            print('Executing job with jid {0}'.format(jid))
+            print(('Executing job with jid {0}'.format(jid)))
             print('------------------------------------\n')
         if timeout is None:
             timeout = self.opts['timeout']
@@ -419,7 +419,9 @@ class LocalClient(object):
                                     continue
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                    open(outp, 'r')
+                                )
                         except:
                             pass
                     found.add(fn_)
@@ -440,7 +442,8 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print('Execution is still running on {0}'.format(id_))
+                            print(('Execution is still running on {0}'
+                            .format(id_)))
                         more_time = True
                 if more_time:
                     timeout += inc_timeout
@@ -490,7 +493,9 @@ class LocalClient(object):
                             ret_data = self.serial.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                    open(outp, 'r')
+                                )
                         except:
                             pass
                     found.add(fn_)
@@ -600,7 +605,9 @@ class LocalClient(object):
                             ret_data = self.serial.load(open(retp, 'r'))
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
+                                ret[fn_]['out'] = self.serial.load(
+                                    open(outp, 'r')
+                                )
                         except:
                             pass
             if ret and start == 999999999999:
@@ -693,8 +700,12 @@ class LocalClient(object):
         '''
         if expr_form == 'nodegroup':
             if tgt not in self.opts['nodegroups']:
-                conf_file = self.opts.get('conf_file', 'the master config file')
-                err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
+                conf_file = self.opts.get(
+                    'conf_file', 'the master config file'
+                )
+                err = 'Node group {0} unavailable in {1}'.format(
+                    tgt, conf_file
+                )
                 raise SaltInvocationError(err)
             tgt = self.opts['nodegroups'][tgt]
             expr_form = 'compound'
@@ -755,7 +766,7 @@ class LocalClient(object):
                 )
         socket.send(package)
         payload = None
-        for ind in range(100):
+        for _ in range(100):
             try:
                 payload = self.serial.loads(
                         socket.recv(
@@ -815,6 +826,5 @@ class FunctionWrapper(dict):
             Run a remote call
             '''
             args = list(args)
-            for _key, _val in kwargs:
-                args.append('{0}={1}'.format(_key, _val))
+            args.extend('{0}={1}'.format(k, v) for k, v in iteritems_(kwargs))
             return self.local.cmd(self.minion, key, args)

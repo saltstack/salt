@@ -4,12 +4,11 @@ Module for viewing and modifying sysctl parameters
 
 import re
 import os
+
+from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
 
-__outputter__ = {
-    'assign': 'txt',
-    'get': 'txt',
-}
+__outputter__ = {'assign': 'txt', 'get': 'txt'}
 
 
 def __virtual__():
@@ -65,10 +64,10 @@ def assign(name, value):
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
-    ret  = {}
-    cmd  = 'sysctl -w {0}="{1}"'.format(name, value)
+    ret = {}
+    cmd = 'sysctl -w {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd)
-    out  = data['stdout']
+    out = data['stdout']
 
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
@@ -110,17 +109,17 @@ def persist(name, value, config='/etc/sysctl.conf'):
             continue
 
         # Strip trailing whitespace and split the k,v
-        comps = [i.strip() for i in line.split('=', 1)]
+        comps = list(i.strip() for i in line.split('=', 1))
 
         # On Linux procfs, files such as /proc/sys/net/ipv4/tcp_rmem or any
         # other sysctl with whitespace in it consistently uses 1 tab.  Lets
         # allow our users to put a space or tab between multi-value sysctls
         # and have salt not try to set it every single time.
-        if isinstance(comps[1], basestring) and ' ' in comps[1]:
+        if isinstance(comps[1], string_types) and ' ' in comps[1]:
             comps[1] = re.sub('\s+', '\t', comps[1])
 
         # Do the same thing for the value 'just in case'
-        if isinstance(value, basestring) and ' ' in value:
+        if isinstance(value, string_types) and ' ' in value:
             value = re.sub('\s+', '\t', value)
 
         if len(comps) < 2:

@@ -1,3 +1,4 @@
+'''YAML utilities'''
 from __future__ import absolute_import
 import warnings
 
@@ -40,8 +41,9 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
             try:
                 hash(key)
             except TypeError as exc:
-                raise ConstructorError('while constructing a mapping', node.start_mark,
-                        'found unacceptable key (%s)' % exc, key_node.start_mark)
+                raise ConstructorError(
+                    'while constructing a mapping', node.start_mark,
+                    'found unacceptable key (%s)' % exc, key_node.start_mark)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
                 warnings.warn(
@@ -50,8 +52,10 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
         return mapping
 
 
-class CustomLoader(yaml.reader.Reader, yaml.scanner.Scanner, yaml.parser.Parser,
-                   yaml.composer.Composer, CustomeConstructor, yaml.resolver.Resolver):
+class CustomLoader(
+    yaml.reader.Reader, yaml.scanner.Scanner, yaml.parser.Parser,
+    yaml.composer.Composer, CustomeConstructor, yaml.resolver.Resolver):
+
     def __init__(self, stream):
         yaml.reader.Reader.__init__(self, stream)
         yaml.scanner.Scanner.__init__(self)

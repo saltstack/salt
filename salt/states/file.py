@@ -83,11 +83,11 @@ import difflib
 import hashlib
 import logging
 import tempfile
-import urlparse
 import copy
 
 # Import Salt libs
 import salt.utils.templates
+from salt._compat import string_types, urlparse, iterkeys_, iteritems_
 
 logger = logging.getLogger(__name__)
 
@@ -228,9 +228,9 @@ def _source_list(source, source_hash, env):
                 # to check, if it is salt then check the master list
                 if len(single) != 1:
                     continue
-                single_src = single.keys()[0]
+                single_src = next(iterkeys_(single))
                 single_hash = single[single_src]
-                proto = urlparse.urlparse(single_src).scheme
+                proto = urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src in mfiles:
                         source = single_src
@@ -244,7 +244,7 @@ def _source_list(source, source_hash, env):
                         source = single_src
                         source_hash = single_hash
                         break
-            elif isinstance(single, basestring):
+            elif isinstance(single, string_types):
                 if single in mfiles:
                     source = single
                     break
@@ -302,21 +302,20 @@ def _get_managed(
             hsum = ''
             with open(sfn, 'r') as source:
                 hsum = hashlib.md5(source.read()).hexdigest()
-            source_sum = {'hash_type': 'md5',
-                          'hsum': hsum}
+            source_sum = {'hash_type': 'md5', 'hsum': hsum}
         else:
             __clean_tmp(sfn)
             return sfn, {}, data['data']
     else:
         # Copy the file down if there is a source
         if source:
-            if urlparse.urlparse(source).scheme == 'salt':
+            if urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, env)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
-                if urlparse.urlparse(source_hash).scheme in protos:
+                if urlparse(source_hash).scheme in protos:
                     # The sourc_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
@@ -353,15 +352,13 @@ def _check_perms(name, ret, user, group, mode):
     Check the permissions on files and chown if needed
     '''
     if not ret:
-        ret = {'name': name,
-               'changes': {},
-               'comment': '',
-               'result': False}
+        ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
     # Check permissions
-    perms = {}
-    perms['luser'] = __salt__['file.get_user'](name)
-    perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name)
+    perms = dict(
+        luser=__salt__['file.get_user'](name),
+        lgroup=__salt__['file.get_group'](name),
+        lmode =__salt__['file.get_mode'](name),
+    )
 
     # Mode changes if needed
     if mode:
@@ -386,11 +383,7 @@ def _check_perms(name, ret, user, group, mode):
                 user = perms['luser']
             if group is None:
                 group = perms['lgroup']
-            __salt__['file.chown'](
-                    name,
-                    user,
-                    group
-                    )
+            __salt__['file.chown'](name, user, group)
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
@@ -446,8 +439,7 @@ def _check_recurse(
         if os.path.isfile(dest):
             with open(fn_, 'r') as source_:
                 hsum = hashlib.md5(source_.read()).hexdigest()
-            source_sum = {'hash_type': 'md5',
-                          'hsum': hsum}
+            source_sum = {'hash_type': 'md5', 'hsum': hsum}
             tchange = _check_file_meta(
                     dest,
                     fn_,
@@ -470,7 +462,7 @@ def _check_recurse(
     if changes:
         comment = 'The following files are set to change:\n'
         for fn_ in changes:
-            for key, val in changes[fn_].items():
+            for key, val in iteritems_(changes[fn_]):
                 comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} in in the correct state'.format(name)
@@ -514,7 +506,7 @@ def _check_directory(
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
-            for key, val in changes[fn_].items():
+            for key, val in iteritems_(changes[fn_]):
                 comment += '{0}: {1} - {2}'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
@@ -559,7 +551,7 @@ def _check_managed(
     changes = _check_file_meta(name, sfn, source_sum, user, group, mode)
     if changes:
         comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
+        for key, val in iteritems_(changes):
             comment += '{0}: {1}\n'.format(key, val)
         return None, comment
     return True, 'The file {0} is in the correct state'.format(name)
@@ -586,7 +578,7 @@ def _check_dir_meta(
         changes['mode'] = mode
     if changes:
         comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
+        for key, val in iteritems_(changes):
             comment += '{0}: {1}\n'.format(key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
@@ -693,10 +685,7 @@ def symlink(name, target, force=False, makedirs=False):
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -751,10 +740,7 @@ def absent(name):
     name
         The path which should be deleted
     '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     if not os.path.isabs(name):
         return _error(ret, ('Specified file {0} is not an absolute'
                           ' path').format(name))
@@ -859,10 +845,7 @@ def managed(name,
     '''
     # Initial set up
     mode = __manage_mode(mode)
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': True}
+    ret = {'changes': {}, 'comment': '', 'name': name, 'result': True}
     if not os.path.isabs(name):
         return _error(
             ret, ('Specified file {0} is not an absolute'
@@ -955,7 +938,7 @@ def managed(name,
                 return _error(
                     ret, 'Failed to commit change, permission error')
 
-        ret, perms = _check_perms(name, ret, user, group, mode)
+        ret, _ = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -1001,7 +984,8 @@ def managed(name,
                     ret['changes']['new'] = 'file {0} created'.format(name)
                     ret['comment'] = 'Empty file'
                 else:
-                    return _error(ret, 'Empty file {0} not created'.format(name))
+                    return _error(
+                        ret, 'Empty file {0} not created'.format(name))
 
             if mode:
                 os.umask(current_umask)
@@ -1069,10 +1053,7 @@ def directory(name,
 
     '''
     mode = __manage_mode(mode)
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -1105,13 +1086,13 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    ret, perms = _check_perms(name, ret, user, group, mode)
+    ret, _ = _check_perms(name, ret, user, group, mode)
 
     if recurse:
         if not set(['user', 'group']) >= set(recurse):
             ret['result'] = False
-            ret['comment'] = 'Types for "recurse" limited to "user" and ' \
-                             '"group"'
+            ret['comment'] = ('Types for "recurse" limited to "user" and '
+                             '"group"')
         else:
             targets = copy.copy(recurse)
             if 'user' in targets:
@@ -1122,33 +1103,33 @@ def directory(name,
                     # exists.
                     if type(uid).__name__ == 'str':
                         ret['result'] = False
-                        ret['comment'] = 'Failed to enforce ownership for ' \
-                                         'user {0} (user does not ' \
-                                         'exist)'.format(user)
+                        ret['comment'] = ('Failed to enforce ownership for '
+                                         'user {0} (user does not '
+                                         'exist)'.format(user))
                         # Remove 'user' from list of recurse targets
-                        targets = filter(lambda x: x != 'user', targets)
+                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
-                    ret['comment'] = 'user not specified, but configured as ' \
-                             'a target for recursive ownership management'
+                    ret['comment'] = ('user not specified, but configured as '
+                             'a target for recursive ownership management')
                     # Remove 'user' from list of recurse targets
-                    targets = filter(lambda x: x != 'user', targets)
+                    targets = list(x for x in targets if x != 'user')
             if 'group' in targets:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
                     if type(gid).__name__ == 'str':
                         ret['result'] = False
-                        ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'for group {0}'.format(group, user)
+                        ret['comment'] = ('Failed to enforce group ownership '
+                                         'for group {0}'.format(group, user))
                         # Remove 'group' from list of recurse targets
-                        targets = filter(lambda x: x != 'group', targets)
+                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
-                    ret['comment'] = 'group not specified, but configured ' \
-                             'as a target for recursive ownership management'
+                    ret['comment'] = ('group not specified, but configured '
+                             'as a target for recursive ownership management')
                     # Remove 'group' from list of recurse targets
-                    targets = filter(lambda x: x != 'group', targets)
+                    targets = list(x for x in targets if x != 'group')
 
             needs_fixed = {}
             if targets:
@@ -1171,23 +1152,23 @@ def directory(name,
                     if __salt__['cmd.retcode']('chown -R {0} "{1}"'.format(
                             user, name)) != 0:
                         ret['result'] = False
-                        ret['comment'] = 'Failed to enforce ownership on ' \
-                                         '{0} for user {1}'.format(name, group)
+                        ret['comment'] = ('Failed to enforce ownership on '
+                                     '{0} for user {1}'.format(name, group))
                     else:
-                        ret['changes']['recurse']['user'] = \
-                                __salt__['file.uid_to_user'](uid)
+                        ret['changes']['recurse']['user'] = __salt__[
+                            'file.uid_to_user'](uid)
             if needs_fixed.get('group'):
                 ret['changes'].setdefault('recurse', {})
                 if 'group' in targets:
                     if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
                             group, name)) != 0:
                         ret['result'] = False
-                        ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'on {0} for group ' \
-                                         '{1}'.format(name, group)
+                        ret['comment'] = ('Failed to enforce group ownership '
+                                         'on {0} for group '
+                                         '{1}'.format(name, group))
                     else:
-                        ret['changes']['recurse']['group'] = \
-                                __salt__['file.gid_to_group'](gid)
+                        ret['changes']['recurse']['group'] = __salt__[
+                            'file.gid_to_group'](gid)
 
     if clean:
         keep = _gen_keep_files(name, require)
@@ -1253,7 +1234,7 @@ def recurse(name,
         The permissions mode to set any files created
 
     include_empty
-        Set this to True if empty directories should also be created 
+        Set this to True if empty directories should also be created
         (default is False)
     '''
     ret = {'name': name,
@@ -1308,12 +1289,12 @@ def recurse(name,
         if not dirname in vdir:
             # verify the directory perms if they are set
             # _check_perms(name, ret, user, group, mode)
-            _ret, perms = _check_perms(dirname, {}, user, group, dir_mode)
+            _ret, _ = _check_perms(dirname, {}, user, group, dir_mode)
             if _ret['changes']:
                 ret['changes'][dirname] = 'updated'
             vdir.add(dirname)
         if os.path.isfile(dest):
-            _ret, perms = _check_perms(dest, {}, user, group, file_mode)
+            _ret, _ = _check_perms(dest, {}, user, group, file_mode)
             if _ret['changes']:
                 ret['changes'][dest] = 'updated'
             keep.add(dest)
@@ -1330,7 +1311,7 @@ def recurse(name,
                 ret['changes'][dest] = 'updated'
         elif os.path.isdir(dest) and include_empty:
             #check perms
-            _ret, perms = _check_perms(dest, {}, user, group, dir_mode)
+            _ret, _ = _check_perms(dest, {}, user, group, dir_mode)
             if _ret['changes']:
                 ret['changes'][dest] = 'updated'
             keep.add(dest)
@@ -1338,7 +1319,7 @@ def recurse(name,
             keep.add(dest)
             if os.path.isdir(fn_) and include_empty:
                 #create empty dir
-                os.mkdir(dest,dir_mode)
+                os.mkdir(dest, dir_mode)
             else:
                 # The destination file is not present, make it
                 # FIXME: no metadata (ownership, permissions) available
@@ -1554,7 +1535,7 @@ def append(name, text):
     if not check_res:
         return _error(ret, check_msg)
 
-    if isinstance(text, basestring):
+    if isinstance(text, string_types):
         text = (text,)
 
     for chunk in text:
@@ -1597,13 +1578,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     .. versionadded:: 0.9.5
     '''
-    ret = {
-        'name': name,
-        'changes': {},
-    }
+    ret = {'name': name, 'changes': {}}
     if not os.path.isabs(name):
-        _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name))
+        _error(ret, 'Specified file {0} is not an absolute path'.format(name))
 
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_touch(name, atime, mtime)

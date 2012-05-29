@@ -13,6 +13,7 @@ import salt
 import salt.utils
 import salt.loader
 import salt.minion
+from salt._compat import string_types, iteritems_
 
 # Custom exceptions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -55,7 +56,7 @@ class Caller(object):
             sys.exit(1)
         if hasattr(self.minion.functions[fun], '__outputter__'):
             oput = self.minion.functions[fun].__outputter__
-            if isinstance(oput, basestring):
+            if isinstance(oput, string_types):
                 ret['out'] = oput
         return ret
 
@@ -64,13 +65,13 @@ class Caller(object):
         Pick up the documentation for all of the modules and print it out.
         '''
         docs = {}
-        for name, func in self.minion.functions.items():
+        for name, func in iteritems_(self.minion.functions):
             if name not in docs:
                 if func.__doc__:
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts['fun']):
-                print('{0}:\n{1}\n'.format(name, docs[name]))
+                print(('{0}:\n{1}\n'.format(name, docs[name])))
 
     def print_grains(self):
         '''

@@ -9,7 +9,6 @@ Required python modules: libvirt
 import os
 import re
 import shutil
-import StringIO
 import subprocess
 from xml.dom import minidom
 from salt.exceptions import CommandExecutionError
@@ -22,6 +21,8 @@ except ImportError:
 
 # Import Third Party Libs
 import yaml
+
+from salt._compat import NativeIO, iterkeys_, itervalues_
 
 
 VIRT_STATE_NAME_MAP = {0: "running",
@@ -44,8 +45,8 @@ def __get_conn():
     Detects what type of dom this node is and attempts to connect to the
     correct hypervisor via libvirt.
     '''
-    # This has only been tested on kvm and xen, it needs to be expanded to support
-    # all vm layers supported by libvirt
+    # This has only been tested on kvm and xen, it needs to be expanded to
+    # support all vm layers supported by libvirt
     try:
         conn = libvirt.open("qemu:///system")
     except:
@@ -98,6 +99,7 @@ def list_vms():
     vms.extend(list_inactive_vms())
     return vms
 
+
 def list_active_vms():
     '''
     Return a list of names for active virtual machine on the minion
@@ -112,6 +114,7 @@ def list_active_vms():
         vms.append(conn.lookupByID(id_).name())
     return vms
 
+
 def list_inactive_vms():
     '''
     Return a list of names for inactive virtual machine on the minion
@@ -125,6 +128,7 @@ def list_inactive_vms():
     for id_ in conn.listDefinedDomains():
         vms.append(id_)
     return vms
+
 
 def vm_info(vm_=None):
     '''
@@ -167,6 +171,7 @@ def vm_info(vm_=None):
             info[vm_] = _info(vm_)
     return info
 
+
 def vm_state(vm_):
     '''
     Return the status of the named VM.
@@ -180,6 +185,7 @@ def vm_state(vm_):
     raw = dom.info()
     state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
     return state
+
 
 def node_info():
     '''
@@ -201,6 +207,7 @@ def node_info():
             'sockets': raw[5]}
     return info
 
+
 def get_nics(vm_):
     '''
     Return info about the network interfaces of a named vm
@@ -210,7 +217,7 @@ def get_nics(vm_):
         salt '*' virt.get_nics <vm name>
     '''
     nics = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(NativeIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -224,7 +231,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes.keys():
+                    for key in iterkeys_(v_node.attributes):
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -232,13 +239,14 @@ def get_nics(vm_):
                 if v_node.tagName == "virtualport":
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes.keys():
+                    for key in iterkeys_(v_node.attributes):
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
                 continue
             nics[nic['mac']] = nic
     return nics
+
 
 def get_macs(vm_):
     '''
@@ -249,13 +257,14 @@ def get_macs(vm_):
         salt '*' virt.get_macs <vm name>
     '''
     macs = []
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(NativeIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
             for v_node in i_node.getElementsByTagName('mac'):
                 macs.append(v_node.getAttribute('address'))
     return macs
+
 
 def get_graphics(vm_):
     '''
@@ -271,12 +280,12 @@ def get_graphics(vm_):
            'port': 'None',
            'type': 'vnc'}
     xml = get_xml(vm_)
-    ssock = StringIO.StringIO(xml)
+    ssock = NativeIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
-            for key in g_node.attributes.keys():
+            for key in iterkeys_(g_node.attributes):
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -290,7 +299,7 @@ def get_disks(vm_):
         salt '*' virt.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(NativeIO(get_xml(vm_)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -302,13 +311,13 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys() \
-                and 'file' in source.attributes.keys():
+        if ('dev' in list(iterkeys_(target.attributes))
+                and 'file' in list(iterkeys_(source.attributes))):
             disks[target.getAttribute('dev')] = \
                     {'file': source.getAttribute('file')}
     for dev in disks:
         try:
-            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
+            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '
                 + disks[dev]['file'],
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]))
@@ -478,8 +487,8 @@ def migrate_non_shared(vm_, target):
 
         salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-all ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = ('virsh migrate --live --copy-storage-all ' + vm_
+        + ' qemu://' + target + '/system')
 
     return subprocess.Popen(cmd,
             shell=True,
@@ -494,8 +503,8 @@ def migrate_non_shared_inc(vm_, target):
 
         salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live --copy-storage-inc ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = ('virsh migrate --live --copy-storage-inc ' + vm_
+        + ' qemu://' + target + '/system')
 
     return subprocess.Popen(cmd,
             shell=True,
@@ -510,8 +519,7 @@ def migrate(vm_, target):
 
         salt '*' virt.migrate <vm name> <target hypervisor>
     '''
-    cmd = 'virsh migrate --live ' + vm_\
-        + ' qemu://' + target + '/system'
+    cmd = 'virsh migrate --live ' + vm_ + ' qemu://' + target + '/system'
 
     return subprocess.Popen(cmd,
             shell=True,
@@ -528,7 +536,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
-    for dev, data in disks.items():
+    for data in itervalues_(disks):
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
@@ -573,6 +581,7 @@ def set_autostart(vm_, state='on'):
     else:
         # return False if state is set to something other then on or off
         return False
+
 
 def destroy(vm_):
     '''
@@ -659,6 +668,7 @@ def is_kvm_hyper():
             return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
 
+
 def is_xen_hyper():
     '''
     Returns a bool whether or not this node is a XEN hypervisor
@@ -680,6 +690,7 @@ def is_xen_hyper():
             # No /proc/modules? Are we on Windows? Or Solaris?
             return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
+
 
 def is_hyper():
     '''

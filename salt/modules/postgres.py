@@ -14,9 +14,10 @@ might look like::
 '''
 
 import logging
+
 from salt.utils import check_or_die
 from salt.exceptions import CommandNotFoundError
-
+from salt._compat import zip
 
 log = logging.getLogger(__name__)
 __opts__ = {}
@@ -42,10 +43,10 @@ def version():
 
         salt '*' postgres.version
     '''
-    version_line =  __salt__['cmd.run']('psql --version').split("\n")[0]
+    version_line = __salt__['cmd.run']('psql --version').split("\n")[0]
     name = version_line.split(" ")[1]
     ver = version_line.split(" ")[2]
-    return "%s %s" % (name, ver)
+    return "{0} {1}".format(name, ver)
 
 
 '''
@@ -73,12 +74,13 @@ def db_list(user=None, host=None, port=None):
     cmd = "psql -l -h {host} -U {user} -p {port}".format(
             host=host, user=user, port=port)
 
-    lines = [x for x in __salt__['cmd.run'](cmd).split("\n") if len(x.split("|")) == 6]
-    header = [x.strip() for x in lines[0].split("|")]
+    lines = list(x for x in __salt__['cmd.run'](cmd).split("\n")
+        if len(x.split("|")) == 6)
+    header = list(x.strip() for x in lines[0].split("|"))
     for line in lines[1:]:
-        line = [x.strip() for x in line.split("|")]
+        line = list(x.strip() for x in line.split("|"))
         if not line[0] == "":
-            ret.append(zip(header[:-1], line[:-1]))
+            ret.append(list(zip(header[:-1], line[:-1])))
 
     return ret
 

@@ -16,6 +16,7 @@ from calendar import month_abbr as months
 # Import Salt libs
 import salt.minion
 import salt.payload
+from salt._compat import iteritems_
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
@@ -113,12 +114,17 @@ def daemonize():
                     0,
                     'runas',
                     executablepath,
-                    os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
+                    os.path.join(
+                        pypath[0],
+                        os.sep,
+                        pypath[1],
+                        'Lib\\site-packages\\salt\\utils\\saltminionservice.py'
+                    ),
                     os.path.join(pypath[0], os.sep, pypath[1]),
                     0)
                 sys.exit(0)
             else:
-                import saltminionservice
+                from salt.utils import saltminionservice
                 import win32serviceutil
                 import win32service
                 import winerror
@@ -127,7 +133,11 @@ def daemonize():
                     status = win32serviceutil.QueryServiceStatus(servicename)
                 except win32service.error as details:
                     if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
-                        saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
+                        saltminionservice.instart(
+                            saltminionservice.MinionService,
+                            servicename,
+                            'Salt Minion'
+                        )
                         sys.exit(0)
                 if status[1] == win32service.SERVICE_RUNNING:
                     win32serviceutil.StopServiceWithDeps(servicename)
@@ -177,7 +187,7 @@ def daemonize_if(opts, **kwargs):
         return
     # Daemonizing breaks the proc dir, so the proc needs to be rewritten
     data = {}
-    for key, val in kwargs.items():
+    for key, val in iteritems_(kwargs):
         if key.startswith('__pub_'):
             data[key[6:]] = val
     if not 'jid' in data:
@@ -219,7 +229,7 @@ def which(exe=None):
     Python clone of POSIX's /usr/bin/which
     '''
     if exe:
-        (path, name) = os.path.split(exe)
+        path, _ = os.path.split(exe)
         if os.access(exe, os.X_OK):
             return exe
         for path in os.environ.get('PATH').split(os.pathsep):
@@ -335,7 +345,7 @@ def required_module_list(docstring=None):
     ret = []
     txt = 'Required python modules: '
     data = docstring.split('\n') if docstring else []
-    mod_list = filter(lambda x: x.startswith(txt), data)
+    mod_list = list(x for x in data if x.startswith(txt))
     if not mod_list:
         return []
     modules = mod_list[0].replace(txt, '').split(', ')

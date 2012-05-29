@@ -1,17 +1,19 @@
 '''
 Support for SQLite3
 '''
-
+from __future__ import absolute_import
 try:
-    import sqlite3
+    from . import sqlite3
     has_sqlite3 = True
 except ImportError:
     has_sqlite3 = False
+
 
 def __virtual__():
     if not has_sqlite3:
         return False
     return 'sqlite3'
+
 
 def _connect(db=None):
     if db is None:
@@ -20,6 +22,7 @@ def _connect(db=None):
     con = sqlite3.connect(db)
     cur = con.cursor()
     return cur
+
 
 def version():
     '''
@@ -31,6 +34,7 @@ def version():
     '''
     return sqlite3.version
 
+
 def sqlite_version():
     '''
     Return version of sqlite
@@ -40,6 +44,7 @@ def sqlite_version():
         salt '*' sqlite3.sqlite_version
     '''
     return sqlite3.sqlite_version
+
 
 def modify(db=None, sql=None):
     '''
@@ -58,6 +63,7 @@ def modify(db=None, sql=None):
     cur.execute(sql)
     return True
 
+
 def fetch(db=None, sql=None):
     '''
     Retrieve data from an sqlite3 db (returns all rows, be careful!)
@@ -75,6 +81,7 @@ def fetch(db=None, sql=None):
     rows = cur.fetchall()
     return rows
 
+
 def tables(db=None):
     '''
     Show all tables in the database
@@ -88,9 +95,11 @@ def tables(db=None):
     if not cur:
         return False
 
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+    cur.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
     rows = cur.fetchall()
     return rows
+
 
 def indices(db=None):
     '''
@@ -105,9 +114,11 @@ def indices(db=None):
     if not cur:
         return False
 
-    cur.execute("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name;")
+    cur.execute(
+        "SELECT name FROM sqlite_master WHERE type='index' ORDER BY name;")
     rows = cur.fetchall()
     return rows
+
 
 def indexes(db=None):
     '''
@@ -118,4 +129,3 @@ def indexes(db=None):
         salt '*' sqlite3.indexes /root/test.db
     '''
     return indices(db)
-

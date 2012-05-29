@@ -89,10 +89,7 @@ def list_tab(user):
         salt '*' cron.list_tab root
     '''
     data = raw_cron(user)
-    ret = {'pre': [],
-           'crons': [],
-           'special': [],
-           'env': []}
+    ret = {'pre': [], 'crons': [], 'special': [], 'env': []}
     flag = False
     for line in data.split('\n'):
         if line == '# Lines below here are managed by Salt, do not edit':
@@ -145,11 +142,9 @@ def set_special(user, special, cmd):
     '''
     lst = list_tab(user)
     for spec in lst['special']:
-        if special == cron['special'] and \
-            cmd == cron['cmd']:
+        if special == spec['special'] and cmd == spec['cmd']:
             return 'present'
-    spec = {'special': special,
-            'cmd': cmd}
+    spec = {'special': special, 'cmd': cmd}
     lst['special'].append(spec)
     comdat = _write_cron(user, _render_tab(lst))
     if not comdat['retcode']:
@@ -175,11 +170,11 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
     lst = list_tab(user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if not minute == cron['min'] or \
-                    not hour == cron['hour'] or \
-                    not dom == cron['daymonth'] or \
-                    not month == cron['month'] or \
-                    not dow == cron['dayweek']:
+            if any([not minute == cron['min'],
+                    not hour == cron['hour'],
+                    not dom == cron['daymonth'],
+                    not month == cron['month'],
+                    not dow == cron['dayweek']]):
                 rm_job(user, minute, hour, dom, month, dow, cmd)
                 jret = set_job(user, minute, hour, dom, month, dow, cmd)
                 if jret == 'new':
@@ -252,7 +247,7 @@ def set_env(user, name, value=None):
                 else:
                     return jret
             return 'present'
-    print value
+    print(value)
     env = {'name': name, 'value': value}
     lst['env'].append(env)
     comdat = _write_cron(user, _render_tab(lst))

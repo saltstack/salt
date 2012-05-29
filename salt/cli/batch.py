@@ -9,6 +9,7 @@ import copy
 # Import Salt libs
 import salt.client
 import salt.output
+from salt._compat import range, iteritems_
 
 
 class Batch(object):
@@ -51,7 +52,7 @@ class Batch(object):
         fret = []
         for ret in self.local.cmd_iter(*args):
             for minion in ret:
-                print('{0} Detected for this batch run'.format(minion))
+                print(('{0} Detected for this batch run'.format(minion)))
                 fret.append(minion)
         return sorted(fret)
 
@@ -70,8 +71,8 @@ class Batch(object):
             else:
                 return int(self.opts['batch'])
         except ValueError:
-            print(('Invalid batch data sent: {0}\nData must be in the form'
-                   'of %10, 10% or 3').format(self.opts['batch']))
+            print((('Invalid batch data sent: {0}\nData must be in the form'
+                   'of %10, 10% or 3').format(self.opts['batch'])))
 
     def run(self):
         '''
@@ -88,7 +89,7 @@ class Batch(object):
         active = []
         ret = {}
         iters = []
-        # Itterate while we still have things to execute
+        # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
             next_ = []
             if len(to_run) <= bnum and not active:
@@ -96,15 +97,14 @@ class Batch(object):
                 while to_run:
                     next_.append(to_run.pop())
             else:
-                for ind in range(bnum - len(active)):
+                for _ in range(bnum - len(active)):
                     if to_run:
                         next_.append(to_run.pop())
             active += next_
             args[0] = next_
             if next_:
-                print('\nExecuting run on {0}\n'.format(next_))
-                iters.append(
-                        self.local.cmd_iter_no_block(*args))
+                print(('\nExecuting run on {0}\n'.format(next_)))
+                iters.append(self.local.cmd_iter_no_block(*args))
             else:
                 time.sleep(0.02)
             parts = {}
@@ -113,7 +113,7 @@ class Batch(object):
                     # Gather returns until we get to the bottom
                     ncnt = 0
                     while True:
-                        part = queue.next()
+                        part = next(queue)
                         if part is None:
                             time.sleep(0.01)
                             ncnt += 1
@@ -124,7 +124,7 @@ class Batch(object):
                 except StopIteration:
                     # remove the iter, it is done
                     pass
-            for minion, data in parts.items():
+            for minion, data in iteritems_(parts):
                 active.remove(minion)
                 ret[minion] = data['ret']
                 data[minion] = data.pop('ret')
@@ -132,8 +132,5 @@ class Batch(object):
                     out = data.pop('out')
                 else:
                     out = None
-                salt.output.display_output(
-                        data,
-                        out,
-                        self.opts)
+                salt.output.display_output(data, out, self.opts)
         return ret

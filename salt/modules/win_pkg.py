@@ -9,6 +9,9 @@ try:
 except:
     pass
 
+from salt._compat import iteritems_
+
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
@@ -20,11 +23,7 @@ def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
     '''
-    pkgs = []
-    for pkg in old:
-        if pkg not in new:
-            pkgs.append(pkg)
-    return pkgs
+    return list(pkg for pkg in old if pkg not in new)
 
 
 def available_version(name):
@@ -88,8 +87,8 @@ def list_pkgs(*args):
     pythoncom.CoInitialize()
     if len(args) == 0:
         pkgs = dict(
-                   _get_reg_software().items() +
-                   _get_msi_software().items())
+                   list(iteritems_(_get_reg_software())) +
+                   list(iteritems_(_get_msi_software())))
     else:
         # get package version for each package in *args
         pkgs = {}
@@ -97,6 +96,7 @@ def list_pkgs(*args):
             pkgs.update(_search_software(arg))
     pythoncom.CoUninitialize()
     return pkgs
+
 
 def _search_software(target):
     '''
@@ -106,13 +106,14 @@ def _search_software(target):
     '''
     search_results = {}
     software = dict(
-                    _get_reg_software().items() +
-                    _get_msi_software().items())
-    for key, value in software.iteritems():
+                   list(iteritems_(_get_reg_software())) +
+                   list(iteritems_(_get_msi_software())))
+    for key, value in iteritems_(software):
         if key is not None:
             if target.lower() in key.lower():
                 search_results[key] = value
     return search_results
+
 
 def _get_msi_software():
     '''
@@ -122,13 +123,14 @@ def _get_msi_software():
     win32_products = {}
     this_computer = "."
     wmi_service = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-    swbem_services = wmi_service.ConnectServer(this_computer,"root\cimv2")
+    swbem_services = wmi_service.ConnectServer(this_computer, "root\cimv2")
     products = swbem_services.ExecQuery("Select * from Win32_Product")
     for product in products:
         prd_name = product.Name.encode('ascii', 'ignore')
         prd_ver = product.Version.encode('ascii', 'ignore')
         win32_products[prd_name] = prd_ver
     return win32_products
+
 
 def _get_reg_software():
     '''
@@ -153,9 +155,10 @@ def _get_reg_software():
                    ]
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
-    reg_entries = dict(_get_user_keys().items() +
-                       _get_machine_keys().items())
-    for reg_hive, reg_keys in reg_entries.iteritems():
+    reg_entries = dict(list(iteritems_(_get_user_keys())) +
+                       list(iteritems_(_get_machine_keys())))
+
+    for reg_hive, reg_keys in iteritems_(reg_entries):
         for reg_key in reg_keys:
             try:
                 reg_handle = win32api.RegOpenKeyEx(
@@ -166,7 +169,7 @@ def _get_reg_software():
             except:
                 pass
                 #Unsinstall key may not exist for all users
-            for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
+            for name, _, _, _ in win32api.RegEnumKeyEx(reg_handle):
                 if name[0] == '{':
                     break
                 prd_uninst_key = "\\".join([reg_key, name])
@@ -184,6 +187,7 @@ def _get_reg_software():
                         reg_software[prd_name] = prd_ver
     return reg_software
 
+
 def _get_machine_keys():
     '''
     This will return the hive 'const' value and some registry keys where
@@ -199,6 +203,7 @@ def _get_machine_keys():
     machine_hive_and_keys[machine_hive] = machine_keys
     return machine_hive_and_keys
 
+
 def _get_user_keys():
     '''
     This will return the hive 'const' value and some registry keys where
@@ -210,17 +215,14 @@ def _get_user_keys():
     users_hive = win32con.HKEY_USERS
     #skip some built in and default users since software information in these
     #keys is limited
-    skip_users = ['.DEFAULT',
-                  'S-1-5-18',
-                  'S-1-5-19',
-                  'S-1-5-20']
+    skip_users = ['.DEFAULT', 'S-1-5-18', 'S-1-5-19', 'S-1-5-20']
     sw_uninst_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
     reg_handle = win32api.RegOpenKeyEx(
                     users_hive,
                     '',
                     0,
                     win32con.KEY_READ)
-    for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
+    for name, _, _, _ in win32api.RegEnumKeyEx(reg_handle):
         #this is some identical key of a sid that contains some software names
         #but no detailed information about the software installed for that user
         if '_Classes' in name:
@@ -231,6 +233,7 @@ def _get_user_keys():
     user_hive_and_keys[users_hive] = user_keys
     return user_hive_and_keys
 
+
 def _get_reg_value(reg_hive, reg_key, value_name=''):
     '''
     Read one value from Windows registry.
@@ -240,8 +243,7 @@ def _get_reg_value(reg_hive, reg_key, value_name=''):
     try:
         key_handle = win32api.RegOpenKeyEx(
             reg_hive, reg_key, 0, win32con.KEY_ALL_ACCESS)
-        value_data, value_type = win32api.RegQueryValueEx(key_handle,
-                                                          value_name)
+        value_data, _ = win32api.RegQueryValueEx(key_handle, value_name)
         win32api.RegCloseKey(key_handle)
     except:
         value_data = 'Not Found'

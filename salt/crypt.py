@@ -235,7 +235,9 @@ class Auth(object):
         '''
         auth = {}
         try:
-            self.opts['master_ip'] = salt.utils.dns_check(self.opts['master'], True)
+            self.opts['master_ip'] = salt.utils.dns_check(
+                self.opts['master'], True
+            )
         except SaltClientError:
             return 'retry'
         context = zmq.Context()
@@ -370,8 +372,8 @@ class SAuth(Auth):
         '''
         creds = self.sign_in()
         if creds == 'retry':
-            log.error('Failed to authenticate with the master, verify this'\
-                + ' minion\'s public key has been accepted on the salt master')
+            log.error('Failed to authenticate with the master, verify this'
+                ' minion\'s public key has been accepted on the salt master')
             sys.exit(2)
         return Crypticle(self.opts, creds['aes'])
 

@@ -17,6 +17,7 @@ try:
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
+from salt._compat import iteritems_, iterkeys_
 
 
 class Master(object):
@@ -62,10 +63,12 @@ class Master(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=salt.log.LOG_LEVELS.keys(),
+                choices=list(salt.log.LOG_LEVELS.keys()),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
+                     ', '.join(
+                         [repr(l) for l in iterkeys_(salt.log.LOG_LEVELS)]
+                        )
                 )
         log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
         options, args = parser.parse_args()
@@ -93,7 +96,7 @@ class Master(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in iteritems_(self.opts['log_granular_levels']):
             salt.log.set_logger_level(name, level)
         import logging
         log = logging.getLogger(__name__)
@@ -153,12 +156,13 @@ class Minion(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=salt.log.LOG_LEVELS.keys(),
+                choices=list(iterkeys_(salt.log.LOG_LEVELS)),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
+                     ', '.join(
+                        [repr(l) for l in iterkeys_(salt.log.LOG_LEVELS)]))
 
-        options, args = parser.parse_args()
+        options, _ = parser.parse_args()
         log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
         cli = {'daemon': options.daemon,
@@ -181,7 +185,7 @@ class Minion(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in iteritems_(self.opts['log_granular_levels']):
             salt.log.set_logger_level(name, level)
         import logging
         # Late import so logging works correctly
@@ -272,13 +276,13 @@ class Syndic(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=salt.log.LOG_LEVELS.keys(),
+                choices=list(iterkeys_(salt.log.LOG_LEVELS)),
                 help=('Console log level. One of %s. For the logfile settings '
                       'see the config file. Default: \'%%default\'.' %
-                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
-                     )
+                      ', '.join(
+                      [repr(l) for l in iterkeys_(salt.log.LOG_LEVELS)])))
 
-        options, args = parser.parse_args()
+        options, _ = parser.parse_args()
         salt.log.setup_console_logger(options.log_level)
 
         cli = {'daemon': options.daemon,
@@ -300,7 +304,7 @@ class Syndic(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in iteritems_(self.opts['log_granular_levels']):
             salt.log.set_logger_level(name, level)
 
         import logging

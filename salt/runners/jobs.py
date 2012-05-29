@@ -10,6 +10,7 @@ import salt.client
 import salt.payload
 import salt.utils
 from salt.exceptions import SaltException
+from salt._compat import iteritems_, string_types
 
 # Import Third party libs
 import yaml
@@ -24,7 +25,7 @@ def active():
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
     client = salt.client.LocalClient(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=1)
-    for minion, data in active_.items():
+    for minion, data in iteritems_(active_):
         if not isinstance(data, list):
             continue
         for job in data:
@@ -50,7 +51,7 @@ def active():
                 continue
             if os.path.exists(os.path.join(jid_dir, minion)):
                 ret[jid]['Returned'].append(minion)
-    print(yaml.dump(ret))
+    print((yaml.dump(ret)))
     return ret
 
 
@@ -64,7 +65,7 @@ def lookup_jid(jid):
         '''
         out = None
         ret = {}
-        for key, data in full_ret.items():
+        for key, data in iteritems_(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
@@ -78,12 +79,13 @@ def lookup_jid(jid):
         ret = formatted[0]
         out = formatted[1]
     else:
-        ret = SaltException('Job {0} hasn\'t finished. No data yet :('.format(jid))
+        ret = SaltException(
+            'Job {0} hasn\'t finished. No data yet :('.format(jid))
         out = ''
 
     # Determine the proper output method and run it
     get_outputter = salt.output.get_outputter
-    if isinstance(ret, (list, dict, basestring)) and out:
+    if isinstance(ret, (list, dict, string_types)) and out:
         printout = get_outputter(out)
     # Pretty print any salt exceptions
     elif isinstance(ret, SaltException):
@@ -114,5 +116,5 @@ def list_jobs():
                         'Arguments': list(load['arg']),
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type']}
-    print(yaml.dump(ret))
+    print((yaml.dump(ret)))
     return ret

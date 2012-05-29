@@ -134,7 +134,7 @@ class Key(object):
         elif self.opts['yaml_out']:
             printout = get_outputter('yaml')
         else:
-            printout = None # use default color output
+            printout = None  # use default color output
         return printout
 
     def _print_key(self, name):
@@ -175,7 +175,7 @@ class Key(object):
         '''
         (minions_accepted,
          minions_pre,
-         minions_rejected) = self._check_minions_directories()
+         _) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
         if key not in pre:
             err = ('The key named {0} does not exist, please accept an '
@@ -194,9 +194,7 @@ class Key(object):
         '''
         Accept all keys in pre
         '''
-        (minions_accepted,
-         minions_pre,
-         minions_rejected) = self._check_minions_directories()
+        (_, minions_pre, _) = self._check_minions_directories()
         for key in os.listdir(minions_pre):
             self._accept(key)
 
@@ -222,8 +220,7 @@ class Key(object):
                          level='info')
         if os.path.exists(rej):
             os.remove(rej)
-            self._log('Removed rejected key {0}'.format(delete),
-                         level='info')
+            self._log('Removed rejected key {0}'.format(delete), level='info')
 
     def _delete_all(self):
         '''
@@ -237,7 +234,7 @@ class Key(object):
         '''
         Reject a specified host's public key
         '''
-        (minions_accepted,
+        (_,
          minions_pre,
          minions_rejected) = self._check_minions_directories()
         pre = os.listdir(minions_pre)
@@ -254,9 +251,7 @@ class Key(object):
         '''
         Reject all keys in pre
         '''
-        (minions_accepted,
-         minions_pre,
-         minions_rejected) = self._check_minions_directories()
+        (_, minions_pre, _) = self._check_minions_directories()
         for key in os.listdir(minions_pre):
             self._reject(key)
 

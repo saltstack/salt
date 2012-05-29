@@ -34,6 +34,7 @@ from salt.template import (
     compile_template,
     compile_template_str,
     )
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ def build_args(func, args, data=None):
     _args = []
     _kw = {}
     for arg in args:
-        if isinstance(arg, basestring):
+        if isinstance(arg, string_types):
             arg = arg.split('=', 1)
             arg_len = len(arg)
             if arg_len == 2:
@@ -155,7 +156,7 @@ def format_log(ret):
                 msg = 'No changes made for {0[name]}'.format(ret)
             elif isinstance(chg, dict):
                 if 'diff' in chg:
-                    if isinstance(chg['diff'], basestring):
+                    if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(
                                 chg['diff'])
                 if isinstance(chg[chg.keys()[0]], dict):
@@ -320,7 +321,7 @@ class State(object):
             errors.append('Missing "fun" data')
         if 'name' not in data:
             errors.append('Missing "name" data')
-        if not isinstance(data['name'], basestring):
+        if not isinstance(data['name'], string_types):
             err = ('The name {0} in sls {1} is not formed as a '
                    'string but is a {2}').format(
                            data['name'], data['__sls__'], type(data['name']))
@@ -379,7 +380,9 @@ class State(object):
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
                     if fnmatch.fnmatch(data['name'], req[req.keys()[0]]) \
-                            or fnmatch.fnmatch(data['__id__'], req[req.keys()[0]]):
+                            or fnmatch.fnmatch(
+                                data['__id__'], req[req.keys()[0]]
+                            ):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -399,7 +402,7 @@ class State(object):
         for name, body in high.items():
             if name.startswith('__'):
                 continue
-            if not isinstance(name, basestring):
+            if not isinstance(name, string_types):
                 err = ('The name {0} in sls {1} is not formed as a '
                        'string but is a {2}').format(
                                name, body['__sls__'], type(name))
@@ -421,7 +424,7 @@ class State(object):
                     if '.' in state:
                         fun += 1
                     for arg in body[state]:
-                        if isinstance(arg, basestring):
+                        if isinstance(arg, string_types):
                             fun += 1
                             if ' ' in arg.strip():
                                 errors.append(('The function "{0}" in state '
@@ -463,7 +466,8 @@ class State(object):
                                         req_val = req[req_key]
                                         if not ishashable(req_val):
                                             errors.append((
-                                                'Illegal requisite "{0}", please check your syntax.\n'
+                                                'Illegal requisite "{0}", '
+                                                'please check your syntax.\n'
                                                 ).format(str(req_val)))
 
                                         # Check for global recursive requisites
@@ -480,10 +484,13 @@ class State(object):
                                                             req_val
                                                             )
                                                     errors.append(err)
-                                # Make sure that there is only one key in the dict
+                                # Make sure that there is only one key in the
+                                # dict
                                 if len(arg.keys()) != 1:
-                                    errors.append(('Multiple dictionaries defined'
-                                    ' in argument of state "{0}" in sls {1}').format(
+                                    errors.append((
+                                        'Multiple dictionaries defined'
+                                    ' in argument of state "{0}" in sls {1}'
+                                    ).format(
                                         name,
                                         body['__sls__']))
                     if not fun:
@@ -605,7 +612,7 @@ class State(object):
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
                 for arg in run:
-                    if isinstance(arg, basestring):
+                    if isinstance(arg, string_types):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
@@ -657,8 +664,10 @@ class State(object):
                     for arg in run:
                         update = False
                         for hind in range(len(high[name][state])):
-                            if isinstance(arg, basestring) and \
-                                    isinstance(high[name][state][hind], basestring):
+                            if isinstance(arg, string_types) and \
+                                    isinstance(
+                                        high[name][state][hind], string_types
+                                    ):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
@@ -825,7 +834,8 @@ class State(object):
         cdata = self.format_call(data)
         try:
             if 'kwargs' in cdata:
-                ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
+                ret = self.states[cdata['full']](
+                    *cdata['args'], **cdata['kwargs'])
             else:
                 ret = self.states[cdata['full']](*cdata['args'])
         except:
@@ -1187,7 +1197,7 @@ class BaseHighState(object):
                         for comp in top[env][tgt]:
                             if isinstance(comp, dict):
                                 matches.append(comp)
-                            if isinstance(comp, basestring):
+                            if isinstance(comp, string_types):
                                 states.add(comp)
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
@@ -1205,7 +1215,7 @@ class BaseHighState(object):
         for env, matches in tops.items():
             if env == 'include':
                 continue
-            if not isinstance(env, basestring):
+            if not isinstance(env, string_types):
                 err = ('Environment {0} in top file is not formed as a '
                        'string').format(env)
                 errors.append(err)
@@ -1228,7 +1238,7 @@ class BaseHighState(object):
                                            )
                                        )
                                 errors.append(err)
-                    elif isinstance(slsmod, basestring):
+                    elif isinstance(slsmod, string_types):
                         # This is a sls module
                         if not slsmod:
                             err = ('Environment {0} contains an empty sls '
@@ -1266,7 +1276,7 @@ class BaseHighState(object):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
-                        if isinstance(item, basestring):
+                        if isinstance(item, string_types):
                             matches[env].append(item)
         ext_matches = self.client.ext_nodes()
         for env in ext_matches:
@@ -1362,7 +1372,7 @@ class BaseHighState(object):
                         if name == '__extend__':
                             continue
 
-                        if isinstance(state[name], basestring):
+                        if isinstance(state[name], string_types):
                             # Is this is a short state, it needs to be padded
                             if '.' in state[name]:
                                 comps = state[name].split('.')
@@ -1370,8 +1380,9 @@ class BaseHighState(object):
                                                '__env__': env,
                                                comps[0]: [comps[1]]}
                                 continue
-                        errors.append(('Name {0} in sls {1} is not a dictionary'
-                                       .format(name, sls)))
+                        errors.append((
+                            'Name {0} in sls {1} is not a dictionary'.format(
+                            name, sls)))
                         continue
                     skeys = set()
                     for key in state[name]:
