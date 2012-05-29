@@ -21,18 +21,9 @@ def _render_tab(lst):
             ret.append(TAG)
     for env in lst['env']:
         if (env['value'] == None) or (env['value'] == ""):
-            ret.append(
-                '{0}=""\n'.format(
-                    env['name']
-                    )
-                )
+            ret.append('{0}=""\n'.format(env['name']))
         else:
-            ret.append(
-                '{0}={1}\n'.format(
-                    env['name'],
-                    env['value']
-                    )
-                )
+            ret.append('{0}={1}\n'.format(env['name'], env['value']))
     for cron in lst['crons']:
         ret.append(
             '{0} {1} {2} {3} {4} {5}\n'.format(
@@ -45,12 +36,7 @@ def _render_tab(lst):
                 )
             )
     for spec in lst['special']:
-        ret.append(
-            '{0} {1}\n'.format(
-                spec['spec'],
-                spec['cmd']
-                )
-            )
+        ret.append('{0} {1}\n'.format(spec['spec'], spec['cmd']))
     return ret
 
 
@@ -89,10 +75,7 @@ def list_tab(user):
         salt '*' cron.list_tab root
     '''
     data = raw_cron(user)
-    ret = {'pre': [],
-           'crons': [],
-           'special': [],
-           'env': []}
+    ret = {'pre': [], 'crons': [], 'special': [], 'env': []}
     flag = False
     for line in data.split('\n'):
         if line == '# Lines below here are managed by Salt, do not edit':
@@ -145,11 +128,9 @@ def set_special(user, special, cmd):
     '''
     lst = list_tab(user)
     for spec in lst['special']:
-        if special == cron['special'] and \
-            cmd == cron['cmd']:
+        if special == spec['special'] and cmd == spec['cmd']:
             return 'present'
-    spec = {'special': special,
-            'cmd': cmd}
+    spec = {'special': special, 'cmd': cmd}
     lst['special'].append(spec)
     comdat = _write_cron(user, _render_tab(lst))
     if not comdat['retcode']:
@@ -175,11 +156,11 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
     lst = list_tab(user)
     for cron in lst['crons']:
         if cmd == cron['cmd']:
-            if not minute == cron['min'] or \
-                    not hour == cron['hour'] or \
-                    not dom == cron['daymonth'] or \
-                    not month == cron['month'] or \
-                    not dow == cron['dayweek']:
+            if any([not minute == cron['min'],
+                    not hour == cron['hour'],
+                    not dom == cron['daymonth'],
+                    not month == cron['month'],
+                    not dow == cron['dayweek']]):
                 rm_job(user, minute, hour, dom, month, dow, cmd)
                 jret = set_job(user, minute, hour, dom, month, dow, cmd)
                 if jret == 'new':
@@ -252,7 +233,7 @@ def set_env(user, name, value=None):
                 else:
                     return jret
             return 'present'
-    print value
+    print(value)
     env = {'name': name, 'value': value}
     lst['env'].append(env)
     comdat = _write_cron(user, _render_tab(lst))

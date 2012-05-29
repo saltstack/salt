@@ -21,10 +21,10 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
         file = open(maclist, 'r')
         for mac in file:
             wol(mac.strip(), bcast, destport)
-            print('Waking up {0}'.format(mac.strip()))
+            print(('Waking up {0}'.format(mac.strip())))
             ret.append(mac)
     except Exception as inst:
-        print('Failed to open the MAC file. Error: {0}'.format(inst))
+        print(('Failed to open the MAC file. Error: {0}'.format(inst)))
         return []
     return ret
 

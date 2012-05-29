@@ -6,11 +6,14 @@ from string import ascii_letters, digits
 import socket
 import re
 
+from salt._compat import iteritems_, range
+
 __outputter__ = {
     'dig':     'txt',
     'ping':    'txt',
     'netstat': 'txt',
 }
+
 
 def __virtual__():
     '''
@@ -31,6 +34,7 @@ def _sanitize_host(host):
         c for c in host[0:255] if c in (ascii_letters + digits + '.')
     ])
 
+
 def _cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask
@@ -43,7 +47,7 @@ def _cidr_to_ipv4_netmask(cidr_bits):
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '%d' % (256-(2**(8-cidr_bits)))
+            netmask += '%d' % (256 - (2 ** (8 - cidr_bits)))
             cidr_bits = 0
     return netmask
 
@@ -56,6 +60,7 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):
     '''
     return _cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
 
+
 def _number_of_set_bits(x):
     '''
     Returns the number of bits that are set in a 32bit int
@@ -67,6 +72,7 @@ def _number_of_set_bits(x):
     x += x >> 8
     x += x >> 16
     return x & 0x0000003f
+
 
 def _interfaces_ip():
     '''
@@ -86,7 +92,7 @@ def _interfaces_ip():
                 continue
             m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
-                iface,parent,attrs = m.groups()
+                iface, parent, attrs = m.groups()
                 if 'UP' in attrs.split(','):
                     data['up'] = True
                 if parent:
@@ -94,7 +100,7 @@ def _interfaces_ip():
             else:
                 cols = line.split()
                 if len(cols) >= 2:
-                    type,value = tuple(cols[0:2])
+                    type, value = tuple(cols[0:2])
                     if type in ('inet', 'inet6'):
                         def parse_network():
                             """
@@ -102,11 +108,11 @@ def _interfaces_ip():
                             based on the current set of cols
                             """
                             brd = None
-                            ip,cidr = tuple(value.split('/'))
+                            ip, cidr = tuple(value.split('/'))
                             if type == 'inet':
                                 mask = _cidr_to_ipv4_netmask(int(cidr))
                                 if 'brd' in cols:
-                                    brd = cols[cols.index('brd')+1]
+                                    brd = cols[cols.index('brd') + 1]
                             elif type == 'inet6':
                                 mask = cidr
                             return (ip, mask, brd)
@@ -138,6 +144,7 @@ def _interfaces_ip():
             del iface, data
     return ret
 
+
 def _interfaces_ifconfig():
     '''
     Uses ifconfig to return a dictionary of interfaces with various information
@@ -150,7 +157,8 @@ def _interfaces_ifconfig():
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
     pmask = re.compile('.*?(?:Mask:|netmask )(?:(0x[0-9a-fA-F]{8})|([\d\.]+))')
-    pmask6 = re.compile('.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
+    pmask6 = re.compile(
+        '.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
     pupdown = re.compile('UP')
     pbcast = re.compile('.*?(?:Bcast:|broadcast )([\d\.]+)')
 
@@ -178,7 +186,7 @@ def _interfaces_ifconfig():
                 data['ipaddr'] = mip.group(1)
             if mmask:
                 if mmask.group(1):
-                    data['netmask'] =  _number_of_set_bits_to_ipv4_netmask(
+                    data['netmask'] = _number_of_set_bits_to_ipv4_netmask(
                         int(mmask.group(1), 16))
                 else:
                     data['netmask'] = mmask.group(2)
@@ -201,6 +209,7 @@ def _interfaces_ifconfig():
         del data
     return ret
 
+
 def interfaces():
     '''
     Returns a dictionary of interfaces with various information about each
@@ -218,6 +227,7 @@ def interfaces():
     # no usable utility found
     return {}
 
+
 def ping(host):
     '''
     Performs a ping to a host
@@ -226,11 +236,12 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -c 4 %s' % _sanitize_host(host)
+    cmd = 'ping -c 4 {0}'.format(_sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
-# FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools 1.6.0 (Ubuntu 10.10)
+# FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools 1.6.0
+# (Ubuntu 10.10)
 def netstat():
     '''
     Return information on open ports and states
@@ -268,7 +279,8 @@ def netstat():
     return ret
 
 
-# FIXME: This is broken on: Modern traceroute for Linux, version 2.0.14, May 10 2010 (Ubuntu 10.10)
+# FIXME: This is broken on: Modern traceroute for Linux, version 2.0.14,
+# May 10 2010 (Ubuntu 10.10)
 # FIXME: traceroute is deprecated, make this fall back to tracepath
 def traceroute(host):
     '''
@@ -279,7 +291,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'traceroute %s' % _sanitize_host(host)
+    cmd = 'traceroute {0}'.format(_sanitize_host(host))
     out = __salt__['cmd.run'](cmd)
 
     for line in out:
@@ -310,7 +322,7 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig %s' % _sanitize_host(host)
+    cmd = 'dig {0}'.format(_sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -331,6 +343,7 @@ def isportopen(host, port):
 
     return out
 
+
 def up(interface):
     '''
     Returns True if interface is up, otherwise returns False
@@ -345,6 +358,7 @@ def up(interface):
     else:
         return None
 
+
 def ipaddr(interface=None):
     '''
     Returns the IP address for a given interface
@@ -358,7 +372,7 @@ def ipaddr(interface=None):
     if not interface:
         result_dict = {}
 
-        for interface, data in interfaces_dict.items():
+        for interface, data in iteritems_(interfaces_dict):
             if data.get('ipaddr'):
                 result_dict[interface] = data.get('ipaddr')
 
@@ -369,6 +383,7 @@ def ipaddr(interface=None):
         return data['ipaddr']
     else:
         return None
+
 
 def netmask(interface):
     '''
@@ -384,6 +399,7 @@ def netmask(interface):
     else:
         return None
 
+
 def hwaddr(interface):
     '''
     Returns the hwaddr for a given interface
@@ -398,6 +414,7 @@ def hwaddr(interface):
     else:
         return None
 
+
 def host_to_ip(host):
     '''
     Returns the IP address of a given hostname
@@ -407,10 +424,11 @@ def host_to_ip(host):
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname( host )
+        ip = socket.gethostbyname(host)
     except:
         ip = None
     return ip
+
 
 def ip_to_host(ip):
     '''
@@ -421,7 +439,7 @@ def ip_to_host(ip):
         salt '*' network.ip_to_host 8.8.8.8
     '''
     try:
-        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr( ip )
+        hostname, _, _ = socket.gethostbyaddr(ip)
     except:
         hostname = None
     return hostname

@@ -60,16 +60,18 @@ def __write_aliases_file(lines):
             os.chmod(out.name, stat.S_IMODE(st.st_mode))
             os.chown(out.name, st.st_uid, st.st_gid)
         else:
-            os.chmod(out.name, 0644)
+            os.chmod(out.name, 0o644)
             os.chown(out.name, 0, 0)
 
-    for (line_alias, line_target, line_comment) in lines:
+    for line_alias, line_target, line_comment in lines:
         if not line_comment:
             line_comment = ''
         if line_alias and line_target:
-            out.write('%s: %s%s\n' % (line_alias, line_target, line_comment))
+            out.write(
+                '{0}: {1}{2}\n'.format(line_alias, line_target, line_comment)
+            )
         else:
-            out.write('%s\n' % line_comment)
+            out.write('{0}\n'.format(line_comment))
 
     out.close()
     os.rename(out.name, afn)
@@ -92,8 +94,9 @@ def list_aliases():
         salt '*' aliases.list_aliases
     '''
     ret = {}
-    for (alias, target, comment) in __parse_aliases():
-        if not alias: continue
+    for alias, target, _ in __parse_aliases():
+        if not alias:
+            continue
         ret[alias] = target
     return ret
 
@@ -138,7 +141,7 @@ def set_target(alias, target):
     lines = __parse_aliases()
     out = []
     ovr = False
-    for (line_alias, line_target, line_comment) in lines:
+    for line_alias, line_target, line_comment in lines:
         if line_alias == alias:
             if not ovr:
                 out.append((alias, target, line_comment))
@@ -164,7 +167,7 @@ def rm_alias(alias):
 
     lines = __parse_aliases()
     out = []
-    for (line_alias, line_target, line_comment) in lines:
+    for line_alias, line_target, line_comment in lines:
         if line_alias != alias:
             out.append((line_alias, line_target, line_comment))
 

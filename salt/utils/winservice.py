@@ -88,4 +88,4 @@ def instart(cls, name, display_name=None, stay_alive=True):
         win32serviceutil.StartService(cls._svc_name_)
         print('Start ok')
     except Exception as x:
-        print(str(x))
+        print((str(x)))

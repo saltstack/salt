@@ -175,10 +175,9 @@ else:
 
 
 if PY3:
-    def map_(*arg):
-        return list(map(*arg))
+    zip = zip
 else:
-    map_ = map
+    from future_builtins import zip
 
 if PY3:
     def is_nonstr_iter(v):

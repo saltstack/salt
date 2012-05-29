@@ -108,7 +108,7 @@ def _search_software(target):
     software = dict(
                    list(iteritems_(_get_reg_software())) +
                    list(iteritems_(_get_msi_software())))
-    for key, value in software.iteritems():
+    for key, value in iteritems_(software):
         if key is not None:
             if target.lower() in key.lower():
                 search_results[key] = value

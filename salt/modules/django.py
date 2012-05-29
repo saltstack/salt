@@ -4,6 +4,9 @@ Manage Django sites
 
 import os
 
+from salt._compat import iteritems_
+
+
 def _get_django_admin(bin_env):
     '''
     Return the django admin
@@ -36,7 +39,7 @@ def command(settings_module,
     for arg in args:
         cmd = '{0} --{1}'.format(cmd, arg)
 
-    for key, value in kwargs.iteritems():
+    for key, value in iteritems_(kwargs):
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
 
@@ -86,7 +89,8 @@ def createsuperuser(settings_module,
         salt '*' django.createsuperuser settings.py user user@example.com
     '''
     da = _get_django_admin(bin_env)
-    cmd = "{0} createsuperuser --settings={1} --noinput --email='{2}' --username={3}".format(
+    cmd = ("{0} createsuperuser --settings={1} --noinput --email='{2}' "
+        "--username={3}").format(
             da, settings_module, email, username)
     if database:
         cmd = '{0} --database={1}'.format(cmd, database)
@@ -135,7 +139,7 @@ def collectstatic(settings_module,
     that can easily be served in production.
 
     CLI Example::
-    
+
         salt '*' django.collectstatic settings.py
     '''
     da = _get_django_admin(bin_env)

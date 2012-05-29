@@ -273,7 +273,7 @@ class SaltCMD(object):
                     else:
                         printout = get_outputter(None)
 
-                    print('Return data for job {0}:'.format(jid))
+                    print(('Return data for job {0}:'.format(jid)))
                     printout(ret[jid])
                     print('')
         elif self.opts['batch']:
@@ -390,8 +390,8 @@ class SaltCMD(object):
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
-            print(fun + ':')
-            print(docs[fun])
+            print((fun + ':'))
+            print((docs[fun]))
             print('')
 
 
@@ -753,7 +753,7 @@ class SaltCall(object):
         opts = {}
         opts.update(salt.config.minion_config(options.conf_file))
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if k == 'module_dirs':
                 opts[k] = v.split(',')
             else:

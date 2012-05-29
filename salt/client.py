@@ -379,7 +379,7 @@ class LocalClient(object):
         a specified jid, it returns all of the information for the jid
         '''
         if verbose:
-            print('Executing job with jid {0}'.format(jid))
+            print(('Executing job with jid {0}'.format(jid)))
             print('------------------------------------\n')
         if timeout is None:
             timeout = self.opts['timeout']
@@ -442,8 +442,8 @@ class LocalClient(object):
                 for id_ in jinfo:
                     if jinfo[id_]:
                         if verbose:
-                            print('Execution is still running on {0}'
-                            .format(id_))
+                            print(('Execution is still running on {0}'
+                            .format(id_)))
                         more_time = True
                 if more_time:
                     timeout += inc_timeout

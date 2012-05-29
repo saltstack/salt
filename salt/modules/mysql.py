@@ -19,12 +19,15 @@ Required python modules: MySQLdb
 '''
 
 import logging
+
 try:
     import MySQLdb
     import MySQLdb.cursors
     has_mysqldb = True
 except ImportError:
     has_mysqldb = False
+
+from salt._compat import iterkeys_, range
 
 log = logging.getLogger(__name__)
 __opts__ = {}
@@ -34,7 +37,7 @@ def __virtual__():
     '''
     Only load this module if the mysql config is set
     '''
-    if any(k.startswith('mysql.') for k in __opts__.keys()):
+    if any(k.startswith('mysql.') for k in iterkeys_(__opts__)):
         if has_mysqldb:
             return 'mysql'
     return False
@@ -116,7 +119,7 @@ def status():
     db = connect()
     cur = db.cursor()
     cur.execute('SHOW STATUS')
-    for i in xrange(cur.rowcount):
+    for _ in range(cur.rowcount):
         row = cur.fetchone()
         ret[row[0]] = row[1]
     return ret
@@ -357,7 +360,8 @@ def user_exists(user,
     '''
     db = connect()
     cur = db.cursor()
-    query = "SELECT User,Host FROM mysql.user WHERE User = '%s' AND Host = '%s'" % (user, host,)
+    query = ("SELECT User,Host FROM mysql.user WHERE User = '%s' AND Host = "
+        "'%s'") % (user, host,)
     log.debug("Doing query: {0}".format(query,))
     cur.execute(query)
     return cur.rowcount == 1
@@ -374,7 +378,8 @@ def user_info(user,
     '''
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
-    query = "SELECT * FROM mysql.user WHERE User = '%s' AND Host = '%s'" % (user, host,)
+    query = "SELECT * FROM mysql.user WHERE User = '%s' AND Host = '%s'" % (
+        user, host)
     log.debug("Query: {0}".format(query,))
     cur.execute(query)
     result = cur.fetchone()
@@ -441,13 +446,16 @@ def user_chpass(user,
 
     db = connect()
     cur = db.cursor()
-    query = "UPDATE mysql.user SET password=%s WHERE User='%s' AND Host = '%s';" % (password_sql, user, host, )
+    query = ("UPDATE mysql.user SET password=%s WHERE User='%s' AND Host = "
+        "'%s';") % (password_sql, user, host, )
     log.debug("Query: {0}".format(query,))
     if cur.execute(query):
-        log.info("Password for user '{0}'@'{1}' has been changed".format(user, host, ))
+        log.info(
+            "Password for user '{0}'@'{1}' has been changed".format(user, host)
+        )
         return True
 
-    log.info("Password for user '{0}'@'{1}' is not changed".format(user, host, ))
+    log.info("Password for user '{0}'@'{1}' is not changed".format(user, host))
     return False
 
 
@@ -536,7 +544,7 @@ def db_optimize(name,
         # we need to optimize all tables
         tables = db_tables(name)
         for table in tables:
-            log.info("Optimizing table '%s' in db '%s..'".format(name, table, ))
+            log.info("Optimizing table '%s' in db '%s..'".format(name, table))
             ret.append(__optimize_table(name, table))
     else:
         log.info("Optimizing table '%s' in db '%s'..".format(name, table, ))
@@ -554,7 +562,8 @@ def __grant_generate(grant,
                     host='localhost',
                     grant_option=False,
                     escape=True):
-    # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
+    # todo: Re-order the grant so it is according to the SHOW GRANTS for
+    # xxx@yyy query (SELECT comes first, etc)
     grant = grant.replace(',', ', ').upper()
 
     db_part = database.rpartition('.')
@@ -606,9 +615,11 @@ def grant_exists(grant,
                 host='localhost',
                 grant_option=False,
                 escape=True):
-    # todo: This function is a bit tricky, since it requires the ordering to be exactly the same.
-    # perhaps should be replaced/reworked with a better/cleaner solution.
-    target = __grant_generate(grant, database, user, host, grant_option, escape)
+    # todo: This function is a bit tricky, since it requires the ordering to
+    # be exactly the same. perhaps should be replaced/reworked with a
+    # better/cleaner solution.
+    target = __grant_generate(
+        grant, database, user, host, grant_option, escape)
 
     if target in user_grants(user, host):
         log.debug("Grant exists.")

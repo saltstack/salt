@@ -12,7 +12,6 @@ Required python modules: libvirt
 # Import Python Libs
 import os
 import shutil
-import StringIO
 import subprocess
 from xml.dom import minidom
 
@@ -28,6 +27,7 @@ import yaml
 
 # Import Salt Modules
 import salt.utils
+from salt._compat import NativeIO, iterkeys_, itervalues_, range, iteritems_
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -213,6 +213,7 @@ def hyper_info():
 # get_disks
 # get_conf
 
+
 def _get_image(image, vda):
     '''
     Copy the image into place
@@ -279,8 +280,8 @@ def _gen_xml(name,
     data = data.replace('%%MEM%%', str(int(mem) * 1024))
     data = data.replace('%%VDA%%', vda)
     nics = ''
-    for interface, data in network.items():
-        for bridge, mac in data.items():
+    for data in itervalues_(network):
+        for bridge, mac in iteritems_(data):
             if not mac:
                 # Generate this interface's mac addr, use the qemu default
                 # prefix, 52:54
@@ -362,6 +363,7 @@ def start(config):
     cmd = 'virsh create {0}'.format(config)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def halt(name):
     '''
     Hard power down a virtual machine
@@ -435,10 +437,10 @@ def set_autostart(name):
     '''
     dom = _get_dom(name)
 
-    if state == 'on':
+    if name == 'on':
         return dom.setAutostart(1) == 0
 
-    elif state == 'off':
+    elif name == 'off':
         return dom.setAutostart(0) == 0
 
     else:
@@ -455,7 +457,7 @@ def get_disks(name):
         salt '*' hyper.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO.StringIO(get_conf(name)))
+    doc = minidom.parse(NativeIO(get_conf(name)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -467,12 +469,13 @@ def get_disks(name):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys() \
-                and 'file' in source.attributes.keys():
-            disks[target.getAttribute('dev')] = \
-                    {'file': source.getAttribute('file')}
+        if (
+            'dev' in list(iterkeys_(target.attributes)) and
+            'file' in list(iterkeys_(source.attributes))):
+            disks[target.getAttribute('dev')] = {
+                'file': source.getAttribute('file')}
     for dev in disks:
-        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
+        disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '
             + disks[dev]['file'],
             shell=True,
             stdout=subprocess.PIPE).communicate()[0]))

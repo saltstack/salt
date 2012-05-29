@@ -6,15 +6,18 @@ import re
 import binascii
 import hashlib
 
+from salt._compat import iterkeys_
+
 
 def _refine_enc(enc):
     '''
     Return the properly formatted ssh value for the authorized encryption key
     type. ecdsa defaults to 256 bits, must give full ecdsa enc schema string if
-    using higher enc. If the type is not found, return ssh-rsa, the ssh default.
+    using higher enc. If the type is not found, return ssh-rsa, the ssh
+    default.
     '''
-    rsa   = ['r', 'rsa', 'ssh-rsa']
-    dss   = ['d', 'dsa', 'dss', 'ssh-dss']
+    rsa = ['r', 'rsa', 'ssh-rsa']
+    dss = ['d', 'dsa', 'dss', 'ssh-dss']
     ecdsa = ['e', 'ecdsa', 'ecdsa-sha2-nistp521', 'ecdsa-sha2-nistp384',
             'ecdsa-sha2-nistp256']
 
@@ -148,7 +151,7 @@ def _fingerprint(public_key):
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()
-    chunks = [ret[i:i+2] for i in range(0, len(ret), 2)]
+    chunks = [ret[i:i + 2] for i in range(0, len(ret), 2)]
     return ':'.join(chunks)
 
 
@@ -278,11 +281,8 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 lines.append(line)
                 continue
 
-            if opts:
                 # It has options, grab them
-                options = opts.split(',')
-            else:
-                options = []
+            options = opts.split(',') if opts else []
 
             pkey = comps[1]
 
@@ -293,6 +293,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
         open(full, 'w+').writelines(lines)
         return 'Key removed'
     return 'Key not present'
+
 
 def set_auth_key_from_file(
         user,
@@ -312,10 +313,9 @@ def set_auth_key_from_file(
     if not os.path.isfile(lfile):
         return 'fail'
 
-    newkey = {}
     rval = ''
     newkey = _validate_keys(lfile)
-    for k in newkey.keys():
+    for k in iterkeys_(newkey):
         rval += set_auth_key(
                 user,
                 k,
@@ -336,6 +336,7 @@ def set_auth_key_from_file(
         return 'new'
     else:
         return 'no change'
+
 
 def set_auth_key(
         user,

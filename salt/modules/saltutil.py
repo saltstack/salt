@@ -1,6 +1,7 @@
 '''
-The Saltutil module is used to manage the state of the salt minion itself. It is
-used to manage minion modules as well as automate updates to the salt minion
+The Saltutil module is used to manage the state of the salt minion itself. It
+is used to manage minion modules as well as automate updates to the salt
+minion
 '''
 
 # Import Python libs
@@ -12,14 +13,16 @@ import logging
 
 # Import Salt libs
 import salt.payload
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
+
 
 def _sync(form, env):
     '''
     Sync the given directory in the given environment
     '''
-    if isinstance(env, basestring):
+    if isinstance(env, string_types):
         env = env.split(',')
     ret = []
     remote = set()

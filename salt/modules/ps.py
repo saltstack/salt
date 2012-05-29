@@ -14,17 +14,21 @@ try:
 except ImportError:
     has_psutil = False
 
+from salt._compat import iteritems_
+
+
 def __virtual__():
     if not has_psutil:
         return False
 
     # The python 2.6 version of psutil lacks several functions
-    # used in this salt module so instead of spaghetti  string
-    # code to try to bring sanity to everything,  disable  it.
+    # used in this salt module so instead of spaghetti string
+    # code to try to bring sanity to everything,  disable it.
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
         return False
 
     return "ps"
+
 
 def top(num_processes=5, interval=3):
     '''
@@ -46,7 +50,7 @@ def top(num_processes=5, interval=3):
         start_usage[p] = user + sys
     time.sleep(interval)
     usage = set()
-    for p, start in start_usage.iteritems():
+    for p, start in iteritems_(start_usage):
         user, sys = p.get_cpu_times()
         now = user + sys
         diff = now - start
@@ -62,9 +66,9 @@ def top(num_processes=5, interval=3):
         info = {'cmd': cmdline,
                 'pid': p.pid,
                 'create_time': p.create_time}
-        for k, v in p.get_cpu_times()._asdict().iteritems():
+        for k, v in iteritems_(p.get_cpu_times()._asdict()):
             info['cpu.' + k] = v
-        for k, v in p.get_memory_info()._asdict().iteritems():
+        for k, v in iteritems_(p.get_memory_info()._asdict()):
             info['mem.' + k] = v
         result.append(info)
 
@@ -185,10 +189,7 @@ def disk_partitions(all=False):
 
         salt '*' ps.disk_partitions
     '''
-    result = []
-    for partition in psutil.disk_partitions(all):
-        result.append(dict(partition._asdict()))
-    return result
+    return list(dict(p._asdict()) for p in psutil.disk_partitions(all))
 
 
 def disk_usage(path):
@@ -250,6 +251,7 @@ def boot_time():
     '''
     return psutil.BOOT_TIME
 
+
 def network_io_counters():
     '''
     Return network I/O statisitics.
@@ -259,6 +261,7 @@ def network_io_counters():
         salt '*' ps.network_io_counters
     '''
     return dict(psutil.network_io_counters()._asdict())
+
 
 def disk_io_counters():
     '''

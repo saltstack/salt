@@ -8,6 +8,7 @@ import os
 
 # Import Salt libs
 import salt.state
+from salt._compat import string_types
 
 
 __outputter__ = {
@@ -101,7 +102,7 @@ def sls(mods, env='base', test=None, **kwargs):
         opts['test'] = test
     salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts)
-    if isinstance(mods, basestring):
+    if isinstance(mods, string_types):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
     if errors:
@@ -145,6 +146,7 @@ def show_lowstate():
     st_ = salt.state.HighState(__opts__)
     return st_.compile_low_chunks()
 
+
 def show_masterstate():
     '''
     Display the data gathered from the master compiled state
@@ -155,6 +157,7 @@ def show_masterstate():
     '''
     st_ = salt.state.RemoteHighState(__opts__, __grains__)
     return st_.compile_master()
+
 
 def single(fun=None, test=None, **kwargs):
     '''

@@ -5,11 +5,14 @@ Module for gathering and managing network information
 from string import ascii_letters, digits
 import socket
 
+from salt._compat import iteritems_
+
 __outputter__ = {
     'dig':     'txt',
     'ping':    'txt',
     'netstat': 'txt',
 }
+
 
 def __virtual__():
     '''
@@ -185,7 +188,7 @@ def _cidr_to_ipv4_netmask(cidr_bits):
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '%d' % (256-(2**(8-cidr_bits)))
+            netmask += '%d' % (256 - (2 ** (8 - cidr_bits)))
             cidr_bits = 0
     return netmask
 
@@ -214,7 +217,7 @@ def interfaces():
             continue
         if line.startswith('  '):
             comps = line.split(':', 1)
-            config[configname][comps[0].rstrip(' .').strip()] =  comps[1].strip()
+            config[configname][comps[0].rstrip(' .').strip()] = comps[1].strip()
             continue
         if configstart == 1:
             configname = line.strip(' :')
@@ -222,7 +225,7 @@ def interfaces():
             configstart = configstart + 1
             continue
     for iface in ifaces:
-        for key, val in iface.iteritems():
+        for key, val in iteritems_(iface):
             item = {}
             itemdict = {'Physical Address': 'hwaddr',
                         'IPv4 Address': 'ipaddr',
@@ -230,7 +233,7 @@ def interfaces():
                         'Subnet Mask': 'netmask',
                         }
             item['broadcast'] = None
-            for k, v in itemdict.iteritems():
+            for k, v in iteritems_(itemdict):
                 if k in val:
                     item[v] = val[k].rstrip('(Preferred)')
             if 'IPv4 Address' in val:
