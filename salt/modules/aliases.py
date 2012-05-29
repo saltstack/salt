@@ -54,7 +54,7 @@ def __write_aliases_file(lines):
 
     out = tempfile.NamedTemporaryFile(dir=adir, delete=False)
 
-    if not __opts__['integration.test']:
+    if not __opts__.get('integration.test', False):
         if os.path.isfile(afn):
             st = os.stat(afn)
             os.chmod(out.name, stat.S_IMODE(st.st_mode))
