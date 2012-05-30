@@ -8,7 +8,7 @@ import os
 
 # Import Salt libs
 import salt.state
-
+from salt._compat import string_types
 
 __outputter__ = {
                  'highstate': 'highstate',
@@ -101,7 +101,7 @@ def sls(mods, env='base', test=None, **kwargs):
         opts['test'] = test
     salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts)
-    if isinstance(mods, basestring):
+    if isinstance(mods, string_types):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
     if errors:

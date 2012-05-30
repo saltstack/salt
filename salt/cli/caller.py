@@ -13,6 +13,7 @@ import salt
 import salt.utils
 import salt.loader
 import salt.minion
+from salt._compat import string_types
 
 # Custom exceptions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -55,7 +56,7 @@ class Caller(object):
             sys.exit(1)
         if hasattr(self.minion.functions[fun], '__outputter__'):
             oput = self.minion.functions[fun].__outputter__
-            if isinstance(oput, basestring):
+            if isinstance(oput, string_types):
                 ret['out'] = oput
         return ret
 

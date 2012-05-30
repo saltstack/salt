@@ -5,6 +5,8 @@ Salt module to manage unix mounts and the fstab file
 import logging
 import os
 
+from salt._compat import string_types
+
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -194,7 +196,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
-    if isinstance(opts, basestring):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
@@ -217,7 +219,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
-    if isinstance(opts, basestring):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
     mnts = active()
     if name in mnts:
