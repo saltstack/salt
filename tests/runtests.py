@@ -22,6 +22,9 @@ PNUM = 50
 
 
 def run_suite(opts, path, display_name, suffix='[!_]*.py'):
+    '''
+    Execute a unit test suite
+    '''
     loader = saltunittest.TestLoader()
     if opts.name:
         tests = loader.loadTestsFromName(opts.name)
@@ -39,6 +42,9 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
 
 
 def run_integration_suite(opts, suite_folder, display_name):
+    '''
+    Run an integration test suite
+    '''
     path = os.path.join(TEST_DIR, 'integration', suite_folder)
     return run_suite(opts, path, display_name)
 
@@ -58,6 +64,8 @@ def run_integration_tests(opts):
         if opts.name:
             results = run_suite(opts, '', opts.name)
             status.append(results)
+        if opts.runner:
+            status.append(run_integration_suite(opts, 'runners', 'Runner'))
         if opts.module:
             status.append(run_integration_suite(opts, 'modules', 'Module'))
         if opts.state:
@@ -66,8 +74,6 @@ def run_integration_tests(opts):
             status.append(run_integration_suite(opts, 'client', 'Client'))
         if opts.shell:
             status.append(run_integration_suite(opts, 'shell', 'Shell'))
-        if opts.runner:
-            status.append(run_integration_suite(opts, 'runners', 'Runner'))
     return status
 
 
