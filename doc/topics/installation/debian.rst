@@ -72,7 +72,7 @@ pending keys type in the following command:
 From here you will should see a key name underneath the Unaccepted Keys 
 portion. To sign the minion key to the master type in the following command:
 
-.. code-block:: baash
+.. code-block:: bash
 
     sudo salt-key -a $minion
 
