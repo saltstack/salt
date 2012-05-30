@@ -31,7 +31,7 @@ in depth how the data is laid out.
 .. _`dictionaries`: http://docs.python.org/glossary.html#term-dictionary
 .. _`lists`: http://docs.python.org/glossary.html#term-list
 .. _`strings`: http://docs.python.org/library/stdtypes.html#typesseq
-.. _`numbers: http://docs.python.org/library/stdtypes.html#numeric-types-int-float-long-complex
+.. _`numbers`: http://docs.python.org/library/stdtypes.html#numeric-types-int-float-long-complex
 
 Default Data - YAML
 ===================
