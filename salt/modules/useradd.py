@@ -10,7 +10,15 @@ def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
-    return 'user' if __grains__['kernel'] == 'Linux' else False
+    import sys
+    if __grains__['kernel'] == 'Darwin':
+        mod = sys.modules[__name__]
+        for attr in dir(mod):
+
+            if callable(getattr(mod, attr)):
+                if not attr in ('info', 'list_groups', '__virtual__'):
+                    delattr(mod, attr)
+    return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
 
 def add(name,
