@@ -16,7 +16,7 @@ except:
 
 # Import Salt libs
 import salt.utils
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_
 from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
@@ -85,7 +85,7 @@ class HighStateOutputter(Outputter):
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
                 # Verify that the needed data is present
-                for tname, info in data[host].items():
+                for tname, info in iteritems_(data[host]):
                     if not '__run_num__' in info:
                         err = ('The State execution failed to record the order '
                                'in which all states were executed. The state '

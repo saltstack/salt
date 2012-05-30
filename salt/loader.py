@@ -12,6 +12,8 @@ import imp
 import salt
 import logging
 import tempfile
+
+from salt._compat import iteritems_
 from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ def minion_mods(opts):
     functions = load.apply_introspection(load.gen_functions())
     if opts.get('providers', False):
         if isinstance(opts['providers'], dict):
-            for mod, provider in opts['providers'].items():
+            for mod, provider in iteritems_(opts['providers']):
                 funcs = raw_mod(opts,
                         provider,
                         functions)
@@ -184,7 +186,7 @@ class Loader(object):
         Strip out of the opts any logger instance
         '''
         mod_opts = {}
-        for key, val in opts.items():
+        for key, val in iteritems_(opts):
             if key in ('logger', 'grains'):
                 continue
             mod_opts[key] = val
@@ -474,7 +476,7 @@ class Loader(object):
         '''
         funcs = {}
         gen = self.gen_functions(pack) if pack else self.gen_functions()
-        for key, fun in gen.items():
+        for key, fun in iteritems_(gen):
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
         return funcs
@@ -485,7 +487,7 @@ class Loader(object):
         used to generate the grains
         '''
         funcs = {}
-        for key, fun in self.gen_functions().items():
+        for key, fun in iteritems_(self.gen_functions()):
             funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
 
@@ -497,14 +499,14 @@ class Loader(object):
         '''
         grains = {}
         funcs = self.gen_functions()
-        for key, fun in funcs.items():
+        for key, fun in iteritems_(funcs):
             if not key[key.index('.') + 1:] == 'core':
                 continue
             ret = fun()
             if not isinstance(ret, dict):
                 continue
             grains.update(ret)
-        for key, fun in funcs.items():
+        for key, fun in iteritems_(funcs):
             if key[key.index('.') + 1:] == 'core':
                 continue
             try:

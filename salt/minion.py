@@ -26,7 +26,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
-from salt._compat import string_types, range
+from salt._compat import string_types, iteritems_, range
 from salt.utils.debug import enable_sigusr1_handler
 
 log = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ def detect_kwargs(func, args, data=None):
         _args.append(arg)
     if has_kwargs and isinstance(data, dict):
         # this function accepts kwargs, pack in the publish data
-        for key, val in data.items():
+        for key, val in iteritems_(data):
             kwargs['__pub_{0}'.format(key)] = val
     return _args, kwargs
 
@@ -148,7 +148,7 @@ class Minion(object):
         Returns a deep copy of the opts with key bits stripped out
         '''
         mod_opts = {}
-        for key, val in self.opts.items():
+        for key, val in iteritems_(self.opts):
             if key == 'logger':
                 continue
             mod_opts[key] = val
@@ -383,7 +383,7 @@ class Minion(object):
                     'jid': ret['jid'],
                     'id': self.opts['id']}
             load['return'] = {}
-            for key, value in ret.items():
+            for key, value in iteritems_(ret):
                 if key == 'jid' or key == 'fun':
                     continue
                 load['return'][key] = value

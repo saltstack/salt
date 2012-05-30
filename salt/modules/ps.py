@@ -14,6 +14,9 @@ try:
 except ImportError:
     has_psutil = False
 
+from salt._compat import iteritems_
+
+
 def __virtual__():
     if not has_psutil:
         return False
@@ -46,7 +49,7 @@ def top(num_processes=5, interval=3):
         start_usage[p] = user + sys
     time.sleep(interval)
     usage = set()
-    for p, start in start_usage.iteritems():
+    for p, start in iteritems_(start_usage):
         user, sys = p.get_cpu_times()
         now = user + sys
         diff = now - start
@@ -62,9 +65,9 @@ def top(num_processes=5, interval=3):
         info = {'cmd': cmdline,
                 'pid': p.pid,
                 'create_time': p.create_time}
-        for k, v in p.get_cpu_times()._asdict().iteritems():
+        for k, v in iteritems_(p.get_cpu_times()._asdict()):
             info['cpu.' + k] = v
-        for k, v in p.get_memory_info()._asdict().iteritems():
+        for k, v in iteritems_(p.get_memory_info()._asdict()):
             info['mem.' + k] = v
         result.append(info)
 

@@ -12,6 +12,8 @@ import shutil
 import StringIO
 import subprocess
 from xml.dom import minidom
+
+from salt._compat import iteritems_
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -528,7 +530,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
-    for dev, data in disks.items():
+    for dev, data in iteritems_(disks):
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]

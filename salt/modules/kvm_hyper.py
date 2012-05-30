@@ -28,7 +28,7 @@ import yaml
 
 # Import Salt Modules
 import salt.utils
-from salt._compat import range
+from salt._compat import iteritems_, range
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -280,8 +280,8 @@ def _gen_xml(name,
     data = data.replace('%%MEM%%', str(int(mem) * 1024))
     data = data.replace('%%VDA%%', vda)
     nics = ''
-    for interface, data in network.items():
-        for bridge, mac in data.items():
+    for interface, data in iteritems_(network):
+        for bridge, mac in iteritems_(data):
             if not mac:
                 # Generate this interface's mac addr, use the qemu default
                 # prefix, 52:54
