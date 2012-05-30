@@ -4,6 +4,7 @@ Manage users with the useradd command
 
 import grp
 import pwd
+from salt._compat import string_types
 
 
 def __virtual__():
@@ -41,7 +42,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'useradd '
     if shell:
@@ -211,7 +212,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):

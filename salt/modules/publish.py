@@ -7,6 +7,7 @@ import ast
 
 import salt.crypt
 import salt.payload
+from salt._compat import string_types
 
 
 def _get_socket():
@@ -56,7 +57,7 @@ def _publish(
         if isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
     except:
-        if isinstance(arg, basestring):
+        if isinstance(arg, string_types):
             arg = arg.split(',')
 
     auth = salt.crypt.SAuth(__opts__)
@@ -129,7 +130,7 @@ def runner(fun, arg=None):
         if isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
     except:
-        if isinstance(arg, basestring):
+        if isinstance(arg, string_types):
             arg = arg.split(',')
 
     auth = salt.crypt.SAuth(__opts__)

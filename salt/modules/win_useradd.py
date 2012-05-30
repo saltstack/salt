@@ -4,6 +4,9 @@ Manage Windows users with the net user command
 NOTE: This currently only works with local user accounts, not domain accounts
 '''
 
+from salt._compat import string_types
+
+
 def __virtual__():
     '''
     Set the user module if the kernel is Windows
@@ -142,7 +145,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):

@@ -4,6 +4,7 @@ Module for viewing and modifying sysctl parameters
 
 import re
 import os
+from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
 
 __outputter__ = {
@@ -116,11 +117,11 @@ def persist(name, value, config='/etc/sysctl.conf'):
         # other sysctl with whitespace in it consistently uses 1 tab.  Lets
         # allow our users to put a space or tab between multi-value sysctls
         # and have salt not try to set it every single time.
-        if isinstance(comps[1], basestring) and ' ' in comps[1]:
+        if isinstance(comps[1], string_types) and ' ' in comps[1]:
             comps[1] = re.sub('\s+', '\t', comps[1])
 
         # Do the same thing for the value 'just in case'
-        if isinstance(value, basestring) and ' ' in value:
+        if isinstance(value, string_types) and ' ' in value:
             value = re.sub('\s+', '\t', value)
 
         if len(comps) < 2:
