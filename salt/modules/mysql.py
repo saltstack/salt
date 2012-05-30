@@ -26,6 +26,8 @@ try:
 except ImportError:
     has_mysqldb = False
 
+from salt._compat import range
+
 log = logging.getLogger(__name__)
 __opts__ = {}
 
@@ -116,7 +118,7 @@ def status():
     db = connect()
     cur = db.cursor()
     cur.execute('SHOW STATUS')
-    for i in xrange(cur.rowcount):
+    for i in range(cur.rowcount):
         row = cur.fetchone()
         ret[row[0]] = row[1]
     return ret

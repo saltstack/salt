@@ -4,6 +4,8 @@ Manage the information in the hosts file
 
 import os
 
+from salt._compat import range
+
 def __get_hosts_filename():
     '''
     Return the path to the appropriate hosts file

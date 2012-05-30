@@ -6,6 +6,8 @@ from string import ascii_letters, digits
 import socket
 import re
 
+from salt._compat import range
+
 __outputter__ = {
     'dig':     'txt',
     'ping':    'txt',

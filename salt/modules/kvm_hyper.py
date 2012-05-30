@@ -28,6 +28,7 @@ import yaml
 
 # Import Salt Modules
 import salt.utils
+from salt._compat import range
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",

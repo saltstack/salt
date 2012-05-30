@@ -29,7 +29,7 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
-from salt._compat import string_types
+from salt._compat import string_types, range
 
 from salt.template import (
     compile_template,

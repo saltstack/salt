@@ -7,6 +7,8 @@ import fnmatch
 import os
 import re
 
+from salt._compat import range
+
 __opts__ = {}
 
 

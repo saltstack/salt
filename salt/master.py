@@ -34,6 +34,7 @@ import salt.payload
 import salt.pillar
 import salt.state
 import salt.runner
+from salt._compat import range
 from salt.utils.debug import enable_sigusr1_handler
 
 

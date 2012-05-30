@@ -4,6 +4,7 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 import socket
+from salt._compat import range
 
 __outputter__ = {
     'dig':     'txt',

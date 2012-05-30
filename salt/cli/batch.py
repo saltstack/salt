@@ -9,6 +9,7 @@ import copy
 # Import Salt libs
 import salt.client
 import salt.output
+from salt._compat import range
 
 
 class Batch(object):

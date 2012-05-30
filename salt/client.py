@@ -42,6 +42,7 @@ import zmq
 import salt.config
 import salt.payload
 import salt.utils
+from salt._compat import range
 from salt.exceptions import SaltClientError, SaltInvocationError
 
 # Try to import range from https://github.com/ytoolshed/range
