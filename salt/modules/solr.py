@@ -66,6 +66,7 @@ import os
 
 # Import Salt libs
 import salt.utils
+from salt._compat import string_types
 
 #sane defaults
 __opts__ = {'solr.cores': [],
@@ -113,7 +114,7 @@ def _get_none_or_value(value):
     elif not value:
         return value
     # if it's a string, and it's not empty check for none
-    elif isinstance(value, basestring):
+    elif isinstance(value, string_types):
         if value.lower() == 'none':
             return None
         return value
