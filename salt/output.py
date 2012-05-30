@@ -16,6 +16,7 @@ except:
 
 # Import Salt libs
 import salt.utils
+from salt._compat import string_types
 from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
@@ -130,7 +131,7 @@ class HighStateOutputter(Outputter):
                         ))
                     changes = '        Changes:   '
                     for key in ret['changes']:
-                        if isinstance(ret['changes'][key], basestring):
+                        if isinstance(ret['changes'][key], string_types):
                             changes += (key + ': ' + ret['changes'][key] +
                                         '\n                   ')
                         elif isinstance(ret['changes'][key], dict):
