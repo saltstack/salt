@@ -4,6 +4,9 @@ Manage Django sites
 
 import os
 
+from salt._compat import iteritems_
+
+
 def _get_django_admin(bin_env):
     '''
     Return the django admin
@@ -36,7 +39,7 @@ def command(settings_module,
     for arg in args:
         cmd = '{0} --{1}'.format(cmd, arg)
 
-    for key, value in kwargs.iteritems():
+    for key, value in iteritems_(kwargs):
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
 

@@ -13,7 +13,7 @@ import salt
 import salt.utils
 import salt.loader
 import salt.minion
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_
 
 # Custom exceptions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -65,7 +65,7 @@ class Caller(object):
         Pick up the documentation for all of the modules and print it out.
         '''
         docs = {}
-        for name, func in self.minion.functions.items():
+        for name, func in iteritems_(self.minion.functions):
             if name not in docs:
                 if func.__doc__:
                     docs[name] = func.__doc__

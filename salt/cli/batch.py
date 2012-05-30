@@ -9,6 +9,7 @@ import copy
 # Import Salt libs
 import salt.client
 import salt.output
+from salt._compat import iteritems_
 
 
 class Batch(object):
@@ -124,7 +125,7 @@ class Batch(object):
                 except StopIteration:
                     # remove the iter, it is done
                     pass
-            for minion, data in parts.items():
+            for minion, data in iteritems_(parts):
                 active.remove(minion)
                 ret[minion] = data['ret']
                 data[minion] = data.pop('ret')

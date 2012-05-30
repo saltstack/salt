@@ -87,6 +87,7 @@ import stat
 import sys
 import time
 
+from salt._compat import iteritems_
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -494,7 +495,7 @@ class Finder(object):
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
-        for key, value in options.iteritems():
+        for key, value in iteritems_(options):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue

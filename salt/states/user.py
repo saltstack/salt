@@ -20,6 +20,8 @@ as either absent or present
           - games
 '''
 
+from salt._compat import iteritems_
+
 
 def _changes(
         name,
@@ -195,14 +197,14 @@ def present(
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in changes.items():
+            for key, val in iteritems_(changes):
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
         if __grains__['os'] != 'FreeBSD':
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
-        for key, val in changes.items():
+        for key, val in iteritems_(changes):
             if key == 'passwd':
                 __salt__['shadow.set_password'](name, password)
                 continue

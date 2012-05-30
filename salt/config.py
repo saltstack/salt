@@ -22,6 +22,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.pillar
+from salt._compat import iteritems_
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def _validate_file_roots(file_roots):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': ['/srv/salt']}
-    for env, dirs in list(file_roots.items()):
+    for env, dirs in list(iteritems_(file_roots)):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             file_roots[env] = []
     return file_roots

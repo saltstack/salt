@@ -7,6 +7,7 @@ import os
 # Import salt libs
 import salt.minion
 import salt.fileclient
+from salt._compat import iteritems_
 
 
 def recv(files, dest):
@@ -16,7 +17,7 @@ def recv(files, dest):
     This function receives small fast copy files from the master via salt-cp
     '''
     ret = {}
-    for path, data in files.items():
+    for path, data in iteritems_(files):
         final = ''
         if os.path.basename(path) == os.path.basename(dest)\
                 and not os.path.isdir(dest):

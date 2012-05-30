@@ -6,6 +6,9 @@ from string import ascii_letters, digits
 import socket
 import re
 
+from salt._compat import iteritems_
+
+
 __outputter__ = {
     'dig':     'txt',
     'ping':    'txt',
@@ -358,7 +361,7 @@ def ipaddr(interface=None):
     if not interface:
         result_dict = {}
 
-        for interface, data in interfaces_dict.items():
+        for interface, data in iteritems_(interfaces_dict):
             if data.get('ipaddr'):
                 result_dict[interface] = data.get('ipaddr')
 

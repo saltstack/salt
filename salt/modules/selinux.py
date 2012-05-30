@@ -6,7 +6,7 @@ import os
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_
 
 __selinux_fs_path__ = None
 
@@ -124,7 +124,7 @@ def setsebools(pairs, persist=False):
         cmd = 'setsebool -P '
     else:
         cmd = 'setsebool '
-    for boolean, value in pairs.items():
+    for boolean, value in iteritems_(pairs):
         cmd = '{0} {1}={2}'.format(cmd, boolean, value)
     return not __salt__['cmd.retcode'](cmd)
 

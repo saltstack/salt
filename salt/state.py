@@ -29,7 +29,7 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_
 
 from salt.template import (
     compile_template,
@@ -370,7 +370,7 @@ class State(object):
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
-        for name, body in high.items():
+        for name, body in iteritems_(high):
             if name.startswith('__'):
                 continue
             if not isinstance(name, string_types):
@@ -383,7 +383,7 @@ class State(object):
                        .format(name, body['__sls__']))
                 errors.append(err)
                 continue
-            for state, run in body.items():
+            for state, run in iteritems_(body):
                 if state.startswith('__'):
                     continue
                 if not isinstance(body[state], list):
@@ -563,10 +563,10 @@ class State(object):
         the individual state executor structures
         '''
         chunks = []
-        for name, body in high.items():
+        for name, body in iteritems_(high):
             if name.startswith('__'):
                 continue
-            for state, run in body.items():
+            for state, run in iteritems_(body):
                 funcs = set()
                 names = set()
                 if state.startswith('__'):
@@ -583,7 +583,7 @@ class State(object):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
-                        for key, val in arg.items():
+                        for key, val in iteritems_(arg):
                             if key == 'names':
                                 names.update(val)
                                 continue
@@ -613,7 +613,7 @@ class State(object):
             return high, errors
         ext = high.pop('__extend__')
         for ext_chunk in ext:
-            for name, body in ext_chunk.items():
+            for name, body in iteritems_(ext_chunk):
                 if name not in high:
                     errors.append(
                         'Extension {0} is not part of the high state'.format(
@@ -621,7 +621,7 @@ class State(object):
                             )
                         )
                     continue
-                for state, run in body.items():
+                for state, run in iteritems_(body):
                     if state.startswith('__'):
                         continue
                     if state not in high[name]:
@@ -667,8 +667,8 @@ class State(object):
         req_in = set(['require_in', 'watch_in', 'use', 'use_in'])
         req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
-        for id_, body in high.items():
-            for state, run in body.items():
+        for id_, body in iteritems_(high):
+            for state, run in iteritems_(body):
                 if state.startswith('__'):
                     continue
                 for arg in run:
@@ -687,7 +687,7 @@ class State(object):
                         items = arg[key]
                         if isinstance(items, dict):
                             # Formated as a single req_in
-                            for _state, name in items.items():
+                            for _state, name in iteritems_(items):
 
                                 # Not a use requisite_in
                                 found = False
@@ -780,7 +780,7 @@ class State(object):
                                         {rkey: [{state: id_}]}
                                         )
         high['__extend__'] = []
-        for key, val in extend.items():
+        for key, val in iteritems_(extend):
             high['__extend__'].append({key: val})
         return self.reconcile_extend(high)
 
@@ -876,7 +876,7 @@ class State(object):
                     if not found:
                         return 'unmet'
         fun_stats = set()
-        for r_state, chunks in reqs.items():
+        for r_state, chunks in iteritems_(reqs):
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in running:
@@ -930,7 +930,7 @@ class State(object):
                         lost[requisite].append(req)
             if lost['require'] or lost['watch']:
                 comment = 'The following requisites were not found:\n'
-                for requisite, lreqs in lost.items():
+                for requisite, lreqs in iteritems_(lost):
                     for lreq in lreqs:
                         comment += '{0}{1}: {2}\n'.format(' ' * 19,
                                 requisite,
@@ -1107,7 +1107,7 @@ class BaseHighState(object):
                         )
 
         # Search initial top files for includes
-        for env, ctops in tops.items():
+        for env, ctops in iteritems_(tops):
             for ctop in ctops:
                 if not 'include' in ctop:
                     continue
@@ -1117,7 +1117,7 @@ class BaseHighState(object):
         # Go through the includes and pull out the extra tops and add them
         while include:
             pops = []
-            for env, states in include.items():
+            for env, states in iteritems_(include):
                 pops.append(env)
                 if not states:
                     continue
@@ -1147,9 +1147,9 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = collections.defaultdict(dict)
-        for sourceenv, ctops in tops.items():
+        for sourceenv, ctops in iteritems_(tops):
             for ctop in ctops:
-                for env, targets in ctop.items():
+                for env, targets in iteritems_(ctop):
                     if env == 'include':
                         continue
                     for tgt in targets:
@@ -1176,7 +1176,7 @@ class BaseHighState(object):
             errors.append('Top data was not formed as a dict')
             # No further checks will work, bail out
             return errors
-        for env, matches in tops.items():
+        for env, matches in iteritems_(tops):
             if env == 'include':
                 continue
             if not isinstance(env, string_types):
@@ -1189,11 +1189,11 @@ class BaseHighState(object):
                 err = ('The top file matches for environment {0} are not '
                        'laid out as a dict').format(env)
                 errors.append(err)
-            for match, slsmods in matches.items():
+            for match, slsmods in iteritems_(matches):
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
-                        for key, val in slsmod.items():
+                        for key, val in iteritems_(slsmod):
                             if not val:
                                 err = ('Improperly formatted top file matcher '
                                        'in environment {0}: {1} file'.format(
@@ -1227,11 +1227,11 @@ class BaseHighState(object):
         {'env': ['state1', 'state2', ...]}
         '''
         matches = {}
-        for env, body in top.items():
+        for env, body in iteritems_(top):
             if self.opts['environment']:
                 if not env == self.opts['environment']:
                     continue
-            for match, data in body.items():
+            for match, data in iteritems_(body):
                 if self.matcher.confirm_top(
                         match,
                         data,
@@ -1391,7 +1391,7 @@ class BaseHighState(object):
         '''
         highstate = {}
         errors = []
-        for env, states in matches.items():
+        for env, states in iteritems_(matches):
             mods = set()
             for sls_match in states:
                 for sls in fnmatch.filter(self.avail[env], sls_match):
@@ -1418,7 +1418,7 @@ class BaseHighState(object):
         if '__extend__' in highstate:
             highext = []
             for ext in highstate['__extend__']:
-                for key, val in ext.items():
+                for key, val in iteritems_(ext):
                     exists = False
                     for hext in highext:
                         if hext == {key: val}:

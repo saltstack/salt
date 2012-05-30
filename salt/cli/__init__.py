@@ -15,7 +15,7 @@ import salt.cli.batch
 import salt.client
 import salt.output
 import salt.runner
-
+from salt._compat import iteritems_
 from salt.utils.verify import verify_env
 from salt import __version__ as VERSION
 from salt.exceptions import SaltInvocationError, SaltClientError, \
@@ -198,7 +198,7 @@ class SaltCMD(object):
 
         opts = {}
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if v is not None:
                 opts[k] = v
 
@@ -369,7 +369,7 @@ class SaltCMD(object):
         '''
         ret = {}
         out = ''
-        for key, data in full_ret.items():
+        for key, data in iteritems_(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
@@ -472,7 +472,7 @@ class SaltCP(object):
 
         opts = {}
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if v is not None:
                 opts[k] = v
 
@@ -641,7 +641,7 @@ class SaltKey(object):
         opts = {}
         opts.update(salt.config.master_config(options.conf_file))
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if k == 'keysize':
                 if v < 2048:
                     opts[k] = v
@@ -748,7 +748,7 @@ class SaltCall(object):
         opts = {}
         opts.update(salt.config.minion_config(options.conf_file))
 
-        for k, v in options.__dict__.items():
+        for k, v in iteritems_(options.__dict__):
             if k == 'module_dirs':
                 opts[k] = v.split(',')
             else:

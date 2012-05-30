@@ -16,6 +16,7 @@ from calendar import month_abbr as months
 # Import Salt libs
 import salt.minion
 import salt.payload
+from salt._compat import iteritems_
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
@@ -177,7 +178,7 @@ def daemonize_if(opts, **kwargs):
         return
     # Daemonizing breaks the proc dir, so the proc needs to be rewritten
     data = {}
-    for key, val in kwargs.items():
+    for key, val in iteritems_(kwargs):
         if key.startswith('__pub_'):
             data[key[6:]] = val
     if not 'jid' in data:
