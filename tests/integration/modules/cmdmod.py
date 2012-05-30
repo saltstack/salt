@@ -21,7 +21,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(
                 self.run_function('cmd.run',
                     ['echo $SHELL', 'shell={0}'.format(shell)]),
-                shell)
+                shell + '\n')
 
     def test_stdout(self):
         '''
@@ -30,7 +30,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(
                 self.run_function('cmd.run_stdout',
                     ['echo "cheese"']),
-                'cheese')
+                'cheese\n')
 
     def test_stderr(self):
         '''
@@ -39,7 +39,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(
                 self.run_function('cmd.run_stderr',
                     ['echo "cheese" 1>&2']),
-                'cheese')
+                'cheese\n')
 
     def test_run_all(self):
         '''
@@ -54,7 +54,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue(isinstance(ret.get('retcode'), int))
         self.assertTrue(isinstance(ret.get('stdout'), basestring))
         self.assertTrue(isinstance(ret.get('stderr'), basestring))
-        self.assertEqual(ret.get('stderr'), 'cheese')
+        self.assertEqual(ret.get('stderr'), 'cheese\n')
 
     def test_retcode(self):
         '''
@@ -68,7 +68,7 @@ class CMDModuleTest(integration.ModuleCase):
         cmd.which
         '''
         self.assertEqual(
-                self.run_function('cmd.which', ['echo']),
+                self.run_function('cmd.which', ['echo']) + '\n',
                 self.run_function('cmd.run', ['which echo']))
 
     def test_has_exec(self):
