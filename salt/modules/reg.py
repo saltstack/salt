@@ -49,9 +49,9 @@ def __virtual__():
 
 def read_key(hkey, path, key):
     '''
-        Read registry key value
+    Read registry key value
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.read_key HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version'
     '''
@@ -68,9 +68,9 @@ def read_key(hkey, path, key):
 
 def set_key(hkey, path, key, value):
     '''
-        Set a registry key
+    Set a registry key
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
@@ -92,9 +92,9 @@ def set_key(hkey, path, key, value):
 
 def create_key(hkey, path, key, value=None):
     '''
-        Create a registry key
+    Create a registry key
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
@@ -116,11 +116,11 @@ def create_key(hkey, path, key, value=None):
 
 def delete_key(hkey, path, key):
     '''
-        Delete a registry key
+    Delete a registry key
 
-        Note: This cannot delete a key with subkeys
+    Note: This cannot delete a key with subkeys
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
