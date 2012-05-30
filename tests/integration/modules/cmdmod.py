@@ -20,8 +20,8 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('cmd.run', ['echo $SHELL']))
         self.assertEqual(
                 self.run_function('cmd.run',
-                    ['echo $SHELL', 'shell={0}'.format(shell)]),
-                shell + '\n')
+                    ['echo $SHELL', 'shell={0}'.format(shell)]).rstrip(),
+                shell)
 
     def test_stdout(self):
         '''
@@ -29,8 +29,8 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         self.assertEqual(
                 self.run_function('cmd.run_stdout',
-                    ['echo "cheese"']),
-                'cheese\n')
+                    ['echo "cheese"']).rstrip(),
+                'cheese')
 
     def test_stderr(self):
         '''
@@ -38,8 +38,8 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         self.assertEqual(
                 self.run_function('cmd.run_stderr',
-                    ['echo "cheese" 1>&2']),
-                'cheese\n')
+                    ['echo "cheese" 1>&2']).rstrip(),
+                'cheese')
 
     def test_run_all(self):
         '''
@@ -54,7 +54,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue(isinstance(ret.get('retcode'), int))
         self.assertTrue(isinstance(ret.get('stdout'), basestring))
         self.assertTrue(isinstance(ret.get('stderr'), basestring))
-        self.assertEqual(ret.get('stderr'), 'cheese\n')
+        self.assertEqual(ret.get('stderr').rstrip(), 'cheese')
 
     def test_retcode(self):
         '''
@@ -68,8 +68,8 @@ class CMDModuleTest(integration.ModuleCase):
         cmd.which
         '''
         self.assertEqual(
-                self.run_function('cmd.which', ['echo']) + '\n',
-                self.run_function('cmd.run', ['which echo']))
+                self.run_function('cmd.which', ['echo']).rstrip(),
+                self.run_function('cmd.run', ['which echo']).rstrip())
 
     def test_has_exec(self):
         '''
@@ -90,7 +90,7 @@ import sys
 sys.stdout.write('cheese')
         '''
         self.assertEqual(
-                self.run_function('cmd.exec_code', ['python', code]),
+                self.run_function('cmd.exec_code', ['python', code]).rstrip(),
                 'cheese'
                 )
 
