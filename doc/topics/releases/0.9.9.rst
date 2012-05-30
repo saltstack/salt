@@ -265,7 +265,7 @@ and then use the minionswarm.py script in the tests directory to spin up
 as many minions as you want. Remember, this is a fork bomb, don't spin up more
 than your hardware can handle!
 
-.. code-block::
+.. code-block:: bash
 
     # python minionswarm.py -m 20 --master salt-master
 
