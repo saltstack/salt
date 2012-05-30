@@ -24,7 +24,8 @@ def add(name,
         workphone=None,
         homephone=None,
         other=None,
-        unique=True):
+        unique=True,
+        system=False):
     '''
     Add a user to the minion
 
@@ -44,12 +45,15 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home:
-        if home is True:
-            cmd += '-m '
+        if home is not True:
+            cmd += '-d {0} '.format(home)
         else:
-            cmd += '-m -d {0} '.format(home)
+            if not system:
+                cmd += '-m '
     if not unique:
         cmd += '-o '
+    if system:
+        cmd += '-r '
     cmd += name
     ret = __salt__['cmd.retcode'](cmd)
     if ret != 0:
