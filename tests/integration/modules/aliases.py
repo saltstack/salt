@@ -1,7 +1,5 @@
 # Import python libs
-import os
 import sys
-import hashlib
 
 # Import salt libs
 from saltunittest import TestLoader, TextTestRunner
@@ -72,3 +70,11 @@ class AliasesTest(integration.ModuleCase):
                 'aliases.list_aliases')
         self.assertIsInstance(tgt_ret, dict)
         self.assertNotIn('alias=frank', tgt_ret)
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(AliasesTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())
