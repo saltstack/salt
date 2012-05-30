@@ -111,19 +111,17 @@ def _run(cmd,
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
-    out = proc.communicate()
+    stdout, stderr = proc.communicate()
 
     if rstrip:
-        # Cast out to a list as proc.communicate() returns a tuple
-        out = list(out)
-        if out[0]:
-            out[0] = out[0].rstrip()
+        if stdout:
+            stdout = stdout.rstrip()
         # None lacks a rstrip() method
-        if out[1]:
-            out[1] = out[1].rstrip()
+        if stderr:
+            stderr = stderr.rstrip()
 
-    ret['stdout']  = out[0]
-    ret['stderr']  = out[1]
+    ret['stdout']  = stdout
+    ret['stderr']  = stderr
     ret['pid']     = proc.pid
     ret['retcode'] = proc.returncode
     return ret
