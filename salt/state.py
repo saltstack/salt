@@ -114,33 +114,6 @@ def find_name(name, state, high):
     return ext_id
 
 
-def build_args(func, args, data=None):
-    '''
-    Build the args and kwargs
-    '''
-    spec_args, _, kwarg_spec, _ = _getargs(func)
-
-    _args = []
-    _kw = {}
-    for arg in args:
-        if isinstance(arg, basestring):
-            arg = arg.split('=', 1)
-            arg_len = len(arg)
-            if arg_len == 2:
-                k, v = arg
-                if k in spec_args:
-                    _kw[k] = v
-            else:
-                _args.append(arg[0])
-        else:
-            _args.append(arg)
-    if kwarg_spec and isinstance(data, dict):
-        # this function accepts kwargs, pack in the publish data
-        for key, val in data.items():
-            _kw['__pub_{0}'.format(key)] = val
-    return _args, _kw
-
-
 def format_log(ret):
     '''
     Format the state into a log message
