@@ -14,6 +14,7 @@ try:
     import salt.config
     from salt.utils.process import set_pidfile
     from salt.utils.verify import check_user, verify_env
+    from salt._compat import iteritems_
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
@@ -93,7 +94,7 @@ class Master(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in iteritems_(self.opts['log_granular_levels']):
             salt.log.set_logger_level(name, level)
         import logging
         log = logging.getLogger(__name__)
@@ -181,7 +182,7 @@ class Minion(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in iteritems_(self.opts['log_granular_levels']):
             salt.log.set_logger_level(name, level)
         import logging
         # Late import so logging works correctly
@@ -300,7 +301,7 @@ class Syndic(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in iteritems_(self.opts['log_granular_levels']):
             salt.log.set_logger_level(name, level)
 
         import logging

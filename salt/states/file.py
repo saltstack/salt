@@ -88,7 +88,7 @@ import copy
 
 # Import Salt libs
 import salt.utils.templates
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_
 
 logger = logging.getLogger(__name__)
 
@@ -471,7 +471,7 @@ def _check_recurse(
     if changes:
         comment = 'The following files are set to change:\n'
         for fn_ in changes:
-            for key, val in changes[fn_].items():
+            for key, val in iteritems_(changes[fn_]):
                 comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} in in the correct state'.format(name)
@@ -515,7 +515,7 @@ def _check_directory(
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
-            for key, val in changes[fn_].items():
+            for key, val in iteritems_(changes[fn_]):
                 comment += '{0}: {1} - {2}'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
@@ -560,7 +560,7 @@ def _check_managed(
     changes = _check_file_meta(name, sfn, source_sum, user, group, mode)
     if changes:
         comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
+        for key, val in iteritems_(changes):
             comment += '{0}: {1}\n'.format(key, val)
         return None, comment
     return True, 'The file {0} is in the correct state'.format(name)
@@ -587,7 +587,7 @@ def _check_dir_meta(
         changes['mode'] = mode
     if changes:
         comment = 'The following values are set to be changed:\n'
-        for key, val in changes.items():
+        for key, val in iteritems_(changes):
             comment += '{0}: {1}\n'.format(key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)

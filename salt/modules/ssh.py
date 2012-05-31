@@ -6,6 +6,8 @@ import re
 import binascii
 import hashlib
 
+from salt._compat import range
+
 
 def _refine_enc(enc):
     '''
@@ -13,8 +15,8 @@ def _refine_enc(enc):
     type. ecdsa defaults to 256 bits, must give full ecdsa enc schema string if
     using higher enc. If the type is not found, return ssh-rsa, the ssh default.
     '''
-    rsa   = ['r', 'rsa', 'ssh-rsa']
-    dss   = ['d', 'dsa', 'dss', 'ssh-dss']
+    rsa = ['r', 'rsa', 'ssh-rsa']
+    dss = ['d', 'dsa', 'dss', 'ssh-dss']
     ecdsa = ['e', 'ecdsa', 'ecdsa-sha2-nistp521', 'ecdsa-sha2-nistp384',
             'ecdsa-sha2-nistp256']
 
@@ -148,7 +150,7 @@ def _fingerprint(public_key):
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()
-    chunks = [ret[i:i+2] for i in range(0, len(ret), 2)]
+    chunks = [ret[i:i + 2] for i in range(0, len(ret), 2)]
     return ':'.join(chunks)
 
 

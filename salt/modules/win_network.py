@@ -4,6 +4,9 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 import socket
+from salt._compat import range
+
+from salt._compat import iteritems_
 
 __outputter__ = {
     'dig':     'txt',
@@ -222,7 +225,7 @@ def interfaces():
             configstart = configstart + 1
             continue
     for iface in ifaces:
-        for key, val in iface.iteritems():
+        for key, val in iteritems_(iface):
             item = {}
             itemdict = {'Physical Address': 'hwaddr',
                         'IPv4 Address': 'ipaddr',
@@ -230,7 +233,7 @@ def interfaces():
                         'Subnet Mask': 'netmask',
                         }
             item['broadcast'] = None
-            for k, v in itemdict.iteritems():
+            for k, v in iteritems_(itemdict):
                 if k in val:
                     item[v] = val[k].rstrip('(Preferred)')
             if 'IPv4 Address' in val:

@@ -66,7 +66,7 @@ import os
 
 # Import Salt libs
 import salt.utils
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_
 
 #sane defaults
 __opts__ = {'solr.cores': [],
@@ -330,7 +330,7 @@ def _merge_options(options):
     defaults = __opts__['solr.dih.import_options']
     if isinstance(options, dict):
         defaults.update(options)
-    for (k, v) in defaults.items():
+    for (k, v) in iteritems_(defaults):
         if isinstance(v, bool):
             defaults[k] = str(v).lower()
     return defaults
@@ -407,9 +407,9 @@ def _find_value(ret_dict, key, path=None):
         path = "{0}:{1}".format(path, key)
 
     ret = []
-    for (k, v) in ret_dict.items():
+    for k, v in iteritems_(ret_dict):
         if k == key:
-            ret.append({path:v})
+            ret.append({path: v})
         if isinstance(v, list):
             for x in v:
                 if isinstance(x, dict):
@@ -1147,7 +1147,7 @@ def full_import(handler, host=None, core_name=None, options={}, extra=[]):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=full-import']
-    for (k, v) in options.items():
+    for (k, v) in iteritems_(options):
         params.append("&{0}={1}".format(k, v))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
@@ -1196,7 +1196,7 @@ def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=delta-import']
-    for (k, v) in options.items():
+    for (k, v) in iteritems_(options):
         params.append("{0}={1}".format(k, v))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)

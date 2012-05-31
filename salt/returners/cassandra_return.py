@@ -22,6 +22,9 @@ try:
 except ImportError:
     has_pycassa = False
 
+from salt._compat import iteritems_
+
+
 log = logging.getLogger(__name__)
 
 __opts__ = {'cassandra.servers': ['localhost:9160'],
@@ -52,7 +55,7 @@ def returner(ret):
     columns = {'fun': ret['fun'],
                'id': ret['id']}
     if isinstance(ret['return'], dict):
-        for key, value in ret['return'].iteritems():
+        for key, value in iteritems_(ret['return']):
             columns['return.%s' % (key,)] = str(value)
     else:
         columns['return'] = str(ret['return'])

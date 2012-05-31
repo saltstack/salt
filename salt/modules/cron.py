@@ -5,6 +5,8 @@ Work with cron
 import tempfile
 import os
 
+from salt._compat import range
+
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 
 

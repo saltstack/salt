@@ -42,6 +42,7 @@ import zmq
 import salt.config
 import salt.payload
 import salt.utils
+from salt._compat import iteritems_, range
 from salt.exceptions import SaltClientError, SaltInvocationError
 
 # Try to import range from https://github.com/ytoolshed/range
@@ -59,7 +60,7 @@ def condition_kwarg(arg, kwarg):
     '''
     if isinstance(kwarg, dict):
         kw_ = []
-        for key, val in kwarg.items():
+        for key, val in iteritems_(kwarg):
             kw_.append('{0}={1}'.format(key, val))
         return list(arg) + kw_
     return arg

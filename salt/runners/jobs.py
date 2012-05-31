@@ -9,7 +9,7 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
-from salt._compat import string_types
+from salt._compat import string_types, iteritems_
 from salt.exceptions import SaltException
 
 # Import Third party libs
@@ -25,7 +25,7 @@ def active():
     job_dir = os.path.join(__opts__['cachedir'], 'jobs')
     client = salt.client.LocalClient(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=1)
-    for minion, data in active_.items():
+    for minion, data in iteritems_(active_):
         if not isinstance(data, list):
             continue
         for job in data:
@@ -65,7 +65,7 @@ def lookup_jid(jid):
         '''
         out = None
         ret = {}
-        for key, data in full_ret.items():
+        for key, data in iteritems_(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']

@@ -34,6 +34,7 @@ import salt.payload
 import salt.pillar
 import salt.state
 import salt.runner
+from salt._compat import iteritems_, range
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -659,7 +660,7 @@ class AESFuncs(object):
             return False
 
         # Format individual return loads
-        for key, item in load['return'].items():
+        for key, item in iteritems_(load['return']):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
