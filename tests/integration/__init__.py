@@ -125,8 +125,12 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
+        if os.path.isdir(self.sub_minion_opts['root_dir']):
+            shutil.rmtree(self.sub_minion_opts['root_dir'])
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
+        if os.path.isdir(self.smaster_opts['root_dir']):
+            shutil.rmtree(self.smaster_opts['root_dir'])
         for fn_ in os.listdir(TMP):
             if fn_ == '_README':
                 continue
