@@ -240,7 +240,7 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             bond.update({'use_carrier': 'off'})
         else:
             valid = _CONFIG_TRUE + _CONFIG_FALSE
-            _raise_error(face, 'use_carrier', valid)
+            _raise_error(iface, 'use_carrier', valid)
     else:
         _log_default(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
@@ -325,7 +325,7 @@ def _parse_settings_bond_3(opts, iface, bond_def):
             valid = _CONFIG_TRUE + _CONFIG_FALSE
             _raise_error(iface, 'use_carrier', valid)
     else:
-        _lod_default(iface, 'use_carrier', bond_def['use_carrier'])
+        _log_default(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
     return bond
