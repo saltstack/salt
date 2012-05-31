@@ -7,6 +7,7 @@ import os
 # Import salt libs
 import integration
 
+
 class FileTest(integration.ModuleCase):
     '''
     Validate the file state
@@ -349,7 +350,6 @@ if __name__ == "__main__":
     import sys
     from saltunittest import TestLoader, TextTestRunner
     from integration import TestDaemon
-
 
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(FileTest)

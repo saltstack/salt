@@ -11,10 +11,11 @@ can be either present or absent:
       group:
         - present
         - gid: 7648
+        - system: True
 '''
 
 
-def present(name, gid=None):
+def present(name, gid=None, system=False):
     '''
     Ensure that a group is present
 
@@ -63,7 +64,7 @@ def present(name, gid=None):
         ret['comment'] = ('Group {0} is not present and should be created'
                 ).format(name)
         return ret
-    ret['result'] = __salt__['group.add'](name, gid)
+    ret['result'] = __salt__['group.add'](name, gid, system)
     if ret['result']:
         ret['changes'] = __salt__['group.info'](name)
         ret['comment'] = 'Added group {0}'.format(name)

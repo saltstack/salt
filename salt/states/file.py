@@ -88,6 +88,7 @@ import copy
 
 # Import Salt libs
 import salt.utils.templates
+from salt._compat import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +245,7 @@ def _source_list(source, source_hash, env):
                         source = single_src
                         source_hash = single_hash
                         break
-            elif isinstance(single, basestring):
+            elif isinstance(single, string_types):
                 if single in mfiles:
                     source = single
                     break
@@ -1253,7 +1254,7 @@ def recurse(name,
         The permissions mode to set any files created
 
     include_empty
-        Set this to True if empty directories should also be created 
+        Set this to True if empty directories should also be created
         (default is False)
     '''
     ret = {'name': name,
@@ -1338,7 +1339,7 @@ def recurse(name,
             keep.add(dest)
             if os.path.isdir(fn_) and include_empty:
                 #create empty dir
-                os.mkdir(dest,dir_mode)
+                os.mkdir(dest, dir_mode)
             else:
                 # The destination file is not present, make it
                 # FIXME: no metadata (ownership, permissions) available
@@ -1554,7 +1555,7 @@ def append(name, text):
     if not check_res:
         return _error(ret, check_msg)
 
-    if isinstance(text, basestring):
+    if isinstance(text, string_types):
         text = (text,)
 
     for chunk in text:

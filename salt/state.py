@@ -29,6 +29,7 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
+from salt._compat import string_types
 
 from salt.template import (
     compile_template,
@@ -114,33 +115,6 @@ def find_name(name, state, high):
     return ext_id
 
 
-def build_args(func, args, data=None):
-    '''
-    Build the args and kwargs
-    '''
-    spec_args, _, kwarg_spec, _ = _getargs(func)
-
-    _args = []
-    _kw = {}
-    for arg in args:
-        if isinstance(arg, basestring):
-            arg = arg.split('=', 1)
-            arg_len = len(arg)
-            if arg_len == 2:
-                k, v = arg
-                if k in spec_args:
-                    _kw[k] = v
-            else:
-                _args.append(arg[0])
-        else:
-            _args.append(arg)
-    if kwarg_spec and isinstance(data, dict):
-        # this function accepts kwargs, pack in the publish data
-        for key, val in data.items():
-            _kw['__pub_{0}'.format(key)] = val
-    return _args, _kw
-
-
 def format_log(ret):
     '''
     Format the state into a log message
@@ -155,7 +129,7 @@ def format_log(ret):
                 msg = 'No changes made for {0[name]}'.format(ret)
             elif isinstance(chg, dict):
                 if 'diff' in chg:
-                    if isinstance(chg['diff'], basestring):
+                    if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(
                                 chg['diff'])
                 if isinstance(chg[chg.keys()[0]], dict):
@@ -320,7 +294,7 @@ class State(object):
             errors.append('Missing "fun" data')
         if 'name' not in data:
             errors.append('Missing "name" data')
-        if not isinstance(data['name'], basestring):
+        if not isinstance(data['name'], string_types):
             err = ('The name {0} in sls {1} is not formed as a '
                    'string but is a {2}').format(
                            data['name'], data['__sls__'], type(data['name']))
@@ -399,7 +373,7 @@ class State(object):
         for name, body in high.items():
             if name.startswith('__'):
                 continue
-            if not isinstance(name, basestring):
+            if not isinstance(name, string_types):
                 err = ('The name {0} in sls {1} is not formed as a '
                        'string but is a {2}').format(
                                name, body['__sls__'], type(name))
@@ -421,7 +395,7 @@ class State(object):
                     if '.' in state:
                         fun += 1
                     for arg in body[state]:
-                        if isinstance(arg, basestring):
+                        if isinstance(arg, string_types):
                             fun += 1
                             if ' ' in arg.strip():
                                 errors.append(('The function "{0}" in state '
@@ -459,6 +433,7 @@ class State(object):
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
+                                            continue
                                         req_key = req.keys()[0]
                                         req_val = req[req_key]
                                         if not ishashable(req_val):
@@ -605,7 +580,7 @@ class State(object):
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
                 for arg in run:
-                    if isinstance(arg, basestring):
+                    if isinstance(arg, string_types):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
@@ -657,8 +632,8 @@ class State(object):
                     for arg in run:
                         update = False
                         for hind in range(len(high[name][state])):
-                            if isinstance(arg, basestring) and \
-                                    isinstance(high[name][state][hind], basestring):
+                            if isinstance(arg, string_types) and \
+                                    isinstance(high[name][state][hind], string_types):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
@@ -1187,7 +1162,7 @@ class BaseHighState(object):
                         for comp in top[env][tgt]:
                             if isinstance(comp, dict):
                                 matches.append(comp)
-                            if isinstance(comp, basestring):
+                            if isinstance(comp, string_types):
                                 states.add(comp)
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
@@ -1205,7 +1180,7 @@ class BaseHighState(object):
         for env, matches in tops.items():
             if env == 'include':
                 continue
-            if not isinstance(env, basestring):
+            if not isinstance(env, string_types):
                 err = ('Environment {0} in top file is not formed as a '
                        'string').format(env)
                 errors.append(err)
@@ -1228,7 +1203,7 @@ class BaseHighState(object):
                                            )
                                        )
                                 errors.append(err)
-                    elif isinstance(slsmod, basestring):
+                    elif isinstance(slsmod, string_types):
                         # This is a sls module
                         if not slsmod:
                             err = ('Environment {0} contains an empty sls '
@@ -1266,7 +1241,7 @@ class BaseHighState(object):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
-                        if isinstance(item, basestring):
+                        if isinstance(item, string_types):
                             matches[env].append(item)
         ext_matches = self.client.ext_nodes()
         for env in ext_matches:
@@ -1362,7 +1337,7 @@ class BaseHighState(object):
                         if name == '__extend__':
                             continue
 
-                        if isinstance(state[name], basestring):
+                        if isinstance(state[name], string_types):
                             # Is this is a short state, it needs to be padded
                             if '.' in state[name]:
                                 comps = state[name].split('.')

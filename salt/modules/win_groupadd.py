@@ -9,7 +9,7 @@ def __virtual__():
     return 'group' if __grains__['kernel'] == 'Windows' else False
 
 
-def add(name, gid=None):
+def add(name, gid=None, system=False):
     '''
     Add the specified group
 

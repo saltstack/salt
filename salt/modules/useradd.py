@@ -4,13 +4,22 @@ Manage users with the useradd command
 
 import grp
 import pwd
+from salt._compat import string_types
 
 
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
-    return 'user' if __grains__['kernel'] == 'Linux' else False
+    import sys
+    if __grains__['kernel'] == 'Darwin':
+        mod = sys.modules[__name__]
+        for attr in dir(mod):
+
+            if callable(getattr(mod, attr)):
+                if not attr in ('info', 'list_groups', '__virtual__'):
+                    delattr(mod, attr)
+    return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
 
 def add(name,
@@ -24,7 +33,8 @@ def add(name,
         workphone=None,
         homephone=None,
         other=None,
-        unique=True):
+        unique=True,
+        system=False):
     '''
     Add a user to the minion
 
@@ -32,7 +42,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     cmd = 'useradd '
     if shell:
@@ -44,12 +54,15 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home:
-        if home is True:
-            cmd += '-m '
+        if home is not True:
+            cmd += '-d {0} '.format(home)
         else:
-            cmd += '-m -d {0} '.format(home)
+            if not system:
+                cmd += '-m '
     if not unique:
         cmd += '-o '
+    if system:
+        cmd += '-r '
     cmd += name
     ret = __salt__['cmd.retcode'](cmd)
     if ret != 0:
@@ -199,7 +212,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):

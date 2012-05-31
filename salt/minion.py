@@ -26,6 +26,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
 log = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ def detect_kwargs(func, args, data=None):
     _args = []
     kwargs = {}
     for arg in args:
-        if isinstance(arg, basestring):
+        if isinstance(arg, string_types):
             if '=' in arg:
                 comps = arg.split('=')
                 if has_kwargs:
@@ -226,7 +227,7 @@ class Minion(object):
         Override this method if you wish to handle the decoded data
         differently.
         '''
-        if isinstance(data['fun'], basestring):
+        if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
 
@@ -265,7 +266,7 @@ class Minion(object):
                 arg = eval(data['arg'][ind])
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, basestring)):
+                elif isinstance(arg, (dict, int, list, string_types)):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
@@ -326,7 +327,7 @@ class Minion(object):
                     arg = eval(data['arg'][ind][index])
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, basestring)):
+                    elif isinstance(arg, (dict, int, list, string_types)):
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
@@ -394,7 +395,7 @@ class Minion(object):
         try:
             if hasattr(self.functions[ret['fun']], '__outputter__'):
                 oput = self.functions[ret['fun']].__outputter__
-                if isinstance(oput, basestring):
+                if isinstance(oput, string_types):
                     load['out'] = oput
         except KeyError:
             pass
@@ -402,7 +403,7 @@ class Minion(object):
         data = self.serial.dumps(payload)
         socket.send(data)
         ret_val = self.serial.loads(socket.recv())
-        if isinstance(ret_val, basestring) and not ret_val:
+        if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
             payload['load'] = self.crypticle.dumps(load)
@@ -655,7 +656,7 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
-        if isinstance(tgt, basestring):
+        if isinstance(tgt, string_types):
             tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
@@ -740,7 +741,7 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, basestring):
+        if not isinstance(tgt, string_types):
             log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',

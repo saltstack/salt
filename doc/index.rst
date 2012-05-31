@@ -156,7 +156,7 @@ effortless, simultaneous configuration of thousands of hosts.
 Miscellaneous topics
 --------------------
 
-Salt is a many splendid thing.
+Salt is many splendid things.
 
 :doc:`File Server <ref/file_server/index>`
     Salt can easily and quickly transfer files (in fact, that's how Salt

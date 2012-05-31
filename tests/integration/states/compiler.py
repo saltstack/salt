@@ -10,6 +10,7 @@ from saltunittest import TestLoader, TextTestRunner
 import integration
 from integration import TestDaemon
 
+
 class CompileTest(integration.ModuleCase):
     '''
     Validate the state compiler

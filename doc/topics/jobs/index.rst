@@ -61,6 +61,10 @@ The active function will also compare jobs that have returned and jobs that
 are still running, making it easier to see what systems have completed a job
 and what systems are still being waited on.
 
+.. code-block:: bash
+
+    # salt-run jobs.active
+
 lookup_jid
 ----------
 
@@ -70,9 +74,17 @@ By default is is cached for 24 hours, but this can be configured via the
 Using the lookup_jid runner will display the same return data that the initial
 job invocation with the salt command would display.
 
+.. code-block:: bash
+
+    # salt-run jobs.lookup_jid <job id number>
+
 list_jobs
 ---------
 
 Before finding a historic job, it may be required to find the job id. list_jobs
 will parse the cached execution data and display all of the job data for jobs
 that have already, or partially returned.
+
+.. code-block:: bash
+
+    # salt-run jobs.list_jobs
