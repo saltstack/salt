@@ -433,6 +433,7 @@ class State(object):
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
+                                            continue
                                         req_key = req.keys()[0]
                                         req_val = req[req_key]
                                         if not ishashable(req_val):
