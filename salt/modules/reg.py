@@ -11,13 +11,18 @@ try:
     import _winreg
     has_windows_modules = True
 except ImportError:
-    has_windows_modules = False
+    try:
+        import winreg as _winreg
+        has_windows_modules = True
+    except ImportError:
+        has_windows_modules = False
 
 import salt.utils
 import logging
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
 
 class Registry(object):
     '''
