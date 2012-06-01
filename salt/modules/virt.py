@@ -223,7 +223,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -231,7 +231,7 @@ def get_nics(vm_):
                 if v_node.tagName == "virtualport":
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -275,7 +275,7 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
-            for key in g_node.attributes.keys():
+            for key in g_node.attributes:
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -301,8 +301,7 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in list(target.attributes.keys()) \
-                and 'file' in list(source.attributes.keys()):
+        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
             disks[target.getAttribute('dev')] = {
                 'file': source.getAttribute('file')}
     for dev in disks:
