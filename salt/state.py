@@ -29,6 +29,7 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
+from salt._compat import string_types, callable
 
 from salt.template import (
     compile_template,
@@ -56,7 +57,7 @@ def _getargs(func):
         aspec = inspect.getargspec(func)
     elif isinstance(func, object):
         aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0] # self
+        del aspec.args[0]  # self
     else:
         raise TypeError("Cannot inspect argument list for '{0}'".format(func))
 
@@ -67,8 +68,9 @@ def trim_req(req):
     '''
     Trim any function off of a requisite
     '''
-    if '.' in req.keys()[0]:
-        return {req.keys()[0].split('.')[0]: req[req.keys()[0]]}
+    reqfirst = list(req.keys())[0]
+    if '.' in reqfirst:
+        return {reqfirst.split('.')[0]: req[reqfirst]}
     return req
 
 
@@ -86,7 +88,7 @@ def state_args(id_, state, high):
             continue
         if len(item) != 1:
             continue
-        args.add(item.keys()[0])
+        args.add(list(item.keys())[0])
     return args
 
 
@@ -109,35 +111,9 @@ def find_name(name, state, high):
                             continue
                         if len(arg) != 1:
                             continue
-                        if arg[arg.keys()[0]] == name:
+                        if arg[list(arg.keys())[0]] == name:
                             ext_id = nid
     return ext_id
-
-def build_args(func, args, data=None):
-    '''
-    Build the args and kwargs
-    '''
-    spec_args, _, kwarg_spec, _ = _getargs(func)
-
-    _args = []
-    _kw = {}
-    for arg in args:
-        if isinstance(arg, basestring):
-            arg = arg.split('=', 1)
-            arg_len = len(arg)
-            if arg_len == 2:
-                k, v = arg
-                if k in spec_args:
-                    _kw[k] = v
-            else:
-                _args.append(arg[0])
-        else:
-            _args.append(arg)
-    if kwarg_spec and isinstance(data, dict):
-        # this function accepts kwargs, pack in the publish data
-        for key, val in data.items():
-            _kw['__pub_{0}'.format(key)] = val
-    return _args, _kw
 
 
 def format_log(ret):
@@ -154,11 +130,11 @@ def format_log(ret):
                 msg = 'No changes made for {0[name]}'.format(ret)
             elif isinstance(chg, dict):
                 if 'diff' in chg:
-                    if isinstance(chg['diff'], basestring):
+                    if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(
                                 chg['diff'])
-                if isinstance(chg[chg.keys()[0]], dict):
-                    if 'new' in chg[chg.keys()[0]]:
+                if isinstance(chg[list(chg.keys())[0]], dict):
+                    if 'new' in chg[list(chg.keys())[0]]:
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -308,7 +284,6 @@ class State(object):
             returns.pop(tag)
         return returns
 
-
     def verify_data(self, data):
         '''
         Verify the data, return an error statement if something is wrong
@@ -320,7 +295,7 @@ class State(object):
             errors.append('Missing "fun" data')
         if 'name' not in data:
             errors.append('Missing "name" data')
-        if not isinstance(data['name'], basestring):
+        if not isinstance(data['name'], string_types):
             err = ('The name {0} in sls {1} is not formed as a '
                    'string but is a {2}').format(
                            data['name'], data['__sls__'], type(data['name']))
@@ -378,8 +353,8 @@ class State(object):
         if reqdec:
             for req in data[reqdec]:
                 if data['state'] == req.keys()[0]:
-                    if fnmatch.fnmatch(data['name'], req[req.keys()[0]]) \
-                            or fnmatch.fnmatch(data['__id__'], req[req.keys()[0]]):
+                    if fnmatch.fnmatch(data['name'], req[list(req.keys())[0]]) \
+                            or fnmatch.fnmatch(data['__id__'], req[list(req.keys())[0]]):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -399,7 +374,7 @@ class State(object):
         for name, body in high.items():
             if name.startswith('__'):
                 continue
-            if not isinstance(name, basestring):
+            if not isinstance(name, string_types):
                 err = ('The name {0} in sls {1} is not formed as a '
                        'string but is a {2}').format(
                                name, body['__sls__'], type(name))
@@ -421,7 +396,7 @@ class State(object):
                     if '.' in state:
                         fun += 1
                     for arg in body[state]:
-                        if isinstance(arg, basestring):
+                        if isinstance(arg, string_types):
                             fun += 1
                             if ' ' in arg.strip():
                                 errors.append(('The function "{0}" in state '
@@ -438,9 +413,9 @@ class State(object):
                             #
                             # Add the requires to the reqs dict and check them
                             # all for recursive requisites.
-                            if arg.keys()[0] == 'require' \
-                                    or arg.keys()[0] == 'watch':
-                                if not isinstance(arg[arg.keys()[0]], list):
+                            if list(arg.keys())[0] == 'require' \
+                                    or list(arg.keys())[0] == 'watch':
+                                if not isinstance(arg[list(arg.keys())[0]], list):
                                     errors.append(('The require or watch'
                                     ' statement in state "{0}" in sls "{1}" needs'
                                     ' to be formed as a list').format(
@@ -451,7 +426,7 @@ class State(object):
                                 # list are all single key dicts.
                                 else:
                                     reqs[name] = {}
-                                    for req in arg[arg.keys()[0]]:
+                                    for req in arg[list(arg.keys())[0]]:
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
                                             ' in SLS {1} is not formed as a'
@@ -459,7 +434,8 @@ class State(object):
                                                 req,
                                                 body['__sls__'])
                                             errors.append(err)
-                                        req_key = req.keys()[0]
+                                            continue
+                                        req_key = list(req.keys())[0]
                                         req_val = req[req_key]
                                         if not ishashable(req_val):
                                             errors.append((
@@ -481,7 +457,7 @@ class State(object):
                                                             )
                                                     errors.append(err)
                                 # Make sure that there is only one key in the dict
-                                if len(arg.keys()) != 1:
+                                if len(list(arg.keys())) != 1:
                                     errors.append(('Multiple dictionaries defined'
                                     ' in argument of state "{0}" in sls {1}').format(
                                         name,
@@ -528,7 +504,7 @@ class State(object):
                         chunk['order'] = cap
         chunks = sorted(
                 chunks,
-                key=lambda k:'{0[state]}{0[name]}{0[fun]}'.format(k)
+                key=lambda k: '{0[state]}{0[name]}{0[fun]}'.format(k)
                 )
         chunks = sorted(
                 chunks,
@@ -605,7 +581,7 @@ class State(object):
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
                 for arg in run:
-                    if isinstance(arg, basestring):
+                    if isinstance(arg, string_types):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
@@ -657,8 +633,8 @@ class State(object):
                     for arg in run:
                         update = False
                         for hind in range(len(high[name][state])):
-                            if isinstance(arg, basestring) and \
-                                    isinstance(high[name][state][hind], basestring):
+                            if isinstance(arg, string_types) and \
+                                    isinstance(high[name][state][hind], string_types):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
@@ -667,13 +643,13 @@ class State(object):
                             if isinstance(arg, dict) and \
                                     isinstance(high[name][state][hind], dict):
                                 # It is an option, make sure the options match
-                                if (arg.keys()[0] ==
-                                    high[name][state][hind].keys()[0]):
+                                if (list(arg.keys())[0] ==
+                                    list(high[name][state][hind].keys())[0]):
                                     # They match, check if the option is a
                                     # watch or require, append, otherwise
                                     # replace
-                                    if arg.keys()[0] == 'require' or \
-                                            arg.keys()[0] == 'watch':
+                                    if list(arg.keys())[0] == 'require' or \
+                                            list(arg.keys())[0] == 'watch':
                                         # Extend the list
                                         (high[name][state][hind][arg.keys()[0]]
                                          .extend(arg[arg.keys()[0]]))
@@ -706,7 +682,7 @@ class State(object):
                             # How did we get this far?
                             continue
                         # Split out the components
-                        key = arg.keys()[0]
+                        key = list(arg.keys())[0]
                         if not key in req_in:
                             continue
                         rkey = key.split('_')[0]
@@ -722,7 +698,7 @@ class State(object):
                                 if not _state in extend[name]:
                                     extend[name][_state] = []
                                 for ind in range(len(extend[name][_state])):
-                                    if extend[name][_state][ind].keys()[0] == rkey:
+                                    if list(extend[name][_state][ind].keys())[0] == rkey:
                                         # Extending again
                                         extend[name][_state][ind][rkey].append(
                                                 {state: id_}
@@ -743,7 +719,7 @@ class State(object):
                                     continue
                                 if len(ind) < 1:
                                     continue
-                                _state = ind.keys()[0]
+                                _state = list(ind.keys())[0]
                                 name = ind[_state]
                                 if key == 'use_in':
                                     # Add the running states args to the
@@ -762,7 +738,7 @@ class State(object):
                                             continue
                                         if len(arg) != 1:
                                             continue
-                                        if arg.keys()[0] in ignore_args:
+                                        if list(arg.keys())[0] in ignore_args:
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -783,7 +759,7 @@ class State(object):
                                             continue
                                         if len(arg) != 1:
                                             continue
-                                        if arg.keys()[0] in ignore_args:
+                                        if list(arg.keys())[0] in ignore_args:
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -793,7 +769,7 @@ class State(object):
                                 if not _state in extend[name]:
                                     extend[name][_state] = []
                                 for ind in range(len(extend[name][_state])):
-                                    if extend[name][_state][ind].keys()[0] == rkey:
+                                    if list(extend[name][_state][ind].keys())[0] == rkey:
                                         # Extending again
                                         extend[name][_state][ind][rkey].append(
                                                 {state: id_}
@@ -883,8 +859,7 @@ class State(object):
             present = True
         if not present:
             return 'met'
-        reqs = {'require': [],
-                'watch': []}
+        reqs = {'require': [], 'watch': []}
         status = 'unmet'
         for r_state in reqs.keys():
             if r_state in low:
@@ -892,7 +867,7 @@ class State(object):
                     req = trim_req(req)
                     found = False
                     for chunk in chunks:
-                        req_key = req.keys()[0]
+                        req_key = list(req.keys())[0]
                         req_val = req[req_key]
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
@@ -945,11 +920,11 @@ class State(object):
                     req = trim_req(req)
                     found = False
                     for chunk in chunks:
-                        req_key = req.keys()[0]
+                        req_key = list(req.keys())[0]
                         req_val = req[req_key]
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
-                            if chunk['state'] == req.keys()[0]:
+                            if chunk['state'] == req_key:
                                 reqs.append(chunk)
                                 found = True
                     if not found:
@@ -958,7 +933,7 @@ class State(object):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     for lreq in lreqs:
-                        comment += '{0}{1}: {2}\n'.format(' '*19,
+                        comment += '{0}{1}: {2}\n'.format(' ' * 19,
                                 requisite,
                                 lreq)
                 running[tag] = {'changes': {},
@@ -1095,7 +1070,7 @@ class BaseHighState(object):
         '''
         envs = set(['base'])
         if 'file_roots' in self.opts:
-            envs.update(self.opts['file_roots'].keys())
+            envs.update(list(self.opts['file_roots'].keys()))
         return envs
 
     def get_tops(self):
@@ -1187,7 +1162,7 @@ class BaseHighState(object):
                         for comp in top[env][tgt]:
                             if isinstance(comp, dict):
                                 matches.append(comp)
-                            if isinstance(comp, basestring):
+                            if isinstance(comp, string_types):
                                 states.add(comp)
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
@@ -1205,7 +1180,7 @@ class BaseHighState(object):
         for env, matches in tops.items():
             if env == 'include':
                 continue
-            if not isinstance(env, basestring):
+            if not isinstance(env, string_types):
                 err = ('Environment {0} in top file is not formed as a '
                        'string').format(env)
                 errors.append(err)
@@ -1228,7 +1203,7 @@ class BaseHighState(object):
                                            )
                                        )
                                 errors.append(err)
-                    elif isinstance(slsmod, basestring):
+                    elif isinstance(slsmod, string_types):
                         # This is a sls module
                         if not slsmod:
                             err = ('Environment {0} contains an empty sls '
@@ -1266,7 +1241,7 @@ class BaseHighState(object):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
-                        if isinstance(item, basestring):
+                        if isinstance(item, string_types):
                             matches[env].append(item)
         ext_matches = self.client.ext_nodes()
         for env in ext_matches:
@@ -1283,7 +1258,7 @@ class BaseHighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        syncd = self.state.functions['saltutil.sync_all'](matches.keys())
+        syncd = self.state.functions['saltutil.sync_all'](list(matches.keys()))
         if syncd[2]:
             self.opts['grains'] = salt.loader.grains(self.opts)
         faux = {'state': 'file', 'fun': 'recurse'}
@@ -1362,7 +1337,7 @@ class BaseHighState(object):
                         if name == '__extend__':
                             continue
 
-                        if isinstance(state[name], basestring):
+                        if isinstance(state[name], string_types):
                             # Is this is a short state, it needs to be padded
                             if '.' in state[name]:
                                 comps = state[name].split('.')
@@ -1477,7 +1452,7 @@ class BaseHighState(object):
                    'in the top file or the top file was not found on the '
                    'master')
             ret[tag_name]['comment'] = msg
-	    return ret
+            return ret
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         self.load_dynamic(matches)

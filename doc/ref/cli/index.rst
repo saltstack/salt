@@ -21,7 +21,7 @@ environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
 Using the Salt Command
 ======================
 
-The Salt command needs a few components to send information to the salt
+The Salt command needs a few components to send information to the Salt
 minions. The target minions need to be defined, the function to call and any
 arguments the function requires.
 

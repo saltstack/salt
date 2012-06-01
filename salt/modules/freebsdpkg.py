@@ -6,27 +6,25 @@ import os
 
 def _check_pkgng():
     '''
-    Looks to see if pkgng is being used if so sets global var.
+    Looks to see if pkgng is being used by checking if database exists
     '''
-    make_file = "/etc/make.conf"
-    if os.path.isfile(make_file):
-        try:
-            for line in open(make_file,'r').readlines():
-                if 'WITH_PKGNG=yes' in line:
-                    return True
-        except IOError:
-            # issue opening file
-            pass
-        return False
+    if os.path.isfile('/var/db/pkg/repo.sqlite'):
+        return True
     return False
 
-def pkgng_update():
+
+def search(pkg_name):
     '''
-    use pkg update to get latest repo.txz
+    Use `pkg search` if pkg is being used.
+
+    CLI Example::
+
+        salt '*' pkg.pkgng_search 'mysql-server'
     '''
     if _check_pkgng():
-        __salt__['cmd.run']('pkg update')
-    return ""
+        res = __salt__['cmd.run']('pkg search {0}'.format(pkg_name))
+        res = [ x for x in res.split('\n') ]
+        return { "Results" : res }
 
 def __virtual__():
     '''
@@ -46,7 +44,6 @@ def _list_removed(old, new):
     return pkgs
 
 
-# FIXME: Unused argument 'name' (pylint is your friend)
 def available_version(name):
     '''
     The available version of the package in the repository
@@ -71,6 +68,15 @@ def version(name):
         return pkgs[name]
     else:
         return ''
+
+
+def refresh_db():
+    '''
+    Use pkg update to get latest repo.txz
+    '''
+    if _check_pkgng():
+        __salt__['cmd.run']('pkg update')
+    return {}
 
 
 def list_pkgs():

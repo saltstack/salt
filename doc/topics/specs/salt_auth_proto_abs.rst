@@ -16,7 +16,7 @@ The header is always clear, and specifies the encryption used by the load. The
 load can be encrypted with the private key of the sending system, or with the
 shared, rotating, AES key.
 
-The message itself is abstracted as a python dict in this fashion:
+The message itself is abstracted as a Python dict in this fashion:
 
 .. code-block:: python
 

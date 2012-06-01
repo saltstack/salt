@@ -2,7 +2,7 @@
 The Top File
 ============
 
-The top file is used to map what sls modules get loaded onto what minions via
+The top file is used to map what SLS modules get loaded onto what minions via
 the state system. The top file creates a few general abstractions. First it
 maps what nodes should pull from which environments, next it defines which
 matches systems should draw from.
@@ -95,10 +95,10 @@ it suits your deployment:
       'db*prod*':
         - db
 
-In this setup all systems will pull the global sls from the base environment,
+In this setup all systems will pull the global SLS from the base environment,
 as well as pull from their respective environments.
 
-Remember, that since everything is a file in salt, the environments are
+Remember, that since everything is a file in Salt, the environments are
 primarily file server environments, this means that environments that have
 nothing to do with states can be defined and used to distribute other files.
 
@@ -141,7 +141,7 @@ would look something like this:
         - db
 
 Other Ways of Targeting Minions
-================================
+===============================
 
 In addition to globs, minions can be specified in top files a few other
 ways. Some common ones are :doc:`compound matches </topics/targeting/compound>`

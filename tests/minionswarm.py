@@ -16,6 +16,7 @@ import hashlib
 # Import third party libs
 import yaml
 
+
 def parse():
     '''
     Parse the cli options
@@ -96,7 +97,7 @@ class Swarm(object):
         '''
         Prepare the confs set
         '''
-        for ind in xrange(self.opts['minions']):
+        for ind in range(self.opts['minions']):
             self.mkconf()
 
     def clean_configs(self):

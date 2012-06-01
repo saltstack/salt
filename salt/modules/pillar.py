@@ -14,5 +14,9 @@ def data():
 
         salt '*' pillar.data
     '''
-    pillar = salt.pillar.get_pillar(__opts__, __grains__, __opts__['id'])
+    pillar = salt.pillar.get_pillar(
+            __opts__,
+            __grains__,
+            __opts__['id'],
+            __opts__['environment'])
     return pillar.compile_pillar()

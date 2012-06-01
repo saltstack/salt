@@ -9,20 +9,19 @@ Required python modules: libvirt
 import os
 import re
 import shutil
-import StringIO
 import subprocess
 from xml.dom import minidom
-from salt.exceptions import CommandExecutionError
 
+# Import Third Party Libs
 try:
     import libvirt
     has_libvirt = True
 except ImportError:
     has_libvirt = False
-
-# Import Third Party Libs
 import yaml
 
+from salt._compat import StringIO
+from salt.exceptions import CommandExecutionError
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -210,7 +209,7 @@ def get_nics(vm_):
         salt '*' virt.get_nics <vm name>
     '''
     nics = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -249,7 +248,7 @@ def get_macs(vm_):
         salt '*' virt.get_macs <vm name>
     '''
     macs = []
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -271,7 +270,7 @@ def get_graphics(vm_):
            'port': 'None',
            'type': 'vnc'}
     xml = get_xml(vm_)
-    ssock = StringIO.StringIO(xml)
+    ssock = StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
@@ -290,7 +289,7 @@ def get_disks(vm_):
         salt '*' virt.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(StringIO(get_xml(vm_)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -302,13 +301,13 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys() \
-                and 'file' in source.attributes.keys():
-            disks[target.getAttribute('dev')] = \
-                    {'file': source.getAttribute('file')}
+        if 'dev' in list(target.attributes.keys()) \
+                and 'file' in list(source.attributes.keys()):
+            disks[target.getAttribute('dev')] = {
+                'file': source.getAttribute('file')}
     for dev in disks:
         try:
-            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
+            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '
                 + disks[dev]['file'],
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]))

@@ -12,6 +12,7 @@ from integration import TestDaemon
 
 HFILE = os.path.join(integration.TMP, 'hosts')
 
+
 class HostTest(integration.ModuleCase):
     '''
     Validate the host state
@@ -25,4 +26,3 @@ class HostTest(integration.ModuleCase):
         self.assertTrue(result)
         with open(HFILE) as fp_:
             self.assertIn('{0}\t\t{1}'.format(ip, name), fp_.read())
-

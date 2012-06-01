@@ -19,6 +19,13 @@ import shutil
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    '''
+    Only load if git is available
+    '''
+    return 'git' if __salt__['cmd.has_exec']('git') else False
+
+
 def latest(name,
            rev=None,
            target=None,
@@ -41,7 +48,6 @@ def latest(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
         return _fail(ret, '"target" option is required')
-
 
     if os.path.isdir(target) and os.path.isdir('{0}/.git'.format(target)):
         # git pull is probably required
@@ -103,10 +109,12 @@ def latest(name,
             ret['changes']['new'] = name
     return ret
 
+
 def _fail(ret, comment):
     ret['result'] = False
     ret['comment'] = comment
     return ret
+
 
 def _neutral_test(ret, comment):
     ret['result'] = None

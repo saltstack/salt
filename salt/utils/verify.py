@@ -30,7 +30,7 @@ def zmq_version():
         log.warn(msg.format(ver))
         return True
 
-    major,minor,point = match.groups()
+    major, minor, point = match.groups()
 
     if major.isdigit():
         major = int(major)

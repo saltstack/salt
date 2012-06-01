@@ -59,6 +59,16 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
+#####    Master Module Management    #####
+##########################################
+# Manage how master side modules are loaded
+#
+# Add any additional locations to look for master runners
+#runner_dirs: []
+#
+#Enable Cython for master side modules
+#cython_enable: False
+
 #####      State System settings     #####
 ##########################################
 # The state system uses a "top" file to tell the minions what environment to
@@ -167,7 +177,7 @@
 # peer:
 #   .*:
 #       - .*
-# This is not recomanded, since it would allow anyone who gets root on any
+# This is not recommended, since it would allow anyone who gets root on any
 # single minion to instantly have root on all of the minions!
 #
 

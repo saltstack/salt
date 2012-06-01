@@ -20,7 +20,8 @@ Full Table of Contents
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
     topics/community
-    topics/tutorials/standalone_minion.rst
+    topics/tutorials/standalone_minion
+    topics/projects/index
 
     ref/index
     ref/modules/*

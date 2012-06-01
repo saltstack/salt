@@ -68,6 +68,7 @@ def jinja(sfn, string=False, **kwargs):
     '''
     try:
         from salt.utils.jinja import get_template
+        from jinja2.exceptions import TemplateSyntaxError
     except ImportError:
         return {'result': False,
                 'data': 'Failed to import jinja'}
@@ -103,6 +104,9 @@ def jinja(sfn, string=False, **kwargs):
                     target.write('\n')
         return {'result': True,
                     'data': tgt}
+    except TemplateSyntaxError as exc:
+        return {'result': False,
+                'data': str(exc)}
     except:
         trb = traceback.format_exc()
         return {'result': False,
@@ -149,4 +153,3 @@ template_registry = {
     'mako': mako,
     'py': py,
 }
-

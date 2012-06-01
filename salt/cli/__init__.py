@@ -105,6 +105,15 @@ class SaltCMD(object):
                 action='store_true',
                 help=('Instead of using shell globs use the return code '
                       'of a function.'))
+        parser.add_option('-I',
+                '--pillar',
+                default=False,
+                dest='pillar',
+                action='store_true',
+                help=('Instead of using shell globs to evaluate the target '
+                      'use a pillar value to identify targets, the syntax '
+                      'for the target is the pillar key followed by a glob'
+                      'expression:\n"role:production*"'))
         parser.add_option('-N',
                 '--nodegroup',
                 default=False,
@@ -286,6 +295,8 @@ class SaltCMD(object):
                 args.append('grain_pcre')
             elif self.opts['exsel']:
                 args.append('exsel')
+            elif self.opts['pillar']:
+                args.append('pillar')
             elif self.opts['nodegroup']:
                 args.append('nodegroup')
             elif self.opts['range']:
@@ -606,6 +617,24 @@ class SaltKey(object):
                 dest='conf_file',
                 default='/etc/salt/master',
                 help='Pass in an alternative configuration file')
+        
+        parser.add_option('--raw-out',
+                default=False,
+                action='store_true',
+                dest='raw_out',
+                help=('Print the output from the salt-key command in raw python '
+                      'form, this is suitable for re-reading the output into '
+                      'an executing python script with eval.'))
+        parser.add_option('--yaml-out',
+                default=False,
+                action='store_true',
+                dest='yaml_out',
+                help='Print the output from the salt-key command in yaml.')
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt-key command in json.')
 
         options, args = parser.parse_args()
 

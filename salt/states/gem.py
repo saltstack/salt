@@ -15,6 +15,13 @@ you can specify what ruby version and gemset to target.
 '''
 
 
+def __virtual__():
+    '''
+    Only load is gem module is available in __salt__
+    '''
+    return 'gem' if 'gem.list' in __salt__ else False
+
+
 def installed(name, ruby=None, runas=None):
     '''
     Make sure that a gem is installed.

@@ -9,6 +9,7 @@ from saltunittest import TestLoader, TextTestRunner
 import integration
 from integration import TestDaemon
 
+
 class CMDTest(integration.ModuleCase):
     '''
     Validate the cmd state
@@ -28,4 +29,3 @@ class CMDTest(integration.ModuleCase):
         ret = self.run_state('cmd.run', name='ls', test=True)
         result = ret[ret.keys()[0]]['result']
         self.assertIsNone(result)
-

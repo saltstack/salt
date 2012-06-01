@@ -47,4 +47,4 @@ class Runner(object):
             self._print_docs()
         else:
             self._verify_fun()
-            self.functions[self.opts['fun']](*self.opts['arg'])
+            return self.functions[self.opts['fun']](*self.opts['arg'])

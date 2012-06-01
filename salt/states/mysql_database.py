@@ -1,8 +1,8 @@
 '''
 MySQL Database Management
 =========================
-The mysql_database module is used to create and manage MySQL databases, databases can be set
-as either absent or present
+The mysql_database module is used to create and manage MySQL databases.
+Databases can be set as either absent or present
 
 .. code-block:: yaml
 
@@ -10,6 +10,14 @@ as either absent or present
       mysql_database:
         - present
 '''
+
+
+def __virtual__():
+    '''
+    Only load if the mysql module is available in __salt__
+    '''
+    return 'mysql_database' if 'mysql.db_exists' in __salt__ else False
+
 
 def present(name):
     '''

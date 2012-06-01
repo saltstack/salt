@@ -93,6 +93,7 @@ def _changes(
         return False
     return change
 
+
 def present(
         name,
         uid=None,
@@ -108,6 +109,7 @@ def present(
         homephone=None,
         other=None,
         unique=True,
+        system=False,
         ):
     '''
     Ensure that the named user is present with the specified properties
@@ -164,6 +166,9 @@ def present(
 
     unique
         Require a unique UID, True by default
+
+    system
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
     '''
     ret = {'name': name,
            'changes': {},
@@ -237,7 +242,8 @@ def present(
                                 workphone=workphone,
                                 homephone=homephone,
                                 other=other,
-                                unique=unique):
+                                unique=unique,
+                                system=system):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if password:

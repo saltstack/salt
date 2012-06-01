@@ -1,5 +1,5 @@
 '''
-This module contains all foo the routines needed to set up a master server, this
+This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
@@ -33,6 +33,7 @@ import salt.client
 import salt.payload
 import salt.pillar
 import salt.state
+import salt.runner
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -62,11 +63,13 @@ def clean_proc(proc, wait_for_kill=10):
         # and proc.terminate() and turns into a NoneType
         pass
 
+
 class MasterExit(SystemExit):
     '''
     Named exit exception for the master process exiting
     '''
     pass
+
 
 class SMaster(object):
     '''
@@ -479,13 +482,12 @@ class AESFuncs(object):
 
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
-                ret[env] = ndata['classes'].keys()
+                ret[env] = list(ndata['classes'].keys())
             elif isinstance(ndata['classes'], list):
                 ret[env] = ndata['classes']
             else:
                 return ret
         return ret
-
 
     def _serve_file(self, load):
         '''
@@ -551,8 +553,8 @@ class AESFuncs(object):
             return ret
         for path in self.opts['file_roots'][load['env']]:
             for root, dirs, files in os.walk(path, followlinks=True):
-                if len(dirs)==0 and len(files)==0:
-                    ret.append(os.path.relpath(root,path))
+                if len(dirs) == 0 and len(files) == 0:
+                    ret.append(os.path.relpath(root, path))
         return ret
 
     def _master_opts(self, load):
@@ -664,6 +666,48 @@ class AESFuncs(object):
             self._return(ret)
         if os.path.isfile(wtag):
             os.remove(wtag)
+
+    def minion_runner(self, clear_load):
+        '''
+        Execute a runner from a minion, return the runner's function data
+        '''
+        if 'peer_run' not in self.opts:
+            return {}
+        if not isinstance(self.opts['peer_run'], dict):
+            return {}
+        if 'fun' not in clear_load\
+                or 'arg' not in clear_load\
+                or 'id' not in clear_load\
+                or 'tok' not in clear_load:
+            return {}
+        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            msg = 'Minion id {0} is not who it says it is!'.format(
+                    clear_load['id'])
+            log.warn(msg)
+            return {}
+        perms = set()
+        for match in self.opts['peer_run']:
+            if re.match(match, clear_load['id']):
+                # This is the list of funcs/modules!
+                if isinstance(self.opts['peer_run'][match], list):
+                    perms.update(self.opts['peer_run'][match])
+        good = False
+        for perm in perms:
+            if re.match(perm, clear_load['fun']):
+                good = True
+        if not good:
+            return {}
+        # Prepare the runner object
+        opts = {'fun': clear_load['fun'],
+                'arg': clear_load['arg'],
+                'doc': False,
+                'conf_file': self.opts['conf_file']}
+        opts.update(self.opts)
+        runner = salt.runner.Runner(opts)
+        return runner.run()
+        
 
     def minion_publish(self, clear_load):
         '''

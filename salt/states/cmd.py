@@ -36,6 +36,7 @@ import grp
 import os
 from salt.exceptions import CommandExecutionError
 
+
 def wait(name,
         onlyif=None,
         unless=None,
@@ -75,6 +76,7 @@ def wait(name,
             'changes': {},
             'result': True,
             'comment': ''}
+
 
 def run(name,
         onlyif=None,

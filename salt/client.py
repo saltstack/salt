@@ -47,10 +47,10 @@ from salt.exceptions import SaltClientError, SaltInvocationError
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
 try:
-  import seco.range
-  RANGE = True
+    import seco.range
+    RANGE = True
 except ImportError:
-  pass
+    pass
 
 
 def condition_kwarg(arg, kwarg):
@@ -103,7 +103,7 @@ class LocalClient(object):
         # If the running user is just the specified user in the
         # conf file, don't pass the user as it's implied.
         elif user == self.opts['user']:
-          return None
+            return None
         return user
 
     def _check_glob_minions(self, expr):
@@ -156,10 +156,10 @@ class LocalClient(object):
     def _convert_range_to_list(self, tgt):
         range = seco.range.Range(self.opts['range_server'])
         try:
-          return range.expand(tgt)
+            return range.expand(tgt)
         except seco.range.RangeException as e:
-          print(("Range server exception: {0}".format(e)))
-          return []
+            print(("Range server exception: {0}".format(e)))
+            return []
 
     def gather_job_info(self, jid, tgt, tgt_type):
         '''
@@ -363,7 +363,7 @@ class LocalClient(object):
             return {}
         elif not pub_data['jid']:
             return {}
-        return (self.get_returns(pub_data['jid'],
+        return (self.get_full_returns(pub_data['jid'],
                 pub_data['minions'], timeout))
 
     def get_cli_returns(
@@ -445,6 +445,13 @@ class LocalClient(object):
                 if more_time:
                     timeout += inc_timeout
                     continue
+                if verbose:
+                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                        if not len(fret) >= len(minions):
+                            print('\nThe following minions did not return:')
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                print(minion)
                 break
             time.sleep(0.01)
 
@@ -657,6 +664,7 @@ class LocalClient(object):
                 'grain': self._check_grain_minions,
                 'grain_pcre': self._check_grain_minions,
                 'exsel': self._check_grain_minions,
+                'pillar': self._check_grain_minions,
                 'compound': self._check_grain_minions,
                 }[expr_form](expr)
 
@@ -694,8 +702,8 @@ class LocalClient(object):
         # Convert a range expression to a list of nodes and change expression
         # form to list
         if expr_form == 'range' and RANGE:
-          tgt = self._convert_range_to_list(tgt)
-          expr_form = 'list'
+            tgt = self._convert_range_to_list(tgt)
+            expr_form = 'list'
 
         # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
@@ -717,14 +725,14 @@ class LocalClient(object):
                     'minions': minions}
 
         # Generate the standard keyword args to feed to format_payload
-        payload_kwargs = { 'cmd': 'publish',
+        payload_kwargs = {'cmd': 'publish',
                            'tgt': tgt,
                            'fun': fun,
                            'arg': arg,
                            'key': self.key,
                            'tgt_type': expr_form,
                            'ret': ret,
-                           'jid': jid }
+                           'jid': jid}
 
         # If we have a salt user, add it to the payload
         if self.salt_user:
@@ -734,7 +742,7 @@ class LocalClient(object):
         if self.opts['order_masters']:
             payload_kwargs['to'] = timeout
 
-        package = salt.payload.format_payload( 'clear', **payload_kwargs)
+        package = salt.payload.format_payload('clear', **payload_kwargs)
 
         # Prep zmq
         context = zmq.Context()

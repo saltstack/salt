@@ -14,3 +14,5 @@ salt.modules.pkg
 * :mod:`salt.modules.yumpkg`
 * :mod:`salt.modules.yumpkg5`
 * :mod:`salt.modules.zypper`
+* :mod:`salt.modules.brew`
+* :mod:`salt.modules.win_pkg`

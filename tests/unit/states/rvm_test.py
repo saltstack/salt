@@ -49,7 +49,7 @@ class TestRvmState(TestCase):
                                  'jruby-1.6.5.1': True,
                                  'jruby-1.6': False,
                                  'jruby-1.9.3': False,
-                                 'jruby-1.9.3-p125': False}.iteritems():
+                                 'jruby-1.9.3-p125': False}.items():
                 ret = rvm._check_ruby({'changes': {}, 'result': False}, ruby)
                 self.assertEqual(result, ret['result'])
 

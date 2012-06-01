@@ -2,8 +2,8 @@
 Postgres Database Management
 ============================
 
-The postgres_database module is used to create and manage Postgres databases, databases can be set
-as either absent or present
+The postgres_database module is used to create and manage Postgres databases.
+Databases can be set as either absent or present
 
 .. code-block:: yaml
 
@@ -11,6 +11,7 @@ as either absent or present
       postgres_database:
         - present
 '''
+
 
 def present(name):
     '''

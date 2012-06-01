@@ -2,8 +2,8 @@
 File Management
 ===============
 
-Salt States can aggressively manipulate files on a system. There are a number of
-ways in which files can be managed.
+Salt States can aggressively manipulate files on a system. There are a number
+of ways in which files can be managed.
 
 Regular files can be enforced with the ``managed`` function. This function
 downloads files from the salt master and places them on the target system.
@@ -83,11 +83,12 @@ import difflib
 import hashlib
 import logging
 import tempfile
-import urlparse
+
 import copy
 
 # Import Salt libs
 import salt.utils.templates
+from salt._compat import string_types, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +231,7 @@ def _source_list(source, source_hash, env):
                     continue
                 single_src = single.keys()[0]
                 single_hash = single[single_src]
-                proto = urlparse.urlparse(single_src).scheme
+                proto = urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src in mfiles:
                         source = single_src
@@ -244,11 +245,12 @@ def _source_list(source, source_hash, env):
                         source = single_src
                         source_hash = single_hash
                         break
-            elif isinstance(single, basestring):
+            elif isinstance(single, string_types):
                 if single in mfiles:
                     source = single
                     break
     return source, source_hash
+
 
 def _get_managed(
         name,
@@ -309,13 +311,13 @@ def _get_managed(
     else:
         # Copy the file down if there is a source
         if source:
-            if urlparse.urlparse(source).scheme == 'salt':
+            if urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, env)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
-                if urlparse.urlparse(source_hash).scheme in protos:
+                if urlparse(source_hash).scheme in protos:
                     # The sourc_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
@@ -335,7 +337,7 @@ def _get_managed(
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
                     if len(comps) < 2:
-                        return '', {},('Source hash file {0} contains an '
+                        return '', {}, ('Source hash file {0} contains an '
                                   ' invalid hash format, it must be in '
                                   ' the format <hash type>=<hash>'
                                   ).format(source_hash)
@@ -345,6 +347,7 @@ def _get_managed(
                 return '', {}, ('Unable to determine upstream hash of'
                           ' source file {0}').format(source)
     return sfn, source_sum, ''
+
 
 def _check_perms(name, ret, user, group, mode):
     '''
@@ -415,14 +418,15 @@ def _check_recurse(
         group,
         dir_mode,
         file_mode,
-        env):
+        env,
+        include_empty):
     '''
     Check what files will be changed by a recurse call
     '''
     vdir = set()
     keep = set()
     changes = {}
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -1123,13 +1127,13 @@ def directory(name,
                                          'user {0} (user does not ' \
                                          'exist)'.format(user)
                         # Remove 'user' from list of recurse targets
-                        targets = filter(lambda x: x != 'user', targets)
+                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'user not specified, but configured as ' \
                              'a target for recursive ownership management'
                     # Remove 'user' from list of recurse targets
-                    targets = filter(lambda x: x != 'user', targets)
+                    targets = list(x for x in targets if x != 'user')
             if 'group' in targets:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
@@ -1137,15 +1141,15 @@ def directory(name,
                     if type(gid).__name__ == 'str':
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'for group {0}'.format(group,user)
+                                         'for group {0}'.format(group, user)
                         # Remove 'group' from list of recurse targets
-                        targets = filter(lambda x: x != 'group', targets)
+                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
                              'as a target for recursive ownership management'
                     # Remove 'group' from list of recurse targets
-                    targets = filter(lambda x: x != 'group', targets)
+                    targets = list(x for x in targets if x != 'group')
 
             needs_fixed = {}
             if targets:
@@ -1154,32 +1158,34 @@ def directory(name,
                     fstat = os.stat(path)
                     if 'user' in targets and fstat.st_uid != uid:
                             needs_fixed['user'] = True
-                            if needs_fixed.get('group'): break
+                            if needs_fixed.get('group'):
+                                break
                     if 'group' in targets and fstat.st_gid != gid:
                             needs_fixed['group'] = True
-                            if needs_fixed.get('user'): break
+                            if needs_fixed.get('user'):
+                                break
 
             if needs_fixed.get('user'):
                 # Make sure the 'recurse' subdict exists
-                ret['changes'].setdefault('recurse',{})
+                ret['changes'].setdefault('recurse', {})
                 if 'user' in targets:
                     if __salt__['cmd.retcode']('chown -R {0} "{1}"'.format(
-                            user,name)) != 0:
+                            user, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership on ' \
-                                         '{0} for user {1}'.format(name,group)
+                                         '{0} for user {1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['user'] = \
                                 __salt__['file.uid_to_user'](uid)
             if needs_fixed.get('group'):
-                ret['changes'].setdefault('recurse',{})
+                ret['changes'].setdefault('recurse', {})
                 if 'group' in targets:
                     if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
-                            group,name)) != 0:
+                            group, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'on {0} for group ' \
-                                         '{1}'.format(name,group)
+                                         '{1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['group'] = \
                                 __salt__['file.gid_to_group'](gid)
@@ -1210,6 +1216,7 @@ def recurse(name,
         dir_mode=None,
         file_mode=None,
         env=None,
+        include_empty=False,
         **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -1245,6 +1252,10 @@ def recurse(name,
 
     file_mode
         The permissions mode to set any files created
+
+    include_empty
+        Set this to True if empty directories should also be created
+        (default is False)
     '''
     ret = {'name': name,
            'changes': {},
@@ -1274,10 +1285,11 @@ def recurse(name,
                 group,
                 dir_mode,
                 file_mode,
-                env)
+                env,
+                include_empty)
         return ret
     vdir = set()
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -1317,11 +1329,21 @@ def recurse(name,
                 # FIXME: no metadata (ownership, permissions) available
                 shutil.copyfile(fn_, dest)
                 ret['changes'][dest] = 'updated'
+        elif os.path.isdir(dest) and include_empty:
+            #check perms
+            _ret, perms = _check_perms(dest, {}, user, group, dir_mode)
+            if _ret['changes']:
+                ret['changes'][dest] = 'updated'
+            keep.add(dest)
         else:
             keep.add(dest)
-            # The destination file is not present, make it
-            # FIXME: no metadata (ownership, permissions) available
-            shutil.copyfile(fn_, dest)
+            if os.path.isdir(fn_) and include_empty:
+                #create empty dir
+                os.mkdir(dest, dir_mode)
+            else:
+                # The destination file is not present, make it
+                # FIXME: no metadata (ownership, permissions) available
+                shutil.copyfile(fn_, dest)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
@@ -1331,6 +1353,7 @@ def recurse(name,
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
+
 
 def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         flags='g'):
@@ -1403,13 +1426,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
     return ret
 
+
 def comment(name, regex, char='#', backup='.bak'):
     '''
     Usage::
 
         /etc/fstab:
           file.comment:
-            - regex: ^//10.10.20.5
+            - regex: ^bind 127.0.0.1
 
     .. versionadded:: 0.9.5
     '''
@@ -1448,6 +1472,7 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'Expected commented lines not found'
 
     return ret
+
 
 def uncomment(name, regex, char='#', backup='.bak'):
     '''
@@ -1497,6 +1522,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     return ret
 
+
 def append(name, text):
     '''
     Ensure that some text appears at the end of a file
@@ -1529,7 +1555,7 @@ def append(name, text):
     if not check_res:
         return _error(ret, check_msg)
 
-    if isinstance(text, basestring):
+    if isinstance(text, string_types):
         text = (text,)
 
     for chunk in text:
