@@ -9,12 +9,6 @@ import os
 import shutil
 import string
 import subprocess
-#try:
-#    import urllib2
-#    import urlparse
-#except:
-#    import urllib.request as urllib2
-#    import urllib.parse as urlparse
 
 # Import third-party libs
 import yaml
