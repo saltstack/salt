@@ -34,7 +34,7 @@ def __virtual__():
     '''
     Only load this module if the mysql config is set
     '''
-    if any(k.startswith('mysql.') for k in __opts__.keys()):
+    if any(k.startswith('mysql.') for k in list(__opts__.keys())):
         if has_mysqldb:
             return 'mysql'
     return False
@@ -116,7 +116,7 @@ def status():
     db = connect()
     cur = db.cursor()
     cur.execute('SHOW STATUS')
-    for i in xrange(cur.rowcount):
+    for i in range(cur.rowcount):
         row = cur.fetchone()
         ret[row[0]] = row[1]
     return ret

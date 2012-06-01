@@ -78,7 +78,7 @@ def db_list(user=None, host=None, port=None):
     for line in lines[1:]:
         line = [x.strip() for x in line.split("|")]
         if not line[0] == "":
-            ret.append(zip(header[:-1], line[:-1]))
+            ret.append(list(zip(header[:-1], line[:-1])))
 
     return ret
 
