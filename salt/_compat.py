@@ -11,6 +11,11 @@ except ImportError:
 PY3 = sys.version_info[0] == 3
 
 if PY3:
+    MAX_SIZE = sys.maxsize
+else:
+    MAX_SIZE = sys.maxint
+
+if PY3:
     string_types = str,
     integer_types = int,
     class_types = type,
@@ -24,11 +29,6 @@ else:
     text_type = unicode
     binary_type = str
     long = long
-
-if PY3:
-    range = range
-else:
-    range = xrange
 
 if PY3:
     def callable(obj):
@@ -123,26 +123,6 @@ else:
         return v.decode(encoding, errors)
     def url_unquote_native(v, encoding='utf-8', errors='replace'):
         return native_(url_unquote_text(v, encoding, errors))
-
-
-if PY3:
-    def iteritems_(d):
-        return d.items()
-
-    def itervalues_(d):
-        return d.values()
-
-    def iterkeys_(d):
-        return d.keys()
-else:
-    def iteritems_(d):
-        return d.iteritems()
-
-    def itervalues_(d):
-        return d.itervalues()
-
-    def iterkeys_(d):
-        return d.iterkeys()
 
 if PY3:
     zip = zip

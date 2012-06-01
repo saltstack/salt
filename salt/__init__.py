@@ -62,7 +62,7 @@ class Master(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=salt.log.LOG_LEVELS.keys(),
+                choices=list(salt.log.LOG_LEVELS.keys()),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
@@ -93,7 +93,7 @@ class Master(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
         import logging
         log = logging.getLogger(__name__)
@@ -153,10 +153,10 @@ class Minion(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=salt.log.LOG_LEVELS.keys(),
+                choices=list(salt.log.LOG_LEVELS.keys()),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
+                     ', '.join([repr(l) for l in list(salt.log.LOG_LEVELS.keys())]))
 
         options, args = parser.parse_args()
         log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
@@ -181,7 +181,7 @@ class Minion(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
         import logging
         # Late import so logging works correctly
@@ -272,7 +272,7 @@ class Syndic(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=salt.log.LOG_LEVELS.keys(),
+                choices=list(salt.log.LOG_LEVELS.keys()),
                 help=('Console log level. One of %s. For the logfile settings '
                       'see the config file. Default: \'%%default\'.' %
                       ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
@@ -300,7 +300,7 @@ class Syndic(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
 
         import logging

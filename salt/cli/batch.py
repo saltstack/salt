@@ -113,7 +113,7 @@ class Batch(object):
                     # Gather returns until we get to the bottom
                     ncnt = 0
                     while True:
-                        part = queue.next()
+                        part = next(queue)
                         if part is None:
                             time.sleep(0.01)
                             ncnt += 1
