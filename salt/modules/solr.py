@@ -60,13 +60,13 @@ verbose : True
 '''
 
 # Import Python Libs
-import urllib2
+
 import json
 import os
 
 # Import Salt libs
 import salt.utils
-from salt._compat import string_types
+from salt._compat import string_types, url_open
 
 #sane defaults
 __opts__ = {'solr.cores': [],
@@ -244,12 +244,13 @@ def _http_request(url, request_timeout=None):
 
         request_timeout = __opts__['solr.request_timeout']
         if request_timeout is None:
-            data = json.load(urllib2.urlopen(url))
+            data = json.load(url_open(url))
         else:
-            data = json.load(urllib2.urlopen(url, timeout=request_timeout))
+            data = json.load(url_open(url, timeout=request_timeout))
         return _get_return_dict(True, data, [])
     except Exception as e:
         return _get_return_dict(False, {}, ["{0} : {1}".format(url, e)])
+
 
 def _replication_request(command, host=None, core_name=None, params=[]):
     '''

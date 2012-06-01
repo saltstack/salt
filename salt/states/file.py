@@ -83,12 +83,12 @@ import difflib
 import hashlib
 import logging
 import tempfile
-import urlparse
+
 import copy
 
 # Import Salt libs
 import salt.utils.templates
-from salt._compat import string_types
+from salt._compat import string_types, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +231,7 @@ def _source_list(source, source_hash, env):
                     continue
                 single_src = single.keys()[0]
                 single_hash = single[single_src]
-                proto = urlparse.urlparse(single_src).scheme
+                proto = urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src in mfiles:
                         source = single_src
@@ -311,13 +311,13 @@ def _get_managed(
     else:
         # Copy the file down if there is a source
         if source:
-            if urlparse.urlparse(source).scheme == 'salt':
+            if urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, env)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
-                if urlparse.urlparse(source_hash).scheme in protos:
+                if urlparse(source_hash).scheme in protos:
                     # The sourc_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
@@ -1127,13 +1127,13 @@ def directory(name,
                                          'user {0} (user does not ' \
                                          'exist)'.format(user)
                         # Remove 'user' from list of recurse targets
-                        targets = filter(lambda x: x != 'user', targets)
+                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'user not specified, but configured as ' \
                              'a target for recursive ownership management'
                     # Remove 'user' from list of recurse targets
-                    targets = filter(lambda x: x != 'user', targets)
+                    targets = list(x for x in targets if x != 'user')
             if 'group' in targets:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
@@ -1143,13 +1143,13 @@ def directory(name,
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
                         # Remove 'group' from list of recurse targets
-                        targets = filter(lambda x: x != 'group', targets)
+                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
                              'as a target for recursive ownership management'
                     # Remove 'group' from list of recurse targets
-                    targets = filter(lambda x: x != 'group', targets)
+                    targets = list(x for x in targets if x != 'group')
 
             needs_fixed = {}
             if targets:

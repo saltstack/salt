@@ -482,7 +482,7 @@ class AESFuncs(object):
 
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
-                ret[env] = ndata['classes'].keys()
+                ret[env] = list(ndata['classes'].keys())
             elif isinstance(ndata['classes'], list):
                 ret[env] = ndata['classes']
             else:
