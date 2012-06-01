@@ -1,4 +1,4 @@
-from winservice import Service, instart
+from salt.utils.winservice import Service, instart
 import win32serviceutil
 import win32service
 import winerror

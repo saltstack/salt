@@ -1,6 +1,7 @@
 '''
 Some of the utils used by salt
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
@@ -118,7 +119,7 @@ def daemonize():
                     0)
                 sys.exit(0)
             else:
-                import saltminionservice
+                from . import saltminionservice
                 import win32serviceutil
                 import win32service
                 import winerror
