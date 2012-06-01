@@ -63,7 +63,7 @@ def detect_kwargs(func, args, data=None):
     defaults = [] if defaults is None else defaults
     starti = len(spec_args) - len(defaults)
     kwarg_spec = set()
-    for ind in xrange(len(defaults)):
+    for ind in range(len(defaults)):
         kwarg_spec.add(spec_args[starti])
         starti += 1
     _args = []

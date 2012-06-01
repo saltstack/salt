@@ -222,7 +222,7 @@ def interfaces():
             configstart = configstart + 1
             continue
     for iface in ifaces:
-        for key, val in iface.iteritems():
+        for key, val in iface.items():
             item = {}
             itemdict = {'Physical Address': 'hwaddr',
                         'IPv4 Address': 'ipaddr',
@@ -230,7 +230,7 @@ def interfaces():
                         'Subnet Mask': 'netmask',
                         }
             item['broadcast'] = None
-            for k, v in itemdict.iteritems():
+            for k, v in itemdict.items():
                 if k in val:
                     item[v] = val[k].rstrip('(Preferred)')
             if 'IPv4 Address' in val:
