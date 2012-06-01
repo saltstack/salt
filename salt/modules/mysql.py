@@ -116,7 +116,7 @@ def status():
     db = connect()
     cur = db.cursor()
     cur.execute('SHOW STATUS')
-    for i in xrange(cur.rowcount):
+    for i in range(cur.rowcount):
         row = cur.fetchone()
         ret[row[0]] = row[1]
     return ret
