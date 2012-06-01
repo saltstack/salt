@@ -120,9 +120,9 @@ def _run(cmd,
         if err:
             err = err.rstrip()
 
-    ret['stdout']  = out
-    ret['stderr']  = err
-    ret['pid']     = proc.pid
+    ret['stdout'] = out
+    ret['stderr'] = err
+    ret['pid'] = proc.pid
     ret['retcode'] = proc.returncode
     return ret
 
@@ -149,7 +149,7 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     return out
 
 
-def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL, env=()):
+def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute a command, and only return the standard out
 
