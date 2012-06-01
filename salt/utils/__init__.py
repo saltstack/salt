@@ -336,7 +336,7 @@ def required_module_list(docstring=None):
     ret = []
     txt = 'Required python modules: '
     data = docstring.split('\n') if docstring else []
-    mod_list = filter(lambda x: x.startswith(txt), data)
+    mod_list = list(x for x in data if x.startswith(txt))
     if not mod_list:
         return []
     modules = mod_list[0].replace(txt, '').split(', ')

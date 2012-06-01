@@ -1127,13 +1127,13 @@ def directory(name,
                                          'user {0} (user does not ' \
                                          'exist)'.format(user)
                         # Remove 'user' from list of recurse targets
-                        targets = filter(lambda x: x != 'user', targets)
+                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'user not specified, but configured as ' \
                              'a target for recursive ownership management'
                     # Remove 'user' from list of recurse targets
-                    targets = filter(lambda x: x != 'user', targets)
+                    targets = list(x for x in targets if x != 'user')
             if 'group' in targets:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
@@ -1143,13 +1143,13 @@ def directory(name,
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
                         # Remove 'group' from list of recurse targets
-                        targets = filter(lambda x: x != 'group', targets)
+                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
                              'as a target for recursive ownership management'
                     # Remove 'group' from list of recurse targets
-                    targets = filter(lambda x: x != 'group', targets)
+                    targets = list(x for x in targets if x != 'group')
 
             needs_fixed = {}
             if targets:

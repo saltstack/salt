@@ -163,7 +163,7 @@ def managed(
         elif old != new:
             diff = difflib.unified_diff(old, new)
             ret['changes']['interface'] = ''.join(diff)
-    except AttributeError, error:
+    except AttributeError as error:
         ret['result'] = False
         ret['comment'] = error.message
         return ret
@@ -178,7 +178,7 @@ def managed(
             elif old != new:
                 diff = difflib.unified_diff(old, new)
                 ret['changes']['bond'] = ''.join(diff)
-        except AttributeError, error:
+        except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
             ret['comment'] = error.message
@@ -190,7 +190,7 @@ def managed(
             __salt__['ip.up'](name)
         else:
             __salt__['ip.down'](name)
-    except Exception, error:
+    except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message
         return ret

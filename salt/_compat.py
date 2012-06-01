@@ -11,6 +11,11 @@ except ImportError:
 PY3 = sys.version_info[0] == 3
 
 if PY3:
+    MAX_SIZE = sys.maxsize
+else:
+    MAX_SIZE = sys.maxint
+
+if PY3:
     string_types = str,
     integer_types = int,
     class_types = type,
