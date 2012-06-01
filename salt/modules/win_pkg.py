@@ -108,7 +108,7 @@ def _search_software(target):
     software = dict(
                     _get_reg_software().items() +
                     _get_msi_software().items())
-    for key, value in software.iteritems():
+    for key, value in software.items():
         if key is not None:
             if target.lower() in key.lower():
                 search_results[key] = value
@@ -155,7 +155,7 @@ def _get_reg_software():
     #software in windows
     reg_entries = dict(_get_user_keys().items() +
                        _get_machine_keys().items())
-    for reg_hive, reg_keys in reg_entries.iteritems():
+    for reg_hive, reg_keys in reg_entries.items():
         for reg_key in reg_keys:
             try:
                 reg_handle = win32api.RegOpenKeyEx(

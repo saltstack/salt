@@ -494,7 +494,7 @@ class Finder(object):
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
-        for key, value in options.iteritems():
+        for key, value in options.items():
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue

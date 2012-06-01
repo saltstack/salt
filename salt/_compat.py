@@ -124,26 +124,6 @@ else:
     def url_unquote_native(v, encoding='utf-8', errors='replace'):
         return native_(url_unquote_text(v, encoding, errors))
 
-
-if PY3:
-    def iteritems_(d):
-        return d.items()
-
-    def itervalues_(d):
-        return d.values()
-
-    def iterkeys_(d):
-        return d.keys()
-else:
-    def iteritems_(d):
-        return d.iteritems()
-
-    def itervalues_(d):
-        return d.itervalues()
-
-    def iterkeys_(d):
-        return d.iterkeys()
-
 if PY3:
     zip = zip
 else:

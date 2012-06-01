@@ -93,7 +93,7 @@ class Master(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
         import logging
         log = logging.getLogger(__name__)
@@ -181,7 +181,7 @@ class Minion(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
         import logging
         # Late import so logging works correctly
@@ -300,7 +300,7 @@ class Syndic(object):
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
         )
-        for name, level in self.opts['log_granular_levels'].iteritems():
+        for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
 
         import logging
