@@ -4,7 +4,8 @@ Manage users with the useradd command
 
 import grp
 import pwd
-from salt._compat import string_types
+
+from salt._compat import string_types, callable
 
 
 def __virtual__():
@@ -77,15 +78,15 @@ def add(name,
         # user does exist, and B) running useradd again would result in a
         # nonzero exit status and be interpreted as a False result.
         if fullname:
-            chfullname(name,fullname)
+            chfullname(name, fullname)
         if roomnumber:
-            chroomnumber(name,roomnumber)
+            chroomnumber(name, roomnumber)
         if workphone:
-            chworkphone(name,workphone)
+            chworkphone(name, workphone)
         if homephone:
-            chhomephone(name,homephone)
+            chhomephone(name, homephone)
         if other:
-            chother(name,other)
+            chother(name, other)
         return True
 
 
@@ -236,7 +237,7 @@ def chfullname(name, fullname):
     pre_info = info(name)
     if fullname == pre_info['fullname']:
         return True
-    cmd = 'chfn -f "{0}" {1}'.format(fullname,name)
+    cmd = 'chfn -f "{0}" {1}'.format(fullname, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['fullname'] != pre_info['fullname']:
@@ -255,7 +256,7 @@ def chroomnumber(name, roomnumber):
     pre_info = info(name)
     if roomnumber == pre_info['roomnumber']:
         return True
-    cmd = 'chfn -r "{0}" {1}'.format(roomnumber,name)
+    cmd = 'chfn -r "{0}" {1}'.format(roomnumber, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['roomnumber'] != pre_info['roomnumber']:
@@ -274,7 +275,7 @@ def chworkphone(name, workphone):
     pre_info = info(name)
     if workphone == pre_info['workphone']:
         return True
-    cmd = 'chfn -w "{0}" {1}'.format(workphone,name)
+    cmd = 'chfn -w "{0}" {1}'.format(workphone, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['workphone'] != pre_info['workphone']:
@@ -293,7 +294,7 @@ def chhomephone(name, homephone):
     pre_info = info(name)
     if homephone == pre_info['homephone']:
         return True
-    cmd = 'chfn -h "{0}" {1}'.format(homephone,name)
+    cmd = 'chfn -h "{0}" {1}'.format(homephone, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['homephone'] != pre_info['homephone']:
@@ -312,7 +313,7 @@ def chother(name, other):
     pre_info = info(name)
     if other == pre_info['other']:
         return True
-    cmd = 'chfn -o "{0}" {1}'.format(other,name)
+    cmd = 'chfn -o "{0}" {1}'.format(other, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['other'] != pre_info['other']:
@@ -343,11 +344,11 @@ def info(name):
         # Assign empty strings for any unspecified GECOS fields
         while len(gecos_field) < 5:
             gecos_field.append('')
-        ret['fullname']   = gecos_field[0]
+        ret['fullname'] = gecos_field[0]
         ret['roomnumber'] = gecos_field[1]
-        ret['workphone']  = gecos_field[2]
-        ret['homephone']  = gecos_field[3]
-        ret['other']      = gecos_field[4]
+        ret['workphone'] = gecos_field[2]
+        ret['homephone'] = gecos_field[3]
+        ret['other'] = gecos_field[4]
     except KeyError:
         ret['gid'] = ''
         ret['groups'] = ''
