@@ -143,7 +143,7 @@ class Pillar(object):
         '''
         envs = set(['base'])
         if 'file_roots' in self.opts:
-            envs.update(list(self.opts['file_roots'].keys()))
+            envs.update(list(self.opts['file_roots']))
         return envs
 
     def get_tops(self):

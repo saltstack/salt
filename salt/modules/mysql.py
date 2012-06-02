@@ -34,7 +34,7 @@ def __virtual__():
     '''
     Only load this module if the mysql config is set
     '''
-    if any(k.startswith('mysql.') for k in list(__opts__.keys())):
+    if any(k.startswith('mysql.') for k in list(__opts__)):
         if has_mysqldb:
             return 'mysql'
     return False

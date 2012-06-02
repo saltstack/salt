@@ -229,7 +229,7 @@ def _source_list(source, source_hash, env):
                 # to check, if it is salt then check the master list
                 if len(single) != 1:
                     continue
-                single_src = single.keys()[0]
+                single_src = next(iter(single))
                 single_hash = single[single_src]
                 proto = urlparse(single_src).scheme
                 if proto == 'salt':

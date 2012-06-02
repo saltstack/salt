@@ -467,10 +467,8 @@ def get_disks(name):
             target = targets[0]
         else:
             continue
-        if 'dev' in list(target.attributes.keys()) \
-                and 'file' in list(source.attributes.keys()):
-            disks[target.getAttribute('dev')] = \
-                    {'file': source.getAttribute('file')}
+        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
+            disks[target.getAttribute('dev')] = {'file': source.getAttribute('file')}
     for dev in disks:
         disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
             + disks[dev]['file'],

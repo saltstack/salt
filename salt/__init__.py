@@ -62,10 +62,10 @@ class Master(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=list(salt.log.LOG_LEVELS.keys()),
+                choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS])
                 )
         log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
         options, args = parser.parse_args()
@@ -153,10 +153,10 @@ class Minion(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=list(salt.log.LOG_LEVELS.keys()),
+                choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in list(salt.log.LOG_LEVELS.keys())]))
+                     ', '.join([repr(l) for l in list(salt.log.LOG_LEVELS)]))
 
         options, args = parser.parse_args()
         log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
@@ -272,10 +272,10 @@ class Syndic(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=list(salt.log.LOG_LEVELS.keys()),
+                choices=list(salt.log.LOG_LEVELS),
                 help=('Console log level. One of %s. For the logfile settings '
                       'see the config file. Default: \'%%default\'.' %
-                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
+                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
                      )
 
         options, args = parser.parse_args()

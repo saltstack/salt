@@ -315,7 +315,7 @@ def set_auth_key_from_file(
     newkey = {}
     rval = ''
     newkey = _validate_keys(lfile)
-    for k in newkey.keys():
+    for k in newkey:
         rval += set_auth_key(
                 user,
                 k,

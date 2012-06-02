@@ -19,7 +19,7 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'symlink')
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', name=name, target=tgt)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_symlink(self):
@@ -29,7 +29,7 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'symlink')
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', test=True, name=name, target=tgt)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_absent_file(self):
@@ -40,7 +40,7 @@ class FileTest(integration.ModuleCase):
         with open(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', name=name)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
         self.assertFalse(os.path.isfile(name))
 
@@ -51,7 +51,7 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'dir_to_kill')
         os.makedirs(name)
         ret = self.run_state('file.absent', name=name)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
         self.assertFalse(os.path.isdir(name))
 
@@ -62,7 +62,7 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'link_to_kill')
         os.symlink(name, '{0}.tgt'.format(name))
         ret = self.run_state('file.absent', name=name)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
         self.assertFalse(os.path.islink(name))
 
@@ -74,7 +74,7 @@ class FileTest(integration.ModuleCase):
         with open(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', test=True, name=name)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
         self.assertTrue(os.path.isfile(name))
 
@@ -99,7 +99,7 @@ class FileTest(integration.ModuleCase):
         with open(name, 'r') as fp_:
             minion_data = fp_.read()
         self.assertEqual(master_data, minion_data)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_managed(self):
@@ -113,7 +113,7 @@ class FileTest(integration.ModuleCase):
                 name=name,
                 source='salt://grail/scene33')
         self.assertFalse(os.path.isfile(name))
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_directory(self):
@@ -126,7 +126,7 @@ class FileTest(integration.ModuleCase):
                 name=name,
                 )
         self.assertTrue(os.path.isdir(name))
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_directory(self):
@@ -140,7 +140,7 @@ class FileTest(integration.ModuleCase):
                 name=name,
                 )
         self.assertFalse(os.path.isdir(name))
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_recurse(self):
@@ -154,7 +154,7 @@ class FileTest(integration.ModuleCase):
                 source='salt://grail',
                 )
         self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_recurse(self):
@@ -169,7 +169,7 @@ class FileTest(integration.ModuleCase):
                 source='salt://grail',
                 )
         self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_sed(self):
@@ -187,7 +187,7 @@ class FileTest(integration.ModuleCase):
                 )
         with open(name, 'r') as fp_:
             self.assertIn('salt', fp_.read())
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_sed(self):
@@ -206,7 +206,7 @@ class FileTest(integration.ModuleCase):
                 )
         with open(name, 'r') as fp_:
             self.assertIn('change', fp_.read())
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_comment(self):
@@ -249,7 +249,7 @@ class FileTest(integration.ModuleCase):
                 )
         with open(name, 'r') as fp_:
             self.assertNotIn('#comment', fp_.read())
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_uncomment(self):
@@ -262,7 +262,7 @@ class FileTest(integration.ModuleCase):
         ret = self.run_state('file.uncomment', name=name, regex='^comment')
         with open(name, 'r') as fp_:
             self.assertNotIn('#comment', fp_.read())
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_uncomment(self):
@@ -280,7 +280,7 @@ class FileTest(integration.ModuleCase):
                 )
         with open(name, 'r') as fp_:
             self.assertIn('#comment', fp_.read())
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_append(self):
@@ -297,7 +297,7 @@ class FileTest(integration.ModuleCase):
                 )
         with open(name, 'r') as fp_:
             self.assertIn('cheese', fp_.read())
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_append(self):
@@ -315,7 +315,7 @@ class FileTest(integration.ModuleCase):
                 )
         with open(name, 'r') as fp_:
             self.assertNotIn('cheese', fp_.read())
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
     def test_touch(self):
@@ -328,7 +328,7 @@ class FileTest(integration.ModuleCase):
                 name=name,
                 )
         self.assertTrue(os.path.isfile(name))
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_touch(self):
@@ -342,7 +342,7 @@ class FileTest(integration.ModuleCase):
                 name=name,
                 )
         self.assertFalse(os.path.isfile(name))
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
 
 

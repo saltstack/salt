@@ -19,7 +19,7 @@ class CMDTest(integration.ModuleCase):
         cmd.run
         '''
         ret = self.run_state('cmd.run', name='ls')
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
     def test_test_run(self):
@@ -27,5 +27,5 @@ class CMDTest(integration.ModuleCase):
         cmd.run test interface
         '''
         ret = self.run_state('cmd.run', name='ls', test=True)
-        result = ret[ret.keys()[0]]['result']
+        result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
