@@ -60,7 +60,7 @@ def __write_aliases_file(lines):
             os.chmod(out.name, stat.S_IMODE(st.st_mode))
             os.chown(out.name, st.st_uid, st.st_gid)
         else:
-            os.chmod(out.name, 0644)
+            os.chmod(out.name, 0o644)
             os.chown(out.name, 0, 0)
 
     for (line_alias, line_target, line_comment) in lines:
@@ -92,8 +92,9 @@ def list_aliases():
         salt '*' aliases.list_aliases
     '''
     ret = {}
-    for (alias, target, comment) in __parse_aliases():
-        if not alias: continue
+    for alias, target, comment in __parse_aliases():
+        if not alias:
+            continue
         ret[alias] = target
     return ret
 

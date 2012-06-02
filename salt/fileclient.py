@@ -518,7 +518,7 @@ class LocalClient(Client):
 
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
-                ret[env] = list(ndata['classes'].keys())
+                ret[env] = list(ndata['classes'])
             elif isinstance(ndata['classes'], list):
                 ret[env] = ndata['classes']
             else:

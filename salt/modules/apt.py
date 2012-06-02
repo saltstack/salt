@@ -8,6 +8,7 @@ import re
 # Import Salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Confirm this module is on a Debian based system

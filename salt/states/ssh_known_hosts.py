@@ -89,7 +89,6 @@ def present(
                          name, config, fingerprint))
 
 
-
 def absent(name, user, config='.ssh/known_hosts'):
     '''
     Verifies that the specified host is not known by the given user

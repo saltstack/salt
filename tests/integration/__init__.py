@@ -170,7 +170,7 @@ class ModuleCase(TestCase):
         '''
         Return the result data from a single state return
         '''
-        return ret[ret.keys()[0]]['result']
+        return ret[next(iter(ret))]['result']
 
     def run_state(self, function, **kwargs):
         '''

@@ -99,7 +99,7 @@ def installed(name,
                                cwd=cwd):
         pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
         version = list(pkg_list.values())[0]
-        pkg_name = list(pkg_list.keys())[0]
+        pkg_name = next(iter(pkg_list))
         ret['result'] = True
         ret['changes']["{0}=={1}".format(pkg_name, version)] = 'Installed'
         ret['comment'] = 'Package was successfully installed'
