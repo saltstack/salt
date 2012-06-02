@@ -44,7 +44,6 @@ def run(name, **kwargs):
            'changes': {},
            'comment': '',
            'result': None}
-    print(__salt__.keys())
     if not name in __salt__:
         ret['comment'] = 'Module function {0} is not available'.format(name)
         ret['result'] = False
