@@ -143,6 +143,28 @@ Or with the following Salt state:
         - present
         - value: 4096 87380 16777216
 
+Salt and SELinux
+================
+
+Currently there are no SELinux policies for Salt. For the most part Salt runs
+without issue when SELinux is running in Enforcing mode. This is because when
+the minion executes as a daemon the type context is changed to ``initrc_t``.
+The problem with SELinux arises when using salt-call or running the minion in
+the foreground, since the type context stays ``unconfined_t``.
+
+This problem is generally manifest in the rpm install scripts when using the
+pkg module. Until a full SELinux Policy is available for Salt the solution
+to this issue is to set the execution context of ``salt-call`` and
+``salt-minion`` to rpm_exec_t:
+
+.. code-block:: bash
+
+    # chcon -t system_u:system_r:rpm_exec_t:s0 /usr/bin/salt-minion
+    # chcon -t system_u:system_r:rpm_exec_t:s0 /usr/bin/salt-call
+
+This works well, because the ``rpm_exec_t`` context has very broad control over
+other types.
+
 Red Hat Enterprise Linux 5
 ==========================
 
