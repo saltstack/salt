@@ -88,7 +88,8 @@ class Master(object):
                     os.path.join(self.opts['cachedir'], 'jobs'),
                     os.path.dirname(self.opts['log_file']),
                     self.opts['sock_dir'],
-                    ])
+                    ],
+                    self.opts['user'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
@@ -176,7 +177,8 @@ class Minion(object):
             self.opts['cachedir'],
             self.opts['extension_modules'],
             os.path.dirname(self.opts['log_file']),
-                ])
+                ],
+                self.opts['user'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
@@ -295,7 +297,8 @@ class Syndic(object):
         '''
         verify_env([self.opts['pki_dir'], self.opts['cachedir'],
                 os.path.dirname(self.opts['log_file']),
-                ])
+                ],
+                self.opts['user'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
