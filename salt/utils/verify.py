@@ -4,6 +4,7 @@ A few checks to make sure the environment is sane
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 import os
 import re
+import pwd
 import sys
 import stat
 import getpass
@@ -60,16 +61,26 @@ def zmq_version():
     return False
 
 
-def verify_env(dirs):
+def verify_env(dirs, user):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
+    pwnam = pwd.getpwnam(user)
+    uid = pwnam[2]
+    gid = pwnam[3]
     for dir_ in dirs:
         if not os.path.isdir(dir_):
             try:
                 cumask = os.umask(63)  # 077
                 os.makedirs(dir_)
+                try:
+                    os.chown(dir_, uid, gid)
+                except KeyError:
+                    err = ('Failed to prepare the Salt environment for user '
+                           '{0}. Either the user is not available or a '
+                           'failure occured trying to change permissions '
+                           'for a file').format(user)
                 os.umask(cumask)
             except OSError as e:
                 sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
