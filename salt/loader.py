@@ -510,7 +510,7 @@ class Loader(object):
             try:
                 ret = fun()
             except Exception as exc:
-                log.critical(('Failed to load grains definded in grain file '
+                log.critical(('Failed to load grains defined in grain file '
                               '{0} in function {1}, error: {2}').format(
                                   key, fun, exc))
                 continue
