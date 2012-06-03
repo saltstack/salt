@@ -104,9 +104,9 @@ def load(mod):
 
         salt '*' kmod.load kvm
     '''
-    pre_mods = kldstat()
+    pre_mods = lsmod()
     data = __salt__['cmd.run_all']('kldload {0}'.format(mod))
-    post_mods = kldstat()
+    post_mods = lsmod()
     return _new_mods(pre_mods, post_mods)
 
 
@@ -118,7 +118,7 @@ def remove(mod):
 
         salt '*' kmod.remove kvm
     '''
-    pre_mods = kldstat()
+    pre_mods = lsmod()
     data = __salt__['cmd.run_all']('kldunload {0}'.format(mod))
-    post_mods = kldstat()
+    post_mods = lsmod()
     return _rm_mods(pre_mods, post_mods)
