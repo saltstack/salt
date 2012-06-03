@@ -229,6 +229,17 @@ class EventPublisher(multiprocessing.Process):
         log.info('Starting the Salt Event Publisher on {0}'.format(epub_uri))
         epub_sock.bind(epub_uri)
         epull_sock.bind(epull_uri)
+        # Restrict access to the sockets
+        os.chmod(
+                os.path.join(self.opts['sock_dir'],
+                    'master_event_pub.ipc'),
+                448
+                )
+        os.chmod(
+                os.path.join(self.opts['sock_dir'],
+                    'master_event_pull.ipc'),
+                448
+                )
 
         try:
             while True:
@@ -274,6 +285,12 @@ class Publisher(multiprocessing.Process):
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
+        # Restrict access to the socket
+        os.chmod(
+                os.path.join(self.opts['sock_dir'],
+                    'publish_pull.ipc'),
+                448
+                )
 
         try:
             while True:
