@@ -173,7 +173,8 @@ class Master(SMaster):
                 aes_funcs,
                 clear_funcs)
         reqserv.start_publisher()
-        reqserv.start_event_publisher()
+        # Uncomment this when the master side event system is ready
+        #reqserv.start_event_publisher()
 
         def sigterm_clean(signum, frame):
             '''
