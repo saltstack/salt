@@ -70,6 +70,8 @@ def verify_env(dirs, user):
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
         gid = pwnam[3]
+        print uid
+        print gid
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
@@ -91,20 +93,20 @@ def verify_env(dirs, user):
         # If starting the process as root, chown the new dirs
         if os.getuid() == 0:
             fmode = os.stat(dir_)
-            if not fmode.st_uid == uid:
+            if not fmode.st_uid == uid or not fmode.st_gid == gid:
                 # chown the file for the new user
                 os.chown(dir_, uid, gid)
             for root, dirs, files in os.walk(dir_):
                 for name in files:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
-                    if not fmode.st_uid == uid:
+                    if not fmode.st_uid == uid or not fmode.st_gid == gid:
                         # chown the file for the new user
                         os.chown(path, uid, gid)
                 for name in dirs:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
-                    if not fmode.st_uid == uid:
+                    if not fmode.st_uid == uid or not fmode.st_gid == gid:
                         # chown the file for the new user
                         os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
