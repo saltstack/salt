@@ -769,7 +769,7 @@ class SaltCall(object):
                     opts['cachedir'],
                     os.path.dirname(opts['log_file']),
                     ],
-                    self.opts['user'])
+                    opts['user'])
 
         return opts
 
