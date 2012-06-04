@@ -362,14 +362,14 @@ def _check_perms(name, ret, user, group, mode):
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
     perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name)
+    perms['lmode'] = __salt__['file.get_mode'](name).lstrip('0')
 
     # Mode changes if needed
     if mode:
         if mode != perms['lmode']:
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
-            if mode != __salt__['file.get_mode'](name):
+            if mode != __salt__['file.get_mode'](name).lstrip('0'):
                 ret['result'] = False
                 ret['comment'] += 'Failed to change mode to {0} '.format(mode)
             else:
