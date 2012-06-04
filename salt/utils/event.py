@@ -67,6 +67,7 @@ class MasterEvent(SaltEvent):
     '''
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__(sock_dir, 'master')
+        self.connect_pub()
 
 
 class MinionEvent(SaltEvent):
