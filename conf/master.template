@@ -180,6 +180,24 @@
 # This is not recommended, since it would allow anyone who gets root on any
 # single minion to instantly have root on all of the minions!
 #
+# Minions can also be allowed to execute runners from the salt master.
+# Since executing a runner from the minion could be considered a security risk,
+# it needs to be enabled. This setting functions just like the peer seeting
+# except that it opens up runners instead of module functions.
+#
+# All peer runner support is turned off by default and must be enabled before
+# using. This will enable all peer runners for all minions:
+#
+# peer_run:
+#   .*:
+#     - .*
+#
+# To enable just the manage.up runner for the minion foo.example.com:
+#
+# peer_run:
+#   foo.example.com:
+#     - manage.up
+#
 
 #####         Cluster settings       #####
 ##########################################

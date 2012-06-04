@@ -5,6 +5,7 @@ Set up the Salt integration test suite
 # Import Python libs
 import multiprocessing
 import os
+import pwd
 import sys
 import shutil
 import signal
@@ -85,7 +86,8 @@ class TestDaemon(object):
                     self.sub_minion_opts['pki_dir'],
                     self.master_opts['sock_dir'],
                     self.smaster_opts['sock_dir'],
-                    ])
+                    ],
+                    pwd.getpwuid(os.getuid())[0])
 
         master = salt.master.Master(self.master_opts)
         self.master_process = multiprocessing.Process(target=master.start)
