@@ -325,6 +325,7 @@ class Loader(object):
         names = {}
         modules = []
         funcs = {}
+        disable = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
@@ -342,6 +343,8 @@ class Loader(object):
                 continue
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
+                    continue
+                if fn_.split('.')[0] in disable:
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))):
