@@ -22,7 +22,7 @@ class DuplicateKeyWarning(RuntimeWarning):
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
-class OctalYAMLUnt(int):
+class OctalYAMLInt(int):
     '''
     Stub class for loading octal integers as strings
     '''
@@ -61,7 +61,7 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
         Detect if an integer is octal and return a string for non explicit
          octal declarations
         '''
-        rv_ = SafeConstructor.construct_yaml_int(self, node)
+        rv_ = yaml.constructor.SafeConstructor.construct_yaml_int(self, node)
         sval = str(self.construct_scalar(node))
         if sval.startswith('0') and not sval.startswith(('0b', '0x')):
             rv_ = OctalYAMLInt(rv_)
