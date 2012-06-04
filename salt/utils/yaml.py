@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import warnings
 
-# Import thirt party modules
+# Import third party modules
 import yaml
 from yaml.nodes import MappingNode
 from yaml.constructor import ConstructorError
@@ -40,8 +40,9 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
             try:
                 hash(key)
             except TypeError as exc:
-                raise ConstructorError('while constructing a mapping', node.start_mark,
-                        'found unacceptable key (%s)' % exc, key_node.start_mark)
+                err = ('While constructing a mapping {0} found unacceptable '
+                       'key {1}').format(node.start_mark, key_node.start_mark)
+                raise ConstructorError(err)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
                 warnings.warn(
@@ -54,13 +55,23 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
         Verify integers and pass them in correctly is they are declared as octal
         '''
         if node.tag == 'tag:yaml.org,2002:int':
-            if node.value.startswith('0') and not node.value.startswith(('0b', '0x')):
+            if node.value.startswith('0') \
+                    and not node.value.startswith(('0b', '0x')):
                 node.value = node.value.lstrip('0')
         return yaml.constructor.SafeConstructor.construct_scalar(self, node)
 
 
-class CustomLoader(yaml.reader.Reader, yaml.scanner.Scanner, yaml.parser.Parser,
-                   yaml.composer.Composer, CustomeConstructor, yaml.resolver.Resolver):
+class CustomLoader(yaml.reader.Reader,
+        yaml.scanner.Scanner,
+        yaml.parser.Parser,
+        yaml.composer.Composer,
+        CustomeConstructor,
+        yaml.resolver.Resolver):
+    '''
+    Create a custom yaml loader that uses the custom constructor. This allows
+    for the yaml loading defaults to be manipulated based on needs within salt
+    to make things like sls file more intuitive.
+    '''
     def __init__(self, stream):
         yaml.reader.Reader.__init__(self, stream)
         yaml.scanner.Scanner.__init__(self)
