@@ -39,7 +39,7 @@ class SaltEvent(object):
         '''
         Establish the publish connection
         '''
-        self.context = zmq.context()
+        self.context = zmq.Context()
         self.sub = context.socket(zmq.SUB)
         self.sub.connect(self.puburi)
         self.poller.register(self.pub, zmq.POLLIN)
