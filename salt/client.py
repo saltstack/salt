@@ -42,6 +42,7 @@ import zmq
 import salt.config
 import salt.payload
 import salt.utils
+import salt.utils.event
 from salt.exceptions import SaltClientError, SaltInvocationError
 
 # Try to import range from https://github.com/ytoolshed/range
@@ -74,6 +75,7 @@ class LocalClient(object):
         self.serial = salt.payload.Serial(self.opts)
         self.key = self.__read_master_key()
         self.salt_user = self.__get_user()
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
     def __read_master_key(self):
         '''
@@ -618,6 +620,13 @@ class LocalClient(object):
                 # return an empty dict
                 return ret
             time.sleep(0.02)
+
+    def get_event_returns(self, jid, minions, timeout=None):
+        '''
+        Gather the return data from the event system
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
 
     def find_cmd(self, cmd):
         '''
