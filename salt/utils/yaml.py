@@ -22,13 +22,6 @@ class DuplicateKeyWarning(RuntimeWarning):
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
-class OctalYAMLInt(int):
-    '''
-    Stub class for loading octal integers as strings
-    '''
-    __slots__ = ()
-
-
 class CustomeConstructor(yaml.constructor.SafeConstructor):
     '''
     Create a custom constructor for manageging YAML
@@ -56,16 +49,14 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
             mapping[key] = value
         return mapping
 
-    def construct_yaml_int(self, node):
+    def construct_scalar(self, node):
         '''
-        Detect if an integer is octal and return a string for non explicit
-         octal declarations
+        Verify integers and pass them in correctly is they are declared as octal
         '''
-        rv_ = yaml.constructor.SafeConstructor.construct_yaml_int(self, node)
-        sval = str(self.construct_scalar(node))
-        if sval.startswith('0') and not sval.startswith(('0b', '0x')):
-            rv_ = OctalYAMLInt(rv_)
-        return rv_
+        if node.tag == 'tag:yaml.org,2002:int':
+            if node.value.startswith('0') and not node.value.startswith(('0b', '0x')):
+                node.value = node.value.lstrip('0')
+        return yaml.constructor.SafeConstructor.construct_scalar(self, node)
 
 
 class CustomLoader(yaml.reader.Reader, yaml.scanner.Scanner, yaml.parser.Parser,
