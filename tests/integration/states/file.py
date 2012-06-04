@@ -223,7 +223,7 @@ class FileTest(integration.ModuleCase):
         with open(name, 'r') as fp_:
             self.assertTrue(fp_.read().startswith('#comment'))
         # result is positive
-        ret = _ret.values()[0]
+        ret = list(_ret.values())[0]
         self.assertTrue(ret['result'], ret)
         # comment twice
         _ret = self.run_state('file.comment', name=name, regex='^comment')
@@ -231,7 +231,7 @@ class FileTest(integration.ModuleCase):
         with open(name, 'r') as fp_:
             self.assertTrue(fp_.read().startswith('#comment'))
         # result is still positive
-        ret = _ret.values()[0]
+        ret = list(_ret.values())[0]
         self.assertTrue(ret['result'], ret)
 
     def test_test_comment(self):

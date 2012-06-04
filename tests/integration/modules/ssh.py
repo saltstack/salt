@@ -38,8 +38,8 @@ class SSHModuleTest(integration.ModuleCase):
              os.path.join(integration.FILES, 'ssh', 'authorized_keys'),
              AUTHORIZED_KEYS)
         ret = self.run_function('ssh.auth_keys', ['root', AUTHORIZED_KEYS])
-        self.assertEqual(len(ret.items()), 1)  # exactply one key is found
-        key_data = ret.items()[0][1]
+        self.assertEqual(len(list(ret.items())), 1)  # exactply one key is found
+        key_data = list(ret.items())[0][1]
         self.assertEqual(key_data['comment'], 'github.com')
         self.assertEqual(key_data['enc'], 'ssh-rsa')
         self.assertEqual(key_data['options'], [])
