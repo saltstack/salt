@@ -13,26 +13,25 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, opts, node):
-        self.opts = opts
+    def __init__(self, sock_dir, node):
         self.poller = zmq.Poller()
         self.cpub = False
         if node == 'master':
             self.puburi = os.path.join(
-                    self.opts['sock_dir'],
+                    sock_dir,
                     'master_event_pub.ipc'
                     )
             self.pulluri = os.path.join(
-                    self.opts['sock_dir'],
+                    sock_dir,
                     'master_event_pull.ipc'
                     )
         else:
             self.puburi = os.path.join(
-                    self.opts['sock_dir'],
+                    sock_dir,
                     'minion_event_pub.ipc'
                     )
             self.pulluri = os.path.join(
-                    self.opts['sock_dir'],
+                    sock_dir,
                     'minion_event_pull.ipc'
                     )
 
@@ -60,3 +59,19 @@ class SaltEvent(object):
                 return self.sub.recv()
             if (time.time() - start) > wait:
                 return None
+
+
+class MasterEvent(SaltEvent):
+    '''
+    Create a master event management object
+    '''
+    def __init__(self, sock_dir):
+        super(MasterEvent, self).__init__(sock_dir, 'master')
+
+
+class MinionEvent(SaltEvent):
+    '''
+    Create a master event management object
+    '''
+    def __init__(self, sock_dir):
+        super(MinionEvent, self).__init__(sock_dir, 'minion')
