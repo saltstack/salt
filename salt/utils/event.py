@@ -17,32 +17,32 @@ class SaltEvent(object):
         self.poller = zmq.Poller()
         self.cpub = False
         if node == 'master':
-            self.puburi = os.path.join(
+            self.puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'master_event_pub.ipc'
-                    )
-            self.pulluri = os.path.join(
+                    ))
+            self.pulluri = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'master_event_pull.ipc'
-                    )
+                    ))
         else:
-            self.puburi = os.path.join(
+            self.puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'minion_event_pub.ipc'
-                    )
-            self.pulluri = os.path.join(
+                    ))
+            self.pulluri = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'minion_event_pull.ipc'
-                    )
+                    ))
 
     def connect_pub(self):
         '''
         Establish the publish connection
         '''
         self.context = zmq.Context()
-        self.sub = context.socket(zmq.SUB)
+        self.sub = self.context.socket(zmq.SUB)
         self.sub.connect(self.puburi)
-        self.poller.register(self.pub, zmq.POLLIN)
+        self.poller.register(self.sub, zmq.POLLIN)
         self.cpub = True
 
     def get_event(self, wait=5, tag=''):
