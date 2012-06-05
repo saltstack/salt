@@ -84,7 +84,7 @@ def _interfaces_ip():
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            m = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
                 iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
@@ -145,7 +145,7 @@ def _interfaces_ifconfig():
     '''
     ret = {}
 
-    piface = re.compile('^(\w+)')
+    piface = re.compile('^(\S+):?')
     pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
