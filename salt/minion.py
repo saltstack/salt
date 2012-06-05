@@ -475,10 +475,12 @@ class Minion(object):
         Lock onto the publisher. This is the main event loop for the minion
         '''
         context = zmq.Context()
+        poller = zmq.Poller()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
         socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
+        poller.register(socket, zmq.POLLIN)
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -486,13 +488,6 @@ class Minion(object):
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
-                payload = None
-                try:
-                    payload = self.serial.loads(socket.recv(1))
-                    self._handle_payload(payload)
-                    last = time.time()
-                except:
-                    pass
                 if time.time() - last > self.opts['sub_timeout']:
                     # It has been a while since the last command, make sure
                     # the connection is fresh by reconnecting
@@ -515,12 +510,11 @@ class Minion(object):
                 self.passive_refresh()
         else:
             while True:
-                payload = None
-                try:
-                    payload = self.serial.loads(socket.recv(1))
+                socks = dict(poller.poll())
+                if socket in socks and socks[socket] == zmq.POLLIN:
+                    payload = self.serial.loads(socket.recv())
                     self._handle_payload(payload)
-                except:
-                    pass
+                    last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
                 self.passive_refresh()
