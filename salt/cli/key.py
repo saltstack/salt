@@ -9,7 +9,7 @@ import sys
 import logging
 # Import salt modules
 import salt.crypt
-import salt.utils as utils
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +20,7 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.colors = salt.utils.get_colors(not bool(self.opts['no_color']))
 
     def _keys(self, key_type, full_path=False):
         '''
@@ -60,11 +61,17 @@ class Key(object):
         List the unaccepted keys
         '''
         if header == True:
-            self._log(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
+            self._log('{0}Unaccepted Keys:{1}'.format(
+                self.colors['LIGHT_RED'], self.colors['ENDC']
+                ))
         keys = self._keys('pre')
         if printer is None:
             for key in sorted(keys):
-                output = utils.RED + key + utils.ENDC
+                output = '{0}{1}{2}'.format(
+                        self.colors['RED'],
+                        key,
+                        self.colors['ENDC']
+                        )
                 self._log(output)
         else:
             printer(list(keys))
@@ -74,11 +81,15 @@ class Key(object):
         List the accepted public keys
         '''
         if header == True:
-            self._log(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
+            self._log('{0}Accepted Keys:{1}'.format(
+                self.colors['LIGHT_GREEN'], self.colors['ENDC']
+                ))
         keys = self._keys('acc')
         if printer is None:
             for key in sorted(keys):
-                self._log(utils.GREEN + key + utils.ENDC)
+                self._log('{0}{1}{2}'.format(
+                    self.colors['GREEN'], key, self.colors['ENDC']
+                    ))
         else:
             printer(list(keys))
 
@@ -87,11 +98,15 @@ class Key(object):
         List the unaccepted keys
         '''
         if header == True:
-            self._log(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
+            self._log('{0}Rejected:{1}'.format(
+                self.colors['LIGHT_BLUE'], self.colors['ENDC']
+                ))
         keys = self._keys('rej')
         if printer is None:
             for key in sorted(keys):
-                self._log(utils.BLUE + key + utils.ENDC)
+                self._log('{0}{1}{2}'.format(
+                    self.colors['BLUE'], key, self.colors['ENDC']
+                    ))
         else:
             printer(list(keys))
 
@@ -151,21 +166,36 @@ class Key(object):
         '''
         Print out the public keys, all of em'
         '''
-        self._log(utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC)
+        self._log('{0}Unaccepted keys:{1}'.format(
+            self.colors['LIGHT_RED'], self.colors['ENDC']
+            ))
         for key in sorted(self._keys('pre', True)):
-            self._log('  ' + utils.RED + os.path.basename(key) + utils.ENDC)
+            self._log('  {0}{1}{2}'.format(
+                self.colors['RED'],
+                os.path.basename(key),
+                self.colors['ENDC']
+                ))
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
-        self._log(utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC)
+        self._log('{0}Accepted keys:{1}'.format(
+            self.colors['LIGHT_GREEN'], self.colors['ENDC']
+            ))
         for key in sorted(self._keys('acc', True)):
-            self._log('  ' + utils.GREEN + os.path.basename(key) +
-                         utils.ENDC)
+            self._log('  {0}{1}{2}'.format(
+                self.colors['GREEN'],
+                os.path.basename(key),
+                self.colors['ENDC']
+                ))
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
-        self._log(utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC)
+        self._log('{0}Rejected keys:{1}'.format(
+            self.colors['LIGHT_BLUE'], self.colors['ENDC']
+            ))
         for key in sorted(self._keys('pre', True)):
-            self._log('  ' + utils.BLUE + os.path.basename(key) +
-                         utils.ENDC)
+            self._log('  {0}{1}{2}'.format(
+                self.colors['BLUE'],
+                os.path.basename(key),
+                self.colors['ENDC']))
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
 
