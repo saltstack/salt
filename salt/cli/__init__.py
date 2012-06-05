@@ -625,16 +625,24 @@ class SaltKey(object):
                 help=('Print the output from the salt-key command in raw python '
                       'form, this is suitable for re-reading the output into '
                       'an executing python script with eval.'))
+
         parser.add_option('--yaml-out',
                 default=False,
                 action='store_true',
                 dest='yaml_out',
                 help='Print the output from the salt-key command in yaml.')
+
         parser.add_option('--json-out',
                 default=False,
                 action='store_true',
                 dest='json_out',
                 help='Print the output from the salt-key command in json.')
+
+        parser.add_option('--no-color',
+                default=False,
+                action='store_true',
+                dest='no_color',
+                help='Disable all colored output')
 
         options, args = parser.parse_args()
 
