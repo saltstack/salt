@@ -4,20 +4,8 @@ Directly call a salt command in the modules, does not require a running salt
 minion to run.
 '''
 
-import salt.cli
-import salt.log
-salt.log.setup_console_logger()
+from salt.scripts import salt_call
 
-
-def main():
-    '''
-    The main function
-    '''
-    client = salt.cli.SaltCall()
-    client.run()
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        raise SystemExit('\nExiting gracefully on Ctrl-c')
+    salt_call()
