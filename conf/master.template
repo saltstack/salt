@@ -73,7 +73,7 @@
 ##########################################
 # The state system uses a "top" file to tell the minions what environment to
 # use and what modules to use. The state_top file is defined relative to the
-# root of the base environment.
+# root of the base environment as defined in "File Server settings" below.
 #state_top: top.sls
 #
 # The external_nodes option allows Salt to gather data that would normally be
