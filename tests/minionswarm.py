@@ -13,6 +13,9 @@ import shutil
 import random
 import hashlib
 
+# Import salt libs
+import salt
+
 # Import third party libs
 import yaml
 
@@ -32,6 +35,11 @@ def parse():
             dest='master',
             default='salt',
             help='The location of the salt master that this swarm will serve')
+    parser.add_option('-k',
+            '--keep-modules',
+            dest='keep',
+            default='',
+            help='A comma delimited list of modules to enable')
     parser.add_option('-f',
             '--foreground',
             dest='foreground',
@@ -74,6 +82,15 @@ class Swarm(object):
                 'cache_dir': os.path.join(dpath, 'cache'),
                 'master': self.opts['master'],
                }
+        if self.opts['keep']:
+            ignore = set()
+            keep = self.opts['keep'].split(',')
+            modpath = os.path.join(os.path.dirname(salt.__file__), 'modules')
+            for fn_ in os.listdir(modpath):
+                if fn_.split('.')[0] in keep:
+                    continue
+                ignore.add(fn_.split('.')[0])
+            data['disable_modules'] = list(ignore)
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
         self.confs.add(path)
