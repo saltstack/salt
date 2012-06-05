@@ -25,6 +25,7 @@ To install Salt on Ubuntu, use the following command:
     `msgpack-python` from Oneiric:
     
     .. code-block:: bash
+
         sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ oneiric universe'
         sudo add-apt-repository ppa:saltstack/salt
         sudo apt-get update
