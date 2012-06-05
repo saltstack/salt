@@ -2,6 +2,7 @@
 master: localhost
 master_port: 54506
 root_dir: /tmp/salttest
+sock_dir: .salt-unix
 pki_dir: pki
 id: minion
 cachedir: cache
