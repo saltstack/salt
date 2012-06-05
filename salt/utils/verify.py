@@ -95,6 +95,8 @@ def verify_env(dirs, user):
                 # chown the file for the new user
                 os.chown(dir_, uid, gid)
             for root, dirs, files in os.walk(dir_):
+                if 'jobs' in root:
+                    continue
                 for name in files:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
