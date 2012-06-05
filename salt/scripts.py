@@ -1,4 +1,6 @@
-"""Salt scripts."""
+'''
+This module contains the function calls to execute command line scipts
+'''
 import os
 
 import salt
@@ -7,19 +9,25 @@ import salt.log
 
 
 def salt_master():
-    '''Start the salt-master.'''
+    '''
+    Start the salt-master.
+    '''
     master = salt.Master()
     master.start()
 
 
 def salt_minion():
-    '''Kick off a salt minion daemon.'''
+    '''
+    Kick off a salt minion daemon.
+    '''
     minion = salt.Minion()
     minion.start()
 
 
 def salt_syndic():
-    '''Kick off a salt syndic daemon.'''
+    '''
+    Kick off a salt syndic daemon.
+    '''
     pid = os.getpid()
     try:
         syndic = salt.Syndic()
@@ -29,7 +37,9 @@ def salt_syndic():
 
 
 def salt_key():
-    '''Manage the authentication keys with salt-key.'''
+    '''
+    Manage the authentication keys with salt-key.
+    '''
     try:
         saltkey = salt.cli.SaltKey()
         saltkey.run()
@@ -38,8 +48,10 @@ def salt_key():
 
 
 def salt_cp():
-    '''Publish commands to the salt system from the command line on the
-    master.'''
+    '''
+    Publish commands to the salt system from the command line on the
+    master.
+    '''
     try:
         cp_ = salt.cli.SaltCP()
         cp_.run()
@@ -48,8 +60,10 @@ def salt_cp():
 
 
 def salt_call():
-    '''Directly call a salt command in the modules, does not require a running
-    salt minion to run.'''
+    '''
+    Directly call a salt command in the modules, does not require a running
+    salt minion to run.
+    '''
     salt.log.setup_console_logger()
     try:
         client = salt.cli.SaltCall()
@@ -59,7 +73,9 @@ def salt_call():
 
 
 def salt_run():
-    '''Execute a salt convenience routine.'''
+    '''
+    Execute a salt convenience routine.
+    '''
     try:
         client = salt.cli.SaltRun()
         client.run()
@@ -68,8 +84,10 @@ def salt_run():
 
 
 def salt_main():
-    '''Publish commands to the salt system from the command line on the
-    master.'''
+    '''
+    Publish commands to the salt system from the command line on the
+    master.
+    '''
     try:
         client = salt.cli.SaltCMD()
         client.run()
