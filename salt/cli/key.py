@@ -20,7 +20,9 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.colors = salt.utils.get_colors(not bool(self.opts['no_color']))
+        self.colors = salt.utils.get_colors(
+                not bool(self.opts.get('no_color', False))
+                )
 
     def _keys(self, key_type, full_path=False):
         '''
