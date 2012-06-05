@@ -488,6 +488,11 @@ class Minion(object):
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
+                socks = dict(poller.poll())
+                if socket in socks and socks[socket] == zmq.POLLIN:
+                    payload = self.serial.loads(socket.recv())
+                    self._handle_payload(payload)
+                    last = time.time()
                 if time.time() - last > self.opts['sub_timeout']:
                     # It has been a while since the last command, make sure
                     # the connection is fresh by reconnecting
