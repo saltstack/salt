@@ -238,7 +238,7 @@ class ShellCase(TestCase):
         path = os.path.join(SCRIPT_DIR, script)
         if not os.path.isfile(path):
             return False
-        ppath = 'PYTHONPATH={0}'.format(':'.join(sys.path[1:]))
+        ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
         data = subprocess.Popen(
                 cmd,
