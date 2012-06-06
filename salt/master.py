@@ -34,6 +34,7 @@ import salt.payload
 import salt.pillar
 import salt.state
 import salt.runner
+import salt.utils.event
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -488,6 +489,10 @@ class AESFuncs(object):
     #
     def __init__(self, opts, crypticle):
         self.opts = opts
+        self.event = salt.utils.event.SaltEvent(
+                self.opst['sock_dir'],
+                'master'
+                )
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         # Make a client
@@ -674,7 +679,8 @@ class AESFuncs(object):
         # If the return data is invalid, just ignore it
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
-        log.info('Got return from %(id)s for job %(jid)s', load)
+        log.info('Got return from {0[id]} for job {0[jid]}'.format(load))
+        self.event.fire_event(load, load['jid'])
         jid_dir = salt.utils.jid_dir(
                 load['jid'],
                 self.opts['cachedir'],
