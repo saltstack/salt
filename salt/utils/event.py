@@ -67,7 +67,7 @@ class SaltEvent(object):
         self.sub.setsockopt(zmq.SUBSCRIBE, tag)
         start = time.time()
         while True:
-            socks = dict(self.poller.poll())
+            socks = dict(self.poller.poll(wait))
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()
                 return self.serial.loads(raw[20:])
