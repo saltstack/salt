@@ -1377,7 +1377,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
         # Remove ldap from nsswitch
         /etc/nsswitch.conf:
-        file.sed:
+          file.sed:
             - before: 'ldap'
             - after: ''
             - limit: '^passwd:'
