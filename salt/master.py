@@ -160,7 +160,6 @@ class Master(SMaster):
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
-        aes_funcs = AESFuncs(self.opts, self.crypticle)
         clear_funcs = ClearFuncs(
                 self.opts,
                 self.key,
@@ -171,7 +170,6 @@ class Master(SMaster):
                 self.crypticle,
                 self.key,
                 self.master_key,
-                aes_funcs,
                 clear_funcs)
         reqserv.start_publisher()
         reqserv.start_event_publisher()
@@ -314,9 +312,8 @@ class ReqServer(object):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, crypticle, key, mkey, aes_funcs, clear_funcs):
+    def __init__(self, opts, crypticle, key, mkey,  clear_funcs):
         self.opts = opts
-        self.aes_funcs = aes_funcs
         self.clear_funcs = clear_funcs
         self.master_key = mkey
         self.context = zmq.Context(self.opts['worker_threads'])
@@ -344,7 +341,6 @@ class ReqServer(object):
                     self.master_key,
                     self.key,
                     self.crypticle,
-                    self.aes_funcs,
                     self.clear_funcs))
 
         for ind, proc in enumerate(self.work_procs):
@@ -395,13 +391,11 @@ class MWorker(multiprocessing.Process):
             mkey,
             key,
             crypticle,
-            aes_funcs,
             clear_funcs):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
-        self.aes_funcs = aes_funcs
         self.clear_funcs = clear_funcs
 
     def __bind(self):
@@ -477,6 +471,7 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
+        self.aes_funcs = AESFuncs(self.opts, self.crypticle)
         self.__bind()
 
 
