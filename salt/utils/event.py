@@ -68,7 +68,7 @@ class SaltEvent(object):
         start = time.time()
         while True:
             socks = dict(self.poller.poll())
-            if self.pub in socks and socks[self.pub] == zmq.POLLIN:
+            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 return self.sub.recv()
             if (time.time() - start) > wait:
                 return None
