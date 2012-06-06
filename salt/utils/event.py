@@ -71,7 +71,7 @@ class SaltEvent(object):
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()
                 return self.serial.loads(raw[20:])
-            if (time.time() - start) > wait:
+            else:
                 return None
 
     def fire_event(self, data, tag=''):
