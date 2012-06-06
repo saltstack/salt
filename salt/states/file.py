@@ -1593,7 +1593,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     Usage::
 
-        /var/log/httpd/logrotate.empty
+        /var/log/httpd/logrotate.empty:
           file.touch
 
     .. versionadded:: 0.9.5
