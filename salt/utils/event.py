@@ -79,7 +79,7 @@ class SaltEvent(object):
             self.connect_pull()
         tag += 20*'|'
         tag = tag[:20]
-        event = '{0}{1}'.format(tag, self.serial.dump(data))
+        event = '{0}{1}'.format(tag, self.serial.dumps(data))
         self.push.send(event)
         return True
 
