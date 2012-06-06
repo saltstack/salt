@@ -478,7 +478,8 @@ class Minion(object):
         poller = zmq.Poller()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
-        socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        if self.opts['sub_timeout']:
+            socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
         poller.register(socket, zmq.POLLIN)
 
