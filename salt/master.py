@@ -489,7 +489,7 @@ class AESFuncs(object):
     def __init__(self, opts, crypticle):
         self.opts = opts
         self.event = salt.utils.event.SaltEvent(
-                self.opst['sock_dir'],
+                self.opts['sock_dir'],
                 'master'
                 )
         self.serial = salt.payload.Serial(opts)
