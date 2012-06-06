@@ -627,6 +627,23 @@ class LocalClient(object):
         '''
         if timeout is None:
             timeout = self.opts['timeout']
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
+        start = 999999999999
+        gstart = int(time.time())
+        found = set()
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            yield {}
+        # Wait for the hosts to check in
+        while True:
+            ret = self.event.get_event(timeout)
+            yield ret
+            time.sleep(0.02)
+
 
     def find_cmd(self, cmd):
         '''
