@@ -4,6 +4,7 @@ Manage events
 
 # Import Python libs
 import os
+import time
 
 # Import Third Party libs
 import zmq
@@ -20,6 +21,7 @@ class SaltEvent(object):
         self.context = zmq.Context()
         self.poller = zmq.Poller()
         self.cpub = False
+        self.cpush = False
         if node == 'master':
             self.puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
