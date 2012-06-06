@@ -102,7 +102,11 @@ def _interfaces_ip():
                             based on the current set of cols
                             """
                             brd = None
-                            ip,cidr = tuple(value.split('/'))
+                            if '/' in value:
+                                ip, cidr = value.split('/')
+                            else:
+                                ip = value
+                                cidr = '24'
                             if type == 'inet':
                                 mask = _cidr_to_ipv4_netmask(int(cidr))
                                 if 'brd' in cols:
