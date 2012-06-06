@@ -404,7 +404,8 @@ class SaltCP(object):
         '''
         Parse the command line
         '''
-        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
+        usage = "%prog [options] '<target>' SOURCE DEST"
+        parser = optparse.OptionParser(version="%%prog %s" % VERSION, usage=usage)
 
         parser.add_option('-t',
                 '--timeout',
