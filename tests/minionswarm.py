@@ -79,7 +79,7 @@ class Swarm(object):
         os.makedirs(dpath)
         data = {'id': os.path.basename(path),
                 'pki_dir': os.path.join(dpath, 'pki'),
-                'cache_dir': os.path.join(dpath, 'cache'),
+                'cachedir': os.path.join(dpath, 'cache'),
                 'master': self.opts['master'],
                }
         if self.opts['keep']:
