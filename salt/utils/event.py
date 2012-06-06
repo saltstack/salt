@@ -1,5 +1,5 @@
 '''
-Manage event listeners.
+Manage events
 '''
 
 # Import Python libs
