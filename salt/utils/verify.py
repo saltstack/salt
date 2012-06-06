@@ -4,7 +4,6 @@ A few checks to make sure the environment is sane
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 import os
 import re
-import pwd
 import sys
 import stat
 import getpass
@@ -12,7 +11,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-__all__ = ('zmq_version', 'run')
+__all__ = ('zmq_version', 'verify_env', 'check_user')
 
 
 def zmq_version():
@@ -66,6 +65,10 @@ def verify_env(dirs, user):
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            return True
+    import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
