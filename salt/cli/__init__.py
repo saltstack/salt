@@ -252,6 +252,7 @@ class SaltCMD(object):
             ret = exc
             out = ''
             self._output_ret(ret, out)
+            sys.exit(2)
             return
 
         if 'query' in self.opts:
