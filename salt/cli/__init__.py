@@ -248,10 +248,7 @@ class SaltCMD(object):
         try:
             local = salt.client.LocalClient(self.opts['conf_file'])
         except SaltClientError as exc:
-            local = None
-            ret = exc
-            out = ''
-            self._output_ret(ret, out)
+            sys.stderr.write('{0}\n'.format(exc))
             sys.exit(2)
             return
 
