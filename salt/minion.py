@@ -489,7 +489,7 @@ class Minion(object):
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
-                socks = dict(poller.poll(0.05))
+                socks = dict(poller.poll(self.opts['sub_timeout']))
                 if socket in socks and socks[socket] == zmq.POLLIN:
                     payload = self.serial.loads(socket.recv())
                     self._handle_payload(payload)
@@ -511,15 +511,17 @@ class Minion(object):
                     socket.setsockopt(zmq.IDENTITY, self.opts['id'])
                     socket.connect(self.master_pub)
                     last = time.time()
+                time.sleep(0.05)
                 multiprocessing.active_children()
                 self.passive_refresh()
         else:
             while True:
-                socks = dict(0.05)
+                socks = dict(poller.poll(60))
                 if socket in socks and socks[socket] == zmq.POLLIN:
                     payload = self.serial.loads(socket.recv())
                     self._handle_payload(payload)
                     last = time.time()
+                time.sleep(0.05)
                 multiprocessing.active_children()
                 self.passive_refresh()
 
