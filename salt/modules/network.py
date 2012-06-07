@@ -12,12 +12,6 @@ __outputter__ = {
     'netstat': 'txt',
 }
 
-# Make the needed functions available to any grains that need information from
-# interfaces() below.
-import salt.modules.cmdmod
-__salt__ = {'cmd.run': salt.modules.cmdmod.run,
-            'cmd.has_exec': salt.modules.cmdmod.has_exec}
-
 def __virtual__():
     '''
     Only work on posix-like systems
