@@ -160,17 +160,11 @@ class Master(SMaster):
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
-        clear_funcs = ClearFuncs(
-                self.opts,
-                self.key,
-                self.master_key,
-                self.crypticle)
         reqserv = ReqServer(
                 self.opts,
                 self.crypticle,
                 self.key,
-                self.master_key,
-                clear_funcs)
+                self.master_key)
         reqserv.start_publisher()
         reqserv.start_event_publisher()
 
@@ -312,9 +306,8 @@ class ReqServer(object):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, crypticle, key, mkey,  clear_funcs):
+    def __init__(self, opts, crypticle, key, mkey):
         self.opts = opts
-        self.clear_funcs = clear_funcs
         self.master_key = mkey
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
@@ -340,8 +333,7 @@ class ReqServer(object):
             self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,
-                    self.crypticle,
-                    self.clear_funcs))
+                    self.crypticle))
 
         for ind, proc in enumerate(self.work_procs):
             log.info('Starting Salt worker process {0}'.format(ind))
@@ -390,13 +382,13 @@ class MWorker(multiprocessing.Process):
             opts,
             mkey,
             key,
-            crypticle,
-            clear_funcs):
+            crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
-        self.clear_funcs = clear_funcs
+        self.mkey = mkey
+        self.key = key
 
     def __bind(self):
         '''
@@ -471,6 +463,11 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
+        self.clear_funcs = ClearFuncs(
+                self.opts,
+                self.key,
+                self.mkey,
+                self.crypticle)
         self.aes_funcs = AESFuncs(self.opts, self.crypticle)
         self.__bind()
 
