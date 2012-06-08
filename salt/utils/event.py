@@ -58,19 +58,23 @@ class SaltEvent(object):
         self.push.connect(self.pulluri)
         self.cpush = True
 
-    def get_event(self, wait=5, tag=''):
+    def get_event(self, wait=5, tag='', full=False):
         '''
         Get a single publication
         '''
         if not self.cpub:
             self.connect_pub()
         self.sub.setsockopt(zmq.SUBSCRIBE, tag)
-        start = time.time()
         while True:
             socks = dict(self.poller.poll(wait))
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()
-                return self.serial.loads(raw[20:])
+                data = self.serial.loads(raw[20:])
+                if full:
+                    ret = {'data': data,
+                           'tag': raw[:20].rstrip('|')}
+                    return ret
+                return data
             else:
                 return None
 
