@@ -966,6 +966,11 @@ class ClearFuncs(object):
         self.key = key
         self.master_key = master_key
         self.crypticle = crypticle
+        # Create the event manager
+        self.event = salt.utils.event.SaltEvent(
+                self.opts['sock_dir'],
+                'master'
+                )
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
@@ -1005,7 +1010,11 @@ class ClearFuncs(object):
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the aes key
-        which was generated at start up
+        which was generated at start up.
+
+        This method fires an event over the master event manager. The evnt is
+        tagged "auth" and returns a dict with information about the auth
+        event
         '''
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
@@ -1036,12 +1045,20 @@ class ClearFuncs(object):
                 )
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
                 return ret
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
             log.info('Public key rejected for %(id)s', load)
             ret = {'enc': 'clear',
                    'load': {'ret': False}}
+            eload = {'result': False,
+                     'id': load['id'],
+                     'pub': load['pub']}
+            self.event.fire_event(eload, 'auth')
             return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
@@ -1051,6 +1068,11 @@ class ClearFuncs(object):
                 fp_.write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
+            eload = {'result': True,
+                     'act': 'pend',
+                     'id': load['id'],
+                     'pub': load['pub']}
+            self.event.fire_event(eload, 'auth')
             return ret
         elif os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
@@ -1062,6 +1084,10 @@ class ClearFuncs(object):
                     'keys in pending did not match. This may be an attempt to '
                     'compromise the Salt cluster.', load
                 )
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -1070,6 +1096,11 @@ class ClearFuncs(object):
                     'pending and needs to be accepted with salt-key -a %(id)s',
                     load
                 )
+                eload = {'result': True,
+                         'act': 'pend',
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif not os.path.isfile(pubfn_pend)\
@@ -1079,6 +1110,10 @@ class ClearFuncs(object):
         else:
             # Something happened that I have not accounted for, FAIL!
             log.warn('Unaccounted for authentication failure')
+            eload = {'result': False,
+                     'id': load['id'],
+                     'pub': load['pub']}
+            self.event.fire_event(eload, 'auth')
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -1092,6 +1127,11 @@ class ClearFuncs(object):
                'publish_port': self.opts['publish_port'],
               }
         ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
+        eload = {'result': True,
+                 'act': 'accept',
+                 'id': load['id'],
+                 'pub': load['pub']}
+        self.event.fire_event(eload, 'auth')
         return ret
 
     def publish(self, clear_load):
