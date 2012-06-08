@@ -22,6 +22,7 @@ Full Table of Contents
     topics/community
     topics/tutorials/standalone_minion
     topics/projects/index
+    topics/event/index
 
     ref/index
     ref/modules/*
