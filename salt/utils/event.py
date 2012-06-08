@@ -79,6 +79,16 @@ class SaltEvent(object):
             else:
                 return None
 
+    def iter_events(self, tag='', full=False):
+        '''
+        Creates a generator that continuously listens for events
+        '''
+        while True:
+            data = self.get_event(tag=tag, full=full)
+            if data is None:
+                continue
+            yield data
+
     def fire_event(self, data, tag=''):
         '''
         Send a single event into the publisher
