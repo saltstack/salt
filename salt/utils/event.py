@@ -5,6 +5,7 @@ Manage events
 # Import Python libs
 import os
 import time
+import multiprocessing
 
 # Import Third Party libs
 import zmq
@@ -134,7 +135,6 @@ class EventPublisher(multiprocessing.Process):
                 os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
                 )
         # Start the master event publisher
-        log.info('Starting the Salt Event Publisher on {0}'.format(epub_uri))
         epub_sock.bind(epub_uri)
         epull_sock.bind(epull_uri)
         # Restrict access to the sockets
@@ -158,3 +158,9 @@ class EventPublisher(multiprocessing.Process):
                     epub_sock.send(package)
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
+                        continue
+                    raise exc
+        except KeyboardInterrupt:
+            epub_sock.close()
+            epull_sock.close()
+

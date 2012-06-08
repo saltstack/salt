@@ -306,7 +306,7 @@ class ReqServer(object):
         Start the salt publisher interface
         '''
         # Start the publisher
-        self.eventpublisher = salt.utils.EventPublisher(self.opts)
+        self.eventpublisher = salt.utils.event.EventPublisher(self.opts)
         self.eventpublisher.start()
 
     def run(self):
