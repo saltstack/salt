@@ -20,6 +20,9 @@ Full Table of Contents
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
     topics/community
+    topics/tutorials/standalone_minion
+    topics/projects/index
+    topics/event/index
 
     ref/index
     ref/modules/*

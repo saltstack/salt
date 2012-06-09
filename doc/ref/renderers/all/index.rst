@@ -10,8 +10,8 @@ Full list of builtin renderers
     :toctree:
     :template: autosummary.rst.tmpl
 
-    salt.renderers.json_jinja
-    salt.renderers.json_mako
-    salt.renderers.yaml_jinja
-    salt.renderers.yaml_mako
-    salt.renderers.py
+    json_jinja
+    json_mako
+    yaml_jinja
+    yaml_mako
+    py

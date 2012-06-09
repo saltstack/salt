@@ -2,13 +2,13 @@
 Returners
 =========
 
-By default the return values of the commands sent to the salt minions are
-returned to the salt-master. But since the commands executed on the salt
-minions are detached from the call on the salt master, there is no need for
-the minion to return the data to the salt master.
+By default the return values of the commands sent to the Salt minions are
+returned to the salt-master. But since the commands executed on the Salt
+minions are detached from the call on the Salt master, there is no need for
+the minion to return the data to the Salt master.
 
 This is where the returner interface comes in. Returners are modules called
-in place of returning the data to the salt master.
+in place of returning the data to the Salt master.
 
 The returner interface allows the return data to be sent to any system that
 can receive data. This means that return data can be sent to a Redis server,
@@ -75,5 +75,5 @@ serializes the data as json and sets it in redis.
 Examples
 --------
 
-The collection of built-in salt returners can be found here:
+The collection of built-in Salt returners can be found here:
 :blob:`salt/returners`

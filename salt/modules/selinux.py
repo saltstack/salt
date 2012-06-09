@@ -6,6 +6,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 __selinux_fs_path__ = None
 
@@ -65,7 +66,7 @@ def setenforce(mode):
 
         salt '*' selinux.setenforce enforcing
     '''
-    if isinstance(mode, basestring):
+    if isinstance(mode, string_types):
         if mode.lower() == 'enforcing':
             mode = '1'
         elif mode.lower() == 'permissive':

@@ -39,7 +39,23 @@ def clean_old_key(rsa_path):
         os.remove(rsa_path)
     except (IOError, OSError):
         pass
-    mkey.save_key(rsa_path, None)
+    # Set write permission for minion.pem file - reverted after saving the key
+    if sys.platform == 'win32':
+        import win32api
+        import win32con
+        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_NORMAL)
+    try:
+        mkey.save_key(rsa_path, None)
+    except IOError:
+        log.error(
+                ('Failed to update old RSA format for key {0}, future '
+                 'releases may not be able to use this key').format(rsa_path)
+                )
+    # Set read-only permission for minion.pem file
+    if sys.platform == 'win32':
+        import win32api
+        import win32con
+        win32api.SetFileAttributes(rsa_path, win32con.FILE_ATTRIBUTE_READONLY)
     return mkey
 
 
@@ -106,7 +122,6 @@ class MasterKeys(dict):
             key = self.__get_keys()
             key.save_pub_key(self.pub_path)
         return open(self.pub_path, 'r').read()
-
 
 
 class Auth(object):

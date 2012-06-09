@@ -4,14 +4,17 @@ Manage Windows users with the net user command
 NOTE: This currently only works with local user accounts, not domain accounts
 '''
 
+from salt._compat import string_types
+
+
 def __virtual__():
     '''
-    Set the user module if the kernel is Windows 
+    Set the user module if the kernel is Windows
     '''
     return 'user' if __grains__['kernel'] == 'Windows' else False
 
 
-def add(name, uid=None, gid=None, groups=None, home=False, shell=None):
+def add(name, uid=None, gid=None, groups=None, home=False, shell=None, system=False):
     '''
     Add a user to the minion
 
@@ -31,7 +34,7 @@ def delete(name):
 
     CLI Example::
 
-        salt '*' user.delete name 
+        salt '*' user.delete name
     '''
     cmd = 'net user {0} /delete'.format(name)
     ret = __salt__['cmd.run_all'](cmd)
@@ -142,7 +145,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):

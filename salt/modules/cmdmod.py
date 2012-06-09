@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt.grains.extra import shell as shell_grain
 
 # Only available on posix systems, nonfatal on windows
 try:
@@ -27,8 +28,7 @@ __outputter__ = {
     'run': 'txt',
 }
 
-
-DEFAULT_SHELL = '/bin/sh'
+DEFAULT_SHELL = shell_grain()['shell']
 
 def __virtual__():
     '''
@@ -55,6 +55,11 @@ def _run(cmd,
     # of the user salt-minion is running as.  Default:  /root
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
+
+    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+        if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
+            msg = 'The shell {0} is not available'.format(shell)
+            raise CommandExecutionError(msg)
 
     # TODO: Figure out the proper way to do this in windows
     disable_runas = [
@@ -106,20 +111,18 @@ def _run(cmd,
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
-    out = proc.communicate()
+    out, err = proc.communicate()
 
     if rstrip:
-        # Cast out to a list as proc.communicate() returns a tuple
-        out = list(out)
-        if out[0]:
-            out[0] = out[0].rstrip()
+        if out:
+            out = out.rstrip()
         # None lacks a rstrip() method
-        if out[1]:
-            out[1] = out[1].rstrip()
+        if err:
+            err = err.rstrip()
 
-    ret['stdout']  = out[0]
-    ret['stderr']  = out[1]
-    ret['pid']     = proc.pid
+    ret['stdout'] = out
+    ret['stderr'] = err
+    ret['pid'] = proc.pid
     ret['retcode'] = proc.returncode
     return ret
 
@@ -146,7 +149,7 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     return out
 
 
-def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL, env=()):
+def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute a command, and only return the standard out
 

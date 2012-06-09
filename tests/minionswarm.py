@@ -13,8 +13,12 @@ import shutil
 import random
 import hashlib
 
+# Import salt libs
+import salt
+
 # Import third party libs
 import yaml
+
 
 def parse():
     '''
@@ -31,6 +35,11 @@ def parse():
             dest='master',
             default='salt',
             help='The location of the salt master that this swarm will serve')
+    parser.add_option('-k',
+            '--keep-modules',
+            dest='keep',
+            default='',
+            help='A comma delimited list of modules to enable')
     parser.add_option('-f',
             '--foreground',
             dest='foreground',
@@ -40,7 +49,7 @@ def parse():
                   'the terminal'))
 
     options, args = parser.parse_args()
-    
+
     opts = {}
 
     for key, val in options.__dict__.items():
@@ -70,9 +79,18 @@ class Swarm(object):
         os.makedirs(dpath)
         data = {'id': os.path.basename(path),
                 'pki_dir': os.path.join(dpath, 'pki'),
-                'cache_dir': os.path.join(dpath, 'cache'),
+                'cachedir': os.path.join(dpath, 'cache'),
                 'master': self.opts['master'],
                }
+        if self.opts['keep']:
+            ignore = set()
+            keep = self.opts['keep'].split(',')
+            modpath = os.path.join(os.path.dirname(salt.__file__), 'modules')
+            for fn_ in os.listdir(modpath):
+                if fn_.split('.')[0] in keep:
+                    continue
+                ignore.add(fn_.split('.')[0])
+            data['disable_modules'] = list(ignore)
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
         self.confs.add(path)
@@ -96,7 +114,7 @@ class Swarm(object):
         '''
         Prepare the confs set
         '''
-        for ind in xrange(self.opts['minions']):
+        for ind in range(self.opts['minions']):
             self.mkconf()
 
     def clean_configs(self):

@@ -84,7 +84,7 @@ def _interfaces_ip():
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            m = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
                 iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
@@ -145,8 +145,8 @@ def _interfaces_ifconfig():
     '''
     ret = {}
 
-    piface = re.compile('^(\w+)')
-    pmac = re.compile('.*?(?:HWaddr|ether) (.*?)\s')
+    piface = re.compile('^(\S+):?')
+    pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
     pmask = re.compile('.*?(?:Mask:|netmask )(?:(0x[0-9a-fA-F]{8})|([\d\.]+))')
@@ -393,7 +393,7 @@ def hwaddr(interface):
         salt '*' network.hwaddr eth0
     '''
     data = interfaces().get(interface)
-    if data:
+    if data and 'hwaddr' in data:
         return data['hwaddr']
     else:
         return None
@@ -401,27 +401,27 @@ def hwaddr(interface):
 def host_to_ip(host):
     '''
     Returns the IP address of a given hostname
-    
+
     CLI Example::
-        
+
         salt '*' network.host_to_ip example.com
     '''
     try:
         ip = socket.gethostbyname( host )
     except:
-        ip = None        
+        ip = None
     return ip
-        
+
 def ip_to_host(ip):
     '''
     Returns the hostname of a given IP
-    
+
     CLI Example::
-        
+
         salt '*' network.ip_to_host 8.8.8.8
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr( ip )
     except:
-        hostname = None        
+        hostname = None
     return hostname

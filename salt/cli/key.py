@@ -9,9 +9,11 @@ import sys
 import logging
 # Import salt modules
 import salt.crypt
-import salt.utils as utils
+import salt.utils
+import salt.utils.event
 
 log = logging.getLogger(__name__)
+
 
 class Key(object):
     '''
@@ -19,6 +21,10 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.event = salt.utils.event.SaltEvent(opts['sock_dir'], 'master')
+        self.colors = salt.utils.get_colors(
+                not bool(self.opts.get('no_color', False))
+                )
 
     def _keys(self, key_type, full_path=False):
         '''
@@ -46,7 +52,7 @@ class Key(object):
         else:
             ret = set(keys)
         return ret
-    
+
     def _log(self, message, level=''):
         if hasattr(log, level):
             log_msg = getattr(log, level)
@@ -54,52 +60,101 @@ class Key(object):
         if not self.opts['quiet']:
             print(message)
 
-    def _list_pre(self, header=True):
+    def _list_pre(self, header=True, printer=None):
         '''
         List the unaccepted keys
         '''
         if header == True:
-            self._log(utils.LIGHT_RED + 'Unaccepted Keys:' + utils.ENDC)
-        for key in sorted(self._keys('pre')):
-            output = utils.RED + key + utils.ENDC
-            self._log(output)
+            self._log('{0}Unaccepted Keys:{1}'.format(
+                self.colors['LIGHT_RED'], self.colors['ENDC']
+                ))
+        keys = self._keys('pre')
+        if printer is None:
+            for key in sorted(keys):
+                output = '{0}{1}{2}'.format(
+                        self.colors['RED'],
+                        key,
+                        self.colors['ENDC']
+                        )
+                self._log(output)
+        else:
+            printer(list(keys))
 
-    def _list_accepted(self, header=True):
+    def _list_accepted(self, header=True, printer=None):
         '''
         List the accepted public keys
         '''
         if header == True:
-            self._log(utils.LIGHT_GREEN + 'Accepted Keys:' + utils.ENDC)
-        for key in sorted(self._keys('acc')):
-            self._log(utils.GREEN + key + utils.ENDC)
+            self._log('{0}Accepted Keys:{1}'.format(
+                self.colors['LIGHT_GREEN'], self.colors['ENDC']
+                ))
+        keys = self._keys('acc')
+        if printer is None:
+            for key in sorted(keys):
+                self._log('{0}{1}{2}'.format(
+                    self.colors['GREEN'], key, self.colors['ENDC']
+                    ))
+        else:
+            printer(list(keys))
 
-    def _list_rejected(self, header=True):
+    def _list_rejected(self, header=True, printer=None):
         '''
         List the unaccepted keys
         '''
         if header == True:
-            self._log(utils.LIGHT_BLUE + 'Rejected:' + utils.ENDC)
-        for key in sorted(self._keys('rej')):
-            self._log(utils.BLUE + key + utils.ENDC)
+            self._log('{0}Rejected:{1}'.format(
+                self.colors['LIGHT_BLUE'], self.colors['ENDC']
+                ))
+        keys = self._keys('rej')
+        if printer is None:
+            for key in sorted(keys):
+                self._log('{0}{1}{2}'.format(
+                    self.colors['BLUE'], key, self.colors['ENDC']
+                    ))
+        else:
+            printer(list(keys))
 
     def _list(self, name):
         '''
         List keys
         '''
+        printout = self._get_outputter()
+        if 'json_out' in self.opts and self.opts['json_out']:
+            printout.indent = 2
         if name in ('pre', 'un', 'unaccept', 'unaccepted'):
-            self._list_pre(False)
+            self._list_pre(header=False, printer=printout)
         elif name in ('acc', 'accept', 'accepted'):
-            self._list_accepted(False)
+            self._list_accepted(header=False, printer=printout)
         elif name in ('rej', 'reject', 'rejected'):
-            self._list_rejected(False)
+            self._list_rejected(header=False, printer=printout)
         elif name in ('all',):
-            self._list_pre()
-            self._list_accepted()
-            self._list_rejected()
+            if printout is not None:
+                keys = {
+                    'rejected': list(self._keys('rej')),
+                    'accepted': list(self._keys('acc')),
+                    'unaccepted': list(self._keys('pre')),
+                }
+                printout(keys)
+            else:
+                self._list_pre(printer=printout)
+                self._list_accepted(printer=printout)
+                self._list_rejected(printer=printout)
         else:
             err = ('Unrecognized key type "{0}".  Run with -h for options.'
                     ).format(name)
             self._log(err, level='error')
+
+    def _get_outputter(self):
+        get_outputter = salt.output.get_outputter
+        if self.opts['raw_out']:
+            printout = get_outputter('raw')
+        elif self.opts['json_out']:
+            printout = get_outputter('json')
+        elif self.opts['yaml_out']:
+            printout = get_outputter('yaml')
+        else:
+            printout = None # use default color output
+        return printout
 
     def _print_key(self, name):
         '''
@@ -115,21 +170,36 @@ class Key(object):
         '''
         Print out the public keys, all of em'
         '''
-        self._log(utils.LIGHT_RED + 'Unaccepted keys:' + utils.ENDC)
+        self._log('{0}Unaccepted keys:{1}'.format(
+            self.colors['LIGHT_RED'], self.colors['ENDC']
+            ))
         for key in sorted(self._keys('pre', True)):
-            self._log('  ' + utils.RED + os.path.basename(key) + utils.ENDC)
+            self._log('  {0}{1}{2}'.format(
+                self.colors['RED'],
+                os.path.basename(key),
+                self.colors['ENDC']
+                ))
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
-        self._log(utils.LIGHT_GREEN + 'Accepted keys:' + utils.ENDC)
+        self._log('{0}Accepted keys:{1}'.format(
+            self.colors['LIGHT_GREEN'], self.colors['ENDC']
+            ))
         for key in sorted(self._keys('acc', True)):
-            self._log('  ' + utils.GREEN + os.path.basename(key) + 
-                         utils.ENDC)
+            self._log('  {0}{1}{2}'.format(
+                self.colors['GREEN'],
+                os.path.basename(key),
+                self.colors['ENDC']
+                ))
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
-        self._log(utils.LIGHT_BLUE + 'Rejected keys:' + utils.ENDC)
+        self._log('{0}Rejected keys:{1}'.format(
+            self.colors['LIGHT_BLUE'], self.colors['ENDC']
+            ))
         for key in sorted(self._keys('pre', True)):
-            self._log('  ' + utils.BLUE + os.path.basename(key) + 
-                         utils.ENDC)
+            self._log('  {0}{1}{2}'.format(
+                self.colors['BLUE'],
+                os.path.basename(key),
+                self.colors['ENDC']))
             with open(key, 'r') as kfn:
                 self._log(kfn.read())
 
@@ -149,6 +219,10 @@ class Key(object):
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_accepted, key))
+        eload = {'result': True,
+                 'act': 'accept',
+                 'id': key}
+        self.event.fire_event(eload, 'key')
         self._log(
                 'Key for {0} accepted.'.format(key),
                 level='info'
@@ -171,7 +245,7 @@ class Key(object):
         (minions_accepted,
          minions_pre,
          minions_rejected) = self._check_minions_directories()
-        if delete == None:
+        if delete is None:
             delete = self.opts['delete']
         pre = os.path.join(minions_pre, delete)
         acc = os.path.join(minions_accepted, delete)
@@ -188,14 +262,14 @@ class Key(object):
             os.remove(rej)
             self._log('Removed rejected key {0}'.format(delete),
                          level='info')
+
     def _delete_all(self):
         '''
-        Delete all keys 
+        Delete all keys
         '''
         for dir in ("acc", "rej", "pre"):
             for key in self._keys(dir):
                 self._delete_key(key)
-
 
     def _reject(self, key):
         '''
@@ -227,7 +301,7 @@ class Key(object):
     def _check_minions_directories(self):
         minions_accepted = os.path.join(self.opts['pki_dir'], 'minions')
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
-        minions_rejected = os.path.join(self.opts['pki_dir'], 
+        minions_rejected = os.path.join(self.opts['pki_dir'],
                                         'minions_rejected')
         for dir_ in [minions_accepted, minions_pre, minions_rejected]:
             if not os.path.isdir(dir_):

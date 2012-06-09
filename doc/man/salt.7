@@ -1,4 +1,4 @@
-.TH "SALT" "7" "April 27, 2012" "0.9.9" "Salt"
+.TH "SALT" "7" "May 11, 2012" "0.9.9" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -1325,6 +1325,22 @@ the salt minion starts, so this information is static. This means that the
 information in grains is unchanging, therefore the nature of the data is
 static. So grains information are things like the running kernel, or the
 operating system.
+.sp
+Match all CentOS minions:
+.sp
+.nf
+.ft C
+salt \-G \(aqos:CentOS\(aq test.ping
+.ft P
+.fi
+.sp
+Match all minions with 64 bit CPUs and return number of available cores:
+.sp
+.nf
+.ft C
+salt \-G \(aqcpuarch:x86_64\(aq grains.item num_cpus
+.ft P
+.fi
 .SS Grains in the Minion Config
 .sp
 Grains can also be statically assigned within the minion configuration file.
@@ -3122,7 +3138,7 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
     \- context: {
       custom_var: "override" }
     \- defaults: {
-      custom_var: "default value"
+      custom_var: "default value",
       other_var: 123 }
 .ft P
 .fi
@@ -3716,7 +3732,7 @@ _
 T{
 \fBdata\fP
 T}	T{
-Manage a local persistent data structure that can hold any arbitrairy data
+Manage a local persistent data structure that can hold any arbitrary data
 T}
 _
 T{
@@ -3729,6 +3745,12 @@ T{
 \fBdisk\fP
 T}	T{
 Module for gathering disk information
+T}
+_
+T{
+\fBdjango\fP
+T}	T{
+Manage Django sites
 T}
 _
 T{
@@ -4268,7 +4290,7 @@ List all available package upgrades.
 .INDENT 7.0
 .TP
 .B CLI Example::
-salt \(aq*\(aq pkg.check_update
+salt \(aq*\(aq pkg.list_upgrades
 .UNINDENT
 .UNINDENT
 .INDENT 0.0
@@ -4676,6 +4698,19 @@ salt \(aq*\(aq cmd.which cat
 .ft P
 .fi
 .UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.cmdmod.which_bin(cmds)
+Returns the first command found in a list of commands
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.which_bin \(aq[pip2, pip, pip\-python]\(aq
+.ft P
+.fi
+.UNINDENT
 .SS salt.modules.cp
 .sp
 Minion side functions for salt\-cp
@@ -4752,11 +4787,12 @@ salt \(aq*\(aq cp.cache_master
 Used to recursively copy a directory from the salt master
 .sp
 CLI Example:
-.INDENT 7.0
-.INDENT 3.5
+.sp
+.nf
+.ft C
 salt \(aq*\(aq cp.get_dir salt://path/to/dir/ /minion/dest
-.UNINDENT
-.UNINDENT
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -4906,21 +4942,53 @@ salt \(aq*\(aq cron.list_tab root
 .TP
 .B salt.modules.cron.raw_cron(user)
 Return the contents of the user\(aqs crontab
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cron.raw_cron root
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.cron.rm(user, minute, hour, dom, month, dow, cmd)
-Remove a cron job up for a specified user.
+Remove a cron job for a specified user.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cron.rm_job root \e* \e* \e* \e* 1 /usr/local/weekly
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.cron.rm_job(user, minute, hour, dom, month, dow, cmd)
-Remove a cron job up for a specified user.
+Remove a cron job for a specified user.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cron.rm_job root \e* \e* \e* \e* 1 /usr/local/weekly
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.cron.set_job(user, minute, hour, dom, month, dow, cmd)
 Sets a cron job up for a specified user.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cron.set_job root \e* \e* \e* \e* 1 /usr/local/weekly
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -4937,7 +5005,7 @@ salt \(aq*\(aq cron.set_special @hourly \(aqecho foobar\(aq
 .UNINDENT
 .SS salt.modules.data
 .sp
-Manage a local persistent data structure that can hold any arbitrairy data
+Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion
 .INDENT 0.0
 .TP
@@ -5116,6 +5184,40 @@ salt \(aq*\(aq disk.usage
 .ft P
 .fi
 .UNINDENT
+.SS salt.modules.django
+.sp
+Manage Django sites
+.INDENT 0.0
+.TP
+.B salt.modules.django.command(settings_module, command, bin_env=None, pythonpath=None, *args, **kwargs)
+Run arbitrary django management command
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.django.createsuperuser(settings_module, username, email, bin_env=None, database=None, pythonpath=None)
+Create a super user for the database.
+this defaults to use the \fB\-\-noinput\fP flag which will
+not create a password for the superuser.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.django.loaddata(settings_module, fixtures, bin_env=None, database=None, pythonpath=None)
+Load fixture data
+.INDENT 7.0
+.TP
+.B Fixtures:
+comma separated list of fixtures to load
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.django.syncdb(settings_module, bin_env=None, migrate=False, database=None, pythonpath=None)
+Run syncdb
+.sp
+If you have south installed, you can pass in the optional
+\fBmigrate\fP kwarg and run the migrations after the syncdb
+finishes.
+.UNINDENT
 .SS salt.modules.ebuild
 .sp
 Support for Portage
@@ -5282,7 +5384,7 @@ data
 .B salt.modules.file.append(path, *args)
 Append text to the end of a file
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -5350,7 +5452,7 @@ after the first invocation.
 .RE
 .UNINDENT
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -5365,7 +5467,7 @@ New in version 0.9.5.
 .B salt.modules.file.contains(path, text)
 Return True if the file at \fBpath\fP contains \fBtext\fP
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -5677,7 +5779,7 @@ matching
 Forward slashes and single quotes will be escaped automatically in the
 \fBbefore\fP and \fBafter\fP patterns.
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -5727,7 +5829,7 @@ Access time in Unix epoch time
 .B mtime:
 Last modification in Unix epoch time
 .TP
-.B Usage::
+.B CLI Example::
 salt \(aq*\(aq file.touch /var/log/emptyfile
 .UNINDENT
 .sp
@@ -5773,7 +5875,7 @@ The file will be backed up before edit with this file extension;
 overwrite this backup
 .UNINDENT
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -6022,16 +6124,40 @@ The service module for FreeBSD
 .TP
 .B salt.modules.freebsdservice.get_all()
 Return a list of all available services
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.get_all
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.get_disabled()
 Return what services are available but not enabled to start at boot
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.get_disabled
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.get_enabled()
 Return what services are set to run on boot
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.get_enabled
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -6258,7 +6384,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq service.enabled <service name>
+salt \(aq*\(aq service.disabled <service name>
 .ft P
 .fi
 .UNINDENT
@@ -6297,7 +6423,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq service.get_enabled
+salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
@@ -6310,7 +6436,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq service.get_enabled
+salt \(aq*\(aq service.get_disabled
 .ft P
 .fi
 .UNINDENT
@@ -6508,6 +6634,16 @@ The revision to describe
 None
 Run git as a user other than what the minion runs as
 .UNINDENT
+.sp
+CLI Examples:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq git.describe /path/to/repo
+
+salt \(aq*\(aq git.describe /path/to/repo develop
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -7137,7 +7273,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virt.freemem
+salt \(aq*\(aq hyper.freecpu
 .ft P
 .fi
 .UNINDENT
@@ -7151,7 +7287,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virt.freemem
+salt \(aq*\(aq hyper.freemem
 .ft P
 .fi
 .UNINDENT
@@ -7164,7 +7300,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virt.get_conf <vm name>
+salt \(aq*\(aq hyper.get_conf <vm name>
 .ft P
 .fi
 .UNINDENT
@@ -7177,7 +7313,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virt.get_disks <vm name>
+salt \(aq*\(aq hyper.get_disks <vm name>
 .ft P
 .fi
 .UNINDENT
@@ -7185,6 +7321,14 @@ salt \(aq*\(aq virt.get_disks <vm name>
 .TP
 .B salt.modules.kvm_hyper.halt(name)
 Hard power down a virtual machine
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq hyper.halt webserver
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -7195,7 +7339,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virt.node_info
+salt \(aq*\(aq hyper.hyper_info
 .ft P
 .fi
 .UNINDENT
@@ -7203,6 +7347,14 @@ salt \(aq*\(aq virt.node_info
 .TP
 .B salt.modules.kvm_hyper.hyper_type()
 Return that type of hypervisor this is
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq hyper.hyper_type
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -7213,7 +7365,7 @@ machine will be started upon creation
 CLI Example:
 .INDENT 7.0
 .INDENT 3.5
-salt node1 webserver 2 2048 salt://fedora/f16.img:virt /srv/vm/images
+salt \(aq*\(aq hyper.init webserver 2 2048 salt://fedora/f16.img:virt /srv/vm/images
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -7226,7 +7378,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virt.list_virts
+salt \(aq*\(aq hyper.list_virts
 .ft P
 .fi
 .UNINDENT
@@ -7234,27 +7386,67 @@ salt \(aq*\(aq virt.list_virts
 .TP
 .B salt.modules.kvm_hyper.pause(name)
 Pause the named virtual machine
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq hyper.pause webserver
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.purge(name)
 Hard power down and purge a virtual machine, this will destroy a vm and
 all associated vm data
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq hyper.purge webserver
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.resume(name)
 Resume the named virtual machine
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq hyper.resume webserver
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.set_autostart(name)
 Set the named virtual machine to autostart when the hypervisor boots
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq hyper.set_autostart webserver
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.start(config)
 Start an already defined virtual machine that has been shut down
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq hyper.start webserver
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -7275,7 +7467,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virt.vm_info
+salt \(aq*\(aq hyper.virt_info
 .ft P
 .fi
 .UNINDENT
@@ -7288,7 +7480,12 @@ Module for viewing and modifying sysctl parameters
 Assign a single sysctl parameter for this minion
 .sp
 CLI Example:
+.sp
+.nf
+.ft C
 salt \(aq*\(aq sysctl.assign net.ipv4.ip_forward 1
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -7492,7 +7689,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq /mnt/foo
+salt \(aq*\(aq mount.rm_fstab /mnt/foo
 .ft P
 .fi
 .UNINDENT
@@ -7888,7 +8085,7 @@ salt \(aq*\(aq network.ip_to_host 8.8.8.8
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.network.ipaddr(interface)
+.B salt.modules.network.ipaddr(interface=None)
 Returns the IP address for a given interface
 .sp
 CLI Example:
@@ -8197,7 +8394,7 @@ salt \(aq*\(aq pillar.data
 Install Python packages with pip to either the system or a virtualenv
 .INDENT 0.0
 .TP
-.B salt.modules.pip.freeze(bin_env=None)
+.B salt.modules.pip.freeze(bin_env=None, runas=None, cwd=None)
 Return a list of installed packages either globally or in the specified
 virtualenv
 .INDENT 7.0
@@ -8208,11 +8405,25 @@ the system python and want to use a specific pip bin (pip\-2.7,
 pip\-2.6, etc..) just specify the pip bin you want.
 If uninstalling from a virtualenv, just use the path to the virtualenv
 (/home/code/path/to/virtualenv/)
+.TP
+.B runas
+User to run pip as
+.TP
+.B cwd
+Current working directory to run pip from
 .UNINDENT
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pip.freeze /home/code/path/to/virtualenv/
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.pip.install(pkgs=None, requirements=None, env=None, bin_env=None, log=None, proxy=None, timeout=None, editable=None, find_links=None, index_url=None, extra_index_url=None, no_index=False, mirrors=None, build=None, target=None, download=None, download_cache=None, source=None, upgrade=False, force_reinstall=False, ignore_installed=False, no_deps=False, no_install=False, no_download=False, install_options=None, runas=None)
+.B salt.modules.pip.install(pkgs=None, requirements=None, env=None, bin_env=None, log=None, proxy=None, timeout=None, editable=None, find_links=None, index_url=None, extra_index_url=None, no_index=False, mirrors=None, build=None, target=None, download=None, download_cache=None, source=None, upgrade=False, force_reinstall=False, ignore_installed=False, no_deps=False, no_install=False, no_download=False, install_options=None, runas=None, cwd=None)
 Install packages with pip
 .sp
 Install packages individually or from a pip requirements file. Install
@@ -8312,6 +8523,9 @@ path, be sure to use absolute path.
 .TP
 .B runas
 User to run pip as
+.TP
+.B cwd
+Current working directory to run pip from
 .UNINDENT
 .sp
 CLI Example:
@@ -8338,13 +8552,21 @@ salt \(aq*\(aq pip.install markdown,django editable=git+https://github.com/world
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.pip.list(prefix=\(aq\(aq, bin_env=None)
+.B salt.modules.pip.list(prefix=\(aq\(aq, bin_env=None, runas=None, cwd=None)
 Filter list of instaslled apps from \fBfreeze\fP and check to see if \fBprefix\fP
 exists in the list of packages installed.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pip.list salt
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.pip.uninstall(pkgs=None, requirements=None, bin_env=None, log=None, proxy=None, timeout=None)
+.B salt.modules.pip.uninstall(pkgs=None, requirements=None, bin_env=None, log=None, proxy=None, timeout=None, runas=None, cwd=None)
 Uninstall packages with pip
 .sp
 Uninstall packages individually or from a pip requirements file. Uninstall
@@ -8377,6 +8599,12 @@ password.
 .TP
 .B timeout
 Set the socket timeout (default 15 seconds)
+.TP
+.B runas
+User to run pip as
+.TP
+.B cwd
+Current working directory to run pip from
 .UNINDENT
 .sp
 CLI Example:
@@ -8427,7 +8655,7 @@ salt \(aq*\(aq ps.cached_physical_memory
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.ps.cpu_percent(interval=0.1, per_cpu=False)
+.B salt.modules.ps.cpu_percent(interval=0.10000000000000001, per_cpu=False)
 Return the percent of time the CPU is busy.
 .INDENT 7.0
 .TP
@@ -8599,6 +8827,16 @@ salt \(aq*\(aq ps.physical_memory_usage
 Return a list of top CPU consuming processes during the interval.
 num_processes = return the top N CPU consuming processes
 interval = the number of seconds to sample CPU usage over
+.sp
+CLI Examples:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq ps.top
+
+salt \(aq*\(aq ps.top 5 10
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -8623,7 +8861,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq virtual_memory_usage
+salt \(aq*\(aq ps.virtual_memory_usage
 .ft P
 .fi
 .UNINDENT
@@ -8934,7 +9172,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq user.groups foo
+salt \(aq*\(aq user.list_groups foo
 .ft P
 .fi
 .UNINDENT
@@ -9711,6 +9949,45 @@ salt \(aq*\(aq shadow.info root
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.shadow.set_inactdays(name, inactdays)
+Set the number of days of inactivity after a password has expired before the account is locked. See man chage.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq shadow.set_inactdays username 7
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.shadow.set_maxdays(name, maxdays)
+Set the maximum number of days during which a password is valid. See man chage.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq shadow.set_maxdays username 90
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.shadow.set_mindays(name, mindays)
+Set the minimum number of days between password changes. See man chage.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq shadow.set_mindays username 7
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.shadow.set_password(name, password)
 Set the password for a named user. The password must be a properly defined
 hash, the password hash can be generated with this command:
@@ -9721,6 +9998,19 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq shadow.set_password root $1$UYCIxa628.9qXjpQCjM4a..
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.shadow.set_warndays(name, warndays)
+Set the number of days of warning before a password change is required. See man chage.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq shadow.set_warndays username 7
 .ft P
 .fi
 .UNINDENT
@@ -10645,11 +10935,12 @@ Execute a set list of state modules from an environment, default
 environment is base
 .sp
 CLI Example:
-.INDENT 7.0
-.INDENT 3.5
+.sp
+.nf
+.ft C
 salt \(aq*\(aq state.sls core,edit.vim dev
-.UNINDENT
-.UNINDENT
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -10681,6 +10972,14 @@ salt \(aq*\(aq state.template_str \(aq<Template String>\(aq
 .TP
 .B salt.modules.state.top(topfn)
 Execute a specific top file instead of the default
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq state.top reverse_top.sls
+.ft P
+.fi
 .UNINDENT
 .SS salt.modules.status
 .sp
@@ -11617,7 +11916,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq user.groups foo
+salt \(aq*\(aq user.list_groups foo
 .ft P
 .fi
 .UNINDENT
@@ -11976,11 +12275,14 @@ salt \(aq*\(aq virt.seed_non_shared_migrate <disks>
 .B salt.modules.virt.set_autostart(vm_, state=\(aqon\(aq)
 Set the autostart flag on a VM so that the VM will start with the host
 system on reboot.
-.INDENT 7.0
-.TP
-.B CLI Example::
-salt "*" virt.enable_autostart <vm name> <on | off>
-.UNINDENT
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt "*" virt.set_autostart <vm name> <on | off>
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -12169,7 +12471,7 @@ Required python modules: win32api, win32con, win32security, ntsecuritycon
 .B salt.modules.win_file.append(path, *args)
 Append text to the end of a file
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -12237,7 +12539,7 @@ after the first invocation.
 .RE
 .UNINDENT
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -12252,7 +12554,7 @@ New in version 0.9.5.
 .B salt.modules.win_file.contains(path, text, limit=\(aq\(aq)
 Return True if the file at \fBpath\fP contains \fBtext\fP
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -12541,7 +12843,7 @@ matching
 Forward slashes and single quotes will be escaped automatically in the
 \fBbefore\fP and \fBafter\fP patterns.
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -12565,7 +12867,7 @@ Access time in Unix epoch time
 .B mtime:
 Last modification in Unix epoch time
 .TP
-.B Usage::
+.B CLI Example::
 salt \(aq*\(aq file.touch /var/log/emptyfile
 .UNINDENT
 .sp
@@ -12611,7 +12913,7 @@ The file will be backed up before edit with this file extension;
 overwrite this backup
 .UNINDENT
 .sp
-Usage:
+CLI Example:
 .sp
 .nf
 .ft C
@@ -12847,7 +13149,7 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq service.get_enabled
+salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
@@ -12881,6 +13183,14 @@ salt \(aq*\(aq service.get_enabled
 .TP
 .B salt.modules.win_service.getsid(name)
 Return the sid for this windows service
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.getsid <service name>
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -14695,6 +15005,81 @@ In this example the default pkg module is being redirected to use the yumpkg5
 module (yum via shelling out instead of via the yum api), but is also using
 a custom module to invoke commands. This could be used to dramatically change
 the behavior of a given state.
+.SH REQUISITES
+.sp
+The Salt requisite system is used to create relationships between states. The
+core idea being, that when one state it dependant somehow on another that
+interdependancy can be easily defined.
+.sp
+Requisites come in two types. Direct requisites, and requisite_ins. The
+relationships are directional, so a requisite statement makes the requireing
+state declaration depend on the required state declaration:
+.sp
+.nf
+.ft C
+vim:
+  pkg.installed
+
+/etc/vimrc:
+  file.managed:
+    \- source: salt://edit/vimrc
+    \- require:
+      \- pkg: vim
+.ft P
+.fi
+.sp
+So in this example, the file \fB/etc/vimrc\fP depends on the vim package.
+.sp
+Requisite_in statements are the opposite, instead of saying "I depend on
+something", requisite_ins say "Someone depends on me":
+.sp
+.nf
+.ft C
+vim:
+  pkg.installed:
+    \- require_in:
+      \- file: /etc/vimrc
+
+/etc/vimrc:
+  file.managed:
+    \- source: salt://edit/vimrc
+.ft P
+.fi
+.sp
+So here, with a requisite_in, the same thing is accomplished, but just from
+the other way around. The vim package is saying "/etc/vimrc depands on me".
+.sp
+In the end a single dependancy map is created and everything is executed in a
+finite and predictable order.
+.SS Requisite and Requisite in types
+.sp
+There are three requisite statements that can be used in Salt. the \fBrequire\fP,
+\fBwatch\fP and \fBuse\fP requisites. Each requisite also has a corresponding
+requisite_in: \fBrequire_in\fP, \fBwatch_in\fP and \fBuse_in\fP. All of the
+requisites define specific relationships and always work with the dependancy
+logic defined above.
+.SS Require
+.sp
+The most basic requisite statement is \fBrequire\fP. The behavior of require is
+simple. Make sure that the dependant state is executed before the depending
+state, and it the dependant state fails, don\(aqt run the depending state. So in
+the above examples the file \fB/etc/vimrc\fP will only be applied after the vim
+package is installed and only if the vim package is installed sucsessfully.
+.SS Watch
+.sp
+The watch statement does everything the require statement does, but with a
+little more. The watch statement looks into the state modules for a function
+called \fBmod_watch\fP. If this function is not available in the corresponding
+state module, then watch does the same thing as require. If the \fBmod_watch\fP
+function is in the state module, then the watched state is checked to see if
+it made any chnges to the system, if it has, then \fBmod_watch\fP is called.
+.sp
+Prhaps the best example of using watch is with a service, when a service
+watches other states, then when the other states make changes on the system
+the service is reloaded or restarted.
+.SS Use
+.sp
+# This needs to be filled in
 .SH THE TOP FILE
 .sp
 The top file is used to map what sls modules get loaded onto what minions via
@@ -16223,7 +16608,7 @@ virtualenvwrapper:
 .fi
 .INDENT 0.0
 .TP
-.B salt.states.pip.installed(name, pip_bin=None, requirements=None, env=None, bin_env=None, log=None, proxy=None, timeout=None, editable=None, find_links=None, index_url=None, extra_index_url=None, no_index=False, mirrors=None, build=None, target=None, download=None, download_cache=None, source=None, upgrade=False, force_reinstall=False, ignore_installed=False, no_deps=False, no_install=False, no_download=False, install_options=None, user=None)
+.B salt.states.pip.installed(name, pip_bin=None, requirements=None, env=None, bin_env=None, log=None, proxy=None, timeout=None, editable=None, find_links=None, index_url=None, extra_index_url=None, no_index=False, mirrors=None, build=None, target=None, download=None, download_cache=None, source=None, upgrade=False, force_reinstall=False, ignore_installed=False, no_deps=False, no_install=False, no_download=False, install_options=None, user=None, cwd=None)
 Make sure the package is installed
 .INDENT 7.0
 .TP
@@ -16245,7 +16630,7 @@ the pip executable or virtualenv to use
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.pip.removed(name, packages=None, requirements=None, bin_env=None, log=None, proxy=None, timeout=None)
+.B salt.states.pip.removed(name, packages=None, requirements=None, bin_env=None, log=None, proxy=None, timeout=None, user=None, cwd=None)
 Make sure that a package is not installed.
 .INDENT 7.0
 .TP
@@ -16845,7 +17230,7 @@ Require a unique UID, True by default
 virtualenv management
 .INDENT 0.0
 .TP
-.B salt.states.virtualenv.managed(name, venv_bin=\(aqvirtualenv\(aq, requirements=\(aq\(aq, no_site_packages=False, system_site_packages=False, distribute=False, clear=False, python=\(aq\(aq, extra_search_dir=\(aq\(aq, never_download=False, prompt=\(aq\(aq, __env__=\(aqbase\(aq, runas=None)
+.B salt.states.virtualenv.managed(name, venv_bin=\(aqvirtualenv\(aq, requirements=\(aq\(aq, no_site_packages=False, system_site_packages=False, distribute=False, clear=False, python=\(aq\(aq, extra_search_dir=\(aq\(aq, never_download=False, prompt=\(aq\(aq, __env__=\(aqbase\(aq, runas=None, cwd=None)
 Create a virtualenv and optionally manage it with pip
 .INDENT 7.0
 .TP
@@ -16855,6 +17240,9 @@ Path to the virtualenv
 .B requirements
 Path to a pip requirements file. If the path begins with \fBsalt://\fP
 the file will be transfered from the master file server.
+.TP
+.B cwd
+Path to the working directory where "pip install" is executed.
 .UNINDENT
 .sp
 Also accepts any kwargs that the virtualenv module will.
@@ -17653,7 +18041,7 @@ will sync all module types over to a minion. For more information see:
 # peer:
 #   .*:
 #       \- .*
-# This is not recomanded, since it would allow anyone who gets root on any
+# This is not recommended, since it would allow anyone who gets root on any
 # single minion to instantly have root on all of the minions!
 #
 
@@ -17744,11 +18132,11 @@ will sync all module types over to a minion. For more information see:
 #id:
 
 # Append a domain to a hostname in the event that it does not exist.  This is
-# usefule for systems where socket.getfqdn() does not actually result in a
+# useful for systems where socket.getfqdn() does not actually result in a
 # FQDN (for instance, Solaris).
 #append_domain:
 
-# If the the connection to the server is interrupted, the minion will
+# If the connection to the server is interrupted, the minion will
 # attempt to reconnect. sub_timeout allows you to control the rate
 # of reconnection attempts (in seconds). To disable reconnects, set
 # this value to 0.
@@ -17835,7 +18223,7 @@ will sync all module types over to a minion. For more information see:
 # Normally the minion is not isolated to any single environment on the master
 # when running states, but the environment can be isolated on the minion side
 # by statically setting it. Remember that the recommended way to manage
-# environments is to issolate via the top file.
+# environments is to isolate via the top file.
 #environment: None
 #
 # If using the local file directory, then the state top file name needs to be
@@ -17846,7 +18234,7 @@ will sync all module types over to a minion. For more information see:
 ##########################################
 # The Salt Minion can redirect all file server operations to a local directory,
 # this allows for the same state tree that is on the master to be used if
-# coppied completely onto the minion. This is a literal copy of the settings on
+# copied completely onto the minion. This is a literal copy of the settings on
 # the master but used to reference a local directory on the minion.
 
 # Set the file client, the client defaults to looking on the master server for
@@ -19097,6 +19485,11 @@ Console log level. One of \fBinfo\fP, \fBnone\fP, \fBgarbage\fP,
 \fBtrace\fP, \fBwarning\fP, \fBerror\fP, \fBdebug\fP. For the logfile
 settings see the config file. Default: \fBwarning\fP.
 .UNINDENT
+.SS See also
+.sp
+\fIsalt(1)\fP
+\fIsalt(7)\fP
+\fIsalt\-minion(1)\fP
 .SH SALT-MINION
 .sp
 The salt minion daemon, receives commands from a remote salt master.
@@ -19140,6 +19533,11 @@ Console log level. One of \fBinfo\fP, \fBnone\fP, \fBgarbage\fP,
 \fBtrace\fP, \fBwarning\fP, \fBerror\fP, \fBdebug\fP. For the logfile
 settings see the config file. Default: \fBwarning\fP.
 .UNINDENT
+.SS See also
+.sp
+\fIsalt(1)\fP
+\fIsalt(7)\fP
+\fIsalt\-master(1)\fP
 .SH SALT-KEY
 .SS Synopsis
 .sp
@@ -19283,6 +19681,11 @@ The location of the salt master configuration file, the salt master
 settings are required to know where the connections are;
 default=/etc/salt/master
 .UNINDENT
+.SS See also
+.sp
+\fIsalt(1)\fP
+\fIsalt\-master(1)\fP
+\fIsalt\-minion(1)\fP
 .SH SALT-CALL
 .SS Synopsis
 .sp
@@ -19349,6 +19752,11 @@ Print the output from the salt command in json.
 .B \-\-no\-color
 Disable all colored output
 .UNINDENT
+.SS See also
+.sp
+\fIsalt(1)\fP
+\fIsalt\-master(1)\fP
+\fIsalt\-minion(1)\fP
 .SH SALT-RUN
 .sp
 Execute a Salt runner
@@ -19377,6 +19785,11 @@ The location of the salt master configuration file, the salt master
 settings are required to know where the connections are;
 default=/etc/salt/master
 .UNINDENT
+.SS See also
+.sp
+\fIsalt(1)\fP
+\fIsalt\-master(1)\fP
+\fIsalt\-minion(1)\fP
 .SH SALT-SYNDIC
 .sp
 The salt syndic daemon, a special minion that passes through commands from a
@@ -19414,6 +19827,11 @@ The master configuration file to use, the default is /etc/salt/master
 .B \-\-minion\-config=MINION_CONFIG
 The minion configuration file to use, the default is /etc/salt/minion
 .UNINDENT
+.SS See also
+.sp
+\fIsalt(1)\fP
+\fIsalt\-master(1)\fP
+\fIsalt\-minion(1)\fP
 .SH ABSTRACT ON SALT AUTHENTICATION AND ENCRYPTION
 .sp
 The Salt authentication and encryption system uses Public Key authentication
@@ -21664,9 +22082,6 @@ Jeff Hutchins and Bret Palsson from Jive Communications.
 .sp
 Currently the only network configuration backend available is for Red Hat
 based systems, like Red Hat Enterprise, CentOS, and Fedora.
-.sp
-Future releases will see the addition of more platforms and more interface
-types like vlans.
 .SS Exponential Jobs
 .sp
 Originally the jobs executed were stored on the master in the format:

@@ -6,7 +6,7 @@ Node groups
 
     Node group
         A predefined group of minions declared in the master configuration file
-        :conf_master:`nodegroups` setting as a :term:`compound target`.
+        :conf_master:`nodegroups` setting as a compound target.
 
 For example, in the master config file :conf_master:`nodegroups` setting::
 

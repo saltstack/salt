@@ -40,6 +40,14 @@ specification as defined in the MySQL documentation:
        - user: joe
 '''
 
+
+def __virtual__():
+    '''
+    Only load if the mysql module is available
+    '''
+    return 'mysql_grants' if 'mysql.grant_exists' in __salt__ else False
+
+
 def present(name,
             grant=None,
             database=None,

@@ -10,6 +10,7 @@ import copy
 import salt.client
 import salt.output
 
+
 class Batch(object):
     '''
     Manage the execution of batch runs
@@ -38,6 +39,8 @@ class Batch(object):
             args.append('grain_pcre')
         elif self.opts['exsel']:
             args.append('exsel')
+        elif self.opts['pillar']:
+            args.append('pillar')
         elif self.opts['nodegroup']:
             args.append('nodegroup')
         elif self.opts['compound']:
@@ -110,7 +113,7 @@ class Batch(object):
                     # Gather returns until we get to the bottom
                     ncnt = 0
                     while True:
-                        part = queue.next()
+                        part = next(queue)
                         if part is None:
                             time.sleep(0.01)
                             ncnt += 1

@@ -12,7 +12,6 @@ Required python modules: libvirt
 # Import Python Libs
 import os
 import shutil
-import StringIO
 import subprocess
 from xml.dom import minidom
 
@@ -28,6 +27,7 @@ import yaml
 
 # Import Salt Modules
 import salt.utils
+from salt._compat import StringIO
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -455,7 +455,7 @@ def get_disks(name):
         salt '*' hyper.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO.StringIO(get_conf(name)))
+    doc = minidom.parse(StringIO(get_conf(name)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -467,10 +467,8 @@ def get_disks(name):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys() \
-                and 'file' in source.attributes.keys():
-            disks[target.getAttribute('dev')] = \
-                    {'file': source.getAttribute('file')}
+        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
+            disks[target.getAttribute('dev')] = {'file': source.getAttribute('file')}
     for dev in disks:
         disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
             + disks[dev]['file'],

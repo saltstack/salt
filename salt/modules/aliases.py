@@ -2,6 +2,7 @@
 Manage the information in the aliases file
 '''
 
+# Import python libs
 import os
 import re
 import stat
@@ -23,7 +24,7 @@ def __get_aliases_filename():
 def __parse_aliases():
     '''
     Parse the aliases file, and return a list of line components:
-    
+
     [
       (alias1, target1, comment1),
       (alias2, target2, comment2),
@@ -51,13 +52,15 @@ def __write_aliases_file(lines):
     adir = os.path.dirname(afn)
 
     out = tempfile.NamedTemporaryFile(dir=adir, delete=False)
-    if os.path.isfile(afn):
-        st = os.stat(afn)
-        os.chmod(out.name, stat.S_IMODE(st.st_mode))
-        os.chown(out.name, st.st_uid, st.st_gid)
-    else:
-        os.chmod(out.name, 0644)
-        os.chown(out.name, 0, 0)
+
+    if not __opts__.get('integration.test', False):
+        if os.path.isfile(afn):
+            st = os.stat(afn)
+            os.chmod(out.name, stat.S_IMODE(st.st_mode))
+            os.chown(out.name, st.st_uid, st.st_gid)
+        else:
+            os.chmod(out.name, 0o644)
+            os.chown(out.name, 0, 0)
 
     for (line_alias, line_target, line_comment) in lines:
         if not line_comment:
@@ -69,7 +72,7 @@ def __write_aliases_file(lines):
 
     out.close()
     os.rename(out.name, afn)
-    
+
     newaliases_path = '/usr/bin/newaliases'
     if os.path.exists(newaliases_path):
         __salt__['cmd.run'](newaliases_path)
@@ -88,8 +91,9 @@ def list_aliases():
         salt '*' aliases.list_aliases
     '''
     ret = {}
-    for (alias, target, comment) in __parse_aliases():
-        if not alias: continue
+    for alias, target, comment in __parse_aliases():
+        if not alias:
+            continue
         ret[alias] = target
     return ret
 

@@ -17,6 +17,7 @@ import salt.utils.templates
 
 log = logging.getLogger(__name__)
 
+
 def render(template_file, env='', sls=''):
     '''
     Render the data passing the functions and grains into the rendering system

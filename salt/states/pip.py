@@ -98,8 +98,8 @@ def installed(name,
                                runas=user,
                                cwd=cwd):
         pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
-        version = pkg_list.values()[0]
-        pkg_name = pkg_list.keys()[0]
+        version = list(pkg_list.values())[0]
+        pkg_name = next(iter(pkg_list))
         ret['result'] = True
         ret['changes']["{0}=={1}".format(pkg_name, version)] = 'Installed'
         ret['comment'] = 'Package was successfully installed'
@@ -155,4 +155,3 @@ def removed(name,
         ret["result"] = False
         ret["comment"] = "Could not remove package."
     return ret
-

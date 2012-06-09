@@ -2,6 +2,7 @@
 
 import sys
 import os
+import types
 
 class Mock(object):
     '''
@@ -78,8 +79,8 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # -- General configuration -----------------------------------------------------
 
-project = u'Salt'
-copyright = u'2012, Thomas S. Hatch'
+project = 'Salt'
+copyright = '2012, Thomas S. Hatch'
 
 version = __version__
 release = version
@@ -151,8 +152,7 @@ html_show_copyright = True
 
 ### Latex options
 latex_documents = [
-  ('contents', 'Salt.tex', u'Salt Documentation',
-   u'Thomas Hatch', 'manual'),
+  ('contents', 'Salt.tex', 'Salt Documentation', 'Thomas Hatch', 'manual'),
 ]
 
 latex_logo = '_static/salt-vert.png'
@@ -162,29 +162,39 @@ latex_logo = '_static/salt-vert.png'
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 authors = [
-    u'Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file',
+    'Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file',
 ]
 
 man_pages = [
-    ('ref/cli/salt', 'salt', u'salt', authors, 1),
-    ('contents', 'salt', u'Salt Documentation', authors, 7),
-    ('ref/cli/salt-master', 'salt-master', u'salt-master Documentation', authors, 1),
-    ('ref/cli/salt-minion', 'salt-minion', u'salt-minion Documentation', authors, 1),
-    ('ref/cli/salt-key', 'salt-key', u'salt-key Documentation', authors, 1),
-    ('ref/cli/salt-cp', 'salt-cp', u'salt-cp Documentation', authors, 1),
-    ('ref/cli/salt-call', 'salt-call', u'salt-call Documentation', authors, 1),
-    ('ref/cli/salt-syndic', 'salt-syndic', u'salt-syndic Documentation', authors, 1),
-    ('ref/cli/salt-run', 'salt-run', u'salt-run Documentation', authors, 1),
+    ('ref/cli/salt', 'salt', 'salt', authors, 1),
+    ('contents', 'salt', 'Salt Documentation', authors, 7),
+    ('ref/cli/salt-master', 'salt-master', 'salt-master Documentation', authors, 1),
+    ('ref/cli/salt-minion', 'salt-minion', 'salt-minion Documentation', authors, 1),
+    ('ref/cli/salt-key', 'salt-key', 'salt-key Documentation', authors, 1),
+    ('ref/cli/salt-cp', 'salt-cp', 'salt-cp Documentation', authors, 1),
+    ('ref/cli/salt-call', 'salt-call', 'salt-call Documentation', authors, 1),
+    ('ref/cli/salt-syndic', 'salt-syndic', 'salt-syndic Documentation', authors, 1),
+    ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
 ]
 
 
 ### epub options
-epub_title = u'Salt Documentation'
-epub_author = u'Thomas S. Hatch'
+epub_title = 'Salt Documentation'
+epub_author = 'Thomas S. Hatch'
 epub_publisher = epub_author
-epub_copyright = u'2012, Thomas S. Hatch'
+epub_copyright = '2012, Thomas S. Hatch'
 
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.org/'
 
 #epub_tocdepth = 3
+
+
+def skip_mod_init_member(app, what, name, obj, skip, options):
+    if isinstance(obj, types.FunctionType) and obj.__name__ == 'mod_init':
+        return True
+    return False
+
+
+def setup(app):
+    app.connect('autodoc-skip-member', skip_mod_init_member)

@@ -32,26 +32,30 @@ class TestModulesGrains(integration.ModuleCase):
         '''
         grains.ls
         '''
+        check_for = (
+            'cpuarch',
+            'cpu_flags',
+            'cpu_model',
+            'domain',
+            'fqdn',
+            'host',
+            'kernel',
+            'kernelrelease',
+            'localhost',
+            'mem_total',
+            'num_cpus',
+            'os',
+            'path',
+            'ps',
+            'pythonpath',
+            'pythonversion',
+            'saltpath',
+            'saltversion',
+            'virtual',
+        )
         lsgrains = self.run_function('grains.ls')
-        self.assertTrue('cpu_model' in lsgrains)
-        self.assertTrue('cpu_flags' in lsgrains)
-        self.assertTrue('cpuarch' in lsgrains)
-        self.assertTrue('domain' in lsgrains)
-        self.assertTrue('fqdn' in lsgrains)
-        self.assertTrue('host' in lsgrains)
-        self.assertTrue('kernel' in lsgrains)
-        self.assertTrue('kernelrelease' in lsgrains)
-        self.assertTrue('localhost' in lsgrains)
-        self.assertTrue('mem_total' in lsgrains)
-        self.assertTrue('num_cpus' in lsgrains)
-        self.assertTrue('os' in lsgrains)
-        self.assertTrue('path' in lsgrains)
-        self.assertTrue('ps' in lsgrains)
-        self.assertTrue('pythonpath' in lsgrains)
-        self.assertTrue('pythonversion' in lsgrains)
-        self.assertTrue('saltpath' in lsgrains)
-        self.assertTrue('saltversion' in lsgrains)
-        self.assertTrue('virtual' in lsgrains)
+        for grain_name in check_for:
+            self.assertTrue(grain_name in lsgrains)
 
 if __name__ == "__main__":
     loader = TestLoader()

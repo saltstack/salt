@@ -113,7 +113,7 @@ configuration paths.
 
 **Interface**
 
-By default the Salt master listens on ports 4505 and 4506 on all interfaces
+By default the Salt master listens on TCP ports 4505 and 4506 on all interfaces
 (0.0.0.0). If you have a need to bind Salt to a specific IP, redefine the
 "interface" directive as seen here:
 
@@ -124,7 +124,7 @@ By default the Salt master listens on ports 4505 and 4506 on all interfaces
 
 **rc.conf**
 
-You'll need to activate the Salt Master in your rc.conf file. Using your
+You'll need to activate the Salt Master in your *rc.conf* file. Using your
 favorite editor, open ``/etc/rc.conf`` and add the  salt-master.
 
 .. code-block:: diff
@@ -197,7 +197,7 @@ see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
 
 Tying It All Together
-======================
+=====================
 
 If you've successfully completed each of the steps above you should have a
 running Salt Master and a running Salt Minion. The Minion should be configured
@@ -263,7 +263,7 @@ the ``test.ping`` remote command:
    {'alpha': True}
 
 Where Do I Go From Here
-========================
+=======================
 
 Congratulations! You've successfully configured your first Salt Minions and are
 able to send remote commands. I'm sure you're eager to learn more about what

@@ -32,7 +32,7 @@ detach the execution from the calling process on the master, it also means that
 replies are cached, so that information gathered from historic commands can be
 queried in the future.
 
-Salt also allows users to make execution modules in python. Writers of these
+Salt also allows users to make execution modules in Python. Writers of these
 modules should also be pleased to know that they have access to the impressive
 information gathered from PuppetLabs' Facter application, making Salt module
 more flexible. In the future I hope to also allow Salt to group servers based

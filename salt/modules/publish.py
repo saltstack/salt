@@ -7,6 +7,8 @@ import ast
 
 import salt.crypt
 import salt.payload
+from salt._compat import string_types
+
 
 def _get_socket():
     '''
@@ -16,6 +18,7 @@ def _get_socket():
     socket = context.socket(zmq.REQ)
     socket.connect(__opts__['master_uri'])
     return socket
+
 
 def _publish(
         tgt,
@@ -54,7 +57,7 @@ def _publish(
         if isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
     except:
-        if isinstance(arg, basestring):
+        if isinstance(arg, string_types):
             arg = arg.split(',')
 
     auth = salt.crypt.SAuth(__opts__)
@@ -65,6 +68,7 @@ def _publish(
             'fun': fun,
             'arg': arg,
             'tgt': tgt,
+            'tgt_type': expr_form,
             'ret': returner,
             'tok': tok,
             'tmo': timeout,
@@ -74,6 +78,7 @@ def _publish(
     socket = _get_socket()
     socket.send(serial.dumps(payload))
     return auth.crypticle.loads(serial.loads(socket.recv()))
+
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     '''
@@ -95,6 +100,7 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     '''
     return _publish(tgt, fun, arg, expr_form, returner, timeout, 'clean')
 
+
 def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     '''
     Return the full data about the publication, this is invoked in the same
@@ -105,3 +111,38 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
         salt system.example.com publish.full_data '*' cmd.run 'ls -la /tmp'
     '''
     return _publish(tgt, fun, arg, expr_form, returner, timeout, 'full')
+
+
+def runner(fun, arg=None):
+    '''
+    Execute a runner on the master and return the data from the runner
+    function
+
+    CLI Example::
+
+        salt publish.runner manage.down
+    '''
+    serial = salt.payload.Serial(__opts__)
+    if not arg:
+        arg = []
+
+    try:
+        if isinstance(ast.literal_eval(arg), dict):
+            arg = [arg,]
+    except:
+        if isinstance(arg, string_types):
+            arg = arg.split(',')
+
+    auth = salt.crypt.SAuth(__opts__)
+    tok = auth.gen_token('salt')
+    payload = {'enc': 'aes'}
+    load = {
+            'cmd': 'minion_runner',
+            'fun': fun,
+            'arg': arg,
+            'tok': tok,
+            'id': __opts__['id']}
+    payload['load'] = auth.crypticle.dumps(load)
+    socket = _get_socket()
+    socket.send(serial.dumps(payload))
+    return auth.crypticle.loads(serial.loads(socket.recv()))

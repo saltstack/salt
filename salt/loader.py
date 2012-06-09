@@ -7,10 +7,11 @@ Routines to set up a minion
 
 
 # Import python libs
-import imp
-import logging
 import os
+import imp
 import salt
+import logging
+import tempfile
 from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
@@ -18,7 +19,8 @@ salt_base_path = os.path.dirname(salt.__file__)
 
 
 def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
-    '''Creates Loader instance
+    '''
+    Creates Loader instance
 
     Order of module_dirs:
         opts[ext_type_dirs],
@@ -30,7 +32,7 @@ def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
 
     ext_type_types = []
     if ext_dirs:
-        if ext_type_dirs == None:
+        if ext_type_dirs is None:
             ext_type_dirs = '{0}_dirs'.format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
@@ -147,10 +149,12 @@ def runner(opts):
     '''
     Directly call a function inside a loader directory
     '''
-    module_dirs = [
-        os.path.join(salt_base_path, 'runners'),
-        ]
-    load = Loader(module_dirs, opts)
+    load = _create_loader(
+            opts,
+            'runners',
+            'runner',
+            ext_type_dirs='runner_dirs'
+            )
     return load.gen_functions()
 
 
@@ -244,9 +248,20 @@ class Loader(object):
                     full = full_test
         if not full:
             return None
+        cython_enabled = False
+        if self.opts.get('cython_enable', True) is True:
+            try:
+                import pyximport
+                pyximport.install()
+                cython_enabled = True
+            except ImportError:
+                log.info('Cython is enabled in the options but not present '
+                         'in the system path. Skipping Cython modules.')
         try:
-            if full.endswith('.pyx') and self.opts['cython_enable']:
-                mod = pyximport.load_module(name, full, '/tmp')
+            if full.endswith('.pyx'):
+                # If there's a name which ends in .pyx it means the above
+                # cython_enabled is True. Continue...
+                mod = pyximport.load_module(name, full, tempfile.gettempdir())
             else:
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
                 mod = imp.load_module(
@@ -310,6 +325,7 @@ class Loader(object):
         names = {}
         modules = []
         funcs = {}
+        disable = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
@@ -328,6 +344,8 @@ class Loader(object):
             for fn_ in os.listdir(mod_dir):
                 if fn_.startswith('_'):
                     continue
+                if fn_.split('.')[0] in disable:
+                    continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))):
                     names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
@@ -339,7 +357,7 @@ class Loader(object):
                     mod = pyximport.load_module(
                             '{0}_{1}'.format(name, self.tag),
                             names[name],
-                            '/tmp')
+                            tempfile.gettempdir())
                 else:
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
@@ -438,7 +456,7 @@ class Loader(object):
         '''
         List the functions
         '''
-        return sorted(funcs.keys())
+        return sorted(funcs)
 
     def list_modules(self, funcs):
         '''
@@ -495,7 +513,7 @@ class Loader(object):
             try:
                 ret = fun()
             except Exception as exc:
-                log.critical(('Failed to load grains definded in grain file '
+                log.critical(('Failed to load grains defined in grain file '
                               '{0} in function {1}, error: {2}').format(
                                   key, fun, exc))
                 continue

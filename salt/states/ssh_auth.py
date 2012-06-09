@@ -40,13 +40,18 @@ name.
 # Import python libs
 import re
 
-def _present_test(user, name, enc, comment, options, source, config):
+
+def _present_test(user, name, enc, comment, options, source, config, env):
     '''
     Run checks for "present"
     '''
     result = None
     if source:
-        keys = __salt__['ssh.check_key_file'](user, source, config)
+        keys = __salt__['ssh.check_key_file'](
+                user,
+                source,
+                config,
+                env)
         if keys:
             comment = ('A number of keys are going to be updated from the '
                        'keyfile: {0}').format(source)
@@ -85,7 +90,8 @@ def present(
         comment='',
         source='',
         options=[],
-        config='.ssh/authorized_keys'):
+        config='.ssh/authorized_keys',
+        **kwargs):
     '''
     Verifies that the specified ssh key is present for the specified user
 
@@ -126,7 +132,8 @@ def present(
                 comment,
                 options,
                 source,
-                config
+                config,
+                kwargs.get('__env__', 'base')
                 )
         return ret
 
@@ -134,7 +141,8 @@ def present(
         data = __salt__['ssh.set_auth_key_from_file'](
                 user,
                 source,
-                config)
+                config,
+                kwargs.get('__env__', 'base'))
     else:
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds).+)$')

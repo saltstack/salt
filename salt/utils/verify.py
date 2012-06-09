@@ -11,7 +11,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-__all__ = ('zmq_version', 'run')
+__all__ = ('zmq_version', 'verify_env', 'check_user')
 
 
 def zmq_version():
@@ -30,7 +30,7 @@ def zmq_version():
         log.warn(msg.format(ver))
         return True
 
-    major,minor,point = match.groups()
+    major, minor, point = match.groups()
 
     if major.isdigit():
         major = int(major)
@@ -60,25 +60,62 @@ def zmq_version():
     return False
 
 
-def verify_env(dirs):
+def verify_env(dirs, user):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
+    if 'os' in os.environ:
+        if os.environ['os'].startswith('Windows'):
+            return True
+    import pwd  # after confirming not running Windows
+    try:
+        pwnam = pwd.getpwnam(user)
+        uid = pwnam[2]
+        gid = pwnam[3]
+    except KeyError:
+        err = ('Failed to prepare the Salt environment for user '
+               '{0}. The user is not available.\n').format(user)
+        sys.stderr.write(err)
+        sys.exit(2)
     for dir_ in dirs:
         if not os.path.isdir(dir_):
             try:
                 cumask = os.umask(63)  # 077
                 os.makedirs(dir_)
+                # If starting the process as root, chown the new dirs
+                if os.getuid() == 0:
+                    os.chown(dir_, uid, gid)
                 os.umask(cumask)
             except OSError as e:
                 sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
 
         mode = os.stat(dir_)
+        # If starting the process as root, chown the new dirs
+        if os.getuid() == 0:
+            fmode = os.stat(dir_)
+            if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                # chown the file for the new user
+                os.chown(dir_, uid, gid)
+            for root, dirs, files in os.walk(dir_):
+                if 'jobs' in root:
+                    continue
+                for name in files:
+                    path = os.path.join(root, name)
+                    fmode = os.stat(path)
+                    if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                        # chown the file for the new user
+                        os.chown(path, uid, gid)
+                for name in dirs:
+                    path = os.path.join(root, name)
+                    fmode = os.stat(path)
+                    if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                        # chown the file for the new user
+                        os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
-        # to read in what it needs to integrate. 
+        # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
         smode = stat.S_IMODE(mode.st_mode)
@@ -108,11 +145,8 @@ def check_user(user, log):
             os.setgid(p.pw_gid)
             os.setuid(p.pw_uid)
         except OSError:
-            if user == 'root':
-                msg = 'Sorry, the salt must run as root.  http://xkcd.com/838'
-            else:
-                msg = 'Salt must be run from root or user "{0}"'.format(user)
-            log.critical(msg)
+            msg = 'Salt configured to run as user "{0}" but unable to switch.'
+            log.critical(msg.format(user))
             return False
     except KeyError:
         msg = 'User not found: "{0}"'.format(user)

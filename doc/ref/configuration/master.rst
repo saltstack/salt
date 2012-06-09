@@ -45,7 +45,7 @@ The network port to set up the publication interface
 .. conf_master:: user
 
 ``user``
-----------------
+--------
 
 Default: ``root``
 
@@ -180,6 +180,33 @@ public keys from the minions
 
     auto_accept: False
 
+
+Master Module Management
+------------------------
+
+.. conf_master:: runner_dirs
+
+``runner_dirs``
+---------------
+
+Default: ``[]``
+
+Set additional directories to search for runner modules
+
+.. conf_master:: cython_enable
+
+``cython_enable``
+-----------------
+
+Default: ``False``
+
+Set to true to enable cython modules (.pyx files) to be compiled on the fly on
+the Salt master
+
+.. code-block:: yaml
+
+    cython_enable: False
+
 Master State System Settings
 ----------------------------
 
@@ -269,6 +296,7 @@ Default: ``base: [/srv/salt]``
 Salt runs a lightweight file server written in zeromq to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
+
 The file server works on environments passed to the master. Each environment
 can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
@@ -443,6 +471,27 @@ This will allow all minions to execute all commands:
 This is not recommended, since it would allow anyone who gets root on any
 single minion to instantly have root on all of the minions!
 
+.. conf_master:: peer_run
+
+``peer_run``
+------------
+
+Default: ``{}``
+
+The peer_run option is used to open up runners on the master to access from the
+minions. The peer_run configuration matches the format of the peer
+configuration.
+
+The following example would allow foo.example.com to execute the manage.up
+runner:
+
+
+.. code-block:: yaml
+
+    peer_run:
+      foo.example.com:
+          - manage.up
+
 Node Groups
 -----------
 
@@ -497,7 +546,7 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 Default: ``{}``
 
 Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the salt library at the 'warning' level, but you
+Imagine you want to have the Salt library at the 'warning' level, but you
 still wish to have 'salt.modules' at the 'debug' level:
 
 .. code-block:: yaml

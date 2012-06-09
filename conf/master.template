@@ -59,11 +59,21 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
+#####    Master Module Management    #####
+##########################################
+# Manage how master side modules are loaded
+#
+# Add any additional locations to look for master runners
+#runner_dirs: []
+#
+#Enable Cython for master side modules
+#cython_enable: False
+
 #####      State System settings     #####
 ##########################################
 # The state system uses a "top" file to tell the minions what environment to
 # use and what modules to use. The state_top file is defined relative to the
-# root of the base environment.
+# root of the base environment as defined in "File Server settings" below.
 #state_top: top.sls
 #
 # The external_nodes option allows Salt to gather data that would normally be
@@ -137,7 +147,7 @@
 # syndic servers(s) below it set the "order_masters" setting to True, if this
 # is a master that will be running a syndic daemon for passthrough the
 # "syndic_master" setting needs to be set to the location of the master server
-# to recieve commands from.
+# to receive commands from.
 #
 # Set the order_masters setting to True if this master will command lower
 # masters' syndic interfaces.
@@ -167,8 +177,26 @@
 # peer:
 #   .*:
 #       - .*
-# This is not recomanded, since it would allow anyone who gets root on any
+# This is not recommended, since it would allow anyone who gets root on any
 # single minion to instantly have root on all of the minions!
+#
+# Minions can also be allowed to execute runners from the salt master.
+# Since executing a runner from the minion could be considered a security risk,
+# it needs to be enabled. This setting functions just like the peer setting
+# except that it opens up runners instead of module functions.
+#
+# All peer runner support is turned off by default and must be enabled before
+# using. This will enable all peer runners for all minions:
+#
+# peer_run:
+#   .*:
+#     - .*
+#
+# To enable just the manage.up runner for the minion foo.example.com:
+#
+# peer_run:
+#   foo.example.com:
+#     - manage.up
 #
 
 #####         Cluster settings       #####

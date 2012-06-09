@@ -8,6 +8,7 @@ import re
 # Import Salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
@@ -216,7 +217,7 @@ def purge(pkg):
     return ret_pkgs
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -287,7 +288,7 @@ def list_pkgs(regex_string=""):
     # If ret is empty at this point, check to see if the package is virtual.
     # We also need aptitude past this point.
     if not ret and __salt__['cmd.has_exec']('aptitude'):
-        cmd = ('aptitude search "{0} ?virtual ?reverse-provides(?installed)"'
+        cmd = ('aptitude search "?name(^{0}$) ?virtual ?reverse-provides(?installed)"'
                 .format(regex_string))
 
         out = __salt__['cmd.run_stdout'](cmd)

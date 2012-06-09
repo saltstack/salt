@@ -4,7 +4,7 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 '''
 
-import pickle
+from salt._compat import pickle
 
 try:
     # Attempt to import msgpack
@@ -40,6 +40,7 @@ def format_payload(enc, **kwargs):
         load[key] = kwargs[key]
     payload['load'] = load
     return package(payload)
+
 
 class Serial(object):
     '''
