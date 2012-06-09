@@ -6,7 +6,6 @@ import os
 import sys
 import time
 import signal
-import datetime
 import tempfile
 import traceback
 

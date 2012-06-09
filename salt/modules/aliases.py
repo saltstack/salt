@@ -4,7 +4,6 @@ Manage the information in the aliases file
 
 # Import python libs
 import os
-import sys
 import re
 import stat
 import tempfile
