@@ -8,7 +8,6 @@ from __future__ import with_statement
 
 import os
 import sys
-from glob import glob
 from distutils.cmd import Command
 from distutils.sysconfig import get_python_lib, PREFIX
 
