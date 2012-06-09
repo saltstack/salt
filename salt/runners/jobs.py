@@ -9,10 +9,12 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
+from salt._compat import string_types
 from salt.exceptions import SaltException
 
 # Import Third party libs
 import yaml
+
 
 def active():
     '''
@@ -50,6 +52,7 @@ def active():
             if os.path.exists(os.path.join(jid_dir, minion)):
                 ret[jid]['Returned'].append(minion)
     print(yaml.dump(ret))
+    return ret
 
 
 def lookup_jid(jid):
@@ -81,7 +84,7 @@ def lookup_jid(jid):
 
     # Determine the proper output method and run it
     get_outputter = salt.output.get_outputter
-    if isinstance(ret, (list, dict, basestring)) and out:
+    if isinstance(ret, (list, dict, string_types)) and out:
         printout = get_outputter(out)
     # Pretty print any salt exceptions
     elif isinstance(ret, SaltException):
@@ -90,6 +93,7 @@ def lookup_jid(jid):
         printout = get_outputter(None)
     printout(ret)
     return ret
+
 
 def list_jobs():
     '''
@@ -112,4 +116,4 @@ def list_jobs():
                         'Target': load['tgt'],
                         'Target-type': load['tgt_type']}
     print(yaml.dump(ret))
-
+    return ret

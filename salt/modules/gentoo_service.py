@@ -35,7 +35,7 @@ def get_enabled():
 def get_disabled():
     '''
     Return a set of services that are installed but disabled
-    
+
     CLI Example::
 
         salt '*' service.get_disabled

@@ -60,26 +60,28 @@ verbose : True
 '''
 
 # Import Python Libs
-import urllib2
+
 import json
 import os
 
 # Import Salt libs
 import salt.utils
+from salt._compat import string_types, url_open
 
 #sane defaults
 __opts__ = {'solr.cores': [],
             'solr.host': 'localhost',
             'solr.port': '8983',
-            'solr.baseurl':'/solr',
-            'solr.type':'master',
+            'solr.baseurl': '/solr',
+            'solr.type': 'master',
             'solr.request_timeout': None,
             'solr.init_script': '/etc/rc.d/solr',
-            'solr.dih.import_options': {'clean':False, 'optimize':True,
-                                        'commit':True, 'verbose':False},
+            'solr.dih.import_options': {'clean': False, 'optimize': True,
+                                        'commit': True, 'verbose': False},
             'solr.backup_path': None,
-            'solr.num_backups':1
+            'solr.num_backups': 1
             }
+
 
 ########################## PRIVATE METHODS ##############################
 
@@ -95,6 +97,7 @@ def __virtual__():
     if salt.utils.which('apache-solr'):
         return 'solr'
     return False
+
 
 def _get_none_or_value(value):
     '''
@@ -113,13 +116,14 @@ def _get_none_or_value(value):
     elif not value:
         return value
     # if it's a string, and it's not empty check for none
-    elif isinstance(value, basestring):
+    elif isinstance(value, string_types):
         if value.lower() == 'none':
             return None
         return value
     # return None
     else:
         return None
+
 
 def _check_for_cores():
     '''
@@ -133,7 +137,8 @@ def _check_for_cores():
     '''
     return len(__opts__['solr.cores']) > 0
 
-def _get_return_dict(success=True, data={}, errors=[], warnings=[]):
+
+def _get_return_dict(success=True, data=None, errors=None, warnings=None):
     '''
     PRIVATE METHOD
     Creates a new return dict with default values. Defaults may be overwritten.
@@ -151,14 +156,18 @@ def _get_return_dict(success=True, data={}, errors=[], warnings=[]):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
-    ret = {'success':success,
-           'data':data,
-           'errors':errors,
-           'warnings':warnings}
+    data = {} if data is None else data
+    errors = [] if errors is None else errors
+    warnings = [] if warnings is None else warnings
+    ret = {'success': success,
+           'data': data,
+           'errors': errors,
+           'warnings': warnings}
 
     return ret
 
-def _update_return_dict(ret, success, data, errors=[], warnings=[]):
+
+def _update_return_dict(ret, success, data, errors=None, warnings=None):
     '''
     PRIVATE METHOD
     Updates the return dictionary and returns it.
@@ -179,6 +188,8 @@ def _update_return_dict(ret, success, data, errors=[], warnings=[]):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
+    errors = [] if errors is None else errors
+    warnings = [] if warnings is None else warnings
     ret['success'] = success
     ret['data'].update(data)
     ret['errors'] = ret['errors'] + errors
@@ -186,7 +197,7 @@ def _update_return_dict(ret, success, data, errors=[], warnings=[]):
     return ret
 
 
-def _format_url(handler, host=None, core_name=None, extra=[]):
+def _format_url(handler, host=None, core_name=None, extra=None):
     '''
     PRIVATE METHOD
     Formats the url based on parameters, and if cores are used or not
@@ -203,8 +214,9 @@ def _format_url(handler, host=None, core_name=None, extra=[]):
 
     Return: str::
 
-        A fullly formatted url (http://<host>:<port>/solr/<handler>?wt=json&<extra>
+        Fully formatted url (http://<host>:<port>/solr/<handler>?wt=json&<extra>
     '''
+    extra = [] if extra is None else extra
     if _get_none_or_value(host) is None or host == 'None':
         host = __opts__['solr.host']
     port = __opts__['solr.port']
@@ -215,14 +227,15 @@ def _format_url(handler, host=None, core_name=None, extra=[]):
                     host, port, baseurl, handler)
         else:
             return "http://{0}:{1}{2}/{3}?wt=json&{4}".format(
-                    host, port, baseurl, handler,"&".join(extra))
+                    host, port, baseurl, handler, "&".join(extra))
     else:
         if extra is None or len(extra) == 0:
             return "http://{0}:{1}{2}/{3}/{4}?wt=json".format(
-                    host,port,baseurl,core_name,handler)
+                    host, port, baseurl, core_name, handler)
         else:
             return "http://{0}:{1}{2}/{3}/{4}?wt=json&{5}".format(
-                    host,port,baseurl,core_name,handler,"&".join(extra))
+                    host, port, baseurl, core_name, handler, "&".join(extra))
+
 
 def _http_request(url, request_timeout=None):
     '''
@@ -232,8 +245,8 @@ def _http_request(url, request_timeout=None):
     url : str
         a complete url that can be passed to urllib.open
     request_timeout : int (None)
-        The number of seconds before the timeout should fail. Leave blank/None to
-        use the default. __opts__['solr.request_timeout']
+        The number of seconds before the timeout should fail. Leave blank/None
+        to use the default. __opts__['solr.request_timeout']
 
     Return: dict<str,obj>::
 
@@ -243,14 +256,15 @@ def _http_request(url, request_timeout=None):
 
         request_timeout = __opts__['solr.request_timeout']
         if request_timeout is None:
-            data = json.load(urllib2.urlopen(url))
+            data = json.load(url_open(url))
         else:
-            data = json.load(urllib2.urlopen(url, timeout=request_timeout))
+            data = json.load(url_open(url, timeout=request_timeout))
         return _get_return_dict(True, data, [])
     except Exception as e:
         return _get_return_dict(False, {}, ["{0} : {1}".format(url, e)])
 
-def _replication_request(command, host=None, core_name=None, params=[]):
+
+def _replication_request(command, host=None, core_name=None, params=None):
     '''
     PRIVATE METHOD
     Performs the requested replication command and returns a dictionary with
@@ -272,10 +286,12 @@ def _replication_request(command, host=None, core_name=None, params=[]):
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
+    params = [] if params is None else params
     extra = ["command={0}".format(command)] + params
     url = _format_url('replication', host=host, core_name=core_name,
                       extra=extra)
     return _http_request(url)
+
 
 def _get_admin_info(command, host=None, core_name=None):
     '''
@@ -298,8 +314,9 @@ def _get_admin_info(command, host=None, core_name=None):
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
     url = _format_url("admin/{0}".format(command), host, core_name=core_name)
-    resp =  _http_request(url)
+    resp = _http_request(url)
     return resp
+
 
 def _is_master():
     '''
@@ -310,6 +327,7 @@ def _is_master():
         True if __opts__['solr.type'] = master
     '''
     return __opts__['solr.type'] == 'master'
+
 
 def _merge_options(options):
     '''
@@ -329,10 +347,11 @@ def _merge_options(options):
     defaults = __opts__['solr.dih.import_options']
     if isinstance(options, dict):
         defaults.update(options)
-    for (k, v) in defaults.items():
+    for k, v in defaults.items():
         if isinstance(v, bool):
             defaults[k] = str(v).lower()
     return defaults
+
 
 def _pre_index_check(handler, host=None, core_name=None):
     '''
@@ -355,7 +374,8 @@ def _pre_index_check(handler, host=None, core_name=None):
     '''
     #make sure that it's a master minion
     if _get_none_or_value(host) is None and not _is_master():
-        err = ['solr.pre_indexing_check can only be called by "master" minions']
+        err = [
+            'solr.pre_indexing_check can only be called by "master" minions']
         return _get_return_dict(False, err)
     '''
     solr can run out of memory quickly if the dih is processing multiple
@@ -381,14 +401,15 @@ def _pre_index_check(handler, host=None, core_name=None):
 
     return resp
 
+
 def _find_value(ret_dict, key, path=None):
     '''
     PRIVATE METHOD
     Traverses a dictionary of dictionaries/lists to find key
     and return the value stored.
-    TODO:// this method doesn't really work very well, and it's not really very
-            useful in it's current state. The purpose for this method is to
-            simplify parsing the json output so you can just pass the key
+    TODO:// this method doesn't really work very well, and it's not really
+            very useful in it's current state. The purpose for this method is
+            to simplify parsing the json output so you can just pass the key
             you want to find and have it return the value.
     ret : dict<str,obj>
         The dictionary to search through. Typically this will be a dict
@@ -406,9 +427,9 @@ def _find_value(ret_dict, key, path=None):
         path = "{0}:{1}".format(path, key)
 
     ret = []
-    for (k, v) in ret_dict.items():
+    for k, v in ret_dict.items():
         if k == key:
-            ret.append({path:v})
+            ret.append({path: v})
         if isinstance(v, list):
             for x in v:
                 if isinstance(x, dict):
@@ -416,6 +437,7 @@ def _find_value(ret_dict, key, path=None):
         if isinstance(v, dict):
             ret = ret + _find_value(v, key, path)
     return ret
+
 
 ########################## PUBLIC METHODS ##############################
 
@@ -442,12 +464,12 @@ def lucene_version(core_name=None):
     if _get_none_or_value(core_name) is None and _check_for_cores():
         success = True
         for name in __opts__['solr.cores']:
-            resp = _get_admin_info('system', core_name=name )
+            resp = _get_admin_info('system', core_name=name)
             if resp['success']:
                 version = resp['data']['lucene']['lucene-spec-version']
-                data = {name: {'lucene_version':version}}
-            else:#generally this means that an exception happened.
-                data = {name:{'lucene_version':None}}
+                data = {name: {'lucene_version': version}}
+            else:  # generally this means that an exception happened.
+                data = {name: {'lucene_version': None}}
                 success = False
             ret = _update_return_dict(ret, success, data, resp['errors'])
         return ret
@@ -455,9 +477,10 @@ def lucene_version(core_name=None):
         resp = _get_admin_info('system', core_name=core_name)
         if resp['success']:
             version = resp['data']['lucene']['lucene-spec-version']
-            return _get_return_dict(True, {'version':version}, resp['errors'])
+            return _get_return_dict(True, {'version': version}, resp['errors'])
         else:
             return resp
+
 
 def version(core_name=None):
     '''
@@ -482,13 +505,13 @@ def version(core_name=None):
     if _get_none_or_value(core_name) is None and _check_for_cores():
         success = True
         for name in __opts__['solr.cores']:
-            resp = _get_admin_info('system', core_name=name )
+            resp = _get_admin_info('system', core_name=name)
             if resp['success']:
                 lucene = resp['data']['lucene']
-                data = {name:{'version':lucene['solr-spec-version']}}
+                data = {name: {'version': lucene['solr-spec-version']}}
             else:
                 success = False
-                data = {name:{'version':None}}
+                data = {name: {'version': None}}
             ret = _update_return_dict(ret, success, data,
                                       resp['errors'], resp['warnings'])
         return ret
@@ -496,10 +519,11 @@ def version(core_name=None):
         resp = _get_admin_info('system', core_name=core_name)
         if resp['success']:
             version = resp['data']['lucene']['solr-spec-version']
-            return _get_return_dict(True, {'version':version},
+            return _get_return_dict(True, {'version': version},
                                     resp['errors'], resp['warnings'])
         else:
             return resp
+
 
 def optimize(host=None, core_name=None):
     '''
@@ -535,19 +559,20 @@ def optimize(host=None, core_name=None):
                               extra=["optimize=true"])
             resp = _http_request(url)
             if resp['success']:
-                data = {name : {'data':resp['data']}}
-                ret =  _update_return_dict(ret, success, data,
+                data = {name: {'data': resp['data']}}
+                ret = _update_return_dict(ret, success, data,
                                            resp['errors'], resp['warnings'])
             else:
                 success = False
-                data = {name : {'data':resp['data']}}
-                ret =  _update_return_dict(ret, success, data,
+                data = {name: {'data': resp['data']}}
+                ret = _update_return_dict(ret, success, data,
                                            resp['errors'], resp['warnings'])
         return ret
     else:
         url = _format_url('update', host=host, core_name=core_name,
                           extra=["optimize=true"])
         return _http_request(url)
+
 
 def ping(host=None, core_name=None):
     '''
@@ -573,15 +598,16 @@ def ping(host=None, core_name=None):
         for name in __opts__['solr.cores']:
             resp = _get_admin_info('ping', host=host, core_name=name)
             if resp['success']:
-                data = {name:{'status':resp['data']['status']}}
+                data = {name: {'status': resp['data']['status']}}
             else:
                 success = False
-                data = {name:{'status':None}}
+                data = {name: {'status': None}}
             ret = _update_return_dict(ret, success, data, resp['errors'])
         return ret
     else:
         resp = _get_admin_info('ping', host=host, core_name=core_name)
         return resp
+
 
 def is_replication_enabled(host=None, core_name=None):
     '''
@@ -607,14 +633,15 @@ def is_replication_enabled(host=None, core_name=None):
     # since only slaves can call this let's check the config:
     if self._is_master() and is_none(host) is None:
         errors = ['Only "slave" minions can run "is_replication_enabled"']
-        return ret.update({'success':False, 'errors':errors})
+        return ret.update({'success': False, 'errors': errors})
+
     #define a convenience method so we don't duplicate code
     def _checks(ret, success, resp, core):
         if response['success']:
             slave = resp['data']['details']['slave']
             # we need to initialize this to false in case there is an error
             # on the master and we can't get this info.
-            replication_enabled  = 'false'
+            replication_enabled = 'false'
             master_url = slave['masterUrl']
             #check for errors on the slave
             if 'ERROR' in slave:
@@ -622,9 +649,10 @@ def is_replication_enabled(host=None, core_name=None):
                 err = "{0}: {1} - {2}".format(name, slave['ERROR'], master_url)
                 resp['errors'].append(err)
                 #if there is an error return everything
-                data = slave if core is None else {core : {'data':slave}}
+                data = slave if core is None else {core: {'data': slave}}
             else:
-                enabled = slave['masterDetails']['master']['replicationEnabled']
+                enabled = slave['masterDetails']['master'][
+                    'replicationEnabled']
                 '''
                 if replication is turned off on the master, or polling is
                 disabled we need to return false. These may not not errors,
@@ -654,6 +682,7 @@ def is_replication_enabled(host=None, core_name=None):
 
     return ret
 
+
 def match_index_versions(host=None, core_name=None):
     '''
     SLAVE CALL
@@ -682,8 +711,8 @@ def match_index_versions(host=None, core_name=None):
     success = True
     if _is_master() and _get_none_or_value(host) is None:
         e = ['solr.match_index_versions can only be called by "slave" minions']
-        return ret.update({'success':False, 'errors':e})
-    #get the default return dict
+        return ret.update({'success': False, 'errors': e})
+    # get the default return dict
 
     def _match(ret, success, resp, core):
         if response['success']:
@@ -696,21 +725,24 @@ def match_index_versions(host=None, core_name=None):
                 resp['errors'].append(err)
                 #if there was an error return the entire response so the
                 #alterer can get what it wants
-                data = slave if core is None else {core : {'data': slave}}
+                data = slave if core is None else {core: {'data': slave}}
             else:
-                versions = {'master':slave['masterDetails']['master']['replicatableIndexVersion'],
-                            'slave' : resp['data']['details']['indexVersion'],
-                            'next_replication' : slave['nextExecutionAt'],
-                            'failed_list': []
-                           }
+                versions = {
+                    'master': slave['masterDetails']['master'][
+                        'replicatableIndexVersion'],
+                    'slave': resp['data']['details']['indexVersion'],
+                    'next_replication': slave['nextExecutionAt'],
+                    'failed_list': []
+               }
                 if 'replicationFailedAtList' in slave:
-                    versions.update({'failed_list' : slave['replicationFailedAtList']})
+                    versions.update({'failed_list': slave[
+                        'replicationFailedAtList']})
                 #check the index versions
                 if versions['master'] != versions['slave']:
                     success = False
                     err = "Master and Slave index versions do not match."
                     resp['errors'].append(err)
-                data = versions if core is None else {core:{'data':versions}}
+                data = versions if core is None else {core: {'data': versions}}
             ret = _update_return_dict(ret, success, data,
                                         resp['errors'], resp['warnings'])
         else:
@@ -730,9 +762,10 @@ def match_index_versions(host=None, core_name=None):
     else:
         response = _replication_request('details', host=host,
                                         core_name=core_name)
-        ret, success = _match(ret , success, response, core_name)
+        ret, success = _match(ret, success, response, core_name)
 
     return ret
+
 
 def replication_details(host=None, core_name=None):
     '''
@@ -757,17 +790,18 @@ def replication_details(host=None, core_name=None):
         success = True
         for name in __opts__['solr.cores']:
             resp = _replication_request('details', host=host, core_name=name)
-            data = {name : {'data':resp['data']}}
+            data = {name: {'data': resp['data']}}
             ret = _update_return_dict(ret, success, data,
                                         resp['errors'], resp['warnings'])
     else:
         resp = _replication_request('details', host=host, core_name=core_name)
         if resp['success']:
-            ret =  _update_return_dict(ret, success, resp['data'],
+            ret = _update_return_dict(ret, success, resp['data'],
                                         resp['errors'], resp['warnings'])
         else:
             return resp
     return ret
+
 
 def backup(host=None, core_name=None, append_core_to_path=False):
     '''
@@ -812,7 +846,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
                                         params=params)
             if not resp['success']:
                 success = False
-            data = {name : {'data': resp['data']}}
+            data = {name: {'data': resp['data']}}
             ret = _update_return_dict(ret, success, data,
                                         resp['errors'], resp['warnings'])
         return ret
@@ -826,6 +860,7 @@ def backup(host=None, core_name=None, append_core_to_path=False):
         resp = _replication_request('backup', host=host, core_name=core_name,
                                     params=params)
         return resp
+
 
 def set_is_polling(polling, host=None, core_name=None):
     '''
@@ -853,7 +888,7 @@ def set_is_polling(polling, host=None, core_name=None):
     # since only slaves can call this let's check the config:
     if _is_master() and _get_none_or_value(host) is None:
         err = ['solr.set_is_polling can only be called by "slave" minions']
-        return ret.update({'success':False, 'errors':err})
+        return ret.update({'success': False, 'errors': err})
 
     cmd = "enablepoll" if polling else "disapblepoll"
     if _get_none_or_value(core_name) is None and _check_for_cores():
@@ -862,13 +897,14 @@ def set_is_polling(polling, host=None, core_name=None):
             resp = set_is_polling(cmd, host=host, core_name=name)
             if not resp['success']:
                 success = False
-            data = {name : {'data' : resp['data']}}
+            data = {name: {'data': resp['data']}}
             ret = _update_return_dict(ret, success, data,
                                         resp['errors'], resp['warnings'])
         return ret
     else:
         resp = _replication_request(cmd, host=host, core_name=name)
         return resp
+
 
 def set_replication_enabled(status, host=None, core_name=None):
     '''
@@ -905,7 +941,7 @@ def set_replication_enabled(status, host=None, core_name=None):
             resp = set_replication_enabled(status, host, name)
             if not resp['success']:
                 success = False
-            data = {name : {'data' : resp['data']}}
+            data = {name: {'data': resp['data']}}
             ret = _update_return_dict(ret, success, data,
                     resp['errors'], resp['warnings'])
         return ret
@@ -914,6 +950,7 @@ def set_replication_enabled(status, host=None, core_name=None):
             return  _replication_request(cmd, host=host, core_name=core_name)
         else:
             return  _replication_request(cmd, host=host, core_name=core_name)
+
 
 def signal(signal=None):
     '''
@@ -937,10 +974,12 @@ def signal(signal=None):
     # TODO: Fix this logic to be reusable and used by apache.signal
     if signal not in valid_signals:
         msg = valid_signals[:-1] + ('or {0}'.format(valid_signals[-1]),)
-        return '{0} is an invalid signal. Try: one of: {1}'.format(signal, ', '.join(msg))
+        return '{0} is an invalid signal. Try: one of: {1}'.format(
+            signal, ', '.join(msg))
 
     cmd = "{0} {1}".format(__opts__['solr.init_script'], signal)
     out = __salt__['cmd.run'](cmd)
+
 
 def reload_core(host=None, core_name=None):
     '''
@@ -968,7 +1007,7 @@ def reload_core(host=None, core_name=None):
     ret = _get_return_dict()
     if not _check_for_cores():
         err = ['solr.reload_core can only be called by "multi-core" minions']
-        return ret.update({'success':False, 'errors':err})
+        return ret.update({'success': False, 'errors': err})
 
     if _get_none_or_value(core_name) is None and _check_for_cores():
         success = True
@@ -976,13 +1015,14 @@ def reload_core(host=None, core_name=None):
             resp = reload_core(host, name)
             if not resp['success']:
                 success = False
-            data = {name : {'data' : resp['data']}}
+            data = {name: {'data': resp['data']}}
             ret = _update_return_dict(ret, success, data,
                     resp['errors'], resp['warnings'])
         return ret
     extra = ['action=RELOAD', 'core={0}'.format(core_name)]
     url = _format_url('admin/cores', host=host, core_name=None, extra=extra)
     return _http_request(url)
+
 
 def core_status(host=None, core_name=None):
     '''
@@ -1005,7 +1045,7 @@ def core_status(host=None, core_name=None):
     ret = _get_return_dict()
     if not _check_for_cores():
         err = ['solr.reload_core can only be called by "multi-core" minions']
-        return ret.update({'success':False, 'errors':err})
+        return ret.update({'success': False, 'errors': err})
 
     if _get_none_or_value(core_name) is None and _check_for_cores():
         success = True
@@ -1013,13 +1053,14 @@ def core_status(host=None, core_name=None):
             resp = reload_core(host, name)
             if not resp['success']:
                 success = False
-            data = {name : {'data' : resp['data']}}
+            data = {name: {'data': resp['data']}}
             ret = _update_return_dict(ret, success, data,
                     resp['errors'], resp['warnings'])
         return ret
     extra = ['action=STATUS', 'core={0}'.format(core_name)]
     url = _format_url('admin/cores', host=host, core_name=None, extra=extra)
     return _http_request(url)
+
 
 ################### DIH (Direct Import Handler) COMMANDS #####################
 
@@ -1049,7 +1090,8 @@ def reload_import_config(handler, host=None, core_name=None, verbose=False):
 
     #make sure that it's a master minion
     if not _is_master() and _get_none_or_value(host) is None:
-        err = ['solr.pre_indexing_check can only be called by "master" minions']
+        err = [
+            'solr.pre_indexing_check can only be called by "master" minions']
         return _get_return_dict(False, err)
 
     if _get_none_or_value(core_name) is None and _check_for_cores():
@@ -1061,6 +1103,7 @@ def reload_import_config(handler, host=None, core_name=None, verbose=False):
         params.append("verbose=true")
     url = _format_url(handler, host=host, core_name=core_name, extra=params)
     return _http_request(url)
+
 
 def abort_import(handler, host=None, core_name=None, verbose=False):
     '''
@@ -1100,7 +1143,8 @@ def abort_import(handler, host=None, core_name=None, verbose=False):
     url = _format_url(handler, host=host, core_name=core_name, extra=params)
     return _http_request(url)
 
-def full_import(handler, host=None, core_name=None, options={}, extra=[]):
+
+def full_import(handler, host=None, core_name=None, options=None, extra=None):
     '''
     MASTER ONLY
     Submits an import command to the specified handler using specified options.
@@ -1128,6 +1172,8 @@ def full_import(handler, host=None, core_name=None, options={}, extra=[]):
 
         salt '*' solr.full_import dataimport None music {'clean':True}
     '''
+    options = {} if options is None else options
+    extra = [] if extra is None else extra
     if not _is_master():
         err = ['solr.full_import can only be called on "master" minions']
         return _get_return_dict(False, errors=err)
@@ -1146,13 +1192,14 @@ def full_import(handler, host=None, core_name=None, options={}, extra=[]):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=full-import']
-    for (k, v) in options.items():
+    for k, v in options.items():
         params.append("&{0}={1}".format(k, v))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
     return _http_request(url)
 
-def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
+
+def delta_import(handler, host=None, core_name=None, options=None, extra=None):
     '''
     Submits an import command to the specified handler using specified options.
     This command can only be run if the minion is is configured with
@@ -1180,6 +1227,8 @@ def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
 
         salt '*' solr.delta_import dataimport None music {'clean':True}
     '''
+    options = {} if options is None else options
+    extra = [] if extra is None else extra
     if not _is_master() and _get_none_or_value(host) is None:
         err = ['solr.delta_import can only be called on "master" minions']
         return _get_return_dict(False, errors=err)
@@ -1195,11 +1244,12 @@ def delta_import(handler, host=None, core_name=None, options={}, extra=[]):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=delta-import']
-    for (k, v) in options.items():
+    for k, v in options.items():
         params.append("{0}={1}".format(k, v))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
     return _http_request(url)
+
 
 def import_status(handler, host=None, core_name=None, verbose=False):
     '''
