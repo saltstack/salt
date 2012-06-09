@@ -15,6 +15,7 @@ Manage events
 # Import Python libs
 import os
 import time
+import errno
 import multiprocessing
 
 # Import Third Party libs
