@@ -147,7 +147,7 @@
 # syndic servers(s) below it set the "order_masters" setting to True, if this
 # is a master that will be running a syndic daemon for passthrough the
 # "syndic_master" setting needs to be set to the location of the master server
-# to recieve commands from.
+# to receive commands from.
 #
 # Set the order_masters setting to True if this master will command lower
 # masters' syndic interfaces.
@@ -182,7 +182,7 @@
 #
 # Minions can also be allowed to execute runners from the salt master.
 # Since executing a runner from the minion could be considered a security risk,
-# it needs to be enabled. This setting functions just like the peer seeting
+# it needs to be enabled. This setting functions just like the peer setting
 # except that it opens up runners instead of module functions.
 #
 # All peer runner support is turned off by default and must be enabled before
