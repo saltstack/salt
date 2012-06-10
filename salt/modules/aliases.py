@@ -103,6 +103,7 @@ def get_target(alias):
     Return the target associated with an alias
 
     CLI Example::
+
         salt '*' aliases.get_target <alias>
     '''
     aliases = list_aliases()
@@ -116,6 +117,7 @@ def has_target(alias, target):
     Return true if the alias/target is set
 
     CLI Example::
+
         salt '*' aliases.has_target <alias> <target>
     '''
     aliases = list_aliases()
@@ -129,6 +131,7 @@ def set_target(alias, target):
     exist.
 
     CLI Example::
+
         salt '*' aliases.set_target <alias> <target>
     '''
 
@@ -157,6 +160,7 @@ def rm_alias(alias):
     Remove an entry from the aliases file
 
     CLI Example::
+
         salt '*' aliases.rm_alias <alias>
     '''
     if not get_target(alias):
