@@ -1,6 +1,6 @@
-==============================================
-Boostrapping Salt on Linux EC2 with Cloud-Init
-==============================================
+===============================================
+Bootstrapping Salt on Linux EC2 with Cloud-Init
+===============================================
 
 `Salt <http://saltstack.org>`_ is a great tool for remote execution and
 configuration management, however you will still need to bootstrap the
