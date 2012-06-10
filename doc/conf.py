@@ -189,12 +189,12 @@ epub_identifier = 'http://saltstack.org/'
 
 #epub_tocdepth = 3
 
-
 def skip_mod_init_member(app, what, name, obj, skip, options):
+    if name.startswith('_'):
+        return True
     if isinstance(obj, types.FunctionType) and obj.__name__ == 'mod_init':
         return True
     return False
-
 
 def setup(app):
     app.connect('autodoc-skip-member', skip_mod_init_member)
