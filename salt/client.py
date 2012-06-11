@@ -422,7 +422,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
-                        except:
+                        except Exception:
                             pass
                     found.add(fn_)
                     fret.update(ret)
@@ -493,7 +493,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
-                        except:
+                        except Exception:
                             pass
                     found.add(fn_)
                     yield ret
@@ -548,7 +548,7 @@ class LocalClient(object):
                     while fn_ not in ret:
                         try:
                             ret[fn_] = self.serial.load(open(retp, 'r'))
-                        except:
+                        except Exception:
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
@@ -603,7 +603,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
-                        except:
+                        except Exception:
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
@@ -748,7 +748,7 @@ class LocalClient(object):
                             if not os.path.isfile(retp):
                                 continue
                             ret[jid][host] = self.serial.load(open(retp))
-                except:
+                except Exception:
                     continue
             else:
                 continue

@@ -394,7 +394,7 @@ class MWorker(multiprocessing.Process):
         '''
         try:
             data = self.crypticle.loads(load)
-        except:
+        except Exception:
             return ''
         if 'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))

@@ -270,7 +270,7 @@ class Minion(object):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
-            except:
+            except Exception:
                 pass
 
         function_name = data['fun']
@@ -331,7 +331,7 @@ class Minion(object):
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
-                except:
+                except Exception:
                     pass
 
             try:
