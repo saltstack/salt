@@ -510,6 +510,7 @@ class Minion(object):
                     socket.setsockopt(zmq.SUBSCRIBE, '')
                     socket.setsockopt(zmq.IDENTITY, self.opts['id'])
                     socket.connect(self.master_pub)
+                    poller.register(socket, zmq.POLLIN)
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
