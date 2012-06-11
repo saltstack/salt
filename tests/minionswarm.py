@@ -126,7 +126,7 @@ class Swarm(object):
                 os.remove(path)
                 os.remove('{0}.pid'.format(path))
                 shutil.rmtree('{0}.d'.format(path))
-            except:
+            except (OSError, IOError):
                 pass
 
     def start(self):
