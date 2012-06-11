@@ -769,7 +769,7 @@ def absent(name):
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove file {0}'.format(name))
 
     elif os.path.isdir(name):
@@ -782,7 +782,7 @@ def absent(name):
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove directory {0}'.format(name))
 
     ret['comment'] = 'File {0} is not present'.format(name)
