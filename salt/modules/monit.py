@@ -1,86 +1,44 @@
 '''
-Salt module to manage monit
+Monit service module. This module will create a monit type 
+service watcher.
 '''
 
-def version():
+import os
+
+def start(name):
     '''
-    List monit version
-
-    Cli Example::
-
-        salt '*' monit.version
+   
+    CLI Example::
+    salt '*' monit.start <service name>
     '''
+    cmd = "monit start {0}".format(name)
 
-    cmd = 'monit -V'
-    res = __salt__['cmd.run'](cmd)
-    return res.split("\n")[0]
+    return not __salt__['cmd.retcode'](cmd)
 
 
-def status():
+def stop(name):
     '''
-    Monit status
+    Stops service via monit
 
     CLI Example::
 
-        salt '*' monit.status
+        salt '*' monit.stop <service name>
     '''
-    cmd = 'monit status'
-    res = __salt__['cmd.run'](cmd)
-    return res.split("\n")
+    cmd = "monit stop {0}".format(name)
 
 
-def start():
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def restart(name):
     '''
-    Starts monit
+    Restart service via monit
 
     CLI Example::
 
-        salt '*' monit.start
-    *Note need to add check to insure its running*
-    `ps ax | grep monit | grep -v grep or something`
+        salt '*' monit.restart <service name>
     '''
-    cmd = 'monit'
-    res = __salt__['cmd.run'](cmd)
-    return "Monit started"
+    cmd = "monit restart {0}".format(name)
 
+    return not __salt__['cmd.retcode'](cmd)
 
-def stop():
-    '''
-    Stop monit
-
-    CLI Example::
-
-        salt '*' monit.stop
-        *Note Needs check as above*
-    '''
-    def _is_bsd():
-        return True if __grains__['os'] == 'FreeBSD' else False
-
-    if _is_bsd():
-        cmd = "/usr/local/etc/rc.d/monit stop"
-    else:
-        cmd = "/etc/init.d/monit stop"
-    res = __salt__['cmd.run'](cmd)
-    return "Monit Stopped"
-
-
-def monitor_all():
-    '''
-    Initializing all monit modules.
-    '''
-    cmd = 'monit monitor all'
-    res = __salt__['cmd.run'](cmd)
-    if res:
-        return "All Services initaialized"
-    return "Issue starting monitoring on all services"
-
-
-def unmonitor_all():
-    '''
-    unmonitor all services.
-    '''
-    cmd = 'monit unmonitor all'
-    res = __salt__['cmd.run'](cmd)
-    if res:
-        return "All Services unmonitored"
-    return "Issue unmonitoring all services"
