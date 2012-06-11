@@ -211,7 +211,7 @@ def list_groups(name):
     ugrp = set()
     try:
         user = info(name)['groups']
-    except:
+    except KeyError:
         return False
     for group in user:
         ugrp.add(group)
