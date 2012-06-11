@@ -58,7 +58,7 @@ def __virtual__():
         libvirt_conn = libvirt.open('qemu:///system')
         libvirt_conn.close()
         return 'hyper'
-    except:
+    except Exception:
         return False
 
 
@@ -373,7 +373,7 @@ def halt(name):
     try:
         dom = _get_dom(name)
         dom.destroy()
-    except:
+    except Exception:
         return False
     return True
 

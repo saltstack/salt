@@ -16,7 +16,7 @@ from salt.grains.extra import shell as shell_grain
 # Only available on posix systems, nonfatal on windows
 try:
     import pwd
-except:
+except ImportError:
     pass
 
 

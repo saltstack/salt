@@ -56,7 +56,7 @@ def _publish(
     try:
         if isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
-    except:
+    except Exception:
         if isinstance(arg, string_types):
             arg = arg.split(',')
 
@@ -129,7 +129,7 @@ def runner(fun, arg=None):
     try:
         if isinstance(ast.literal_eval(arg), dict):
             arg = [arg,]
-    except:
+    except Exception:
         if isinstance(arg, string_types):
             arg = arg.split(',')
 
