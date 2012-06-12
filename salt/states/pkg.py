@@ -108,9 +108,9 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Verify that the named package is installed and the latest available
     package. If the package can be updated this state function will update
-    the package. Generally it is better for the installed function to be
-    used, as ``latest`` will update the package the package whenever a new
-    package is available
+    the package. Generally it is better for the ``installed`` function to be
+    used, as ``latest`` will update the package whenever a new package is
+    available.
 
     name
         The name of the package to maintain at the latest available version

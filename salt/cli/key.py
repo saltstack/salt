@@ -10,6 +10,7 @@ import logging
 # Import salt modules
 import salt.crypt
 import salt.utils
+import salt.utils.event
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.event = salt.utils.event.SaltEvent(opts['sock_dir'], 'master')
         self.colors = salt.utils.get_colors(
                 not bool(self.opts.get('no_color', False))
                 )
@@ -217,6 +219,10 @@ class Key(object):
             sys.exit(43)
         shutil.move(os.path.join(minions_pre, key),
                     os.path.join(minions_accepted, key))
+        eload = {'result': True,
+                 'act': 'accept',
+                 'id': key}
+        self.event.fire_event(eload, 'key')
         self._log(
                 'Key for {0} accepted.'.format(key),
                 level='info'

@@ -11,7 +11,7 @@ import yaml
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
-except:
+except Exception:
     pass
 
 # Import Salt libs

@@ -40,4 +40,4 @@ That same example expressed in a :term:`top file` looks like the following::
         - webserver
 
 .. _`glob`: http://docs.python.org/library/fnmatch.html
-.. _`regular expressions`: http://docs.python.org/library/re.html#module-re
+.. _`regular expression`: http://docs.python.org/library/re.html#module-re

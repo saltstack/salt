@@ -60,7 +60,7 @@ class Serial(object):
         elif self.serial == 'pickle':
             try:
                 return pickle.loads(msg)
-            except:
+            except Exception:
                 return msgpack.loads(msg, use_list=True)
 
     def load(self, fn_):

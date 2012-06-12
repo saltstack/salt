@@ -162,6 +162,7 @@ def single(fun=None, test=None, **kwargs):
     insufficient data is sent to the command
 
     CLI Example::
+
         salt '*' state.single pkg.installed name=vim
     '''
     if not 'name' in kwargs:

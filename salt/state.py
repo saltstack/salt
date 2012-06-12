@@ -811,7 +811,7 @@ class State(object):
                     *cdata['args'], **cdata['kwargs'])
             else:
                 ret = self.states[cdata['full']](*cdata['args'])
-        except:
+        except Exception:
             trb = traceback.format_exc()
             ret = {
                 'result': False,

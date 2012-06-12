@@ -109,7 +109,7 @@ def run(name, **kwargs):
             mret = __salt__[name](*args, **kwargs)
         else:
             mret = __salt__[name](*args)
-    except:
+    except Exception:
         ret['comment'] = 'Module function {0} threw an exception'.format(name)
         ret['result'] = False
 

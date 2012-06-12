@@ -318,7 +318,7 @@ def _get_managed(
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
                 if urlparse(source_hash).scheme in protos:
-                    # The sourc_hash is a file on a server
+                    # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
@@ -769,7 +769,7 @@ def absent(name):
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove file {0}'.format(name))
 
     elif os.path.isdir(name):
@@ -782,7 +782,7 @@ def absent(name):
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove directory {0}'.format(name))
 
     ret['comment'] = 'File {0} is not present'.format(name)
@@ -936,6 +936,21 @@ def managed(name,
             if not sfn:
                 return _error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source).scheme != 'salt':
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             # Check to see if the files are bins
             if _is_bin(sfn) or _is_bin(name):
@@ -976,6 +991,22 @@ def managed(name,
             if not sfn:
                 return ret.error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source).scheme != 'salt':
+                hash_func = getattr(hashlib, source_sum['hash_type'])
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
@@ -1377,7 +1408,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
         # Remove ldap from nsswitch
         /etc/nsswitch.conf:
-        file.sed:
+          file.sed:
             - before: 'ldap'
             - after: ''
             - limit: '^passwd:'
@@ -1593,7 +1624,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     Usage::
 
-        /var/log/httpd/logrotate.empty
+        /var/log/httpd/logrotate.empty:
           file.touch
 
     .. versionadded:: 0.9.5
