@@ -938,7 +938,7 @@ def managed(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if urlparse(source) != 'salt':
+            if urlparse(source).scheme != 'salt':
                 with open(sfn, 'rb') as dlfile:
                     dl_sum = hash_func(dlfile.read()).hexdigest()
                 if dl_sum != source_sum['hsum']:
@@ -991,6 +991,22 @@ def managed(name,
             if not sfn:
                 return ret.error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source).scheme != 'salt':
+                hash_func = getattr(hashlib, source_sum['hash_type'])
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
