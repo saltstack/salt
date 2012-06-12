@@ -179,6 +179,7 @@ class Master(SMaster):
                 .format(signum)))
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
+            clean_proc(reqserv.eventpublisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
