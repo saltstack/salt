@@ -318,7 +318,7 @@ def _get_managed(
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
                 if urlparse(source_hash).scheme in protos:
-                    # The sourc_hash is a file on a server
+                    # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
@@ -936,6 +936,21 @@ def managed(name,
             if not sfn:
                 return _error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source) != 'salt':
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             # Check to see if the files are bins
             if _is_bin(sfn) or _is_bin(name):
