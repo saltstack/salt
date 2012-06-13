@@ -315,7 +315,7 @@ templating system. A guide to the Jinja templating system can be found here:
 http://jinja.pocoo.org/docs
 
 When working with renderers a few very useful bits of data are passed in. In
-the case of templating engine based renderers two critical components are
+the case of templating engine based renderers, three critical components are
 available, ``salt``, ``grains``, and ``pillar``. The ``salt`` object allows for
 any Salt function to be called from within the template, and ``grains`` allows for
 the Grains to be accessed from within the template. A few examples:
