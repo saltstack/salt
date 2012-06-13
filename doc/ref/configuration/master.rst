@@ -134,6 +134,20 @@ Default: ``24``
 
 Set the number of hours to keep old job information
 
+.. conf_master:: job_cache
+
+``job_cache``
+-------------
+
+Default: ``True``
+
+The master maintains a job cache, while this is a great addition it can be
+a burden on the master for larger deployments (over 5000 minions).
+Disabling the job cache will make previously executed jobs unavailable to
+the jobs system and is not generally recommended. Normally it is wise to make
+sure the master has access to a faster IO system or a tmpfs is mounted to the
+jobs dir
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
