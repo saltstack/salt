@@ -95,7 +95,7 @@ class MasterKeys(dict):
         key = None
         if os.path.exists(self.rsa_path):
             try:
-                key = RSA.load_key(self.rsa_path, None)
+                key = RSA.load_key(self.rsa_path)
             except Exception:
                 # This is probably an "old key", we need to use m2crypto to
                 # open it and then save it back without a passphrase
