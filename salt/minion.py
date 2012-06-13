@@ -505,6 +505,7 @@ class Minion(object):
                         except SaltClientError:
                             # Failed to update the dns, keep the old addr
                             pass
+                    poller.unregister(socket)
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
