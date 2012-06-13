@@ -11,7 +11,7 @@ import yaml
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
-except:
+except Exception:
     pass
 
 # Import Salt libs
@@ -168,7 +168,7 @@ class TxtOutputter(Outputter):
 
     def __call__(self, data, **kwargs):
         if hasattr(data, 'keys'):
-            for key in data.keys():
+            for key in data:
                 value = data[key]
                 # Don't blow up on non-strings
                 try:

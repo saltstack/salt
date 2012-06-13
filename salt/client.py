@@ -42,6 +42,7 @@ import zmq
 import salt.config
 import salt.payload
 import salt.utils
+import salt.utils.event
 from salt.exceptions import SaltClientError, SaltInvocationError
 
 # Try to import range from https://github.com/ytoolshed/range
@@ -74,6 +75,7 @@ class LocalClient(object):
         self.serial = salt.payload.Serial(self.opts)
         self.key = self.__read_master_key()
         self.salt_user = self.__get_user()
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
     def __read_master_key(self):
         '''
@@ -242,7 +244,7 @@ class LocalClient(object):
             print('No minions match the target')
             yield {}
         else:
-            for fn_ret in self.get_cli_returns(pub_data['jid'],
+            for fn_ret in self.get_cli_event_returns(pub_data['jid'],
                     pub_data['minions'],
                     timeout,
                     tgt,
@@ -420,7 +422,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
-                        except:
+                        except Exception:
                             pass
                     found.add(fn_)
                     fret.update(ret)
@@ -491,7 +493,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
-                        except:
+                        except Exception:
                             pass
                     found.add(fn_)
                     yield ret
@@ -546,7 +548,7 @@ class LocalClient(object):
                     while fn_ not in ret:
                         try:
                             ret[fn_] = self.serial.load(open(retp, 'r'))
-                        except:
+                        except Exception:
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
@@ -601,7 +603,7 @@ class LocalClient(object):
                             ret[fn_] = {'ret': ret_data}
                             if os.path.isfile(outp):
                                 ret[fn_]['out'] = self.serial.load(open(outp, 'r'))
-                        except:
+                        except Exception:
                             pass
             if ret and start == 999999999999:
                 start = int(time.time())
@@ -618,6 +620,107 @@ class LocalClient(object):
                 # return an empty dict
                 return ret
             time.sleep(0.02)
+
+    def get_cli_event_returns(
+            self,
+            jid,
+            minions,
+            timeout=None,
+            tgt='*',
+            tgt_type='glob',
+            verbose=False):
+        '''
+        Get the returns for the command line interface via the event system
+        '''
+        if verbose:
+            print('Executing job with jid {0}'.format(jid))
+            print('------------------------------------\n')
+        if timeout is None:
+            timeout = self.opts['timeout']
+        inc_timeout = timeout
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
+        start = int(time.time())
+        found = set()
+        wtag = os.path.join(jid_dir, 'wtag*')
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            yield {}
+        # Wait for the hosts to check in
+        while True:
+            raw = self.event.get_event(timeout, jid)
+            if not raw is None:
+                found.add(raw['id'])
+                ret = {raw['id']: {'ret': raw['return']}}
+                if 'out' in raw:
+                    ret[raw['id']]['out'] = raw['out']
+                yield ret
+                continue
+            # Then event system timeout was reached and nothing was returned
+            if len(found) >= len(minions):
+                # All minions have returned, break out of the loop
+                break
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
+            if int(time.time()) > start + timeout:
+                # The timeout has been reached, check the jid to see if the
+                # timeout needs to be increased
+                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                more_time = False
+                for id_ in jinfo:
+                    if jinfo[id_]:
+                        if verbose:
+                            print('Execution is still running on {0}'.format(id_))
+                        more_time = True
+                if more_time:
+                    timeout += inc_timeout
+                    continue
+                if verbose:
+                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                        if not len(found) >= len(minions):
+                            print('\nThe following minions did not return:')
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                print(minion)
+                break
+            time.sleep(0.01)
+
+    def get_event_iter_returns(self, jid, minions, timeout=None):
+        '''
+        Gather the return data from the event system, break hard when timeout
+        is reached.
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
+        start = 999999999999
+        gstart = int(time.time())
+        found = set()
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            yield {}
+        # Wait for the hosts to check in
+        while True:
+            raw = self.event.get_event(timeout)
+            if raw is None:
+                # Timeout reached
+                break
+            found.add(raw['id'])
+            ret = {raw['id']: {'ret': raw['return']}}
+            if 'out' in raw:
+                ret[raw['id']]['out'] = raw['out']
+            yield ret
+            time.sleep(0.02)
+
 
     def find_cmd(self, cmd):
         '''
@@ -645,7 +748,7 @@ class LocalClient(object):
                             if not os.path.isfile(retp):
                                 continue
                             ret[jid][host] = self.serial.load(open(retp))
-                except:
+                except Exception:
                     continue
             else:
                 continue
@@ -691,6 +794,15 @@ class LocalClient(object):
             minions:
                 A set, the targets that the tgt passed should match.
         '''
+        # Make sure the publisher is running by checking the unix socket
+        if not os.path.exists(
+                os.path.join(
+                    self.opts['sock_dir'],
+                    'publish_pull.ipc'
+                    )
+                ):
+            return {'jid': '0', 'minions': []}
+
         if expr_form == 'nodegroup':
             if tgt not in self.opts['nodegroups']:
                 conf_file = self.opts.get('conf_file', 'the master config file')
@@ -754,19 +866,7 @@ class LocalClient(object):
                     )
                 )
         socket.send(package)
-        payload = None
-        for ind in range(100):
-            try:
-                payload = self.serial.loads(
-                        socket.recv(
-                            zmq.NOBLOCK
-                            )
-                        )
-                break
-            except zmq.core.error.ZMQError:
-                time.sleep(0.01)
-        if not payload:
-            return {'jid': '0', 'minions': []}
+        payload = self.serial.loads(socket.recv())
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 

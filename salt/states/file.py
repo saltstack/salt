@@ -83,12 +83,12 @@ import difflib
 import hashlib
 import logging
 import tempfile
-import urlparse
+
 import copy
 
 # Import Salt libs
 import salt.utils.templates
-from salt._compat import string_types
+from salt._compat import string_types, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -229,9 +229,9 @@ def _source_list(source, source_hash, env):
                 # to check, if it is salt then check the master list
                 if len(single) != 1:
                     continue
-                single_src = single.keys()[0]
+                single_src = next(iter(single))
                 single_hash = single[single_src]
-                proto = urlparse.urlparse(single_src).scheme
+                proto = urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src in mfiles:
                         source = single_src
@@ -311,14 +311,14 @@ def _get_managed(
     else:
         # Copy the file down if there is a source
         if source:
-            if urlparse.urlparse(source).scheme == 'salt':
+            if urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, env)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
-                if urlparse.urlparse(source_hash).scheme in protos:
-                    # The sourc_hash is a file on a server
+                if urlparse(source_hash).scheme in protos:
+                    # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
@@ -362,14 +362,14 @@ def _check_perms(name, ret, user, group, mode):
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
     perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name)
+    perms['lmode'] = __salt__['file.get_mode'](name).lstrip('0')
 
     # Mode changes if needed
     if mode:
         if mode != perms['lmode']:
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
-            if mode != __salt__['file.get_mode'](name):
+            if mode != __salt__['file.get_mode'](name).lstrip('0'):
                 ret['result'] = False
                 ret['comment'] += 'Failed to change mode to {0} '.format(mode)
             else:
@@ -769,7 +769,7 @@ def absent(name):
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove file {0}'.format(name))
 
     elif os.path.isdir(name):
@@ -782,7 +782,7 @@ def absent(name):
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove directory {0}'.format(name))
 
     ret['comment'] = 'File {0} is not present'.format(name)
@@ -936,6 +936,21 @@ def managed(name,
             if not sfn:
                 return _error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source).scheme != 'salt':
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             # Check to see if the files are bins
             if _is_bin(sfn) or _is_bin(name):
@@ -976,6 +991,22 @@ def managed(name,
             if not sfn:
                 return ret.error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source).scheme != 'salt':
+                hash_func = getattr(hashlib, source_sum['hash_type'])
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
@@ -1127,13 +1158,13 @@ def directory(name,
                                          'user {0} (user does not ' \
                                          'exist)'.format(user)
                         # Remove 'user' from list of recurse targets
-                        targets = filter(lambda x: x != 'user', targets)
+                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'user not specified, but configured as ' \
                              'a target for recursive ownership management'
                     # Remove 'user' from list of recurse targets
-                    targets = filter(lambda x: x != 'user', targets)
+                    targets = list(x for x in targets if x != 'user')
             if 'group' in targets:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
@@ -1143,13 +1174,13 @@ def directory(name,
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
                         # Remove 'group' from list of recurse targets
-                        targets = filter(lambda x: x != 'group', targets)
+                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
                              'as a target for recursive ownership management'
                     # Remove 'group' from list of recurse targets
-                    targets = filter(lambda x: x != 'group', targets)
+                    targets = list(x for x in targets if x != 'group')
 
             needs_fixed = {}
             if targets:
@@ -1377,7 +1408,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
         # Remove ldap from nsswitch
         /etc/nsswitch.conf:
-        file.sed:
+          file.sed:
             - before: 'ldap'
             - after: ''
             - limit: '^passwd:'
@@ -1593,7 +1624,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     Usage::
 
-        /var/log/httpd/logrotate.empty
+        /var/log/httpd/logrotate.empty:
           file.touch
 
     .. versionadded:: 0.9.5

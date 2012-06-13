@@ -36,7 +36,7 @@ def command(settings_module,
     for arg in args:
         cmd = '{0} --{1}'.format(cmd, arg)
 
-    for key, value in kwargs.iteritems():
+    for key, value in kwargs.items():
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
 

@@ -34,6 +34,7 @@ import salt.payload
 import salt.pillar
 import salt.state
 import salt.runner
+import salt.utils.event
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -159,20 +160,13 @@ class Master(SMaster):
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
-        aes_funcs = AESFuncs(self.opts, self.crypticle)
-        clear_funcs = ClearFuncs(
-                self.opts,
-                self.key,
-                self.master_key,
-                self.crypticle)
         reqserv = ReqServer(
                 self.opts,
                 self.crypticle,
                 self.key,
-                self.master_key,
-                aes_funcs,
-                clear_funcs)
+                self.master_key)
         reqserv.start_publisher()
+        reqserv.start_event_publisher()
 
         def sigterm_clean(signum, frame):
             '''
@@ -185,6 +179,7 @@ class Master(SMaster):
                 .format(signum)))
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
+            clean_proc(reqserv.eventpublisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
@@ -212,17 +207,27 @@ class Publisher(multiprocessing.Process):
         '''
         Bind to the interface specified in the configuration file
         '''
+        # Set up the context
         context = zmq.Context(1)
+        # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
         pub_sock.setsockopt(zmq.HWM, 1)
-        pull_sock = context.socket(zmq.PULL)
         pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
+        # Prepare minion pull socket
+        pull_sock = context.socket(zmq.PULL)
         pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-            )
+                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                )
+        # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
         pull_sock.bind(pull_uri)
+        # Restrict access to the socket
+        os.chmod(
+                os.path.join(self.opts['sock_dir'],
+                    'publish_pull.ipc'),
+                448
+                )
 
         try:
             while True:
@@ -245,10 +250,8 @@ class ReqServer(object):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, crypticle, key, mkey, aes_funcs, clear_funcs):
+    def __init__(self, opts, crypticle, key, mkey):
         self.opts = opts
-        self.aes_funcs = aes_funcs
-        self.clear_funcs = clear_funcs
         self.master_key = mkey
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
@@ -274,9 +277,7 @@ class ReqServer(object):
             self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,
-                    self.crypticle,
-                    self.aes_funcs,
-                    self.clear_funcs))
+                    self.crypticle))
 
         for ind, proc in enumerate(self.work_procs):
             log.info('Starting Salt worker process {0}'.format(ind))
@@ -300,6 +301,15 @@ class ReqServer(object):
         self.publisher = Publisher(self.opts)
         self.publisher.start()
 
+
+    def start_event_publisher(self):
+        '''
+        Start the salt publisher interface
+        '''
+        # Start the publisher
+        self.eventpublisher = salt.utils.event.EventPublisher(self.opts)
+        self.eventpublisher.start()
+
     def run(self):
         '''
         Start up the ReqServer
@@ -316,15 +326,13 @@ class MWorker(multiprocessing.Process):
             opts,
             mkey,
             key,
-            crypticle,
-            aes_funcs,
-            clear_funcs):
+            crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
-        self.aes_funcs = aes_funcs
-        self.clear_funcs = clear_funcs
+        self.mkey = mkey
+        self.key = key
 
     def __bind(self):
         '''
@@ -387,7 +395,7 @@ class MWorker(multiprocessing.Process):
         '''
         try:
             data = self.crypticle.loads(load)
-        except:
+        except Exception:
             return ''
         if 'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))
@@ -399,6 +407,12 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
+        self.clear_funcs = ClearFuncs(
+                self.opts,
+                self.key,
+                self.mkey,
+                self.crypticle)
+        self.aes_funcs = AESFuncs(self.opts, self.crypticle)
         self.__bind()
 
 
@@ -410,6 +424,10 @@ class AESFuncs(object):
     #
     def __init__(self, opts, crypticle):
         self.opts = opts
+        self.event = salt.utils.event.SaltEvent(
+                self.opts['sock_dir'],
+                'master'
+                )
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         # Make a client
@@ -482,7 +500,7 @@ class AESFuncs(object):
 
         if 'classes' in ndata:
             if isinstance(ndata['classes'], dict):
-                ret[env] = ndata['classes'].keys()
+                ret[env] = list(ndata['classes'])
             elif isinstance(ndata['classes'], list):
                 ret[env] = ndata['classes']
             else:
@@ -596,7 +614,8 @@ class AESFuncs(object):
         # If the return data is invalid, just ignore it
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
-        log.info('Got return from %(id)s for job %(jid)s', load)
+        log.info('Got return from {0[id]} for job {0[jid]}'.format(load))
+        self.event.fire_event(load, load['jid'])
         jid_dir = salt.utils.jid_dir(
                 load['jid'],
                 self.opts['cachedir'],
@@ -891,6 +910,11 @@ class ClearFuncs(object):
         self.key = key
         self.master_key = master_key
         self.crypticle = crypticle
+        # Create the event manager
+        self.event = salt.utils.event.SaltEvent(
+                self.opts['sock_dir'],
+                'master'
+                )
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
@@ -930,7 +954,11 @@ class ClearFuncs(object):
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the aes key
-        which was generated at start up
+        which was generated at start up.
+
+        This method fires an event over the master event manager. The evnt is
+        tagged "auth" and returns a dict with information about the auth
+        event
         '''
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
@@ -961,12 +989,20 @@ class ClearFuncs(object):
                 )
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
                 return ret
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
             log.info('Public key rejected for %(id)s', load)
             ret = {'enc': 'clear',
                    'load': {'ret': False}}
+            eload = {'result': False,
+                     'id': load['id'],
+                     'pub': load['pub']}
+            self.event.fire_event(eload, 'auth')
             return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
@@ -976,6 +1012,11 @@ class ClearFuncs(object):
                 fp_.write(load['pub'])
             ret = {'enc': 'clear',
                    'load': {'ret': True}}
+            eload = {'result': True,
+                     'act': 'pend',
+                     'id': load['id'],
+                     'pub': load['pub']}
+            self.event.fire_event(eload, 'auth')
             return ret
         elif os.path.isfile(pubfn_pend)\
                 and not self.opts['auto_accept']:
@@ -987,6 +1028,10 @@ class ClearFuncs(object):
                     'keys in pending did not match. This may be an attempt to '
                     'compromise the Salt cluster.', load
                 )
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
                 return {'enc': 'clear',
                         'load': {'ret': False}}
             else:
@@ -995,6 +1040,11 @@ class ClearFuncs(object):
                     'pending and needs to be accepted with salt-key -a %(id)s',
                     load
                 )
+                eload = {'result': True,
+                         'act': 'pend',
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
                 return {'enc': 'clear',
                         'load': {'ret': True}}
         elif not os.path.isfile(pubfn_pend)\
@@ -1004,6 +1054,10 @@ class ClearFuncs(object):
         else:
             # Something happened that I have not accounted for, FAIL!
             log.warn('Unaccounted for authentication failure')
+            eload = {'result': False,
+                     'id': load['id'],
+                     'pub': load['pub']}
+            self.event.fire_event(eload, 'auth')
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
@@ -1017,6 +1071,11 @@ class ClearFuncs(object):
                'publish_port': self.opts['publish_port'],
               }
         ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
+        eload = {'result': True,
+                 'act': 'accept',
+                 'id': load['id'],
+                 'pub': load['pub']}
+        self.event.fire_event(eload, 'auth')
         return ret
 
     def publish(self, clear_load):

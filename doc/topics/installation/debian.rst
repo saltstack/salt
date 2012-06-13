@@ -14,8 +14,25 @@ To install Salt on Ubuntu, use the following command:
 
     sudo apt-get install python-software-properties
     sudo add-apt-repository ppa:saltstack/salt
+    sudo apt-get update
     sudo apt-get install salt-master
     sudo apt-get install salt-minion
+
+.. admonition:: Installing on Ubuntu 11.04
+
+    There is a conflict with `msgpack-python` on Ubuntu 11.04 and the current 
+    saltstack PPA.  You can work around the conflict by installing
+    `msgpack-python` from Oneiric:
+    
+    .. code-block:: bash
+
+        sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ oneiric universe'
+        sudo add-apt-repository ppa:saltstack/salt
+        sudo apt-get update
+        sudo apt-get install msgpack-python
+        sudo apt-get install salt-master
+        sudo apt-get install salt-minion
+        sudo add-apt-repository --remove 'deb http://us.archive.ubuntu.com/ubuntu/ oneiric universe'
 
 After installation you'll need to make a few changes to the configuration files.
 

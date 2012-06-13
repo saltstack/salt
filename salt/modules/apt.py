@@ -8,6 +8,7 @@ import re
 # Import Salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Confirm this module is on a Debian based system
@@ -333,6 +334,7 @@ def list_upgrades():
     List all available package upgrades.
 
     CLI Example::
+
         salt '*' pkg.list_upgrades
     '''
     r = _get_upgradable()

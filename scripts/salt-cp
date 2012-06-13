@@ -3,18 +3,8 @@
 Publish commands to the salt system from the command line on the master.
 '''
 
-import salt.cli
+from salt.scripts import salt_cp
 
-
-def main():
-    '''
-    The main function
-    '''
-    cp_ = salt.cli.SaltCP()
-    cp_.run()
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        raise SystemExit('\nExiting gracefully on Ctrl-c')
+    salt_cp()

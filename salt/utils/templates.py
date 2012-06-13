@@ -51,7 +51,7 @@ def mako(sfn, string=False, **kwargs):
             target.write(data)
         return {'result': True,
                 'data': tgt}
-    except:
+    except Exception:
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
@@ -107,7 +107,7 @@ def jinja(sfn, string=False, **kwargs):
     except TemplateSyntaxError as exc:
         return {'result': False,
                 'data': str(exc)}
-    except:
+    except Exception:
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
@@ -143,7 +143,7 @@ def py(sfn, string=False, **kwargs):
             target.write(data)
         return {'result': True,
                 'data': tgt}
-    except:
+    except Exception:
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}

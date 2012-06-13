@@ -25,11 +25,11 @@
 #id:
 
 # Append a domain to a hostname in the event that it does not exist.  This is
-# usefule for systems where socket.getfqdn() does not actually result in a
+# useful for systems where socket.getfqdn() does not actually result in a
 # FQDN (for instance, Solaris).
 #append_domain:
 
-# If the the connection to the server is interrupted, the minion will
+# If the connection to the server is interrupted, the minion will
 # attempt to reconnect. sub_timeout allows you to control the rate
 # of reconnection attempts (in seconds). To disable reconnects, set
 # this value to 0.
@@ -97,7 +97,7 @@
 #renderer: yaml_jinja
 #
 # state_verbose allows for the data returned from the minion to be more
-# verbose. Normaly only states that fail or states that have changes are
+# verbose. Normally only states that fail or states that have changes are
 # returned, but setting state_verbose to True will return all states that
 # were checked
 #state_verbose: False
@@ -116,7 +116,7 @@
 # Normally the minion is not isolated to any single environment on the master
 # when running states, but the environment can be isolated on the minion side
 # by statically setting it. Remember that the recommended way to manage
-# environments is to issolate via the top file.
+# environments is to isolate via the top file.
 #environment: None
 #
 # If using the local file directory, then the state top file name needs to be
@@ -127,7 +127,7 @@
 ##########################################
 # The Salt Minion can redirect all file server operations to a local directory,
 # this allows for the same state tree that is on the master to be used if
-# coppied completely onto the minion. This is a literal copy of the settings on
+# copied completely onto the minion. This is a literal copy of the settings on
 # the master but used to reference a local directory on the minion.
 
 # Set the file client, the client defaults to looking on the master server for

@@ -23,6 +23,7 @@ def list_vhosts():
     Return a list of vhost based of of rabbitmqctl list_vhosts.
 
     CLI Example::
+
         salt '*' rabbitmq-server.list_vhosts
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_vhosts')
@@ -37,6 +38,7 @@ def add_user(name, password):
     Add a rabbitMQ user via rabbitmqctl user_add <user> <password>
 
     CLI Example::
+
         salt '*' rabbitmq-server.add_user 'meow' 'mix'
     '''
     res = __salt__['cmd.run']('rabbitmqctl add_user {0} {1}'.format(name, password))
@@ -50,6 +52,7 @@ def delete_user(name):
     Deletes a user via rabbitmqctl delete_user.
 
     CLI Example::
+
         salt '*' rabbitmq-server.delete_user 'meow'
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name))
@@ -63,6 +66,7 @@ def add_vhost(vhost):
     Adds a vhost via rabbitmqctl add_vhost.
 
     CLI Example::
+
         salt '*' rabbitmq-server add_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost))
@@ -76,6 +80,7 @@ def delete_vhost(vhost):
     Deletes a vhost rabbitmqctl delete_vhost.
 
     CLI Example::
+
         salt '*' rabbitmq-server.delete_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost))
@@ -89,6 +94,7 @@ def set_permissions(vhost,user,conf='.*',write='.*',read='.*'):
     Sets permissions for vhost via rabbitmqctl set_permissions
 
     CLI Example::
+
         salt '*' rabbitmq-server.set_permissions 'myvhost' 'myuser'
     '''
     res = __salt__['cmd.run']('rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(vhost,user,conf,write,read))
@@ -100,6 +106,7 @@ def list_user_permissions(name):
     List permissions for a user via rabbitmqctl list_user_permissions
 
     Example::
+
         salt '*' rabbitmq-server.list_user_permissions 'user'.
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_user_permissions {0}'.format(name))

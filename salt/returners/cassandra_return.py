@@ -52,7 +52,7 @@ def returner(ret):
     columns = {'fun': ret['fun'],
                'id': ret['id']}
     if isinstance(ret['return'], dict):
-        for key, value in ret['return'].iteritems():
+        for key, value in ret['return'].items():
             columns['return.%s' % (key,)] = str(value)
     else:
         columns['return'] = str(ret['return'])

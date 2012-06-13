@@ -252,7 +252,7 @@ def set_env(user, name, value=None):
                 else:
                     return jret
             return 'present'
-    print value
+    print(value)
     env = {'name': name, 'value': value}
     lst['env'].append(env)
     comdat = _write_cron(user, _render_tab(lst))

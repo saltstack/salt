@@ -11,7 +11,7 @@ class AliasesTest(integration.ModuleCase):
     '''
     Validate aliases module
     '''
-    def test_set_target(self):
+    def not_test_set_target(self):
         '''
         aliases.set_target and aliases.get_target
         '''
@@ -25,7 +25,7 @@ class AliasesTest(integration.ModuleCase):
                 alias='fred')
         self.assertEqual(tgt_ret, 'target=bob')
 
-    def test_has_target(self):
+    def not_test_has_target(self):
         '''
         aliases.set_target and aliases.has_target
         '''
@@ -40,7 +40,7 @@ class AliasesTest(integration.ModuleCase):
                 target='bob')
         self.assertTrue(tgt_ret)
 
-    def test_list_aliases(self):
+    def not_test_list_aliases(self):
         '''
         aliases.list_aliases
         '''

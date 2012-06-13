@@ -13,6 +13,9 @@ import shutil
 import random
 import hashlib
 
+# Import salt libs
+import salt
+
 # Import third party libs
 import yaml
 
@@ -32,6 +35,11 @@ def parse():
             dest='master',
             default='salt',
             help='The location of the salt master that this swarm will serve')
+    parser.add_option('-k',
+            '--keep-modules',
+            dest='keep',
+            default='',
+            help='A comma delimited list of modules to enable')
     parser.add_option('-f',
             '--foreground',
             dest='foreground',
@@ -56,7 +64,18 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.pki = self._pki_dir()
         self.confs = set()
+
+    def _pki_dir(self):
+        '''
+        Create the shared pki directory
+        '''
+        path = tempfile.mkdtemp()
+        cmd = 'salt-key --gen-keys minion --gen-keys-dir {0}'.format(path)
+        print('Creating shared pki keys for the swarm')
+        subprocess.call(cmd, shell=True)
+        return path
 
     def mkconf(self):
         '''
@@ -70,10 +89,19 @@ class Swarm(object):
         dpath = '{0}.d'.format(path)
         os.makedirs(dpath)
         data = {'id': os.path.basename(path),
-                'pki_dir': os.path.join(dpath, 'pki'),
-                'cache_dir': os.path.join(dpath, 'cache'),
+                'pki_dir': self.pki,
+                'cachedir': os.path.join(dpath, 'cache'),
                 'master': self.opts['master'],
                }
+        if self.opts['keep']:
+            ignore = set()
+            keep = self.opts['keep'].split(',')
+            modpath = os.path.join(os.path.dirname(salt.__file__), 'modules')
+            for fn_ in os.listdir(modpath):
+                if fn_.split('.')[0] in keep:
+                    continue
+                ignore.add(fn_.split('.')[0])
+            data['disable_modules'] = list(ignore)
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
         self.confs.add(path)
@@ -97,7 +125,7 @@ class Swarm(object):
         '''
         Prepare the confs set
         '''
-        for ind in xrange(self.opts['minions']):
+        for ind in range(self.opts['minions']):
             self.mkconf()
 
     def clean_configs(self):
@@ -109,7 +137,7 @@ class Swarm(object):
                 os.remove(path)
                 os.remove('{0}.pid'.format(path))
                 shutil.rmtree('{0}.d'.format(path))
-            except:
+            except (OSError, IOError):
                 pass
 
     def start(self):

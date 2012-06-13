@@ -1,3 +1,5 @@
+:orphan:
+
 .. _contents:
 
 .. |vid| image:: /_static/film_link.png
@@ -86,6 +88,10 @@ configuration.
 :doc:`Compound matchers </topics/targeting/compound>`
     Combine the above matchers as a single target.
 
+:doc:`Batching execution </topics/targeting/batch>`
+    Loop through all matching minions so that only a subset are executing a
+    command at one time.
+
 Remote execution
 ----------------
 
@@ -170,6 +176,9 @@ Salt is many splendid things.
     Allow minions to communicate amongst themselves. For example, configure
     one minion by querying live data from all the others. With great power
     comes great responsibility.
+
+:doc:`Running Salt without root <topics/nonroot>`
+:doc:`Firewall settings and Salt <topics/tutorials/firewall>`
 
 :doc:`Network topology <ref/topology>`
     At it's core, Salt is a highly scalable communication layer built on

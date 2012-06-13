@@ -7,7 +7,7 @@ __grains__ = {}
 
 # Change the default outputter to make it more readable
 __outputter__ = {
-    'item' : 'txt',
+    'item': 'txt',
     'items': 'yaml',
 }
 
@@ -32,6 +32,7 @@ def item(key=None):
         salt '*' grains.item os
     '''
     return __grains__.get(key, '')
+
 
 def ls():
     '''

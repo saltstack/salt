@@ -45,6 +45,7 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_all
         '''
+        from salt._compat import string_types
         ret = self.run_function('cmd.run_all', ['echo "cheese" 1>&2'])
         self.assertTrue('pid' in ret)
         self.assertTrue('retcode' in ret)
@@ -52,8 +53,8 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue('stderr' in ret)
         self.assertTrue(isinstance(ret.get('pid'), int))
         self.assertTrue(isinstance(ret.get('retcode'), int))
-        self.assertTrue(isinstance(ret.get('stdout'), basestring))
-        self.assertTrue(isinstance(ret.get('stderr'), basestring))
+        self.assertTrue(isinstance(ret.get('stdout'), string_types))
+        self.assertTrue(isinstance(ret.get('stderr'), string_types))
         self.assertEqual(ret.get('stderr').rstrip(), 'cheese')
 
     def test_retcode(self):

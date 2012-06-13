@@ -6,7 +6,7 @@ try:
     import win32com.client
     import win32api
     import win32con
-except:
+except ImportError:
     pass
 
 def __virtual__():
@@ -88,8 +88,8 @@ def list_pkgs(*args):
     pythoncom.CoInitialize()
     if len(args) == 0:
         pkgs = dict(
-                   _get_reg_software().items() +
-                   _get_msi_software().items())
+                   list(_get_reg_software().items()) +
+                   list(_get_msi_software().items()))
     else:
         # get package version for each package in *args
         pkgs = {}
@@ -106,9 +106,9 @@ def _search_software(target):
     '''
     search_results = {}
     software = dict(
-                    _get_reg_software().items() +
-                    _get_msi_software().items())
-    for key, value in software.iteritems():
+                    list(_get_reg_software().items()) +
+                    list(_get_msi_software().items()))
+    for key, value in software.items():
         if key is not None:
             if target.lower() in key.lower():
                 search_results[key] = value
@@ -153,9 +153,9 @@ def _get_reg_software():
                    ]
     #attempt to corral the wild west of the multiple ways to install
     #software in windows
-    reg_entries = dict(_get_user_keys().items() +
-                       _get_machine_keys().items())
-    for reg_hive, reg_keys in reg_entries.iteritems():
+    reg_entries = dict(list(_get_user_keys().items()) +
+                       list(_get_machine_keys().items()))
+    for reg_hive, reg_keys in reg_entries.items():
         for reg_key in reg_keys:
             try:
                 reg_handle = win32api.RegOpenKeyEx(
@@ -163,7 +163,7 @@ def _get_reg_software():
                                 reg_key,
                                 0,
                                 win32con.KEY_READ)
-            except:
+            except Exception:
                 pass
                 #Unsinstall key may not exist for all users
             for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
@@ -243,7 +243,7 @@ def _get_reg_value(reg_hive, reg_key, value_name=''):
         value_data, value_type = win32api.RegQueryValueEx(key_handle,
                                                           value_name)
         win32api.RegCloseKey(key_handle)
-    except:
+    except Exception:
         value_data = 'Not Found'
     return value_data
 

@@ -471,6 +471,27 @@ This will allow all minions to execute all commands:
 This is not recommended, since it would allow anyone who gets root on any
 single minion to instantly have root on all of the minions!
 
+.. conf_master:: peer_run
+
+``peer_run``
+------------
+
+Default: ``{}``
+
+The peer_run option is used to open up runners on the master to access from the
+minions. The peer_run configuration matches the format of the peer
+configuration.
+
+The following example would allow foo.example.com to execute the manage.up
+runner:
+
+
+.. code-block:: yaml
+
+    peer_run:
+      foo.example.com:
+          - manage.up
+
 Node Groups
 -----------
 
