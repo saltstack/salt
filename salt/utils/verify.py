@@ -102,7 +102,10 @@ def verify_env(dirs, user):
                     continue
                 for name in files:
                     path = os.path.join(root, name)
-                    fmode = os.stat(path)
+                    try:
+                        fmode = os.stat(path)
+                    except (IOError, OSError):
+                        pass
                     if not fmode.st_uid == uid or not fmode.st_gid == gid:
                         # chown the file for the new user
                         os.chown(path, uid, gid)
