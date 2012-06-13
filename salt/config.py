@@ -239,6 +239,7 @@ def master_config(path):
             'state_top': 'top.sls',
             'external_nodes': '',
             'order_masters': False,
+            'job_cache': True,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
             'log_granular_levels': {},
