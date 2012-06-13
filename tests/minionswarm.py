@@ -64,7 +64,18 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.pki = self._pki_dir()
         self.confs = set()
+
+    def _pki_dir(self):
+        '''
+        Create the shared pki directory
+        '''
+        path = tempfile.mkdtemp()
+        cmd = 'salt-key --gen-keys minion --gen-keys-dir {0}'.format(path)
+        print('Creating shared pki keys for the swarm')
+        subprocess.call(cmd, shell=True)
+        return path
 
     def mkconf(self):
         '''
@@ -78,7 +89,7 @@ class Swarm(object):
         dpath = '{0}.d'.format(path)
         os.makedirs(dpath)
         data = {'id': os.path.basename(path),
-                'pki_dir': os.path.join(dpath, 'pki'),
+                'pki_dir': self.pki,
                 'cachedir': os.path.join(dpath, 'cache'),
                 'master': self.opts['master'],
                }
