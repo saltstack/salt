@@ -64,6 +64,7 @@ truly make it work for you.
 
     * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
     * :doc:`Installing Salt on FreeBSD <topics/installation/freebsd>`
+    * :doc:`Preseeding Minions with Accepted Keys <topics/tutorials/preseed_key>`
 
 .. contents:: The components of Salt
     :local:
