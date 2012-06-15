@@ -87,7 +87,7 @@ def highstate(test=None, **kwargs):
     st_ = salt.state.HighState(opts)
     ret = st_.call_highstate()
     serial = salt.payload.Serial(__opts__)
-    with open(os.path.join(__opts__['cachedir'], 'highstate.p')) as fp_:
+    with open(os.path.join(__opts__['cachedir'], 'highstate.p'), 'w+') as fp_:
         serial.dump(ret, fp_)
     return ret
 
@@ -112,7 +112,8 @@ def sls(mods, env='base', test=None, **kwargs):
     if errors:
         return errors
     ret = st_.state.call_high(high)
-    with open(os.path.join(__opts__['cachedir'], 'sls.p')) as fp_:
+    serial = salt.payload.Serial(__opts__)
+    with open(os.path.join(__opts__['cachedir'], 'sls.p'), 'w+') as fp_:
         serial.dump(ret, fp_)
     return ret
 
