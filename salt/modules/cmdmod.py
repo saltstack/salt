@@ -82,7 +82,7 @@ def _run(cmd,
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
 
-        cmd_prefix = 'su'
+        cmd_prefix = 'su -s ' + shell
 
         # Load the 'nix environment
         if with_env:
