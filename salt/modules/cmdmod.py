@@ -86,10 +86,10 @@ def _run(cmd,
 
         # Load the 'nix environment
         if with_env:
-            cmd_prefix += ' - '
+            cmd_prefix += ' -'
             cmd = 'cd {0} && {1}'.format(cwd, cmd)
 
-        cmd_prefix += '{0} -c'.format(runas)
+        cmd_prefix += ' {0} -c'.format(runas)
         cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
 
     if not quiet:
