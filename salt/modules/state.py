@@ -8,6 +8,7 @@ import os
 
 # Import Salt libs
 import salt.state
+import salt.payload
 from salt._compat import string_types
 
 __outputter__ = {
@@ -84,7 +85,11 @@ def highstate(test=None, **kwargs):
     if not test is None:
         opts['test'] = test
     st_ = salt.state.HighState(opts)
-    return st_.call_highstate()
+    ret = st_.call_highstate()
+    serial = salt.payload.Serial(__opts__)
+    with open(os.path.join(__opts__['cachedir'], 'highstate.p')) as fp_:
+        serial.dump(ret, fp_)
+    return ret
 
 
 def sls(mods, env='base', test=None, **kwargs):
@@ -106,7 +111,10 @@ def sls(mods, env='base', test=None, **kwargs):
     high, errors = st_.render_highstate({env: mods})
     if errors:
         return errors
-    return st_.state.call_high(high)
+    ret = st_.state.call_high(high)
+    with open(os.path.join(__opts__['cachedir'], 'sls.p')) as fp_:
+        serial.dump(ret, fp_)
+    return ret
 
 
 def top(topfn):
