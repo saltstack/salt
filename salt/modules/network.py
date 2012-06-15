@@ -102,6 +102,8 @@ def _interfaces_ip():
                             based on the current set of cols
                             """
                             brd = None
+                            # A small hack until we can get new code in here
+                            # supporting network device lookup better
                             if '/' in value:
                                 ip, cidr = value.split('/')
                             else:
