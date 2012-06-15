@@ -445,8 +445,8 @@ class State(object):
                                         reqs[name][req_val] = req_key
                                         if req_val in reqs:
                                             if name in reqs[req_val]:
-                                                if reqs[req_val][
-                                                    name] == state:
+                                                if reqs[name][
+                                                    req_val] == state:
                                                     err = ('A recursive '
                                                     'requisite was found, SLS '
                                                     '"{0}" ID "{1}" ID "{2}"'
