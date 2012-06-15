@@ -82,14 +82,14 @@ def _run(cmd,
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
 
-        cmd_prefix = 'su -s ' + shell
+        cmd_prefix = 'su -s {0}'.format(shell)
 
         # Load the 'nix environment
         if with_env:
             cmd_prefix += ' - '
-            cmd = 'cd ' + cwd + ' && ' + cmd
+            cmd = 'cd {0} && {1}'.format(cwd, cmd)
 
-        cmd_prefix += runas + ' -c'
+        cmd_prefix += '{0} -c'.format(runas)
         cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
 
     if not quiet:
