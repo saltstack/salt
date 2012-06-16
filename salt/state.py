@@ -423,7 +423,7 @@ class State(object):
                                 # It is a list, verify that the members of the
                                 # list are all single key dicts.
                                 else:
-                                    reqs[name] = {}
+                                    reqs[name] = {'state': state}
                                     for req in arg[argfirst]:
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
@@ -445,8 +445,8 @@ class State(object):
                                         reqs[name][req_val] = req_key
                                         if req_val in reqs:
                                             if name in reqs[req_val]:
-                                                if reqs[name][
-                                                    req_val] == state:
+                                                if reqs[req_val][
+                                                    'state'] == req_key:
                                                     err = ('A recursive '
                                                     'requisite was found, SLS '
                                                     '"{0}" ID "{1}" ID "{2}"'
