@@ -1,6 +1,6 @@
 '''
-Group Management
-================
+Management of user groups.
+==========================
 
 The group module is used to create and manage unix group settings, groups
 can be either present or absent:

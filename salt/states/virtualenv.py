@@ -1,5 +1,7 @@
 '''
-virtualenv management
+Setup of Python virtualenv sandboxes.
+=====================================
+
 '''
 import logging
 import os

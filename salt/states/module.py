@@ -1,6 +1,6 @@
 '''
-One Off Module Function Executions
-==================================
+Execution of Salt modules from within states.
+=============================================
 
 Individual module calls can be made via states. to call a single module
 function use the run function.
