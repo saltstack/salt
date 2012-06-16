@@ -1,6 +1,7 @@
 '''
-Network Management
-==================
+Configuration of network interfaces.
+====================================
+
 The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
 all interfaces are ignored unless specified.

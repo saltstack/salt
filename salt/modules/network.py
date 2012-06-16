@@ -102,7 +102,13 @@ def _interfaces_ip():
                             based on the current set of cols
                             """
                             brd = None
-                            ip,cidr = tuple(value.split('/'))
+                            # A small hack until we can get new code in here
+                            # supporting network device lookup better
+                            if '/' in value:
+                                ip, cidr = value.split('/')
+                            else:
+                                ip = value
+                                cidr = '24'
                             if type == 'inet':
                                 mask = _cidr_to_ipv4_netmask(int(cidr))
                                 if 'brd' in cols:
@@ -407,8 +413,8 @@ def host_to_ip(host):
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname( host )
-    except:
+        ip = socket.gethostbyname(host)
+    except Exception:
         ip = None
     return ip
 
@@ -421,7 +427,7 @@ def ip_to_host(ip):
         salt '*' network.ip_to_host 8.8.8.8
     '''
     try:
-        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr( ip )
-    except:
+        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
+    except Exception:
         hostname = None
     return hostname

@@ -1,6 +1,6 @@
-==============================================
-Boostrapping Salt on Linux EC2 with Cloud-Init
-==============================================
+===============================================
+Bootstrapping Salt on Linux EC2 with Cloud-Init
+===============================================
 
 `Salt <http://saltstack.org>`_ is a great tool for remote execution and
 configuration management, however you will still need to bootstrap the
@@ -36,8 +36,8 @@ we copy over the minion config template and tell it where to find the
 master. You will have to replace ``[salt_master_fqdn]`` with something
 that resolves to your Salt master.
 
-.. _ `AMI`: https://en.wikipedia.org/wiki/Amazon_Machine_Image
-.. _ `EC2 Instance`: http://aws.amazon.com/ec2/instance-types/
+.. _`AMI`: https://en.wikipedia.org/wiki/Amazon_Machine_Image
+.. _`EC2 Instance`: http://aws.amazon.com/ec2/instance-types/
 
 Used With Boto
 --------------

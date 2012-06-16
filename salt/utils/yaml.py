@@ -8,7 +8,7 @@ from yaml.constructor import ConstructorError
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
-except:
+except Exception:
     pass
 
 load = yaml.load

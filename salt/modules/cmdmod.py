@@ -16,7 +16,7 @@ from salt.grains.extra import shell as shell_grain
 # Only available on posix systems, nonfatal on windows
 try:
     import pwd
-except:
+except ImportError:
     pass
 
 
@@ -47,7 +47,8 @@ def _run(cmd,
          with_env=True,
          shell=DEFAULT_SHELL,
          env=(),
-         rstrip=True):
+         rstrip=True,
+         retcode=False):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -81,14 +82,14 @@ def _run(cmd,
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
 
-        cmd_prefix = 'su'
+        cmd_prefix = 'su -s {0}'.format(shell)
 
         # Load the 'nix environment
         if with_env:
-            cmd_prefix += ' - '
-            cmd = 'cd ' + cwd + ' && ' + cmd
+            cmd_prefix += ' -'
+            cmd = 'cd {0} && {1}'.format(cwd, cmd)
 
-        cmd_prefix += runas + ' -c'
+        cmd_prefix += ' {0} -c'.format(runas)
         cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
 
     if not quiet:
@@ -111,7 +112,20 @@ def _run(cmd,
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
-    out, err = proc.communicate()
+    # If all we want is the return code then don't block on gathering input,
+    # this is used to bypass ampersand issues with background processes in
+    # scripts
+    if retcode:
+        while True:
+            retcode = proc.poll()
+            if retcode is None:
+                continue
+            else:
+                out = ''
+                err = ''
+                break
+    else:
+        out, err = proc.communicate()
 
     if rstrip:
         if out:
@@ -210,7 +224,14 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
 
         salt '*' cmd.retcode "file /bin/bash"
     '''
-    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)['retcode']
+    return _run(
+            cmd,
+            runas=runas,
+            cwd=cwd,
+            shell=shell,
+            env=env,
+            retcode=True
+            )['retcode']
 
 
 def which(cmd):

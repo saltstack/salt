@@ -70,4 +70,4 @@ new rules with the new additions. This can be done using the ``pfctl`` command.
     pfctl -vf /etc/pf.conf
 
     
-.. _ `packet filter (pf)`: http://openbsd.org/faq/pf/
+.. _`packet filter (pf)`: http://openbsd.org/faq/pf/

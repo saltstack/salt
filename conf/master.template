@@ -38,6 +38,13 @@
 # Set the directory used to hold unix sockets
 #sock_dir: /tmp/salt-unix
 
+# The master maintains a job cache, while this is a great addition it can be
+# a burden on the master for larger deployments (over 5000 minions).
+# Disabling the job cache will make previously executed jobs unavailable to
+# the jobs system and is not generally recommended.
+#
+#job_cache: True
+
 # Set the acceptance level for serialization of messages. This should only be
 # set if the master is newer than 0.9.5 and the minion are older. This option
 # allows a 0.9.5 and newer master to communicate with minions 0.9.4 and

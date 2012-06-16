@@ -179,6 +179,7 @@ class Master(SMaster):
                 .format(signum)))
             clean_proc(clear_old_jobs_proc)
             clean_proc(reqserv.publisher)
+            clean_proc(reqserv.eventpublisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
@@ -394,7 +395,7 @@ class MWorker(multiprocessing.Process):
         '''
         try:
             data = self.crypticle.loads(load)
-        except:
+        except Exception:
             return ''
         if 'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))
@@ -615,6 +616,8 @@ class AESFuncs(object):
             return False
         log.info('Got return from {0[id]} for job {0[jid]}'.format(load))
         self.event.fire_event(load, load['jid'])
+        if not self.opts['job_cache']:
+            return
         jid_dir = salt.utils.jid_dir(
                 load['jid'],
                 self.opts['cachedir'],

@@ -1,6 +1,6 @@
 '''
-Management of python packages
-=============================
+Installation of Python packages using pip.
+==========================================
 
 A state module to manage system installed python packages
 

@@ -12,6 +12,7 @@ Required python modules: libvirt
 # Import Python Libs
 import os
 import shutil
+import string
 import subprocess
 from xml.dom import minidom
 
@@ -58,7 +59,7 @@ def __virtual__():
         libvirt_conn = libvirt.open('qemu:///system')
         libvirt_conn.close()
         return 'hyper'
-    except:
+    except Exception:
         return False
 
 
@@ -297,7 +298,7 @@ def _gen_xml(name,
     data = data.replace('%%NICS%%', nics)
 
     if disks:
-        letters = salt.utils.gen_letters()
+        letters = string.ascii_lowercase
         disk_str = ''
         for ind in range(0, len(disks)):
             disk = disks[ind]
@@ -373,7 +374,7 @@ def halt(name):
     try:
         dom = _get_dom(name)
         dom.destroy()
-    except:
+    except Exception:
         return False
     return True
 

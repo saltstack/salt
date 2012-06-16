@@ -15,7 +15,7 @@ Telling Salt Call to Run Masterless
 
 The salt-call command is used to run module functions locally on a minion
 instead of executing them from the master. Normally the salt-call command
-checks into the master to retrive file server and pillar data, but when running
+checks into the master to retrieve file server and pillar data, but when running
 standalone salt-call needs to be instructed to not check the master for this
 data. To instruct the minion to not look for a master when running salt-call
 the ``file_client`` configuration option needs to be set. By default the

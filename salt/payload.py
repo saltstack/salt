@@ -9,6 +9,10 @@ from salt._compat import pickle
 try:
     # Attempt to import msgpack
     import msgpack
+    # There is a serialization issue on ARM and potentially other platforms
+    # for some msgpack bindings, check for it
+    if msgpack.loads(msgpack.dumps([1,2,3])) is None:
+        raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
     import msgpack_pure as msgpack
@@ -60,7 +64,7 @@ class Serial(object):
         elif self.serial == 'pickle':
             try:
                 return pickle.loads(msg)
-            except:
+            except Exception:
                 return msgpack.loads(msg, use_list=True)
 
     def load(self, fn_):

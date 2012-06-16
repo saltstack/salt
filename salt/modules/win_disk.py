@@ -48,7 +48,7 @@ def usage():
                     'available': available_space,
                     'capacity': '{0}%'.format(capacity),
                 }
-            except:
+            except Exception:
                 ret['{0}:\\'.format(drive)] = {
                     'filesystem': '{0}:\\'.format(drive),
                     '1K-blocks': None,

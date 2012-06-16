@@ -95,8 +95,8 @@ class MasterKeys(dict):
         key = None
         if os.path.exists(self.rsa_path):
             try:
-                key = RSA.load_key(self.rsa_path, None)
-            except:
+                key = RSA.load_key(self.rsa_path)
+            except Exception:
                 # This is probably an "old key", we need to use m2crypto to
                 # open it and then save it back without a passphrase
                 key = clean_old_key(self.rsa_path)
@@ -148,8 +148,8 @@ class Auth(object):
         key = None
         if os.path.exists(self.rsa_path):
             try:
-                key = RSA.load_key(self.rsa_path, None)
-            except:
+                key = RSA.load_key(self.rsa_path)
+            except Exception:
                 # This is probably an "old key", we need to use m2crypto to
                 # open it and then save it back without a passphrase
                 key = clean_old_key(self.rsa_path)

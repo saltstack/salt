@@ -162,10 +162,11 @@ def _parse_size(value):
         style = '='
 
     if len(scalar) > 0:
-        multiplier = {'k': 2 ** 10,
+        multiplier = {'b': 2 ** 0,
+                      'k': 2 ** 10,
                       'm': 2 ** 20,
                       'g': 2 ** 30,
-                      't': 2 ** 40}.get(scalar[-1])
+                      't': 2 ** 40}.get(scalar[-1].lower())
         if multiplier:
             scalar = scalar[:-1].strip()
         else:
@@ -308,7 +309,7 @@ class OwnerOption(Option):
                 self.uids.add(int(name))
             else:
                 try:
-                    self.uid = pwd.getpwnam(value).pw_uid
+                    self.uids.add(pwd.getpwnam(value).pw_uid)
                 except KeyError:
                     raise ValueError('no such user "{0}"'.format(name))
 
