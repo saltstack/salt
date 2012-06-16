@@ -56,7 +56,7 @@ installing packages, configuring users and services, and much more.
 Salt in depth
 =============
 
-Setting up and using Salt is a simple task but it's capabilities run much, much
+Setting up and using Salt is a simple task but its capabilities run much, much
 deeper. Gaining a better understanding of how Salt works will allow you to
 truly make it work for you.
 
@@ -109,7 +109,7 @@ arbitrary commands on remote hosts.
         (And there are even more in the `salt-contrib`_ repository!)
 
     :doc:`Writing modules <ref/modules/index>`
-        A guide on how to write Salt modules
+        A guide on how to write Salt modules.
 
 **Returners**
     Salt returners allow saving minion responses in various datastores or
@@ -136,14 +136,14 @@ effortless, simultaneous configuration of thousands of hosts.
 
     :doc:`Full list of states <ref/states/all/index>`
         Install packages, create users, transfer files, start services, and
-        more and more.
+        much more.
 
     :doc:`Using states <ref/states/index>`
         You've seen the big list of available states, now learn how to call
         them.
 
     :doc:`Highstate data structure <ref/states/highstate>`
-        A dry, vocabulary and technical representation of the configuration
+        A dry vocabulary and technical representation of the configuration
         format that states represent.
 
 **Renderers**

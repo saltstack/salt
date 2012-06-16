@@ -1,6 +1,7 @@
 '''
-User Management
-===============
+Management of user accounts.
+============================
+
 The user module is used to create and manage user settings, users can be set
 as either absent or present
 

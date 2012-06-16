@@ -1,6 +1,6 @@
 '''
-File Management
-===============
+Operations on files, directories and symlinks.
+==============================================
 
 Salt States can aggressively manipulate files on a system. There are a number
 of ways in which files can be managed.
