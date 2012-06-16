@@ -1,6 +1,6 @@
 '''
-One Off Module Function Executions
-==================================
+Execution of Salt modules from within states.
+=============================================
 
 Individual module calls can be made via states. to call a single module
 function use the run function.
@@ -109,7 +109,7 @@ def run(name, **kwargs):
             mret = __salt__[name](*args, **kwargs)
         else:
             mret = __salt__[name](*args)
-    except:
+    except Exception:
         ret['comment'] = 'Module function {0} threw an exception'.format(name)
         ret['result'] = False
 

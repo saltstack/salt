@@ -47,7 +47,7 @@ def __get_conn():
     # all vm layers supported by libvirt
     try:
         conn = libvirt.open("qemu:///system")
-    except:
+    except Exception:
         msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
         raise CommandExecutionError(msg.format(__grains__['fqdn']))
     return conn
@@ -584,7 +584,7 @@ def destroy(vm_):
     try:
         dom = _get_dom(vm_)
         dom.destroy()
-    except:
+    except Exception:
         return False
     return True
 
@@ -601,7 +601,7 @@ def undefine(vm_):
     try:
         dom = _get_dom(vm_)
         dom.undefine()
-    except:
+    except Exception:
         return False
     return True
 

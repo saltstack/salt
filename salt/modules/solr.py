@@ -90,7 +90,7 @@ def __virtual__():
     PRIVATE METHOD
     Solr needs to be installed to use this.
 
-    Return: str/bool::
+    Return: str/bool
     '''
     if salt.utils.which('solr'):
         return 'solr'
@@ -131,7 +131,7 @@ def _check_for_cores():
     Checks to see if using_cores has been set or not. if it's been set
     return it, otherwise figure it out and set it. Then return it
 
-    Return: boolean::
+    Return: boolean
 
         True if one or more cores defined in __opts__['solr.cores']
     '''
@@ -212,9 +212,8 @@ def _format_url(handler, host=None, core_name=None, extra=None):
     extra : list<str> ([])
         A list of name value pairs in string format. eg ['name=value']
 
-    Return: str::
-
-        Fully formatted url (http://<host>:<port>/solr/<handler>?wt=json&<extra>
+    Return: str
+        Fully formatted url (http://<host>:<port>/solr/<handler>?wt=json&<extra>)
     '''
     extra = [] if extra is None else extra
     if _get_none_or_value(host) is None or host == 'None':
@@ -324,6 +323,7 @@ def _is_master():
     Simple method to determine if the minion is configured as master or slave
 
     Return: boolean::
+
         True if __opts__['solr.type'] = master
     '''
     return __opts__['solr.type'] == 'master'
@@ -368,6 +368,7 @@ def _pre_index_check(handler, host=None, core_name=None):
         The name of the solr core if using cores. Leave this blank if you are
         not using cores or if you want to check all cores.
         REQUIRED if you are using cores.
+
     Return:  dict<str,obj>::
 
         {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
@@ -498,7 +499,7 @@ def version(core_name=None):
 
     CLI Example::
 
-        alt '*' solr.version
+        salt '*' solr.version
     '''
     ret = _get_return_dict()
     #do we want to check for all the cores?
