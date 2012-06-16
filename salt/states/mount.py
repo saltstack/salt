@@ -1,6 +1,6 @@
 '''
-Mount Management
-================
+Mounting of filesystems.
+========================
 
 Mount any type of mountable filesystem with the mounted function:
 

@@ -1,6 +1,7 @@
 '''
-Package Management
-==================
+Installation of packages using OS package managers such as yum or apt-get.
+==========================================================================
+
 Salt can manage software packages via the pkg state module, packages can be
 set up to be installed, latest, removed and purged. Package management
 declarations are typically rather simple:

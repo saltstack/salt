@@ -1,6 +1,6 @@
 '''
-Kernel Sysctl Management
-========================
+Configuration of the Linux kernel using sysctrl.
+================================================
 
 Control the kernel sysctl system
 
