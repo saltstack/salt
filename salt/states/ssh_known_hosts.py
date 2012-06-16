@@ -1,6 +1,6 @@
 '''
-SSH known hosts management
-==========================
+Control of SSH known_hosts entries.
+===================================
 
 Manage the information stored in the known_hosts files
 

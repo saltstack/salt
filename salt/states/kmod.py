@@ -1,6 +1,7 @@
 '''
-Kernel Module Management
-========================
+Loading and unloading of kernel modules.
+========================================
+
 The Kernel modules on a system can be managed cleanly with the kmod state
 module:
 

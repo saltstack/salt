@@ -1,6 +1,6 @@
 '''
-SSH Authorized Key Management
-=============================
+Control of entries in SSH authorized_key files.
+===============================================
 
 The information stored in a user's ssh authorized key file can be easily
 controlled via the ssh_auth state. Defaults can be set by the enc, options,

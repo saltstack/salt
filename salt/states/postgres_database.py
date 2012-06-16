@@ -1,6 +1,6 @@
 '''
-Postgres Database Management
-============================
+Management of PostgreSQL databases (schemas).
+=============================================
 
 The postgres_database module is used to create and manage Postgres databases.
 Databases can be set as either absent or present

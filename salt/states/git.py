@@ -1,5 +1,6 @@
 '''
-Git repository management
+Interaction with Git repositories.
+==================================
 
 NOTE: This modules is under heavy development and the API is subject to change.
 It may be replaced with a generic VCS module if this proves viable.
