@@ -1,6 +1,7 @@
 '''
-Management of ruby installations and gemsets with RVM
-=====================================================
+Management of Ruby installations and gemsets with RVM, the Ruby Version Manager.
+================================================================================
+
 This module is used to install and manage ruby installations and
 gemsets with RVM, the Ruby Version Manager. Different versions of ruby
 can be installed and gemsets created. RVM itself will be installed
