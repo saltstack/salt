@@ -172,6 +172,7 @@ def show_sls(mods, env='base', test=None, **kwargs):
     if isinstance(mods, string_types):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
+    errors += st_.state.verify_high(high)
     if errors:
         return errors
     return high
