@@ -1,6 +1,7 @@
 '''
-MySQL User Management
-=====================
+Management of MySQL users.
+==========================
+
 The mysql_user module is used manage MySQL users.
 
 .. code-block:: yaml

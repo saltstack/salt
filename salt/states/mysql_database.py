@@ -1,6 +1,7 @@
 '''
-MySQL Database Management
-=========================
+Management of MySQL databases (schemas).
+========================================
+
 The mysql_database module is used to create and manage MySQL databases.
 Databases can be set as either absent or present
 
