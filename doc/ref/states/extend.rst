@@ -31,8 +31,7 @@ this:
             - file: /etc/ssh/banner
 
     /etc/ssh/banner:
-      file:
-        - managed
+      file.managed:
         - source: salt://ssh/banner
 
 A few critical things happened here, first off the SLS files that are going to
@@ -81,8 +80,7 @@ cleanly defined like so:
       - ssh
 
     /etc/ssh/banner:
-      file:
-        - managed
+      file.managed:
         - source: salt://ssh/banner
         - watch_in:
           - service: ssh-server

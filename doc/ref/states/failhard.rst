@@ -22,8 +22,7 @@ A good example of this would be setting up a package manager early on:
 .. code-block:: yaml
 
     /etc/yum.repos.d/company.repo:
-      file:
-        - managed
+      file.managed:
         - source: salt://company/yumrepo.conf
         - user: root
         - group: root
