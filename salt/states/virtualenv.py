@@ -39,8 +39,7 @@ def managed(name,
     .. code-block: yaml
 
         /var/www/myvirtualenv.com:
-          virtualenv:
-            - manage
+          virtualenv.manage:
             - no_site_packages: True
             - requirements: salt://REQUIREMENTS.txt
     '''

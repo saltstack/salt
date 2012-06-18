@@ -168,8 +168,7 @@ Function declaration
         .. code-block:: yaml
 
             httpd:
-              pkg:
-                - installed
+              pkg.installed
 
         Occurs as the only index in the :term:`state declaration` list.
 
@@ -192,8 +191,7 @@ For example in the following state declaration ``user``, ``group``, and
 .. code-block:: yaml
 
     /etc/http/conf/http.conf:
-      file:
-        - managed
+      file.managed:
         - user: root
         - group: root
         - mode: 644
@@ -218,14 +216,12 @@ declarations cannot both have ``/etc/motd`` as the ID declaration:
 .. code-block:: yaml
 
     motd_perms:
-      file:
-        - managed
+      file.managed:
         - name: /etc/motd
         - mode: 644
 
     motd_quote:
-      file:
-        - append
+      file.append:
         - name: /etc/motd
         - text: "Of all smells, bread; of all tastes, salt."
 
@@ -237,14 +233,12 @@ easier to specify ``mywebsite`` than to specify
 .. code-block:: yaml
 
     mywebsite:
-      file:
-        - managed
+      file.managed:
         - name: /etc/apache2/sites-available/mywebsite.com
         - source: salt://mywebsite.com
 
     a2ensite mywebsite.com:
-      cmd:
-        - wait
+      cmd.wait:
         - unless: test -L /etc/apache2/sites-enabled/mywebsite.com
         - watch:
           - file: mywebsite
@@ -269,8 +263,7 @@ For example, given the following state declaration:
 .. code-block:: yaml
 
     python-pkgs:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - python-django
           - python-crypto
@@ -282,16 +275,13 @@ declaration will be expanded into the following three state declarations:
 .. code-block:: yaml
 
       python-django:
-        pkg:
-          - installed
+        pkg.installed
 
       python-crypto:
-        pkg:
-          - installed
+        pkg.installed
 
       python-yaml:
-        pkg:
-          - installed
+        pkg.installed
 
 Large example
 =============
@@ -310,8 +300,7 @@ components.
         [<overrides>]
 
     <ID Declaration>:
-      <State Declaration>:
-        - <Function>
+      <State Declaration>.<Function>:
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
@@ -321,8 +310,7 @@ components.
           - <Requisite Reference>
 
     <ID Declaration>:
-      <State Declaration>:
-        - <Function>
+      <State Declaration>.<Function>:
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
