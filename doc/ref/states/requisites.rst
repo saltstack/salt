@@ -3,7 +3,7 @@ Requisites
 ==========
 
 The Salt requisite system is used to create relationships between states. The
-core idea being, that when one state it dependant somehow on another that
+core idea being, that when one state it dependent somehow on another that
 interdependency can be easily defined.
 
 Requisites come in two types. Direct requisites, and requisite_ins. The
@@ -56,8 +56,8 @@ Require
 -------
 
 The most basic requisite statement is ``require``. The behavior of require is
-simple. Make sure that the dependant state is executed before the depending
-state, and it the dependant state fails, don't run the depending state. So in
+simple. Make sure that the dependent state is executed before the depending
+state, and it the dependent state fails, don't run the depending state. So in
 the above examples the file ``/etc/vimrc`` will only be applied after the vim
 package is installed and only if the vim package is installed successfully.
 
