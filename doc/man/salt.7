@@ -10383,7 +10383,7 @@ salt \(aq*\(aq user.list_groups foo
 .SS salt.modules.rabbitmq_server
 .sp
 Module to provide rabbitMQ compatibility to salt.
-Todo: Alot, need to add cluster support, logging, and minion configuration data.
+Todo: A lot, need to add cluster support, logging, and minion configuration data.
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.add_user(name, password)
@@ -12961,7 +12961,7 @@ salt \(aq*\(aq service.status <service name>
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.stop(name)
-Stop the specifed service with systemd
+Stop the specified service with systemd
 .sp
 CLI Example:
 .sp
@@ -16873,8 +16873,8 @@ the behavior of a given state.
 .SH REQUISITES
 .sp
 The Salt requisite system is used to create relationships between states. The
-core idea being, that when one state it dependant somehow on another that
-interdependancy can be easily defined.
+core idea being, that when one state it dependent somehow on another that
+interdependency can be easily defined.
 .sp
 Requisites come in two types. Direct requisites, and requisite_ins. The
 relationships are directional, so a requisite statement makes the requireing
@@ -16914,22 +16914,22 @@ vim:
 So here, with a requisite_in, the same thing is accomplished, but just from
 the other way around. The vim package is saying "/etc/vimrc depands on me".
 .sp
-In the end a single dependancy map is created and everything is executed in a
+In the end a single dependency map is created and everything is executed in a
 finite and predictable order.
 .SS Requisite and Requisite in types
 .sp
 There are three requisite statements that can be used in Salt. the \fBrequire\fP,
 \fBwatch\fP and \fBuse\fP requisites. Each requisite also has a corresponding
 requisite_in: \fBrequire_in\fP, \fBwatch_in\fP and \fBuse_in\fP. All of the
-requisites define specific relationships and always work with the dependancy
+requisites define specific relationships and always work with the dependency
 logic defined above.
 .SS Require
 .sp
 The most basic requisite statement is \fBrequire\fP. The behavior of require is
-simple. Make sure that the dependant state is executed before the depending
-state, and it the dependant state fails, don\(aqt run the depending state. So in
+simple. Make sure that the dependent state is executed before the depending
+state, and it the dependent state fails, don\(aqt run the depending state. So in
 the above examples the file \fB/etc/vimrc\fP will only be applied after the vim
-package is installed and only if the vim package is installed sucsessfully.
+package is installed and only if the vim package is installed successfully.
 .SS Watch
 .sp
 The watch statement does everything the require statement does, but with a
