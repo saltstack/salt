@@ -33,7 +33,8 @@ These requisite statements are applied to a specific state declaration:
 .. code-block:: yaml
 
     httpd:
-      pkg.installed
+      pkg:
+        - installed
       file.managed:
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
@@ -57,7 +58,8 @@ more requisites. Both requisite types can also be separately declared:
 .. code-block:: yaml
 
     httpd:
-      pkg.installed
+      pkg:
+        - installed
       service.running:
         - enable: True
         - watch:
@@ -71,8 +73,10 @@ more requisites. Both requisite types can also be separately declared:
         - source: salt://httpd/httpd.conf
         - require:
           - pkg: httpd
-      user.present
-      group.present
+      user:
+        - present
+      group:
+        - present
 
 In this example the httpd service is only going to be started if the package,
 user, group and file are executed successfully.
@@ -89,7 +93,8 @@ the vim package has been installed:
 .. code-block:: yaml
 
     vim:
-      pkg.installed
+      pkg:
+        - installed
       file.managed:
         - source: salt://vim/vimrc
         - require:
@@ -116,7 +121,8 @@ Perhaps an example can better explain the behavior:
 .. code-block:: yaml
 
     redis:
-      pkg.latest
+      pkg:
+        - latest
       file.managed:
         - source: salt://redis/redis.conf
         - name: /etc/redis.conf

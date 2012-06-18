@@ -109,7 +109,8 @@ Here is an example of a Salt State:
         - installed
 
     salt:
-      pkg.latest
+      pkg:
+        - latest
       service.running:
         - require:
           - file: /etc/salt/minion
