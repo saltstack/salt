@@ -16,14 +16,16 @@ configuration could look like:
     rvm:
       group:
         - present
-      user.present:
+      user:
+        - present
         - gid: rvm
         - home: /home/rvm
         - require:
           - group: rvm
 
     rvm-deps:
-      pkg.installed:
+      pkg:
+        - installed
         - names:
           - bash
           - coreutils
@@ -37,7 +39,8 @@ configuration could look like:
           - sudo
 
     mri-deps:
-      pkg.installed:
+      pkg:
+        - installed
         - names:
           - build-essential
           - openssl
@@ -64,14 +67,16 @@ configuration could look like:
           - ruby
 
     jruby-deps:
-      pkg.installed:
+      pkg:
+        - installed
         - names:
           - curl
           - g++
           - openjdk-6-jre-headless
 
     ruby-1.9.2:
-      rvm.installed:
+      rvm:
+        - installed
         - default: True
         - runas: rvm
         - require:
@@ -80,7 +85,8 @@ configuration could look like:
           - user: rvm
 
     jruby:
-      rvm.installed:
+      rvm:
+        - installed
         - runas: rvm
         - require:
           - pkg: rvm-deps
@@ -88,14 +94,16 @@ configuration could look like:
           - user: rvm
 
     jgemset:
-      rvm.gemset_present:
+      rvm:
+        - gemset_present
         - ruby: jruby
         - runas: rvm
         - require:
           - rvm: jruby
 
     mygemset:
-      rvm.gemset_present:
+      rvm:
+        - gemset_present
         - ruby: ruby-1.9.2
         - runas: rvm
         - require:

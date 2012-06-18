@@ -9,7 +9,8 @@ you can specify what ruby version and gemset to target.
 .. code-block:: yaml
 
     addressable:
-      gem.installed:
+      gem:
+        - installed
         - runas: rvm
         - ruby: jruby@jgemset
 '''

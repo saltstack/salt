@@ -8,9 +8,11 @@ module:
 .. code-block:: yaml
 
   kvm_amd:
-    kmod.present
+    kmod:
+      - present
   pcspkr:
-    kmod.absent
+    kmod:
+      - absent
 '''
 
 
