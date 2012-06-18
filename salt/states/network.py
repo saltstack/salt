@@ -9,8 +9,7 @@ all interfaces are ignored unless specified.
 .. code-block:: yaml
 
     eth0:
-      network:
-        - managed
+      network.managed:
         - enabled: True
         - type: eth
         - proto: none
@@ -20,20 +19,17 @@ all interfaces are ignored unless specified.
           - 8.8.8.8
           - 8.8.4.4
     eth2:
-      network:
-        - managed
+      network.managed:
         - type: slave
         - master: bond0
 
     eth3:
-      network:
-        - managed
+      network.managed:
         - type: slave
         - master: bond0
 
     bond0:
-      network:
-        - managed
+      network.managed:
         - type: bond
         - ipaddr: 10.1.0.1
         - netmask: 255.255.255.0
@@ -71,8 +67,7 @@ all interfaces are ignored unless specified.
         - lro: off
 
     bond0.2:
-      network:
-        - managed
+      network.managed:
         - type: vlan
         - ipaddr: 10.1.0.2
         - use:
@@ -81,8 +76,7 @@ all interfaces are ignored unless specified.
           - network: bond0
 
     bond0.3:
-      network:
-        - managed
+      network.managed:
         - type: vlan
         - ipaddr: 10.1.0.3
         - use:
@@ -91,8 +85,7 @@ all interfaces are ignored unless specified.
           - network: bond0
 
     bond0.10:
-      network:
-        - managed
+      network.managed:
         - type: vlan
         - ipaddr: 10.1.0.4
         - use:
@@ -101,8 +94,7 @@ all interfaces are ignored unless specified.
           - network: bond0
 
     bond0.12:
-      network:
-        - managed
+      network.managed:
         - type: vlan
         - ipaddr: 10.1.0.5
         - use:
