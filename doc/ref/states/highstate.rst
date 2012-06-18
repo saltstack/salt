@@ -170,6 +170,44 @@ Function declaration
             httpd:
               pkg.installed
 
+        The function can be declared inline with the state as a shortcut, but
+        the actual data structure is better referenced in this form:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg:
+                - installed
+
+        Where the function is a string in the body of the state declaration.
+        Technically when the function is declared in dot notation the compiler
+        converts it to be a string in the state declaration list. Note that the
+        use of the first example more than once in an ID declaration is invalid
+        yaml.
+
+        INVALID:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.installed
+              service.running
+
+        When passing a function without arguments and another state declaration
+        within a single ID declaration, then the long or "standard" format
+        needs to be used since otherwise it does not represent a valid data
+        structure.
+
+        VALID:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg:
+                - installed
+              service:
+                - running
+
         Occurs as the only index in the :term:`state declaration` list.
 
 Function arg declaration
@@ -300,7 +338,8 @@ components.
         [<overrides>]
 
     <ID Declaration>:
-      <State Declaration>.<Function>:
+      <State Declaration>:
+        - <Function>:
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
