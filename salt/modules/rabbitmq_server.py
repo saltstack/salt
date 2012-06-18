@@ -1,6 +1,6 @@
 '''
 Module to provide rabbitMQ compatibility to salt.
-Todo: Alot, need to add cluster support, logging, and minion configuration data.
+Todo: A lot, need to add cluster support, logging, and minion configuration data.
 '''
 
 def list_users():
