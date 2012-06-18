@@ -18,6 +18,7 @@ except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
 
+log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
 
 class Master(object):
     '''
@@ -65,9 +66,8 @@ class Master(object):
                 choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS])
-                )
-        log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
+
         options, args = parser.parse_args()
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
 
@@ -159,11 +159,11 @@ class Minion(object):
                 choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in list(salt.log.LOG_LEVELS)]))
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
 
         options, args = parser.parse_args()
-        log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
+
         cli = {'daemon': options.daemon,
                'config': options.config,
                'user': options.user,
@@ -277,13 +277,12 @@ class Syndic(object):
                 dest='log_level',
                 default='warning',
                 choices=list(salt.log.LOG_LEVELS),
-                help=('Console log level. One of %s. For the logfile settings '
-                      'see the config file. Default: \'%%default\'.' %
-                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
-                     )
+                help='Console log level. One of %s. For the logfile settings '
+                     'see the config file. Default: \'%%default\'.' %
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
 
         options, args = parser.parse_args()
-        salt.log.setup_console_logger(options.log_level)
+        salt.log.setup_console_logger(options.log_level, log_format=log_format)
 
         cli = {'daemon': options.daemon,
                'minion_config': options.minion_config,
