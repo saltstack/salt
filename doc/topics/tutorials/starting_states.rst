@@ -92,23 +92,20 @@ and a user and group may need to be set up.
           - pkg: apache
           - file: /etc/httpd/conf/httpd.conf
           - user: apache
-      user:
-        - present
+      user.present:
         - uid: 87
         - gid: 87
         - home: /var/www/html
         - shell: /bin/nologin
         - require:
           - group: apache
-      group:
-        - present
+      group.present:
         - gid: 87
         - require:
           - pkg: apache
 
     /etc/httpd/conf/httpd.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/httpd.conf
         - user: root
         - group: root
@@ -163,12 +160,10 @@ toolkit, consider this SSH example:
    :linenos:
 
     openssh-client:
-      pkg:
-        - installed
+      pkg.installed
 
     /etc/ssh/ssh_config
-      file:
-        - managed
+      file.managed:
         - user: root
         - group: root
         - mode: 644
@@ -185,12 +180,10 @@ toolkit, consider this SSH example:
       - ssh
 
     openssh-server:
-      pkg:
-        - installed
+      pkg.installed
 
     sshd:
-      service:
-        - running
+      service.running:
         - require:
           - pkg: openssh-client
           - pkg: openssh-server
@@ -198,7 +191,7 @@ toolkit, consider this SSH example:
           - file: /etc/ssh/sshd_config
 
     /etc/ssh/sshd_config:
-        - managed
+      file.managed:
         - user: root
         - group: root
         - mode: 644
@@ -271,8 +264,7 @@ These examples will add more watchers to apache and change the ssh banner.
             - pkg: mod_python
 
     mod_python:
-      pkg:
-        - installed
+      pkg.installed
 
 The ``custom-server.sls`` file uses the extend statement to overwrite where the
 banner is being downloaded from, and therefore changing what file is being used
@@ -326,13 +318,11 @@ the Grains to be accessed from within the template. A few examples:
    :linenos:
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         {% if grains['os'] == 'RedHat'%}
         - name: httpd
         {% endif %}
-      service:
-        - running
+      service.running:
         {% if grains['os'] == 'RedHat'%}
         - name: httpd
         {% endif %}
@@ -340,23 +330,20 @@ the Grains to be accessed from within the template. A few examples:
           - pkg: apache
           - file: /etc/httpd/conf/httpd.conf
           - user: apache
-      user:
-        - present
+      user.present:
         - uid: 87
         - gid: 87
         - home: /var/www/html
         - shell: /bin/nologin
         - require:
           - group: apache
-      group:
-        - present
+      group.present:
         - gid: 87
         - require:
           - pkg: apache
 
     /etc/httpd/conf/httpd.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/httpd.conf
         - user: root
         - group: root
@@ -378,13 +365,11 @@ a MooseFS distributed filesystem chunkserver:
 
     {% for mnt in salt['cmd.run']('ls /dev/data/moose*').split() %}
     /mnt/moose{{ mnt[-1] }}:
-      mount:
-        - mounted
+      mount.mounted:
         - device: {{ mnt }}
         - fstype: xfs
         - mkmnt: True
-      file:
-        - directory
+      file.directory:
         - user: mfs
         - group: mfs
         - require:
@@ -393,8 +378,7 @@ a MooseFS distributed filesystem chunkserver:
     {% endfor %}
 
     '/etc/mfshdd.cfg':
-      file:
-        - managed
+      file.managed:
         - source: salt://moosefs/mfshdd.cfg
         - user: root
         - group: root
@@ -404,8 +388,7 @@ a MooseFS distributed filesystem chunkserver:
           - pkg: mfs-chunkserver
 
     '/etc/mfschunkserver.cfg':
-      file:
-        - managed
+      file.managed:
         - source: salt://moosefs/mfschunkserver.cfg
         - user: root
         - group: root
@@ -473,8 +456,7 @@ This Python example would look like this if it were written in YAML:
       - python
 
     django:
-      pkg:
-        - installed
+      pkg.installed
 
 This clearly illustrates, that not only is using the YAML renderer a wise
 decision as the default, but that unbridled power can be obtained where
