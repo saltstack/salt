@@ -8,8 +8,7 @@ Databases can be set as either absent or present
 .. code-block:: yaml
 
     frank:
-      postgres_database:
-        - present
+      postgres_database.present
 '''
 
 
