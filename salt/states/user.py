@@ -8,7 +8,8 @@ as either absent or present
 .. code-block:: yaml
 
     fred:
-      user.present:
+      user:
+        - present
         - fullname: Fred Jones
         - shell: /bin/zsh
         - home: /home/fred
@@ -18,9 +19,6 @@ as either absent or present
           - wheel
           - storage
           - games
-
-    testuser:
-      user.absent
 '''
 
 

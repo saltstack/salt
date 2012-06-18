@@ -8,7 +8,8 @@ It may be replaced with a generic VCS module if this proves viable.
 .. code-block:: yaml
 
     https://github.com/saltstack/salt.git:
-      git.latest:
+      git:
+        - latest
         - rev: develop
         - target: /tmp/salt
 '''

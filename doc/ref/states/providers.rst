@@ -16,7 +16,8 @@ module detected for Arch Linux, the systemd module can be used:
 .. code-block:: yaml
 
     httpd:
-      service.running:
+      service:
+        - running
         - enable: True
         - provider: systemd
 
@@ -34,7 +35,8 @@ module can be used to provide certain functionality.
 .. code-block:: yaml
 
     emacs:
-      pkg.installed:
+      pkg:
+        - installed
         - provider:
           - pkg: yumpkg5
           - cmd: customcmd

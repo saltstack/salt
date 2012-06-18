@@ -8,7 +8,8 @@ can be either present or absent:
 .. code-block:: yaml
 
     cheese:
-      group.present:
+      group:
+        - present
         - gid: 7648
         - system: True
 '''

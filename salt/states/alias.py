@@ -8,7 +8,8 @@ aliases:
 .. code-block:: yaml
 
     username:
-      alias.present:
+      alias:
+        - present
         - target: user@example.com
 '''
 

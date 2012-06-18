@@ -68,7 +68,8 @@ more requisites. Both requisite types can also be separately declared:
           - pkg: httpd
           - user: httpd
           - group: httpd
-      file.managed:
+      file:
+        - managed
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
         - require:
@@ -128,7 +129,8 @@ Perhaps an example can better explain the behavior:
         - name: /etc/redis.conf
         - require:
           - pkg: redis
-      service.running:
+      service:
+        - running
         - enable: True
         - watch:
           - file: /etc/redis.conf
@@ -192,7 +194,8 @@ with the option `order`:
 .. code-block:: yaml
 
     vim:
-      pkg.installed:
+      pkg:
+        - installed
         - order: 1
 
 By adding the order option to `1` this ensures that the vim package will be
@@ -208,5 +211,6 @@ set the order to ``last``:
 .. code-block:: yaml
 
     vim:
-      pkg.installed:
+      pkg:
+        - installed
         - order: last

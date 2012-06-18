@@ -122,7 +122,8 @@ Here is an example of a Salt State:
           - file: /etc/salt/minion
 
     /etc/salt/minion:
-      file.managed:
+      file:
+        - managed
         - source: salt://salt/minion
         - user: root
         - group: root

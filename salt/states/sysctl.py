@@ -7,7 +7,8 @@ Control the kernel sysctl system
 .. code-block:: yaml
 
   vm.swappines:
-    sysctl.present:
+    sysctl:
+      - present
       - value: 20
 '''
 

@@ -8,7 +8,8 @@ Databases can be set as either absent or present
 .. code-block:: yaml
 
     frank:
-      mysql_database.present
+      mysql_database:
+        - present
 '''
 
 

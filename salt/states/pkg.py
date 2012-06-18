@@ -9,7 +9,8 @@ declarations are typically rather simple:
 .. code-block:: yaml
 
     vim:
-      pkg.installed
+      pkg:
+        - installed
 '''
 # Import python ilbs
 import logging

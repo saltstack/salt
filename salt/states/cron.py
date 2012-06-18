@@ -15,7 +15,8 @@ and existing cron that looks like this:
 .. code-block:: yaml
 
     date > /tmp/crontest:
-      cron.present:
+      cron:
+        - present
         - user: root
         - minute: 5
 
@@ -24,7 +25,8 @@ Is changed to this:
 .. code-block:: yaml
 
     date > /tmp/crontest:
-      cron.present:
+      cron:
+        - present
         - user: root
         - minute: 7
         - hour: 2
