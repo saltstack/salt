@@ -443,19 +443,22 @@ class State(object):
 
                                         # Check for global recursive requisites
                                         reqs[name][req_val] = req_key
+                                        # I am going beyond 80 chars on
+                                        # purpose, this is just too much
+                                        # of a pain to deal with otherwise
                                         if req_val in reqs:
                                             if name in reqs[req_val]:
-                                                if reqs[req_val][
-                                                    'state'] == req_key:
-                                                    err = ('A recursive '
-                                                    'requisite was found, SLS '
-                                                    '"{0}" ID "{1}" ID "{2}"'
-                                                    ).format(
-                                                            body['__sls__'],
-                                                            name,
-                                                            req_val
-                                                            )
-                                                    errors.append(err)
+                                                if reqs[req_val][name] == state:
+                                                    if reqs[req_val]['state'] == reqs[name][req_val]:
+                                                        err = ('A recursive '
+                                                        'requisite was found, SLS '
+                                                        '"{0}" ID "{1}" ID "{2}"'
+                                                        ).format(
+                                                                body['__sls__'],
+                                                                name,
+                                                                req_val
+                                                                )
+                                                        errors.append(err)
                                 # Make sure that there is only one key in the
                                 # dict
                                 if len(list(arg)) != 1:
