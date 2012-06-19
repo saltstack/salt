@@ -8,7 +8,8 @@ import os
 
 # Import Salt libs
 import salt.state
-
+import salt.payload
+from salt._compat import string_types
 
 __outputter__ = {
                  'highstate': 'highstate',
@@ -84,7 +85,11 @@ def highstate(test=None, **kwargs):
     if not test is None:
         opts['test'] = test
     st_ = salt.state.HighState(opts)
-    return st_.call_highstate()
+    ret = st_.call_highstate()
+    serial = salt.payload.Serial(__opts__)
+    with open(os.path.join(__opts__['cachedir'], 'highstate.p'), 'w+') as fp_:
+        serial.dump(ret, fp_)
+    return ret
 
 
 def sls(mods, env='base', test=None, **kwargs):
@@ -101,12 +106,16 @@ def sls(mods, env='base', test=None, **kwargs):
         opts['test'] = test
     salt.utils.daemonize_if(opts, **kwargs)
     st_ = salt.state.HighState(opts)
-    if isinstance(mods, basestring):
+    if isinstance(mods, string_types):
         mods = mods.split(',')
     high, errors = st_.render_highstate({env: mods})
     if errors:
         return errors
-    return st_.state.call_high(high)
+    ret = st_.state.call_high(high)
+    serial = salt.payload.Serial(__opts__)
+    with open(os.path.join(__opts__['cachedir'], 'sls.p'), 'w+') as fp_:
+        serial.dump(ret, fp_)
+    return ret
 
 
 def top(topfn):
@@ -145,6 +154,30 @@ def show_lowstate():
     st_ = salt.state.HighState(__opts__)
     return st_.compile_low_chunks()
 
+
+def show_sls(mods, env='base', test=None, **kwargs):
+    '''
+    Display the state data from a specific sls or list of sls files on the
+    master
+
+    CLI Example::
+
+        salt '*' state.sls core,edit.vim dev
+    '''
+    opts = copy.copy(__opts__)
+    if not test is None:
+        opts['test'] = test
+    salt.utils.daemonize_if(opts, **kwargs)
+    st_ = salt.state.HighState(opts)
+    if isinstance(mods, string_types):
+        mods = mods.split(',')
+    high, errors = st_.render_highstate({env: mods})
+    errors += st_.state.verify_high(high)
+    if errors:
+        return errors
+    return high
+
+
 def show_masterstate():
     '''
     Display the data gathered from the master compiled state
@@ -156,12 +189,14 @@ def show_masterstate():
     st_ = salt.state.RemoteHighState(__opts__, __grains__)
     return st_.compile_master()
 
+
 def single(fun=None, test=None, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
 
     CLI Example::
+
         salt '*' state.single pkg.installed name=vim
     '''
     if not 'name' in kwargs:
@@ -170,6 +205,8 @@ def single(fun=None, test=None, **kwargs):
         comps = fun.split('.')
         if len(comps) < 2:
             return False
+    else:
+        return False
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
                    '__id__': kwargs['name']})

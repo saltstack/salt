@@ -1,10 +1,13 @@
 '''
-virtualenv management
+Setup of Python virtualenv sandboxes.
+=====================================
+
 '''
 import logging
 import os
 
 logger = logging.getLogger(__name__)
+
 
 def managed(name,
         venv_bin='virtualenv',

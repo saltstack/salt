@@ -44,7 +44,7 @@ def dump(new_data):
 
     CLI Example::
 
-        salt '*' data.dump '{'eggs': 'spam'}' 
+        salt '*' data.dump '{'eggs': 'spam'}'
     '''
     if not isinstance(new_data, dict):
         if isinstance(ast.literal_eval(new_data), dict):
@@ -53,11 +53,10 @@ def dump(new_data):
             return False
 
     try:
-        fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "w")
-        
-        serial = salt.payload.Serial(__opts__)
-        serial.dump(new_data, fn_)
-        
+        with open(os.path.join(__opts__['cachedir'], 'datastore'), "w") as fn_:
+            serial = salt.payload.Serial(__opts__)
+            serial.dump(new_data, fn_)
+
         return True
 
     except (IOError, OSError):
@@ -81,7 +80,7 @@ def getval(key):
     Get a value from the minion datastore
 
     CLI Example::
-        
+
         salt '*' data.getval <key>
     '''
     store = load()
@@ -92,7 +91,7 @@ def getvals(keys):
     Get values from the minion datastore
 
     CLI Example::
-        
+
         salt '*' data.getvals <key>
     '''
     store = load()

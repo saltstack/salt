@@ -1,6 +1,6 @@
 '''
-Kernel Sysctl Management
-========================
+Configuration of the Linux kernel using sysctrl.
+================================================
 
 Control the kernel sysctl system
 
@@ -46,7 +46,7 @@ def present(name, value, config='/etc/sysctl.conf'):
                     value
                     )
             return ret
-    
+
     update = __salt__['sysctl.persist'](name, value, config)
 
     if update == 'Updated':

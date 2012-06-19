@@ -12,6 +12,7 @@ import logging
 
 # Import Salt libs
 import salt.payload
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def _sync(form, env):
     '''
     Sync the given directory in the given environment
     '''
-    if isinstance(env, basestring):
+    if isinstance(env, string_types):
         env = env.split(',')
     ret = []
     remote = set()
@@ -162,7 +163,7 @@ def refresh_pillar():
         return True
     except IOError:
         return False
-    
+
 
 def running():
     '''

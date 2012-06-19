@@ -26,7 +26,7 @@ which is used by default on Arch Linux, and the httpd service will be set up
 using systemd.
 
 Arbitrary Module Redirects
-===========================
+==========================
 
 The provider statement can also be used for more powerful means, instead of
 overwriting or extending the module used for the named service an arbitrary
@@ -41,7 +41,7 @@ module can be used to provide certain functionality.
           - pkg: yumpkg5
           - cmd: customcmd
 
-In this example the default pkg module is being redirected to use the yumpkg5
-module (yum via shelling out instead of via the yum api), but is also using
+In this example the default pkg module is being redirected to use the *yumpkg5*
+module (*yum* via shelling out instead of via the yum API), but is also using
 a custom module to invoke commands. This could be used to dramatically change
 the behavior of a given state.

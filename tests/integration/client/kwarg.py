@@ -81,12 +81,12 @@ class StdTest(integration.ModuleCase):
                 kwarg={'qux': 'quux'}
                 )
         data = ret['minion']
-        self.assertIn('foo', data)
-        self.assertIn('baz', data)
-        self.assertIn('qux', data)
-        self.assertEqual(data['foo'], 'bar')
-        self.assertEqual(data['baz'], 'quo')
-        self.assertEqual(data['qux'], 'quux')
+        self.assertIn('foo', data['ret'])
+        self.assertIn('baz', data['ret'])
+        self.assertIn('qux', data['ret'])
+        self.assertEqual(data['ret']['foo'], 'bar')
+        self.assertEqual(data['ret']['baz'], 'quo')
+        self.assertEqual(data['ret']['qux'], 'quux')
 
 if __name__ == "__main__":
     loader = TestLoader()

@@ -69,13 +69,13 @@ Major Features
 SPEED! Pickle to msgpack
 ------------------------
 
-For a few months now we have been talking about moving away from python
+For a few months now we have been talking about moving away from Python
 pickles for network serialization, but a preferred serialization format
 had not yet been found. After an extensive performance testing period
 involving everything from JSON to protocol buffers, a clear winner emerged.
 Message Pack (http://msgpack.org/) proved to not only be the fastest and most
 compact, but also the most "salt like". Message Pack is simple, and the code
-involved is very small. The msgpack library for python has been added directly
+involved is very small. The msgpack library for Python has been added directly
 to Salt.
 
 This move introduces a few changes to Salt. First off, Salt is no longer a
@@ -229,7 +229,7 @@ Salt -Q is Useful Now
 ---------------------
 
 In the past the salt query system, which would display the data from recent
-executions would be displayed in pure python, and it was unreadable.
+executions would be displayed in pure Python, and it was unreadable.
 
 0.9.5 has added the outputter system to the ``-Q`` option, thus enabling the
 salt query system to return readable output.
@@ -346,7 +346,7 @@ init system are supported on systems running systemd.
 
 :mod:`virtualenv <salt.modules.virtualenv>`
 ```````````````````````````````````````````
-The virtualenv module has been added to allow salt to create virtual python
+The virtualenv module has been added to allow salt to create virtual Python
 environments.
 Thanks goes to whitinge for the addition of the virtualenv module
 
@@ -368,8 +368,8 @@ Salt can now manage local users on Microsoft Windows Systems
 `````````````````````````````````````
 The yumpkg module introduces in 0.9.4 uses the yum api to interact with the
 yum package manager. Unfortunately, on Red Hat 5 systems salt does not have
-access to the yum api because the yum api is running under python 2.4 and Salt
-needs to run under python 2.6.
+access to the yum api because the yum api is running under Python 2.4 and Salt
+needs to run under Python 2.6.
 
 The yumpkg5 module bypasses this issue by shelling out to yum on systems where
 the yum api is not available.
@@ -390,7 +390,7 @@ The mysql_user state enables mysql user management.
 
 :mod:`virtualenv <salt.states.virtualenv>`
 ``````````````````````````````````````````
-The virtualenv state can manage the state of python virtual environments.
+The virtualenv state can manage the state of Python virtual environments.
 Thanks to Whitinge for the virtualenv state
 
 New Returners

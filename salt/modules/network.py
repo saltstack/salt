@@ -84,7 +84,7 @@ def _interfaces_ip():
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            m = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
                 iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
@@ -102,7 +102,13 @@ def _interfaces_ip():
                             based on the current set of cols
                             """
                             brd = None
-                            ip,cidr = tuple(value.split('/'))
+                            # A small hack until we can get new code in here
+                            # supporting network device lookup better
+                            if '/' in value:
+                                ip, cidr = value.split('/')
+                            else:
+                                ip = value
+                                cidr = '24'
                             if type == 'inet':
                                 mask = _cidr_to_ipv4_netmask(int(cidr))
                                 if 'brd' in cols:
@@ -145,7 +151,7 @@ def _interfaces_ifconfig():
     '''
     ret = {}
 
-    piface = re.compile('^(\w+)')
+    piface = re.compile('^(\S+):?')
     pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
@@ -401,27 +407,27 @@ def hwaddr(interface):
 def host_to_ip(host):
     '''
     Returns the IP address of a given hostname
-    
+
     CLI Example::
-        
+
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname( host )
-    except:
-        ip = None        
+        ip = socket.gethostbyname(host)
+    except Exception:
+        ip = None
     return ip
-        
+
 def ip_to_host(ip):
     '''
     Returns the hostname of a given IP
-    
+
     CLI Example::
-        
+
         salt '*' network.ip_to_host 8.8.8.8
     '''
     try:
-        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr( ip )
-    except:
-        hostname = None        
+        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
+    except Exception:
+        hostname = None
     return hostname

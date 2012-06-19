@@ -43,8 +43,9 @@ Restart the Salt master in order to pick up this change:
 Preparing the Top File
 ======================
 
-On the master in the directory you specified in the previous step, create a new
-file called :conf_master:`top.sls <state_top>` and add the following:
+On the master in the directory you uncommented in the previous step
+(``/srv/salt`` by default), create a new file called
+:conf_master:`top.sls <state_top>` and add the following:
 
 .. code-block:: yaml
 
@@ -71,7 +72,7 @@ Create an ``sls`` module
 ========================
 
 In the same directory as your :term:`top file`, create an empty file, called an
-:term:`sls module`, named ``webserver.sls``. Type the following and save the
+:term:`SLS module`, named ``webserver.sls``. Type the following and save the
 file:
 
 .. code-block:: yaml

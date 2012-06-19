@@ -6,9 +6,9 @@ import os
 import sys
 import time
 import signal
-import datetime
 import tempfile
 import traceback
+
 
 def _makepretty(printout, stack):
     '''
@@ -35,9 +35,13 @@ def _handle_sigusr1(sig, stack):
         with open(destfile, 'w') as output:
             _makepretty(output, stack)
 
+
 def enable_sigusr1_handler():
     '''
     Pretty print a stack trace to the console or a debug log under /tmp
     when any of the salt daemons such as salt-master are sent a SIGUSR1
     '''
-    signal.signal(signal.SIGUSR1, _handle_sigusr1)
+    #  Skip setting up this signal on Windows
+    #  SIGUSR1 doesn't exist on Windows and causes the minion to crash
+    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+        signal.signal(signal.SIGUSR1, _handle_sigusr1)

@@ -22,7 +22,7 @@ configuration setting.
 Globbing
 ========
 
-The default matching that Salt utilizes is shell-style globbing around the
+The default matching that Salt utilizes is `shell-style globbing`_ around the
 :term:`minion id`. This also works for states in the :term:`top file`.
 
 .. note::
@@ -51,19 +51,21 @@ Match the ``web1`` through ``web5`` minions::
 Match the ``web-x``, ``web-y``, and ``web-z`` minions::
 
     salt 'web-[x-z]' test.ping
+    
+.. _`shell-style globbing`: http://docs.python.org/library/fnmatch.html
 
-Regex
-=====
+Regular Expressions
+===================
 
-Minions can be matched using Perl-compatible regular expressions (which is
+Minions can be matched using Perl-compatible `regular expressions`_ (which is
 globbing on steroids and a ton of caffeine).
 
 Match both ``web1-prod`` and ``web1-devel`` minions::
 
     salt -E 'web1-(prod|devel)' test.ping
 
-When using regex in a states :term:`top file` you must specify the matcher as
-the first option. The following example executes the contents of
+When using regular expressions in a State's :term:`top file`, you must specify
+the matcher as the first option. The following example executes the contents of
 ``webserver.sls`` on the above-mentioned minions.
 
 .. code-block:: yaml
@@ -72,10 +74,12 @@ the first option. The following example executes the contents of
       'web1-(prod|devel)':
       - match: pcre
       - webserver
+      
+.. _`regular expressions`: http://docs.python.org/library/re.html#module-re
 
 Lists
 =====
 
-At the most basic you can specify a flat list of minion ids::
+At the most basic level, you can specify a flat list of minion IDs::
 
     salt -L 'web1,web2,web3' test.ping

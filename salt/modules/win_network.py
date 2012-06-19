@@ -114,7 +114,7 @@ def traceroute(host):
                 'count': comps[0],
                 'hostname': None,
                 'ip': None,
-                'ms1': None, 
+                'ms1': None,
                 'ms2': None,
                 'ms3': None}
             ret.append(result)
@@ -144,7 +144,7 @@ def nslookup(host):
 def dig(host):
     '''
     Performs a DNS lookup with dig
-    
+
     Note: dig must be installed on the Windows minion
 
     CLI Example::
@@ -218,26 +218,26 @@ def interfaces():
             continue
         if configstart == 1:
             configname = line.strip(' :')
-            config = {configname: {}} 
+            config = {configname: {}}
             configstart = configstart + 1
             continue
     for iface in ifaces:
-        for key, val in iface.iteritems():
-            item = {} 
-            itemdict = {'Physical Address': 'hwaddr', 
-                        'IPv4 Address': 'ipaddr', 
+        for key, val in iface.items():
+            item = {}
+            itemdict = {'Physical Address': 'hwaddr',
+                        'IPv4 Address': 'ipaddr',
                         'Link-local IPv6 Address': 'ipaddr6',
                         'Subnet Mask': 'netmask',
                         }
             item['broadcast'] = None
-            for k, v in itemdict.iteritems():
+            for k, v in itemdict.items():
                 if k in val:
                     item[v] = val[k].rstrip('(Preferred)')
             if 'IPv4 Address' in val:
                 item['up'] = True
             else:
                 item['up'] = False
-            ret[key] = item 
+            ret[key] = item
     return ret
 
 

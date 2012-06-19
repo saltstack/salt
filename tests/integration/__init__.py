@@ -5,6 +5,7 @@ Set up the Salt integration test suite
 # Import Python libs
 import multiprocessing
 import os
+import pwd
 import sys
 import shutil
 import signal
@@ -15,6 +16,7 @@ import salt
 import salt.config
 import salt.master
 import salt.minion
+import salt.runner
 from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
@@ -26,6 +28,7 @@ PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
 TMP = os.path.join(INTEGRATION_TEST_DIR, 'tmp')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
+
 
 class TestDaemon(object):
     '''
@@ -39,6 +42,8 @@ class TestDaemon(object):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
         self.minion_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'))
+        self.sub_minion_opts = salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion'))
         self.smaster_opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'))
         self.syndic_opts = salt.config.minion_config(
@@ -77,9 +82,12 @@ class TestDaemon(object):
                     os.path.join(self.smaster_opts['cachedir'], 'jobs'),
                     os.path.dirname(self.master_opts['log_file']),
                     self.minion_opts['extension_modules'],
+                    self.sub_minion_opts['extension_modules'],
+                    self.sub_minion_opts['pki_dir'],
                     self.master_opts['sock_dir'],
                     self.smaster_opts['sock_dir'],
-                    ])
+                    ],
+                    pwd.getpwuid(os.getuid())[0])
 
         master = salt.master.Master(self.master_opts)
         self.master_process = multiprocessing.Process(target=master.start)
@@ -88,6 +96,11 @@ class TestDaemon(object):
         minion = salt.minion.Minion(self.minion_opts)
         self.minion_process = multiprocessing.Process(target=minion.tune_in)
         self.minion_process.start()
+
+        sub_minion = salt.minion.Minion(self.sub_minion_opts)
+        self.sub_minion_process = multiprocessing.Process(
+                target=sub_minion.tune_in)
+        self.sub_minion_process.start()
 
         smaster = salt.master.Master(self.smaster_opts)
         self.smaster_process = multiprocessing.Process(target=smaster.start)
@@ -103,6 +116,7 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
+        self.sub_minion_process.terminate()
         self.minion_process.terminate()
         self.master_process.terminate()
         self.syndic_process.terminate()
@@ -113,8 +127,12 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
+        if os.path.isdir(self.sub_minion_opts['root_dir']):
+            shutil.rmtree(self.sub_minion_opts['root_dir'])
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
+        if os.path.isdir(self.smaster_opts['root_dir']):
+            shutil.rmtree(self.smaster_opts['root_dir'])
         for fn_ in os.listdir(TMP):
             if fn_ == '_README':
                 continue
@@ -123,6 +141,9 @@ class TestDaemon(object):
                 shutil.rmtree(path)
             elif os.path.isfile(path):
                 os.remove(path)
+            elif os.path.islink(path):
+                os.remove(path)
+
 
 class ModuleCase(TestCase):
     '''
@@ -139,13 +160,25 @@ class ModuleCase(TestCase):
                     )
                 )
 
-    def run_function(self, function, arg=()):
+    def run_function(self, function, arg=(), **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg)
+        orig = self.client.cmd('minion', function, arg, kwarg=kwargs)
         return orig['minion']
+
+    def state_result(self, ret):
+        '''
+        Return the result data from a single state return
+        '''
+        return ret[next(iter(ret))]['result']
+
+    def run_state(self, function, **kwargs):
+        '''
+        Run the state.single command and return the state return structure
+        '''
+        return self.run_function('state.single', [function], **kwargs)
 
     def minion_opts(self):
         '''
@@ -168,6 +201,7 @@ class ModuleCase(TestCase):
                     'files', 'conf', 'master'
                     )
                 )
+
 
 class SyndicCase(TestCase):
     '''
@@ -192,6 +226,7 @@ class SyndicCase(TestCase):
         orig = self.client.cmd('minion', function, arg)
         return orig['minion']
 
+
 class ShellCase(TestCase):
     '''
     Execute a test for a shell command
@@ -203,7 +238,7 @@ class ShellCase(TestCase):
         path = os.path.join(SCRIPT_DIR, script)
         if not os.path.isfile(path):
             return False
-        ppath = 'PYTHONPATH={0}'.format(':'.join(sys.path[1:]))
+        ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
         data = subprocess.Popen(
                 cmd,
@@ -214,7 +249,7 @@ class ShellCase(TestCase):
 
     def run_salt(self, arg_str):
         '''
-        Execute salt-key
+        Execute salt
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
@@ -222,11 +257,29 @@ class ShellCase(TestCase):
 
     def run_run(self, arg_str):
         '''
-        Execute salt-key
+        Execute salt-run
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-run', arg_str)
+
+    def run_run_plus(self, fun, options='', *arg):
+        '''
+        Execute Salt run and the salt run function and return the data from
+        each in a dict
+        '''
+        ret = {}
+        ret['out'] = self.run_run(
+                '{0} {1} {2}'.format(options, fun, ' '.join(arg))
+                )
+        opts = salt.config.master_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
+        opts.update({'doc': False,
+                     'fun': fun,
+                     'arg': arg})
+        runner = salt.runner.Runner(opts)
+        ret['fun'] = runner.run()
+        return ret
 
     def run_key(self, arg_str):
         '''

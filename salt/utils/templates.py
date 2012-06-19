@@ -51,7 +51,7 @@ def mako(sfn, string=False, **kwargs):
             target.write(data)
         return {'result': True,
                 'data': tgt}
-    except:
+    except Exception:
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
@@ -68,6 +68,7 @@ def jinja(sfn, string=False, **kwargs):
     '''
     try:
         from salt.utils.jinja import get_template
+        from jinja2.exceptions import TemplateSyntaxError
     except ImportError:
         return {'result': False,
                 'data': 'Failed to import jinja'}
@@ -103,7 +104,10 @@ def jinja(sfn, string=False, **kwargs):
                     target.write('\n')
         return {'result': True,
                     'data': tgt}
-    except:
+    except TemplateSyntaxError as exc:
+        return {'result': False,
+                'data': str(exc)}
+    except Exception:
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
@@ -139,7 +143,7 @@ def py(sfn, string=False, **kwargs):
             target.write(data)
         return {'result': True,
                 'data': tgt}
-    except:
+    except Exception:
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}
@@ -149,4 +153,3 @@ template_registry = {
     'mako': mako,
     'py': py,
 }
-

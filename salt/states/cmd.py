@@ -1,6 +1,6 @@
 '''
-Command Executions
-==================
+Execution of arbitrary commands.
+================================
 
 The cmd state module manages the enforcement of executed commands, this
 state can tell a command to run under certain circumstances.
@@ -35,6 +35,7 @@ syslog if there is no disk space:
 import grp
 import os
 from salt.exceptions import CommandExecutionError
+
 
 def wait(name,
         onlyif=None,
@@ -75,6 +76,7 @@ def wait(name,
             'changes': {},
             'result': True,
             'comment': ''}
+
 
 def run(name,
         onlyif=None,

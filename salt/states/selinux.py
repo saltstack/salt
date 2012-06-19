@@ -1,6 +1,6 @@
 '''
-SELinux Management
-==================
+Management of SELinux rules.
+============================
 
 If SELinux is available for the running system, the mode can be managed and
 booleans can be set.
@@ -16,6 +16,7 @@ booleans can be set.
           - persist: True
 
 '''
+
 
 def _refine_mode(mode):
     '''
@@ -85,6 +86,7 @@ def mode(name):
         return ret
     ret['comment'] = 'Failed to set SELinux to {0} mode'.format(tmode)
     return ret
+
 
 def boolean(name, value, persist=False):
     '''

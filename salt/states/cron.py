@@ -1,6 +1,6 @@
 '''
-Cron Management
-===============
+Management of cron, the Unix command scheduler.
+===============================================
 
 The cron state module allows for user crontabs to be cleanly managed.
 
@@ -35,9 +35,10 @@ Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 '''
 
+
 def _check_cron(cmd, user, minute, hour, dom, month, dow):
     '''
-    Return the changes 
+    Return the changes
     '''
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
@@ -50,6 +51,7 @@ def _check_cron(cmd, user, minute, hour, dom, month, dow):
                 return 'update'
             return 'present'
     return 'absent'
+
 
 def present(name,
         user='root',
@@ -113,7 +115,6 @@ def present(name,
         elif status == 'update':
             ret['comment'] = 'Cron {0} is set to be updated'.format(name)
         return ret
-
 
     data = __salt__['cron.set_job'](
             dom=daymonth,
@@ -201,7 +202,7 @@ def absent(name,
         elif status == 'present' or status == 'update':
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
-    
+
     data = __salt__['cron.rm_job'](
             user,
             minute,

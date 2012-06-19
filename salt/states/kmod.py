@@ -1,6 +1,7 @@
 '''
-Kernel Module Management
-========================
+Loading and unloading of kernel modules.
+========================================
+
 The Kernel modules on a system can be managed cleanly with the kmod state
 module:
 
@@ -13,6 +14,13 @@ module:
     kmod:
       - absent
 '''
+
+
+def __virtual__():
+    '''
+    only load if kmod is available
+    '''
+    return 'kmod' if 'kmod.available' in __salt__ else False
 
 
 def present(name):
@@ -33,6 +41,10 @@ def present(name):
                               .format(name))
             return ret
     # Module is not loaded, verify availability
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Module {0} is set to be loaded'.format(name)
+        return ret
     if name not in __salt__['kmod.available']():
         ret['comment'] = 'Kernel module {0} is unavailable'.format(name)
         ret['result'] = False
@@ -62,6 +74,10 @@ def absent(name):
     for mod in mods:
         if mod['module'] == name:
             # Found the module, unload it!
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Module {0} is set to be unloaded'.format(name)
+                return ret
             for mod in __salt__['kmod.load'](name):
                 ret['changes'][mod] = 'removed'
             for change in ret['changes']:

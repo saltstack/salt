@@ -26,6 +26,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 
 log = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ def get_proc_dir(cachedir):
             os.remove(os.path.join(fn_, proc_fn))
     return fn_
 
+
 def detect_kwargs(func, args, data=None):
     '''
     Detect the args and kwargs that need to be passed to a function call
@@ -61,13 +63,13 @@ def detect_kwargs(func, args, data=None):
     defaults = [] if defaults is None else defaults
     starti = len(spec_args) - len(defaults)
     kwarg_spec = set()
-    for ind in xrange(len(defaults)):
+    for ind in range(len(defaults)):
         kwarg_spec.add(spec_args[starti])
         starti += 1
     _args = []
     kwargs = {}
     for arg in args:
-        if isinstance(arg, basestring):
+        if isinstance(arg, string_types):
             if '=' in arg:
                 comps = arg.split('=')
                 if has_kwargs:
@@ -113,6 +115,7 @@ class SMinion(object):
         self.matcher = Matcher(self.opts, self.functions)
         self.functions['sys.reload_modules'] = self.gen_modules
 
+
 class Minion(object):
     '''
     This class instantiates a minion, runs connections for a minion,
@@ -128,7 +131,7 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        if hasattr(self,'_syndic') and self._syndic:
+        if hasattr(self, '_syndic') and self._syndic:
             log.warn('Starting the Salt Syndic Minion')
         else:
             log.warn('Starting the Salt Minion')
@@ -224,7 +227,7 @@ class Minion(object):
         Override this method if you wish to handle the decoded data
         differently.
         '''
-        if isinstance(data['fun'], basestring):
+        if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
 
@@ -263,11 +266,11 @@ class Minion(object):
                 arg = eval(data['arg'][ind])
                 if isinstance(arg, bool):
                     data['arg'][ind] = str(data['arg'][ind])
-                elif isinstance(arg, (dict, int, list, basestring)):
+                elif isinstance(arg, (dict, int, list, string_types)):
                     data['arg'][ind] = arg
                 else:
                     data['arg'][ind] = str(data['arg'][ind])
-            except:
+            except Exception:
                 pass
 
         function_name = data['fun']
@@ -324,11 +327,11 @@ class Minion(object):
                     arg = eval(data['arg'][ind][index])
                     if isinstance(arg, bool):
                         data['arg'][ind][index] = str(data['arg'][ind][index])
-                    elif isinstance(arg, (dict, int, list, basestring)):
+                    elif isinstance(arg, (dict, int, list, string_types)):
                         data['arg'][ind][index] = arg
                     else:
                         data['arg'][ind][index] = str(data['arg'][ind][index])
-                except:
+                except Exception:
                     pass
 
             try:
@@ -392,7 +395,7 @@ class Minion(object):
         try:
             if hasattr(self.functions[ret['fun']], '__outputter__'):
                 oput = self.functions[ret['fun']].__outputter__
-                if isinstance(oput, basestring):
+                if isinstance(oput, string_types):
                     load['out'] = oput
         except KeyError:
             pass
@@ -400,7 +403,7 @@ class Minion(object):
         data = self.serial.dumps(payload)
         socket.send(data)
         ret_val = self.serial.loads(socket.recv())
-        if isinstance(ret_val, basestring) and not ret_val:
+        if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
             payload['load'] = self.crypticle.dumps(load)
@@ -472,10 +475,13 @@ class Minion(object):
         Lock onto the publisher. This is the main event loop for the minion
         '''
         context = zmq.Context()
+        poller = zmq.Poller()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
-        socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        if self.opts['sub_timeout']:
+            socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
+        poller.register(socket, zmq.POLLIN)
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -483,13 +489,11 @@ class Minion(object):
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
-                payload = None
-                try:
-                    payload = self.serial.loads(socket.recv(1))
+                socks = dict(poller.poll(self.opts['sub_timeout']))
+                if socket in socks and socks[socket] == zmq.POLLIN:
+                    payload = self.serial.loads(socket.recv())
                     self._handle_payload(payload)
                     last = time.time()
-                except:
-                    pass
                 if time.time() - last > self.opts['sub_timeout']:
                     # It has been a while since the last command, make sure
                     # the connection is fresh by reconnecting
@@ -501,23 +505,24 @@ class Minion(object):
                         except SaltClientError:
                             # Failed to update the dns, keep the old addr
                             pass
+                    poller.unregister(socket)
                     socket.close()
                     socket = context.socket(zmq.SUB)
                     socket.setsockopt(zmq.SUBSCRIBE, '')
                     socket.setsockopt(zmq.IDENTITY, self.opts['id'])
                     socket.connect(self.master_pub)
+                    poller.register(socket, zmq.POLLIN)
                     last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
                 self.passive_refresh()
         else:
             while True:
-                payload = None
-                try:
-                    payload = self.serial.loads(socket.recv(1))
+                socks = dict(poller.poll(60))
+                if socket in socks and socks[socket] == zmq.POLLIN:
+                    payload = self.serial.loads(socket.recv())
                     self._handle_payload(payload)
-                except:
-                    pass
+                    last = time.time()
                 time.sleep(0.05)
                 multiprocessing.active_children()
                 self.passive_refresh()
@@ -653,6 +658,8 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
+        if isinstance(tgt, string_types):
+            tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
     def grain_match(self, tgt):
@@ -709,23 +716,47 @@ class Matcher(object):
             return False
         return(self.functions[tgt]())
 
+    def pillar_match(self, tgt):
+        '''
+        Reads in the pillar glob match
+        '''
+        log.debug('tgt {0}'.format(tgt))
+        comps = tgt.split(':')
+        if len(comps) < 2:
+            log.error('Got insufficient arguments for pillar match statement from master')
+            return False
+        if comps[0] not in self.opts['pillar']:
+            log.error('Got unknown pillar match statement from master: {0}'.format(comps[0]))
+            return False
+        if isinstance(self.opts['pillar'][comps[0]], list):
+            # We are matching a single component to a single list member
+            for member in self.opts['pillar'][comps[0]]:
+                if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
+                    return True
+            return False
+        return bool(fnmatch.fnmatch(
+            str(self.opts['pillar'][comps[0]]).lower(),
+            comps[1].lower(),
+            ))
+
     def compound_match(self, tgt):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, basestring):
+        if not isinstance(tgt, string_types):
             log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'X': 'exsel',
+               'I': 'pillar',
                'L': 'list',
                'E': 'pcre'}
         results = []
         opers = ['and', 'or', 'not']
         for match in tgt.split():
             # Try to match tokens from the compound target, first by using
-            # the 'G, X, L, E' matcher types, then by hostname glob.
+            # the 'G, X, I, L, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
                 comps = match.split('@')
                 matcher = ref.get(comps[0])

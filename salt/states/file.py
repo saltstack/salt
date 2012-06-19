@@ -1,9 +1,9 @@
 '''
-File Management
-===============
+Operations on files, directories and symlinks.
+==============================================
 
-Salt States can aggressively manipulate files on a system. There are a number of
-ways in which files can be managed.
+Salt States can aggressively manipulate files on a system. There are a number
+of ways in which files can be managed.
 
 Regular files can be enforced with the ``managed`` function. This function
 downloads files from the salt master and places them on the target system.
@@ -83,11 +83,12 @@ import difflib
 import hashlib
 import logging
 import tempfile
-import urlparse
+
 import copy
 
 # Import Salt libs
 import salt.utils.templates
+from salt._compat import string_types, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -117,12 +118,19 @@ def __clean_tmp(sfn):
             os.remove(sfn)
 
 
-def _makedirs(path):
+def _makedirs(path, user=None, group=None, mode=None):
     '''
     Ensure that the directory containing this path is available.
     '''
-    if not os.path.isdir(os.path.dirname(path)):
-        os.makedirs(os.path.dirname(path))
+    directory = os.path.dirname(path)
+
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+        # If a caller such as managed() is invoked  with
+        # makedirs=True, make sure that any created dirs
+        # are created with the same user  and  group  to
+        # follow the principal of least surprise method.
+        _check_perms(directory, None, user, group, mode)
 
 
 def _is_bin(path):
@@ -221,9 +229,9 @@ def _source_list(source, source_hash, env):
                 # to check, if it is salt then check the master list
                 if len(single) != 1:
                     continue
-                single_src = single.keys()[0]
+                single_src = next(iter(single))
                 single_hash = single[single_src]
-                proto = urlparse.urlparse(single_src).scheme
+                proto = urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src in mfiles:
                         source = single_src
@@ -237,11 +245,12 @@ def _source_list(source, source_hash, env):
                         source = single_src
                         source_hash = single_hash
                         break
-            elif isinstance(single, basestring):
+            elif isinstance(single, string_types):
                 if single in mfiles:
                     source = single
                     break
     return source, source_hash
+
 
 def _get_managed(
         name,
@@ -302,14 +311,14 @@ def _get_managed(
     else:
         # Copy the file down if there is a source
         if source:
-            if urlparse.urlparse(source).scheme == 'salt':
+            if urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, env)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'ftp']
-                if urlparse.urlparse(source_hash).scheme in protos:
-                    # The sourc_hash is a file on a server
+                if urlparse(source_hash).scheme in protos:
+                    # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash)
                     if not hash_fn:
                         return '', {}, 'Source hash file {0} not found'.format(
@@ -328,7 +337,7 @@ def _get_managed(
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
                     if len(comps) < 2:
-                        return '', {},('Source hash file {0} contains an '
+                        return '', {}, ('Source hash file {0} contains an '
                                   ' invalid hash format, it must be in '
                                   ' the format <hash type>=<hash>'
                                   ).format(source_hash)
@@ -338,6 +347,7 @@ def _get_managed(
                 return '', {}, ('Unable to determine upstream hash of'
                           ' source file {0}').format(source)
     return sfn, source_sum, ''
+
 
 def _check_perms(name, ret, user, group, mode):
     '''
@@ -352,14 +362,14 @@ def _check_perms(name, ret, user, group, mode):
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
     perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name)
+    perms['lmode'] = __salt__['file.get_mode'](name).lstrip('0')
 
     # Mode changes if needed
     if mode:
         if mode != perms['lmode']:
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
-            if mode != __salt__['file.get_mode'](name):
+            if mode != __salt__['file.get_mode'](name).lstrip('0'):
                 ret['result'] = False
                 ret['comment'] += 'Failed to change mode to {0} '.format(mode)
             else:
@@ -408,14 +418,15 @@ def _check_recurse(
         group,
         dir_mode,
         file_mode,
-        env):
+        env,
+        include_empty):
     '''
     Check what files will be changed by a recurse call
     '''
     vdir = set()
     keep = set()
     changes = {}
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -496,6 +507,11 @@ def _check_directory(
                 fchange = _check_dir_meta(path, user, group, None)
                 if fchange:
                     changes[path] = fchange
+    else:
+        if not os.path.isdir(name):
+            changes[name] = 'new'
+            return None, 'A new directory is set to be made at {0}'.format(
+                    name)
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
@@ -524,7 +540,7 @@ def _check_managed(
     changes = {}
     # If the source is a list then find which file exists
     source, source_hash = _source_list(source, source_hash, env)
-    
+
     # Gather the source file from the server
     sfn, source_sum, comment = _get_managed(
             name,
@@ -564,7 +580,10 @@ def _check_dir_meta(
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
-    if not mode is None and mode != stats['mode']:
+    # Normalize the dir mode
+    smode = __manage_mode(stats['mode'])
+    mode = __manage_mode(mode)
+    if not mode is None and mode != smode:
         changes['mode'] = mode
     if changes:
         comment = 'The following values are set to be changed:\n'
@@ -593,17 +612,24 @@ def _check_file_meta(
         return changes
     if 'hsum' in source_sum:
         if source_sum['hsum'] != stats['sum']:
-            with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
-                slines = src.readlines()
-                nlines = name_.readlines()
-            changes['diff'] = (
-                    ''.join(difflib.unified_diff(nlines, slines))
-                    )
+            if sfn:
+                with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
+                    slines = src.readlines()
+                    nlines = name_.readlines()
+                changes['diff'] = (
+                        ''.join(difflib.unified_diff(nlines, slines))
+                        )
+            else:
+                # TODO Evaluate diff without downloading file from master
+                changes['sum'] = 'Checksum differs'
     if not user is None and user != stats['user']:
         changes['user'] = user
     if not group is None and group != stats['group']:
         changes['group'] = group
-    if not mode is None and mode != stats['mode']:
+    # Normalize the file mode
+    smode = __manage_mode(stats['mode'])
+    mode = __manage_mode(mode)
+    if not mode is None and mode != smode:
         changes['mode'] = mode
     return changes
 
@@ -675,7 +701,7 @@ def symlink(name, target, force=False, makedirs=False):
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _symlink_check(name, target, force)
         return ret
@@ -743,7 +769,7 @@ def absent(name):
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove file {0}'.format(name))
 
     elif os.path.isdir(name):
@@ -756,7 +782,7 @@ def absent(name):
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except:
+        except (OSError, IOError):
             return _error(ret, 'Failed to remove directory {0}'.format(name))
 
     ret['comment'] = 'File {0} is not present'.format(name)
@@ -876,7 +902,7 @@ def managed(name,
 
     # If the source is a list then find which file exists
     source, source_hash = _source_list(source, source_hash, env)
-    
+
     # Gather the source file from the server
     sfn, source_sum, comment = _get_managed(
             name,
@@ -910,6 +936,21 @@ def managed(name,
             if not sfn:
                 return _error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source).scheme != 'salt':
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             # Check to see if the files are bins
             if _is_bin(sfn) or _is_bin(name):
@@ -923,17 +964,18 @@ def managed(name,
                                                       .unified_diff(nlines,
                                                                     slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
-            if not __opts__['test']:
+            try:
                 shutil.copyfile(sfn, name)
+            except IOError:
                 __clean_tmp(sfn)
+                return _error(
+                    ret, 'Failed to commit change, permission error')
 
         ret, perms = _check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File {0} updated'.format(name)
 
-        if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
         __clean_tmp(sfn)
@@ -949,17 +991,33 @@ def managed(name,
             if not sfn:
                 return ret.error(
                     ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if urlparse(source).scheme != 'salt':
+                hash_func = getattr(hashlib, source_sum['hash_type'])
+                with open(sfn, 'rb') as dlfile:
+                    dl_sum = hash_func(dlfile.read()).hexdigest()
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(
+                                              name,
+                                              source_sum['hsum'],
+                                              dl_sum
+                                              )
+                    ret['result'] = False
+                    return ret
 
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    _makedirs(name)
+                    _makedirs(name, user=user, group=group, mode=mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    _makedirs(name)
+                    _makedirs(name, user=user, group=group, mode=mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
@@ -1068,12 +1126,12 @@ def directory(name,
         # The dir does not exist, make it
         if not os.path.isdir(os.path.dirname(name)):
             if makedirs:
-                _makedirs(name)
+                _makedirs(name, user=user, group=group, mode=mode)
             else:
                 return _error(
                     ret, 'No directory to create {0} in'.format(name))
     if not os.path.isdir(name):
-        _makedirs(name)
+        _makedirs(name, user=user, group=group, mode=mode)
         os.makedirs(name)
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
@@ -1100,13 +1158,13 @@ def directory(name,
                                          'user {0} (user does not ' \
                                          'exist)'.format(user)
                         # Remove 'user' from list of recurse targets
-                        targets = filter(lambda x: x != 'user', targets)
+                        targets = list(x for x in targets if x != 'user')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'user not specified, but configured as ' \
                              'a target for recursive ownership management'
                     # Remove 'user' from list of recurse targets
-                    targets = filter(lambda x: x != 'user', targets)
+                    targets = list(x for x in targets if x != 'user')
             if 'group' in targets:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
@@ -1114,15 +1172,15 @@ def directory(name,
                     if type(gid).__name__ == 'str':
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'for group {0}'.format(group,user)
+                                         'for group {0}'.format(group, user)
                         # Remove 'group' from list of recurse targets
-                        targets = filter(lambda x: x != 'group', targets)
+                        targets = list(x for x in targets if x != 'group')
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
                              'as a target for recursive ownership management'
                     # Remove 'group' from list of recurse targets
-                    targets = filter(lambda x: x != 'group', targets)
+                    targets = list(x for x in targets if x != 'group')
 
             needs_fixed = {}
             if targets:
@@ -1131,32 +1189,34 @@ def directory(name,
                     fstat = os.stat(path)
                     if 'user' in targets and fstat.st_uid != uid:
                             needs_fixed['user'] = True
-                            if needs_fixed.get('group'): break
+                            if needs_fixed.get('group'):
+                                break
                     if 'group' in targets and fstat.st_gid != gid:
                             needs_fixed['group'] = True
-                            if needs_fixed.get('user'): break
+                            if needs_fixed.get('user'):
+                                break
 
             if needs_fixed.get('user'):
                 # Make sure the 'recurse' subdict exists
-                ret['changes'].setdefault('recurse',{})
+                ret['changes'].setdefault('recurse', {})
                 if 'user' in targets:
                     if __salt__['cmd.retcode']('chown -R {0} "{1}"'.format(
-                            user,name)) != 0:
+                            user, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership on ' \
-                                         '{0} for user {1}'.format(name,group)
+                                         '{0} for user {1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['user'] = \
                                 __salt__['file.uid_to_user'](uid)
             if needs_fixed.get('group'):
-                ret['changes'].setdefault('recurse',{})
+                ret['changes'].setdefault('recurse', {})
                 if 'group' in targets:
                     if __salt__['cmd.retcode']('chown -R :{0} "{1}"'.format(
-                            group,name)) != 0:
+                            group, name)) != 0:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'on {0} for group ' \
-                                         '{1}'.format(name,group)
+                                         '{1}'.format(name, group)
                     else:
                         ret['changes']['recurse']['group'] = \
                                 __salt__['file.gid_to_group'](gid)
@@ -1187,6 +1247,7 @@ def recurse(name,
         dir_mode=None,
         file_mode=None,
         env=None,
+        include_empty=False,
         **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -1222,6 +1283,10 @@ def recurse(name,
 
     file_mode
         The permissions mode to set any files created
+
+    include_empty
+        Set this to True if empty directories should also be created
+        (default is False)
     '''
     ret = {'name': name,
            'changes': {},
@@ -1251,10 +1316,11 @@ def recurse(name,
                 group,
                 dir_mode,
                 file_mode,
-                env)
+                env,
+                include_empty)
         return ret
     vdir = set()
-    for fn_ in __salt__['cp.cache_dir'](source, env):
+    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         dest = os.path.join(name,
@@ -1270,7 +1336,7 @@ def recurse(name,
                 )
         dirname = os.path.dirname(dest)
         if not os.path.isdir(dirname):
-            _makedirs(dest)
+            _makedirs(dest, user=user, group=group)
         if not dirname in vdir:
             # verify the directory perms if they are set
             # _check_perms(name, ret, user, group, mode)
@@ -1294,11 +1360,21 @@ def recurse(name,
                 # FIXME: no metadata (ownership, permissions) available
                 shutil.copyfile(fn_, dest)
                 ret['changes'][dest] = 'updated'
+        elif os.path.isdir(dest) and include_empty:
+            #check perms
+            _ret, perms = _check_perms(dest, {}, user, group, dir_mode)
+            if _ret['changes']:
+                ret['changes'][dest] = 'updated'
+            keep.add(dest)
         else:
             keep.add(dest)
-            # The destination file is not present, make it
-            # FIXME: no metadata (ownership, permissions) available
-            shutil.copyfile(fn_, dest)
+            if os.path.isdir(fn_) and include_empty:
+                #create empty dir
+                os.mkdir(dest, dir_mode)
+            else:
+                # The destination file is not present, make it
+                # FIXME: no metadata (ownership, permissions) available
+                shutil.copyfile(fn_, dest)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
@@ -1308,6 +1384,7 @@ def recurse(name,
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
+
 
 def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         flags='g'):
@@ -1331,7 +1408,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
         # Remove ldap from nsswitch
         /etc/nsswitch.conf:
-        file.sed:
+          file.sed:
             - before: 'ldap'
             - after: ''
             - limit: '^passwd:'
@@ -1380,13 +1457,14 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
     return ret
 
+
 def comment(name, regex, char='#', backup='.bak'):
     '''
     Usage::
 
         /etc/fstab:
           file.comment:
-            - regex: ^//10.10.20.5
+            - regex: ^bind 127.0.0.1
 
     .. versionadded:: 0.9.5
     '''
@@ -1425,6 +1503,7 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'Expected commented lines not found'
 
     return ret
+
 
 def uncomment(name, regex, char='#', backup='.bak'):
     '''
@@ -1474,6 +1553,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     return ret
 
+
 def append(name, text):
     '''
     Ensure that some text appears at the end of a file
@@ -1506,7 +1586,7 @@ def append(name, text):
     if not check_res:
         return _error(ret, check_msg)
 
-    if isinstance(text, basestring):
+    if isinstance(text, string_types):
         text = (text,)
 
     for chunk in text:
@@ -1544,7 +1624,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     Usage::
 
-        /var/log/httpd/logrotate.empty
+        /var/log/httpd/logrotate.empty:
           file.touch
 
     .. versionadded:: 0.9.5

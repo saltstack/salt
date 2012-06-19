@@ -1,6 +1,7 @@
 '''
-Management of rubygems
-=======================
+Installation of Ruby modules packaged as gems.
+==============================================
+
 A state module to manage rubygems. Gems can be set up to be installed
 or removed. This module will use RVM if it is installed. In that case
 you can specify what ruby version and gemset to target.
@@ -13,6 +14,13 @@ you can specify what ruby version and gemset to target.
         - runas: rvm
         - ruby: jruby@jgemset
 '''
+
+
+def __virtual__():
+    '''
+    Only load is gem module is available in __salt__
+    '''
+    return 'gem' if 'gem.list' in __salt__ else False
 
 
 def installed(name, ruby=None, runas=None):

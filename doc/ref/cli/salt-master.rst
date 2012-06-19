@@ -2,7 +2,7 @@
 ``salt-master``
 ===============
 
-The salt master daemon, used to control the salt minions
+The Salt master daemon, used to control the Salt minions
 
 Synopsis
 ========
@@ -12,7 +12,7 @@ salt-master [ options ]
 Description
 ===========
 
-The master daemon controls the salt minions
+The master daemon controls the Salt minions
 
 Options
 =======
@@ -25,7 +25,7 @@ Options
 
 .. option:: -d, --daemon
 
-    Run the salt master as a daemon
+    Run the Salt master as a daemon
 
 .. option:: -c CONFIG, --config=CONFIG
 

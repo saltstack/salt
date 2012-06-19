@@ -6,6 +6,7 @@ import os
 import tempfile
 
 import salt.utils
+from salt._compat import string_types
 
 
 def compile_template(template, renderers, default, env='', sls=''):
@@ -14,7 +15,7 @@ def compile_template(template, renderers, default, env='', sls=''):
     derived from the template.
     '''
     # Template was specified incorrectly
-    if not isinstance(template, basestring):
+    if not isinstance(template, string_types):
         return {}
     # Template does not exists
     if not os.path.isfile(template):

@@ -15,6 +15,7 @@ Full list of builtin states
     cron
     file
     gem
+    git
     group
     host
     kmod
@@ -27,8 +28,10 @@ Full list of builtin states
     pkg
     postgres_database
     rvm
+    selinux
     service
     ssh_auth
+    ssh_known_hosts
     sysctl
     user
     virtualenv
