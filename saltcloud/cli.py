@@ -84,7 +84,7 @@ class SaltCloud(object):
             salt.log.set_logger_level(name, level)
         import logging
         # If statement here for when cloud query is added
-        import saltcloud.create
-        create = saltcloud.create.Create(self.opts)
-        create.run_data()
+        import saltcloud
+        cloud = saltcloud.Cloud(self.opts)
+        cloud.run_data()
 
