@@ -63,7 +63,7 @@ def script(vm_):
     return ScriptDeployment(saltcloud.utils.os_script(os_))
 
 
-def image(conn, vm_):
+def get_image(conn, vm_):
     '''
     Return the image object to use
     '''
@@ -77,7 +77,7 @@ def image(conn, vm_):
             return img
 
 
-def size(conn, vm_):
+def get_size(conn, vm_):
     '''
     Return the vm's size object
     '''
@@ -116,8 +116,8 @@ def create(vm_):
     '''
     conn = get_conn(vm_)
     msd = MultiStepDeployment([ssh_pub(vm_), script(vm_)])
-    img = image(conn, vm_)
-    size = size(conn, vm_)
+    img = get_image(conn, vm_)
+    size = get_size(conn, vm_)
     return conn.deploy_node(
             name=vm_['name'],
             image=img,
