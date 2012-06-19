@@ -833,7 +833,7 @@ class LocalClient(object):
             # forms possible
             minions = tgt
         elif not minions:
-            return {'jid': '',
+            return {'jid': '0',
                     'minions': minions}
 
         # Generate the standard keyword args to feed to format_payload
