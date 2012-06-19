@@ -16,9 +16,21 @@ class Cloud(object):
         self.opts = opts
         self.clouds = saltcloud.loader.clouds(self.opts)
 
-    def run_data(self):
+    def provider(self, vm_):
+        '''
+        Return the top level module that will be used for the given vm data
+        set
+        '''
+        if 'provider' in vm_:
+            if '{0}.create'.format(vm_['provider']) in self.clouds:
+                return vm_['provider']
+        if 'provider' in self.opts:
+            if '{0}.create'.format(self.opts['provider']) in self.clouds:
+                return self.opts['provider']
+
+    def create_all(self):
         '''
         Create/Verify the vms in the vm data
         '''
         for vm_ in self.opts['vm']:
-            self.create(vm_)
+            self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
