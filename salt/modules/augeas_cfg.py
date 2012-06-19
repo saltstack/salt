@@ -75,29 +75,59 @@ def get(path, value=''):
     return ret
 
 
-def setvalue(path, value):
+def setvalue(*args):
     '''
     Set a value for a specific augeas path
 
     CLI Example::
 
         salt '*' augeas.setvalue /files/etc/hosts/1/canonical localhost
+
+        salt '*' augeas.setvalue /files/etc/hosts/01/ipaddr 192.168.1.1 \
+                                 /files/etc/hosts/01/canonical hostname
+
+        salt '*' augeas.setvalue prefix=/files/etc/sudoers/ \
+                 "/spec[user = '%wheel']/user" "%wheel" \
+                 "/spec[user = '%wheel']/host_group/host" 'ALL' \
+                 "/spec[user = '%wheel']/host_group/command[1]" 'ALL' \
+                 "/spec[user = '%wheel']/host_group/command[1]/tag" 'PASSWD' \
+                 "/spec[user = '%wheel']/host_group/command[2]" '/usr/bin/apt-get' \
+                 "/spec[user = '%wheel']/host_group/command[2]/tag" NOPASSWD
     '''
+
 
     from augeas import Augeas
     aug = Augeas()
 
     ret = {'retval': False}
 
+    prefix = None
+
+
+    tuples = filter(lambda x: not x.startswith('prefix='), args)
+    prefix = filter(lambda x: x.startswith('prefix='), args)
+    if prefix:
+        prefix = prefix[0].split('=', 1)[1]
+
+    if len(tuples) % 2 != 0:
+        return ret  # ensure we have multiple of twos
+
+    tuple_iter = iter(tuples)
+
+    for path, value in zip(tuple_iter, tuple_iter):
+        target_path = path
+        if prefix:
+            target_path = "{0}/{1}".format(prefix.rstrip('/'), path.lstrip('/'))
+        try:
+            aug.set(target_path, str(value))
+        except ValueError as err:
+            ret['error'] = "Multiple values: " + str(err)
+
     try:
-        aug.set(path, unicode(value))
         aug.save()
         ret['retval'] = True
-    except ValueError as err:
-        ret['error'] = "Multiple values: " + str(err)
     except IOError as err:
         ret['error'] = str(err)
-
     return ret
 
 
