@@ -86,5 +86,5 @@ class SaltCloud(object):
         # If statement here for when cloud query is added
         import saltcloud
         cloud = saltcloud.Cloud(self.opts)
-        cloud.run_data()
+        cloud.create_all()
 
