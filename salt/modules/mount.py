@@ -12,15 +12,7 @@ from salt._compat import string_types
 log = logging.getLogger(__name__)
 
 
-def active():
-    '''
-    List the active mounts.
-
-    CLI Example::
-
-        salt '*' mount.active
-    '''
-    ret = {}
+def _active_mountinfo(ret):
     with open('/proc/self/mountinfo') as fh:
         for line in fh:
             comps = line.split()
@@ -34,6 +26,32 @@ def active():
                              'fstype': comps[7],
                              'device': comps[8],
                              'superopts': comps[9].split(',')}
+    return ret
+
+
+def _active_mounts(ret):
+    with open('/proc/self/mounts') as fh:
+        for line in fh:
+            comps.split()
+            ret[comps[1]] = {'device': comps[0],
+                             'fstype': comps[2],
+                             'opts': comps[3].split(',')}
+    return ret
+
+
+def active():
+    '''
+    List the active mounts.
+
+    CLI Example::
+
+        salt '*' mount.active
+    '''
+    ret = {}
+    try:
+        _active_mountinfo(ret)
+    except IOError:
+        _active_mounts(ret)
     return ret
 
 
