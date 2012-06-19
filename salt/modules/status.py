@@ -279,7 +279,7 @@ def diskusage(*args):
                 fstypes.add(arg)
 
     if len(fstypes) > 0:
-        # determine which mount points host the specifed fstypes
+        # determine which mount points host the specified fstypes
         p = re.compile('|'.join(fnmatch.translate(fstype).format("(%s)")
                             for fstype in fstypes))
         with open(procf, 'r') as fp:

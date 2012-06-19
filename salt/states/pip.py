@@ -7,8 +7,7 @@ A state module to manage system installed python packages
 .. code-block:: yaml
 
     virtualenvwrapper:
-      pip:
-        - installed
+      pip.installed:
         - version: 3.0.1
 '''
 

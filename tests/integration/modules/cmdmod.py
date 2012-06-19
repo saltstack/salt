@@ -69,8 +69,8 @@ class CMDModuleTest(integration.ModuleCase):
         cmd.which
         '''
         self.assertEqual(
-                self.run_function('cmd.which', ['echo']).rstrip(),
-                self.run_function('cmd.run', ['which echo']).rstrip())
+                self.run_function('cmd.which', ['cat']).rstrip(),
+                self.run_function('cmd.run', ['which cat']).rstrip())
 
     def test_has_exec(self):
         '''

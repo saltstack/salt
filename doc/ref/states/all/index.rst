@@ -8,7 +8,6 @@ Full list of builtin states
 
 .. autosummary::
     :toctree:
-    :template: autosummary.rst.tmpl
 
     alias
     cmd

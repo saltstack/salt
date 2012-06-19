@@ -35,8 +35,7 @@ These requisite statements are applied to a specific state declaration:
     httpd:
       pkg:
         - installed
-      file:
-        - managed
+      file.managed:
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
         - require:
@@ -61,8 +60,7 @@ more requisites. Both requisite types can also be separately declared:
     httpd:
       pkg:
         - installed
-      service:
-        - running
+      service.running:
         - enable: True
         - watch:
           - file: /etc/httpd/conf/httpd.conf
@@ -70,8 +68,7 @@ more requisites. Both requisite types can also be separately declared:
           - pkg: httpd
           - user: httpd
           - group: httpd
-      file:
-        - managed
+      file.managed:
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
         - require:
@@ -98,8 +95,7 @@ the vim package has been installed:
     vim:
       pkg:
         - installed
-      file:
-        - managed
+      file.managed:
         - source: salt://vim/vimrc
         - require:
           - pkg: vim
@@ -127,14 +123,12 @@ Perhaps an example can better explain the behavior:
     redis:
       pkg:
         - latest
-      file:
-        - managed
+      file.managed:
         - source: salt://redis/redis.conf
         - name: /etc/redis.conf
         - require:
           - pkg: redis
-      service:
-        - running
+      service.running:
         - enable: True
         - watch:
           - file: /etc/redis.conf
@@ -198,8 +192,7 @@ with the option `order`:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - order: 1
 
 By adding the order option to `1` this ensures that the vim package will be
@@ -215,6 +208,5 @@ set the order to ``last``:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - order: last

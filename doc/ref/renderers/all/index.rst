@@ -8,7 +8,6 @@ Full list of builtin renderers
 
 .. autosummary::
     :toctree:
-    :template: autosummary.rst.tmpl
 
     json_jinja
     json_mako

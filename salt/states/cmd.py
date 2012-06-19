@@ -27,8 +27,7 @@ syslog if there is no disk space:
 .. code-block:: yaml
 
     > /var/log/messages:
-      cmd:
-        - run
+      cmd.run:
         - unless: echo 'foo' > /tmp/.test
 '''
 
