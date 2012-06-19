@@ -11,6 +11,12 @@ class PipModuleTest(integration.ModuleCase):
     '''
     Validate the pip module
     '''
+    def setUp(self):
+        super(PipModuleTest, self).setUp()
+        ret = self.run_function('cmd.which_bin', [['pip2', 'pip', 'pip-python']])
+        if not ret:
+            self.skipTest("pip not installed")
+
     def test_freeze(self):
         '''
         pip.freeze

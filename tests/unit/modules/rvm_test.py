@@ -47,7 +47,8 @@ rvm rubies
 #  * - default
 
 '''
-        with patch.object(rvm, '_rvm', return_value=list_output):
+        with patch.object(rvm, '_rvm') as mock_method:
+            mock_method.return_value = list_output
             self.assertEqual(
                 [['jruby', '1.6.5.1', False],
                  ['ree', '1.8.7-2011.03', False],
@@ -66,7 +67,8 @@ gemsets for ree-1.8.7-2012.02 (found in /usr/local/rvm/gems/ree-1.8.7-2012.02)
    foo
 
 '''
-        with patch.object(rvm, '_rvm_do', return_value=output):
+        with patch.object(rvm, '_rvm_do') as mock_method:
+            mock_method.return_value = output
             self.assertEqual(
                 ['global', 'bar', 'foo'],
                 rvm.gemset_list())
@@ -97,7 +99,8 @@ gemsets for ruby-1.9.2-p180 (found in /usr/local/rvm/gems/ruby-1.9.2-p180)
 
 
 '''
-        with patch.object(rvm, '_rvm_do', return_value=output):
+        with patch.object(rvm, '_rvm_do') as mock_method:
+            mock_method.return_value = output
             self.assertEqual(
                 {'jruby-1.6.5.1': ['global', 'jbar', 'jfoo'],
                  'ruby-1.9.2-p180': ['global'],
