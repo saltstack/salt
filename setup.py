@@ -40,6 +40,7 @@ setup(
           ],
       packages=['saltcloud',
                 'saltcloud/utils',
+                'saltcloud/clouds',
                 ],
       package_data = {
           'saltcloud': ['deploy/*'],
