@@ -5,6 +5,12 @@ Utility functions for saltcloud
 # Import python libs
 import os
 import sys
+import shutil
+import tempfile
+
+# Import salt libs
+import salt.crypt
+
 
 def os_script(os_):
     '''
