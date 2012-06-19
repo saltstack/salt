@@ -27,10 +27,10 @@ def conn(vm_):
             prov += '_{0}'.format(__opts__['location'])
     if not hasattr(Provider, prov):
         return None
-    driver = get_driver('EC2')
+    driver = get_driver(getattr(Provider, 'EC2'))
     return driver(
-            __opts__['EC2_user'],
-            __opts__['EC2_key'],
+            __opts__['EC2.id'],
+            __opts__['EC2.key'],
             )
 
 
