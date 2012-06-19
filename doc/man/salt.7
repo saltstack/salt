@@ -1,4 +1,4 @@
-.TH "SALT" "7" "June 16, 2012" "0.10.0" "Salt"
+.TH "SALT" "7" "June 19, 2012" "0.10.1" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -482,7 +482,7 @@ minion. To do so type in the following commands:
 .nf
 .ft C
 sudo /etc/init.d/salt\-master restart
-sudo /etc/inti.d/salt\-minion restart
+sudo /etc/init.d/salt\-minion restart
 .ft P
 .fi
 .SS Test
@@ -1518,7 +1518,7 @@ what the grain is and remember that grains need to be static data.
 The core module in the grains package is where the main grains are loaded by
 the Salt minion and provides the principal example of how to write grains:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/grains/core.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/grains/core.py\fP
 .SS Syncing Grains
 .sp
 Syncing grains can be done a number of ways, they are automatically synced when
@@ -1862,23 +1862,20 @@ and a user and group may need to be set up.
        \- pkg: apache
        \- file: /etc/httpd/conf/httpd.conf
        \- user: apache
-   user:
-     \- present
+   user.present:
      \- uid: 87
      \- gid: 87
      \- home: /var/www/html
      \- shell: /bin/nologin
      \- require:
        \- group: apache
-   group:
-     \- present
+   group.present:
      \- gid: 87
      \- require:
        \- pkg: apache
 
  /etc/httpd/conf/httpd.conf:
-   file:
-     \- managed
+   file.managed:
      \- source: salt://apache/httpd.conf
      \- user: root
      \- group: root
@@ -1936,12 +1933,10 @@ toolkit, consider this SSH example:
 .nf
 .ft C
  openssh\-client:
-   pkg:
-     \- installed
+   pkg.installed
 
  /etc/ssh/ssh_config
-   file:
-     \- managed
+   file.managed:
      \- user: root
      \- group: root
      \- mode: 644
@@ -1959,12 +1954,10 @@ toolkit, consider this SSH example:
    \- ssh
 
  openssh\-server:
-   pkg:
-     \- installed
+   pkg.installed
 
  sshd:
-   service:
-     \- running
+   service.running:
      \- require:
        \- pkg: openssh\-client
        \- pkg: openssh\-server
@@ -1972,7 +1965,7 @@ toolkit, consider this SSH example:
        \- file: /etc/ssh/sshd_config
 
  /etc/ssh/sshd_config:
-     \- managed
+   file.managed:
      \- user: root
      \- group: root
      \- mode: 644
@@ -2049,8 +2042,7 @@ These examples will add more watchers to apache and change the ssh banner.
          \- pkg: mod_python
 
  mod_python:
-   pkg:
-     \- installed
+   pkg.installed
 .ft P
 .fi
 .sp
@@ -2098,13 +2090,11 @@ the Grains to be accessed from within the template. A few examples:
 .nf
 .ft C
  apache:
-   pkg:
-     \- installed
+   pkg.installed:
      {% if grains[\(aqos\(aq] == \(aqRedHat\(aq%}
      \- name: httpd
      {% endif %}
-   service:
-     \- running
+   service.running:
      {% if grains[\(aqos\(aq] == \(aqRedHat\(aq%}
      \- name: httpd
      {% endif %}
@@ -2112,23 +2102,20 @@ the Grains to be accessed from within the template. A few examples:
        \- pkg: apache
        \- file: /etc/httpd/conf/httpd.conf
        \- user: apache
-   user:
-     \- present
+   user.present:
      \- uid: 87
      \- gid: 87
      \- home: /var/www/html
      \- shell: /bin/nologin
      \- require:
        \- group: apache
-   group:
-     \- present
+   group.present:
      \- gid: 87
      \- require:
        \- pkg: apache
 
  /etc/httpd/conf/httpd.conf:
-   file:
-     \- managed
+   file.managed:
      \- source: salt://apache/httpd.conf
      \- user: root
      \- group: root
@@ -2151,13 +2138,11 @@ a MooseFS distributed filesystem chunkserver:
 
  {% for mnt in salt[\(aqcmd.run\(aq](\(aqls /dev/data/moose*\(aq).split() %}
  /mnt/moose{{ mnt[\-1] }}:
-   mount:
-     \- mounted
+   mount.mounted:
      \- device: {{ mnt }}
      \- fstype: xfs
      \- mkmnt: True
-   file:
-     \- directory
+   file.directory:
      \- user: mfs
      \- group: mfs
      \- require:
@@ -2166,8 +2151,7 @@ a MooseFS distributed filesystem chunkserver:
  {% endfor %}
 
  \(aq/etc/mfshdd.cfg\(aq:
-   file:
-     \- managed
+   file.managed:
      \- source: salt://moosefs/mfshdd.cfg
      \- user: root
      \- group: root
@@ -2177,8 +2161,7 @@ a MooseFS distributed filesystem chunkserver:
        \- pkg: mfs\-chunkserver
 
  \(aq/etc/mfschunkserver.cfg\(aq:
-   file:
-     \- managed
+   file.managed:
      \- source: salt://moosefs/mfschunkserver.cfg
      \- user: root
      \- group: root
@@ -2246,8 +2229,7 @@ This Python example would look like this if it were written in YAML:
    \- python
 
  django:
-   pkg:
-     \- installed
+   pkg.installed
 .ft P
 .fi
 .sp
@@ -2622,8 +2604,7 @@ this:
 .ft C
 {% for usr in \(aqmoe\(aq,\(aqlarry\(aq,\(aqcurly\(aq %}
 {{ usr }}:
-  user:
-    \- present
+  user.present
 {% endfor %}
 .ft P
 .fi
@@ -2633,14 +2614,11 @@ This templated sls file once generated will look like this:
 .nf
 .ft C
 moe:
-  user:
-    \- present
+  user.present
 larry:
-  user:
-    \- present
+  user.present
 curly:
-  user:
-    \- present
+  user.present
 .ft P
 .fi
 .SS Using Grains in SLS modules
@@ -2652,13 +2630,12 @@ called \fBgrains\fP is made available in the template context:
 .nf
 .ft C
 apache:
-  pkg:
+  pkg.installed:
     {% if grains[\(aqos\(aq] == \(aqRedHat\(aq %}
     \- name: httpd
     {% elif grains[\(aqos\(aq] == \(aqUbuntu\(aq %}
     \- name: apache2
     {% endif %}
-    \- installed
 .ft P
 .fi
 .SS Calling Salt modules from templates
@@ -2708,8 +2685,7 @@ span multiple files you must use an \fIinclude declaration\fP. For example:
 .nf
 .ft C
 python\-dateutil:
-  pkg:
-    \- installed
+  pkg.installed
 .ft P
 .fi
 .sp
@@ -2721,8 +2697,7 @@ include:
   \- python\-libs
 
 django:
-  pkg:
-    \- installed
+  pkg.installed:
     \- require:
       \- pkg: python\-dateutil
 .ft P
@@ -2738,8 +2713,7 @@ vhosts file is changed:
 .nf
 .ft C
 apache:
-  pkg:
-    \- installed
+  pkg.installed
 .ft P
 .fi
 .sp
@@ -2757,8 +2731,7 @@ extend:
         \- file: /etc/httpd/extra/httpd\-vhosts.conf
 
 /etc/httpd/extra/httpd\-vhosts.conf:
-  file:
-    \- managed
+  file.managed:
     \- source: salt://httpd\-vhosts.conf
 .ft P
 .fi
@@ -2782,8 +2755,7 @@ extend:
         \- file: mywebsite
 
 mywebsite:
-  file:
-    \- managed
+  file.managed:
     \- name: /etc/httpd/extra/httpd\-vhosts.conf
     \- source: salt://httpd\-vhosts.conf
 .ft P
@@ -2798,8 +2770,7 @@ can be rewritten without the loop:
 .nf
 .ft C
 stooges:
-  user:
-    \- present
+  user.present:
     \- names:
       \- moe
       \- larry
@@ -3811,7 +3782,7 @@ executions to manipulating the flow of how data is handled by Salt.
 The minion execution modules or just \fBmodules\fP are the core to what Salt is
 and does. These modules are found in:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/modules\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/modules\fP
 .sp
 These modules are what is called by the Salt command line and the salt client
 API. Adding modules is done by simply adding additional Python modules to the
@@ -3828,7 +3799,7 @@ of execution modules and types to specific Salt minions.
 .sp
 The code used to generate the Salt grains can be found here:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/grains\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/grains\fP
 .SS States
 .sp
 Salt supports state enforcement, this makes Salt a high speed and very efficient
@@ -3836,7 +3807,7 @@ solution for system configuration management.
 .sp
 States can be easily added to Salt by dropping a new state module in:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/states\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/states\fP
 .SS Renderers
 .sp
 Salt states are controlled by simple data structures, these structures can be
@@ -3847,7 +3818,7 @@ it.
 .sp
 The existing renderers can be found here:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/renderers\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/renderers\fP
 .SS Returners
 .sp
 The Salt commands all produce a return value, that return value is sent to the
@@ -3857,7 +3828,7 @@ from an SQL or NoSQL database, to a custom application made to use Salt.
 .sp
 The existing returners can be found here:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/returners\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/returners\fP
 .SS Runners
 .sp
 Sometimes a certain application can be made to execute and run from the
@@ -3867,7 +3838,7 @@ act as a generic interface for encapsulating master side executions.
 .sp
 Existing Salt runners are located here:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/runners\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/runners\fP
 .SH MODULES
 .sp
 Salt modules are the functions called by the \fBsalt\fP command.
@@ -4004,9 +3975,9 @@ regardless of what the actual module is named.
 .sp
 The package manager modules are the best example of using the \fB__virtual__\fP
 function:
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/modules/pacman.py\fP
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/modules/yumpkg.py\fP
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/modules/apt.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/modules/pacman.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/modules/yumpkg.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/modules/apt.py\fP
 .SS Documentation
 .sp
 Salt modules are self documenting, the \fBsys.doc()\fP function will return the
@@ -4081,7 +4052,7 @@ functions for Salt, but to stand as examples for building out more Salt
 modules.
 .sp
 The existing modules can be found here:
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/modules\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/modules\fP
 .sp
 The most simple module is the test module, it contains the simplest Salt
 function, \fBtest.ping\fP:
@@ -4646,6 +4617,7 @@ _
 .SS salt.modules.aliases
 .sp
 Manage the information in the aliases file
+Members.SS get_target
 .INDENT 0.0
 .TP
 .B salt.modules.aliases.get_target(alias)
@@ -4659,6 +4631,7 @@ salt \(aq*\(aq aliases.get_target <alias>
 .ft P
 .fi
 .UNINDENT
+.SS has_target
 .INDENT 0.0
 .TP
 .B salt.modules.aliases.has_target(alias, target)
@@ -4672,6 +4645,7 @@ salt \(aq*\(aq aliases.has_target <alias> <target>
 .ft P
 .fi
 .UNINDENT
+.SS list_aliases
 .INDENT 0.0
 .TP
 .B salt.modules.aliases.list_aliases()
@@ -4691,6 +4665,7 @@ salt \(aq*\(aq aliases.list_aliases
 .ft P
 .fi
 .UNINDENT
+.SS rm_alias
 .INDENT 0.0
 .TP
 .B salt.modules.aliases.rm_alias(alias)
@@ -4704,6 +4679,7 @@ salt \(aq*\(aq aliases.rm_alias <alias>
 .ft P
 .fi
 .UNINDENT
+.SS set_target
 .INDENT 0.0
 .TP
 .B salt.modules.aliases.set_target(alias, target)
@@ -4722,6 +4698,7 @@ salt \(aq*\(aq aliases.set_target <alias> <target>
 .SS salt.modules.apache
 .sp
 Support for Apache
+Members.SS directives
 .INDENT 0.0
 .TP
 .B salt.modules.apache.directives()
@@ -4736,6 +4713,7 @@ salt \(aq*\(aq apache.directives
 .ft P
 .fi
 .UNINDENT
+.SS fullversion
 .INDENT 0.0
 .TP
 .B salt.modules.apache.fullversion()
@@ -4749,6 +4727,7 @@ salt \(aq*\(aq apache.fullversion
 .ft P
 .fi
 .UNINDENT
+.SS modules
 .INDENT 0.0
 .TP
 .B salt.modules.apache.modules()
@@ -4762,6 +4741,7 @@ salt \(aq*\(aq apache.modules
 .ft P
 .fi
 .UNINDENT
+.SS servermods
 .INDENT 0.0
 .TP
 .B salt.modules.apache.servermods()
@@ -4775,6 +4755,7 @@ salt \(aq*\(aq apache.servermods
 .ft P
 .fi
 .UNINDENT
+.SS signal
 .INDENT 0.0
 .TP
 .B salt.modules.apache.signal(signal=None)
@@ -4788,6 +4769,7 @@ salt \(aq*\(aq apache.signal restart
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.apache.version()
@@ -4801,6 +4783,7 @@ salt \(aq*\(aq apache.version
 .ft P
 .fi
 .UNINDENT
+.SS vhosts
 .INDENT 0.0
 .TP
 .B salt.modules.apache.vhosts()
@@ -4820,6 +4803,7 @@ salt \-t 10 \(aq*\(aq apache.vhosts
 .SS salt.modules.apt
 .sp
 Support for APT (Advanced Packaging Tool)
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.apt.available_version(name)
@@ -4834,6 +4818,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.apt.install(pkg, refresh=False, repo=\(aq\(aq, skip_verify=False, debconf=None, version=None, **kwargs)
@@ -4883,6 +4868,7 @@ salt \(aq*\(aq pkg.install <package name>
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.apt.list_pkgs(regex_string=\(aq\(aq)
@@ -4912,6 +4898,7 @@ salt \(aq*\(aq pkg.list_pkgs httpd
 .ft P
 .fi
 .UNINDENT
+.SS list_upgrades
 .INDENT 0.0
 .TP
 .B salt.modules.apt.list_upgrades()
@@ -4925,6 +4912,7 @@ salt \(aq*\(aq pkg.list_upgrades
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.apt.purge(pkg)
@@ -4941,6 +4929,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.apt.refresh_db()
@@ -4962,6 +4951,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.apt.remove(pkg)
@@ -4977,6 +4967,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.apt.upgrade(refresh=True, **kwargs)
@@ -5004,6 +4995,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS upgrade_available
 .INDENT 0.0
 .TP
 .B salt.modules.apt.upgrade_available(name)
@@ -5017,6 +5009,7 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.apt.version(name)
@@ -5034,6 +5027,7 @@ salt \(aq*\(aq pkg.version <package name>
 .SS salt.modules.archive
 .sp
 A module to wrap archive calls
+Members.SS gunzip
 .INDENT 0.0
 .TP
 .B salt.modules.archive.gunzip(gzipfile)
@@ -5047,6 +5041,7 @@ salt \(aq*\(aq archive.gunzip /tmp/sourcefile.txt.gz
 .ft P
 .fi
 .UNINDENT
+.SS gzip
 .INDENT 0.0
 .TP
 .B salt.modules.archive.gzip(sourcefile)
@@ -5060,6 +5055,7 @@ salt \(aq*\(aq archive.gzip /tmp/sourcefile.txt
 .ft P
 .fi
 .UNINDENT
+.SS rar
 .INDENT 0.0
 .TP
 .B salt.modules.archive.rar(rarfile, *sources)
@@ -5074,6 +5070,7 @@ salt \(aq*\(aq archive.rar /tmp/rarfile.rar /tmp/sourcefile1 /tmp/sourcefile2
 .ft P
 .fi
 .UNINDENT
+.SS tar
 .INDENT 0.0
 .TP
 .B salt.modules.archive.tar(options, tarfile, *sources)
@@ -5087,6 +5084,7 @@ salt \(aq*\(aq archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file1 /tmp/file2
 .ft P
 .fi
 .UNINDENT
+.SS unrar
 .INDENT 0.0
 .TP
 .B salt.modules.archive.unrar(rarfile, dest, *xfiles)
@@ -5101,6 +5099,7 @@ salt \(aq*\(aq archive.unrar /tmp/rarfile.rar /home/strongbad/ file1 file2
 .ft P
 .fi
 .UNINDENT
+.SS unzip
 .INDENT 0.0
 .TP
 .B salt.modules.archive.unzip(zipfile, dest, *xfiles)
@@ -5114,6 +5113,7 @@ salt \(aq*\(aq archive.unzip /tmp/zipfile.zip /home/strongbad/ file1 file2
 .ft P
 .fi
 .UNINDENT
+.SS zip
 .INDENT 0.0
 .TP
 .B salt.modules.archive.zip(zipfile, *sources)
@@ -5128,6 +5128,7 @@ salt \(aq*\(aq archive.zip /tmp/zipfile.zip /tmp/sourcefile1 /tmp/sourcefile2
 .fi
 .UNINDENT
 .SS salt.modules.brew
+Members.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.brew.install(pkgs)
@@ -5155,6 +5156,7 @@ salt \(aq*\(aq pkg.install \(aqpackage package package\(aq
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.brew.list_pkgs(*args)
@@ -5174,6 +5176,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS list_upgrades
 .INDENT 0.0
 .TP
 .B salt.modules.brew.list_upgrades()
@@ -5187,6 +5190,7 @@ salt \(aq*\(aq pkg.list_upgrades
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.brew.remove(pkgs)
@@ -5202,6 +5206,7 @@ salt \(aq*\(aq pkg.remove <package,package,package>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade_available
 .INDENT 0.0
 .TP
 .B salt.modules.brew.upgrade_available(pkg)
@@ -5215,6 +5220,7 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.brew.version(name)
@@ -5231,6 +5237,7 @@ salt \(aq*\(aq pkg.version <package name>
 .SS salt.modules.butterkvm
 .sp
 Specialized routines used by the butter cloud component
+Members.SS create
 .INDENT 0.0
 .TP
 .B salt.modules.butterkvm.create(instance, vda, image, pin)
@@ -5263,6 +5270,7 @@ salt \(aq*\(aq butterkvm.create <instance dir> <root image location>\e
 .ft P
 .fi
 .UNINDENT
+.SS full_butter_data
 .INDENT 0.0
 .TP
 .B salt.modules.butterkvm.full_butter_data(local_path)
@@ -5276,6 +5284,7 @@ salt \(aq*\(aq buttervm.full_butter_data <image_path>
 .ft P
 .fi
 .UNINDENT
+.SS libvirt_creds
 .INDENT 0.0
 .TP
 .B salt.modules.butterkvm.libvirt_creds()
@@ -5289,6 +5298,7 @@ salt \(aq*\(aq butterkvm.libvirt_creds
 .ft P
 .fi
 .UNINDENT
+.SS local_images
 .INDENT 0.0
 .TP
 .B salt.modules.butterkvm.local_images(local_path)
@@ -5313,18 +5323,20 @@ salt \(aq*\(aq buttervm.local_images <image_path>
 .sp
 The cluster module is used to distribute and activate salt HA cluster
 components
+Members.SS distrib
 .INDENT 0.0
 .TP
 .B salt.modules.cluster.distrib(minions, master_conf, master_pem, conf_file)
 Set up this minion as a failover master \- only intended for use by the
 cluster interface
 .UNINDENT
-.SS salt.modules.cmd
+.SS salt.modules.cmdmod
 .sp
 A module for shelling out
 .sp
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
+Members.SS exec_code
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.exec_code(lang, code, cwd=None)
@@ -5340,6 +5352,7 @@ salt \(aq*\(aq cmd.exec_code ruby \(aqputs "cheese"\(aq
 .ft P
 .fi
 .UNINDENT
+.SS has_exec
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.has_exec(cmd)
@@ -5353,6 +5366,7 @@ salt \(aq*\(aq cmd.has_exec cat
 .ft P
 .fi
 .UNINDENT
+.SS retcode
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.retcode(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=())
@@ -5366,6 +5380,7 @@ salt \(aq*\(aq cmd.retcode "file /bin/bash"
 .ft P
 .fi
 .UNINDENT
+.SS run
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.run(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=())
@@ -5379,6 +5394,7 @@ salt \(aq*\(aq cmd.run "ls \-l | awk \(aq/foo/{print $2}\(aq"
 .ft P
 .fi
 .UNINDENT
+.SS run_all
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.run_all(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=())
@@ -5392,6 +5408,7 @@ salt \(aq*\(aq cmd.run_all "ls \-l | awk \(aq/foo/{print $2}\(aq"
 .ft P
 .fi
 .UNINDENT
+.SS run_stderr
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.run_stderr(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=())
@@ -5405,6 +5422,7 @@ salt \(aq*\(aq cmd.run_stderr "ls \-l | awk \(aq/foo/{print $2}\(aq"
 .ft P
 .fi
 .UNINDENT
+.SS run_stdout
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.run_stdout(cmd, cwd=None, runas=None, shell=\(aq/bin/bash\(aq, env=())
@@ -5418,6 +5436,13 @@ salt \(aq*\(aq cmd.run_stdout "ls \-l | awk \(aq/foo/{print $2}\(aq"
 .ft P
 .fi
 .UNINDENT
+.SS shell_grain
+.INDENT 0.0
+.TP
+.B salt.modules.cmdmod.shell_grain()
+Return the default shell to use on this system
+.UNINDENT
+.SS which
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.which(cmd)
@@ -5431,6 +5456,7 @@ salt \(aq*\(aq cmd.which cat
 .ft P
 .fi
 .UNINDENT
+.SS which_bin
 .INDENT 0.0
 .TP
 .B salt.modules.cmdmod.which_bin(cmds)
@@ -5447,6 +5473,7 @@ salt \(aq*\(aq cmd.which_bin \(aq[pip2, pip, pip\-python]\(aq
 .SS salt.modules.cp
 .sp
 Minion side functions for salt\-cp
+Members.SS cache_dir
 .INDENT 0.0
 .TP
 .B salt.modules.cp.cache_dir(path, env=\(aqbase\(aq, include_empty=False)
@@ -5460,6 +5487,7 @@ salt \(aq*\(aq cp.cache_dir salt://path/to/dir
 .ft P
 .fi
 .UNINDENT
+.SS cache_file
 .INDENT 0.0
 .TP
 .B salt.modules.cp.cache_file(path, env=\(aqbase\(aq)
@@ -5473,6 +5501,7 @@ salt \(aq*\(aq cp.cache_file salt://path/to/file
 .ft P
 .fi
 .UNINDENT
+.SS cache_files
 .INDENT 0.0
 .TP
 .B salt.modules.cp.cache_files(paths, env=\(aqbase\(aq)
@@ -5488,6 +5517,7 @@ salt \(aq*\(aq cp.cache_files salt://pathto/file1,salt://pathto/file1
 .ft P
 .fi
 .UNINDENT
+.SS cache_local_file
 .INDENT 0.0
 .TP
 .B salt.modules.cp.cache_local_file(path)
@@ -5501,6 +5531,7 @@ salt \(aq*\(aq cp.cache_local_file /etc/hosts
 .ft P
 .fi
 .UNINDENT
+.SS cache_master
 .INDENT 0.0
 .TP
 .B salt.modules.cp.cache_master(env=\(aqbase\(aq)
@@ -5514,6 +5545,7 @@ salt \(aq*\(aq cp.cache_master
 .ft P
 .fi
 .UNINDENT
+.SS get_dir
 .INDENT 0.0
 .TP
 .B salt.modules.cp.get_dir(path, dest, env=\(aqbase\(aq)
@@ -5527,6 +5559,7 @@ salt \(aq*\(aq cp.get_dir salt://path/to/dir/ /minion/dest
 .ft P
 .fi
 .UNINDENT
+.SS get_file
 .INDENT 0.0
 .TP
 .B salt.modules.cp.get_file(path, dest, env=\(aqbase\(aq)
@@ -5540,6 +5573,7 @@ salt \(aq*\(aq cp.get_file salt://path/to/file /minion/dest
 .ft P
 .fi
 .UNINDENT
+.SS get_template
 .INDENT 0.0
 .TP
 .B salt.modules.cp.get_template(path, dest, template=\(aqjinja\(aq, env=\(aqbase\(aq, **kwargs)
@@ -5553,6 +5587,7 @@ salt \(aq*\(aq cp.get_template salt://path/to/template /minion/dest
 .ft P
 .fi
 .UNINDENT
+.SS get_url
 .INDENT 0.0
 .TP
 .B salt.modules.cp.get_url(path, dest, env=\(aqbase\(aq)
@@ -5567,6 +5602,7 @@ salt \(aq*\(aq cp.get_url http://www.slashdot.org /tmp/index.html
 .ft P
 .fi
 .UNINDENT
+.SS hash_file
 .INDENT 0.0
 .TP
 .B salt.modules.cp.hash_file(path, env=\(aqbase\(aq)
@@ -5582,6 +5618,7 @@ salt \(aq*\(aq cp.hash_file salt://path/to/file
 .ft P
 .fi
 .UNINDENT
+.SS is_cached
 .INDENT 0.0
 .TP
 .B salt.modules.cp.is_cached(path, env=\(aqbase\(aq)
@@ -5596,6 +5633,7 @@ salt \(aq*\(aq cp.is_cached salt://path/to/file
 .ft P
 .fi
 .UNINDENT
+.SS list_master
 .INDENT 0.0
 .TP
 .B salt.modules.cp.list_master(env=\(aqbase\(aq)
@@ -5609,6 +5647,7 @@ salt \(aq*\(aq cp.list_master
 .ft P
 .fi
 .UNINDENT
+.SS list_minion
 .INDENT 0.0
 .TP
 .B salt.modules.cp.list_minion(env=\(aqbase\(aq)
@@ -5622,6 +5661,7 @@ salt \(aq*\(aq cp.list_minion
 .ft P
 .fi
 .UNINDENT
+.SS list_states
 .INDENT 0.0
 .TP
 .B salt.modules.cp.list_states(env=\(aqbase\(aq)
@@ -5635,6 +5675,7 @@ salt \(aq*\(aq cp.list_states
 .ft P
 .fi
 .UNINDENT
+.SS recv
 .INDENT 0.0
 .TP
 .B salt.modules.cp.recv(files, dest)
@@ -5645,6 +5686,7 @@ This function receives small fast copy files from the master via salt\-cp
 .SS salt.modules.cron
 .sp
 Work with cron
+Members.SS list_tab
 .INDENT 0.0
 .TP
 .B salt.modules.cron.list_tab(user)
@@ -5658,6 +5700,7 @@ salt \(aq*\(aq cron.list_tab root
 .ft P
 .fi
 .UNINDENT
+.SS ls
 .INDENT 0.0
 .TP
 .B salt.modules.cron.ls(user)
@@ -5671,6 +5714,7 @@ salt \(aq*\(aq cron.list_tab root
 .ft P
 .fi
 .UNINDENT
+.SS raw_cron
 .INDENT 0.0
 .TP
 .B salt.modules.cron.raw_cron(user)
@@ -5684,6 +5728,7 @@ salt \(aq*\(aq cron.raw_cron root
 .ft P
 .fi
 .UNINDENT
+.SS rm
 .INDENT 0.0
 .TP
 .B salt.modules.cron.rm(user, minute, hour, dom, month, dow, cmd)
@@ -5697,6 +5742,7 @@ salt \(aq*\(aq cron.rm_job root \e* \e* \e* \e* 1 /usr/local/weekly
 .ft P
 .fi
 .UNINDENT
+.SS rm_env
 .INDENT 0.0
 .TP
 .B salt.modules.cron.rm_env(user, name)
@@ -5710,6 +5756,7 @@ salt \(aq*\(aq cron.rm_env root MAILTO
 .ft P
 .fi
 .UNINDENT
+.SS rm_job
 .INDENT 0.0
 .TP
 .B salt.modules.cron.rm_job(user, minute, hour, dom, month, dow, cmd)
@@ -5723,6 +5770,7 @@ salt \(aq*\(aq cron.rm_job root \e* \e* \e* \e* 1 /usr/local/weekly
 .ft P
 .fi
 .UNINDENT
+.SS set_env
 .INDENT 0.0
 .TP
 .B salt.modules.cron.set_env(user, name, value=None)
@@ -5736,6 +5784,7 @@ salt \(aq*\(aq cron.set_env root MAILTO user@example.com
 .ft P
 .fi
 .UNINDENT
+.SS set_job
 .INDENT 0.0
 .TP
 .B salt.modules.cron.set_job(user, minute, hour, dom, month, dow, cmd)
@@ -5749,6 +5798,7 @@ salt \(aq*\(aq cron.set_job root \e* \e* \e* \e* 1 /usr/local/weekly
 .ft P
 .fi
 .UNINDENT
+.SS set_special
 .INDENT 0.0
 .TP
 .B salt.modules.cron.set_special(user, special, cmd)
@@ -5766,6 +5816,7 @@ salt \(aq*\(aq cron.set_special @hourly \(aqecho foobar\(aq
 .sp
 Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion
+Members.SS clear
 .INDENT 0.0
 .TP
 .B salt.modules.data.clear()
@@ -5780,6 +5831,7 @@ salt \(aq*\(aq data.clear
 .ft P
 .fi
 .UNINDENT
+.SS dump
 .INDENT 0.0
 .TP
 .B salt.modules.data.dump(new_data)
@@ -5793,6 +5845,7 @@ salt \(aq*\(aq data.dump \(aq{\(aqeggs\(aq: \(aqspam\(aq}\(aq
 .ft P
 .fi
 .UNINDENT
+.SS getval
 .INDENT 0.0
 .TP
 .B salt.modules.data.getval(key)
@@ -5806,6 +5859,7 @@ salt \(aq*\(aq data.getval <key>
 .ft P
 .fi
 .UNINDENT
+.SS getvals
 .INDENT 0.0
 .TP
 .B salt.modules.data.getvals(keys)
@@ -5819,6 +5873,7 @@ salt \(aq*\(aq data.getvals <key>
 .ft P
 .fi
 .UNINDENT
+.SS load
 .INDENT 0.0
 .TP
 .B salt.modules.data.load()
@@ -5832,6 +5887,7 @@ salt \(aq*\(aq data.load
 .ft P
 .fi
 .UNINDENT
+.SS update
 .INDENT 0.0
 .TP
 .B salt.modules.data.update(key, value)
@@ -5848,6 +5904,7 @@ salt \(aq*\(aq data.update <key> <value>
 .SS salt.modules.debconfmod
 .sp
 Support for Debconf
+Members.SS get_selections
 .INDENT 0.0
 .TP
 .B salt.modules.debconfmod.get_selections(fetchempty=True)
@@ -5867,6 +5924,7 @@ salt \(aq*\(aq debconf.get_selections
 .ft P
 .fi
 .UNINDENT
+.SS set
 .INDENT 0.0
 .TP
 .B salt.modules.debconfmod.set(package, question, type, value, *extra)
@@ -5880,6 +5938,7 @@ salt \(aq*\(aq debconf.set <package> <question> <type> <value> [<value> ...]
 .ft P
 .fi
 .UNINDENT
+.SS set_file
 .INDENT 0.0
 .TP
 .B salt.modules.debconfmod.set_file(path)
@@ -5893,6 +5952,7 @@ salt \(aq*\(aq debconf.set_file salt://pathto/pkg.selections
 .ft P
 .fi
 .UNINDENT
+.SS show
 .INDENT 0.0
 .TP
 .B salt.modules.debconfmod.show(name)
@@ -5917,6 +5977,7 @@ salt \(aq*\(aq debconf.show <package name>
 .SS salt.modules.disk
 .sp
 Module for gathering disk information
+Members.SS inodeusage
 .INDENT 0.0
 .TP
 .B salt.modules.disk.inodeusage()
@@ -5930,6 +5991,7 @@ salt \(aq*\(aq disk.inodeusage
 .ft P
 .fi
 .UNINDENT
+.SS usage
 .INDENT 0.0
 .TP
 .B salt.modules.disk.usage()
@@ -5946,6 +6008,7 @@ salt \(aq*\(aq disk.usage
 .SS salt.modules.django
 .sp
 Manage Django sites
+Members.SS collectstatic
 .INDENT 0.0
 .TP
 .B salt.modules.django.collectstatic(settings_module, bin_env=None, no_post_process=False, ignore=None, dry_run=False, clear=False, link=False, no_default_ignore=False, pythonpath=None)
@@ -5960,11 +6023,13 @@ salt \(aq*\(aq django.collectstatic settings.py
 .ft P
 .fi
 .UNINDENT
+.SS command
 .INDENT 0.0
 .TP
 .B salt.modules.django.command(settings_module, command, bin_env=None, pythonpath=None, *args, **kwargs)
 Run arbitrary django management command
 .UNINDENT
+.SS createsuperuser
 .INDENT 0.0
 .TP
 .B salt.modules.django.createsuperuser(settings_module, username, email, bin_env=None, database=None, pythonpath=None)
@@ -5980,6 +6045,7 @@ salt \(aq*\(aq django.createsuperuser settings.py user user@example.com
 .ft P
 .fi
 .UNINDENT
+.SS loaddata
 .INDENT 0.0
 .TP
 .B salt.modules.django.loaddata(settings_module, fixtures, bin_env=None, database=None, pythonpath=None)
@@ -5998,6 +6064,7 @@ salt \(aq*\(aq django.loaddata settings.py <comma delimited list of fixtures>
 .ft P
 .fi
 .UNINDENT
+.SS syncdb
 .INDENT 0.0
 .TP
 .B salt.modules.django.syncdb(settings_module, bin_env=None, migrate=False, database=None, pythonpath=None, noinput=True)
@@ -6018,6 +6085,7 @@ salt \(aq*\(aq django.syncdb settings.py
 .SS salt.modules.ebuild
 .sp
 Support for Portage
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.available_version(name)
@@ -6031,6 +6099,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.install(pkg, refresh=False, **kwargs)
@@ -6053,6 +6122,7 @@ salt \(aq*\(aq pkg.install <package name>
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.list_pkgs()
@@ -6072,6 +6142,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.purge(pkg)
@@ -6087,6 +6158,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.refresh_db()
@@ -6100,6 +6172,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.remove(pkg)
@@ -6115,6 +6188,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .ft P
 .fi
 .UNINDENT
+.SS update
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.update(pkg, refresh=False)
@@ -6137,6 +6211,7 @@ salt \(aq*\(aq pkg.update <package name>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.upgrade(refresh=False)
@@ -6159,6 +6234,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.ebuild.version(name)
@@ -6176,6 +6252,7 @@ salt \(aq*\(aq pkg.version <package name>
 .sp
 Manage information about files on the minion, set/read user, group, and mode
 data
+Members.SS append
 .INDENT 0.0
 .TP
 .B salt.modules.file.append(path, *args)
@@ -6193,6 +6270,7 @@ salt \(aq*\(aq file.append /etc/motd \e
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS chgrp
 .INDENT 0.0
 .TP
 .B salt.modules.file.chgrp(path, group)
@@ -6206,6 +6284,7 @@ salt \(aq*\(aq file.chgrp /etc/passwd root
 .ft P
 .fi
 .UNINDENT
+.SS chown
 .INDENT 0.0
 .TP
 .B salt.modules.file.chown(path, user, group)
@@ -6219,6 +6298,7 @@ salt \(aq*\(aq file.chown /etc/passwd root root
 .ft P
 .fi
 .UNINDENT
+.SS comment
 .INDENT 0.0
 .TP
 .B salt.modules.file.comment(path, regex, char=\(aq#\(aq, backup=\(aq.bak\(aq)
@@ -6259,6 +6339,7 @@ salt \(aq*\(aq file.comment /etc/modules pcspkr
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS contains
 .INDENT 0.0
 .TP
 .B salt.modules.file.contains(path, text)
@@ -6274,6 +6355,7 @@ salt \(aq*\(aq file.contains /etc/crontab \(aqmymaintenance.sh\(aq
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS contains_glob
 .INDENT 0.0
 .TP
 .B salt.modules.file.contains_glob(path, glob)
@@ -6287,6 +6369,7 @@ salt \(aq*\(aq /etc/foobar \(aq*cheese*\(aq
 .ft P
 .fi
 .UNINDENT
+.SS contains_regex
 .INDENT 0.0
 .TP
 .B salt.modules.file.contains_regex(path, regex, lchar=\(aq\(aq)
@@ -6301,6 +6384,7 @@ salt \(aq*\(aq /etc/crontab \(aq^maint\(aq
 .ft P
 .fi
 .UNINDENT
+.SS find
 .INDENT 0.0
 .TP
 .B salt.modules.file.find(path, **kwargs)
@@ -6425,6 +6509,7 @@ salt \(aq*\(aq file.find /var/log name=\e*.[0\-9] mtime=+30d size=+10m delete
 .ft P
 .fi
 .UNINDENT
+.SS get_gid
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_gid(path)
@@ -6438,6 +6523,7 @@ salt \(aq*\(aq file.get_gid /etc/passwd
 .ft P
 .fi
 .UNINDENT
+.SS get_group
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_group(path)
@@ -6451,6 +6537,7 @@ salt \(aq*\(aq file.get_group /etc/passwd
 .ft P
 .fi
 .UNINDENT
+.SS get_mode
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_mode(path)
@@ -6464,6 +6551,7 @@ salt \(aq*\(aq file.get_mode /etc/passwd
 .ft P
 .fi
 .UNINDENT
+.SS get_sum
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_sum(path, form=\(aqmd5\(aq)
@@ -6478,6 +6566,7 @@ salt \(aq*\(aq file.get_sum /etc/passwd sha512
 .ft P
 .fi
 .UNINDENT
+.SS get_uid
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_uid(path)
@@ -6491,6 +6580,7 @@ salt \(aq*\(aq file.get_uid /etc/passwd
 .ft P
 .fi
 .UNINDENT
+.SS get_user
 .INDENT 0.0
 .TP
 .B salt.modules.file.get_user(path)
@@ -6504,6 +6594,7 @@ salt \(aq*\(aq file.get_user /etc/passwd
 .ft P
 .fi
 .UNINDENT
+.SS gid_to_group
 .INDENT 0.0
 .TP
 .B salt.modules.file.gid_to_group(gid)
@@ -6517,6 +6608,7 @@ salt \(aq*\(aq file.gid_to_group 0
 .ft P
 .fi
 .UNINDENT
+.SS group_to_gid
 .INDENT 0.0
 .TP
 .B salt.modules.file.group_to_gid(group)
@@ -6530,6 +6622,7 @@ salt \(aq*\(aq file.group_to_gid root
 .ft P
 .fi
 .UNINDENT
+.SS sed
 .INDENT 0.0
 .TP
 .B salt.modules.file.sed(path, before, after, limit=\(aq\(aq, backup=\(aq.bak\(aq, options=\(aq\-r \-e\(aq, flags=\(aqg\(aq, escape_all=False)
@@ -6586,6 +6679,7 @@ salt \(aq*\(aq file.sed /etc/httpd/httpd.conf \(aqLogLevel warn\(aq \(aqLogLevel
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS set_mode
 .INDENT 0.0
 .TP
 .B salt.modules.file.set_mode(path, mode)
@@ -6599,6 +6693,7 @@ salt \(aq*\(aq file.set_mode /etc/passwd 0644
 .ft P
 .fi
 .UNINDENT
+.SS stats
 .INDENT 0.0
 .TP
 .B salt.modules.file.stats(path, hash_type=\(aqmd5\(aq, follow_symlink=False)
@@ -6612,6 +6707,7 @@ salt \(aq*\(aq file.stats /etc/passwd
 .ft P
 .fi
 .UNINDENT
+.SS touch
 .INDENT 0.0
 .TP
 .B salt.modules.file.touch(name, atime=None, mtime=None)
@@ -6637,6 +6733,7 @@ salt \(aq*\(aq file.touch /var/log/emptyfile
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS uid_to_user
 .INDENT 0.0
 .TP
 .B salt.modules.file.uid_to_user(uid)
@@ -6650,6 +6747,7 @@ salt \(aq*\(aq file.uid_to_user 0
 .ft P
 .fi
 .UNINDENT
+.SS uncomment
 .INDENT 0.0
 .TP
 .B salt.modules.file.uncomment(path, regex, char=\(aq#\(aq, backup=\(aq.bak\(aq)
@@ -6687,6 +6785,7 @@ salt \(aq*\(aq file.uncomment /etc/hosts.deny \(aqALL: PARANOID\(aq
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS user_to_uid
 .INDENT 0.0
 .TP
 .B salt.modules.file.user_to_uid(user)
@@ -6703,6 +6802,7 @@ salt \(aq*\(aq file.user_to_uid root
 .SS salt.modules.freebsdjail
 .sp
 The jail module for FreeBSD
+Members.SS fstab
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.fstab(jail)
@@ -6717,16 +6817,19 @@ salt \(aq*\(aq jail.fstab <jail name>
 .ft P
 .fi
 .UNINDENT
+.SS get_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.get_enabled()
 Return which jails are set to be run
 .UNINDENT
+.SS is_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.is_enabled()
 See if jail service is actually enabled on boot
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.restart(jail=\(aq\(aq)
@@ -6740,6 +6843,7 @@ salt \(aq*\(aq jail.restart [<jail name>]
 .ft P
 .fi
 .UNINDENT
+.SS show_config
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.show_config(jail)
@@ -6753,6 +6857,7 @@ salt \(aq*\(aq jail.show_config <jail name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.start(jail=\(aq\(aq)
@@ -6766,6 +6871,7 @@ salt \(aq*\(aq jail.start [<jail name>]
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.status(jail)
@@ -6779,6 +6885,7 @@ salt \(aq*\(aq jail.status <jail name>
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.stop(jail=\(aq\(aq)
@@ -6792,6 +6899,7 @@ salt \(aq*\(aq jail.stop [<jail name>]
 .ft P
 .fi
 .UNINDENT
+.SS sysctl
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdjail.sysctl()
@@ -6800,6 +6908,7 @@ Dump all jail related kernel states (sysctl)
 .SS salt.modules.freebsdkmod
 .sp
 Module to manage FreeBSD kernel modules
+Members.SS available
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdkmod.available()
@@ -6813,6 +6922,7 @@ salt \(aq*\(aq kmod.available
 .ft P
 .fi
 .UNINDENT
+.SS check_available
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdkmod.check_available(mod)
@@ -6826,6 +6936,7 @@ salt \(aq*\(aq kmod.check_available kvm
 .ft P
 .fi
 .UNINDENT
+.SS load
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdkmod.load(mod)
@@ -6839,6 +6950,7 @@ salt \(aq*\(aq kmod.load kvm
 .ft P
 .fi
 .UNINDENT
+.SS lsmod
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdkmod.lsmod()
@@ -6852,6 +6964,7 @@ salt \(aq*\(aq kmod.lsmod
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdkmod.remove(mod)
@@ -6868,6 +6981,7 @@ salt \(aq*\(aq kmod.remove kvm
 .SS salt.modules.freebsdpkg
 .sp
 Package support for FreeBSD
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.available_version(name)
@@ -6881,6 +6995,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.install(name, *args, **kwargs)
@@ -6903,6 +7018,7 @@ salt \(aq*\(aq pkg.install <package name>
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.list_pkgs()
@@ -6922,6 +7038,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.purge(name)
@@ -6937,6 +7054,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.refresh_db()
@@ -6951,6 +7069,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS rehash
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.rehash()
@@ -6966,6 +7085,7 @@ salt \(aq*\(aq pkg.rehash
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.remove(name)
@@ -6981,6 +7101,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .ft P
 .fi
 .UNINDENT
+.SS search
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.search(pkg_name)
@@ -6994,6 +7115,7 @@ salt \(aq*\(aq pkg.pkgng_search \(aqmysql\-server\(aq
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.upgrade()
@@ -7016,6 +7138,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.version(name)
@@ -7032,6 +7155,7 @@ salt \(aq*\(aq pkg.version <package name>
 .SS salt.modules.freebsdservice
 .sp
 The service module for FreeBSD
+Members.SS get_all
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.get_all()
@@ -7045,6 +7169,7 @@ salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
+.SS get_disabled
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.get_disabled()
@@ -7058,6 +7183,7 @@ salt \(aq*\(aq service.get_disabled
 .ft P
 .fi
 .UNINDENT
+.SS get_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.get_enabled()
@@ -7071,6 +7197,7 @@ salt \(aq*\(aq service.get_enabled
 .ft P
 .fi
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.restart(name)
@@ -7084,6 +7211,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.start(name)
@@ -7097,6 +7225,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.status(name, sig=None)
@@ -7112,6 +7241,7 @@ salt \(aq*\(aq service.status <service name> [service signature]
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdservice.stop(name)
@@ -7128,6 +7258,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.gem
 .sp
 Manage ruby gems.
+Members.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.gem.install(gems, ruby=None, runas=None)
@@ -7146,6 +7277,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS list
 .INDENT 0.0
 .TP
 .B salt.modules.gem.list(prefix=\(aq\(aq, ruby=None, runas=None)
@@ -7164,6 +7296,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS sources_add
 .INDENT 0.0
 .TP
 .B salt.modules.gem.sources_add(source_uri, ruby=None, runas=None)
@@ -7182,6 +7315,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS sources_list
 .INDENT 0.0
 .TP
 .B salt.modules.gem.sources_list(ruby=None, runas=None)
@@ -7197,6 +7331,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS sources_remove
 .INDENT 0.0
 .TP
 .B salt.modules.gem.sources_remove(source_uri, ruby=None, runas=None)
@@ -7215,6 +7350,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS uninstall
 .INDENT 0.0
 .TP
 .B salt.modules.gem.uninstall(gems, ruby=None, runas=None)
@@ -7233,6 +7369,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS update
 .INDENT 0.0
 .TP
 .B salt.modules.gem.update(gems, ruby=None, runas=None)
@@ -7251,6 +7388,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS update_system
 .INDENT 0.0
 .TP
 .B salt.modules.gem.update_system(version=\(aq\(aq, ruby=None, runas=None)
@@ -7274,6 +7412,7 @@ The user to run gem as.
 .sp
 Top level package command wrapper, used to translate the os detected by the
 grains to the correct service manager
+Members.SS disable
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.disable(name)
@@ -7287,6 +7426,7 @@ salt \(aq*\(aq service.disable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS disabled
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.disabled(name)
@@ -7300,6 +7440,7 @@ salt \(aq*\(aq service.disabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enable
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.enable(name)
@@ -7313,6 +7454,7 @@ salt \(aq*\(aq service.enable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enabled
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.enabled(name)
@@ -7326,6 +7468,7 @@ salt \(aq*\(aq service.enabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS get_all
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.get_all()
@@ -7339,6 +7482,7 @@ salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
+.SS get_disabled
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.get_disabled()
@@ -7352,6 +7496,7 @@ salt \(aq*\(aq service.get_disabled
 .ft P
 .fi
 .UNINDENT
+.SS get_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.get_enabled()
@@ -7365,6 +7510,7 @@ salt \(aq*\(aq service.get_enabled
 .ft P
 .fi
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.restart(name)
@@ -7378,6 +7524,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.start(name)
@@ -7391,6 +7538,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.status(name, sig=None)
@@ -7406,6 +7554,7 @@ salt \(aq*\(aq service.status <service name> [service signature]
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.gentoo_service.stop(name)
@@ -7422,6 +7571,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.git
 .sp
 Support for the Git SCM
+Members.SS archive
 .INDENT 0.0
 .TP
 .B salt.modules.git.archive(cwd, output, rev=\(aqHEAD\(aq, fmt=None, prefix=None, user=None)
@@ -7460,6 +7610,7 @@ salt \(aq*\(aq git.archive /path/to/repo /path/to/archive.tar.gz
 .ft P
 .fi
 .UNINDENT
+.SS checkout
 .INDENT 0.0
 .TP
 .B salt.modules.git.checkout(cwd, rev, force=False, opts=None, user=None)
@@ -7497,6 +7648,7 @@ salt \(aq*\(aq git.checkout /path/to/repo rev=origin/mybranch opts=\-\-track
 .ft P
 .fi
 .UNINDENT
+.SS clone
 .INDENT 0.0
 .TP
 .B salt.modules.git.clone(cwd, repository, opts=None, user=None)
@@ -7529,6 +7681,7 @@ salt \(aq*\(aq git.clone /path/to/repo.git\e
 .ft P
 .fi
 .UNINDENT
+.SS describe
 .INDENT 0.0
 .TP
 .B salt.modules.git.describe(cwd, rev=\(aqHEAD\(aq, user=None)
@@ -7557,6 +7710,7 @@ salt \(aq*\(aq git.describe /path/to/repo develop
 .ft P
 .fi
 .UNINDENT
+.SS fetch
 .INDENT 0.0
 .TP
 .B salt.modules.git.fetch(cwd, opts=None, user=None)
@@ -7585,6 +7739,7 @@ salt \(aq*\(aq git.fetch cwd=/path/to/repo opts=\(aq\-\-all\(aq user=johnny
 .ft P
 .fi
 .UNINDENT
+.SS init
 .INDENT 0.0
 .TP
 .B salt.modules.git.init(cwd, opts=None, user=None)
@@ -7611,6 +7766,7 @@ salt \(aq*\(aq git.init /path/to/repo.git opts=\(aq\-\-bare\(aq
 .ft P
 .fi
 .UNINDENT
+.SS merge
 .INDENT 0.0
 .TP
 .B salt.modules.git.merge(cwd, branch=\(aq@{upstream}\(aq, opts=None, user=None)
@@ -7642,6 +7798,7 @@ salt \(aq*\(aq git.merge /path/to/repo @{upstream}
 .ft P
 .fi
 .UNINDENT
+.SS pull
 .INDENT 0.0
 .TP
 .B salt.modules.git.pull(cwd, opts=None, user=None)
@@ -7668,6 +7825,7 @@ salt \(aq*\(aq git.pull /path/to/repo opts=\(aq\-\-rebase origin master\(aq
 .ft P
 .fi
 .UNINDENT
+.SS rebase
 .INDENT 0.0
 .TP
 .B salt.modules.git.rebase(cwd, rev=\(aqmaster\(aq, opts=None, user=None)
@@ -7700,6 +7858,7 @@ salt \(aq*\(aq git.rebase /path/to/repo master
 .sp
 That is the same as: git rebase master
 .UNINDENT
+.SS revision
 .INDENT 0.0
 .TP
 .B salt.modules.git.revision(cwd, rev=\(aqHEAD\(aq, short=False, user=None)
@@ -7731,6 +7890,7 @@ salt \(aq*\(aq git.revision /path/to/repo mybranch
 .SS salt.modules.grains
 .sp
 Control aspects of the grains data
+Members.SS item
 .INDENT 0.0
 .TP
 .B salt.modules.grains.item(key=None)
@@ -7744,6 +7904,7 @@ salt \(aq*\(aq grains.item os
 .ft P
 .fi
 .UNINDENT
+.SS items
 .INDENT 0.0
 .TP
 .B salt.modules.grains.items()
@@ -7757,6 +7918,7 @@ salt \(aq*\(aq grains.items
 .ft P
 .fi
 .UNINDENT
+.SS ls
 .INDENT 0.0
 .TP
 .B salt.modules.grains.ls()
@@ -7773,6 +7935,7 @@ salt \(aq*\(aq grains.ls
 .SS salt.modules.groupadd
 .sp
 Manage groups on Linux
+Members.SS add
 .INDENT 0.0
 .TP
 .B salt.modules.groupadd.add(name, gid=None, system=False)
@@ -7786,6 +7949,7 @@ salt \(aq*\(aq group.add foo 3456
 .ft P
 .fi
 .UNINDENT
+.SS chgid
 .INDENT 0.0
 .TP
 .B salt.modules.groupadd.chgid(name, gid)
@@ -7799,6 +7963,7 @@ salt \(aq*\(aq group.chgid foo 4376
 .ft P
 .fi
 .UNINDENT
+.SS delete
 .INDENT 0.0
 .TP
 .B salt.modules.groupadd.delete(name)
@@ -7812,6 +7977,7 @@ salt \(aq*\(aq group.delete foo
 .ft P
 .fi
 .UNINDENT
+.SS getent
 .INDENT 0.0
 .TP
 .B salt.modules.groupadd.getent()
@@ -7825,6 +7991,7 @@ salt \(aq*\(aq group.getent
 .ft P
 .fi
 .UNINDENT
+.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.groupadd.info(name)
@@ -7841,6 +8008,7 @@ salt \(aq*\(aq group.info foo
 .SS salt.modules.grub
 .sp
 Support for GRUB
+Members.SS conf
 .INDENT 0.0
 .TP
 .B salt.modules.grub.conf()
@@ -7854,6 +8022,7 @@ salt \(aq*\(aq grub.conf
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.grub.version()
@@ -7870,6 +8039,7 @@ salt \(aq*\(aq grub.version
 .SS salt.modules.hg
 .sp
 Support for the Mercurial SCM
+Members.SS archive
 .INDENT 0.0
 .TP
 .B salt.modules.hg.archive(cwd, output, rev=\(aqtip\(aq, fmt=None, prefix=None, user=None)
@@ -7909,6 +8079,7 @@ salt \(aq*\(aq hg.archive /path/to/repo output=/tmp/archive.tgz fmt=tgz
 .ft P
 .fi
 .UNINDENT
+.SS clone
 .INDENT 0.0
 .TP
 .B salt.modules.hg.clone(cwd, repository, opts=None, user=None)
@@ -7938,6 +8109,7 @@ salt \(aq*\(aq hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
 .ft P
 .fi
 .UNINDENT
+.SS describe
 .INDENT 0.0
 .TP
 .B salt.modules.hg.describe(cwd, rev=\(aqtip\(aq, user=None)
@@ -7963,6 +8135,7 @@ salt \(aq*\(aq hg.describe /path/to/repo
 .ft P
 .fi
 .UNINDENT
+.SS pull
 .INDENT 0.0
 .TP
 .B salt.modules.hg.pull(cwd, opts=None, user=None)
@@ -7989,6 +8162,7 @@ salt \(aq*\(aq hg.pull /path/to/repo \(aq\-u\(aq
 .ft P
 .fi
 .UNINDENT
+.SS revision
 .INDENT 0.0
 .TP
 .B salt.modules.hg.revision(cwd, rev=\(aqtip\(aq, short=False, user=None)
@@ -8017,6 +8191,7 @@ salt \(aq*\(aq hg.revision /path/to/repo mybranch
 .ft P
 .fi
 .UNINDENT
+.SS update
 .INDENT 0.0
 .TP
 .B salt.modules.hg.update(cwd, rev, force=False, user=None)
@@ -8049,6 +8224,7 @@ salt devserver1 hg.update /path/to/repo somebranch
 .SS salt.modules.hosts
 .sp
 Manage the information in the hosts file
+Members.SS add_host
 .INDENT 0.0
 .TP
 .B salt.modules.hosts.add_host(ip, alias)
@@ -8063,6 +8239,7 @@ salt \(aq*\(aq hosts.add_host <ip> <alias>
 .ft P
 .fi
 .UNINDENT
+.SS get_alias
 .INDENT 0.0
 .TP
 .B salt.modules.hosts.get_alias(ip)
@@ -8076,6 +8253,7 @@ salt \(aq*\(aq hosts.get_alias <ip addr>
 .ft P
 .fi
 .UNINDENT
+.SS get_ip
 .INDENT 0.0
 .TP
 .B salt.modules.hosts.get_ip(host)
@@ -8089,6 +8267,7 @@ salt \(aq*\(aq hosts.get_ip <hostname>
 .ft P
 .fi
 .UNINDENT
+.SS has_pair
 .INDENT 0.0
 .TP
 .B salt.modules.hosts.has_pair(ip, alias)
@@ -8102,6 +8281,7 @@ salt \(aq*\(aq hosts.has_pair <ip> <alias>
 .ft P
 .fi
 .UNINDENT
+.SS list_hosts
 .INDENT 0.0
 .TP
 .B salt.modules.hosts.list_hosts()
@@ -8121,6 +8301,7 @@ salt \(aq*\(aq hosts.list_hosts
 .ft P
 .fi
 .UNINDENT
+.SS rm_host
 .INDENT 0.0
 .TP
 .B salt.modules.hosts.rm_host(ip, alias)
@@ -8134,6 +8315,7 @@ salt \(aq*\(aq hosts.rm_host <ip> <alias>
 .ft P
 .fi
 .UNINDENT
+.SS set_host
 .INDENT 0.0
 .TP
 .B salt.modules.hosts.set_host(ip, alias)
@@ -8151,6 +8333,7 @@ salt \(aq*\(aq hosts.set_host <ip> <alias>
 .SS salt.modules.kmod
 .sp
 Module to manage Linux kernel modules
+Members.SS available
 .INDENT 0.0
 .TP
 .B salt.modules.kmod.available()
@@ -8164,6 +8347,7 @@ salt \(aq*\(aq kmod.available
 .ft P
 .fi
 .UNINDENT
+.SS check_available
 .INDENT 0.0
 .TP
 .B salt.modules.kmod.check_available(mod)
@@ -8177,6 +8361,7 @@ salt \(aq*\(aq kmod.check_available kvm
 .ft P
 .fi
 .UNINDENT
+.SS load
 .INDENT 0.0
 .TP
 .B salt.modules.kmod.load(mod)
@@ -8190,6 +8375,7 @@ salt \(aq*\(aq kmod.load kvm
 .ft P
 .fi
 .UNINDENT
+.SS lsmod
 .INDENT 0.0
 .TP
 .B salt.modules.kmod.lsmod()
@@ -8203,6 +8389,7 @@ salt \(aq*\(aq kmod.lsmod
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.kmod.remove(mod)
@@ -8222,6 +8409,7 @@ Provide the hyper module for kvm hypervisors. This is the interface used to
 interact with kvm on behalf of the salt\-virt interface
 .sp
 Required python modules: libvirt
+Members.SS freecpu
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.freecpu()
@@ -8236,6 +8424,7 @@ salt \(aq*\(aq hyper.freecpu
 .ft P
 .fi
 .UNINDENT
+.SS freemem
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.freemem()
@@ -8250,6 +8439,7 @@ salt \(aq*\(aq hyper.freemem
 .ft P
 .fi
 .UNINDENT
+.SS get_conf
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.get_conf(name)
@@ -8263,6 +8453,7 @@ salt \(aq*\(aq hyper.get_conf <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS get_disks
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.get_disks(name)
@@ -8276,6 +8467,7 @@ salt \(aq*\(aq hyper.get_disks <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS halt
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.halt(name)
@@ -8289,6 +8481,7 @@ salt \(aq*\(aq hyper.halt webserver
 .ft P
 .fi
 .UNINDENT
+.SS hyper_info
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.hyper_info()
@@ -8302,6 +8495,7 @@ salt \(aq*\(aq hyper.hyper_info
 .ft P
 .fi
 .UNINDENT
+.SS hyper_type
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.hyper_type()
@@ -8315,6 +8509,7 @@ salt \(aq*\(aq hyper.hyper_type
 .ft P
 .fi
 .UNINDENT
+.SS init
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.init(name, cpus, mem, image, storage_dir, network={\(aqeth0\(aq: {\(aqbridge\(aq: \(aqbr0\(aq, \(aqmac\(aq: \(aq\(aq}}, desc=\(aq\(aq, opts={})
@@ -8328,6 +8523,7 @@ salt \(aq*\(aq hyper.init webserver 2 2048 salt://fedora/f16.img:virt /srv/vm/im
 .UNINDENT
 .UNINDENT
 .UNINDENT
+.SS list_virts
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.list_virts()
@@ -8341,6 +8537,7 @@ salt \(aq*\(aq hyper.list_virts
 .ft P
 .fi
 .UNINDENT
+.SS pause
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.pause(name)
@@ -8354,6 +8551,7 @@ salt \(aq*\(aq hyper.pause webserver
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.purge(name)
@@ -8368,6 +8566,7 @@ salt \(aq*\(aq hyper.purge webserver
 .ft P
 .fi
 .UNINDENT
+.SS resume
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.resume(name)
@@ -8381,6 +8580,7 @@ salt \(aq*\(aq hyper.resume webserver
 .ft P
 .fi
 .UNINDENT
+.SS set_autostart
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.set_autostart(name)
@@ -8394,6 +8594,7 @@ salt \(aq*\(aq hyper.set_autostart webserver
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.start(config)
@@ -8407,6 +8608,7 @@ salt \(aq*\(aq hyper.start webserver
 .ft P
 .fi
 .UNINDENT
+.SS virt_info
 .INDENT 0.0
 .TP
 .B salt.modules.kvm_hyper.virt_info()
@@ -8433,6 +8635,7 @@ salt \(aq*\(aq hyper.virt_info
 .SS salt.modules.launchctl
 .sp
 Module for the management of MacOS systems that use launchd/launchctl
+Members.SS get_all
 .INDENT 0.0
 .TP
 .B salt.modules.launchctl.get_all()
@@ -8446,10 +8649,12 @@ salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
+.SS get_launchctl_data
 .INDENT 0.0
 .TP
 .B salt.modules.launchctl.get_launchctl_data(job_label, runas=None)
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.launchctl.restart(job_label, runas=None)
@@ -8463,6 +8668,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.launchctl.start(job_label, runas=None)
@@ -8476,6 +8682,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.launchctl.status(job_label, runas=None)
@@ -8490,6 +8697,7 @@ salt \(aq*\(aq service.status <service name>
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.launchctl.stop(job_label, runas=None)
@@ -8506,6 +8714,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.linux_sysctl
 .sp
 Module for viewing and modifying sysctl parameters
+Members.SS assign
 .INDENT 0.0
 .TP
 .B salt.modules.linux_sysctl.assign(name, value)
@@ -8519,6 +8728,7 @@ salt \(aq*\(aq sysctl.assign net.ipv4.ip_forward 1
 .ft P
 .fi
 .UNINDENT
+.SS get
 .INDENT 0.0
 .TP
 .B salt.modules.linux_sysctl.get(name)
@@ -8532,6 +8742,7 @@ salt \(aq*\(aq sysctl.get net.ipv4.ip_forward
 .ft P
 .fi
 .UNINDENT
+.SS persist
 .INDENT 0.0
 .TP
 .B salt.modules.linux_sysctl.persist(name, value, config=\(aq/etc/sysctl.conf\(aq)
@@ -8545,6 +8756,7 @@ salt \(aq*\(aq sysctl.persist net.ipv4.ip_forward 1
 .ft P
 .fi
 .UNINDENT
+.SS show
 .INDENT 0.0
 .TP
 .B salt.modules.linux_sysctl.show()
@@ -8561,6 +8773,7 @@ salt \(aq*\(aq sysctl.show
 .SS salt.modules.mdadm
 .sp
 Salt module to manage RAID arrays with mdadm
+Members.SS detail
 .INDENT 0.0
 .TP
 .B salt.modules.mdadm.detail(device=\(aq/dev/md0\(aq)
@@ -8574,6 +8787,7 @@ salt \(aq*\(aq raid.detail \(aq/dev/md0\(aq
 .ft P
 .fi
 .UNINDENT
+.SS list
 .INDENT 0.0
 .TP
 .B salt.modules.mdadm.list()
@@ -8590,6 +8804,7 @@ salt \(aq*\(aq raid.list
 .SS salt.modules.moosefs
 .sp
 Module for gathering and managing information about MooseFS
+Members.SS dirinfo
 .INDENT 0.0
 .TP
 .B salt.modules.moosefs.dirinfo(path, opts=None)
@@ -8603,6 +8818,7 @@ salt \(aq*\(aq moosefs.dirinfo /path/to/dir/ [\-[n][h|H]]
 .ft P
 .fi
 .UNINDENT
+.SS fileinfo
 .INDENT 0.0
 .TP
 .B salt.modules.moosefs.fileinfo(path)
@@ -8616,6 +8832,7 @@ salt \(aq*\(aq moosefs.fileinfo /path/to/dir/
 .ft P
 .fi
 .UNINDENT
+.SS getgoal
 .INDENT 0.0
 .TP
 .B salt.modules.moosefs.getgoal(path, opts=None)
@@ -8630,6 +8847,7 @@ salt \(aq*\(aq moosefs.getgoal /path/to/dir/ [\-[n][h|H][r]]
 .ft P
 .fi
 .UNINDENT
+.SS mounts
 .INDENT 0.0
 .TP
 .B salt.modules.moosefs.mounts()
@@ -8646,6 +8864,7 @@ salt \(aq*\(aq moosefs.mounts
 .SS salt.modules.mount
 .sp
 Salt module to manage unix mounts and the fstab file
+Members.SS active
 .INDENT 0.0
 .TP
 .B salt.modules.mount.active()
@@ -8659,6 +8878,7 @@ salt \(aq*\(aq mount.active
 .ft P
 .fi
 .UNINDENT
+.SS fstab
 .INDENT 0.0
 .TP
 .B salt.modules.mount.fstab(config=\(aq/etc/fstab\(aq)
@@ -8672,6 +8892,7 @@ salt \(aq*\(aq mount.fstab
 .ft P
 .fi
 .UNINDENT
+.SS is_fuse_exec
 .INDENT 0.0
 .TP
 .B salt.modules.mount.is_fuse_exec(cmd)
@@ -8685,6 +8906,7 @@ salt \(aq*\(aq mount.is_fuse_exec sshfs
 .ft P
 .fi
 .UNINDENT
+.SS mount
 .INDENT 0.0
 .TP
 .B salt.modules.mount.mount(name, device, mkmnt=False, fstype=\(aq\(aq, opts=\(aqdefaults\(aq)
@@ -8698,6 +8920,7 @@ salt \(aq*\(aq mount.mount /mnt/foo /dev/sdz1 True
 .ft P
 .fi
 .UNINDENT
+.SS remount
 .INDENT 0.0
 .TP
 .B salt.modules.mount.remount(name, device, mkmnt=False, fstype=\(aq\(aq, opts=\(aqdefaults\(aq)
@@ -8712,6 +8935,7 @@ salt \(aq*\(aq mount.remount /mnt/foo /dev/sdz1 True
 .ft P
 .fi
 .UNINDENT
+.SS rm_fstab
 .INDENT 0.0
 .TP
 .B salt.modules.mount.rm_fstab(name, config=\(aq/etc/fstab\(aq)
@@ -8725,6 +8949,7 @@ salt \(aq*\(aq mount.rm_fstab /mnt/foo
 .ft P
 .fi
 .UNINDENT
+.SS set_fstab
 .INDENT 0.0
 .TP
 .B salt.modules.mount.set_fstab(name, device, fstype, opts=\(aqdefaults\(aq, dump=0, pass_num=0, config=\(aq/etc/fstab\(aq)
@@ -8766,11 +8991,13 @@ mysql.default_file: \(aq/etc/mysql/debian.cnf\(aq
 .fi
 .sp
 Required python modules: MySQLdb
+Members.SS connect
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.connect(**kwargs)
 wrap authentication credentials here
 .UNINDENT
+.SS db_check
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_check(name, table=None)
@@ -8784,6 +9011,7 @@ salt \(aq*\(aq mysql.db_check dbname
 .ft P
 .fi
 .UNINDENT
+.SS db_create
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_create(name)
@@ -8797,6 +9025,7 @@ salt \(aq*\(aq mysql.db_create \(aqdbname\(aq
 .ft P
 .fi
 .UNINDENT
+.SS db_exists
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_exists(name)
@@ -8810,6 +9039,7 @@ salt \(aq*\(aq mysql.db_exists \(aqdbname\(aq
 .ft P
 .fi
 .UNINDENT
+.SS db_list
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_list()
@@ -8824,6 +9054,7 @@ salt \(aq*\(aq mysql.db_list
 .ft P
 .fi
 .UNINDENT
+.SS db_optimize
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_optimize(name, table=None)
@@ -8837,6 +9068,7 @@ salt \(aq*\(aq mysql.db_optimize dbname
 .ft P
 .fi
 .UNINDENT
+.SS db_remove
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_remove(name)
@@ -8850,6 +9082,7 @@ salt \(aq*\(aq mysql.db_remove \(aqdbname\(aq
 .ft P
 .fi
 .UNINDENT
+.SS db_repair
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_repair(name, table=None)
@@ -8863,6 +9096,7 @@ salt \(aq*\(aq mysql.db_repair dbname
 .ft P
 .fi
 .UNINDENT
+.SS db_tables
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.db_tables(name)
@@ -8876,11 +9110,13 @@ salt \(aq*\(aq mysql.db_tables \(aqdatabase\(aq
 .ft P
 .fi
 .UNINDENT
+.SS free_slave
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.free_slave()
 Frees a slave from its master.  This is a WIP, do not use.
 .UNINDENT
+.SS grant_add
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.grant_add(grant, database, user, host=\(aqlocalhost\(aq, grant_option=False, escape=True)
@@ -8894,10 +9130,12 @@ salt \(aq*\(aq mysql.grant_add \(aqSELECT|INSERT|UPDATE|...\(aq \(aqdatabase.*\(
 .ft P
 .fi
 .UNINDENT
+.SS grant_exists
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.grant_exists(grant, database, user, host=\(aqlocalhost\(aq, grant_option=False, escape=True)
 .UNINDENT
+.SS grant_revoke
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.grant_revoke(grant, database, user, host=\(aqlocalhost\(aq, grant_option=False)
@@ -8911,6 +9149,7 @@ salt \(aq*\(aq mysql.grant_revoke \(aqSELECT,INSERT,UPDATE\(aq \(aqdatabase.*\(a
 .ft P
 .fi
 .UNINDENT
+.SS slave_lag
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.slave_lag()
@@ -8927,6 +9166,7 @@ salt \(aq*\(aq mysql.slave_lag
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.status()
@@ -8941,6 +9181,7 @@ salt \(aq*\(aq mysql.status
 .ft P
 .fi
 .UNINDENT
+.SS user_chpass
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.user_chpass(user, host=\(aqlocalhost\(aq, password=None, password_hash=None)
@@ -8956,6 +9197,7 @@ salt \(aq*\(aq mysql.user_chpass frank localhost password_hash=\(aqhash\(aq
 .ft P
 .fi
 .UNINDENT
+.SS user_create
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.user_create(user, host=\(aqlocalhost\(aq, password=None, password_hash=None)
@@ -8971,6 +9213,7 @@ salt \(aq*\(aq mysql.user_create \(aqusername\(aq \(aqhostname\(aq password_hash
 .ft P
 .fi
 .UNINDENT
+.SS user_exists
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.user_exists(user, host=\(aqlocalhost\(aq)
@@ -8984,6 +9227,7 @@ salt \(aq*\(aq mysql.user_exists \(aqusername\(aq \(aqhostname\(aq
 .ft P
 .fi
 .UNINDENT
+.SS user_grants
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.user_grants(user, host=\(aqlocalhost\(aq)
@@ -8997,6 +9241,7 @@ salt \(aq*\(aq mysql.user_grants \(aqfrank\(aq \(aqlocalhost\(aq
 .ft P
 .fi
 .UNINDENT
+.SS user_info
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.user_info(user, host=\(aqlocalhost\(aq)
@@ -9010,6 +9255,7 @@ salt \(aq*\(aq mysql.user_info root localhost
 .ft P
 .fi
 .UNINDENT
+.SS user_list
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.user_list()
@@ -9023,6 +9269,7 @@ salt \(aq*\(aq mysql.user_list
 .ft P
 .fi
 .UNINDENT
+.SS user_remove
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.user_remove(user, host=\(aqlocalhost\(aq)
@@ -9036,6 +9283,7 @@ salt \(aq*\(aq mysql.user_remove frank localhost
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.mysql.version()
@@ -9053,6 +9301,7 @@ salt \(aq*\(aq mysql.version
 .SS salt.modules.network
 .sp
 Module for gathering and managing network information
+Members.SS dig
 .INDENT 0.0
 .TP
 .B salt.modules.network.dig(host)
@@ -9066,6 +9315,7 @@ salt \(aq*\(aq network.dig archlinux.org
 .ft P
 .fi
 .UNINDENT
+.SS host_to_ip
 .INDENT 0.0
 .TP
 .B salt.modules.network.host_to_ip(host)
@@ -9079,6 +9329,7 @@ salt \(aq*\(aq network.host_to_ip example.com
 .ft P
 .fi
 .UNINDENT
+.SS hwaddr
 .INDENT 0.0
 .TP
 .B salt.modules.network.hwaddr(interface)
@@ -9092,6 +9343,7 @@ salt \(aq*\(aq network.hwaddr eth0
 .ft P
 .fi
 .UNINDENT
+.SS interfaces
 .INDENT 0.0
 .TP
 .B salt.modules.network.interfaces()
@@ -9106,6 +9358,7 @@ salt \(aq*\(aq network.interfaces
 .ft P
 .fi
 .UNINDENT
+.SS ip_to_host
 .INDENT 0.0
 .TP
 .B salt.modules.network.ip_to_host(ip)
@@ -9119,6 +9372,7 @@ salt \(aq*\(aq network.ip_to_host 8.8.8.8
 .ft P
 .fi
 .UNINDENT
+.SS ipaddr
 .INDENT 0.0
 .TP
 .B salt.modules.network.ipaddr(interface=None)
@@ -9132,6 +9386,7 @@ salt \(aq*\(aq network.ipaddr eth0
 .ft P
 .fi
 .UNINDENT
+.SS isportopen
 .INDENT 0.0
 .TP
 .B salt.modules.network.isportopen(host, port)
@@ -9145,6 +9400,7 @@ salt \(aq*\(aq network.isportopen 127.0.0.1 22
 .ft P
 .fi
 .UNINDENT
+.SS netmask
 .INDENT 0.0
 .TP
 .B salt.modules.network.netmask(interface)
@@ -9158,6 +9414,7 @@ salt \(aq*\(aq network.netmask eth0
 .ft P
 .fi
 .UNINDENT
+.SS netstat
 .INDENT 0.0
 .TP
 .B salt.modules.network.netstat()
@@ -9171,6 +9428,7 @@ salt \(aq*\(aq network.netstat
 .ft P
 .fi
 .UNINDENT
+.SS ping
 .INDENT 0.0
 .TP
 .B salt.modules.network.ping(host)
@@ -9184,6 +9442,7 @@ salt \(aq*\(aq network.ping archlinux.org
 .ft P
 .fi
 .UNINDENT
+.SS traceroute
 .INDENT 0.0
 .TP
 .B salt.modules.network.traceroute(host)
@@ -9197,6 +9456,7 @@ salt \(aq*\(aq network.traceroute archlinux.org
 .ft P
 .fi
 .UNINDENT
+.SS up
 .INDENT 0.0
 .TP
 .B salt.modules.network.up(interface)
@@ -9213,6 +9473,7 @@ salt \(aq*\(aq network.up eth0
 .SS salt.modules.nginx
 .sp
 Support for nginx
+Members.SS signal
 .INDENT 0.0
 .TP
 .B salt.modules.nginx.signal(signal=None)
@@ -9226,6 +9487,7 @@ salt \(aq*\(aq nginx.signal reload
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.nginx.version()
@@ -9242,6 +9504,7 @@ salt \(aq*\(aq nginx.version
 .SS salt.modules.osxdesktop
 .sp
 Mac OS X implementations of various commands in the "desktop" interface
+Members.SS get_output_volume
 .INDENT 0.0
 .TP
 .B salt.modules.osxdesktop.get_output_volume()
@@ -9255,6 +9518,7 @@ salt \(aq*\(aq desktop.get_output_volume
 .ft P
 .fi
 .UNINDENT
+.SS lock
 .INDENT 0.0
 .TP
 .B salt.modules.osxdesktop.lock()
@@ -9268,6 +9532,7 @@ salt \(aq*\(aq desktop.lock
 .ft P
 .fi
 .UNINDENT
+.SS screensaver
 .INDENT 0.0
 .TP
 .B salt.modules.osxdesktop.screensaver()
@@ -9281,6 +9546,7 @@ salt \(aq*\(aq desktop.screensaver
 .ft P
 .fi
 .UNINDENT
+.SS set_output_volume
 .INDENT 0.0
 .TP
 .B salt.modules.osxdesktop.set_output_volume(volume)
@@ -9298,6 +9564,7 @@ salt \(aq*\(aq desktop.set_output_volume <volume>
 .sp
 A module to wrap pacman calls, since Arch is the best
 (\fI\%https://wiki.archlinux.org/index.php/Arch_is_the_best\fP)
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.available_version(name)
@@ -9311,6 +9578,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.install(name, refresh=False, **kwargs)
@@ -9333,6 +9601,7 @@ salt \(aq*\(aq pkg.install <package name>
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.list_pkgs()
@@ -9352,6 +9621,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS list_upgrades
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.list_upgrades()
@@ -9365,6 +9635,7 @@ salt \(aq*\(aq pkg.list_upgrades
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.purge(name)
@@ -9381,6 +9652,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.refresh_db()
@@ -9400,6 +9672,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.remove(name)
@@ -9415,6 +9688,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.upgrade()
@@ -9437,6 +9711,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS upgrade_available
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.upgrade_available(name)
@@ -9450,6 +9725,7 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.pacman.version(name)
@@ -9466,6 +9742,7 @@ salt \(aq*\(aq pkg.version <package name>
 .SS salt.modules.pillar
 .sp
 Extract the pillar data for this minion
+Members.SS data
 .INDENT 0.0
 .TP
 .B salt.modules.pillar.data()
@@ -9483,6 +9760,7 @@ salt \(aq*\(aq pillar.data
 .SS salt.modules.pip
 .sp
 Install Python packages with pip to either the system or a virtualenv
+Members.SS freeze
 .INDENT 0.0
 .TP
 .B salt.modules.pip.freeze(bin_env=None, runas=None, cwd=None)
@@ -9512,6 +9790,7 @@ salt \(aq*\(aq pip.freeze /home/code/path/to/virtualenv/
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.pip.install(pkgs=None, requirements=None, env=None, bin_env=None, log=None, proxy=None, timeout=None, editable=None, find_links=None, index_url=None, extra_index_url=None, no_index=False, mirrors=None, build=None, target=None, download=None, download_cache=None, source=None, upgrade=False, force_reinstall=False, ignore_installed=False, no_deps=False, no_install=False, no_download=False, install_options=None, runas=None, cwd=None)
@@ -9641,6 +9920,7 @@ salt \(aq*\(aq pip.install markdown,django editable=git+https://github.com/world
 .ft P
 .fi
 .UNINDENT
+.SS list
 .INDENT 0.0
 .TP
 .B salt.modules.pip.list(prefix=\(aq\(aq, bin_env=None, runas=None, cwd=None)
@@ -9655,6 +9935,7 @@ salt \(aq*\(aq pip.list salt
 .ft P
 .fi
 .UNINDENT
+.SS uninstall
 .INDENT 0.0
 .TP
 .B salt.modules.pip.uninstall(pkgs=None, requirements=None, bin_env=None, log=None, proxy=None, timeout=None, runas=None, cwd=None)
@@ -9729,6 +10010,18 @@ postgres.pass: \(aq\(aq
 postgres.db: \(aqpostgres\(aq
 .ft P
 .fi
+Members.SS check_or_die
+.INDENT 0.0
+.TP
+.B salt.modules.postgres.check_or_die(command)
+Simple convienence function for modules to  use
+for gracefully blowing up if a required tool is
+not available in the system path.
+.sp
+Lazily import salt.modules.cmdmod to avoid any
+sort of circular dependencies.
+.UNINDENT
+.SS db_create
 .INDENT 0.0
 .TP
 .B salt.modules.postgres.db_create(name, user=None, host=None, port=None, tablespace=None, encoding=None, local=None, lc_collate=None, lc_ctype=None, owner=None, template=None)
@@ -9744,6 +10037,7 @@ salt \(aq*\(aq postgres.db_create \(aqdbname\(aq template=template_postgis
 .ft P
 .fi
 .UNINDENT
+.SS db_exists
 .INDENT 0.0
 .TP
 .B salt.modules.postgres.db_exists(name, user=None, host=None, port=None)
@@ -9757,6 +10051,7 @@ salt \(aq*\(aq postgres.db_exists \(aqdbname\(aq
 .ft P
 .fi
 .UNINDENT
+.SS db_list
 .INDENT 0.0
 .TP
 .B salt.modules.postgres.db_list(user=None, host=None, port=None)
@@ -9771,6 +10066,7 @@ salt \(aq*\(aq postgres.db_list
 .ft P
 .fi
 .UNINDENT
+.SS db_remove
 .INDENT 0.0
 .TP
 .B salt.modules.postgres.db_remove(name, user=None, host=None, port=None)
@@ -9784,6 +10080,7 @@ salt \(aq*\(aq postgres.db_remove \(aqdbname\(aq
 .ft P
 .fi
 .UNINDENT
+.SS user_create
 .INDENT 0.0
 .TP
 .B salt.modules.postgres.user_create(username, user=None, host=None, port=None, createdb=False, createuser=False, encrypted=False, password=None)
@@ -9797,6 +10094,7 @@ salt \(aq*\(aq postgres.user_create \(aqusername\(aq user=\(aquser\(aq host=\(aq
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.postgres.version()
@@ -9817,6 +10115,7 @@ A salt interface to psutil, a system and process library.
 See \fI\%http://code.google.com/p/psutil\fP.
 .sp
 Required python modules: psutil
+Members.SS boot_time
 .INDENT 0.0
 .TP
 .B salt.modules.ps.boot_time()
@@ -9830,6 +10129,7 @@ salt \(aq*\(aq ps.boot_time
 .ft P
 .fi
 .UNINDENT
+.SS cached_physical_memory
 .INDENT 0.0
 .TP
 .B salt.modules.ps.cached_physical_memory()
@@ -9843,6 +10143,7 @@ salt \(aq*\(aq ps.cached_physical_memory
 .ft P
 .fi
 .UNINDENT
+.SS cpu_percent
 .INDENT 0.0
 .TP
 .B salt.modules.ps.cpu_percent(interval=0.1, per_cpu=False)
@@ -9865,6 +10166,7 @@ salt \(aq*\(aq ps.cpu_percent
 .ft P
 .fi
 .UNINDENT
+.SS cpu_times
 .INDENT 0.0
 .TP
 .B salt.modules.ps.cpu_times(per_cpu=False)
@@ -9885,6 +10187,7 @@ salt \(aq*\(aq ps.cpu_times
 .ft P
 .fi
 .UNINDENT
+.SS disk_io_counters
 .INDENT 0.0
 .TP
 .B salt.modules.ps.disk_io_counters()
@@ -9898,6 +10201,7 @@ salt \(aq*\(aq ps.disk_io_counters
 .ft P
 .fi
 .UNINDENT
+.SS disk_partition_usage
 .INDENT 0.0
 .TP
 .B salt.modules.ps.disk_partition_usage(all=False)
@@ -9912,6 +10216,7 @@ salt \(aq*\(aq ps.disk_partition_usage
 .ft P
 .fi
 .UNINDENT
+.SS disk_partitions
 .INDENT 0.0
 .TP
 .B salt.modules.ps.disk_partitions(all=False)
@@ -9932,6 +10237,7 @@ salt \(aq*\(aq ps.disk_partitions
 .ft P
 .fi
 .UNINDENT
+.SS disk_usage
 .INDENT 0.0
 .TP
 .B salt.modules.ps.disk_usage(path)
@@ -9946,6 +10252,7 @@ salt \(aq*\(aq ps.disk_usage /home
 .ft P
 .fi
 .UNINDENT
+.SS get_pid_list
 .INDENT 0.0
 .TP
 .B salt.modules.ps.get_pid_list()
@@ -9959,6 +10266,7 @@ salt \(aq*\(aq ps.get_pid_list
 .ft P
 .fi
 .UNINDENT
+.SS network_io_counters
 .INDENT 0.0
 .TP
 .B salt.modules.ps.network_io_counters()
@@ -9972,6 +10280,7 @@ salt \(aq*\(aq ps.network_io_counters
 .ft P
 .fi
 .UNINDENT
+.SS num_cpus
 .INDENT 0.0
 .TP
 .B salt.modules.ps.num_cpus()
@@ -9985,6 +10294,7 @@ salt \(aq*\(aq ps.num_cpus
 .ft P
 .fi
 .UNINDENT
+.SS physical_memory_buffers
 .INDENT 0.0
 .TP
 .B salt.modules.ps.physical_memory_buffers()
@@ -9998,6 +10308,7 @@ salt \(aq*\(aq ps.physical_memory_buffers
 .ft P
 .fi
 .UNINDENT
+.SS physical_memory_usage
 .INDENT 0.0
 .TP
 .B salt.modules.ps.physical_memory_usage()
@@ -10011,6 +10322,7 @@ salt \(aq*\(aq ps.physical_memory_usage
 .ft P
 .fi
 .UNINDENT
+.SS top
 .INDENT 0.0
 .TP
 .B salt.modules.ps.top(num_processes=5, interval=3)
@@ -10028,6 +10340,7 @@ salt \(aq*\(aq ps.top 5 10
 .ft P
 .fi
 .UNINDENT
+.SS total_physical_memory
 .INDENT 0.0
 .TP
 .B salt.modules.ps.total_physical_memory()
@@ -10041,6 +10354,7 @@ salt \(aq*\(aq ps.total_physical_memory
 .ft P
 .fi
 .UNINDENT
+.SS virtual_memory_usage
 .INDENT 0.0
 .TP
 .B salt.modules.ps.virtual_memory_usage()
@@ -10058,6 +10372,7 @@ salt \(aq*\(aq ps.virtual_memory_usage
 .SS salt.modules.publish
 .sp
 Publish a command from a minion to a target
+Members.SS full_data
 .INDENT 0.0
 .TP
 .B salt.modules.publish.full_data(tgt, fun, arg=None, expr_form=\(aqglob\(aq, returner=\(aq\(aq, timeout=5)
@@ -10072,6 +10387,7 @@ salt system.example.com publish.full_data \(aq*\(aq cmd.run \(aqls \-la /tmp\(aq
 .ft P
 .fi
 .UNINDENT
+.SS publish
 .INDENT 0.0
 .TP
 .B salt.modules.publish.publish(tgt, fun, arg=None, expr_form=\(aqglob\(aq, returner=\(aq\(aq, timeout=5)
@@ -10099,6 +10415,7 @@ salt system.example.com publish.publish \(aq*\(aq cmd.run \(aqls \-la /tmp\(aq
 .ft P
 .fi
 .UNINDENT
+.SS runner
 .INDENT 0.0
 .TP
 .B salt.modules.publish.runner(fun, arg=None)
@@ -10116,6 +10433,7 @@ salt publish.runner manage.down
 .SS salt.modules.puppet
 .sp
 Execute puppet routines
+Members.SS fact
 .INDENT 0.0
 .TP
 .B salt.modules.puppet.fact(name)
@@ -10129,6 +10447,7 @@ salt \(aq*\(aq puppet.fact kernel
 .ft P
 .fi
 .UNINDENT
+.SS facts
 .INDENT 0.0
 .TP
 .B salt.modules.puppet.facts()
@@ -10142,6 +10461,7 @@ salt \(aq*\(aq puppet.facts
 .ft P
 .fi
 .UNINDENT
+.SS noop
 .INDENT 0.0
 .TP
 .B salt.modules.puppet.noop(tags=None)
@@ -10159,6 +10479,7 @@ salt \(aq*\(aq puppet.noop web::server,django::base
 .ft P
 .fi
 .UNINDENT
+.SS run
 .INDENT 0.0
 .TP
 .B salt.modules.puppet.run(tags=None)
@@ -10180,6 +10501,7 @@ salt \(aq*\(aq puppet.run basefiles::edit,apache::server
 .SS salt.modules.pw_group
 .sp
 Manage groups on FreeBSD
+Members.SS add
 .INDENT 0.0
 .TP
 .B salt.modules.pw_group.add(name, gid=None, system=False)
@@ -10193,6 +10515,7 @@ salt \(aq*\(aq group.add foo 3456
 .ft P
 .fi
 .UNINDENT
+.SS chgid
 .INDENT 0.0
 .TP
 .B salt.modules.pw_group.chgid(name, gid)
@@ -10206,6 +10529,7 @@ salt \(aq*\(aq group.chgid foo 4376
 .ft P
 .fi
 .UNINDENT
+.SS delete
 .INDENT 0.0
 .TP
 .B salt.modules.pw_group.delete(name)
@@ -10219,6 +10543,7 @@ salt \(aq*\(aq group.delete foo
 .ft P
 .fi
 .UNINDENT
+.SS getent
 .INDENT 0.0
 .TP
 .B salt.modules.pw_group.getent()
@@ -10232,6 +10557,7 @@ salt \(aq*\(aq group.getent
 .ft P
 .fi
 .UNINDENT
+.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.pw_group.info(name)
@@ -10248,6 +10574,7 @@ salt \(aq*\(aq group.info foo
 .SS salt.modules.pw_user
 .sp
 Manage users with the useradd command
+Members.SS add
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.add(name, uid=None, gid=None, groups=None, home=True, shell=None, system=False, **kwargs)
@@ -10261,6 +10588,7 @@ salt \(aq*\(aq user.add name <uid> <gid> <groups> <home> <shell>
 .ft P
 .fi
 .UNINDENT
+.SS chgid
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.chgid(name, gid)
@@ -10274,6 +10602,7 @@ salt \(aq*\(aq user.chgid foo 4376
 .ft P
 .fi
 .UNINDENT
+.SS chgroups
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.chgroups(name, groups, append=False)
@@ -10288,6 +10617,7 @@ salt \(aq*\(aq user.chgroups foo wheel,root True
 .ft P
 .fi
 .UNINDENT
+.SS chhome
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.chhome(name, home, persist=False)
@@ -10302,6 +10632,7 @@ salt \(aq*\(aq user.chhome foo /home/users/foo True
 .ft P
 .fi
 .UNINDENT
+.SS chshell
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.chshell(name, shell)
@@ -10315,6 +10646,7 @@ salt \(aq*\(aq user.chshell foo /bin/zsh
 .ft P
 .fi
 .UNINDENT
+.SS chuid
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.chuid(name, uid)
@@ -10328,6 +10660,7 @@ salt \(aq*\(aq user.chuid foo 4376
 .ft P
 .fi
 .UNINDENT
+.SS delete
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.delete(name, remove=False, force=False)
@@ -10341,6 +10674,7 @@ salt \(aq*\(aq user.delete name True True
 .ft P
 .fi
 .UNINDENT
+.SS getent
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.getent()
@@ -10354,6 +10688,7 @@ salt \(aq*\(aq user.getent
 .ft P
 .fi
 .UNINDENT
+.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.info(name)
@@ -10367,6 +10702,7 @@ salt \(aq*\(aq user.info root
 .ft P
 .fi
 .UNINDENT
+.SS list_groups
 .INDENT 0.0
 .TP
 .B salt.modules.pw_user.list_groups(name)
@@ -10384,6 +10720,7 @@ salt \(aq*\(aq user.list_groups foo
 .sp
 Module to provide rabbitMQ compatibility to salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration data.
+Members.SS add_user
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.add_user(name, password)
@@ -10397,6 +10734,7 @@ salt \(aq*\(aq rabbitmq\-server.add_user \(aqmeow\(aq \(aqmix\(aq
 .ft P
 .fi
 .UNINDENT
+.SS add_vhost
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.add_vhost(vhost)
@@ -10410,6 +10748,7 @@ salt \(aq*\(aq rabbitmq\-server add_vhost \(aq<vhost_name>\(aq
 .ft P
 .fi
 .UNINDENT
+.SS delete_user
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.delete_user(name)
@@ -10423,6 +10762,7 @@ salt \(aq*\(aq rabbitmq\-server.delete_user \(aqmeow\(aq
 .ft P
 .fi
 .UNINDENT
+.SS delete_vhost
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.delete_vhost(vhost)
@@ -10436,6 +10776,7 @@ salt \(aq*\(aq rabbitmq\-server.delete_vhost \(aq<vhost_name>\(aq
 .ft P
 .fi
 .UNINDENT
+.SS list_user_permissions
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.list_user_permissions(name)
@@ -10449,6 +10790,7 @@ salt \(aq*\(aq rabbitmq\-server.list_user_permissions \(aquser\(aq.
 .ft P
 .fi
 .UNINDENT
+.SS list_users
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.list_users()
@@ -10462,6 +10804,7 @@ salt \(aq*\(aq rabbitmq\-server.list_users
 .ft P
 .fi
 .UNINDENT
+.SS list_vhosts
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.list_vhosts()
@@ -10475,6 +10818,7 @@ salt \(aq*\(aq rabbitmq\-server.list_vhosts
 .ft P
 .fi
 .UNINDENT
+.SS set_permissions
 .INDENT 0.0
 .TP
 .B salt.modules.rabbitmq_server.set_permissions(vhost, user, conf=\(aq.*\(aq, write=\(aq.*\(aq, read=\(aq.*\(aq)
@@ -10493,11 +10837,7 @@ salt \(aq*\(aq rabbitmq\-server.set_permissions \(aqmyvhost\(aq \(aqmyuser\(aq
 Manage the registry on Windows
 .sp
 Required python modules: _winreg
-.INDENT 0.0
-.TP
-.B class salt.modules.reg.Registry
-Delay \(aq_winreg\(aq usage until this module is used
-.UNINDENT
+Members.SS create_key
 .INDENT 0.0
 .TP
 .B salt.modules.reg.create_key(hkey, path, key, value=None)
@@ -10511,6 +10851,7 @@ salt \(aq*\(aq reg.create_key HKEY_CURRENT_USER \(aqSOFTWARE\eSalt\(aq \(aqversi
 .ft P
 .fi
 .UNINDENT
+.SS delete_key
 .INDENT 0.0
 .TP
 .B salt.modules.reg.delete_key(hkey, path, key)
@@ -10526,6 +10867,7 @@ salt \(aq*\(aq reg.delete_key HKEY_CURRENT_USER \(aqSOFTWARE\eSalt\(aq \(aqversi
 .ft P
 .fi
 .UNINDENT
+.SS read_key
 .INDENT 0.0
 .TP
 .B salt.modules.reg.read_key(hkey, path, key)
@@ -10539,6 +10881,7 @@ salt \(aq*\(aq reg.read_key HKEY_LOCAL_MACHINE \(aqSOFTWARE\eSalt\(aq \(aqversio
 .ft P
 .fi
 .UNINDENT
+.SS set_key
 .INDENT 0.0
 .TP
 .B salt.modules.reg.set_key(hkey, path, key, value)
@@ -10555,6 +10898,7 @@ salt \(aq*\(aq reg.set_key HKEY_CURRENT_USER \(aqSOFTWARE\eSalt\(aq \(aqversion\
 .SS salt.modules.rh_ip
 .sp
 The networking module for RHEL/Fedora based distros
+Members.SS build_bond
 .INDENT 0.0
 .TP
 .B salt.modules.rh_ip.build_bond(iface, settings)
@@ -10568,6 +10912,7 @@ salt \(aq*\(aq ip.build_bond br0 mode=balance\-alb
 .ft P
 .fi
 .UNINDENT
+.SS build_interface
 .INDENT 0.0
 .TP
 .B salt.modules.rh_ip.build_interface(iface, type, settings)
@@ -10581,6 +10926,7 @@ salt \(aq*\(aq ip.build_interface eth0 eth <settings>
 .ft P
 .fi
 .UNINDENT
+.SS down
 .INDENT 0.0
 .TP
 .B salt.modules.rh_ip.down(iface)
@@ -10594,6 +10940,13 @@ salt \(aq*\(aq ip.down eth0
 .ft P
 .fi
 .UNINDENT
+.SS exists
+.INDENT 0.0
+.TP
+.B salt.modules.rh_ip.exists(path)
+Test whether a path exists.  Returns False for broken symbolic links
+.UNINDENT
+.SS get_bond
 .INDENT 0.0
 .TP
 .B salt.modules.rh_ip.get_bond(iface)
@@ -10607,6 +10960,7 @@ salt \(aq*\(aq ip.get_bond br0
 .ft P
 .fi
 .UNINDENT
+.SS get_interface
 .INDENT 0.0
 .TP
 .B salt.modules.rh_ip.get_interface(iface)
@@ -10620,6 +10974,15 @@ salt \(aq*\(aq ip.get_interface eth0
 .ft P
 .fi
 .UNINDENT
+.SS join
+.INDENT 0.0
+.TP
+.B salt.modules.rh_ip.join(a, *p)
+Join two or more pathname components, inserting \(aq/\(aq as needed.
+If any component is an absolute path, all previous path components
+will be discarded.
+.UNINDENT
+.SS up
 .INDENT 0.0
 .TP
 .B salt.modules.rh_ip.up(iface)
@@ -10638,6 +11001,7 @@ salt \(aq*\(aq ip.up eth0
 Service support for classic Red Hat type systems. This interface uses the
 service command (so it is compatible with upstart systems) and the chkconfig
 command.
+Members.SS disable
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.disable(name)
@@ -10651,6 +11015,7 @@ salt \(aq*\(aq service.disable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS disabled
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.disabled(name)
@@ -10664,6 +11029,7 @@ salt \(aq*\(aq service.disabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enable
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.enable(name)
@@ -10677,6 +11043,7 @@ salt \(aq*\(aq service.enable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enabled
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.enabled(name)
@@ -10690,6 +11057,7 @@ salt \(aq*\(aq service.enabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS get_all
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.get_all()
@@ -10703,6 +11071,7 @@ salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
+.SS get_disabled
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.get_disabled()
@@ -10716,6 +11085,7 @@ salt \(aq*\(aq service.get_disabled
 .ft P
 .fi
 .UNINDENT
+.SS get_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.get_enabled()
@@ -10729,6 +11099,7 @@ salt \(aq*\(aq service.get_enabled
 .ft P
 .fi
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.restart(name)
@@ -10742,6 +11113,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.start(name)
@@ -10755,6 +11127,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.status(name, sig=None)
@@ -10769,6 +11142,7 @@ salt \(aq*\(aq service.status <service name>
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.rh_service.stop(name)
@@ -10785,6 +11159,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.rvm
 .sp
 Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
+Members.SS do
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.do(ruby, command, runas=None)
@@ -10802,6 +11177,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS gemset_copy
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.gemset_copy(source, destination, runas=None)
@@ -10819,6 +11195,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS gemset_create
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.gemset_create(ruby, gemset, runas=None)
@@ -10836,6 +11213,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS gemset_delete
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.gemset_delete(ruby, gemset, runas=None)
@@ -10853,6 +11231,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS gemset_empty
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.gemset_empty(ruby, gemset, runas=None)
@@ -10870,6 +11249,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS gemset_list
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.gemset_list(ruby=\(aqdefault\(aq, runas=None)
@@ -10885,6 +11265,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS gemset_list_all
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.gemset_list_all(runas=None)
@@ -10898,6 +11279,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS get
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.get(version=\(aqstable\(aq, runas=None)
@@ -10912,11 +11294,13 @@ Which version of RVM to install, e.g. stable or head.
 The version of ruby to reinstall.
 .UNINDENT
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.install()
 Install RVM system wide.
 .UNINDENT
+.SS install_ruby
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.install_ruby(ruby, runas=None)
@@ -10931,11 +11315,13 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS is_installed
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.is_installed()
 Check if RVM is installed.
 .UNINDENT
+.SS list
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.list(runas=None)
@@ -10947,6 +11333,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS reinstall_ruby
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.reinstall_ruby(ruby, runas=None)
@@ -10961,6 +11348,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS rubygems
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.rubygems(ruby, version, runas=None)
@@ -10978,6 +11366,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS set_default
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.set_default(ruby, runas=None)
@@ -10992,6 +11381,7 @@ None
 The user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS wrapper
 .INDENT 0.0
 .TP
 .B salt.modules.rvm.wrapper(ruby_string, wrapper_prefix, runas=None, *binaries)
@@ -11017,6 +11407,7 @@ The names of the binaries to create wrappers for. When nothing is given, wrapper
 .sp
 The Saltutil module is used to manage the state of the salt minion itself. It is
 used to manage minion modules as well as automate updates to the salt minion
+Members.SS find_job
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.find_job(jid)
@@ -11030,6 +11421,7 @@ salt \(aq*\(aq saltutil.find_job <job id>
 .ft P
 .fi
 .UNINDENT
+.SS kill_job
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.kill_job(jid)
@@ -11043,6 +11435,7 @@ salt \(aq*\(aq saltutil.kill_job <job id>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_pillar
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.refresh_pillar()
@@ -11056,6 +11449,7 @@ salt \(aq*\(aq saltutil.refresh_pillar
 .ft P
 .fi
 .UNINDENT
+.SS running
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.running()
@@ -11069,6 +11463,7 @@ salt \(aq*\(aq saltutil.running
 .ft P
 .fi
 .UNINDENT
+.SS signal_job
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.signal_job(jid, sig)
@@ -11082,6 +11477,7 @@ salt \(aq*\(aq saltutil.signal_job <job id> 15
 .ft P
 .fi
 .UNINDENT
+.SS sync_all
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.sync_all(env=\(aqbase\(aq)
@@ -11096,6 +11492,7 @@ salt \(aq*\(aq saltutil.sync_all
 .ft P
 .fi
 .UNINDENT
+.SS sync_grains
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.sync_grains(env=\(aqbase\(aq)
@@ -11112,6 +11509,7 @@ salt \(aq*\(aq saltutil.sync_grains
 .ft P
 .fi
 .UNINDENT
+.SS sync_modules
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.sync_modules(env=\(aqbase\(aq)
@@ -11128,6 +11526,7 @@ salt \(aq*\(aq saltutil.sync_modules
 .ft P
 .fi
 .UNINDENT
+.SS sync_renderers
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.sync_renderers(env=\(aqbase\(aq)
@@ -11144,6 +11543,7 @@ salt \(aq*\(aq saltutil.sync_renderers
 .ft P
 .fi
 .UNINDENT
+.SS sync_returners
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.sync_returners(env=\(aqbase\(aq)
@@ -11160,6 +11560,7 @@ salt \(aq*\(aq saltutil.sync_returners
 .ft P
 .fi
 .UNINDENT
+.SS sync_states
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.sync_states(env=\(aqbase\(aq)
@@ -11176,6 +11577,7 @@ salt \(aq*\(aq saltutil.sync_states
 .ft P
 .fi
 .UNINDENT
+.SS term_job
 .INDENT 0.0
 .TP
 .B salt.modules.saltutil.term_job(jid)
@@ -11192,6 +11594,7 @@ salt \(aq*\(aq saltutil.term_job <job id>
 .SS salt.modules.selinux
 .sp
 Execute calls on selinux
+Members.SS getenforce
 .INDENT 0.0
 .TP
 .B salt.modules.selinux.getenforce()
@@ -11205,6 +11608,7 @@ salt \(aq*\(aq selinux.getenforce
 .ft P
 .fi
 .UNINDENT
+.SS getsebool
 .INDENT 0.0
 .TP
 .B salt.modules.selinux.getsebool(boolean)
@@ -11218,6 +11622,7 @@ salt \(aq*\(aq selinux.getsebool virt_use_usb
 .ft P
 .fi
 .UNINDENT
+.SS list_sebool
 .INDENT 0.0
 .TP
 .B salt.modules.selinux.list_sebool()
@@ -11232,6 +11637,7 @@ salt \(aq*\(aq selinux.list_sebool
 .ft P
 .fi
 .UNINDENT
+.SS selinux_fs_path
 .INDENT 0.0
 .TP
 .B salt.modules.selinux.selinux_fs_path()
@@ -11245,6 +11651,7 @@ salt \(aq*\(aq selinux.selinux_fs_path
 .ft P
 .fi
 .UNINDENT
+.SS setenforce
 .INDENT 0.0
 .TP
 .B salt.modules.selinux.setenforce(mode)
@@ -11258,6 +11665,7 @@ salt \(aq*\(aq selinux.setenforce enforcing
 .ft P
 .fi
 .UNINDENT
+.SS setsebool
 .INDENT 0.0
 .TP
 .B salt.modules.selinux.setsebool(boolean, value, persist=False)
@@ -11271,6 +11679,7 @@ salt \(aq*\(aq selinux.setsebool virt_use_usb off
 .ft P
 .fi
 .UNINDENT
+.SS setsebools
 .INDENT 0.0
 .TP
 .B salt.modules.selinux.setsebools(pairs, persist=False)
@@ -11288,6 +11697,7 @@ salt \(aq*\(aq selinux.setsebools \(aq{virt_use_usb: on, squid_use_tproxy: off}\
 .sp
 The default service module, if not otherwise specified salt will fall back
 to this basic module
+Members.SS reload
 .INDENT 0.0
 .TP
 .B salt.modules.service.reload(name)
@@ -11301,6 +11711,7 @@ salt \(aq*\(aq service.reload <service name>
 .ft P
 .fi
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.service.restart(name)
@@ -11314,6 +11725,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.service.start(name)
@@ -11327,6 +11739,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.service.status(name, sig=None)
@@ -11342,6 +11755,7 @@ salt \(aq*\(aq service.status <service name> [service signature]
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.service.stop(name)
@@ -11358,6 +11772,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.shadow
 .sp
 Manage the shadow file
+Members.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.shadow.info(name)
@@ -11371,6 +11786,7 @@ salt \(aq*\(aq shadow.info root
 .ft P
 .fi
 .UNINDENT
+.SS set_inactdays
 .INDENT 0.0
 .TP
 .B salt.modules.shadow.set_inactdays(name, inactdays)
@@ -11384,6 +11800,7 @@ salt \(aq*\(aq shadow.set_inactdays username 7
 .ft P
 .fi
 .UNINDENT
+.SS set_maxdays
 .INDENT 0.0
 .TP
 .B salt.modules.shadow.set_maxdays(name, maxdays)
@@ -11397,6 +11814,7 @@ salt \(aq*\(aq shadow.set_maxdays username 90
 .ft P
 .fi
 .UNINDENT
+.SS set_mindays
 .INDENT 0.0
 .TP
 .B salt.modules.shadow.set_mindays(name, mindays)
@@ -11410,6 +11828,7 @@ salt \(aq*\(aq shadow.set_mindays username 7
 .ft P
 .fi
 .UNINDENT
+.SS set_password
 .INDENT 0.0
 .TP
 .B salt.modules.shadow.set_password(name, password)
@@ -11425,6 +11844,7 @@ salt \(aq*\(aq shadow.set_password root $1$UYCIxa628.9qXjpQCjM4a..
 .ft P
 .fi
 .UNINDENT
+.SS set_warndays
 .INDENT 0.0
 .TP
 .B salt.modules.shadow.set_warndays(name, warndays)
@@ -11512,6 +11932,7 @@ Optimize the index after commit is complete
 True
 Get verbose output
 .UNINDENT
+Members.SS abort_import
 .INDENT 0.0
 .TP
 .B salt.modules.solr.abort_import(handler, host=None, core_name=None, verbose=False)
@@ -11554,6 +11975,7 @@ salt \(aq*\(aq solr.abort_import dataimport None music {\(aqclean\(aq:True}
 .ft P
 .fi
 .UNINDENT
+.SS backup
 .INDENT 0.0
 .TP
 .B salt.modules.solr.backup(host=None, core_name=None, append_core_to_path=False)
@@ -11594,6 +12016,7 @@ salt \(aq*\(aq solr.backup music
 .ft P
 .fi
 .UNINDENT
+.SS core_status
 .INDENT 0.0
 .TP
 .B salt.modules.solr.core_status(host=None, core_name=None)
@@ -11626,6 +12049,7 @@ salt \(aq*\(aq solr.core_status None music
 .ft P
 .fi
 .UNINDENT
+.SS delta_import
 .INDENT 0.0
 .TP
 .B salt.modules.solr.delta_import(handler, host=None, core_name=None, options=None, extra=None)
@@ -11673,6 +12097,7 @@ salt \(aq*\(aq solr.delta_import dataimport None music {\(aqclean\(aq:True}
 .ft P
 .fi
 .UNINDENT
+.SS full_import
 .INDENT 0.0
 .TP
 .B salt.modules.solr.full_import(handler, host=None, core_name=None, options=None, extra=None)
@@ -11721,6 +12146,7 @@ salt \(aq*\(aq solr.full_import dataimport None music {\(aqclean\(aq:True}
 .ft P
 .fi
 .UNINDENT
+.SS import_status
 .INDENT 0.0
 .TP
 .B salt.modules.solr.import_status(handler, host=None, core_name=None, verbose=False)
@@ -11762,6 +12188,7 @@ salt \(aq*\(aq solr.import_status dataimport None music False
 .ft P
 .fi
 .UNINDENT
+.SS is_replication_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.solr.is_replication_enabled(host=None, core_name=None)
@@ -11795,6 +12222,7 @@ salt \(aq*\(aq solr.is_replication_enabled music
 .ft P
 .fi
 .UNINDENT
+.SS lucene_version
 .INDENT 0.0
 .TP
 .B salt.modules.solr.lucene_version(core_name=None)
@@ -11825,6 +12253,7 @@ salt \(aq*\(aq solr.lucene_version
 .ft P
 .fi
 .UNINDENT
+.SS match_index_versions
 .INDENT 0.0
 .TP
 .B salt.modules.solr.match_index_versions(host=None, core_name=None)
@@ -11862,6 +12291,7 @@ salt \(aq*\(aq solr.match_index_versions music
 .ft P
 .fi
 .UNINDENT
+.SS optimize
 .INDENT 0.0
 .TP
 .B salt.modules.solr.optimize(host=None, core_name=None)
@@ -11901,6 +12331,7 @@ salt \(aq*\(aq solr.optimize music
 .ft P
 .fi
 .UNINDENT
+.SS ping
 .INDENT 0.0
 .TP
 .B salt.modules.solr.ping(host=None, core_name=None)
@@ -11933,6 +12364,7 @@ salt \(aq*\(aq solr.ping music
 .ft P
 .fi
 .UNINDENT
+.SS reload_core
 .INDENT 0.0
 .TP
 .B salt.modules.solr.reload_core(host=None, core_name=None)
@@ -11970,6 +12402,7 @@ salt \(aq*\(aq solr.reload_core None music
 .ft P
 .fi
 .UNINDENT
+.SS reload_import_config
 .INDENT 0.0
 .TP
 .B salt.modules.solr.reload_import_config(handler, host=None, core_name=None, verbose=False)
@@ -12011,6 +12444,7 @@ salt \(aq*\(aq solr.reload_import_config dataimport None music {\(aqclean\(aq:Tr
 .ft P
 .fi
 .UNINDENT
+.SS replication_details
 .INDENT 0.0
 .TP
 .B salt.modules.solr.replication_details(host=None, core_name=None)
@@ -12043,6 +12477,7 @@ salt \(aq*\(aq solr.replication_details music
 .ft P
 .fi
 .UNINDENT
+.SS set_is_polling
 .INDENT 0.0
 .TP
 .B salt.modules.solr.set_is_polling(polling, host=None, core_name=None)
@@ -12080,6 +12515,7 @@ salt \(aq*\(aq solr.set_is_polling False
 .ft P
 .fi
 .UNINDENT
+.SS set_replication_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.solr.set_replication_enabled(status, host=None, core_name=None)
@@ -12119,6 +12555,7 @@ salt \(aq*\(aq solr.set_replication_enabled false, None, music
 .ft P
 .fi
 .UNINDENT
+.SS signal
 .INDENT 0.0
 .TP
 .B salt.modules.solr.signal(signal=None)
@@ -12141,6 +12578,12 @@ salt \(aq*\(aq solr.signal restart
 .ft P
 .fi
 .UNINDENT
+.SS url_open
+.INDENT 0.0
+.TP
+.B salt.modules.solr.url_open(url, data=None, timeout=<object object at 0x7faf014542d0>)
+.UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.solr.version(core_name=None)
@@ -12174,6 +12617,7 @@ salt \(aq*\(aq solr.version
 .SS salt.modules.sqlite3
 .sp
 Support for SQLite3
+Members.SS fetch
 .INDENT 0.0
 .TP
 .B salt.modules.sqlite3.fetch(db=None, sql=None)
@@ -12187,6 +12631,7 @@ salt \(aq*\(aq sqlite3.fetch /root/test.db \(aqSELECT * FROM test;\(aq
 .ft P
 .fi
 .UNINDENT
+.SS indexes
 .INDENT 0.0
 .TP
 .B salt.modules.sqlite3.indexes(db=None)
@@ -12200,6 +12645,7 @@ salt \(aq*\(aq sqlite3.indexes /root/test.db
 .ft P
 .fi
 .UNINDENT
+.SS indices
 .INDENT 0.0
 .TP
 .B salt.modules.sqlite3.indices(db=None)
@@ -12213,6 +12659,7 @@ salt \(aq*\(aq sqlite3.indices /root/test.db
 .ft P
 .fi
 .UNINDENT
+.SS modify
 .INDENT 0.0
 .TP
 .B salt.modules.sqlite3.modify(db=None, sql=None)
@@ -12227,6 +12674,7 @@ salt \(aq*\(aq sqlite3.modify /root/test.db \(aqCREATE TABLE test(id INT, testda
 .ft P
 .fi
 .UNINDENT
+.SS sqlite_version
 .INDENT 0.0
 .TP
 .B salt.modules.sqlite3.sqlite_version()
@@ -12240,6 +12688,7 @@ salt \(aq*\(aq sqlite3.sqlite_version
 .ft P
 .fi
 .UNINDENT
+.SS tables
 .INDENT 0.0
 .TP
 .B salt.modules.sqlite3.tables(db=None)
@@ -12253,6 +12702,7 @@ salt \(aq*\(aq sqlite3.tables /root/test.db
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.sqlite3.version()
@@ -12269,6 +12719,7 @@ salt \(aq*\(aq sqlite3.version
 .SS salt.modules.ssh
 .sp
 Manage client ssh components
+Members.SS auth_keys
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.auth_keys(user, config=\(aq.ssh/authorized_keys\(aq)
@@ -12282,6 +12733,7 @@ salt \(aq*\(aq ssh.auth_keys root
 .ft P
 .fi
 .UNINDENT
+.SS check_key
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.check_key(user, key, enc, comment, options, config=\(aq.ssh/authorized_keys\(aq)
@@ -12295,12 +12747,14 @@ salt \(aq*\(aq ssh.check_key <user> <key>
 .ft P
 .fi
 .UNINDENT
+.SS check_key_file
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.check_key_file(user, keysource, config=\(aq.ssh/authorized_keys\(aq, env=\(aqbase\(aq)
 Check a keyfile from a source destination against the local keys and
 return the keys to change
 .UNINDENT
+.SS check_known_host
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.check_known_host(user, hostname, key=None, fingerprint=None, config=\(aq.ssh/known_hosts\(aq)
@@ -12323,6 +12777,7 @@ salt \(aq*\(aq ssh.check_known_host <user> <hostname> key=\(aqAAAA...FAaQ==\(aq
 .ft P
 .fi
 .UNINDENT
+.SS get_known_host
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.get_known_host(user, hostname, config=\(aq.ssh/known_hosts\(aq)
@@ -12337,6 +12792,7 @@ salt \(aq*\(aq ssh.get_known_host <user> <hostname>
 .ft P
 .fi
 .UNINDENT
+.SS host_keys
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.host_keys(keydir=None)
@@ -12350,6 +12806,7 @@ salt \(aq*\(aq ssh.host_keys
 .ft P
 .fi
 .UNINDENT
+.SS recv_known_host
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.recv_known_host(user, hostname, enc=None, port=None, hash_hostname=False)
@@ -12363,6 +12820,7 @@ salt \(aq*\(aq ssh.recv_known_host <user> <hostname> enc=<enc> port=<port>
 .ft P
 .fi
 .UNINDENT
+.SS rm_auth_key
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.rm_auth_key(user, key, config=\(aq.ssh/authorized_keys\(aq)
@@ -12376,6 +12834,7 @@ salt \(aq*\(aq ssh.rm_auth_key <user> <key>
 .ft P
 .fi
 .UNINDENT
+.SS rm_known_host
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.rm_known_host(user, hostname, config=\(aq.ssh/known_hosts\(aq)
@@ -12389,6 +12848,7 @@ salt \(aq*\(aq ssh.rm_known_host <user> <hostname>
 .ft P
 .fi
 .UNINDENT
+.SS set_auth_key
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.set_auth_key(user, key, enc=\(aqssh\-rsa\(aq, comment=\(aq\(aq, options=[], config=\(aq.ssh/authorized_keys\(aq)
@@ -12402,6 +12862,7 @@ salt \(aq*\(aq ssh.set_auth_key <user> key=\(aq<key>\(aq enc=\(aqdsa\(aq        
 .ft P
 .fi
 .UNINDENT
+.SS set_auth_key_from_file
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.set_auth_key_from_file(user, source, config=\(aq.ssh/authorized_keys\(aq, env=\(aqbase\(aq)
@@ -12415,6 +12876,7 @@ salt \(aq*\(aq ssh.set_auth_key_from_file <user>                salt://ssh_keys/
 .ft P
 .fi
 .UNINDENT
+.SS set_known_host
 .INDENT 0.0
 .TP
 .B salt.modules.ssh.set_known_host(user, hostname, fingerprint=None, port=None, enc=None, hash_hostname=True, config=\(aq.ssh/known_hosts\(aq)
@@ -12435,6 +12897,7 @@ salt \(aq*\(aq ssh.set_known_host <user> fingerprint=\(aqxx:xx:..:xx\(aq enc=\(a
 .SS salt.modules.state
 .sp
 Control the state system on the minion
+Members.SS high
 .INDENT 0.0
 .TP
 .B salt.modules.state.high(data)
@@ -12449,6 +12912,7 @@ salt \(aq*\(aq state.high \(aq{"vim": {"pkg": ["installed"]}}\(aq
 .ft P
 .fi
 .UNINDENT
+.SS highstate
 .INDENT 0.0
 .TP
 .B salt.modules.state.highstate(test=None, **kwargs)
@@ -12462,6 +12926,7 @@ salt \(aq*\(aq state.highstate
 .ft P
 .fi
 .UNINDENT
+.SS low
 .INDENT 0.0
 .TP
 .B salt.modules.state.low(data)
@@ -12476,6 +12941,7 @@ salt \(aq*\(aq state.low \(aq{"state": "pkg", "fun": "installed", "name": "vi"}\
 .ft P
 .fi
 .UNINDENT
+.SS show_highstate
 .INDENT 0.0
 .TP
 .B salt.modules.state.show_highstate()
@@ -12489,6 +12955,7 @@ salt \(aq*\(aq state.show_highstate
 .ft P
 .fi
 .UNINDENT
+.SS show_lowstate
 .INDENT 0.0
 .TP
 .B salt.modules.state.show_lowstate()
@@ -12502,6 +12969,7 @@ salt \(aq*\(aq state.show_lowstate
 .ft P
 .fi
 .UNINDENT
+.SS show_masterstate
 .INDENT 0.0
 .TP
 .B salt.modules.state.show_masterstate()
@@ -12515,6 +12983,7 @@ salt \(aq*\(aq state.show_masterstate
 .ft P
 .fi
 .UNINDENT
+.SS show_sls
 .INDENT 0.0
 .TP
 .B salt.modules.state.show_sls(mods, env=\(aqbase\(aq, test=None, **kwargs)
@@ -12529,6 +12998,7 @@ salt \(aq*\(aq state.sls core,edit.vim dev
 .ft P
 .fi
 .UNINDENT
+.SS single
 .INDENT 0.0
 .TP
 .B salt.modules.state.single(fun=None, test=None, **kwargs)
@@ -12543,6 +13013,7 @@ salt \(aq*\(aq state.single pkg.installed name=vim
 .ft P
 .fi
 .UNINDENT
+.SS sls
 .INDENT 0.0
 .TP
 .B salt.modules.state.sls(mods, env=\(aqbase\(aq, test=None, **kwargs)
@@ -12557,6 +13028,7 @@ salt \(aq*\(aq state.sls core,edit.vim dev
 .ft P
 .fi
 .UNINDENT
+.SS template
 .INDENT 0.0
 .TP
 .B salt.modules.state.template(tem)
@@ -12570,6 +13042,7 @@ salt \(aq*\(aq state.template \(aq<Path to template on the minion>\(aq
 .ft P
 .fi
 .UNINDENT
+.SS template_str
 .INDENT 0.0
 .TP
 .B salt.modules.state.template_str(tem)
@@ -12583,6 +13056,7 @@ salt \(aq*\(aq state.template_str \(aq<Template String>\(aq
 .ft P
 .fi
 .UNINDENT
+.SS top
 .INDENT 0.0
 .TP
 .B salt.modules.state.top(topfn)
@@ -12600,6 +13074,7 @@ salt \(aq*\(aq state.top reverse_top.sls
 .sp
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
+Members.SS all_status
 .INDENT 0.0
 .TP
 .B salt.modules.status.all_status()
@@ -12614,6 +13089,7 @@ salt \(aq*\(aq status.all_status
 .ft P
 .fi
 .UNINDENT
+.SS cpuinfo
 .INDENT 0.0
 .TP
 .B salt.modules.status.cpuinfo()
@@ -12627,6 +13103,7 @@ salt \(aq*\(aq status.cpuinfo
 .ft P
 .fi
 .UNINDENT
+.SS cpustats
 .INDENT 0.0
 .TP
 .B salt.modules.status.cpustats()
@@ -12640,6 +13117,7 @@ salt \(aq*\(aq status.cpustats
 .ft P
 .fi
 .UNINDENT
+.SS custom
 .INDENT 0.0
 .TP
 .B salt.modules.status.custom()
@@ -12670,6 +13148,7 @@ salt \(aq*\(aq status.custom
 .ft P
 .fi
 .UNINDENT
+.SS diskstats
 .INDENT 0.0
 .TP
 .B salt.modules.status.diskstats()
@@ -12683,6 +13162,7 @@ salt \(aq*\(aq status.diskstats
 .ft P
 .fi
 .UNINDENT
+.SS diskusage
 .INDENT 0.0
 .TP
 .B salt.modules.status.diskusage(*args)
@@ -12707,6 +13187,7 @@ salt \(aq*\(aq status.diskusage / ext?  # usage for / and all ext filesystems
 .ft P
 .fi
 .UNINDENT
+.SS loadavg
 .INDENT 0.0
 .TP
 .B salt.modules.status.loadavg()
@@ -12720,6 +13201,7 @@ salt \(aq*\(aq status.loadavg
 .ft P
 .fi
 .UNINDENT
+.SS meminfo
 .INDENT 0.0
 .TP
 .B salt.modules.status.meminfo()
@@ -12733,6 +13215,7 @@ salt \(aq*\(aq status.meminfo
 .ft P
 .fi
 .UNINDENT
+.SS netdev
 .INDENT 0.0
 .TP
 .B salt.modules.status.netdev()
@@ -12746,6 +13229,7 @@ salt \(aq*\(aq status.netdev
 .ft P
 .fi
 .UNINDENT
+.SS netstats
 .INDENT 0.0
 .TP
 .B salt.modules.status.netstats()
@@ -12759,6 +13243,7 @@ salt \(aq*\(aq status.netstats
 .ft P
 .fi
 .UNINDENT
+.SS procs
 .INDENT 0.0
 .TP
 .B salt.modules.status.procs()
@@ -12772,6 +13257,7 @@ salt \(aq*\(aq status.procs
 .ft P
 .fi
 .UNINDENT
+.SS uptime
 .INDENT 0.0
 .TP
 .B salt.modules.status.uptime()
@@ -12785,6 +13271,7 @@ salt \(aq*\(aq status.uptime
 .ft P
 .fi
 .UNINDENT
+.SS vmstats
 .INDENT 0.0
 .TP
 .B salt.modules.status.vmstats()
@@ -12798,6 +13285,7 @@ salt \(aq*\(aq status.vmstats
 .ft P
 .fi
 .UNINDENT
+.SS w
 .INDENT 0.0
 .TP
 .B salt.modules.status.w()
@@ -12814,6 +13302,7 @@ salt \(aq*\(aq status.w
 .SS salt.modules.systemd
 .sp
 Provide the service module for systemd
+Members.SS disable
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.disable(name)
@@ -12827,6 +13316,7 @@ salt \(aq*\(aq service.disable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS disabled
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.disabled(name)
@@ -12840,6 +13330,7 @@ salt \(aq*\(aq service.disabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enable
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.enable(name)
@@ -12853,6 +13344,7 @@ salt \(aq*\(aq service.enable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enabled
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.enabled(name)
@@ -12866,6 +13358,7 @@ salt \(aq*\(aq service.enabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS get_all
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.get_all()
@@ -12879,6 +13372,7 @@ salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
+.SS get_disabled
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.get_disabled()
@@ -12892,6 +13386,7 @@ salt \(aq*\(aq service.get_disabled
 .ft P
 .fi
 .UNINDENT
+.SS get_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.get_enabled()
@@ -12905,6 +13400,7 @@ salt \(aq*\(aq service.get_enabled
 .ft P
 .fi
 .UNINDENT
+.SS reload
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.reload(name)
@@ -12918,6 +13414,7 @@ salt \(aq*\(aq service.reload <service name>
 .ft P
 .fi
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.restart(name)
@@ -12931,6 +13428,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.start(name)
@@ -12944,6 +13442,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.status(name, sig=None)
@@ -12958,6 +13457,7 @@ salt \(aq*\(aq service.status <service name>
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.stop(name)
@@ -12974,6 +13474,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.test
 .sp
 Module for running arbitrary tests
+Members.SS collatz
 .INDENT 0.0
 .TP
 .B salt.modules.test.collatz(start)
@@ -12989,6 +13490,7 @@ salt \(aq*\(aq test.collatz 3
 .ft P
 .fi
 .UNINDENT
+.SS conf_test
 .INDENT 0.0
 .TP
 .B salt.modules.test.conf_test()
@@ -13003,6 +13505,7 @@ salt \(aq*\(aq test.conf_test
 .ft P
 .fi
 .UNINDENT
+.SS cross_test
 .INDENT 0.0
 .TP
 .B salt.modules.test.cross_test(func, args=None)
@@ -13018,6 +13521,7 @@ salt \(aq*\(aq test.cross_test file.gid_to_group 0
 .ft P
 .fi
 .UNINDENT
+.SS echo
 .INDENT 0.0
 .TP
 .B salt.modules.test.echo(text)
@@ -13031,6 +13535,7 @@ salt \(aq*\(aq test.echo \(aqfoo bar baz quo qux\(aq
 .ft P
 .fi
 .UNINDENT
+.SS fib
 .INDENT 0.0
 .TP
 .B salt.modules.test.fib(num)
@@ -13045,6 +13550,7 @@ salt \(aq*\(aq test.fib 3
 .ft P
 .fi
 .UNINDENT
+.SS get_opts
 .INDENT 0.0
 .TP
 .B salt.modules.test.get_opts()
@@ -13058,6 +13564,7 @@ salt \(aq*\(aq test.get_opts
 .ft P
 .fi
 .UNINDENT
+.SS kwarg
 .INDENT 0.0
 .TP
 .B salt.modules.test.kwarg(**kwargs)
@@ -13073,6 +13580,7 @@ salt \(aq*\(aq test.kwarg
 .ft P
 .fi
 .UNINDENT
+.SS outputter
 .INDENT 0.0
 .TP
 .B salt.modules.test.outputter(data)
@@ -13086,6 +13594,7 @@ salt \(aq*\(aq test.outputter foobar
 .ft P
 .fi
 .UNINDENT
+.SS ping
 .INDENT 0.0
 .TP
 .B salt.modules.test.ping()
@@ -13100,6 +13609,7 @@ salt \(aq*\(aq test.ping
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.test.version()
@@ -13116,6 +13626,7 @@ salt \(aq*\(aq test.version
 .SS salt.modules.tomcat
 .sp
 Support for Tomcat
+Members.SS fullversion
 .INDENT 0.0
 .TP
 .B salt.modules.tomcat.fullversion()
@@ -13129,6 +13640,7 @@ salt \(aq*\(aq tomcat.fullversion
 .ft P
 .fi
 .UNINDENT
+.SS signal
 .INDENT 0.0
 .TP
 .B salt.modules.tomcat.signal(signal=None)
@@ -13142,6 +13654,7 @@ salt \(aq*\(aq tomcat.signal start
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.tomcat.version()
@@ -13191,6 +13704,7 @@ stop on runlevel [016]
 .sp
 DO NOT use this module on red hat systems, as red hat systems should use the
 rh_service module, since red hat systems support chkconfig
+Members.SS disable
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.disable(name)
@@ -13204,6 +13718,7 @@ salt \(aq*\(aq service.disable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS disabled
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.disabled(name)
@@ -13217,6 +13732,7 @@ salt \(aq*\(aq service.disabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enable
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.enable(name)
@@ -13230,6 +13746,7 @@ salt \(aq*\(aq service.enable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enabled
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.enabled(name)
@@ -13243,6 +13760,7 @@ salt \(aq*\(aq service.enabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS get_all
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.get_all()
@@ -13256,6 +13774,7 @@ salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
+.SS get_disabled
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.get_disabled()
@@ -13269,6 +13788,7 @@ salt \(aq*\(aq service.get_disabled
 .ft P
 .fi
 .UNINDENT
+.SS get_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.get_enabled()
@@ -13282,6 +13802,7 @@ salt \(aq*\(aq service.get_enabled
 .ft P
 .fi
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.restart(name)
@@ -13295,6 +13816,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.start(name)
@@ -13308,6 +13830,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.status(name, sig=None)
@@ -13322,6 +13845,7 @@ salt \(aq*\(aq service.status <service name>
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.upstart.stop(name)
@@ -13338,6 +13862,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.useradd
 .sp
 Manage users with the useradd command
+Members.SS add
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.add(name, uid=None, gid=None, groups=None, home=True, shell=None, fullname=None, roomnumber=None, workphone=None, homephone=None, other=None, unique=True, system=False)
@@ -13351,6 +13876,14 @@ salt \(aq*\(aq user.add name <uid> <gid> <groups> <home> <shell>
 .ft P
 .fi
 .UNINDENT
+.SS callable
+.INDENT 0.0
+.TP
+.B salt.modules.useradd.callable(object) -> bool
+Return whether the object is callable (i.e., some kind of function).
+Note that classes are callable, as are instances with a __call__() method.
+.UNINDENT
+.SS chfullname
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chfullname(name, fullname)
@@ -13364,6 +13897,7 @@ salt \(aq*\(aq user.chfullname foo "Foo Bar"
 .ft P
 .fi
 .UNINDENT
+.SS chgid
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chgid(name, gid)
@@ -13377,6 +13911,7 @@ salt \(aq*\(aq user.chgid foo 4376
 .ft P
 .fi
 .UNINDENT
+.SS chgroups
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chgroups(name, groups, append=False)
@@ -13391,6 +13926,7 @@ salt \(aq*\(aq user.chgroups foo wheel,root True
 .ft P
 .fi
 .UNINDENT
+.SS chhome
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chhome(name, home, persist=False)
@@ -13405,6 +13941,7 @@ salt \(aq*\(aq user.chhome foo /home/users/foo True
 .ft P
 .fi
 .UNINDENT
+.SS chhomephone
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chhomephone(name, homephone)
@@ -13418,6 +13955,7 @@ salt \(aq*\(aq user.chhomephone foo "7735551234"
 .ft P
 .fi
 .UNINDENT
+.SS chother
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chother(name, other)
@@ -13431,6 +13969,7 @@ salt \(aq*\(aq user.chother foo "fax=7735555678"
 .ft P
 .fi
 .UNINDENT
+.SS chroomnumber
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chroomnumber(name, roomnumber)
@@ -13444,6 +13983,7 @@ salt \(aq*\(aq user.chroomnumber foo 123
 .ft P
 .fi
 .UNINDENT
+.SS chshell
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chshell(name, shell)
@@ -13457,6 +13997,7 @@ salt \(aq*\(aq user.chshell foo /bin/zsh
 .ft P
 .fi
 .UNINDENT
+.SS chuid
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chuid(name, uid)
@@ -13470,6 +14011,7 @@ salt \(aq*\(aq user.chuid foo 4376
 .ft P
 .fi
 .UNINDENT
+.SS chworkphone
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chworkphone(name, workphone)
@@ -13483,6 +14025,7 @@ salt \(aq*\(aq user.chworkphone foo "7735550123"
 .ft P
 .fi
 .UNINDENT
+.SS delete
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.delete(name, remove=False, force=False)
@@ -13496,6 +14039,7 @@ salt \(aq*\(aq user.delete name True True
 .ft P
 .fi
 .UNINDENT
+.SS getent
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.getent()
@@ -13509,6 +14053,7 @@ salt \(aq*\(aq user.getent
 .ft P
 .fi
 .UNINDENT
+.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.info(name)
@@ -13522,6 +14067,7 @@ salt \(aq*\(aq user.info root
 .ft P
 .fi
 .UNINDENT
+.SS list_groups
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.list_groups(name)
@@ -13540,6 +14086,7 @@ salt \(aq*\(aq user.list_groups foo
 Work with virtual machines managed by libvirt
 .sp
 Required python modules: libvirt
+Members.SS create
 .INDENT 0.0
 .TP
 .B salt.modules.virt.create(vm_)
@@ -13553,6 +14100,7 @@ salt \(aq*\(aq virt.create <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS create_xml_path
 .INDENT 0.0
 .TP
 .B salt.modules.virt.create_xml_path(path)
@@ -13566,6 +14114,7 @@ salt \(aq*\(aq virt.create_xml_path <path to xml file on the node>
 .ft P
 .fi
 .UNINDENT
+.SS create_xml_str
 .INDENT 0.0
 .TP
 .B salt.modules.virt.create_xml_str(xml)
@@ -13579,6 +14128,7 @@ salt \(aq*\(aq virt.create_xml_str <xml in string format>
 .ft P
 .fi
 .UNINDENT
+.SS destroy
 .INDENT 0.0
 .TP
 .B salt.modules.virt.destroy(vm_)
@@ -13593,6 +14143,7 @@ salt \(aq*\(aq virt.destroy <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS freecpu
 .INDENT 0.0
 .TP
 .B salt.modules.virt.freecpu()
@@ -13607,6 +14158,7 @@ salt \(aq*\(aq virt.freecpu
 .ft P
 .fi
 .UNINDENT
+.SS freemem
 .INDENT 0.0
 .TP
 .B salt.modules.virt.freemem()
@@ -13621,6 +14173,7 @@ salt \(aq*\(aq virt.freemem
 .ft P
 .fi
 .UNINDENT
+.SS full_info
 .INDENT 0.0
 .TP
 .B salt.modules.virt.full_info()
@@ -13634,6 +14187,7 @@ salt \(aq*\(aq virt.full_info
 .ft P
 .fi
 .UNINDENT
+.SS get_disks
 .INDENT 0.0
 .TP
 .B salt.modules.virt.get_disks(vm_)
@@ -13647,6 +14201,7 @@ salt \(aq*\(aq virt.get_disks <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS get_graphics
 .INDENT 0.0
 .TP
 .B salt.modules.virt.get_graphics(vm_)
@@ -13660,6 +14215,7 @@ salt \(aq*\(aq virt.get_graphics <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS get_macs
 .INDENT 0.0
 .TP
 .B salt.modules.virt.get_macs(vm_)
@@ -13673,6 +14229,7 @@ salt \(aq*\(aq virt.get_macs <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS get_nics
 .INDENT 0.0
 .TP
 .B salt.modules.virt.get_nics(vm_)
@@ -13686,6 +14243,7 @@ salt \(aq*\(aq virt.get_nics <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS get_xml
 .INDENT 0.0
 .TP
 .B salt.modules.virt.get_xml(vm_)
@@ -13699,10 +14257,11 @@ salt \(aq*\(aq virt.get_xml <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS is_hyper
 .INDENT 0.0
 .TP
 .B salt.modules.virt.is_hyper()
-Returns a bool whether or not this nos is a hypervisor of any kind
+Returns a bool whether or not this node is a hypervisor of any kind
 .sp
 CLI Example:
 .sp
@@ -13712,6 +14271,7 @@ salt \(aq*\(aq virt.is_hyper
 .ft P
 .fi
 .UNINDENT
+.SS is_kvm_hyper
 .INDENT 0.0
 .TP
 .B salt.modules.virt.is_kvm_hyper()
@@ -13725,6 +14285,7 @@ salt \(aq*\(aq virt.is_kvm_hyper
 .ft P
 .fi
 .UNINDENT
+.SS is_xen_hyper
 .INDENT 0.0
 .TP
 .B salt.modules.virt.is_xen_hyper()
@@ -13738,6 +14299,7 @@ salt \(aq*\(aq virt.is_xen_hyper
 .ft P
 .fi
 .UNINDENT
+.SS list_active_vms
 .INDENT 0.0
 .TP
 .B salt.modules.virt.list_active_vms()
@@ -13751,6 +14313,7 @@ salt \(aq*\(aq virt.list_active_vms
 .ft P
 .fi
 .UNINDENT
+.SS list_inactive_vms
 .INDENT 0.0
 .TP
 .B salt.modules.virt.list_inactive_vms()
@@ -13764,6 +14327,7 @@ salt \(aq*\(aq virt.list_inactive_vms
 .ft P
 .fi
 .UNINDENT
+.SS list_vms
 .INDENT 0.0
 .TP
 .B salt.modules.virt.list_vms()
@@ -13777,6 +14341,7 @@ salt \(aq*\(aq virt.list_vms
 .ft P
 .fi
 .UNINDENT
+.SS migrate
 .INDENT 0.0
 .TP
 .B salt.modules.virt.migrate(vm_, target)
@@ -13790,6 +14355,7 @@ salt \(aq*\(aq virt.migrate <vm name> <target hypervisor>
 .ft P
 .fi
 .UNINDENT
+.SS migrate_non_shared
 .INDENT 0.0
 .TP
 .B salt.modules.virt.migrate_non_shared(vm_, target)
@@ -13803,6 +14369,7 @@ salt \(aq*\(aq virt.migrate_non_shared <vm name> <target hypervisor>
 .ft P
 .fi
 .UNINDENT
+.SS migrate_non_shared_inc
 .INDENT 0.0
 .TP
 .B salt.modules.virt.migrate_non_shared_inc(vm_, target)
@@ -13816,6 +14383,7 @@ salt \(aq*\(aq virt.migrate_non_shared_inc <vm name> <target hypervisor>
 .ft P
 .fi
 .UNINDENT
+.SS node_info
 .INDENT 0.0
 .TP
 .B salt.modules.virt.node_info()
@@ -13829,6 +14397,7 @@ salt \(aq*\(aq virt.node_info
 .ft P
 .fi
 .UNINDENT
+.SS pause
 .INDENT 0.0
 .TP
 .B salt.modules.virt.pause(vm_)
@@ -13842,6 +14411,7 @@ salt \(aq*\(aq virt.pause <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.virt.purge(vm_, dirs=False)
@@ -13857,6 +14427,7 @@ salt \(aq*\(aq virt.purge <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS resume
 .INDENT 0.0
 .TP
 .B salt.modules.virt.resume(vm_)
@@ -13870,6 +14441,7 @@ salt \(aq*\(aq virt.resume <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS seed_non_shared_migrate
 .INDENT 0.0
 .TP
 .B salt.modules.virt.seed_non_shared_migrate(disks, force=False)
@@ -13885,6 +14457,7 @@ salt \(aq*\(aq virt.seed_non_shared_migrate <disks>
 .ft P
 .fi
 .UNINDENT
+.SS set_autostart
 .INDENT 0.0
 .TP
 .B salt.modules.virt.set_autostart(vm_, state=\(aqon\(aq)
@@ -13899,6 +14472,7 @@ salt "*" virt.set_autostart <vm name> <on | off>
 .ft P
 .fi
 .UNINDENT
+.SS shutdown
 .INDENT 0.0
 .TP
 .B salt.modules.virt.shutdown(vm_)
@@ -13912,6 +14486,7 @@ salt \(aq*\(aq virt.shutdown <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.virt.start(vm_)
@@ -13925,6 +14500,7 @@ salt \(aq*\(aq virt.start <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS undefine
 .INDENT 0.0
 .TP
 .B salt.modules.virt.undefine(vm_)
@@ -13939,6 +14515,7 @@ salt \(aq*\(aq virt.undefine <vm name>
 .ft P
 .fi
 .UNINDENT
+.SS virt_type
 .INDENT 0.0
 .TP
 .B salt.modules.virt.virt_type()
@@ -13952,6 +14529,7 @@ salt \(aq*\(aq virt.virt_type
 .ft P
 .fi
 .UNINDENT
+.SS vm_info
 .INDENT 0.0
 .TP
 .B salt.modules.virt.vm_info(vm_=None)
@@ -13984,6 +14562,7 @@ salt \(aq*\(aq virt.vm_info
 .ft P
 .fi
 .UNINDENT
+.SS vm_state
 .INDENT 0.0
 .TP
 .B salt.modules.virt.vm_state(vm_)
@@ -14000,6 +14579,7 @@ salt \(aq*\(aq virt.vm_state <vm name>
 .SS salt.modules.virtualenv
 .sp
 Create virtualenv environments
+Members.SS create
 .INDENT 0.0
 .TP
 .B salt.modules.virtualenv.create(path, venv_bin=\(aqvirtualenv\(aq, no_site_packages=False, system_site_packages=False, distribute=False, clear=False, python=\(aq\(aq, extra_search_dir=\(aq\(aq, never_download=False, prompt=\(aq\(aq, runas=None)
@@ -14062,6 +14642,7 @@ salt \(aq*\(aq virtualenv.create /path/to/new/virtualenv
 .SS salt.modules.win_disk
 .sp
 Module for gathering disk information on Windows
+Members.SS usage
 .INDENT 0.0
 .TP
 .B salt.modules.win_disk.usage()
@@ -14081,6 +14662,7 @@ Manage information about files on the minion, set/read user, group
 data
 .sp
 Required python modules: win32api, win32con, win32security, ntsecuritycon
+Members.SS append
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.append(path, *args)
@@ -14098,6 +14680,7 @@ salt \(aq*\(aq file.append /etc/motd \e
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS chgrp
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.chgrp(path, group)
@@ -14111,6 +14694,7 @@ salt \(aq*\(aq file.chgrp c:\etemp\etest.txt administrators
 .ft P
 .fi
 .UNINDENT
+.SS chown
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.chown(path, user, group)
@@ -14124,6 +14708,7 @@ salt \(aq*\(aq file.chown c:\etemp\etest.txt myusername administrators
 .ft P
 .fi
 .UNINDENT
+.SS comment
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.comment(path, regex, char=\(aq#\(aq, backup=\(aq.bak\(aq)
@@ -14164,6 +14749,7 @@ salt \(aq*\(aq file.comment /etc/modules pcspkr
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS contains
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.contains(path, text, limit=\(aq\(aq)
@@ -14179,6 +14765,7 @@ salt \(aq*\(aq file.contains /etc/crontab \(aqmymaintenance.sh\(aq
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS find
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.find(path, **kwargs)
@@ -14303,6 +14890,7 @@ salt \(aq*\(aq file.find /var/log name=\e*.[0\-9] mtime=+30d size=+10m delete
 .ft P
 .fi
 .UNINDENT
+.SS get_gid
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.get_gid(path)
@@ -14316,6 +14904,7 @@ salt \(aq*\(aq file.get_gid c:\etemp\etest.txt
 .ft P
 .fi
 .UNINDENT
+.SS get_group
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.get_group(path)
@@ -14329,6 +14918,7 @@ salt \(aq*\(aq file.get_group c:\etemp\etest.txt
 .ft P
 .fi
 .UNINDENT
+.SS get_mode
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.get_mode(path)
@@ -14346,6 +14936,7 @@ salt \(aq*\(aq file.get_mode /etc/passwd
 .ft P
 .fi
 .UNINDENT
+.SS get_sum
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.get_sum(path, form=\(aqmd5\(aq)
@@ -14360,6 +14951,7 @@ salt \(aq*\(aq file.get_sum /etc/passwd sha512
 .ft P
 .fi
 .UNINDENT
+.SS get_uid
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.get_uid(path)
@@ -14373,6 +14965,7 @@ salt \(aq*\(aq file.get_uid c:\etemp\etest.txt
 .ft P
 .fi
 .UNINDENT
+.SS get_user
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.get_user(path)
@@ -14386,6 +14979,7 @@ salt \(aq*\(aq file.get_user c:\etemp\etest.txt
 .ft P
 .fi
 .UNINDENT
+.SS gid_to_group
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.gid_to_group(gid)
@@ -14399,6 +14993,7 @@ salt \(aq*\(aq file.gid_to_group S\-1\-5\-21\-626487655\-2533044672\-482107328\-
 .ft P
 .fi
 .UNINDENT
+.SS group_to_gid
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.group_to_gid(group)
@@ -14412,6 +15007,7 @@ salt \(aq*\(aq file.group_to_gid administrators
 .ft P
 .fi
 .UNINDENT
+.SS sed
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.sed(path, before, after, limit=\(aq\(aq, backup=\(aq.bak\(aq, options=\(aq\-r \-e\(aq, flags=\(aqg\(aq)
@@ -14468,6 +15064,7 @@ salt \(aq*\(aq file.sed /etc/httpd/httpd.conf \(aqLogLevel warn\(aq \(aqLogLevel
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS touch
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.touch(name, atime=None, mtime=None)
@@ -14493,6 +15090,7 @@ salt \(aq*\(aq file.touch /var/log/emptyfile
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS uid_to_user
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.uid_to_user(uid)
@@ -14506,6 +15104,7 @@ salt \(aq*\(aq file.uid_to_user S\-1\-5\-21\-626487655\-2533044672\-482107328\-1
 .ft P
 .fi
 .UNINDENT
+.SS uncomment
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.uncomment(path, regex, char=\(aq#\(aq, backup=\(aq.bak\(aq)
@@ -14543,6 +15142,7 @@ salt \(aq*\(aq file.uncomment /etc/hosts.deny \(aqALL: PARANOID\(aq
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS user_to_uid
 .INDENT 0.0
 .TP
 .B salt.modules.win_file.user_to_uid(user)
@@ -14559,6 +15159,7 @@ salt \(aq*\(aq file.user_to_uid myusername
 .SS salt.modules.win_groupadd
 .sp
 Manage groups on Windows
+Members.SS add
 .INDENT 0.0
 .TP
 .B salt.modules.win_groupadd.add(name, gid=None, system=False)
@@ -14572,6 +15173,7 @@ salt \(aq*\(aq group.add foo
 .ft P
 .fi
 .UNINDENT
+.SS delete
 .INDENT 0.0
 .TP
 .B salt.modules.win_groupadd.delete(name)
@@ -14585,6 +15187,7 @@ salt \(aq*\(aq group.delete foo
 .ft P
 .fi
 .UNINDENT
+.SS getent
 .INDENT 0.0
 .TP
 .B salt.modules.win_groupadd.getent()
@@ -14598,6 +15201,7 @@ salt \(aq*\(aq group.getent
 .ft P
 .fi
 .UNINDENT
+.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.win_groupadd.info(name)
@@ -14614,6 +15218,7 @@ salt \(aq*\(aq group.info foo
 .SS salt.modules.win_network
 .sp
 Module for gathering and managing network information
+Members.SS dig
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.dig(host)
@@ -14629,6 +15234,7 @@ salt \(aq*\(aq network.dig archlinux.org
 .ft P
 .fi
 .UNINDENT
+.SS hwaddr
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.hwaddr(interface)
@@ -14642,6 +15248,7 @@ salt \(aq*\(aq network.hwaddr \(aqWireless LAN adapter Wireless Network Connecti
 .ft P
 .fi
 .UNINDENT
+.SS interfaces
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.interfaces()
@@ -14656,6 +15263,7 @@ salt \(aq*\(aq network.interfaces
 .ft P
 .fi
 .UNINDENT
+.SS ipaddr
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.ipaddr(interface)
@@ -14669,6 +15277,7 @@ salt \(aq*\(aq network.ipaddr \(aqWireless LAN adapter Wireless Network Connecti
 .ft P
 .fi
 .UNINDENT
+.SS isportopen
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.isportopen(host, port)
@@ -14682,6 +15291,7 @@ salt \(aq*\(aq network.isportopen 127.0.0.1 22
 .ft P
 .fi
 .UNINDENT
+.SS netmask
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.netmask(interface)
@@ -14695,6 +15305,7 @@ salt \(aq*\(aq network.netmask \(aqWireless LAN adapter Wireless Network Connect
 .ft P
 .fi
 .UNINDENT
+.SS netstat
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.netstat()
@@ -14708,6 +15319,7 @@ salt \(aq*\(aq network.netstat
 .ft P
 .fi
 .UNINDENT
+.SS nslookup
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.nslookup(host)
@@ -14721,6 +15333,7 @@ salt \(aq*\(aq network.nslookup archlinux.org
 .ft P
 .fi
 .UNINDENT
+.SS ping
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.ping(host)
@@ -14734,6 +15347,7 @@ salt \(aq*\(aq network.ping archlinux.org
 .ft P
 .fi
 .UNINDENT
+.SS traceroute
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.traceroute(host)
@@ -14747,6 +15361,7 @@ salt \(aq*\(aq network.traceroute archlinux.org
 .ft P
 .fi
 .UNINDENT
+.SS up
 .INDENT 0.0
 .TP
 .B salt.modules.win_network.up(interface)
@@ -14763,6 +15378,7 @@ salt \(aq*\(aq network.up \(aqWireless LAN adapter Wireless Network Connection\(
 .SS salt.modules.win_pkg
 .sp
 A module to manage software on Windows
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.available_version(name)
@@ -14776,6 +15392,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.install(name, refresh=False, **kwargs)
@@ -14798,6 +15415,7 @@ salt \(aq*\(aq pkg.install <package name>
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.list_pkgs(*args)
@@ -14817,6 +15435,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS list_upgrades
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.list_upgrades()
@@ -14830,6 +15449,7 @@ salt \(aq*\(aq pkg.list_upgrades
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.purge(name)
@@ -14846,6 +15466,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.refresh_db()
@@ -14865,6 +15486,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.remove(name)
@@ -14880,6 +15502,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.upgrade()
@@ -14902,6 +15525,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS upgrade_available
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.upgrade_available(name)
@@ -14915,6 +15539,7 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.win_pkg.version(name)
@@ -14931,6 +15556,7 @@ salt \(aq*\(aq pkg.version <package name>
 .SS salt.modules.win_service
 .sp
 Windows Service module.
+Members.SS disable
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.disable(name)
@@ -14944,6 +15570,7 @@ salt \(aq*\(aq service.disable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS disabled
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.disabled(name)
@@ -14957,6 +15584,7 @@ salt \(aq*\(aq service.disabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enable
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.enable(name)
@@ -14970,6 +15598,7 @@ salt \(aq*\(aq service.enable <service name>
 .ft P
 .fi
 .UNINDENT
+.SS enabled
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.enabled(name)
@@ -14983,6 +15612,7 @@ salt \(aq*\(aq service.enabled <service name>
 .ft P
 .fi
 .UNINDENT
+.SS get_all
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.get_all()
@@ -14996,6 +15626,7 @@ salt \(aq*\(aq service.get_all
 .ft P
 .fi
 .UNINDENT
+.SS get_disabled
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.get_disabled()
@@ -15009,6 +15640,7 @@ salt \(aq*\(aq service.get_disabled
 .ft P
 .fi
 .UNINDENT
+.SS get_enabled
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.get_enabled()
@@ -15022,6 +15654,7 @@ salt \(aq*\(aq service.get_enabled
 .ft P
 .fi
 .UNINDENT
+.SS getsid
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.getsid(name)
@@ -15035,6 +15668,7 @@ salt \(aq*\(aq service.getsid <service name>
 .ft P
 .fi
 .UNINDENT
+.SS restart
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.restart(name)
@@ -15048,6 +15682,7 @@ salt \(aq*\(aq service.restart <service name>
 .ft P
 .fi
 .UNINDENT
+.SS start
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.start(name)
@@ -15061,6 +15696,7 @@ salt \(aq*\(aq service.start <service name>
 .ft P
 .fi
 .UNINDENT
+.SS status
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.status(name, sig=None)
@@ -15076,6 +15712,7 @@ salt \(aq*\(aq service.status <service name> [service signature]
 .ft P
 .fi
 .UNINDENT
+.SS stop
 .INDENT 0.0
 .TP
 .B salt.modules.win_service.stop(name)
@@ -15092,6 +15729,7 @@ salt \(aq*\(aq service.stop <service name>
 .SS salt.modules.win_shadow
 .sp
 Manage the shadow file
+Members.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.win_shadow.info(name)
@@ -15106,6 +15744,7 @@ salt \(aq*\(aq shadow.info root
 .ft P
 .fi
 .UNINDENT
+.SS set_password
 .INDENT 0.0
 .TP
 .B salt.modules.win_shadow.set_password(name, password)
@@ -15124,6 +15763,7 @@ salt \(aq*\(aq shadow.set_password root mysecretpassword
 Manage Windows users with the net user command
 .sp
 NOTE: This currently only works with local user accounts, not domain accounts
+Members.SS add
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.add(name, uid=None, gid=None, groups=None, home=False, shell=None, system=False)
@@ -15137,6 +15777,7 @@ salt \(aq*\(aq user.add name password
 .ft P
 .fi
 .UNINDENT
+.SS addgroup
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.addgroup(name, group)
@@ -15150,6 +15791,7 @@ salt \(aq*\(aq user.addgroup username groupname
 .ft P
 .fi
 .UNINDENT
+.SS chgroups
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.chgroups(name, groups, append=False)
@@ -15164,6 +15806,7 @@ salt \(aq*\(aq user.chgroups foo wheel,root True
 .ft P
 .fi
 .UNINDENT
+.SS chhome
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.chhome(name, home)
@@ -15177,6 +15820,7 @@ salt \(aq*\(aq user.chhome foo \e\efileserver\ehome\efoo
 .ft P
 .fi
 .UNINDENT
+.SS chprofile
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.chprofile(name, profile)
@@ -15190,6 +15834,7 @@ salt \(aq*\(aq user.chprofile foo \e\efileserver\eprofiles\efoo
 .ft P
 .fi
 .UNINDENT
+.SS delete
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.delete(name)
@@ -15203,6 +15848,7 @@ salt \(aq*\(aq user.delete name
 .ft P
 .fi
 .UNINDENT
+.SS getent
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.getent()
@@ -15216,6 +15862,7 @@ salt \(aq*\(aq user.getent
 .ft P
 .fi
 .UNINDENT
+.SS info
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.info(name)
@@ -15229,6 +15876,7 @@ salt \(aq*\(aq user.info root
 .ft P
 .fi
 .UNINDENT
+.SS list_groups
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.list_groups(name)
@@ -15242,6 +15890,7 @@ salt \(aq*\(aq user.list_groups foo
 .ft P
 .fi
 .UNINDENT
+.SS removegroup
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.removegroup(name, group)
@@ -15255,6 +15904,7 @@ salt \(aq*\(aq user.removegroup username groupname
 .ft P
 .fi
 .UNINDENT
+.SS setpassword
 .INDENT 0.0
 .TP
 .B salt.modules.win_useradd.setpassword(name, password)
@@ -15270,13 +15920,10 @@ salt \(aq*\(aq user.setpassword name password
 .UNINDENT
 .SS salt.modules.yumpkg
 .sp
-New in version 0.9.4: This module replaces the "yum" module in previous releases. It is backward
-compatibile and uses the native yum Python interface instead of the CLI
-interface.
-.sp
 Support for YUM
 .sp
 Required python modules: yum, rpm, rpmUtils
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.available_version(name)
@@ -15290,6 +15937,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS clean_metadata
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.clean_metadata()
@@ -15303,6 +15951,7 @@ salt \(aq*\(aq pkg.clean_metadata
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.install(pkgs, refresh=False, repo=\(aq\(aq, skip_verify=False, **kwargs)
@@ -15343,6 +15992,7 @@ salt \(aq*\(aq pkg.install \(aqpackage package package\(aq
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.list_pkgs(*args)
@@ -15362,6 +16012,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS list_upgrades
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.list_upgrades(*args)
@@ -15375,6 +16026,7 @@ salt \(aq*\(aq pkg.list_upgrades
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.purge(pkgs)
@@ -15390,6 +16042,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.refresh_db()
@@ -15404,6 +16057,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.remove(pkgs)
@@ -15419,6 +16073,7 @@ salt \(aq*\(aq pkg.remove <package,package,package>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.upgrade()
@@ -15441,6 +16096,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS upgrade_available
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.upgrade_available(name)
@@ -15454,6 +16110,7 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.version(name)
@@ -15470,6 +16127,7 @@ salt \(aq*\(aq pkg.version <package name>
 .SS salt.modules.yumpkg5
 .sp
 Support for YUM
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.available_version(name)
@@ -15483,6 +16141,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.install(pkg, refresh=False, repo=\(aq\(aq, skip_verify=False, **kwargs)
@@ -15523,6 +16182,7 @@ salt \(aq*\(aq pkg.install <package name>
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.list_pkgs()
@@ -15542,6 +16202,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS list_upgrades
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.list_upgrades()
@@ -15555,6 +16216,36 @@ salt \(aq*\(aq pkg.list_upgrades
 .ft P
 .fi
 .UNINDENT
+.SS namedtuple
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.namedtuple(typename, field_names, verbose=False, rename=False)
+Returns a new subclass of tuple with named fields.
+.sp
+.nf
+.ft C
+>>> Point = namedtuple(\(aqPoint\(aq, \(aqx y\(aq)
+>>> Point.__doc__                   # docstring for the new class
+\(aqPoint(x, y)\(aq
+>>> p = Point(11, y=22)             # instantiate with positional args or keywords
+>>> p[0] + p[1]                     # indexable like a plain tuple
+33
+>>> x, y = p                        # unpack like a regular tuple
+>>> x, y
+(11, 22)
+>>> p.x + p.y                       # fields also accessable by name
+33
+>>> d = p._asdict()                 # convert to a dictionary
+>>> d[\(aqx\(aq]
+11
+>>> Point(**d)                      # convert from a dictionary
+Point(x=11, y=22)
+>>> p._replace(x=100)               # _replace() is like str.replace() but targets named fields
+Point(x=100, y=22)
+.ft P
+.fi
+.UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.purge(pkg)
@@ -15570,6 +16261,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.refresh_db()
@@ -15584,6 +16276,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.remove(pkg)
@@ -15599,6 +16292,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.upgrade()
@@ -15621,6 +16315,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS upgrade_available
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.upgrade_available(name)
@@ -15634,6 +16329,7 @@ salt \(aq*\(aq pkg.upgrade_available <package name>
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg5.version(name)
@@ -15650,6 +16346,7 @@ salt \(aq*\(aq pkg.version <package name>
 .SS salt.modules.zypper
 .sp
 Package support for openSUSE via the zypper package manager
+Members.SS available_version
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.available_version(name)
@@ -15663,6 +16360,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .ft P
 .fi
 .UNINDENT
+.SS install
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.install(name, refresh=False, **kwargs)
@@ -15685,6 +16383,7 @@ salt \(aq*\(aq pkg.install <package name>
 .ft P
 .fi
 .UNINDENT
+.SS list_pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.list_pkgs()
@@ -15704,6 +16403,7 @@ salt \(aq*\(aq pkg.list_pkgs
 .ft P
 .fi
 .UNINDENT
+.SS purge
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.purge(name)
@@ -15720,6 +16420,7 @@ salt \(aq*\(aq pkg.purge <package name>
 .ft P
 .fi
 .UNINDENT
+.SS refresh_db
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.refresh_db()
@@ -15739,6 +16440,7 @@ salt \(aq*\(aq pkg.refresh_db
 .ft P
 .fi
 .UNINDENT
+.SS remove
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.remove(name)
@@ -15754,6 +16456,7 @@ salt \(aq*\(aq pkg.remove <package name>
 .ft P
 .fi
 .UNINDENT
+.SS upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.upgrade()
@@ -15776,6 +16479,7 @@ salt \(aq*\(aq pkg.upgrade
 .ft P
 .fi
 .UNINDENT
+.SS version
 .INDENT 0.0
 .TP
 .B salt.modules.zypper.version(name)
@@ -15867,7 +16571,7 @@ serializes the data as json and sets it in redis.
 .SS Examples
 .sp
 The collection of built\-in Salt returners can be found here:
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/returners\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/returners\fP
 .SH FULL LIST OF BUILTIN RETURNERS
 .TS
 center;
@@ -15902,6 +16606,7 @@ _
 .sp
 The local returner is used to test the returner interface, it just prints the
 return data to the console to verify that it is being passed properly
+Members.SS returner
 .INDENT 0.0
 .TP
 .B salt.returners.local.returner(ret)
@@ -15926,6 +16631,7 @@ create column family returns
 .fi
 .sp
 Required python modules: pycassa
+Members.SS returner
 .INDENT 0.0
 .TP
 .B salt.returners.cassandra_return.returner(ret)
@@ -15936,6 +16642,7 @@ Return data to a Cassandra ColumnFamily
 Return data to a mongodb server
 .sp
 Required python modules: pymongo
+Members.SS returner
 .INDENT 0.0
 .TP
 .B salt.returners.mongo_return.returner(ret)
@@ -15948,6 +16655,7 @@ This is a VERY simple example for pushing data to a redis server and is not
 necessarily intended as a usable interface.
 .sp
 Required python modules: redis
+Members.SS returner
 .INDENT 0.0
 .TP
 .B salt.returners.redis_return.returner(ret)
@@ -15982,8 +16690,7 @@ extend:
         \- file: /etc/ssh/banner
 
 /etc/ssh/banner:
-  file:
-    \- managed
+  file.managed:
     \- source: salt://ssh/banner
 .ft P
 .fi
@@ -16031,8 +16738,7 @@ include:
   \- ssh
 
 /etc/ssh/banner:
-  file:
-    \- managed
+  file.managed:
     \- source: salt://ssh/banner
     \- watch_in:
       \- service: ssh\-server
@@ -16073,8 +16779,7 @@ A good example of this would be setting up a package manager early on:
 .nf
 .ft C
 /etc/yum.repos.d/company.repo:
-  file:
-    \- managed
+  file.managed:
     \- source: salt://company/yumrepo.conf
     \- user: root
     \- group: root
@@ -16257,8 +16962,51 @@ For example, the following state declaration calls the \fBinstalled\fP function 
 .nf
 .ft C
 httpd:
+  pkg.installed
+.ft P
+.fi
+.sp
+The function can be declared inline with the state as a shortcut, but
+the actual data structure is better referenced in this form:
+.sp
+.nf
+.ft C
+httpd:
   pkg:
     \- installed
+.ft P
+.fi
+.sp
+Where the function is a string in the body of the state declaration.
+Technically when the function is declared in dot notation the compiler
+converts it to be a string in the state declaration list. Note that the
+use of the first example more than once in an ID declaration is invalid
+yaml.
+.sp
+INVALID:
+.sp
+.nf
+.ft C
+httpd:
+  pkg.installed
+  service.running
+.ft P
+.fi
+.sp
+When passing a function without arguments and another state declaration
+within a single ID declaration, then the long or "standard" format
+needs to be used since otherwise it does not represent a valid data
+structure.
+.sp
+VALID:
+.sp
+.nf
+.ft C
+httpd:
+  pkg:
+    \- installed
+  service:
+    \- running
 .ft P
 .fi
 .sp
@@ -16281,8 +17029,7 @@ For example in the following state declaration \fBuser\fP, \fBgroup\fP, and
 .nf
 .ft C
 /etc/http/conf/http.conf:
-  file:
-    \- managed
+  file.managed:
     \- user: root
     \- group: root
     \- mode: 644
@@ -16307,14 +17054,12 @@ declarations cannot both have \fB/etc/motd\fP as the ID declaration:
 .nf
 .ft C
 motd_perms:
-  file:
-    \- managed
+  file.managed:
     \- name: /etc/motd
     \- mode: 644
 
 motd_quote:
-  file:
-    \- append
+  file.append:
     \- name: /etc/motd
     \- text: "Of all smells, bread; of all tastes, salt."
 .ft P
@@ -16328,14 +17073,12 @@ easier to specify \fBmywebsite\fP than to specify
 .nf
 .ft C
 mywebsite:
-  file:
-    \- managed
+  file.managed:
     \- name: /etc/apache2/sites\-available/mywebsite.com
     \- source: salt://mywebsite.com
 
 a2ensite mywebsite.com:
-  cmd:
-    \- wait
+  cmd.wait:
     \- unless: test \-L /etc/apache2/sites\-enabled/mywebsite.com
     \- watch:
       \- file: mywebsite
@@ -16360,8 +17103,7 @@ For example, given the following state declaration:
 .nf
 .ft C
 python\-pkgs:
-  pkg:
-    \- installed
+  pkg.installed:
     \- names:
       \- python\-django
       \- python\-crypto
@@ -16375,16 +17117,13 @@ declaration will be expanded into the following three state declarations:
 .nf
 .ft C
 python\-django:
-  pkg:
-    \- installed
+  pkg.installed
 
 python\-crypto:
-  pkg:
-    \- installed
+  pkg.installed
 
 python\-yaml:
-  pkg:
-    \- installed
+  pkg.installed
 .ft P
 .fi
 .SS Large example
@@ -16404,7 +17143,7 @@ components.
 
 <ID Declaration>:
   <State Declaration>:
-    \- <Function>
+    \- <Function>:
     \- <Function Arg>
     \- <Function Arg>
     \- <Function Arg>
@@ -16414,8 +17153,7 @@ components.
       \- <Requisite Reference>
 
 <ID Declaration>:
-  <State Declaration>:
-    \- <Function>
+  <State Declaration>.<Function>:
     \- <Function Arg>
     \- <Function Arg>
     \- <Function Arg>
@@ -16529,8 +17267,7 @@ vim:
 salt:
   pkg:
     \- latest
-  service:
-    \- running
+  service.running:
     \- require:
       \- file: /etc/salt/minion
       \- pkg: salt
@@ -16541,8 +17278,7 @@ salt:
       \- file: /etc/salt/minion
 
 /etc/salt/minion:
-  file:
-    \- managed
+  file.managed:
     \- source: salt://salt/minion
     \- user: root
     \- group: root
@@ -16597,7 +17333,7 @@ files.
 The available renderers can be found in the renderers directory in the Salt
 source code:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/renderers\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/renderers\fP
 .sp
 By default SLS files are rendered using jinja as a templating engine, and yaml
 as the serialization format. Since the rendering system can be extended simply
@@ -16636,8 +17372,7 @@ These requisite statements are applied to a specific state declaration:
 httpd:
   pkg:
     \- installed
-  file:
-    \- managed
+  file.managed:
     \- name: /etc/httpd/conf/httpd.conf
     \- source: salt://httpd/httpd.conf
     \- require:
@@ -16662,8 +17397,7 @@ more requisites. Both requisite types can also be separately declared:
 httpd:
   pkg:
     \- installed
-  service:
-    \- running
+  service.running:
     \- enable: True
     \- watch:
       \- file: /etc/httpd/conf/httpd.conf
@@ -16671,8 +17405,7 @@ httpd:
       \- pkg: httpd
       \- user: httpd
       \- group: httpd
-  file:
-    \- managed
+  file.managed:
     \- name: /etc/httpd/conf/httpd.conf
     \- source: salt://httpd/httpd.conf
     \- require:
@@ -16699,8 +17432,7 @@ the vim package has been installed:
 vim:
   pkg:
     \- installed
-  file:
-    \- managed
+  file.managed:
     \- source: salt://vim/vimrc
     \- require:
       \- pkg: vim
@@ -16728,14 +17460,12 @@ Perhaps an example can better explain the behavior:
 redis:
   pkg:
     \- latest
-  file:
-    \- managed
+  file.managed:
     \- source: salt://redis/redis.conf
     \- name: /etc/redis.conf
     \- require:
       \- pkg: redis
-  service:
-    \- running
+  service.running:
     \- enable: True
     \- watch:
       \- file: /etc/redis.conf
@@ -16799,8 +17529,7 @@ with the option \fIorder\fP:
 .nf
 .ft C
 vim:
-  pkg:
-    \- installed
+  pkg.installed:
     \- order: 1
 .ft P
 .fi
@@ -16818,8 +17547,7 @@ set the order to \fBlast\fP:
 .nf
 .ft C
 vim:
-  pkg:
-    \- installed
+  pkg.installed:
     \- order: last
 .ft P
 .fi
@@ -16839,8 +17567,7 @@ module detected for Arch Linux, the systemd module can be used:
 .nf
 .ft C
 httpd:
-  service:
-    \- running
+  service.running:
     \- enable: True
     \- provider: systemd
 .ft P
@@ -16858,8 +17585,7 @@ module can be used to provide certain functionality.
 .nf
 .ft C
 emacs:
-  pkg:
-    \- installed
+  pkg.installed:
     \- provider:
       \- pkg: yumpkg5
       \- cmd: customcmd
@@ -16877,7 +17603,7 @@ core idea being, that when one state it dependent somehow on another that
 interdependency can be easily defined.
 .sp
 Requisites come in two types. Direct requisites, and requisite_ins. The
-relationships are directional, so a requisite statement makes the requireing
+relationships are directional, so a requisite statement makes the requiring
 state declaration depend on the required state declaration:
 .sp
 .nf
@@ -16912,7 +17638,7 @@ vim:
 .fi
 .sp
 So here, with a requisite_in, the same thing is accomplished, but just from
-the other way around. The vim package is saying "/etc/vimrc depands on me".
+the other way around. The vim package is saying "/etc/vimrc depends on me".
 .sp
 In the end a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -16937,9 +17663,9 @@ little more. The watch statement looks into the state modules for a function
 called \fBmod_watch\fP. If this function is not available in the corresponding
 state module, then watch does the same thing as require. If the \fBmod_watch\fP
 function is in the state module, then the watched state is checked to see if
-it made any chnges to the system, if it has, then \fBmod_watch\fP is called.
+it made any changes to the system, if it has, then \fBmod_watch\fP is called.
 .sp
-Prhaps the best example of using watch is with a service, when a service
+Perhaps the best example of using watch is with a service, when a service
 watches other states, then when the other states make changes on the system
 the service is reloaded or restarted.
 .SS Use
@@ -17454,11 +18180,11 @@ aliases:
 .nf
 .ft C
 username:
-  alias:
-    \- present
+  alias.present:
     \- target: user@example.com
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.alias.absent(name)
@@ -17469,6 +18195,7 @@ Ensure that the named alias is absent
 The alias to remove
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.alias.present(name, target)
@@ -17512,11 +18239,11 @@ syslog if there is no disk space:
 .nf
 .ft C
 > /var/log/messages:
-  cmd:
-    \- run
+  cmd.run:
     \- unless: echo \(aqfoo\(aq > /tmp/.test
 .ft P
 .fi
+Members.SS mod_watch
 .INDENT 0.0
 .TP
 .B salt.states.cmd.mod_watch(name, onlyif=None, unless=None, cwd=\(aq/root\(aq, user=None, group=None, shell=None, env=())
@@ -17549,6 +18276,7 @@ The group context to run the command as
 The shell to use for execution, defaults to the shell grain
 .UNINDENT
 .UNINDENT
+.SS run
 .INDENT 0.0
 .TP
 .B salt.states.cmd.run(name, onlyif=None, unless=None, cwd=\(aq/root\(aq, user=None, group=None, shell=None, env=())
@@ -17581,6 +18309,7 @@ The group context to run the command as
 The shell to use for execution, defaults to the shell grain
 .UNINDENT
 .UNINDENT
+.SS wait
 .INDENT 0.0
 .TP
 .B salt.states.cmd.wait(name, onlyif=None, unless=None, cwd=\(aq/root\(aq, user=None, group=None, shell=None)
@@ -17629,8 +18358,7 @@ and existing cron that looks like this:
 .nf
 .ft C
 date > /tmp/crontest:
-  cron:
-    \- present
+  cron.present:
     \- user: root
     \- minute: 5
 .ft P
@@ -17641,8 +18369,7 @@ Is changed to this:
 .nf
 .ft C
 date > /tmp/crontest:
-  cron:
-    \- present
+  cron.present:
     \- user: root
     \- minute: 7
     \- hour: 2
@@ -17651,6 +18378,7 @@ date > /tmp/crontest:
 .sp
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user\(aqs crontab.
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.cron.absent(name, user=\(aqroot\(aq, minute=\(aq*\(aq, hour=\(aq*\(aq, daymonth=\(aq*\(aq, month=\(aq*\(aq, dayweek=\(aq*\(aq)
@@ -17684,6 +18412,7 @@ The information to be set in the day of day of week section. Default is
 \fB*\fP
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.cron.present(name, user=\(aqroot\(aq, minute=\(aq*\(aq, hour=\(aq*\(aq, daymonth=\(aq*\(aq, month=\(aq*\(aq, dayweek=\(aq*\(aq)
@@ -17805,6 +18534,7 @@ something like this:
     \- source: salt://code/flask
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.file.absent(name)
@@ -17816,6 +18546,7 @@ reverse any of the functions in the file state module.
 The path which should be deleted
 .UNINDENT
 .UNINDENT
+.SS append
 .INDENT 0.0
 .TP
 .B salt.states.file.append(name, text)
@@ -17851,6 +18582,7 @@ Multiple lines of text:
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS comment
 .INDENT 0.0
 .TP
 .B salt.states.file.comment(name, regex, char=\(aq#\(aq, backup=\(aq.bak\(aq)
@@ -17866,6 +18598,7 @@ Usage:
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS directory
 .INDENT 0.0
 .TP
 .B salt.states.file.directory(name, user=None, group=None, recurse=[], mode=None, makedirs=False, clean=False, require=None)
@@ -17904,6 +18637,7 @@ directory will be deleted unless it is required.
 Require other resources such as packages or files
 .UNINDENT
 .UNINDENT
+.SS managed
 .INDENT 0.0
 .TP
 .B salt.states.file.managed(name, source=None, source_hash=\(aq\(aq, user=None, group=None, mode=None, template=None, makedirs=False, context=None, replace=True, defaults=None, env=None, **kwargs)
@@ -17964,6 +18698,33 @@ Overrides default context variables passed to the template.
 Default context passed to the template.
 .UNINDENT
 .UNINDENT
+.SS nested
+.INDENT 0.0
+.TP
+.B salt.states.file.nested(*args, **kwds)
+Combine multiple context managers into a single nested context manager.
+.sp
+This function has been deprecated in favour of the multiple manager form
+of the with statement.
+.sp
+The one advantage of this function over the multiple manager form of the
+with statement is that argument unpacking allows it to be
+used with a variable number of context managers as follows:
+.INDENT 7.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B with nested(
+.nf
+*
+.fi
+managers):
+do_something()
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS recurse
 .INDENT 0.0
 .TP
 .B salt.states.file.recurse(name, source, clean=False, require=None, user=None, group=None, dir_mode=None, file_mode=None, env=None, include_empty=False, **kwargs)
@@ -18007,6 +18768,7 @@ Set this to True if empty directories should also be created
 (default is False)
 .UNINDENT
 .UNINDENT
+.SS sed
 .INDENT 0.0
 .TP
 .B salt.states.file.sed(name, before, after, limit=\(aq\(aq, backup=\(aq.bak\(aq, options=\(aq\-r \-e\(aq, flags=\(aqg\(aq)
@@ -18040,6 +18802,7 @@ Usage:
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS symlink
 .INDENT 0.0
 .TP
 .B salt.states.file.symlink(name, target, force=False, makedirs=False)
@@ -18063,6 +18826,7 @@ then the state will fail, setting makedirs to True will allow Salt to
 create the parent directory
 .UNINDENT
 .UNINDENT
+.SS touch
 .INDENT 0.0
 .TP
 .B salt.states.file.touch(name, atime=None, mtime=None, makedirs=False)
@@ -18080,6 +18844,7 @@ Usage:
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS uncomment
 .INDENT 0.0
 .TP
 .B salt.states.file.uncomment(name, regex, char=\(aq#\(aq, backup=\(aq.bak\(aq)
@@ -18095,6 +18860,16 @@ Usage:
 .sp
 New in version 0.9.5.
 .UNINDENT
+.SS urlparse
+.INDENT 0.0
+.TP
+.B salt.states.file.urlparse(url, scheme=\(aq\(aq, allow_fragments=True)
+Parse a URL into 6 components:
+<scheme>://<netloc>/<path>;<params>?<query>#<fragment>
+Return a 6\-tuple: (scheme, netloc, path, params, query, fragment).
+Note that we don\(aqt break the components up in smaller bits
+(e.g. netloc is a single string) and we don\(aqt expand % escapes.
+.UNINDENT
 .SS salt.states.gem
 .SS Installation of Ruby modules packaged as gems.
 .sp
@@ -18105,12 +18880,12 @@ you can specify what ruby version and gemset to target.
 .nf
 .ft C
 addressable:
-  gem:
-    \- installed
+  gem.installed:
     \- runas: rvm
     \- ruby: jruby@jgemset
 .ft P
 .fi
+Members.SS installed
 .INDENT 0.0
 .TP
 .B salt.states.gem.installed(name, ruby=None, runas=None)
@@ -18129,6 +18904,7 @@ None
 The user to run gem as.
 .UNINDENT
 .UNINDENT
+.SS removed
 .INDENT 0.0
 .TP
 .B salt.states.gem.removed(name, ruby=None, runas=None)
@@ -18156,12 +18932,12 @@ It may be replaced with a generic VCS module if this proves viable.
 .nf
 .ft C
 https://github.com/saltstack/salt.git:
-  git:
-    \- latest
+  git.latest:
     \- rev: develop
     \- target: /tmp/salt
 .ft P
 .fi
+Members.SS latest
 .INDENT 0.0
 .TP
 .B salt.states.git.latest(name, rev=None, target=None, runas=None, force=None)
@@ -18193,12 +18969,12 @@ can be either present or absent:
 .nf
 .ft C
 cheese:
-  group:
-    \- present
+  group.present:
     \- gid: 7648
     \- system: True
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.group.absent(name)
@@ -18209,6 +18985,7 @@ Ensure that the named group is absent
 The name of the group to remove
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.group.present(name, gid=None, system=False)
@@ -18231,11 +19008,11 @@ The hosts file can be managed to contain definitions for specific hosts:
 .nf
 .ft C
 salt\-master:
-  host:
-    \- present
+  host.present:
     \- ip: 192.168.0.42
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.host.absent(name, ip)
@@ -18249,6 +19026,7 @@ The host to remove
 The ip addr of the host to remove
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.host.present(name, ip)
@@ -18271,13 +19049,12 @@ module:
 .nf
 .ft C
 kvm_amd:
-  kmod:
-    \- present
+  kmod.present
 pcspkr:
-  kmod:
-    \- absent
+  kmod.absent
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.kmod.absent(name)
@@ -18288,6 +19065,7 @@ Verify that the named kernel module is not loaded
 The name of the kernel module to verify is not loaded
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.kmod.present(name)
@@ -18306,8 +19084,7 @@ Mount any type of mountable filesystem with the mounted function:
 .nf
 .ft C
 /mnt/sdb:
-  mount:
-    \- mounted
+  mount.mounted:
     \- device: /dev/sdb1
     \- fstype: ext4
     \- mkmnt: True
@@ -18315,6 +19092,7 @@ Mount any type of mountable filesystem with the mounted function:
       \- defaults
 .ft P
 .fi
+Members.SS mounted
 .INDENT 0.0
 .TP
 .B salt.states.mount.mounted(name, device, fstype, mkmnt=False, opts=[\(aqdefaults\(aq], dump=0, pass_num=0, config=\(aq/etc/fstab\(aq, persist=True)
@@ -18364,10 +19142,10 @@ Databases can be set as either absent or present
 .nf
 .ft C
 frank:
-  mysql_database:
-    \- present
+  mysql_database.present
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.mysql_database.absent(name)
@@ -18378,6 +19156,7 @@ Ensure that the named database is absent
 The name of the database to remove
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.mysql_database.present(name)
@@ -18414,28 +19193,26 @@ etc...
 .nf
 .ft C
 frank_exampledb:
-   mysql_grants:
-    \- present
+   mysql_grants.present:
     \- grant: select,insert,update
     \- database: exampledb.*
     \- user: frank
     \- host: localhost
 
 frank_otherdb:
-  mysql_grants:
-    \- present
+  mysql_grants.present:
     \- grant: all privileges
     \- database: otherdb.*
     \- user: frank
 
 restricted_singletable:
-  mysql_grants:
-    \- present
+  mysql_grants.present:
     \- grant: select
     \- database: somedb.sometable
     \- user: joe
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.mysql_grants.absent(name, grant=None, database=None, user=None, host=\(aqlocalhost\(aq, grant_option=False, escape=True)
@@ -18458,6 +19235,7 @@ The user to apply the grant to
 The MySQL server
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.mysql_grants.present(name, grant=None, database=None, user=None, host=\(aqlocalhost\(aq, grant_option=False, escape=True)
@@ -18494,12 +19272,12 @@ The mysql_user module is used manage MySQL users.
 .nf
 .ft C
 frank:
-  mysql_user:
-    \- present
+  mysql_user.present:
     \- host: localhost
     \- password: bobcat
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.mysql_user.absent(name, host=\(aqlocalhost\(aq)
@@ -18510,6 +19288,7 @@ Ensure that the named user is absent
 The name of the user to remove
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.mysql_user.present(name, host=\(aqlocalhost\(aq, password=None, password_hash=None)
@@ -18533,11 +19312,13 @@ The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
 all interfaces are ignored unless specified.
 .sp
+Please note that only Redhat\-style networking is currently
+supported. This module will therefore only work on RH/CentOS/Fedora.
+.sp
 .nf
 .ft C
 eth0:
-  network:
-    \- managed
+  network.managed:
     \- enabled: True
     \- type: eth
     \- proto: none
@@ -18547,20 +19328,17 @@ eth0:
       \- 8.8.8.8
       \- 8.8.4.4
 eth2:
-  network:
-    \- managed
+  network.managed:
     \- type: slave
     \- master: bond0
 
 eth3:
-  network:
-    \- managed
+  network.managed:
     \- type: slave
     \- master: bond0
 
 bond0:
-  network:
-    \- managed
+  network.managed:
     \- type: bond
     \- ipaddr: 10.1.0.1
     \- netmask: 255.255.255.0
@@ -18598,8 +19376,7 @@ bond0:
     \- lro: off
 
 bond0.2:
-  network:
-    \- managed
+  network.managed:
     \- type: vlan
     \- ipaddr: 10.1.0.2
     \- use:
@@ -18608,8 +19385,7 @@ bond0.2:
       \- network: bond0
 
 bond0.3:
-  network:
-    \- managed
+  network.managed:
     \- type: vlan
     \- ipaddr: 10.1.0.3
     \- use:
@@ -18618,8 +19394,7 @@ bond0.3:
       \- network: bond0
 
 bond0.10:
-  network:
-    \- managed
+  network.managed:
     \- type: vlan
     \- ipaddr: 10.1.0.4
     \- use:
@@ -18628,8 +19403,7 @@ bond0.10:
       \- network: bond0
 
 bond0.12:
-  network:
-    \- managed
+  network.managed:
     \- type: vlan
     \- ipaddr: 10.1.0.5
     \- use:
@@ -18638,6 +19412,7 @@ bond0.12:
       \- network: bond0
 .ft P
 .fi
+Members.SS managed
 .INDENT 0.0
 .TP
 .B salt.states.network.managed(name, type, enabled=True, **kwargs)
@@ -18665,11 +19440,11 @@ A state module to manage system installed python packages
 .nf
 .ft C
 virtualenvwrapper:
-  pip:
-    \- installed
+  pip.installed:
     \- version: 3.0.1
 .ft P
 .fi
+Members.SS installed
 .INDENT 0.0
 .TP
 .B salt.states.pip.installed(name, pip_bin=None, requirements=None, env=None, bin_env=None, log=None, proxy=None, timeout=None, editable=None, find_links=None, index_url=None, extra_index_url=None, no_index=False, mirrors=None, build=None, target=None, download=None, download_cache=None, source=None, upgrade=False, force_reinstall=False, ignore_installed=False, no_deps=False, no_install=False, no_download=False, install_options=None, user=None, cwd=None)
@@ -18692,6 +19467,7 @@ None
 the pip executable or virtualenv to use
 .UNINDENT
 .UNINDENT
+.SS removed
 .INDENT 0.0
 .TP
 .B salt.states.pip.removed(name, packages=None, requirements=None, bin_env=None, log=None, proxy=None, timeout=None, user=None, cwd=None)
@@ -18716,10 +19492,10 @@ declarations are typically rather simple:
 .nf
 .ft C
 vim:
-  pkg:
-    \- installed
+  pkg.installed
 .ft P
 .fi
+Members.SS installed
 .INDENT 0.0
 .TP
 .B salt.states.pkg.installed(name, version=None, refresh=False, repo=\(aq\(aq, skip_verify=False, **kwargs)
@@ -18756,6 +19532,7 @@ httpd:
 .ft P
 .fi
 .UNINDENT
+.SS latest
 .INDENT 0.0
 .TP
 .B salt.states.pkg.latest(name, refresh=False, repo=\(aq\(aq, skip_verify=False, **kwargs)
@@ -18778,6 +19555,13 @@ False
 Skip the GPG verification check for the package to be installed
 .UNINDENT
 .UNINDENT
+.SS mod_init
+.INDENT 0.0
+.TP
+.B salt.states.pkg.mod_init(low)
+Refresh the package database here so that it only needs to happen once
+.UNINDENT
+.SS purged
 .INDENT 0.0
 .TP
 .B salt.states.pkg.purged(name)
@@ -18789,6 +19573,7 @@ salt pkg module for the platform.
 The name of the package to be purged
 .UNINDENT
 .UNINDENT
+.SS removed
 .INDENT 0.0
 .TP
 .B salt.states.pkg.removed(name)
@@ -18809,10 +19594,10 @@ Databases can be set as either absent or present
 .nf
 .ft C
 frank:
-  postgres_database:
-    \- present
+  postgres_database.present
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.postgres_database.absent(name)
@@ -18823,6 +19608,7 @@ Ensure that the named database is absent
 The name of the database to remove
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.postgres_database.present(name)
@@ -18850,16 +19636,14 @@ configuration could look like:
 rvm:
   group:
     \- present
-  user:
-    \- present
+  user.present:
     \- gid: rvm
     \- home: /home/rvm
     \- require:
       \- group: rvm
 
 rvm\-deps:
-  pkg:
-    \- installed
+  pkg.installed:
     \- names:
       \- bash
       \- coreutils
@@ -18873,8 +19657,7 @@ rvm\-deps:
       \- sudo
 
 mri\-deps:
-  pkg:
-    \- installed
+  pkg.installed:
     \- names:
       \- build\-essential
       \- openssl
@@ -18901,16 +19684,14 @@ mri\-deps:
       \- ruby
 
 jruby\-deps:
-  pkg:
-    \- installed
+  pkg.installed:
     \- names:
       \- curl
       \- g++
       \- openjdk\-6\-jre\-headless
 
 ruby\-1.9.2:
-  rvm:
-    \- installed
+  rvm.installed:
     \- default: True
     \- runas: rvm
     \- require:
@@ -18919,8 +19700,7 @@ ruby\-1.9.2:
       \- user: rvm
 
 jruby:
-  rvm:
-    \- installed
+  rvm.installed:
     \- runas: rvm
     \- require:
       \- pkg: rvm\-deps
@@ -18928,22 +19708,21 @@ jruby:
       \- user: rvm
 
 jgemset:
-  rvm:
-    \- gemset_present
+  rvm.gemset_present:
     \- ruby: jruby
     \- runas: rvm
     \- require:
       \- rvm: jruby
 
 mygemset:
-  rvm:
-    \- gemset_present
+  rvm.gemset_present:
     \- ruby: ruby\-1.9.2
     \- runas: rvm
     \- require:
       \- rvm: ruby\-1.9.2
 .ft P
 .fi
+Members.SS gemset_present
 .INDENT 0.0
 .TP
 .B salt.states.rvm.gemset_present(name, ruby=\(aqdefault\(aq, runas=None)
@@ -18962,6 +19741,7 @@ None
 The use user to run rvm as.
 .UNINDENT
 .UNINDENT
+.SS installed
 .INDENT 0.0
 .TP
 .B salt.states.rvm.installed(name, default=False, runas=None)
@@ -18998,6 +19778,7 @@ samba_create_home_dirs:
       \- persist: True
 .ft P
 .fi
+Members.SS boolean
 .INDENT 0.0
 .TP
 .B salt.states.selinux.boolean(name, value, persist=False)
@@ -19015,6 +19796,7 @@ Defaults to False, set persist to true to make the boolean apply on a
 reboot
 .UNINDENT
 .UNINDENT
+.SS mode
 .INDENT 0.0
 .TP
 .B salt.states.selinux.mode(name)
@@ -19039,6 +19821,7 @@ httpd:
     \- running
 .ft P
 .fi
+Members.SS dead
 .INDENT 0.0
 .TP
 .B salt.states.service.dead(name, enable=None, sig=None)
@@ -19057,6 +19840,7 @@ is None, which does not enable or disable anything.
 The string to search for when looking for the service process with ps
 .UNINDENT
 .UNINDENT
+.SS disabled
 .INDENT 0.0
 .TP
 .B salt.states.service.disabled(name)
@@ -19070,6 +19854,7 @@ function.
 The name of the init or rc script used to manage the service
 .UNINDENT
 .UNINDENT
+.SS enabled
 .INDENT 0.0
 .TP
 .B salt.states.service.enabled(name)
@@ -19083,6 +19868,7 @@ or dead function.
 The name of the init or rc script used to manage the service
 .UNINDENT
 .UNINDENT
+.SS mod_watch
 .INDENT 0.0
 .TP
 .B salt.states.service.mod_watch(name, sig=None, reload=False)
@@ -19096,6 +19882,7 @@ The name of the init or rc script used to manage the service
 The string to search for when looking for the service process with ps
 .UNINDENT
 .UNINDENT
+.SS running
 .INDENT 0.0
 .TP
 .B salt.states.service.running(name, enable=None, sig=None)
@@ -19152,6 +19939,7 @@ sshkeys:
       \- AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.ssh_auth.absent(name, user, config=\(aq.ssh/authorized_keys\(aq)
@@ -19169,6 +19957,7 @@ The location of the authorized keys file relative to the user\(aqs home
 directory, defaults to ".ssh/authorized_keys"
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.ssh_auth.present(name, user, enc=\(aqssh\-rsa\(aq, comment=\(aq\(aq, source=\(aq\(aq, options=[], config=\(aq.ssh/authorized_keys\(aq, **kwargs)
@@ -19219,6 +20008,7 @@ example.com:
     \- user: root
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.ssh_known_hosts.absent(name, user, config=\(aq.ssh/known_hosts\(aq)
@@ -19236,6 +20026,7 @@ The location of the authorized keys file relative to the user\(aqs home
 directory, defaults to ".ssh/known_hosts"
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.ssh_known_hosts.present(name, user, fingerprint=None, port=None, enc=None, config=\(aq.ssh/known_hosts\(aq)
@@ -19273,11 +20064,11 @@ Control the kernel sysctl system
 .nf
 .ft C
 vm.swappines:
-  sysctl:
-    \- present
+  sysctl.present:
     \- value: 20
 .ft P
 .fi
+Members.SS present
 .INDENT 0.0
 .TP
 .B salt.states.sysctl.present(name, value, config=\(aq/etc/sysctl.conf\(aq)
@@ -19303,8 +20094,7 @@ as either absent or present
 .nf
 .ft C
 fred:
-  user:
-    \- present
+  user.present:
     \- fullname: Fred Jones
     \- shell: /bin/zsh
     \- home: /home/fred
@@ -19314,8 +20104,12 @@ fred:
       \- wheel
       \- storage
       \- games
+
+testuser:
+  user.absent
 .ft P
 .fi
+Members.SS absent
 .INDENT 0.0
 .TP
 .B salt.states.user.absent(name, purge=False, force=False)
@@ -19333,6 +20127,7 @@ If the user is logged in the absent state will fail, set the force
 option to True to remove the user even if they are logged in
 .UNINDENT
 .UNINDENT
+.SS present
 .INDENT 0.0
 .TP
 .B salt.states.user.present(name, uid=None, gid=None, groups=None, home=True, password=None, enforce_password=True, shell=None, fullname=None, roomnumber=None, workphone=None, homephone=None, other=None, unique=True, system=False)
@@ -19399,6 +20194,27 @@ Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
 .UNINDENT
 .SS salt.states.virtualenv
 .SS Setup of Python virtualenv sandboxes.
+Members.SS manage
+.INDENT 0.0
+.TP
+.B salt.states.virtualenv.manage(name, venv_bin=\(aqvirtualenv\(aq, requirements=\(aq\(aq, no_site_packages=False, system_site_packages=False, distribute=False, clear=False, python=\(aq\(aq, extra_search_dir=\(aq\(aq, never_download=False, prompt=\(aq\(aq, __env__=\(aqbase\(aq, runas=None, cwd=None)
+Create a virtualenv and optionally manage it with pip
+.INDENT 7.0
+.TP
+.B name
+Path to the virtualenv
+.TP
+.B requirements
+Path to a pip requirements file. If the path begins with \fBsalt://\fP
+the file will be transfered from the master file server.
+.TP
+.B cwd
+Path to the working directory where "pip install" is executed.
+.UNINDENT
+.sp
+Also accepts any kwargs that the virtualenv module will.
+.UNINDENT
+.SS managed
 .INDENT 0.0
 .TP
 .B salt.states.virtualenv.managed(name, venv_bin=\(aqvirtualenv\(aq, requirements=\(aq\(aq, no_site_packages=False, system_site_packages=False, distribute=False, clear=False, python=\(aq\(aq, extra_search_dir=\(aq\(aq, never_download=False, prompt=\(aq\(aq, __env__=\(aqbase\(aq, runas=None, cwd=None)
@@ -19474,7 +20290,7 @@ derived from the file.
 The best place to find examples of renderers is in the Salt source code. The
 renderers included with Salt can be found here:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/renderers\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/renderers\fP
 .sp
 Here is a simple Jinja + YAML example:
 .sp
@@ -19543,6 +20359,7 @@ Process json with the jinja2 templating engine
 .sp
 This renderer will take a json file with the jinja template and render it to a
 high data format for salt states.
+Members.SS render
 .INDENT 0.0
 .TP
 .B salt.renderers.json_jinja.render(template_file, env=\(aq\(aq, sls=\(aq\(aq)
@@ -19554,6 +20371,7 @@ Process json with the Mako templating engine
 .sp
 This renderer will take a json file with the Mako template and render it to a
 high data format for salt states.
+Members.SS render
 .INDENT 0.0
 .TP
 .B salt.renderers.json_mako.render(template_file, env=\(aq\(aq, sls=\(aq\(aq)
@@ -19565,6 +20383,7 @@ The default rendering engine, process yaml with the jinja2 templating engine
 .sp
 This renderer will take a yaml file with the jinja2 template and render it to a
 high data format for salt states.
+Members.SS render
 .INDENT 0.0
 .TP
 .B salt.renderers.yaml_jinja.render(template_file, env=\(aq\(aq, sls=\(aq\(aq)
@@ -19576,6 +20395,7 @@ Process yaml with the Mako templating engine
 .sp
 This renderer will take a yaml file within a mako template and render it to a
 high data format for salt states.
+Members.SS render
 .INDENT 0.0
 .TP
 .B salt.renderers.yaml_mako.render(template_file, env=\(aq\(aq, sls=\(aq\(aq)
@@ -19587,6 +20407,7 @@ Pure python state renderer
 .sp
 The sls file should contain a function called \fBsls\fP which returns high state
 data
+Members.SS render
 .INDENT 0.0
 .TP
 .B salt.renderers.py.render(template, env=\(aq\(aq, sls=\(aq\(aq)
@@ -19620,7 +20441,7 @@ contains a function called \fBfoo\fP then the function could be called with:
 .sp
 The best examples of runners can be found in the Salt source:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/runners\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/runners\fP
 .sp
 A simple runner that returns a well\-formatted list of the minions that are
 responding to Salt calls would look like this:
@@ -22438,9 +23259,9 @@ header.
 .SS Source Files Implimenting Components
 .sp
 The pubkey authentication is managed via the salt.master module:
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/master.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/master.py\fP
 The regular minion authentication is managed via the salt.crypt module:
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/crypt.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/crypt.py\fP
 The salt.crypt module contains a class "SAuth" that can be used for
 standalone authentication with the Salt master, this is most likely the best
 place to start when looking into how the authentication mechanism works
@@ -22722,7 +23543,7 @@ use the file extension “.pyx” and the minion module will be compiled when
 the minion is started. An example cython module is included in the main
 distribution called cytest.pyx:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/modules/cytest.pyx\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/modules/cytest.pyx\fP
 .SS Dynamic Returners \-
 .sp
 By default salt returns command data back to the salt master, but now salt can
@@ -22736,7 +23557,7 @@ data so anything from MySQL, redis, mongodb and more!
 .sp
 There are 2 simple stock returners in the returners directory:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/returners\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/returners\fP
 .sp
 The documentation on writing returners will be added to the wiki shortly, and
 returners can be written in pure Python, or in cython.
@@ -22752,7 +23573,7 @@ Information on how to use this simple addition has been added to the wiki:
 The test module has an example of using the __opts__ dict, and how to set
 default options:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/modules/test.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/modules/test.py\fP
 .SS Advanced Minion Threading:
 .sp
 In 0.7.0 the minion would block after receiving a command from the master, now
@@ -22764,7 +23585,7 @@ exploit the negative aspects of the Python GIL to run faster and more reliably,
 but simple calls will still be faster with Python threading.
 The configuration option can be found in the minion configuration file:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/conf/minion\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/conf/minion\fP
 .sp
 Lowered Supported Python to 2.6 \-
 .sp
@@ -22842,7 +23663,7 @@ The system for loading salt modules has been pulled out of the minion class to
 be a standalone module, this has enabled more dynamic loading of Salt modules
 and enables many of the updates in 0.8.7 –
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/loader.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/loader.py\fP
 .sp
 Salt Job ids are now microsecond precise, this was needed to repair a race
 condition unveiled by the speed improvements in the new ZeroMQ topology.
@@ -23118,7 +23939,7 @@ The minion and master classes have been redesigned to allow for specialized
 minion and master servers to be easily created. An example on how this is done
 for the master can be found in the \fBmaster.py\fP salt module:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/master.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/master.py\fP
 .sp
 The \fBMaster\fP class extends the \fBSMaster\fP class and set up the main master
 server.
@@ -23126,7 +23947,7 @@ server.
 The minion functions can now also be easily added to another application via
 the \fBSMinion\fP class, this class can be found in the \fBminion.py\fP module:
 .sp
-\fI\%https://github.com/saltstack/salt/blob/v0.10.0/salt/minion.py\fP
+\fI\%https://github.com/saltstack/salt/blob/v0.10.1/salt/minion.py\fP
 .SS Cleaner Key Management
 .sp
 This release changes some of the key naming to allow for multiple master keys
