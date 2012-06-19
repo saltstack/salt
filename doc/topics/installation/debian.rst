@@ -74,7 +74,7 @@ minion. To do so type in the following commands:
 .. code-block:: bash
 
     sudo /etc/init.d/salt-master restart
-    sudo /etc/inti.d/salt-minion restart
+    sudo /etc/init.d/salt-minion restart
 
 Test
 ====
