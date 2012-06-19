@@ -115,14 +115,16 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     conn = get_conn(vm_)
-    msd = MultiStepDeployment([ssh_pub(vm_), script(vm_)])
-    img = get_image(conn, vm_)
-    size = get_size(conn, vm_)
-    return conn.deploy_node(
-            name=vm_['name'],
-            image=img,
-            size=size,
-            deploy=msd,
-            ex_keyname=keyname(vm_),
-            ex_securitygroup=securitygroup(vm_))
+    kwargs = {}
+    kwargs['name'] = vm_['name']
+    kwargs['deploy'] = MultiStepDeployment([ssh_pub(vm_), script(vm_)])
+    kwargs['image'] = get_image(conn, vm_)
+    kwargs['size'] = get_size(conn, vm_)
+    ex_keyname = keyname(vm_)
+    if ex_keyname:
+        kwargs['ex_keyname'] = ex_keyname
+    ex_securitygroup = securitygroup(vm_)
+    if ex_securitygroup:
+        kwargs['ex_securitygroup'] = ex_securitygroup
+    return conn.deploy_node(**kwargs)
 
