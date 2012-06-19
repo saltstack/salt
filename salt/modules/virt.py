@@ -681,7 +681,7 @@ def is_xen_hyper():
 
 def is_hyper():
     '''
-    Returns a bool whether or not this nos is a hypervisor of any kind
+    Returns a bool whether or not this node is a hypervisor of any kind
 
     CLI Example::
 
