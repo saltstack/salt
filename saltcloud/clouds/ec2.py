@@ -5,10 +5,7 @@ cloud virtual machines
 
 # Import python libs
 import os
-import tempfile
-import shutil
 
-#
 # Import libcloud
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -16,7 +13,6 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 
 # Import salt libs
 import saltcloud.utils
-import salt.crypt
 
 
 def conn(vm_):
