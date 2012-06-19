@@ -564,7 +564,7 @@ class RemoteClient(Client):
                     os.makedirs(destdir)
                 else:
                     return False
-            fn_ = open(dest, 'w+')
+            fn_ = open(dest, 'wb+')
         while True:
             if not fn_:
                 load['loc'] = 0
@@ -579,13 +579,13 @@ class RemoteClient(Client):
                     with self._cache_loc(data['dest'], env) as cache_dest:
                         dest = cache_dest
                         if not os.path.exists(cache_dest):
-                            with open(cache_dest, 'w+') as f:
+                            with open(cache_dest, 'wb+') as f:
                                 f.write(data['data'])
                 break
             if not fn_:
                 with self._cache_loc(data['dest'], env) as cache_dest:
                     dest = cache_dest
-                    fn_ = open(dest, 'w+')
+                    fn_ = open(dest, 'wb+')
             fn_.write(data['data'])
         if fn_:
             fn_.close()
