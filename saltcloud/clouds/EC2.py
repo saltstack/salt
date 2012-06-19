@@ -15,7 +15,7 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 import saltcloud.utils
 
 
-def conn(vm_):
+def get_conn(vm_):
     '''
     Return a conn object for the passed vm data
     '''
@@ -114,13 +114,13 @@ def create(vm_):
     '''
     Create a single vm from a data dict
     '''
-    connection = conn(vm_)
+    conn = get_conn(vm_)
     msd = MultiStepDeployment([ssh_pub(vm_), script(vm_)])
-    image = image(conn, vm_)
+    img = image(conn, vm_)
     size = size(conn, vm_)
     return conn.deploy_node(
             name=vm_['name'],
-            image=image,
+            image=img,
             size=size,
             deploy=msd,
             ex_keyname=keyname(vm_),
