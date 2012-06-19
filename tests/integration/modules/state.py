@@ -37,10 +37,17 @@ class StateModuleTest(integration.ModuleCase):
 
     def test_no_recurse(self):
         '''
-        state.show_sls used to catch a recursive ref
+        verify that a sls structure is NOT a recursive ref
         '''
         sls = self.run_function('state.show_sls', mods='recurse_ok')
         self.assertIn('snmpd', sls)
+
+    def test_no_recurse_two(self):
+        '''
+        verify that a sls structure is NOT a recursive ref
+        '''
+        sls = self.run_function('state.show_sls', mods='recurse_ok_two')
+        self.assertIn('/etc/nagios/nrpe.cfg', sls)
 
 if __name__ == "__main__":
     loader = TestLoader()
