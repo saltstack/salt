@@ -31,6 +31,8 @@ def os_script(os_):
                 return data
             except (OSError, IOError):
                 continue
+    # No deploy script was found, return an empy string
+    return ''
 
 
 def gen_keys(keysize=2048):
