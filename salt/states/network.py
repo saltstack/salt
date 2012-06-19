@@ -6,6 +6,9 @@ The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
 all interfaces are ignored unless specified.
 
+Please note that only Redhat-style networking is currently
+supported. This module will therefore only work on RH/CentOS/Fedora.
+
 .. code-block:: yaml
 
     eth0:
