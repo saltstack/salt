@@ -93,6 +93,23 @@ def size(conn, vm_):
             return size
 
 
+def keyname(vm_):
+    '''
+    Return the keyname
+    '''
+    return vm_.get('EC2.keyname', __opts__.get('EC2.keyname', ''))
+
+
+def securitygroup(vm_):
+    '''
+    Return the keyname
+    '''
+    return vm_.get(
+            'EC2.securitygroup',
+            __opts__.get('EC2.securitygroup', 'default')
+            )
+
+
 def create(vm_):
     '''
     Create a single vm from a data dict
@@ -105,5 +122,7 @@ def create(vm_):
             name=vm_['name'],
             image=image,
             size=size,
-            deploy=msd)
+            deploy=msd,
+            ex_keyname=keyname(vm_),
+            ex_securitygroup=securitygroup(vm_))
 
