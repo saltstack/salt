@@ -32,7 +32,7 @@ def _active_mountinfo(ret):
 def _active_mounts(ret):
     with open('/proc/self/mounts') as fh:
         for line in fh:
-            comps.split()
+            comps = line.split()
             ret[comps[1]] = {'device': comps[0],
                              'fstype': comps[2],
                              'opts': comps[3].split(',')}
