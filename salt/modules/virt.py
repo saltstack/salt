@@ -47,7 +47,7 @@ def __get_conn():
     # all vm layers supported by libvirt
     try:
         conn = libvirt.open("qemu:///system")
-    except:
+    except Exception:
         msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
         raise CommandExecutionError(msg.format(__grains__['fqdn']))
     return conn
@@ -223,7 +223,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -231,7 +231,7 @@ def get_nics(vm_):
                 if v_node.tagName == "virtualport":
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -275,7 +275,7 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
-            for key in g_node.attributes.keys():
+            for key in g_node.attributes:
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -301,8 +301,7 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in list(target.attributes.keys()) \
-                and 'file' in list(source.attributes.keys()):
+        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
             disks[target.getAttribute('dev')] = {
                 'file': source.getAttribute('file')}
     for dev in disks:
@@ -585,7 +584,7 @@ def destroy(vm_):
     try:
         dom = _get_dom(vm_)
         dom.destroy()
-    except:
+    except Exception:
         return False
     return True
 
@@ -602,7 +601,7 @@ def undefine(vm_):
     try:
         dom = _get_dom(vm_)
         dom.undefine()
-    except:
+    except Exception:
         return False
     return True
 
@@ -682,7 +681,7 @@ def is_xen_hyper():
 
 def is_hyper():
     '''
-    Returns a bool whether or not this nos is a hypervisor of any kind
+    Returns a bool whether or not this node is a hypervisor of any kind
 
     CLI Example::
 

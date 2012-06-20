@@ -177,7 +177,7 @@ def set_mode(path, mode):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
-    except:
+    except Exception:
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
@@ -593,6 +593,7 @@ def touch(name, atime=None, mtime=None):
         Last modification in Unix epoch time
 
     CLI Example::
+
         salt '*' file.touch /var/log/emptyfile
 
     .. versionadded:: 0.9.5

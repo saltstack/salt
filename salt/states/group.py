@@ -1,6 +1,6 @@
 '''
-Group Management
-================
+Management of user groups.
+==========================
 
 The group module is used to create and manage unix group settings, groups
 can be either present or absent:
@@ -8,8 +8,7 @@ can be either present or absent:
 .. code-block:: yaml
 
     cheese:
-      group:
-        - present
+      group.present:
         - gid: 7648
         - system: True
 '''

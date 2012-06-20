@@ -18,6 +18,7 @@ except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
 
+log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
 
 class Master(object):
     '''
@@ -62,12 +63,11 @@ class Master(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=list(salt.log.LOG_LEVELS.keys()),
+                choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()])
-                )
-        log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
+
         options, args = parser.parse_args()
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
 
@@ -82,13 +82,16 @@ class Master(object):
         '''
         Run the sequence to start a salt master server
         '''
-        verify_env([os.path.join(self.opts['pki_dir'], 'minions'),
+        verify_env([self.opts['pki_dir'],
+                    os.path.join(self.opts['pki_dir'], 'minions'),
                     os.path.join(self.opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.opts['pki_dir'], 'minions_rejected'),
+                    self.opts['cachedir'],
                     os.path.join(self.opts['cachedir'], 'jobs'),
                     os.path.dirname(self.opts['log_file']),
                     self.opts['sock_dir'],
-                    ])
+                    ],
+                    self.opts['user'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
@@ -153,14 +156,14 @@ class Minion(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=list(salt.log.LOG_LEVELS.keys()),
+                choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in list(salt.log.LOG_LEVELS.keys())]))
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
 
         options, args = parser.parse_args()
-        log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
         salt.log.setup_console_logger(options.log_level, log_format=log_format)
+
         cli = {'daemon': options.daemon,
                'config': options.config,
                'user': options.user,
@@ -176,7 +179,8 @@ class Minion(object):
             self.opts['cachedir'],
             self.opts['extension_modules'],
             os.path.dirname(self.opts['log_file']),
-                ])
+                ],
+                self.opts['user'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
@@ -272,14 +276,13 @@ class Syndic(object):
                 '--log-level',
                 dest='log_level',
                 default='warning',
-                choices=list(salt.log.LOG_LEVELS.keys()),
-                help=('Console log level. One of %s. For the logfile settings '
-                      'see the config file. Default: \'%%default\'.' %
-                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS.keys()]))
-                     )
+                choices=list(salt.log.LOG_LEVELS),
+                help='Console log level. One of %s. For the logfile settings '
+                     'see the config file. Default: \'%%default\'.' %
+                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
 
         options, args = parser.parse_args()
-        salt.log.setup_console_logger(options.log_level)
+        salt.log.setup_console_logger(options.log_level, log_format=log_format)
 
         cli = {'daemon': options.daemon,
                'minion_config': options.minion_config,
@@ -295,7 +298,8 @@ class Syndic(object):
         '''
         verify_env([self.opts['pki_dir'], self.opts['cachedir'],
                 os.path.dirname(self.opts['log_file']),
-                ])
+                ],
+                self.opts['user'])
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']

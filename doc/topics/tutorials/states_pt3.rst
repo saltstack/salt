@@ -27,8 +27,7 @@ this:
 
     {% for usr in 'moe','larry','curly' %}
     {{ usr }}:
-      user:
-        - present
+      user.present
     {% endfor %}
 
 This templated sls file once generated will look like this:
@@ -36,14 +35,11 @@ This templated sls file once generated will look like this:
 .. code-block:: yaml
 
     moe:
-      user:
-        - present
+      user.present
     larry:
-      user:
-        - present
+      user.present
     curly:
-      user:
-        - present
+      user.present
 
 Using Grains in SLS modules
 ===========================
@@ -55,13 +51,12 @@ called ``grains`` is made available in the template context:
 .. code-block:: yaml
 
     apache:
-      pkg:
+      pkg.installed:
         {% if grains['os'] == 'RedHat' %}
         - name: httpd
         {% elif grains['os'] == 'Ubuntu' %}
         - name: apache2
         {% endif %}
-        - installed
 
 Calling Salt modules from templates
 ===================================
@@ -110,8 +105,7 @@ span multiple files you must use an :term:`include declaration`. For example:
 .. code-block:: yaml
 
     python-dateutil:
-      pkg:
-        - installed
+      pkg.installed
 
 ``django.sls``:
 
@@ -121,8 +115,7 @@ span multiple files you must use an :term:`include declaration`. For example:
       - python-libs
 
     django:
-      pkg:
-        - installed
+      pkg.installed:
         - require:
           - pkg: python-dateutil
 
@@ -138,8 +131,7 @@ vhosts file is changed:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed
 
 ``mywebsite.sls``:
 
@@ -155,8 +147,7 @@ vhosts file is changed:
             - file: /etc/httpd/extra/httpd-vhosts.conf
 
     /etc/httpd/extra/httpd-vhosts.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://httpd-vhosts.conf
 
 
@@ -182,8 +173,7 @@ rewritten as follows:
             - file: mywebsite
 
     mywebsite:
-      file:
-        - managed
+      file.managed:
         - name: /etc/httpd/extra/httpd-vhosts.conf
         - source: salt://httpd-vhosts.conf
 
@@ -198,8 +188,7 @@ can be rewritten without the loop:
 .. code-block:: yaml
 
     stooges:
-      user:
-        - present
+      user.present:
         - names:
           - moe
           - larry

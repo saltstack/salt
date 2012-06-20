@@ -14,7 +14,7 @@ import yaml
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
-except:
+except Exception:
     pass
 
 # Import salt libs
@@ -136,6 +136,7 @@ def minion_config(path):
             'cachedir': '/var/cache/salt',
             'cache_jobs': False,
             'conf_file': path,
+            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
@@ -196,7 +197,7 @@ def minion_config(path):
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir',
                             'key_logfile', 'extension_modules'])
 
     opts['grains'] = salt.loader.grains(opts)
@@ -238,6 +239,7 @@ def master_config(path):
             'state_top': 'top.sls',
             'external_nodes': '',
             'order_masters': False,
+            'job_cache': True,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
             'log_granular_levels': {},

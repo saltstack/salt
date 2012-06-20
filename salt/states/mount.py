@@ -1,14 +1,13 @@
 '''
-Mount Management
-================
+Mounting of filesystems.
+========================
 
 Mount any type of mountable filesystem with the mounted function:
 
 .. code-block:: yaml
 
     /mnt/sdb:
-      mount:
-        - mounted
+      mount.mounted:
         - device: /dev/sdb1
         - fstype: ext4
         - mkmnt: True

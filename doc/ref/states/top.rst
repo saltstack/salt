@@ -147,7 +147,8 @@ In addition to globs, minions can be specified in top files a few other
 ways. Some common ones are :doc:`compound matches </topics/targeting/compound>`
 and :doc:`node groups </topics/targeting/nodegroups>`.
 
-Here is a slightly more complex top file example:
+Here is a slightly more complex top file example, showing the different types
+of matches you can perform:
 
 .. code-block:: yaml
 
@@ -160,19 +161,40 @@ Here is a slightly more complex top file example:
         'salt-master*':
             - salt.master
 
-        'nag1* or G@role:monitoring':
-            - match: compound
-            - nagios.server
-
-        'E@^(memcache|web).(qa|prod).loc$':
+        '^(memcache|web).(qa|prod).loc$':
             - match: pcre
             - nagios.mon.web
             - apache.server
 
+        'os:Ubuntu':
+            - match: grain
+            - repos.ubuntu
+
+        'os:(RedHat|CentOS)'
+            - match: grain_pcre
+            - repos.epel
+
+        'foo,bar,baz':
+            - match: list
+            - database
+
+        'somekey:abc'
+            - match: pillar
+            - xyz
+
+        'nag1* or G@role:monitoring':
+            - match: compound
+            - nagios.server
+
 In this example ``top.sls``, all minions get the ldap-client, networking and
 salt.minion states. Any minion with an id matching the ``salt-master*`` glob
-will get the salt.master state. Minions with ids matching the nag1* glob or
-with a grain named ``role`` equal to ``monitoring`` will get the nagios.server
-state. Finally, any minion with ids matching the regular expression
-``^(memcache|web).(qa|prod).loc$``, will get the nagios.mon.web and
-apache.server states.
+will get the salt.master state. Any minion with ids matching the regular
+expression ``^(memcache|web).(qa|prod).loc$`` will get the nagios.mon.web and
+apache.server states. All Ubuntu minions will receive the repos.ubuntu state,
+while all RHEL and CentOS minions will receive the repos.epel state. The
+minions ``foo``, ``bar``, and ``baz`` will receive the database state. Any
+minion with a pillar named ``somekey``, having a value of ``abc`` will receive
+the xyz state.  Finally, minions with ids matching the nag1* glob or with a
+grain named ``role`` equal to ``monitoring`` will receive the nagios.server
+state.
+

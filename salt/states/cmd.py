@@ -1,6 +1,6 @@
 '''
-Command Executions
-==================
+Execution of arbitrary commands.
+================================
 
 The cmd state module manages the enforcement of executed commands, this
 state can tell a command to run under certain circumstances.
@@ -27,8 +27,7 @@ syslog if there is no disk space:
 .. code-block:: yaml
 
     > /var/log/messages:
-      cmd:
-        - run
+      cmd.run:
         - unless: echo 'foo' > /tmp/.test
 '''
 

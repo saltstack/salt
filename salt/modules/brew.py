@@ -4,7 +4,7 @@ from salt.modules.yumpkg import _compare_versions
 
 def __virtual__():
     '''
-    Confine this module to yum based systems
+    Confine this module to Mac OS with Homebrew.
     '''
 
     if salt.utils.which('brew') and __grains__['os'] == 'MacOS':

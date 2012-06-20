@@ -1,14 +1,13 @@
 '''
-Kernel Sysctl Management
-========================
+Configuration of the Linux kernel using sysctrl.
+================================================
 
 Control the kernel sysctl system
 
 .. code-block:: yaml
 
   vm.swappines:
-    sysctl:
-      - present
+    sysctl.present:
       - value: 20
 '''
 

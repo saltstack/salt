@@ -1,13 +1,13 @@
 '''
-MySQL User Management
-=====================
+Management of MySQL users.
+==========================
+
 The mysql_user module is used manage MySQL users.
 
 .. code-block:: yaml
 
     frank:
-      mysql_user:
-        - present
+      mysql_user.present:
         - host: localhost
         - password: bobcat
 '''

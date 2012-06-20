@@ -1,17 +1,16 @@
 '''
-Kernel Module Management
-========================
+Loading and unloading of kernel modules.
+========================================
+
 The Kernel modules on a system can be managed cleanly with the kmod state
 module:
 
 .. code-block:: yaml
 
   kvm_amd:
-    kmod:
-      - present
+    kmod.present
   pcspkr:
-    kmod:
-      - absent
+    kmod.absent
 '''
 
 
@@ -19,7 +18,7 @@ def __virtual__():
     '''
     only load if kmod is available
     '''
-    return 'kmod' if 'kmod' in __salt__ else False
+    return 'kmod' if 'kmod.available' in __salt__ else False
 
 
 def present(name):

@@ -1,6 +1,6 @@
 '''
-SSH known hosts management
-==========================
+Control of SSH known_hosts entries.
+===================================
 
 Manage the information stored in the known_hosts files
 
@@ -87,7 +87,6 @@ def present(
                 changes={'old': result['old'], 'new': result['new']},
                 comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
                          name, config, fingerprint))
-
 
 
 def absent(name, user, config='.ssh/known_hosts'):

@@ -8,7 +8,6 @@ Full list of builtin returners
 
 .. autosummary::
     :toctree:
-    :template: autosummary.rst.tmpl
 
     local
     cassandra_return

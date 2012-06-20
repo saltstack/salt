@@ -58,7 +58,7 @@ def list_upgrades():
             'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
             ).split('\n')
     for line in lines:
-        comps = lines.split(' ')
+        comps = line.split(' ')
         if len(comps) < 2:
             continue
         upgrades[comps[0]] = comps[1]

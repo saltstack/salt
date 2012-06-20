@@ -175,7 +175,7 @@ def host_keys(keydir=None):
                 kname += '.{0}'.format(top[1])
             try:
                 keys[kname] = open(os.path.join(keydir, fn_), 'r').read()
-            except:
+            except (IOError, OSError):
                 keys[kname] = ''
     return keys
 
@@ -315,7 +315,7 @@ def set_auth_key_from_file(
     newkey = {}
     rval = ''
     newkey = _validate_keys(lfile)
-    for k in newkey.keys():
+    for k in newkey:
         rval += set_auth_key(
                 user,
                 k,

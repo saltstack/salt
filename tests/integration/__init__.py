@@ -5,6 +5,7 @@ Set up the Salt integration test suite
 # Import Python libs
 import multiprocessing
 import os
+import pwd
 import sys
 import shutil
 import signal
@@ -85,7 +86,8 @@ class TestDaemon(object):
                     self.sub_minion_opts['pki_dir'],
                     self.master_opts['sock_dir'],
                     self.smaster_opts['sock_dir'],
-                    ])
+                    ],
+                    pwd.getpwuid(os.getuid())[0])
 
         master = salt.master.Master(self.master_opts)
         self.master_process = multiprocessing.Process(target=master.start)
@@ -170,7 +172,7 @@ class ModuleCase(TestCase):
         '''
         Return the result data from a single state return
         '''
-        return ret[ret.keys()[0]]['result']
+        return ret[next(iter(ret))]['result']
 
     def run_state(self, function, **kwargs):
         '''
@@ -236,7 +238,7 @@ class ShellCase(TestCase):
         path = os.path.join(SCRIPT_DIR, script)
         if not os.path.isfile(path):
             return False
-        ppath = 'PYTHONPATH={0}'.format(':'.join(sys.path[1:]))
+        ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
         data = subprocess.Popen(
                 cmd,

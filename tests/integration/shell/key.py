@@ -17,11 +17,11 @@ class KeyTest(integration.ShellCase):
         '''
         data = self.run_key('-L')
         expect = [
-                '\x1b[1;31mUnaccepted Keys:\x1b[0m',
-                '\x1b[1;32mAccepted Keys:\x1b[0m',
-                '\x1b[0;32mminion\x1b[0m',
-                '\x1b[0;32msub_minion\x1b[0m',
-                '\x1b[1;34mRejected:\x1b[0m', '']
+                'Unaccepted Keys:',
+                'Accepted Keys:',
+                'minion',
+                'sub_minion',
+                'Rejected:', '']
         self.assertEqual(data, expect)
 
     def test_list_json_out(self):
@@ -75,8 +75,8 @@ class KeyTest(integration.ShellCase):
         self.assertEqual(
                 data,
                 [
-                    '\x1b[0;32mminion\x1b[0m',
-                    '\x1b[0;32msub_minion\x1b[0m',
+                    'minion',
+                    'sub_minion',
                     ''
                     ]
                 )

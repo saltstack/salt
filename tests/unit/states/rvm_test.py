@@ -54,8 +54,8 @@ class TestRvmState(TestCase):
                 self.assertEqual(result, ret['result'])
 
     def test_gemset_present(self):
-        with patch.object(rvm, '_check_rvm',
-                          return_value={'result': True, 'changes': {}}):
+        with patch.object(rvm, '_check_rvm') as mock_method:
+            mock_method.return_value = {'result': True, 'changes': {}}
             gems = ['global', 'foo', 'bar']
             gemset_list = MagicMock(return_value=gems)
             gemset_create = MagicMock(return_value=True)
@@ -75,7 +75,8 @@ class TestRvmState(TestCase):
 
     def test_installed(self):
         mock = MagicMock()
-        with patch.object(rvm, '_check_rvm', return_value={'result': True}):
+        with patch.object(rvm, '_check_rvm') as mock_method:
+            mock_method.return_value = {'result': True}
             with patch.object(rvm, '_check_and_install_ruby', new=mock):
                 rvm.installed("1.9.3", default=True)
         mock.assert_called_once_with(

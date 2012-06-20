@@ -67,7 +67,7 @@ def read_key(hkey, path, key):
     try:
         handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_READ)
         return _winreg.QueryValueEx(handle, key)[0]
-    except:
+    except Exception:
         return False
 
 
@@ -88,7 +88,7 @@ def set_key(hkey, path, key, value):
         _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
         _winreg.CloseKey(handle)
         return True
-    except:
+    except Exception:
         handle = _winreg.CreateKey(hkey2, fullpath)
         _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
         _winreg.CloseKey(handle)
@@ -111,7 +111,7 @@ def create_key(hkey, path, key, value=None):
         handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
         _winreg.CloseKey(handle)
         return True
-    except:
+    except Exception:
         handle = _winreg.CreateKey(hkey2, fullpath)
         if value:
             _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
@@ -137,6 +137,6 @@ def delete_key(hkey, path, key):
         _winreg.DeleteKeyEx(handle, key)
         _winreg.CloseKey(handle)
         return True
-    except:
+    except Exception:
         _winreg.CloseKey(handle)
     return True
