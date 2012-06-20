@@ -1,14 +1,14 @@
 '''
-User Management
-===============
+Management of user accounts.
+============================
+
 The user module is used to create and manage user settings, users can be set
 as either absent or present
 
 .. code-block:: yaml
 
     fred:
-      user:
-        - present
+      user.present:
         - fullname: Fred Jones
         - shell: /bin/zsh
         - home: /home/fred
@@ -18,6 +18,9 @@ as either absent or present
           - wheel
           - storage
           - games
+
+    testuser:
+      user.absent
 '''
 
 
@@ -41,7 +44,7 @@ def _changes(
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
     '''
-    
+
     change = {}
     found = False
 
@@ -63,7 +66,8 @@ def _changes(
                     change['groups'] = groups
             if home:
                 if lusr['home'] != home:
-                    change['home'] = home
+                    if not home is True:
+                        change['home'] = home
             if shell:
                 if lusr['shell'] != shell:
                     change['shell'] = shell
@@ -92,6 +96,7 @@ def _changes(
         return False
     return change
 
+
 def present(
         name,
         uid=None,
@@ -107,6 +112,7 @@ def present(
         homephone=None,
         other=None,
         unique=True,
+        system=False,
         ):
     '''
     Ensure that the named user is present with the specified properties
@@ -141,7 +147,7 @@ def present(
 
 
     User comment field (GECOS) support (currently Linux-only):
-    
+
     The below values should be specified as strings to avoid ambiguities when
     the values are loaded. (Especially the phone and room number fields which
     are likely to contain numeric data)
@@ -151,10 +157,10 @@ def present(
 
     roomnumber
         The user's room number
-    
+
     workphone
         The user's work phone number
-    
+
     homephone
         The user's home phone number
 
@@ -163,6 +169,9 @@ def present(
 
     unique
         Require a unique UID, True by default
+
+    system
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
     '''
     ret = {'name': name,
            'changes': {},
@@ -218,7 +227,7 @@ def present(
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         return ret
- 
+
     if changes is False:
         # The user is not present, make it!
         if __opts__['test']:
@@ -236,7 +245,8 @@ def present(
                                 workphone=workphone,
                                 homephone=homephone,
                                 other=other,
-                                unique=unique):
+                                unique=unique,
+                                system=system):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if password:

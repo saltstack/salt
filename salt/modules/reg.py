@@ -11,13 +11,18 @@ try:
     import _winreg
     has_windows_modules = True
 except ImportError:
-    has_windows_modules = False
+    try:
+        import winreg as _winreg
+        has_windows_modules = True
+    except ImportError:
+        has_windows_modules = False
 
 import salt.utils
 import logging
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
 
 class Registry(object):
     '''
@@ -49,9 +54,9 @@ def __virtual__():
 
 def read_key(hkey, path, key):
     '''
-        Read registry key value
+    Read registry key value
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.read_key HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version'
     '''
@@ -62,15 +67,15 @@ def read_key(hkey, path, key):
     try:
         handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_READ)
         return _winreg.QueryValueEx(handle, key)[0]
-    except:
+    except Exception:
         return False
 
 
 def set_key(hkey, path, key, value):
     '''
-        Set a registry key
+    Set a registry key
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
@@ -83,7 +88,7 @@ def set_key(hkey, path, key, value):
         _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
         _winreg.CloseKey(handle)
         return True
-    except:
+    except Exception:
         handle = _winreg.CreateKey(hkey2, fullpath)
         _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
         _winreg.CloseKey(handle)
@@ -92,9 +97,9 @@ def set_key(hkey, path, key, value):
 
 def create_key(hkey, path, key, value=None):
     '''
-        Create a registry key
+    Create a registry key
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
@@ -106,7 +111,7 @@ def create_key(hkey, path, key, value=None):
         handle = _winreg.OpenKey(hkey2, fullpath, 0, _winreg.KEY_ALL_ACCESS)
         _winreg.CloseKey(handle)
         return True
-    except:
+    except Exception:
         handle = _winreg.CreateKey(hkey2, fullpath)
         if value:
             _winreg.SetValueEx(handle, key, 0, _winreg.REG_SZ, value)
@@ -116,11 +121,11 @@ def create_key(hkey, path, key, value=None):
 
 def delete_key(hkey, path, key):
     '''
-        Delete a registry key
+    Delete a registry key
 
-        Note: This cannot delete a key with subkeys
+    Note: This cannot delete a key with subkeys
 
-        CLI Example::
+    CLI Example::
 
         salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
@@ -132,6 +137,6 @@ def delete_key(hkey, path, key):
         _winreg.DeleteKeyEx(handle, key)
         _winreg.CloseKey(handle)
         return True
-    except:
+    except Exception:
         _winreg.CloseKey(handle)
     return True

@@ -42,6 +42,6 @@ returns. By default cache_jobs is set to False.
 Pure Python Template Support For file.managed
 ---------------------------------------------
 
-Templates in the file.managed state can now be defined in a python script.
+Templates in the file.managed state can now be defined in a Python script.
 This script needs to have a run function that returns the string that needs to
 be in the named file.

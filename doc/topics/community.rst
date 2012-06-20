@@ -17,9 +17,9 @@ Join the `salt-users mailing list`_. It is the best place to ask questions
 about Salt and see whats going on with Salt development! The Salt mailing list
 is hosted by Google Groups. It is open to new members.
 
-http://groups.google.com/group/salt-users
+https://groups.google.com/forum/#!forum/salt-users
 
-.. _`salt-users mailing list`: http://groups.google.com/group/salt-users
+.. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
 .. _community-irc:
 
@@ -63,8 +63,12 @@ Example Salt States
 The official ``salt-states`` repository is:
 https://github.com/saltstack/salt-states
 
-Another good example from one of our users is:
-https://github.com/blast-hardcheese/blast-salt-states
+A few examples of salt states from the community:
+
+* https://github.com/blast-hardcheese/blast-salt-states
+* https://github.com/kevingranade/kevingranade-salt-state
+* https://github.com/uggedal/states
+* https://github.com/mattmcclean/salt-openstack/tree/master/salt
 
 Follow on ohloh
 ===============
@@ -100,3 +104,7 @@ The goal here it to make contributions clear, make sure there is a trail for
 where the code has come from, but most importantly, to give credit where credit
 is due!
 
+The `Open Comparison Contributing Docs`__ has some good suggestions and tips for
+those who are looking forward to contribute.
+
+.. __: http://opencomparison.readthedocs.org/en/latest/contributing.html

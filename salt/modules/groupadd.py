@@ -12,7 +12,7 @@ def __virtual__():
     return 'group' if __grains__['kernel'] == 'Linux' else False
 
 
-def add(name, gid=None):
+def add(name, gid=None, system=False):
     '''
     Add the specified group
 
@@ -23,6 +23,8 @@ def add(name, gid=None):
     cmd = 'groupadd '
     if gid:
         cmd += '-g {0} '.format(gid)
+    if system:
+        cmd += '-r '
     cmd += name
 
     ret = __salt__['cmd.run_all'](cmd)

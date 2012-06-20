@@ -19,3 +19,13 @@ share/
 
 # tox - ignore any tox-created virtualenv dirs
 .tox
+
+# setuptools stuff
+*.egg-info
+
+# code coverage outputs genereated by coverage.py
+.coverage
+coverage.xml
+htmlcov/
+/.project
+/.pydevproject

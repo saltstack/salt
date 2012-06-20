@@ -6,6 +6,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 __selinux_fs_path__ = None
 
@@ -19,7 +20,7 @@ def __virtual__():
         return False
     if not salt.utils.which('seinfo'):
         return False
-        
+
     global __selinux_fs_path__
     if __grains__['kernel'] == 'Linux':
         # systems running systemd (e.g. Fedora 15 and newer)
@@ -65,7 +66,7 @@ def setenforce(mode):
 
         salt '*' selinux.setenforce enforcing
     '''
-    if isinstance(mode, basestring):
+    if isinstance(mode, string_types):
         if mode.lower() == 'enforcing':
             mode = '1'
         elif mode.lower() == 'permissive':
@@ -103,9 +104,9 @@ def setsebool(boolean, value, persist=False):
         salt '*' selinux.setsebool virt_use_usb off
     '''
     if persist:
-    	cmd = 'setsebool -P {0} {1}'.format(boolean, value)
+        cmd = 'setsebool -P {0} {1}'.format(boolean, value)
     else:
-    	cmd = 'setsebool {0} {1}'.format(boolean, value)
+        cmd = 'setsebool {0} {1}'.format(boolean, value)
     return not __salt__['cmd.retcode'](cmd)
 
 

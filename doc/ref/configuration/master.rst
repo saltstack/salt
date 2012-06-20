@@ -45,7 +45,7 @@ The network port to set up the publication interface
 .. conf_master:: user
 
 ``user``
-----------------
+--------
 
 Default: ``root``
 
@@ -134,6 +134,20 @@ Default: ``24``
 
 Set the number of hours to keep old job information
 
+.. conf_master:: job_cache
+
+``job_cache``
+-------------
+
+Default: ``True``
+
+The master maintains a job cache, while this is a great addition it can be
+a burden on the master for larger deployments (over 5000 minions).
+Disabling the job cache will make previously executed jobs unavailable to
+the jobs system and is not generally recommended. Normally it is wise to make
+sure the master has access to a faster IO system or a tmpfs is mounted to the
+jobs dir
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
@@ -179,6 +193,33 @@ public keys from the minions
 .. code-block:: yaml
 
     auto_accept: False
+
+
+Master Module Management
+------------------------
+
+.. conf_master:: runner_dirs
+
+``runner_dirs``
+---------------
+
+Default: ``[]``
+
+Set additional directories to search for runner modules
+
+.. conf_master:: cython_enable
+
+``cython_enable``
+-----------------
+
+Default: ``False``
+
+Set to true to enable cython modules (.pyx files) to be compiled on the fly on
+the Salt master
+
+.. code-block:: yaml
+
+    cython_enable: False
 
 Master State System Settings
 ----------------------------
@@ -269,6 +310,7 @@ Default: ``base: [/srv/salt]``
 Salt runs a lightweight file server written in zeromq to deliver files to
 minions. This file server is built into the master daemon and does not
 require a dedicated port.
+
 The file server works on environments passed to the master. Each environment
 can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
@@ -443,6 +485,27 @@ This will allow all minions to execute all commands:
 This is not recommended, since it would allow anyone who gets root on any
 single minion to instantly have root on all of the minions!
 
+.. conf_master:: peer_run
+
+``peer_run``
+------------
+
+Default: ``{}``
+
+The peer_run option is used to open up runners on the master to access from the
+minions. The peer_run configuration matches the format of the peer
+configuration.
+
+The following example would allow foo.example.com to execute the manage.up
+runner:
+
+
+.. code-block:: yaml
+
+    peer_run:
+      foo.example.com:
+          - manage.up
+
 Node Groups
 -----------
 
@@ -497,7 +560,7 @@ One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
 Default: ``{}``
 
 Logger levels can be used to tweak specific loggers logging levels.
-Imagine you want to have the salt library at the 'warning' level, but you
+Imagine you want to have the Salt library at the 'warning' level, but you
 still wish to have 'salt.modules' at the 'debug' level:
 
 .. code-block:: yaml

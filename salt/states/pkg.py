@@ -1,6 +1,7 @@
 '''
-Package Management
-==================
+Installation of packages using OS package managers such as yum or apt-get.
+==========================================================================
+
 Salt can manage software packages via the pkg state module, packages can be
 set up to be installed, latest, removed and purged. Package management
 declarations are typically rather simple:
@@ -8,8 +9,7 @@ declarations are typically rather simple:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed
 '''
 # Import python ilbs
 import logging
@@ -71,7 +71,7 @@ def installed(
                 'changes': {},
                 'result': True,
                 'comment': 'Package {0} is already installed'.format(name)}
-    
+
     if __opts__['test']:
         return {'name': name,
                 'changes': {},
@@ -108,9 +108,9 @@ def latest(name, refresh=False, repo='', skip_verify=False, **kwargs):
     '''
     Verify that the named package is installed and the latest available
     package. If the package can be updated this state function will update
-    the package. Generally it is better for the installed function to be
-    used, as ``latest`` will update the package the package whenever a new
-    package is available
+    the package. Generally it is better for the ``installed`` function to be
+    used, as ``latest`` will update the package whenever a new package is
+    available.
 
     name
         The name of the package to maintain at the latest available version

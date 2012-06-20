@@ -1,8 +1,12 @@
 # Import python libs
 import os
+import sys
 
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class CMDModuleTest(integration.ModuleCase):
     '''
@@ -16,7 +20,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('cmd.run', ['echo $SHELL']))
         self.assertEqual(
                 self.run_function('cmd.run',
-                    ['echo $SHELL', 'shell={0}'.format(shell)]),
+                    ['echo $SHELL', 'shell={0}'.format(shell)]).rstrip(),
                 shell)
 
     def test_stdout(self):
@@ -25,7 +29,7 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         self.assertEqual(
                 self.run_function('cmd.run_stdout',
-                    ['echo "cheese"']),
+                    ['echo "cheese"']).rstrip(),
                 'cheese')
 
     def test_stderr(self):
@@ -34,13 +38,14 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         self.assertEqual(
                 self.run_function('cmd.run_stderr',
-                    ['echo "cheese" 1>&2']),
+                    ['echo "cheese" 1>&2']).rstrip(),
                 'cheese')
 
     def test_run_all(self):
         '''
         cmd.run_all
         '''
+        from salt._compat import string_types
         ret = self.run_function('cmd.run_all', ['echo "cheese" 1>&2'])
         self.assertTrue('pid' in ret)
         self.assertTrue('retcode' in ret)
@@ -48,9 +53,9 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertTrue('stderr' in ret)
         self.assertTrue(isinstance(ret.get('pid'), int))
         self.assertTrue(isinstance(ret.get('retcode'), int))
-        self.assertTrue(isinstance(ret.get('stdout'), basestring))
-        self.assertTrue(isinstance(ret.get('stderr'), basestring))
-        self.assertEqual(ret.get('stderr'), 'cheese')
+        self.assertTrue(isinstance(ret.get('stdout'), string_types))
+        self.assertTrue(isinstance(ret.get('stderr'), string_types))
+        self.assertEqual(ret.get('stderr').rstrip(), 'cheese')
 
     def test_retcode(self):
         '''
@@ -64,8 +69,8 @@ class CMDModuleTest(integration.ModuleCase):
         cmd.which
         '''
         self.assertEqual(
-                self.run_function('cmd.which', ['echo']),
-                self.run_function('cmd.run', ['which echo']))
+                self.run_function('cmd.which', ['cat']).rstrip(),
+                self.run_function('cmd.run', ['which cat']).rstrip())
 
     def test_has_exec(self):
         '''
@@ -86,6 +91,14 @@ import sys
 sys.stdout.write('cheese')
         '''
         self.assertEqual(
-                self.run_function('cmd.exec_code', ['python', code]),
+                self.run_function('cmd.exec_code', ['python', code]).rstrip(),
                 'cheese'
                 )
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(CMDModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

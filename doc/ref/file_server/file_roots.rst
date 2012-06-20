@@ -43,7 +43,7 @@ are listed. In the case of this ``file_roots`` configuration:
         - /srv/salt/base
         - /srv/salt/failover
 
-If a file's uri is ``salt://httpd/httpd.conf``, it will first search for the
+If a file's URI is ``salt://httpd/httpd.conf``, it will first search for the
 file at ``/srv/salt/base/httpd/httpd.conf``. If the file is found there it
 will be returned. If the file is not found there, then
 ``/srv/salt/failover/httpd/httpd.conf`` will be used for the source.
@@ -58,7 +58,7 @@ Local File Server
 
 
 The file server can be rerouted to run from the minion. This is primarily to
-enable running salt states without a salt master. To use the local file server
+enable running Salt states without a Salt master. To use the local file server
 interface, copy the file server data to the minion and set the file_roots
 option on the minion to point to the directories copied from the master.
 Once the minion ``file_roots`` option has been set, change the ``file_client``

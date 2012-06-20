@@ -17,9 +17,13 @@ Full Table of Contents
     topics/tutorials/bootstrap_ec2
     topics/pillar/index
     topics/jobs/index
+    topics/nonroot
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
     topics/community
+    topics/tutorials/standalone_minion
+    topics/projects/index
+    topics/event/index
 
     ref/index
     ref/modules/*

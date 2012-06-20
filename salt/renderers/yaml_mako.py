@@ -7,21 +7,24 @@ high data format for salt states.
 
 # Import Python Modules
 import os
+import logging
+import warnings
 
-# Import Third Party libs
-from mako.template import Template
-
+# Import Salt libs
 from salt.utils.yaml import CustomLoader, load
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
+log = logging.getLogger(__name__)
 
-def render(template, env='', sls=''):
+
+def render(template_file, env='', sls=''):
     '''
     Render the data passing the functions and grains into the rendering system
     '''
-    if not os.path.isfile(template):
+    if not os.path.isfile(template_file):
         return {}
+
     tmp_data = salt.utils.templates.mako(
             template_file,
             True,
@@ -35,7 +38,6 @@ def render(template, env='', sls=''):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in yaml_mako renderer'))
     yaml_data = tmp_data['data']
-
     with warnings.catch_warnings(record=True) as warn_list:
         data = load(yaml_data, Loader=CustomLoader)
         if len(warn_list) > 0:

@@ -10,9 +10,9 @@ import json
 import os
 
 # Import salt libs
-from salt.utils.jinja import get_template
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
+
 
 def render(template_file, env='', sls=''):
     '''

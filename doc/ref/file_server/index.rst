@@ -3,10 +3,10 @@ Salt File Server
 ================
 
 Salt comes with a simple file server suitable for distributing files to the
-salt minions. The file server is a stateless ZeroMQ server that is built into
-the salt master.
+Salt minions. The file server is a stateless ZeroMQ server that is built into
+the Salt master.
 
-The main intent of the Salt File server is to present files for use in the
+The main intent of the Salt file server is to present files for use in the
 Salt state system. With this said, the Salt file server can be used for any
 general file transfer from the master to the minions.
 
@@ -35,7 +35,7 @@ the master, the syntax looks like this:
 
     # salt '*' cp.get_file salt://vimrc /etc/vimrc
 
-This will instruct all salt minions to download the vimrc file and copy it
+This will instruct all Salt minions to download the vimrc file and copy it
 to /etc/vimrc
 
 File Server Client API
@@ -61,7 +61,7 @@ built in ``__opts__`` data can be passed:
 
     def get_file(path, dest, env='base'):
         '''
-        Used to get a single file from the salt master
+        Used to get a single file from the Salt master
 
         CLI Example:
         salt '*' cp.get_file salt://vimrc /etc/vimrc
@@ -81,7 +81,7 @@ data is not available, it needs to be generated:
 
     def get_file(path, dest, env='base'):
         '''
-        Used to get a single file from the salt master
+        Used to get a single file from the Salt master
         '''
         # Get the configuration data
         opts = salt.config.minion_config('/etc/salt/minion')

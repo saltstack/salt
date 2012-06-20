@@ -58,7 +58,7 @@ def list_upgrades():
             'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
             ).split('\n')
     for line in lines:
-        comps = lines.split(' ')
+        comps = line.split(' ')
         if len(comps) < 2:
             continue
         upgrades[comps[0]] = comps[1]
@@ -142,14 +142,10 @@ def install(name, refresh=False, **kwargs):
         salt '*' pkg.install <package name>
     '''
     fname = name
-    if 'gt' in kwargs:
-        fname = '"{0}>{1}"'.format(name, kwargs['gt'])
-    if 'lt' in kwargs:
-        fname = '"{0}<{1}"'.format(name, kwargs['lt'])
-    if 'eq' in kwargs:
-        fname = '"{0}={1}"'.format(name, kwargs['eq'])
-    if 'version' in kwargs:
-        fname = '"{0}={1}"'.format(name, kwargs['version'])
+    for vkey, vsign in (('gt', '>'), ('lt', '<'), ('eq', '='), ('version', '=')):
+        if vkey in kwargs and kwargs[vkey] is not None:
+            fname = '"{0}{1}{2}"'.format(name, vsign, kwargs[vkey])
+            break
     old = list_pkgs()
     cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
     if refresh:

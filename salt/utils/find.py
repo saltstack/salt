@@ -87,6 +87,7 @@ import stat
 import sys
 import time
 
+from salt._compat import MAX_SIZE
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -140,9 +141,9 @@ def _parse_interval(value):
     resolution = None
     for name, multiplier in [('second', 1),
                              ('minute', 60),
-                             ('hour',   60 * 60),
-                             ('day',    60 * 60 * 24),
-                             ('week',   60 * 60 * 24 * 7)]:
+                             ('hour', 60 * 60),
+                             ('day', 60 * 60 * 24),
+                             ('week', 60 * 60 * 24 * 7)]:
         if m.group(name) is not None:
             result += float(m.group(name)) * multiplier
             if resolution is None:
@@ -161,10 +162,11 @@ def _parse_size(value):
         style = '='
 
     if len(scalar) > 0:
-        multiplier = {'k': 2 ** 10,
+        multiplier = {'b': 2 ** 0,
+                      'k': 2 ** 10,
                       'm': 2 ** 20,
                       'g': 2 ** 30,
-                      't': 2 ** 40}.get(scalar[-1])
+                      't': 2 ** 40}.get(scalar[-1].lower())
         if multiplier:
             scalar = scalar[:-1].strip()
         else:
@@ -185,7 +187,7 @@ def _parse_size(value):
         max_size = num
     elif style == '+':
         min_size = num
-        max_size = sys.maxint
+        max_size = MAX_SIZE
     else:
         min_size = num
         max_size = num + multiplier - 1
@@ -307,7 +309,7 @@ class OwnerOption(Option):
                 self.uids.add(int(name))
             else:
                 try:
-                    self.uid = pwd.getpwnam(value).pw_uid
+                    self.uids.add(pwd.getpwnam(value).pw_uid)
                 except KeyError:
                     raise ValueError('no such user "{0}"'.format(name))
 
@@ -494,7 +496,10 @@ class Finder(object):
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
-        for key, value in options.iteritems():
+        for key, value in options.items():
+            if key.startswith('_'):
+                # this is a passthrough object, continue
+                continue
             if value is None or len(value) == 0:
                 raise ValueError('missing value for "{0}" option'.format(key))
             try:
@@ -570,7 +575,7 @@ if __name__ == '__main__':
         criteria[key] = value
     try:
         f = Finder(criteria)
-    except ValueError, ex:
+    except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
         sys.exit(1)
 

@@ -80,7 +80,7 @@ def start(name):
 
 def stop(name):
     '''
-    Stop the specifed service with systemd
+    Stop the specified service with systemd
 
     CLI Example::
 
@@ -162,7 +162,7 @@ def disable(name):
 def enabled(name):
     '''
     Return if the named service is enabled to start on boot
-    
+
     CLI Example::
 
         salt '*' service.enabled <service name>

@@ -133,7 +133,7 @@ file. Using your favorite editor open ``/etc/rc.conf`` or
    + salt_minion_enable="YES"
 
 Once you've completed all of these steps you're ready to start your Salt
-Minion. The Salt port installs an rc script which should be used to manage your
+Minion. The Salt port installs an *rc* script which should be used to manage your
 Salt Minion. You should be able to start your Salt Minion now using the command
 seen here.
 
@@ -146,7 +146,7 @@ see if anything was missed. Salt doesn't take much configuration (part of its
 beauty!), and errors are usually simple mistakes.
 
 Tying It All Together
-======================
+=====================
 
 If you've successfully completed each of the steps above you should have a
 running Salt Master and a running Salt Minion. The Minion should be configured
@@ -210,7 +210,7 @@ the ``test.ping`` remote command. ::
    {'alpha': True}
 
 Where Do I Go From Here
-========================
+=======================
 
 Congratulations! You've successfully configured your first Salt Minions and are
 able to send remote commands. I'm sure you're eager to learn more about what

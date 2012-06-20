@@ -14,9 +14,8 @@ import yaml
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
-except:
+except Exception:
     pass
-
 
 # Import salt libs
 import salt.crypt
@@ -42,6 +41,7 @@ def _validate_file_roots(file_roots):
             file_roots[env] = []
     return file_roots
 
+
 def _append_domain(opts):
     '''
     Append a domain to the existing id if it doesn't already exist
@@ -53,6 +53,7 @@ def _append_domain(opts):
     if opts['id'].endswith('.'):
         return opts['id']
     return "{0[id]}.{0[append_domain]}".format(opts)
+
 
 def _read_conf_file(path):
     with open(path, 'r') as conf_file:
@@ -77,7 +78,7 @@ def load_config(opts, path, env_var):
         if os.path.isfile(template):
             with open(path, 'w') as out:
                 with open(template, 'r') as f:
-                    f.readline() # skip first line
+                    f.readline()  # skip first line
                     out.write(f.read())
 
     if os.path.isfile(path):
@@ -135,6 +136,7 @@ def minion_config(path):
             'cachedir': '/var/cache/salt',
             'cache_jobs': False,
             'conf_file': path,
+            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
@@ -195,7 +197,7 @@ def minion_config(path):
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
 
     # Prepend root_dir to other paths
-    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
+    prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir',
                             'key_logfile', 'extension_modules'])
 
     opts['grains'] = salt.loader.grains(opts)
@@ -237,6 +239,7 @@ def master_config(path):
             'state_top': 'top.sls',
             'external_nodes': '',
             'order_masters': False,
+            'job_cache': True,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
             'log_granular_levels': {},
@@ -246,6 +249,7 @@ def master_config(path):
             'range_server': 'range:80',
             'serial': 'msgpack',
             'nodegroups': {},
+            'cython_enable': False,
             'key_logfile': '/var/log/salt/key.log',
     }
 
@@ -267,4 +271,3 @@ def master_config(path):
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
-

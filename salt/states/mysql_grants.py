@@ -1,6 +1,7 @@
 '''
-MySQL Grant Management
-======================
+Management of MySQL grants (user permissions).
+==============================================
+
 The mysql_grants module is used to grant and revoke MySQL permissions.
 
 The ``name`` you pass in purely symbolic and does not have anything to do
@@ -18,27 +19,32 @@ specification as defined in the MySQL documentation:
 .. code-block:: yaml
 
    frank_exampledb:
-      mysql_grants:
-       - present
+      mysql_grants.present:
        - grant: select,insert,update
        - database: exampledb.*
        - user: frank
        - host: localhost
 
    frank_otherdb:
-     mysql_grants:
-       - present
+     mysql_grants.present:
        - grant: all privileges
        - database: otherdb.*
        - user: frank
 
    restricted_singletable:
-     mysql_grants:
-       - present
+     mysql_grants.present:
        - grant: select
        - database: somedb.sometable
        - user: joe
 '''
+
+
+def __virtual__():
+    '''
+    Only load if the mysql module is available
+    '''
+    return 'mysql_grants' if 'mysql.grant_exists' in __salt__ else False
+
 
 def present(name,
             grant=None,

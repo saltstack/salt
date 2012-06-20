@@ -78,7 +78,7 @@ def db_list(user=None, host=None, port=None):
     for line in lines[1:]:
         line = [x.strip() for x in line.split("|")]
         if not line[0] == "":
-            ret.append(zip(header[:-1], line[:-1]))
+            ret.append(list(zip(header[:-1], line[:-1])))
 
     return ret
 
@@ -222,7 +222,7 @@ def user_create(username,
 
     if sub_cmd.endswith("WITH"):
         sub_cmd = sub_cmd.replace(" WITH", "")
-    
+
     cmd = 'psql -h {host} -U {user} -p {port} -c "{sub_cmd}"'.format(
         host=host, user=user, port=port, sub_cmd=sub_cmd)
     return __salt__['cmd.run'](cmd)

@@ -5,9 +5,38 @@ Salt module to manage unix mounts and the fstab file
 import logging
 import os
 
+from salt._compat import string_types
+
 
 # Set up logger
 log = logging.getLogger(__name__)
+
+
+def _active_mountinfo(ret):
+    with open('/proc/self/mountinfo') as fh:
+        for line in fh:
+            comps = line.split()
+            device = comps[2].split(':')
+            ret[comps[4]] = {'mountid': comps[0],
+                             'parentid': comps[1],
+                             'major': device[0],
+                             'minor': device[1],
+                             'root': comps[3],
+                             'opts': comps[5].split(','),
+                             'fstype': comps[7],
+                             'device': comps[8],
+                             'superopts': comps[9].split(',')}
+    return ret
+
+
+def _active_mounts(ret):
+    with open('/proc/self/mounts') as fh:
+        for line in fh:
+            comps.split()
+            ret[comps[1]] = {'device': comps[0],
+                             'fstype': comps[2],
+                             'opts': comps[3].split(',')}
+    return ret
 
 
 def active():
@@ -19,14 +48,10 @@ def active():
         salt '*' mount.active
     '''
     ret = {}
-    for line in __salt__['cmd.run_stdout']('mount').split('\n'):
-        comps = line.split()
-        if not len(comps) == 6:
-            # Invalid entry
-            continue
-        ret[comps[2]] = {'device': comps[0],
-                         'fstype': comps[4],
-                         'opts': comps[5][1:-1].split(',')}
+    try:
+        _active_mountinfo(ret)
+    except IOError:
+        _active_mounts(ret)
     return ret
 
 
@@ -66,7 +91,7 @@ def rm_fstab(name, config='/etc/fstab'):
 
     CLI Example::
 
-        salt '*' /mnt/foo
+        salt '*' mount.rm_fstab /mnt/foo
     '''
     contents = fstab(config)
     if name not in contents:
@@ -189,7 +214,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
-    if isinstance(opts, basestring):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
     if not os.path.exists(name) and mkmnt:
         os.makedirs(name)
@@ -212,7 +237,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
-    if isinstance(opts, basestring):
+    if isinstance(opts, string_types):
         opts = opts.split(',')
     mnts = active()
     if name in mnts:

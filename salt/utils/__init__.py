@@ -1,10 +1,12 @@
 '''
 Some of the utils used by salt
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
 import imp
+import random
 import sys
 import socket
 import logging
@@ -90,7 +92,7 @@ def get_colors(use=True):
             'ENDC': '\033[0m',
             }
 
-    if not use:
+    if not use or not os.isatty(sys.stdout.fileno()):
         for color in colors:
             colors[color] = ''
 
@@ -114,10 +116,10 @@ def daemonize():
                     executablepath,
                     os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
                     os.path.join(pypath[0], os.sep, pypath[1]),
-                    0 )
+                    0)
                 sys.exit(0)
             else:
-                import saltminionservice
+                from . import saltminionservice
                 import win32serviceutil
                 import win32service
                 import winerror
@@ -125,7 +127,7 @@ def daemonize():
                 try:
                     status = win32serviceutil.QueryServiceStatus(servicename)
                 except win32service.error as details:
-                    if details[0]==winerror.ERROR_SERVICE_DOES_NOT_EXIST:
+                    if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
                         saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
                         sys.exit(0)
                 if status[1] == win32service.SERVICE_RUNNING:
@@ -228,6 +230,19 @@ def which(exe=None):
     return None
 
 
+def which_bin(exes):
+    '''
+    Scan over some possible executables and return the first one that is found
+    '''
+    if not isinstance(exes, (list, tuple)):
+        return None
+    for exe in exes:
+        path = which(exe)
+        if not path:
+            continue
+        return path
+
+
 def list_files(directory):
     '''
     Return a list of all files found under directory
@@ -274,7 +289,8 @@ def gen_mac(prefix='52:54:'):
     '''
     Generates a mac addr with the defined prefix
     '''
-    src = ['1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f']
+    src = ['1', '2', '3', '4', '5', '6', '7', '8',
+            '9', '0', 'a', 'b', 'c', 'd', 'e', 'f']
     mac = prefix
     while len(mac) < 18:
         if len(mac) < 3:
@@ -320,7 +336,7 @@ def required_module_list(docstring=None):
     ret = []
     txt = 'Required python modules: '
     data = docstring.split('\n') if docstring else []
-    mod_list =  filter(lambda x: x.startswith(txt), data)
+    mod_list = list(x for x in data if x.startswith(txt))
     if not mod_list:
         return []
     modules = mod_list[0].replace(txt, '').split(', ')
@@ -344,6 +360,7 @@ def required_modules_error(name, docstring):
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
 
+
 def prep_jid(cachedir, sum_type):
     '''
     Return a job id and prepare the job id directory
@@ -359,12 +376,14 @@ def prep_jid(cachedir, sum_type):
         return prep_jid(cachedir, sum_type)
     return jid
 
+
 def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
+
 
 def check_or_die(command):
     '''

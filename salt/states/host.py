@@ -1,13 +1,13 @@
 '''
-Hosts File Management
-=====================
+Management of addresses and names in hosts file.
+================================================
+
 The hosts file can be managed to contain definitions for specific hosts:
 
 .. code-block:: yaml
 
     salt-master:
-      host:
-        - present
+      host.present:
         - ip: 192.168.0.42
 '''
 

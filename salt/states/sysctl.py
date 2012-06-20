@@ -1,14 +1,13 @@
 '''
-Kernel Sysctl Management
-========================
+Configuration of the Linux kernel using sysctrl.
+================================================
 
 Control the kernel sysctl system
 
 .. code-block:: yaml
 
   vm.swappines:
-    sysctl:
-      - present
+    sysctl.present:
       - value: 20
 '''
 
@@ -46,7 +45,7 @@ def present(name, value, config='/etc/sysctl.conf'):
                     value
                     )
             return ret
-    
+
     update = __salt__['sysctl.persist'](name, value, config)
 
     if update == 'Updated':

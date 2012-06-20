@@ -3,20 +3,8 @@
 This script is used to kick off a salt syndic daemon
 '''
 
-import os
-import salt
+from salt.scripts import salt_minion
 
-
-def main():
-    '''
-    The main function
-    '''
-    pid = os.getpid()
-    try:
-        syndic = salt.Syndic()
-        syndic.start()
-    except KeyboardInterrupt:
-        os.kill(pid, 15)
 
 if __name__ == '__main__':
-    main()
+    salt_minion()

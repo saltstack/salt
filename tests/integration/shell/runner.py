@@ -1,8 +1,14 @@
 '''
 Tests for the salt-run command
 '''
+# Import python libs
+import sys
+
 # Import Salt Modules
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class RunTest(integration.ShellCase):
     '''
@@ -29,3 +35,11 @@ class RunTest(integration.ShellCase):
         data = self.run_run('-d')
         data = '\n'.join(data)
         self.assertNotIn('jobs.SaltException:', data)
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(RunTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

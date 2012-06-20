@@ -11,11 +11,12 @@ import subprocess
 import tempfile
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt.grains.extra import shell as shell_grain
 
 # Only available on posix systems, nonfatal on windows
 try:
     import pwd
-except:
+except ImportError:
     pass
 
 
@@ -27,8 +28,7 @@ __outputter__ = {
     'run': 'txt',
 }
 
-
-DEFAULT_SHELL = '/bin/sh'
+DEFAULT_SHELL = shell_grain()['shell']
 
 def __virtual__():
     '''
@@ -47,7 +47,8 @@ def _run(cmd,
          with_env=True,
          shell=DEFAULT_SHELL,
          env=(),
-         rstrip=True):
+         rstrip=True,
+         retcode=False):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -55,6 +56,11 @@ def _run(cmd,
     # of the user salt-minion is running as.  Default:  /root
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
+
+    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+        if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
+            msg = 'The shell {0} is not available'.format(shell)
+            raise CommandExecutionError(msg)
 
     # TODO: Figure out the proper way to do this in windows
     disable_runas = [
@@ -76,14 +82,14 @@ def _run(cmd,
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
 
-        cmd_prefix = 'su'
+        cmd_prefix = 'su -s {0}'.format(shell)
 
         # Load the 'nix environment
         if with_env:
-            cmd_prefix += ' - '
-            cmd = 'cd ' + cwd + ' && ' + cmd
+            cmd_prefix += ' -'
+            cmd = 'cd {0} && {1}'.format(cwd, cmd)
 
-        cmd_prefix += runas + ' -c'
+        cmd_prefix += ' {0} -c'.format(runas)
         cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
 
     if not quiet:
@@ -106,20 +112,31 @@ def _run(cmd,
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
-    out = proc.communicate()
+    # If all we want is the return code then don't block on gathering input,
+    # this is used to bypass ampersand issues with background processes in
+    # scripts
+    if retcode:
+        while True:
+            retcode = proc.poll()
+            if retcode is None:
+                continue
+            else:
+                out = ''
+                err = ''
+                break
+    else:
+        out, err = proc.communicate()
 
     if rstrip:
-        # Cast out to a list as proc.communicate() returns a tuple
-        out = list(out)
-        if out[0]:
-            out[0] = out[0].rstrip()
+        if out:
+            out = out.rstrip()
         # None lacks a rstrip() method
-        if out[1]:
-            out[1] = out[1].rstrip()
+        if err:
+            err = err.rstrip()
 
-    ret['stdout']  = out[0]
-    ret['stderr']  = out[1]
-    ret['pid']     = proc.pid
+    ret['stdout'] = out
+    ret['stderr'] = err
+    ret['pid'] = proc.pid
     ret['retcode'] = proc.returncode
     return ret
 
@@ -146,7 +163,7 @@ def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     return out
 
 
-def run_stdout(cmd, cwd=None,  runas=None, shell=DEFAULT_SHELL, env=()):
+def run_stdout(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute a command, and only return the standard out
 
@@ -207,7 +224,14 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
 
         salt '*' cmd.retcode "file /bin/bash"
     '''
-    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)['retcode']
+    return _run(
+            cmd,
+            runas=runas,
+            cwd=cwd,
+            shell=shell,
+            env=env,
+            retcode=True
+            )['retcode']
 
 
 def which(cmd):
@@ -219,6 +243,17 @@ def which(cmd):
         salt '*' cmd.which cat
     '''
     return salt.utils.which(cmd)
+
+
+def which_bin(cmds):
+    '''
+    Returns the first command found in a list of commands
+
+    CLI Example::
+
+        salt '*' cmd.which_bin '[pip2, pip, pip-python]'
+    '''
+    return salt.utils.which_bin(cmds)
 
 
 def has_exec(cmd):

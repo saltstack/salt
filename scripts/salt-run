@@ -3,18 +3,8 @@
 Execute a salt convenience routine
 '''
 
-import salt.cli
+from salt.scripts import salt_run
 
-
-def main():
-    '''
-    The main function
-    '''
-    client = salt.cli.SaltRun()
-    client.run()
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        raise SystemExit('\nExiting gracefully on Ctrl-c')
+    salt_run()

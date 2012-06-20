@@ -96,7 +96,7 @@ easily. A simple example:
       file.present:
         - source: salt://edit/vimrc
 
-This makes the 2 lower state decs inherit the options from thier respectively
+This makes the 2 lower state decs inherit the options from their respectively
 "used" state decs.
 
 Network State
@@ -108,9 +108,6 @@ Jeff Hutchins and Bret Palsson from Jive Communications.
 
 Currently the only network configuration backend available is for Red Hat
 based systems, like Red Hat Enterprise, CentOS, and Fedora.
-
-Future releases will see the addition of more platforms and more interface
-types like vlans.
 
 Exponential Jobs
 ----------------
@@ -131,7 +128,7 @@ The original ssh_auth state was limited to accepting only arguments to apply
 to a public key, and the key itself. This was restrictive due to the way the
 we learned that many people were using the state, so the key section has been
 expanded to accept options and arguments to the key that over ride arguments
-passed in the stae. This gives substantial power to using ssh_auth with names:
+passed in the state. This gives substantial power to using ssh_auth with names:
 
 .. code-block:: yaml
 
@@ -268,7 +265,7 @@ and then use the minionswarm.py script in the tests directory to spin up
 as many minions as you want. Remember, this is a fork bomb, don't spin up more
 than your hardware can handle!
 
-.. code-block::
+.. code-block:: bash
 
     # python minionswarm.py -m 20 --master salt-master
 

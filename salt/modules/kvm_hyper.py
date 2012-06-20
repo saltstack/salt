@@ -12,7 +12,7 @@ Required python modules: libvirt
 # Import Python Libs
 import os
 import shutil
-import StringIO
+import string
 import subprocess
 from xml.dom import minidom
 
@@ -28,6 +28,7 @@ import yaml
 
 # Import Salt Modules
 import salt.utils
+from salt._compat import StringIO
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -58,7 +59,7 @@ def __virtual__():
         libvirt_conn = libvirt.open('qemu:///system')
         libvirt_conn.close()
         return 'hyper'
-    except:
+    except Exception:
         return False
 
 
@@ -88,6 +89,10 @@ def _get_dom(vm_):
 def hyper_type():
     '''
     Return that type of hypervisor this is
+
+    CLI Example::
+
+        salt '*' hyper.hyper_type
     '''
     return 'kvm'
 
@@ -99,7 +104,7 @@ def freemem():
 
     CLI Example::
 
-        salt '*' virt.freemem
+        salt '*' hyper.freemem
     '''
     conn = __get_conn()
     mem = conn.getInfo()[1]
@@ -119,7 +124,7 @@ def freecpu():
 
     CLI Example::
 
-        salt '*' virt.freemem
+        salt '*' hyper.freecpu
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
@@ -136,7 +141,7 @@ def list_virts():
 
     CLI Example::
 
-        salt '*' virt.list_virts
+        salt '*' hyper.list_virts
     '''
     # Expand to include down vms
     conn = __get_conn()
@@ -158,7 +163,7 @@ def virt_info():
 
     CLI Example::
 
-        salt '*' virt.vm_info
+        salt '*' hyper.virt_info
     '''
     info = {}
     for vm_ in list_virts():
@@ -181,7 +186,7 @@ def hyper_info():
 
     CLI Example::
 
-        salt '*' virt.node_info
+        salt '*' hyper.hyper_info
     '''
     conn = __get_conn()
     raw = conn.getInfo()
@@ -293,7 +298,7 @@ def _gen_xml(name,
     data = data.replace('%%NICS%%', nics)
 
     if disks:
-        letters = salt.utils.gen_letters()
+        letters = string.ascii_lowercase
         disk_str = ''
         for ind in range(0, len(disks)):
             disk = disks[ind]
@@ -331,7 +336,7 @@ def init(
 
     CLI Example:
 
-        salt node1 webserver 2 2048 salt://fedora/f16.img:virt /srv/vm/images
+        salt '*' hyper.init webserver 2 2048 salt://fedora/f16.img:virt /srv/vm/images
     '''
     vmdir = os.path.join(storage_dir, name)
     if not os.path.exists(vmdir):
@@ -348,6 +353,10 @@ def init(
 def start(config):
     '''
     Start an already defined virtual machine that has been shut down
+
+    CLI Example::
+
+        salt '*' hyper.start webserver
     '''
     # change this to use the libvirt api and add more logging and a verbose
     # return
@@ -357,11 +366,15 @@ def start(config):
 def halt(name):
     '''
     Hard power down a virtual machine
+
+    CLI Example::
+
+        salt '*' hyper.halt webserver
     '''
     try:
         dom = _get_dom(name)
         dom.destroy()
-    except:
+    except Exception:
         return False
     return True
 
@@ -370,6 +383,10 @@ def purge(name):
     '''
     Hard power down and purge a virtual machine, this will destroy a vm and
     all associated vm data
+
+    CLI Example::
+
+        salt '*' hyper.purge webserver
     '''
     disks = get_disks(name)
     halt(name)
@@ -386,6 +403,10 @@ def purge(name):
 def pause(name):
     '''
     Pause the named virtual machine
+
+    CLI Example::
+
+        salt '*' hyper.pause webserver
     '''
     dom = _get_dom(name)
     dom.suspend()
@@ -395,6 +416,10 @@ def pause(name):
 def resume(name):
     '''
     Resume the named virtual machine
+
+    CLI Example::
+
+        salt '*' hyper.resume webserver
     '''
     dom = _get_dom(name)
     dom.resume()
@@ -404,6 +429,10 @@ def resume(name):
 def set_autostart(name):
     '''
     Set the named virtual machine to autostart when the hypervisor boots
+
+    CLI Example::
+
+        salt '*' hyper.set_autostart webserver
     '''
     dom = _get_dom(name)
 
@@ -424,10 +453,10 @@ def get_disks(name):
 
     CLI Example::
 
-        salt '*' virt.get_disks <vm name>
+        salt '*' hyper.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO.StringIO(get_conf(name)))
+    doc = minidom.parse(StringIO(get_conf(name)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -439,10 +468,8 @@ def get_disks(name):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys() \
-                and 'file' in source.attributes.keys():
-            disks[target.getAttribute('dev')] = \
-                    {'file': source.getAttribute('file')}
+        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
+            disks[target.getAttribute('dev')] = {'file': source.getAttribute('file')}
     for dev in disks:
         disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
             + disks[dev]['file'],
@@ -457,7 +484,7 @@ def get_conf(name):
 
     CLI Example::
 
-        salt '*' virt.get_conf <vm name>
+        salt '*' hyper.get_conf <vm name>
     '''
     dom = _get_dom(name)
     return dom.XMLDesc(0)

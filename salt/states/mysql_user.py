@@ -1,17 +1,24 @@
 '''
-MySQL User Management
-=====================
-The mysql_database module is used to create and manage MySQL databases, databases can be set
-as either absent or present
+Management of MySQL users.
+==========================
+
+The mysql_user module is used manage MySQL users.
 
 .. code-block:: yaml
 
     frank:
-      mysql_user:
-        - present
+      mysql_user.present:
         - host: localhost
         - password: bobcat
 '''
+
+
+def __virtual__():
+    '''
+    Olny load if the mysql module is in __salt__
+    '''
+    return 'mysql_user' if 'mysql.user_create' in __salt__ else False
+
 
 def present(name,
             host='localhost',
@@ -34,7 +41,7 @@ def present(name,
            'result': True,
            'comment': 'User {0}@{1} is already present'.format(name, host)}
     # check if user exists
-    if __salt__['mysql.user_exists'](name,host):
+    if __salt__['mysql.user_exists'](name, host):
         return ret
 
     # The user is not present, make it!
@@ -42,7 +49,7 @@ def present(name,
         ret['result'] = None
         ret['comment'] = 'User {0}@{1} is set to be added'.format(name, host)
         return ret
-    if __salt__['mysql.user_create'](name,host,password,password_hash):
+    if __salt__['mysql.user_create'](name, host, password, password_hash):
         ret['comment'] = 'The user {0}@{1} has been added'.format(name, host)
         ret['changes'][name] = 'Present'
     else:

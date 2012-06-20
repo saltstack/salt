@@ -1,5 +1,11 @@
+# Import python libs
+import sys
+
 # Import salt libs
+from saltunittest import TestLoader, TextTestRunner
 import integration
+from integration import TestDaemon
+
 
 class PublishModuleTest(integration.ModuleCase):
     '''
@@ -25,7 +31,7 @@ class PublishModuleTest(integration.ModuleCase):
                 ]
                 )
         self.assertEqual(ret['minion']['ret'][0][-1], 34)
-        
+
     def test_kwarg(self):
         '''
         Verify that the pub data is making it to the minion functions
@@ -38,14 +44,19 @@ class PublishModuleTest(integration.ModuleCase):
                     'cheese=spam',
                 ]
                 )['minion']['ret']
-        self.assertTrue('__pub_arg' in ret)
-        self.assertTrue('__pub_id' in ret)
-        self.assertTrue('__pub_fun' in ret)
-        self.assertTrue('__pub_jid' in ret)
-        self.assertTrue('__pub_tgt' in ret)
-        self.assertTrue('__pub_tgt_type' in ret)
-        self.assertTrue('__pub_ret' in ret)
-        self.assertTrue('cheese' in ret)
+        check_true = (
+            'cheese',
+            '__pub_arg',
+            '__pub_fun',
+            '__pub_id',
+            '__pub_jid',
+            '__pub_ret',
+            '__pub_tgt',
+            '__pub_tgt_type',
+        )
+        for name in check_true:
+            self.assertTrue(name in ret)
+
         self.assertEqual(ret['cheese'], 'spam')
         self.assertEqual(ret['__pub_arg'], ['cheese=spam'])
         self.assertEqual(ret['__pub_id'], 'minion')
@@ -64,3 +75,11 @@ class PublishModuleTest(integration.ModuleCase):
                 ]
                 )
         self.assertEqual(ret, {})
+
+if __name__ == "__main__":
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(PublishModuleTest)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon():
+        runner = TextTestRunner(verbosity=1).run(tests)
+        sys.exit(runner.wasSuccessful())

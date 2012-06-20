@@ -13,8 +13,8 @@ import grp
 import pwd
 import time
 import hashlib
-import sys
 import stat
+import fnmatch
 
 # Import salt libs
 import salt.utils.find
@@ -177,7 +177,7 @@ def set_mode(path, mode):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
-    except:
+    except Exception:
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
@@ -389,7 +389,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
 
@@ -435,7 +435,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    Usage::
+    CLI Example::
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
 
@@ -473,7 +473,7 @@ def comment(path, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.comment /etc/modules pcspkr
 
@@ -497,7 +497,7 @@ def contains(path, text):
     '''
     Return True if the file at ``path`` contains ``text``
 
-    Usage::
+    CLI Example::
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
 
@@ -531,7 +531,7 @@ def contains_regex(path, regex, lchar=''):
     try:
         with open(path, 'r') as fp_:
             for line in  fp_:
-                if re.match(regex, line.lstrip(lchar)):
+                if re.search(regex, line.lstrip(lchar)):
                     return True
             return False
     except (IOError, OSError):
@@ -552,7 +552,7 @@ def contains_glob(path, glob):
     try:
         with open(path, 'r') as fp_:
             data = fp_.read()
-            if fnmatch(data, glob):
+            if fnmatch.fnmatch(data, glob):
                 return True
             else:
                 return False
@@ -564,7 +564,7 @@ def append(path, *args):
     '''
     Append text to the end of a file
 
-    Usage::
+    CLI Example::
 
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt."\\
@@ -592,7 +592,8 @@ def touch(name, atime=None, mtime=None):
     mtime:
         Last modification in Unix epoch time
 
-    Usage::
+    CLI Example::
+
         salt '*' file.touch /var/log/emptyfile
 
     .. versionadded:: 0.9.5

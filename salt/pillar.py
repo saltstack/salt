@@ -14,7 +14,7 @@ import salt.loader
 import salt.fileclient
 import salt.minion
 import salt.crypt
-
+from salt._compat import string_types
 from salt.template import compile_template
 
 # Import third party libs
@@ -22,6 +22,7 @@ import zmq
 import yaml
 
 log = logging.getLogger(__name__)
+
 
 def hiera(conf, grains=None):
     '''
@@ -31,7 +32,7 @@ def hiera(conf, grains=None):
         grains = {}
     cmd = 'hiera {0}'.format(conf)
     for key, val in grains.items():
-        if isinstance(val, basestring):
+        if isinstance(val, string_types):
             cmd += ' {0}={1}'.format(key, val)
     out = subprocess.Popen(
             cmd,
@@ -68,6 +69,7 @@ def get_pillar(opts, grains, id_, env=None):
                }.get(opts['file_client'], 'local')(opts, grains, id_, env)
     except KeyError:
         return Pillar(opts, grains, id_, env)
+
 
 class RemotePillar(object):
     '''
@@ -111,7 +113,7 @@ class Pillar(object):
     '''
     def __init__(self, opts, grains, id_, env):
         # use the local file client
-        self.opts = self.__gen_opts(opts, grains, id_)
+        self.opts = self.__gen_opts(opts, grains, id_, env)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
         self.rend = salt.loader.render(self.opts, {})
@@ -127,7 +129,6 @@ class Pillar(object):
         opts['id'] = id_
         if 'environment' not in opts:
             opts['environment'] = env
-        opts
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
@@ -142,7 +143,7 @@ class Pillar(object):
         '''
         envs = set(['base'])
         if 'file_roots' in self.opts:
-            envs.update(self.opts['file_roots'].keys())
+            envs.update(list(self.opts['file_roots']))
         return envs
 
     def get_tops(self):
@@ -234,7 +235,7 @@ class Pillar(object):
                         for comp in top[env][tgt]:
                             if isinstance(comp, dict):
                                 matches.append(comp)
-                            if isinstance(comp, basestring):
+                            if isinstance(comp, string_types):
                                 states.add(comp)
                         top[env][tgt] = matches
                         top[env][tgt].extend(list(states))
@@ -269,7 +270,7 @@ class Pillar(object):
                     if env not in matches:
                         matches[env] = []
                     for item in data:
-                        if isinstance(item, basestring):
+                        if isinstance(item, string_types):
                             matches[env].append(item)
         ext_matches = self.client.ext_nodes()
         for env in ext_matches:
@@ -367,7 +368,6 @@ class Pillar(object):
                 except Exception as e:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext
-
 
     def compile_pillar(self):
         '''

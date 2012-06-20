@@ -1,5 +1,5 @@
 '''
-Manage groups on Linux
+Manage groups on FreeBSD
 '''
 
 import grp
@@ -12,7 +12,7 @@ def __virtual__():
     return 'group' if __grains__['kernel'] == 'FreeBSD' else False
 
 
-def add(name, gid=None):
+def add(name, gid=None, system=False):
     '''
     Add the specified group
 

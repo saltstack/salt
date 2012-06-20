@@ -5,7 +5,6 @@ Module for gathering and managing network information
 from string import ascii_letters, digits
 import socket
 import re
-import salt.utils
 
 __outputter__ = {
     'dig':     'txt',
@@ -85,7 +84,7 @@ def _interfaces_ip():
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
-            m = re.match('^\d*:\s+(\w+)(?:@)?(\w+)?:\s+<(.+)>', line)
+            m = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
                 iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
@@ -103,7 +102,13 @@ def _interfaces_ip():
                             based on the current set of cols
                             """
                             brd = None
-                            ip,cidr = tuple(value.split('/'))
+                            # A small hack until we can get new code in here
+                            # supporting network device lookup better
+                            if '/' in value:
+                                ip, cidr = value.split('/')
+                            else:
+                                ip = value
+                                cidr = '24'
                             if type == 'inet':
                                 mask = _cidr_to_ipv4_netmask(int(cidr))
                                 if 'brd' in cols:
@@ -146,8 +151,8 @@ def _interfaces_ifconfig():
     '''
     ret = {}
 
-    piface = re.compile('^(\w+)')
-    pmac = re.compile('.*?(?:HWaddr|ether) (.*?)\s')
+    piface = re.compile('^(\S+):?')
+    pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
     pip = re.compile('.*?(?:inet addr:|inet )(.*?)\s')
     pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
     pmask = re.compile('.*?(?:Mask:|netmask )(?:(0x[0-9a-fA-F]{8})|([\d\.]+))')
@@ -346,7 +351,7 @@ def up(interface):
     else:
         return None
 
-def ipaddr(interface):
+def ipaddr(interface=None):
     '''
     Returns the IP address for a given interface
 
@@ -354,7 +359,18 @@ def ipaddr(interface):
 
         salt '*' network.ipaddr eth0
     '''
-    data = interfaces().get(interface)
+    interfaces_dict = interfaces()
+
+    if not interface:
+        result_dict = {}
+
+        for interface, data in interfaces_dict.items():
+            if data.get('ipaddr'):
+                result_dict[interface] = data.get('ipaddr')
+
+        return result_dict
+
+    data = interfaces_dict.get(interface)
     if data:
         return data['ipaddr']
     else:
@@ -383,7 +399,7 @@ def hwaddr(interface):
         salt '*' network.hwaddr eth0
     '''
     data = interfaces().get(interface)
-    if data:
+    if data and 'hwaddr' in data:
         return data['hwaddr']
     else:
         return None
@@ -391,27 +407,27 @@ def hwaddr(interface):
 def host_to_ip(host):
     '''
     Returns the IP address of a given hostname
-    
+
     CLI Example::
-        
+
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname( host )
-    except:
-        ip = None        
+        ip = socket.gethostbyname(host)
+    except Exception:
+        ip = None
     return ip
-        
+
 def ip_to_host(ip):
     '''
     Returns the hostname of a given IP
-    
+
     CLI Example::
-        
+
         salt '*' network.ip_to_host 8.8.8.8
     '''
     try:
-        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr( ip )
-    except:
-        hostname = None        
+        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
+    except Exception:
+        hostname = None
     return hostname

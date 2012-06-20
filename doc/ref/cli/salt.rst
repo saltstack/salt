@@ -33,7 +33,7 @@ Options
 
 .. option:: -t TIMEOUT, --timeout=TIMEOUT
 
-    The timeout in seconds to wait for replies from the salt minions.
+    The timeout in seconds to wait for replies from the Salt minions.
 
 .. option:: -s STATIC, --static=STATIC
 
@@ -51,7 +51,7 @@ Options
 
 .. option:: --version
 
-    Print the version of salt that is running.
+    Print the version of Salt that is running.
 
 .. option:: -E, --pcre
 
@@ -65,7 +65,7 @@ Options
 
 .. option:: -G, --grain
 
-    The target expression matches values returned by the salt grains system on
+    The target expression matches values returned by the Salt grains system on
     the minions. The target expression is in the format of '<grain value>:<glob
     expression>'; example: 'os:Arch*'
 
@@ -75,7 +75,7 @@ Options
 
 .. option:: --grain-pcre
 
-    The target expression matches values returned by the salt grains system on
+    The target expression matches values returned by the Salt grains system on
     the minions. The target expression is in the format of '<grain value>:<
     regular expression>'; example: 'os:Arch.*'
 
@@ -93,7 +93,7 @@ Options
 
 .. option:: -N, --nodegroup
 
-    Use a predefined compound target defined in the salt master configuration
+    Use a predefined compound target defined in the Salt master configuration
     file
 
 .. option:: -R, --range
@@ -114,7 +114,7 @@ Options
 .. option:: -Q, --query
 
     The -Q option is being deprecated and will be removed in version 0.9.9,
-    Use the salt jobs interface instead, for documentation on the salt jobs
+    Use the Salt jobs interface instead, for documentation on the Salt jobs
     interface execute the command "salt-run -d jobs"
 
     Execute a salt command query, this can be used to find the results of a
@@ -122,15 +122,15 @@ Options
 
 .. option:: -c CONFIG, --config=CONFIG
 
-    The location of the salt master configuration file, the salt master
+    The location of the Salt master configuration file, the Salt master
     settings are required to know where the connections are;
     default=/etc/salt/master
 
 .. option::  --raw-out
 
-    Print the output from the salt command in raw python
+    Print the output from the salt command in raw Python
     form, this is suitable for re-reading the output into
-    an executing python script with eval.
+    an executing Python script with eval.
 
 .. option::   --text-out
 
@@ -139,11 +139,11 @@ Options
 
 .. option::   --yaml-out
 
-    Print the output from the salt command in yaml.
+    Print the output from the salt command in YAML.
 
 .. option::   --json-out
 
-    Print the output from the salt command in json.
+    Print the output from the salt command in JSON.
 
 .. option:: --no-color
 
