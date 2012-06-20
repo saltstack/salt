@@ -7,21 +7,21 @@ Required python modules: libvirt
 # of his in the virt func module have been used
 
 import os
+import re
 import shutil
-import StringIO
 import subprocess
 from xml.dom import minidom
-from salt.exceptions import CommandExecutionError
 
+# Import Third Party Libs
 try:
     import libvirt
     has_libvirt = True
 except ImportError:
     has_libvirt = False
-
-# Import Third Party Libs
 import yaml
 
+from salt._compat import StringIO
+from salt.exceptions import CommandExecutionError
 
 VIRT_STATE_NAME_MAP = {0: "running",
                        1: "running",
@@ -47,7 +47,7 @@ def __get_conn():
     # all vm layers supported by libvirt
     try:
         conn = libvirt.open("qemu:///system")
-    except:
+    except Exception:
         msg = 'Sorry, {0} failed to open a connection to the hypervisor software'
         raise CommandExecutionError(msg.format(__grains__['fqdn']))
     return conn
@@ -209,7 +209,7 @@ def get_nics(vm_):
         salt '*' virt.get_nics <vm name>
     '''
     nics = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -223,7 +223,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -231,7 +231,7 @@ def get_nics(vm_):
                 if v_node.tagName == "virtualport":
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -248,7 +248,7 @@ def get_macs(vm_):
         salt '*' virt.get_macs <vm name>
     '''
     macs = []
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(StringIO(get_xml(vm_)))
     for node in doc.getElementsByTagName("devices"):
         i_nodes = node.getElementsByTagName("interface")
         for i_node in i_nodes:
@@ -270,12 +270,12 @@ def get_graphics(vm_):
            'port': 'None',
            'type': 'vnc'}
     xml = get_xml(vm_)
-    ssock = StringIO.StringIO(xml)
+    ssock = StringIO(xml)
     doc = minidom.parse(ssock)
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
-            for key in g_node.attributes.keys():
+            for key in g_node.attributes:
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -289,7 +289,7 @@ def get_disks(vm_):
         salt '*' virt.get_disks <vm name>
     '''
     disks = {}
-    doc = minidom.parse(StringIO.StringIO(get_xml(vm_)))
+    doc = minidom.parse(StringIO(get_xml(vm_)))
     for elem in doc.getElementsByTagName('disk'):
         sources = elem.getElementsByTagName('source')
         targets = elem.getElementsByTagName('target')
@@ -301,13 +301,12 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in target.attributes.keys() \
-                and 'file' in source.attributes.keys():
-            disks[target.getAttribute('dev')] = \
-                    {'file': source.getAttribute('file')}
+        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
+            disks[target.getAttribute('dev')] = {
+                'file': source.getAttribute('file')}
     for dev in disks:
         try:
-            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info ' \
+            disks[dev].update(yaml.safe_load(subprocess.Popen('qemu-img info '
                 + disks[dev]['file'],
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]))
@@ -557,7 +556,8 @@ def set_autostart(vm_, state='on'):
     system on reboot.
 
     CLI Example::
-        salt "*" virt.enable_autostart <vm name> <on | off>
+
+        salt "*" virt.set_autostart <vm name> <on | off>
     '''
 
     dom = _get_dom(vm_)
@@ -584,7 +584,7 @@ def destroy(vm_):
     try:
         dom = _get_dom(vm_)
         dom.destroy()
-    except:
+    except Exception:
         return False
     return True
 
@@ -601,7 +601,7 @@ def undefine(vm_):
     try:
         dom = _get_dom(vm_)
         dom.undefine()
-    except:
+    except Exception:
         return False
     return True
 
@@ -681,7 +681,7 @@ def is_xen_hyper():
 
 def is_hyper():
     '''
-    Returns a bool whether or not this nos is a hypervisor of any kind
+    Returns a bool whether or not this node is a hypervisor of any kind
 
     CLI Example::
 

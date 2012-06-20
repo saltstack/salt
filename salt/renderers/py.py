@@ -6,12 +6,12 @@ data
 '''
 
 # Import python libs
-import imp
 import os
 
 # Import Salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
+
 
 def render(template, env='', sls=''):
     '''
@@ -21,7 +21,7 @@ def render(template, env='', sls=''):
         return {}
 
     tmp_data = salt.utils.templates.py(
-            template_file,
+            template,
             True,
             salt=__salt__,
             grains=__grains__,

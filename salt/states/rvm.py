@@ -1,6 +1,7 @@
 '''
-Management of ruby installations and gemsets with RVM
-=====================================================
+Management of Ruby installations and gemsets with RVM, the Ruby Version Manager.
+================================================================================
+
 This module is used to install and manage ruby installations and
 gemsets with RVM, the Ruby Version Manager. Different versions of ruby
 can be installed and gemsets created. RVM itself will be installed
@@ -15,16 +16,14 @@ configuration could look like:
     rvm:
       group:
         - present
-      user:
-        - present
+      user.present:
         - gid: rvm
         - home: /home/rvm
         - require:
           - group: rvm
 
     rvm-deps:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - bash
           - coreutils
@@ -38,8 +37,7 @@ configuration could look like:
           - sudo
 
     mri-deps:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - build-essential
           - openssl
@@ -66,16 +64,14 @@ configuration could look like:
           - ruby
 
     jruby-deps:
-      pkg:
-        - installed
+      pkg.installed:
         - names:
           - curl
           - g++
           - openjdk-6-jre-headless
 
     ruby-1.9.2:
-      rvm:
-        - installed
+      rvm.installed:
         - default: True
         - runas: rvm
         - require:
@@ -84,8 +80,7 @@ configuration could look like:
           - user: rvm
 
     jruby:
-      rvm:
-        - installed
+      rvm.installed:
         - runas: rvm
         - require:
           - pkg: rvm-deps
@@ -93,16 +88,14 @@ configuration could look like:
           - user: rvm
 
     jgemset:
-      rvm:
-        - gemset_present
+      rvm.gemset_present:
         - ruby: jruby
         - runas: rvm
         - require:
           - rvm: jruby
 
     mygemset:
-      rvm:
-        - gemset_present
+      rvm.gemset_present:
         - ruby: ruby-1.9.2
         - runas: rvm
         - require:
@@ -154,9 +147,9 @@ def _check_ruby(ret, ruby, runas=None):
     match_version = True
     match_micro_version = False
     micro_version_regex = re.compile('-([0-9]{4}\.[0-9]{2}|p[0-9]+)$')
-    if micro_version_regex.match(ruby):
+    if micro_version_regex.search(ruby):
         match_micro_version = True
-    if re.match('^[a-z]+$', ruby):
+    if re.search('^[a-z]+$', ruby):
         match_version = False
     ruby = re.sub('^ruby-', '', ruby)
 
@@ -166,7 +159,7 @@ def _check_ruby(ret, ruby, runas=None):
         if not match_micro_version:
             version = micro_version_regex.sub('', version)
         if not match_version:
-            version = re.sub('-.*', '')
+            version = re.sub('-.*', '', version)
         if version == ruby:
             ret['result'] = True
             ret['comment'] = 'Requested ruby exists.'

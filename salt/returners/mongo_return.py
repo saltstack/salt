@@ -1,8 +1,6 @@
 '''
 Return data to a mongodb server
 
-This is the default interface for returning data for the butter statd subsytem
-
 Required python modules: pymongo
 '''
 
