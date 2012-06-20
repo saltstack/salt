@@ -8,7 +8,7 @@
 %global python_sitearch /usr/local/lib/python2.7/site-packages
 
 Name: salt
-Version: 0.9.9dev
+Version: 0.10.1dev
 Release: 1talkos
 Summary: A parallel remote execution system
 
