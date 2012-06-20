@@ -2,7 +2,6 @@
 Manage the shadow file
 '''
 
-import os
 
 def __virtual__():
     '''
@@ -36,7 +35,7 @@ def info(name):
 
 def set_password(name, password):
     '''
-    Set the password for a named user. 
+    Set the password for a named user.
 
     CLI Example::
 

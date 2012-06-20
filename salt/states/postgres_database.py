@@ -1,16 +1,16 @@
 '''
-Postgres Database Management
-============================
+Management of PostgreSQL databases (schemas).
+=============================================
 
-The postgres_database module is used to create and manage Postgres databases, databases can be set
-as either absent or present
+The postgres_database module is used to create and manage Postgres databases.
+Databases can be set as either absent or present
 
 .. code-block:: yaml
 
     frank:
-      postgres_database:
-        - present
+      postgres_database.present
 '''
+
 
 def present(name):
     '''

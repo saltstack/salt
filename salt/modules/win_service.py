@@ -1,8 +1,7 @@
 '''
-Windows Service module. 
+Windows Service module.
 '''
 
-import os
 import time
 
 
@@ -75,7 +74,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
 
@@ -146,6 +145,10 @@ def status(name, sig=None):
 def getsid(name):
     '''
     Return the sid for this windows service
+
+    CLI Example::
+
+        salt '*' service.getsid <service name>
     '''
     cmd = 'sc showsid "{0}"'.format(name)
     lines = __salt__['cmd.run'](cmd).split('\n')
