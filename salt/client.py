@@ -927,7 +927,7 @@ class Caller(object):
         self.opts = salt.config.minion_config(c_path)
         self.sminion = salt.minion.SMinion(self.opts)
 
-    def function(fun, *args, **kwargs):
+    def function(self, fun, *args, **kwargs):
         '''
         Call a single salt function
         '''
