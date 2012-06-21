@@ -60,7 +60,10 @@ def script(vm_):
         os_ = vm_['os']
     if not os_:
         os_ = __opts__['os']
-    return ScriptDeployment(saltcloud.utils.os_script(os_))
+    return ScriptDeployment(
+            saltcloud.utils.os_script(os_),
+            name='/home/ec2-user/deployment.sh'
+            )
 
 
 def get_image(conn, vm_):
@@ -115,16 +118,22 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     conn = get_conn(vm_)
-    kwargs = {}
+    kwargs = {'ssh_username': 'ec2-user',
+              'ssh_key': '/root/.ssh/id_rsa'}
     kwargs['name'] = vm_['name']
-    kwargs['deploy'] = MultiStepDeployment([ssh_pub(vm_), script(vm_)])
+    print('Setting up deployment script')
+    kwargs['deploy'] = script(vm_)
+    print('Getting the image')
     kwargs['image'] = get_image(conn, vm_)
+    print('Getting the size')
     kwargs['size'] = get_size(conn, vm_)
+    print('Getting security data')
     ex_keyname = keyname(vm_)
     if ex_keyname:
         kwargs['ex_keyname'] = ex_keyname
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
+    print('Running deploy')
     return conn.deploy_node(**kwargs)
 
