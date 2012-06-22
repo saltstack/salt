@@ -33,4 +33,7 @@ class Cloud(object):
         Create/Verify the vms in the vm data
         '''
         for vm_ in self.opts['vm']:
+            fun = '{0}.create'.format(self.provider(vm_))
+            if not fun in self.clouds:
+                print('Public cloud provider {0} is not available'.format(self.provider(vm_)))
             self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
