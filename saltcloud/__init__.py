@@ -33,7 +33,7 @@ class Cloud(object):
         Create/Verify the vms in the vm data
         '''
         for vm_ in self.opts['vm']:
-            create(vm_)
+            self.create(vm_)
 
     def create(self, vm_):
         '''
