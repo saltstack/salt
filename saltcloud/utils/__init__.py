@@ -85,3 +85,12 @@ def get_option(option, opts, vm_):
     if option in opts:
         return opts[option]
 
+def minion_conf_string(opts, vm_):
+    '''
+    Return a string to be passed into the deployment script for the minion
+    configuration file
+    '''
+    minion = {}
+    minion.update(opts.get('minion', {}))
+    minion.update(vm_.get('minion', {}))
+    return yaml.safe_dump(minion)
