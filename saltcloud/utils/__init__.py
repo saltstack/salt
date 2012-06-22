@@ -14,7 +14,7 @@ import salt.crypt
 # Import third party libs
 from jinja2 import Template
 
-def os_script(os_, vm_=None, opts=None):
+def os_script(os_, vm_=None, opts=None, minion=''):
     '''
     Return the script as a string for the specific os
     '''
@@ -30,7 +30,7 @@ def os_script(os_, vm_=None, opts=None):
             try:
                 with open(full, 'r') as fp_:
                     template = Template(fp_.read())
-                return str(template.render(opts=opts, vm=vm_))
+                return str(template.render(opts=opts, vm=vm_, minion=minion))
             except AttributeError:
                 # Specified renderer was not found
                 continue

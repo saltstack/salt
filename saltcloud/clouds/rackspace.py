@@ -79,6 +79,7 @@ def script(vm_):
     '''
     Return the script deployment object
     '''
+    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     return ScriptDeployment(
             saltcloud.utils.os_script(
                 saltcloud.utils.get_option(
@@ -88,6 +89,7 @@ def script(vm_):
                     ),
                 vm_,
                 __opts__,
+                minion,
                 )
             )
 
