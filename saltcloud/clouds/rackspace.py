@@ -53,7 +53,7 @@ def script(vm_):
     if not os_:
         os_ = __opts__['os']
     return ScriptDeployment(
-            saltcloud.utils.os_script(os_),
+            saltcloud.utils.os_script(os_, vm_, __opts__),
             )
 
 
