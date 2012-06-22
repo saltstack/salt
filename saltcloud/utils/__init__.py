@@ -82,7 +82,7 @@ def get_option(option, opts, vm_):
     present there look for it in the main config file
     '''
     if option in vm_:
-        return vm_[options]
+        return vm_[option]
     if option in opts:
-        return opts[options]
+        return opts[option]
 
