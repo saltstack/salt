@@ -43,20 +43,6 @@ def ssh_pub(vm_):
     return SSHKeyDeployment(open(os.path.expanduser(ssh)).read())
 
 
-def script(vm_):
-    '''
-    Return the deployment object for managing a script
-    '''
-    os_ = ''
-    if 'os' in vm_:
-        os_ = vm_['os']
-    if not os_:
-        os_ = __opts__['os']
-    return ScriptDeployment(
-            saltcloud.utils.os_script(os_, vm_, __opts__),
-            )
-
-
 def get_image(conn, vm_):
     '''
     Return the image object to use
@@ -87,6 +73,21 @@ def get_size(conn, vm_):
             return size
         if size.name == vm_['size']:
             return size
+
+
+def script(vm_):
+    '''
+    Return the script deployment object
+    '''
+    return ScriptDeployment(
+            saltcloud.utils.os_script(
+                saltclout.utils.get_option(
+                    'os',
+                    __opts__,
+                    vm_
+                    )
+                )
+            )
 
 
 def create(vm_):
