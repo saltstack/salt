@@ -13,6 +13,7 @@ import salt.crypt
 
 # Import third party libs
 from jinja2 import Template
+import yaml
 
 def os_script(os_, vm_=None, opts=None, minion=''):
     '''
