@@ -1,10 +1,10 @@
 #!/bin/bash
 
-sudo rpm -Uvh --force http://mirrors.kernel.org/fedora-epel/6/x86_64/epel-release-6-7.noarch.rpm
-sudo yum install -y salt-minion
-sudo mkdir -p /etc/salt/pki
-sudo echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
-sudo echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-sudo echo '{{ minion }}' > /etc/salt/minion
-sudo /sbin/chkconfig salt-minion on
-sudo service salt-minion start
+rpm -Uvh --force http://mirrors.kernel.org/fedora-epel/6/x86_64/epel-release-6-7.noarch.rpm
+yum install -y salt-minion
+mkdir -p /etc/salt/pki
+echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
+echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
+echo '{{ minion }}' > /etc/salt/minion
+/sbin/chkconfig salt-minion on
+service salt-minion start
