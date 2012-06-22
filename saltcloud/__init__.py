@@ -41,7 +41,9 @@ class Cloud(object):
         '''
         fun = '{0}.create'.format(self.provider(vm_))
         if not fun in self.clouds:
-            print('Public cloud provider {0} is not available'.format(self.provider(vm_)))
+            print('Public cloud provider {0} is not available'.format(
+                self.provider(vm_))
+                )
         priv, pub = saltcloud.utils.gen_keys(
                 saltcloud.utils.get_option('keysize', self.opts, vm_)
                 )
@@ -49,3 +51,15 @@ class Cloud(object):
         vm_['pub_key'] = pub
         vm_['priv_key'] = priv
         self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+
+    def run(self):
+        '''
+        Parse over the options passed on the command line and determine how to
+        handle them
+        '''
+        if self.opts['name']:
+            for vm_ in self.opts['vm']:
+                if vm_['name'] == self.opts['name']:
+                    self.create(vm_)
+        else:
+            self.create_all()
