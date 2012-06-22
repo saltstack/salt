@@ -33,7 +33,19 @@ class Cloud(object):
         Create/Verify the vms in the vm data
         '''
         for vm_ in self.opts['vm']:
-            fun = '{0}.create'.format(self.provider(vm_))
-            if not fun in self.clouds:
-                print('Public cloud provider {0} is not available'.format(self.provider(vm_)))
-            self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+            create(vm_)
+
+    def create(self, vm_):
+        '''
+        Create a single vm
+        '''
+        fun = '{0}.create'.format(self.provider(vm_))
+        if not fun in self.clouds:
+            print('Public cloud provider {0} is not available'.format(self.provider(vm_)))
+        priv, pub = saltcloud.utils.gen_keys(
+                saltcloud.utils.get_option('keysize', self.opts, vm_)
+                )
+        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
+        vm_['pub_key'] = pub
+        vm_['priv_key'] = priv
+        self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
