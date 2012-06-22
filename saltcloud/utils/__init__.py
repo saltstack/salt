@@ -10,9 +10,10 @@ import tempfile
 
 # Import salt libs
 import salt.crypt
+import salt.utils.templates
 
 
-def os_script(os_):
+def os_script(os_, vm_=None, opts=None, render='jinja'):
     '''
     Return the script as a string for the specific os
     '''
@@ -26,10 +27,13 @@ def os_script(os_):
         if os_.lower() == fn_.split('.')[0].lower():
             # found the right script to embed, go for it
             try:
-                with open(full, 'r') as fp_:
-                    data = fp_.read()
-                return data
-            except (OSError, IOError):
+                return getattr(salt.utils.templates, render)(
+                        full,
+                        True,
+                        vm=vm_,
+                        opts=opts)
+            except AttributeError:
+                # Specified renderer was not found
                 continue
     # No deploy script was found, return an empy string
     return ''
@@ -39,6 +43,9 @@ def gen_keys(keysize=2048):
     '''
     Generate Salt minion keys and return them as PEM file strings
     '''
+    # Mandate that keys are at least 2048 in size
+    if keysize < 2048:
+        keysize = 2048
     tdir = tempfile.mkdtemp()
     salt.crypt.gen_keys(
             tdir,
