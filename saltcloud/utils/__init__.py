@@ -67,3 +67,15 @@ def accept_key(pki_dir, pub, id_):
     with open(key, 'w+') as fp_:
         fp_.write(pub)
 
+
+def get_option(option, opts, vm_):
+    '''
+    Convenience function to return the dominant option to be used. Always
+    default to options set in the vm structure, but if the option is not
+    present there look for it in the main config file
+    '''
+    if option in vm_:
+        return vm_[options]
+    if option in opts:
+        return opts[options]
+
