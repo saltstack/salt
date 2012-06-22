@@ -81,7 +81,7 @@ def script(vm_):
     '''
     return ScriptDeployment(
             saltcloud.utils.os_script(
-                saltclout.utils.get_option(
+                saltcloud.utils.get_option(
                     'os',
                     __opts__,
                     vm_

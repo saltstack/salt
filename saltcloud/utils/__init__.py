@@ -10,10 +10,11 @@ import tempfile
 
 # Import salt libs
 import salt.crypt
-import salt.utils.templates
 
+# Import third party libs
+from jinja2 import Template
 
-def os_script(os_, vm_=None, opts=None, render='jinja'):
+def os_script(os_, vm_=None, opts=None):
     '''
     Return the script as a string for the specific os
     '''
@@ -27,11 +28,11 @@ def os_script(os_, vm_=None, opts=None, render='jinja'):
         if os_.lower() == fn_.split('.')[0].lower():
             # found the right script to embed, go for it
             try:
-                return getattr(salt.utils.templates, render)(
-                        full,
-                        True,
-                        vm=vm_,
-                        opts=opts)
+                with open(full, 'r') as fp_:
+                template = Template(fp_.read())
+                return template.render(
+                        opts=opts,
+                        vm=vm)
             except AttributeError:
                 # Specified renderer was not found
                 continue
