@@ -1,5 +1,6 @@
 #!/bin/bash
 
+apt-get update
 apt-get install -y python-software-properties
 add-apt-repository -y ppa:saltstack/salt
 apt-get update
