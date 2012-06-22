@@ -85,7 +85,9 @@ def script(vm_):
                     'os',
                     __opts__,
                     vm_
-                    )
+                    ),
+                vm_,
+                __opts__,
                 )
             )
 
