@@ -70,6 +70,9 @@ class SaltCloud(object):
         for k, v in options.__dict__.items():
             if v is not None:
                 cli[k] = v
+        if args:
+            cli['name'] = args[0]
+
         return cli
 
     def run(self):
@@ -86,5 +89,5 @@ class SaltCloud(object):
         # If statement here for when cloud query is added
         import saltcloud
         cloud = saltcloud.Cloud(self.opts)
-        cloud.create_all()
+        cloud.run()
 
