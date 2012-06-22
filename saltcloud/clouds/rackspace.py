@@ -69,6 +69,8 @@ def get_image(conn, vm_):
     for img in images:
         if img.id == vm_['image']:
             return img
+        if img.name == vm_['image']:
+            return img
 
 
 def get_size(conn, vm_):
