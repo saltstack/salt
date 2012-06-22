@@ -52,7 +52,7 @@ def gen_keys(keysize=2048):
             'minion',
             keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
-    pup_path = os.path.join(tdir, 'minion.pub')
+    pub_path = os.path.join(tdir, 'minion.pub')
     with open(priv_path) as fp_:
         priv = fp_.read()
     with open(pub_path) as fp_:
