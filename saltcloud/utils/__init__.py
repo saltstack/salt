@@ -29,10 +29,8 @@ def os_script(os_, vm_=None, opts=None):
             # found the right script to embed, go for it
             try:
                 with open(full, 'r') as fp_:
-                template = Template(fp_.read())
-                return template.render(
-                        opts=opts,
-                        vm=vm)
+                    template = Template(fp_.read())
+                return template.render(opts=opts, vm=vm)
             except AttributeError:
                 # Specified renderer was not found
                 continue
