@@ -69,7 +69,7 @@ def accept_key(pki_dir, pub, id_):
     '''
     key = os.path.join(
             pki_dir,
-            'minions/{0}.pub'.format(id_)
+            'minions/{0}'.format(id_)
             )
     with open(key, 'w+') as fp_:
         fp_.write(pub)
