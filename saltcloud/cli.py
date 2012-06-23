@@ -92,7 +92,7 @@ class SaltCloud(object):
             if v is not None:
                 cli[k] = v
         if args:
-            cli['names'] = args[0]
+            cli['names'] = args[]
 
         return cli
 
