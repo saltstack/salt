@@ -55,7 +55,7 @@ def vm_config(path):
         opts.pop('conf_file')
 
     for key, val in opts.items():
-        val['name'] = key
+        val['profile'] = key
         vms.append(val)
 
     return vms
