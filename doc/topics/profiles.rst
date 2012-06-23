@@ -1,0 +1,35 @@
+VM Profiles
+===========
+
+Salt cloud designates virtual machines inside the profile configuration file.
+The profile configuration file defaults to ``/etc/salt/cloud.vm`` and is a
+yaml configuration. The syntax for declaring profiles is simple:
+
+.. code-block:: yaml
+
+    fedora_rackspace:
+      provider: rackspace
+      image: Fedora 17
+      size: 256 server
+      os: Fedora
+
+A few key peices of information need to be declared and can change based on the
+public cloud provider. A number of additional paramaters can also be inserted:
+
+.. code-block:: yaml
+
+    centos_rackspace:
+      provider: rackspace
+      image: CentOS 6.2
+      size: 1024 server
+      os: RHEL6
+      minion:
+        grains:
+          role: webserver
+        master: salt.example.com
+
+Some paramaters can be specified in the main Salt cloud config file and then
+are applied to all cloud profiles. For instance if only a single cloud provider
+is being used then the provider option can be declared in the Salt cloud config
+file.
+
