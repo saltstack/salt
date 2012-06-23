@@ -54,7 +54,7 @@ class Map(object):
                 vm_['name'] = name
                 if self.opts['parallel']:
                     multiprocessing.Process(
-                            target=self.cloud.create(vm_)
+                            target=lambda: self.cloud.create(vm_)
                             ).start()
                 else:
                     self.cloud.create(vm_)
