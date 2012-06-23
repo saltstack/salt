@@ -35,7 +35,7 @@ class Map(object):
             return {}
         try:
             with open(self.opts['map'], 'rb') as fp_:
-                map_ = yaml.loads(fb_.read())
+                map_ = yaml.load(fp_.read())
         except Exception:
             return {}
         if 'include' in map_:
