@@ -6,6 +6,7 @@ allowing for individual vms to be created in a more stateful way
 # Import python libs
 import os
 import copy
+import multiprocessing
 
 # Import salt libs
 import saltcloud.cloud
@@ -51,4 +52,9 @@ class Map(object):
                     continue
                 vm_ = copy.deepcopy(self.opts['vm'][profile])
                 vm_['name'] = name
-                self.cloud.create(vm_)
+                if self.opts['parallel']:
+                    multiprocessing.Process(
+                            target=self.cloud.create(vm_)
+                            ).start()
+                else:
+                    self.cloud.create(vm_)
