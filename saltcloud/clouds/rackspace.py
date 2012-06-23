@@ -109,6 +109,6 @@ def create(vm_):
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
-    for key, val in data.__dict__().items():
+    for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
 
