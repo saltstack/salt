@@ -48,13 +48,13 @@ class Map(object):
         '''
         for profile in self.map:
             for name in self.map[profile]:
-                if not profile in self.opts['vm']:
-                    continue
-                vm_ = copy.deepcopy(self.opts['vm'][profile])
-                vm_['name'] = name
-                if self.opts['parallel']:
-                    multiprocessing.Process(
-                            target=lambda: self.cloud.create(vm_)
-                            ).start()
-                else:
-                    self.cloud.create(vm_)
+                for vm_ in self.opts['vm']:
+                    if vm_['profile'] == profile:
+                        tvm = copy.deepcopy(vm_)
+                        tvm['name'] = name
+                        if self.opts['parallel']:
+                            multiprocessing.Process(
+                                    target=lambda: self.cloud.create(tvm)
+                                    ).start()
+                        else:
+                            self.cloud.create(tvm)
