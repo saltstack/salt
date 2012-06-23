@@ -57,9 +57,11 @@ class Cloud(object):
         Parse over the options passed on the command line and determine how to
         handle them
         '''
-        if self.opts['name']:
-            for vm_ in self.opts['vm']:
-                if vm_['name'] == self.opts['name']:
-                    self.create(vm_)
+        if self.opts['names'] and self.opts['profile']:
+            for name in self.opts['names']:
+                for vm_ in self.opts['vm']:
+                    if vm_['profile'] == self.opts['profile']:
+                        vm_['name'] = name
+                        self.create(name, vm_)
         else:
             self.create_all()
