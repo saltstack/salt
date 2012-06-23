@@ -109,7 +109,7 @@ class SaltCloud(object):
         import logging
         # If statement here for when cloud query is added
 
-        if self.opts['names'] and self.opts['profile']:
+        if self.opts.get('names', False) and self.opts['profile']:
             import saltcloud.cloud
             cloud = saltcloud.cloud.Cloud(self.opts)
             cloud.run_profile()
