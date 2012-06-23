@@ -61,4 +61,9 @@ class Cloud(object):
             for vm_ in self.opts['vm']:
                 if vm_['profile'] == self.opts['profile']:
                     vm_['name'] = name
-                    self.create(name, vm_)
+                    if self.opts['parallel']:
+                        multiprocessing.Process(
+                                target=self.create(name, vm_)
+                                ).start()
+                    else:
+                        self.create(name, vm_)
