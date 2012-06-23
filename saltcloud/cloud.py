@@ -2,6 +2,8 @@
 The top level interface used to translate configuration data back to the
 correct cloud modules
 '''
+# Import python libs
+import multiprocessing
 
 # Import saltcloud libs
 import saltcloud.utils
@@ -63,7 +65,7 @@ class Cloud(object):
                     vm_['name'] = name
                     if self.opts['parallel']:
                         multiprocessing.Process(
-                                target=self.create(name, vm_)
+                                target=lambda: self.create(vm_),
                                 ).start()
                     else:
-                        self.create(name, vm_)
+                        self.create(vm_)
