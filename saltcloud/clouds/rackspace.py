@@ -98,15 +98,17 @@ def create(vm_):
     '''
     Create a single vm from a data dict
     '''
+    print('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
-    print('Setting up deployment script')
     kwargs['deploy'] = script(vm_)
-    print('Getting the image')
     kwargs['image'] = get_image(conn, vm_)
-    print('Getting the size')
     kwargs['size'] = get_size(conn, vm_)
-    print('Running deploy')
-    return conn.deploy_node(**kwargs)
+    data = conn.deploy_node(**kwargs)
+    print('Created Cloud VM {0} with the following values:'.format(
+        vm_['name']
+        ))
+    for key, val in data.__dict__().items():
+        print('  {0}: {1}'.format(key, val))
 
