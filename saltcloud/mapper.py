@@ -5,6 +5,7 @@ allowing for individual vms to be created in a more stateful way
 
 # Import python libs
 import os
+import copy
 
 # Import salt libs
 import saltcloud.cloud
@@ -20,6 +21,8 @@ class Map(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.cloud = saltcloud.cloud.Cloud(self.opts)
+        self.map = self.read()
 
     def read(self):
         '''
@@ -37,3 +40,15 @@ class Map(object):
         if 'include' in map_:
             map_ = salt.config.include_config(map_, self.opts['map'])
         return map_
+
+    def run_map(self):
+        '''
+        Execute the contents of the vm map
+        '''
+        for profile in self.map:
+            for name in self.map[profile]:
+                if not profile in self.opts['vm']:
+                    continue
+                vm_ = copy.deepcopy(self.opts['vm'][profile])
+                vm_['name'] = name
+                self.cloud.create(vm_)
