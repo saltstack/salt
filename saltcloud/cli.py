@@ -47,16 +47,37 @@ class SaltCloud(object):
         '''
         parser = optparse.OptionParser()
 
+        parser.add_option('-p',
+                '--profile',
+                dest='profile',
+                default='',
+                help='Specify a profile to use for the vms')
+
+        parser.add_option('-m',
+                '--map',
+                dest='map',
+                default='',
+                help='Specify a cloud map file to use for deployment')
+
+        parser.add_option('-P',
+                '--parallel',
+                dest='parallel',
+                default=False,
+                action='store_true',
+                help='Build all of the specified virtual machines in parallel')
+
         parser.add_option('-C',
                 '--cloud-config',
                 dest='cloud_config',
                 default='/etc/salt/cloud',
                 help='The location of the saltcloud config file')
+
         parser.add_option('-M',
                 '--master-config',
                 dest='master_config',
                 default='/etc/salt/master',
                 help='The location of the salt master config file')
+
         parser.add_option('-V',
                 '--vm-config',
                 dest='vm_config',
@@ -71,7 +92,7 @@ class SaltCloud(object):
             if v is not None:
                 cli[k] = v
         if args:
-            cli['name'] = args[0]
+            cli['names'] = args[0]
 
         return cli
 
