@@ -1,0 +1,31 @@
+base_ec2:
+  provider: EC2
+  image: ami-e565ba8c
+  size: Micro Instance
+  os: RHEL
+  minion:
+      cheese: edam
+
+arch_rs:
+  provider: rackspace
+  image: Arch 2011.10
+  size: 256 server
+  os: Arch
+  minion:
+      cheese: edam
+
+ubuntu_rs:
+  provider: rackspace
+  image: Ubuntu 12.04 LTS
+  size: 256 server
+  os: Ubuntu
+  minion:
+      cheese: edam
+
+fedora_rs:
+  provider: rackspace
+  image: Fedora 17
+  size: 256 server
+  os: Fedora
+  minion:
+      cheese: edam
