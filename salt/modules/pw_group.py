@@ -2,7 +2,10 @@
 Manage groups on FreeBSD
 '''
 
-import grp
+try:
+    import grp
+except ImportError:
+    pass
 
 
 def __virtual__():
