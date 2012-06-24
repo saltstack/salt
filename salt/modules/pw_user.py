@@ -1,10 +1,13 @@
 '''
 Manage users with the useradd command
 '''
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
-import grp
 import os
-import pwd
 
 from salt._compat import string_types
 
