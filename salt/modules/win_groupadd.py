@@ -9,13 +9,13 @@ def __virtual__():
     return 'group' if __grains__['kernel'] == 'Windows' else False
 
 
-def add(name):
+def add(name, gid=None, system=False):
     '''
     Add the specified group
 
     CLI Example::
 
-        salt '*' group.add foo 
+        salt '*' group.add foo
     '''
     cmd = 'net localgroup {0} /add'.format(name)
 
@@ -56,7 +56,7 @@ def info(name):
         if 'successfully' in line:
             memberline = False
         if memberline:
-            gr_mem.append(line.strip())    
+            gr_mem.append(line.strip())
         if '---' in line:
             memberline = True
     if not gr_name:
@@ -77,14 +77,31 @@ def getent():
         salt '*' group.getent
     '''
     ret = []
+    ret2 = []
     lines = __salt__['cmd.run']('net localgroup').split('\n')
     groupline = False
     for line in lines:
         if 'successfully' in line:
             groupline = False
         if groupline:
-            ret.append(line.strip('*').strip())    
+            ret.append(line.strip('*').strip())
         if '---' in line:
             groupline = True
-
-    return ret
+    for item in ret:
+        members = []
+        gid = __salt__['file.group_to_gid'](item)
+        memberlines = __salt__['cmd.run']('net localgroup "{0}"'.format(item)).split('\n')
+        memberline = False
+        for line in memberlines:
+            if 'successfully' in line:
+                memberline = False
+            if memberline:
+                members.append(line.strip('*').strip())
+            if '---' in line:
+                memberline = True
+        group = {'gid': gid,
+                'members': members,
+                'name': item,
+                'passwd': 'x'}
+        ret2.append(group)
+    return ret2

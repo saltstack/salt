@@ -1,0 +1,179 @@
+========================
+Salt 0.9.7 Release Notes
+========================
+
+Salt 0.9.7 is here! The latest iteration of Salt brings more features and many
+fixes. This release is a great refinement over 0.9.6, adding many conveniences
+under the hood, as well as some features that make working with Salt much
+better.
+
+A few highlights include the new Job system, refinements to the requisite
+system in states, the ``mod_init`` interface for states, external node
+classification, search path to managed files in the file state, and refinements
+and additions to dynamic module loading.
+
+0.9.7 also introduces the long developed (and oft changed) unit test framework
+and the initial unit tests.
+
+
+Major Features
+==============
+
+Salt Jobs Interface
+-------------------
+
+The new jobs interface makes the management of running executions much cleaner
+and more transparent. Building on the existing execution framework the jobs
+system allows clear introspection into the active running state of the
+running Salt interface.
+
+The Jobs interface is centered in the new minion side proc system. The
+minions now store msgpack serialized files under ``/var/cache/salt/proc``.
+These files keep track of the active state of processes on the minion.
+
+Functions in the saltutil Module
+````````````````````````````````
+
+A number of functions have been added to the saltutil module to manage and
+view the jobs:
+
+``running`` - Returns the data of all running jobs that are found in the proc
+directory.
+
+``find_job`` - Returns specific data about a certain job based on job id.
+
+``signal_job`` - Allows for a given jid to be sent a signal.
+
+``term_job`` - Sends a termination signal (``SIGTERM, 15``) to the process
+controlling the specified job.
+
+``kill_job`` Sends a kill signal (``SIGKILL, 9``) to the process controlling the
+specified job.
+
+The jobs Runner
+---------------
+
+A convenience runner front end and reporting system has been added as well.
+The jobs runner contains functions to make viewing data easier and cleaner.
+
+The jobs runner contains a number of functions...
+
+active
+``````
+
+The active function runs ``saltutil.running`` on all minions and formats the
+return data about all running jobs in a much more usable and compact format.
+The active function will also compare jobs that have returned and jobs that
+are still running, making it easier to see what systems have completed a job
+and what systems are still being waited on.
+
+lookup_jid
+``````````
+
+When jobs are executed the return data is sent back to the master and cached.
+By default is is cached for 24 hours, but this can be configured via the
+``keep_jobs`` option in the master configuration.
+
+Using the ``lookup_jid`` runner will display the same return data that the
+initial job invocation with the salt command would display.
+
+list_jobs
+`````````
+
+Before finding a historic job, it may be required to find the job id.
+``list_jobs`` will parse the cached execution data and display all of the job
+data for jobs that have already, or partially returned.
+
+
+External Node Classification
+----------------------------
+
+Salt can now use external node classifiers like Cobbler's
+``cobbler-ext-nodes``.
+
+Salt uses specific data from the external node classifier. In particular the
+classes value denotes which sls modules to run, and the environment value sets
+to another environment.
+
+An external node classification can be set in the master configuration file via
+the ``external_nodes`` option:
+http://salt.readthedocs.org/en/latest/ref/configuration/master.html#external-nodes
+
+External nodes are loaded in addition to the top files. If it is intended to
+only use external nodes, do not deploy any top files.
+
+State Mod Init System
+---------------------
+
+An issue arose with the pkg state. Every time a package was run Salt would
+need to refresh the package database. This made systems with slower package
+metadata refresh speeds much slower to work with. To alleviate this issue the
+``mod_init`` interface has been added to salt states.
+
+The ``mod_init`` interface is a function that can be added to a state file.
+This function is called with the first state called. In the case of the pkg
+state, the ``mod_init`` function sets up a tag which makes the package database
+only refresh on the first attempt to install a package.
+
+In a nutshell, the ``mod_init`` interface allows a state to run any command that
+only needs to be run once, or can be used to set up an environment for working
+with the state.
+
+Source File Search Path
+-----------------------
+
+The file state continues to be refined, adding speed and capabilities. This
+release adds the ability to pass a list to the source option. This list is then
+iterated over until the source file is found, and the first found file is used.
+
+The new syntax looks like this:
+
+.. code-block:: yaml
+
+    /etc/httpd/conf/httpd.conf:
+      file:
+        - managed
+        - source:
+          - salt://httpd/httpd.conf
+          - http://myserver/httpd.conf: md5=8c1fe119e6f1fd96bc06614473509bf1
+
+The source option can take sources in the list from the salt file server
+as well as an arbitrary web source. If using an arbitrary web source the
+checksum needs to be passed as well for file verification.
+
+Refinements to the Requisite System
+-----------------------------------
+
+A few discrepancies were still lingering in the requisite system, in
+particular, it was not possible to have a ``require`` and a ``watch`` requisite
+declared in the same state declaration.
+
+This issue has been alleviated, as well as making the requisite system run
+more quickly.
+
+Initial Unit Testing Framework
+------------------------------
+
+Because of the module system, and the need to test real scenarios, the
+development of a viable unit testing system has been difficult, but unit
+testing has finally arrived. Only a small amount of unit testing coverage
+has been developed, much more coverage will be in place soon.
+
+A huge thanks goes out to those who have helped with unit testing, and the
+contributions that have been made to get us where we are. Without these
+contributions unit tests would still be in the dark.
+
+Compound Targets Expanded
+-------------------------
+
+Originally only support for ``and`` and ``or`` were available in the compound
+target. 0.9.7 adds the capability to negate compound targets with ``not``.
+
+Nodegroups in the Top File
+--------------------------
+
+Previously the nodegroups defined in the master configuration file could not
+be used to match nodes for states. The nodegroups support has been expanded
+and the nodegroups defined in the master configuration can now be used to
+match minions in the top file.
+

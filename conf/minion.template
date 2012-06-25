@@ -24,7 +24,12 @@
 # clusters.
 #id:
 
-# If the the connection to the server is interrupted, the minion will
+# Append a domain to a hostname in the event that it does not exist.  This is
+# useful for systems where socket.getfqdn() does not actually result in a
+# FQDN (for instance, Solaris).
+#append_domain:
+
+# If the connection to the server is interrupted, the minion will
 # attempt to reconnect. sub_timeout allows you to control the rate
 # of reconnection attempts (in seconds). To disable reconnects, set
 # this value to 0.
@@ -44,6 +49,10 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time = 10
 
+# When healing a dns_check is run, this is to make sure that the originally
+# resolved dns has not changed, if this is something that does not happen in
+# your environment then set this value to False.
+#dns_check: True
 
 
 #####   Minion module management     #####
@@ -61,6 +70,14 @@
 #returner_dirs: []
 #states_dirs: []
 #render_dirs: []
+#
+# A module provider can be statically overwritten or extended for the minion
+# via the providers option, in this case the default module will be
+# overwritten by the specified module. In this example the pkg module will
+# be provided by the yumpkg5 module instead of the system default.
+#
+# providers:
+#   pkg: yumpkg5
 #
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
@@ -80,7 +97,7 @@
 #renderer: yaml_jinja
 #
 # state_verbose allows for the data returned from the minion to be more
-# verbose. Normaly only states that fail or states that have changes are
+# verbose. Normally only states that fail or states that have changes are
 # returned, but setting state_verbose to True will return all states that
 # were checked
 #state_verbose: False
@@ -99,8 +116,56 @@
 # Normally the minion is not isolated to any single environment on the master
 # when running states, but the environment can be isolated on the minion side
 # by statically setting it. Remember that the recommended way to manage
-# environments is to issolate via the top file.
+# environments is to isolate via the top file.
 #environment: None
+#
+# If using the local file directory, then the state top file name needs to be
+# defined, by default this is top.sls.
+#state_top: top.sls
+
+#####     File Directory Settings    #####
+##########################################
+# The Salt Minion can redirect all file server operations to a local directory,
+# this allows for the same state tree that is on the master to be used if
+# copied completely onto the minion. This is a literal copy of the settings on
+# the master but used to reference a local directory on the minion.
+
+# Set the file client, the client defaults to looking on the master server for
+# files, but can be directed to look at the local file directory setting 
+# defined below by setting it to local.
+#file_client: remote
+
+# The file directory works on environments passed to the minion, each environment
+# can have multiple root directories, the subdirectories in the multiple file
+# roots cannot match, otherwise the downloaded files will not be able to be
+# reliably ensured. A base environment is required to house the top file.
+# Example:
+# file_roots:
+#   base:
+#     - /srv/salt/
+#   dev:
+#     - /srv/salt/dev/services
+#     - /srv/salt/dev/states
+#   prod:
+#     - /srv/salt/prod/services
+#     - /srv/salt/prod/states
+#
+# Default:
+#file_roots:
+#  base:
+#    - /srv/salt
+
+# The hash_type is the hash to use when discovering the hash of a file in
+# the minion directory, the default is md5, but sha1, sha224, sha256, sha384
+# and sha512 are also supported.
+#hash_type: md5
+
+# The Salt pillar is searched for locally if file_client is set to local. If
+# this is the case, and pillar data is defined, then the pillar_roots need to
+# also be configured on the minion:
+#pillar_roots:
+#  base:
+#    - /srv/pillar
 
 ######        Security settings       #####
 ###########################################

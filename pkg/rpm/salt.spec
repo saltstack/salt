@@ -9,8 +9,8 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.9.6
-Release: 2%{?dist}
+Version: 0.9.9.1
+Release: 1%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -27,6 +27,10 @@ Source7: README.fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildArch: noarch
+
+%ifarch %{ix86} x86_64
+ Requires: dmidecode
+%endif
 
 %if 0%{?with_python26}
 BuildRequires: python26-zmq
@@ -93,7 +97,6 @@ Requires: salt = %{version}-%{release}
 
 %description -n salt-master 
 The Salt master is the central server to which all minions connect.
-Summary: 
 
 %package -n salt-minion
 Summary: Client component for salt, a parallel remote execution system 
@@ -127,8 +130,11 @@ install -p -m 0644 %{SOURCE6} $RPM_BUILD_ROOT%{_unitdir}/
 
 install -p %{SOURCE7} .
 
-install -p -m 0640 $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
-install -p -m 0640 $RPM_BUILD_ROOT%{_sysconfdir}/salt/master.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
+install -p -m 0640 conf/minion.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
+install -p -m 0640 conf/minion.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion.template
+install -p -m 0640 conf/master.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/master
+install -p -m 0640 conf/master.template $RPM_BUILD_ROOT%{_sysconfdir}/salt/master.template
  
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -255,6 +261,21 @@ fi
 %endif
 
 %changelog
+* Sat Apr 28 2012 Clint Savage <herlo1@gmail.com> - 0.9.9.1-1
+- Moved to upstream release 0.9.9.1
+
+* Tue Apr 17 2012 Peter Robinson <pbrobinson@fedoraproject.org> - 0.9.8-2
+- dmidecode is x86 only
+
+* Wed Mar 21 2012 Clint Savage <herlo1@gmail.com> - 0.9.8-1
+- Moved to upstream release 0.9.8
+
+* Thu Mar 8 2012 Clint Savage <herlo1@gmail.com> - 0.9.7-2
+- Added dmidecode as a Requires
+
+* Thu Feb 16 2012 Clint Savage <herlo1@gmail.com> - 0.9.7-1
+- Moved to upstream release 0.9.7
+
 * Tue Jan 24 2012 Clint Savage <herlo1@gmail.com> - 0.9.6-2
 - Added README.fedora and removed deps for optional modules
 

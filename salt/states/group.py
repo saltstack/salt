@@ -1,6 +1,6 @@
 '''
-Group Management
-================
+Management of user groups.
+==========================
 
 The group module is used to create and manage unix group settings, groups
 can be either present or absent:
@@ -8,13 +8,13 @@ can be either present or absent:
 .. code-block:: yaml
 
     cheese:
-      group:
-        - present
+      group.present:
         - gid: 7648
+        - system: True
 '''
 
 
-def present(name, gid=None):
+def present(name, gid=None, system=False):
     '''
     Ensure that a group is present
 
@@ -39,6 +39,11 @@ def present(name, gid=None):
                     ret['comment'] = 'No change'
                     return ret
                 else:
+                    if __opts__['test']:
+                        ret['result'] = None
+                        ret['comment'] = ('Group {0} exists but the gid will '
+                                          'be changed to {1}').format(name, gid)
+                        return ret
                     ret['result'] = __salt__['group.chgid'](name, gid)
                     if ret['result']:
                         ret['comment'] = ('Changed gid to {0} for group {1}'
@@ -53,7 +58,12 @@ def present(name, gid=None):
                 ret['comment'] = 'Group {0} is already present'.format(name)
                 return ret
     # Group is not present, make it!
-    ret['result'] = __salt__['group.add'](name, gid)
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Group {0} is not present and should be created'
+                ).format(name)
+        return ret
+    ret['result'] = __salt__['group.add'](name, gid, system)
     if ret['result']:
         ret['changes'] = __salt__['group.info'](name)
         ret['comment'] = 'Added group {0}'.format(name)
@@ -78,6 +88,10 @@ def absent(name):
         # Scan over the groups
         if lgrp['name'] == name:
             # The group is present, DESTROY!!
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Group {0} is set for removal'.format(name)
+                return ret
             ret['result'] = __salt__['group.delete'](name)
             if ret['result']:
                 ret['changes'] = {name: ''}

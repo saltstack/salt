@@ -2,7 +2,7 @@
 ``salt-syndic``
 ===============
 
-The salt syndic daemon, a special minion that passes through commands from a
+The Salt syndic daemon, a special minion that passes through commands from a
 higher master
 
 Synopsis
@@ -13,7 +13,7 @@ salt-syndic [ options ]
 Description
 ===========
 
-The salt syndic daemon, a special minion that passes through commands from a
+The Salt syndic daemon, a special minion that passes through commands from a
 higher master.
 
 Options
@@ -27,7 +27,11 @@ Options
 
 .. option:: -d, --daemon
 
-    Run the salt syndic as a daemon
+    Run the Salt syndic as a daemon
+
+.. option:: --pid-file PIDFILE
+
+    Specify the location of the pidfile
 
 .. option:: --master-config=MASTER_CONFIG
 
@@ -36,3 +40,10 @@ Options
 .. option:: --minion-config=MINION_CONFIG
 
     The minion configuration file to use, the default is /etc/salt/minion
+
+See also
+========
+
+:manpage:`salt(1)`
+:manpage:`salt-master(1)`
+:manpage:`salt-minion(1)`

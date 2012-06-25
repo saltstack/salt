@@ -1,0 +1,14 @@
+# basic config
+master: localhost
+master_port: 54506
+root_dir: /tmp/salttest
+sock_dir: .salt-unix
+pki_dir: pki
+id: minion
+cachedir: cache
+acceptance_wait_time: 1
+open_mode: True
+log_file: minion
+order_masters: True
+interface: 0.0.0.0
+ret_port: 64506

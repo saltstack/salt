@@ -1,0 +1,284 @@
+========================
+Salt 0.9.9 Release Notes
+========================
+
+0.9.9 is out and comes with some serious bug fixes and even more serious
+features. This release is the last major feature release before 1.0.0 and
+could be considered the 1.0.0 release candidate.
+
+A few updates include more advanced kwargs support, the ability for salt
+states to more safely configure a running salt minion, better job directory
+management and the new state test interface.
+
+Many new tests have been added as well, including the new minion swarm test
+that allows for easier testing of Salt working with large groups of minions.
+This means that if you have experienced stability issues with Salt before,
+particularly in larger deployments, that these bugs have been tested for,
+found, and killed.
+
+Major Features
+==============
+
+State Test Interface
+--------------------
+
+Until 0.9.9 the only option when running states to see what was going to be
+changed was to print out the highstate with state.show_highstate and manually
+look it over. But now states can be run to discover what is going to be
+changed.
+
+Passing the option ``test=True`` to many of the state functions will now cause
+the salt state system to only check for what is going to be changed and report
+on those changes.
+
+.. code-block:: bash
+
+    # salt \* state.highstate test=True
+
+Now states that would have made changes report them back in yellow.
+
+State Syntax Update
+-------------------
+
+A shorthand syntax has been added to sls files, and it will be the default
+syntax in documentation going forward. The old syntax is still fully supported
+and will not be deprecated, but it is recommended to move to the new syntax in
+the future. This change moves the state function up into the state name using
+a dot notation. This is in-line with how state functions are generally referred
+to as well:
+
+The new way:
+
+.. code-block:: yaml
+
+    /etc/sudoers:
+      file.present:
+        - source: salt://sudo/sudoers
+        - user: root
+        - mode: 400
+
+Use and Use_in Requisites
+-------------------------
+
+Two new requisite statements are available in 0.9.9. The use and use_in
+requisite and requisite-in allow for the transparent duplication of data
+between states. When a state "uses" another state it copies the other state's
+arguments as defaults. This was created in direct response to the new network
+state, and allows for many network interfaces to be configured in the same way
+easily. A simple example:
+
+.. code-block:: yaml
+
+    root_file:
+      file.absent:
+        - name: /tmp/nothing
+        - user: root
+        - mode: 644
+        - group: root
+        - use_in:
+          - file: /etc/vimrc
+
+    fred_file:
+      file.absent:
+        - name: /tmp/nothing
+        - user: fred
+        - group: marketing
+        - mode: 660
+
+    /files/marketing/district7.rst:
+      file.present:
+        - source: salt://marketing/district7.rst
+        - template: jinja
+        - use:
+          - file: fred_file
+
+    /etc/vimrc:
+      file.present:
+        - source: salt://edit/vimrc
+
+This makes the 2 lower state decs inherit the options from their respectively
+"used" state decs.
+
+Network State
+-------------
+
+The new network state allows for the configuration of network devices via salt
+states and the ip salt module. This addition has been given to the project by
+Jeff Hutchins and Bret Palsson from Jive Communications.
+
+Currently the only network configuration backend available is for Red Hat
+based systems, like Red Hat Enterprise, CentOS, and Fedora.
+
+Exponential Jobs
+----------------
+
+Originally the jobs executed were stored on the master in the format:
+``<cachedir>/jobs/jid/{minion ids}``
+But this format restricted the number of jobs in the cache to the number of
+subdirectories allowed on the filesystem. Ext3 for instance limits
+subdirectories to 32000. To combat this the new format for 0.9.9 is:
+``<cachedir>/jobs/jid_hash[:2]/jid_hash[2:]/{minion ids}``
+So that now the number of maximum jobs that can be run before the cleanup
+cycle hits the job directory is substantially higher.
+
+ssh_auth Additions
+------------------
+
+The original ssh_auth state was limited to accepting only arguments to apply
+to a public key, and the key itself. This was restrictive due to the way the
+we learned that many people were using the state, so the key section has been
+expanded to accept options and arguments to the key that over ride arguments
+passed in the state. This gives substantial power to using ssh_auth with names:
+
+.. code-block:: yaml
+
+    sshkeys:
+      ssh_auth:
+        - present
+        - user: backup
+        - enc: ssh-dss
+        - options:
+          - option1="value1"
+          - option2="value2 flag2"
+        - comment: backup
+        - names:
+          - AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0111==
+          - AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0222== override
+          - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0333== override
+          - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0444==
+          - option3="value3",option4="value4 flag4" ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0555== override
+          - option3="value3" ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAlyE26SMFFVY5YJvnL7AF5CRTPtAigSW1U887ASfBt6FDa7Qr1YdO5ochiLoz8aSiMKd5h4dhB6ymHbmntMPjQena29jQjXAK4AK0500rMShG1Y1HYEjTXjQxIy/SMjq2aycHI+abiVDn3sciQjsLsNW59t48Udivl2RjWG7Eo+LYiB17MKD5M40r5CP2K4B8nuL+r4oAZEHKOJUF3rzA20MZXHRQuki7vVeWcW7ie8JHNBcq8iObVSoruylXav4aKG02d/I4bz/l0UdGh18SpMB8zVnT3YF5nukQQ/ATspmhpU66s4ntMehULC+ljLvZL40ByNmF0TZc2sdSkA0666==
+
+LocalClient Additions
+---------------------
+
+To follow up the recent additions in 0.9.8 of additional kwargs support,
+0.9.9 also adds the capability to send kwargs into commands via a dict.
+This addition to the LocalClient api can be used like so:
+
+.. code-block:: python
+
+    import salt.client
+
+    client = salt.client.LocalClient('/etc/salt/master')
+    ret = client.cmd('*', 'cmd.run', ['ls -l'], kwarg={'cwd': '/etc'})
+
+This update has been added to all cmd methods in the LocalClient class.
+
+Better Self Salting
+-------------------
+
+One problem faced with running Salt states, is that it has been difficult
+to manage the Salt minion via states, this is due to the fact that if the
+minion is called to restart while a state run is happening then the state
+run would be killed. 0.9.9 slightly changes the process scope of the state
+runs, so now when salt is executing states it can safely restart the
+salt-minion daemon.
+
+In addition to daemonizing the state run, the apt module also daemonizes.
+This update makes it possible to cleanly update the salt-minion package on
+Debian/Ubuntu systems without leaving apt in an inconsistent state or killing
+the active minion process mid-execution.
+
+Wildcards for SLS Modules
+-------------------------
+
+Now, when including sls modules in include statements or in the top file,
+shell globs can be used. This can greatly simplify listing matched sls
+modules in the top file and include statements:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - files*
+        - core*
+
+.. code-block:: yaml
+
+    include:
+      - users.dev.*
+      - apache.ser*
+
+External Pillar
+---------------
+
+Since the pillar data is just, data, it does not need to come expressly from
+the pillar interface. The external pillar system allows for hooks to be added
+making it possible to extract pillar data from any arbitrary external
+interface. The external pillar interface is configured via the ``ext_pillar``
+option. Currently interfaces exist to gather external pillar data via hiera
+or via a shell command that sends yaml data to the terminal:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - cmd_yaml: cat /etc/salt/ext.yaml
+      - hiera: /etc/hirea.yaml
+
+The initial external pillar interfaces and extra interfaces can be added to
+the file salt/pillar.py, it is planned to add more external pillar interfaces.
+If the need arises a new module loader interface will be created in the future
+to manage external pillar interfaces.
+
+Single State Executions
+-----------------------
+
+The new state.single function allows for single states to be cleanly executed.
+This is a great tool for setting up a small group of states on a system or for
+testing out the behavior of single states:
+
+.. code-block:: bash
+
+    # salt \* state.single user.present name=wade uid=2000
+
+The test interface functions here as well, so changes can also be tested
+against as:
+
+.. code-block:: bash
+
+    # salt \* state.single user.present name=wade uid=2000 test=True
+
+New Tests
+=========
+
+A few exciting new test interfaces have been added, the minion swarm allows
+not only testing of larger loads, but also allows users to see how Salt behaves
+with large groups of minions without having to create a large deployment.
+
+Minion Swarm
+------------
+
+The minion swarm test system allows for large groups of minions to be tested
+against easily without requiring large numbers of servers or virtual
+machines. The minion swarm creates as many minions as a system can handle and
+roots them in the /tmp directory and connects them to a master.
+
+The benefit here is that we were able to replicate issues that happen only
+when there are large numbers of minions. A number of elusive bugs which were
+causing stability issues in masters and minions have since been hunted down.
+Bugs that used to take careful watch by users over several days can now be
+reliably replicated in minutes, and fixed in minutes.
+
+Using the swarm is easy, make sure a master is up for the swarm to connect to,
+and then use the minionswarm.py script in the tests directory to spin up
+as many minions as you want. Remember, this is a fork bomb, don't spin up more
+than your hardware can handle!
+
+.. code-block:: bash
+
+    # python minionswarm.py -m 20 --master salt-master
+
+
+Shell Tests
+-----------
+
+The new Shell testing system allows us to test the behavior of commands
+executed from a high level. This allows for the high level testing of salt
+runners and commands like salt-key.
+
+Client Tests
+------------
+
+Tests have been added to test the aspects of the client apis and ensure that
+the client calls work, and that they manage passed data, in a desirable way.

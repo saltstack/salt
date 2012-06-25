@@ -2,9 +2,9 @@
 Command Line Reference
 ======================
 
-Salt can be controlled by a command line client by the root user on the Salt 
+Salt can be controlled by a command line client by the root user on the Salt
 master. The Salt command line client uses the Salt client API to communicate
-with the Salt master server. The Salt client is straightforward and simple 
+with the Salt master server. The Salt client is straightforward and simple
 to use.
 
 Using the Salt client commands can be easily sent to the minions.
@@ -21,7 +21,7 @@ environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
 Using the Salt Command
 ======================
 
-The Salt command needs a few components to send information to the salt
+The Salt command needs a few components to send information to the Salt
 minions. The target minions need to be defined, the function to call and any
 arguments the function requires.
 
@@ -148,8 +148,8 @@ be retried from the minions via the :func:`sys.doc` function:
 Compound Command Execution
 --------------------------
 
-If a series of commands need to be sent to a single target specification then
-the multiple commands can be send in a single publish. This can make gathering
+If a series of commands needs to be sent to a single target specification then
+the commands can be sent in a single publish. This can make gathering
 groups of information faster, and lowers the stress on the network for repeated
 commands.
 

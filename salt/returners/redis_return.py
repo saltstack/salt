@@ -2,14 +2,27 @@
 Return data to a redis server
 This is a VERY simple example for pushing data to a redis server and is not
 necessarily intended as a usable interface.
+
+Required python modules: redis
 '''
 
 import json
-import redis
+
+try:
+    import redis
+    has_redis = True
+except ImportError:
+    has_redis = False
 
 __opts__ = {'redis.db': '0',
             'redis.host': 'mcp',
             'redis.port': 6379}
+
+
+def __virtual__():
+    if not has_redis:
+        return False
+    return 'redis_return'
 
 
 def returner(ret):

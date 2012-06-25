@@ -1,0 +1,20 @@
+# basic config
+master: localhost
+master_port: 64506
+root_dir: /tmp/salttest
+pki_dir: pki
+id: minion
+cachedir: cachedir
+#acceptance_wait_time: = 1
+open_mode: True
+log_file: minion
+
+# module extension
+test.foo: baz
+hosts.file: integration/tmp/hosts
+aliases.file: integration/tmp/aliases
+integration.test: True
+
+# Grains addons
+grains:
+  test_grain: cheese

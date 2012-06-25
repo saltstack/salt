@@ -27,8 +27,7 @@ this:
 
     {% for usr in 'moe','larry','curly' %}
     {{ usr }}:
-      user:
-        - present
+      user.present
     {% endfor %}
 
 This templated sls file once generated will look like this:
@@ -36,38 +35,34 @@ This templated sls file once generated will look like this:
 .. code-block:: yaml
 
     moe:
-      user:
-        - present
+      user.present
     larry:
-      user:
-        - present
-    currly:
-      user:
-        - present
+      user.present
+    curly:
+      user.present
 
 Using Grains in SLS modules
 ===========================
 
 Often times a state will need to behave differently on different systems.
-:doc:`Salt grains </ref/grains>` can be used from within sls modules. An object
+:doc:`Salt grains </topics/targeting/grains>` can be used from within sls modules. An object
 called ``grains`` is made available in the template context:
 
 .. code-block:: yaml
 
     apache:
-      pkg:
+      pkg.installed:
         {% if grains['os'] == 'RedHat' %}
         - name: httpd
         {% elif grains['os'] == 'Ubuntu' %}
         - name: apache2
         {% endif %}
-        - installed
 
 Calling Salt modules from templates
 ===================================
 
-All of the Salt modules loaded by the minion ave available within the
-templating system. This allows data to be gathered in real time, on the target
+All of the Salt modules loaded by the minion are available within the
+templating system. This allows data to be gathered in real time on the target
 system. It also allows for shell commands to be run easily from within the sls
 modules.
 
@@ -87,10 +82,10 @@ The Salt module functions are also made available in the template context as
           - group: {{ usr }}
     {% endfor %}
 
-Below is another example that calls an arbitrary command in order to grab the
-mac addr for eth0::
+Below is an example that uses the ``network.hwaddr`` function to retrieve the
+MAC address for eth0:
 
-    salt['cmd.run']('ifconfig eth0 | grep HWaddr | cut -d" " -f10')
+    salt['network.hwaddr']('eth0')
 
 Advanced SLS module syntax
 ==========================
@@ -103,15 +98,14 @@ trees.
 
 You have seen an example of how to spread a Salt tree across several files but
 in order to be able to have :term:`requisite references <requisite reference>`
-span multiple files you must use a :term:`include declaration`. For example:
+span multiple files you must use an :term:`include declaration`. For example:
 
 ``python-libs.sls``:
 
 .. code-block:: yaml
 
     python-dateutil:
-      pkg:
-        - installed
+      pkg.installed
 
 ``django.sls``:
 
@@ -121,15 +115,14 @@ span multiple files you must use a :term:`include declaration`. For example:
       - python-libs
 
     django:
-      pkg:
-        - installed
+      pkg.installed:
         - require:
           - pkg: python-dateutil
 
 :term:`Extend declaration`
 --------------------------
 
-You can modify previous declarations by using a :term:`extend declaration`. For
+You can modify previous declarations by using an :term:`extend declaration`. For
 example the following modifies the Apache tree to also restart Apache when the
 vhosts file is changed:
 
@@ -138,8 +131,7 @@ vhosts file is changed:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed
 
 ``mywebsite.sls``:
 
@@ -155,8 +147,7 @@ vhosts file is changed:
             - file: /etc/httpd/extra/httpd-vhosts.conf
 
     /etc/httpd/extra/httpd-vhosts.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://httpd-vhosts.conf
 
 
@@ -164,8 +155,8 @@ vhosts file is changed:
 ------------------------
 
 You can override the :term:`ID declaration` by using a :term:`name
-declaration`. For example the previous example is a bit more maintainable if
-rewritten as the following:
+declaration`. For example, the previous example is a bit more maintainable if
+rewritten as follows:
 
 ``mywebsite.sls``:
 
@@ -182,8 +173,7 @@ rewritten as the following:
             - file: mywebsite
 
     mywebsite:
-      file:
-        - managed
+      file.managed:
         - name: /etc/httpd/extra/httpd-vhosts.conf
         - source: salt://httpd-vhosts.conf
 
@@ -198,8 +188,7 @@ can be rewritten without the loop:
 .. code-block:: yaml
 
     stooges:
-      user:
-        - present
+      user.present:
         - names:
           - moe
           - larry
@@ -208,7 +197,7 @@ can be rewritten without the loop:
 Continue learning
 =================
 
-The best way to continue learing about Salt States is to read through the
+The best way to continue learning about Salt States is to read through the
 :doc:`reference documentation </ref/states/index>` and to look through examples
 of existing :term:`state trees <state tree>`. You can find examples in the
 `salt-states repository`_ and please send a pull-request on GitHub with any

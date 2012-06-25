@@ -1,0 +1,14 @@
+publish_port: 64505
+ret_port: 64506
+worker_threads: 3
+root_dir: /tmp/salttest
+pidfile: masterpid
+pki_dir: pki
+cachedir: cache
+timeout: 1
+sock_dir: .salt-unix
+open_mode: True
+syndic_master: localhost
+peer:
+  '.*':
+    - 'test.*'

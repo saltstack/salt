@@ -9,10 +9,10 @@ Distributed remote execution
 
 Salt is a distributed remote execution system used to execute commands and
 query data. It was developed in order to bring the best solutions found in the
-world of remote execution together and make them better, faster and more
-malleable. Salt accomplishes this via its ability to handle larger loads of
-information, and not just dozens, but hundreds or even thousands of individual
-servers, handle them quickly and through a simple and manageable interface.
+world of remote execution together and make them better, faster, and more
+malleable. Salt accomplishes this through its ability to handle large loads of
+information, and not just dozens but hundreds and even thousands of individual
+servers quickly through a simple and manageable interface.
 
 Simplicity
 ==========
@@ -21,7 +21,7 @@ Versatility between massive scale deployments and smaller systems may seem
 daunting, but Salt is very simple to set up and maintain, regardless of the
 size of the project. The architecture of Salt is designed to work with any
 number of servers, from a handful of local network systems to international
-deployments across disparate datacenters. The topology is a simple
+deployments across different datacenters. The topology is a simple
 server/client model with the needed functionality built into a single set of
 daemons. While the default configuration will work with little to no
 modification, Salt can be fine tuned to meet specific needs.
@@ -31,7 +31,7 @@ Parallel execution
 
 The core function of Salt is to enable remote commands to be called in parallel
 rather than in serial, to use a secure and encrypted protocol, the smallest and
-fastest network payloads possible, and with a simple programmer interface. Salt
+fastest network payloads possible, and with a simple programming interface. Salt
 also introduces more granular controls to the realm of remote execution,
 allowing for commands to be executed in parallel and for systems to be targeted
 based on more than just hostname, but by system properties.
@@ -42,13 +42,14 @@ Building on proven technology
 Salt takes advantage of a number of technologies and techniques. The networking
 layer is built with the excellent `ZeroMQ`_ networking library, so Salt itself
 contains a viable, and transparent, AMQ broker inside the daemon. Salt uses
-public keys for authentication with the master daemon, then uses faster AES
+public keys for authentication with the master daemon, then uses faster `AES`_
 encryption for payload communication, this means that authentication and
 encryption are also built into Salt. Salt takes advantage of communication via
 `msgpack`_, enabling fast and light network traffic.
 
 .. _`ZeroMQ`: http://www.zeromq.org/
 .. _`msgpack`: http://msgpack.org/
+.. _`AES`: https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 
 Python client interface
 =======================

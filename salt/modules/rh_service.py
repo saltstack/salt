@@ -1,9 +1,8 @@
 '''
-Top level package command wrapper, used to translate the os detected by the
-grains to the correct service manager
+Service support for classic Red Hat type systems. This interface uses the
+service command (so it is compatible with upstart systems) and the chkconfig
+command.
 '''
-
-import os
 
 
 def __virtual__():
@@ -14,6 +13,7 @@ def __virtual__():
     enable = [
                'RedHat',
                'CentOS',
+               'Scientific',
                'Fedora',
               ]
     if __grains__['os'] in enable:
@@ -28,7 +28,14 @@ def _runlevel():
     Return the current runlevel
     '''
     out = __salt__['cmd.run']('runlevel').strip()
-    return out.split()[1]
+    # unknown will be returned while inside a kickstart environment, since
+    # this is usually a server deployment it should be safe to assume runlevel
+    # 3.  If not all service related states will throw an out of range
+    # exception here which will cause other functions to fail.
+    if 'unknown' in out:
+        return '3'
+    else:
+        return out.split()[1]
 
 
 def get_enabled():
@@ -41,7 +48,7 @@ def get_enabled():
     '''
     rlevel = _runlevel()
     ret = set()
-    cmd = 'chkconfig --list'
+    cmd = '/sbin/chkconfig --list'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
@@ -57,11 +64,11 @@ def get_disabled():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_disabled
     '''
     rlevel = _runlevel()
     ret = set()
-    cmd = 'chkconfig --list'
+    cmd = '/sbin/chkconfig --list'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
@@ -77,7 +84,7 @@ def get_all():
 
     CLI Example::
 
-        salt '*' service.get_enabled
+        salt '*' service.get_all
     '''
     return sorted(get_enabled() + get_disabled())
 
@@ -89,7 +96,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'service {0} start'.format(name)
+    cmd = '/sbin/service {0} start'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -101,7 +108,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'service {0} stop'.format(name)
+    cmd = '/sbin/service {0} stop'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -113,21 +120,20 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = 'service {0} restart'.format(name)
+    cmd = '/sbin/service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns the PID or an empty string if the
-    service is running or not, pass a signature to use to find the service via
-    ps
+    Return the status for a service, returns a bool whether the service is
+    running.
 
     CLI Example::
 
-        salt '*' service.status <service name> [service signature]
+        salt '*' service.status <service name>
     '''
-    cmd = 'service {0} status'.format(name)
+    cmd = '/sbin/service {0} status'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -139,7 +145,7 @@ def enable(name):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'chkconfig {0} on'.format(name)
+    cmd = '/sbin/chkconfig {0} on'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -151,7 +157,7 @@ def disable(name):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'chkconfig {0} off'.format(name)
+    cmd = '/sbin/chkconfig {0} off'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -163,9 +169,7 @@ def enabled(name):
 
         salt '*' service.enabled <service name>
     '''
-    if name in get_enabled():
-        return True
-    return False
+    return name in get_enabled()
 
 
 def disabled(name):
@@ -176,6 +180,4 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    if name in get_disabled():
-        return True
-    return False
+    return name in get_disabled()

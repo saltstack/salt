@@ -5,39 +5,44 @@ How Do I Use Salt States?
 Simplicity, Simplicity, Simplicity
 
 Many of the most powerful and useful engineering solutions are founded on
-simple principals, the Salt SLS system strives to do just that.
+simple principals, the Salt SLS system strives to do just that. K.I.S.S.
 
 The core of the Salt State system is the SLS, or the SaLt State file. The SLS
 is a representation of the state in which a system should be in, and is set up
-to contain this data in the most simple way possible.
+to contain this data simply. This is often called configuration management.
 
 It is All Just Data
 ===================
 
 Before delving into the particulars, it will help to understand that the SLS
 is just a data structure under the hood. While understanding that the SLS is
-just a data structure is not at all critical to understand to make use Salt States,
-it should help bolster the understanding of where the real power is.
+just a data structure is not at all critical to understand to make use Salt
+States, it should help bolster the understanding of where the real power is.
 
-SLS files are therefore, in reality, just dictionaries, lists strings and
-numbers. By using this approach Salt can be much more flexible, and as someone
-writes more SLS files it becomes clear exactly what is being written. The result
-is a system that is easy to understand, yet grows with the needs of the admin
-or developer, offering simple constructs that grow to encompass the most
-complicated needs.
+SLS files are therefore, in reality, just `dictionaries`_, `lists`_,
+`strings`_, and `numbers`_. By using this approach Salt can be much more
+flexible. As someone writes more state files, it becomes clear exactly what is
+being written. The result is a system that is easy to understand, yet grows
+with the needs of the admin or developer.
 
 In the section titled "State Data Structures" a reference exists, explaining
 in depth how the data is laid out.
+
+.. _`dictionaries`: http://docs.python.org/glossary.html#term-dictionary
+.. _`lists`: http://docs.python.org/glossary.html#term-list
+.. _`strings`: http://docs.python.org/library/stdtypes.html#typesseq
+.. _`numbers`: http://docs.python.org/library/stdtypes.html#numeric-types-int-float-long-complex
 
 Default Data - YAML
 ===================
 
 By default Salt represents the SLS data in what is one of the simplest
-serialization formats available - YAML.
+serialization formats available - `YAML`_.
 
-A typical, small SLS file will often look like this in YAML:
+A typical SLS file will often look like this in YAML:
 
 .. code-block:: yaml
+   :linenos:
 
     apache:
       pkg:
@@ -51,7 +56,7 @@ This SLS data will ensure that the package named apache is installed, and
 that the apache service is running. The components can be explained in a
 simple way.
 
-The first like it the ID for a set of data, and it is called the ID
+The first line is the ID for a set of data, and it is called the ID
 Declaration. This ID sets the name of the thing that needs to be manipulated.
 
 The second and fourth lines are the start of the State Declarations, so they
@@ -62,18 +67,21 @@ lines are the function to run. This function defines what state the named
 package and service should be in. Here the package is to be installed, and
 the service should be running.
 
-Finally, on line 6, is the word ``require``, this is called a Requisite
-Statement, and it makes sure that the apache service is only started after
+Finally, on line 6, is the word ``require``. This is called a Requisite
+Statement, and it makes sure that the Apache service is only started after
 the successful installation of the apache package.
+
+.. _`YAML`: http://yaml.org/spec/1.1/
 
 Adding Configs and Users
 ========================
 
-When setting up a service like an apache server many more components may
-need to be added. The apache configuration file will most likely be managed,
+When setting up a service like an Apache web server, many more components may
+need to be added. The Apache configuration file will most likely be managed,
 and a user and group may need to be set up.
 
 .. code-block:: yaml
+   :linenos:
 
     apache:
       pkg:
@@ -84,23 +92,20 @@ and a user and group may need to be set up.
           - pkg: apache
           - file: /etc/httpd/conf/httpd.conf
           - user: apache
-      user:
-        - present
+      user.present:
         - uid: 87
         - gid: 87
         - home: /var/www/html
         - shell: /bin/nologin
         - require:
           - group: apache
-      group:
-        - present
+      group.present:
         - gid: 87
         - require:
           - pkg: apache
 
     /etc/httpd/conf/httpd.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/httpd.conf
         - user: root
         - group: root
@@ -110,9 +115,9 @@ This SLS data greatly extends the first example, and includes a config file,
 a user, a group and new requisite statement: ``watch``.
 
 Adding more states is easy, since the new user and group states are under
-the apache ID, the user and group will be the apache user and group. The
+the Apache ID, the user and group will be the Apache user and group. The
 ``require`` statements will make sure that the user will only be made after
-the group, and that the group will be made only after the apache package is
+the group, and that the group will be made only after the Apache package is
 installed.
 
 Next,the ``require`` statement under service was changed to watch, and is
@@ -128,38 +133,37 @@ config file will also trigger a restart of the respective service.
 Moving Beyond a Single SLS
 ==========================
 
-When setting up Salt States more than one SLS will need to be used, the above
+When setting up Salt States, more than one SLS will need to be used. The above
 examples were just in a single SLS file, but more than one SLS file can be
 combined to build out a State Tree. The above example also references a file
-with a strange source - salt://apache/httpd.conf, that file will need to be
-available as well.
+with a strange source - ``salt://apache/httpd.conf``. That file will need to
+be available as well.
 
-The SLS files are laid out in a directory on the salt master. Files are laid
-out as just files, an sls is just a file and files to download are just files.
+The SLS files are laid out in a directory on the Salt master. Files are laid
+out as just files. A SLS is just a file and files to download are just files.
 
-The apache example would be laid out in the root of the salt file server like
-this:
+The Apache example would be laid out in the root of the Salt file server like
+this: ::
 
-/apache/init.sls
-/apache/httpd.conf
+    /apache/init.sls
+    /apache/httpd.conf
 
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
 
 But with more than a single SLS file, more components can be added to the
-toolkit, consider this ssh example:
+toolkit, consider this SSH example:
 
-``/ssh/init.sls``
+``/ssh/init.sls:``
 
 .. code-block:: yaml
-    
+   :linenos:
+
     openssh-client:
-      pkg:
-        - installed
-    
+      pkg.installed
+
     /etc/ssh/ssh_config
-      file:
-        - managed
+      file.managed:
         - user: root
         - group: root
         - mode: 644
@@ -167,20 +171,19 @@ toolkit, consider this ssh example:
         - require:
           - pkg: openssh-client
 
-``/ssh/server.sls``
+``ssh/server.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - ssh
 
     openssh-server:
-      pkg:
-        - installed
+      pkg.installed
 
     sshd:
-      service:
-        - running
+      service.running:
         - require:
           - pkg: openssh-client
           - pkg: openssh-server
@@ -188,7 +191,7 @@ toolkit, consider this ssh example:
           - file: /etc/ssh/sshd_config
 
     /etc/ssh/sshd_config:
-        - managed
+      file.managed:
         - user: root
         - group: root
         - mode: 644
@@ -206,15 +209,15 @@ toolkit, consider this ssh example:
         - require:
           - pkg: openssh-server
 
-Now our State Tree looks like this:
+Now our State Tree looks like this: ::
 
-/apache/init.sls
-/apache/httpd.conf
-/ssh/init.sls
-/ssh/server.sls
-/ssh/banner
-/ssh/ssh_config
-/ssh/sshd_config
+    /apache/init.sls
+    /apache/httpd.conf
+    /ssh/init.sls
+    /ssh/server.sls
+    /ssh/banner
+    /ssh/ssh_config
+    /ssh/sshd_config
 
 This example now introduces the ``include`` statement. The include statement
 includes another SLS file so that components found in it can be required,
@@ -233,9 +236,10 @@ needs to be placed.
 
 These examples will add more watchers to apache and change the ssh banner.
 
-``/ssh/custom-server.sls``
+``/ssh/custom-server.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - ssh.server
@@ -245,9 +249,10 @@ These examples will add more watchers to apache and change the ssh banner.
         file:
           - source: salt://ssh/custom-banner
 
-``/python/mod_python.sls``
+``/python/mod_python.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - apache
@@ -259,10 +264,9 @@ These examples will add more watchers to apache and change the ssh banner.
             - pkg: mod_python
 
     mod_python:
-      pkg:
-        - installed
+      pkg.installed
 
-The custom-server.sls file uses the extend statement to overwrite where the
+The ``custom-server.sls`` file uses the extend statement to overwrite where the
 banner is being downloaded from, and therefore changing what file is being used
 to configure the banner.
 
@@ -281,42 +285,44 @@ with YAML. Salt defaults to YAML because it is very straightforward and easy
 to learn and use. But the SLS files can be rendered from almost any imaginable
 medium, so long as a renderer module is provided.
 
-The default rendering system is the ``yaml_jinja`` renderer. The 
-``yaml_jinja`` renderer will first pass the template through the jinja
+The default rendering system is the ``yaml_jinja`` renderer. The
+``yaml_jinja`` renderer will first pass the template through the `Jinja2`_
 templating system, and then through the YAML parser. The benefit here is that
 full programming constructs are available when creating SLS files.
 
-Other renderers available are ``yaml_mako`` which uses the mako templating
+Other renderers available are ``yaml_mako`` which uses the `Mako`_ templating
 system rather than the jinja templating system, and more notably, the pure
-python or ``py`` renderer. The ``py`` renderer allows for SLS files to be
-written in pure python, allowing for the utmost level of flexibility and
+Python or ``py`` renderer. The ``py`` renderer allows for SLS files to be
+written in pure Python, allowing for the utmost level of flexibility and
 power when preparing SLS data.
 
-Geting to Know the Default - yaml_jinja
----------------------------------------
+.. _`Jinja2`: http://jinja.pocoo.org/
+.. _`Mako`: http://www.makotemplates.org/
+
+Getting to Know the Default - yaml_jinja
+----------------------------------------
 
 The default renderer - ``yaml_jinja``, allows for the use of the jinja
-templating system. A guide to the jinja templating system can be found here:
-<link to the jinga templating docs page>.
+templating system. A guide to the Jinja templating system can be found here:
+http://jinja.pocoo.org/docs
 
 When working with renderers a few very useful bits of data are passed in. In
-the case of templating engine based renderers two critical components are
-available, ``salt`` and ``grains``. The salt object allows for any salt
-function to be called from within the template, and grains allows for the
-grains to be accessed from within the template. A few examples are in order:
+the case of templating engine based renderers, three critical components are
+available, ``salt``, ``grains``, and ``pillar``. The ``salt`` object allows for
+any Salt function to be called from within the template, and ``grains`` allows for
+the Grains to be accessed from within the template. A few examples:
 
-``/apache/init.sls``
+``/apache/init.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         {% if grains['os'] == 'RedHat'%}
         - name: httpd
         {% endif %}
-      service:
-        - running
+      service.running:
         {% if grains['os'] == 'RedHat'%}
         - name: httpd
         {% endif %}
@@ -324,50 +330,46 @@ grains to be accessed from within the template. A few examples are in order:
           - pkg: apache
           - file: /etc/httpd/conf/httpd.conf
           - user: apache
-      user:
-        - present
+      user.present:
         - uid: 87
         - gid: 87
         - home: /var/www/html
         - shell: /bin/nologin
         - require:
           - group: apache
-      group:
-        - present
+      group.present:
         - gid: 87
         - require:
           - pkg: apache
 
     /etc/httpd/conf/httpd.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/httpd.conf
         - user: root
         - group: root
         - mode: 644
 
-This example is simple, if the os grain states that the operating system is
-Red Hat, then the name of the apache package and service needs to be httpd.
+This example is simple. If the ``os`` grain states that the operating system is
+Red Hat, then the name of the Apache package and service needs to be httpd.
 
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
 
-``/moosefs/chunk.sls``
+``/moosefs/chunk.sls:``
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - moosefs
 
     {% for mnt in salt['cmd.run']('ls /dev/data/moose*').split() %}
     /mnt/moose{{ mnt[-1] }}:
-      mount:
-        - mounted
+      mount.mounted:
         - device: {{ mnt }}
         - fstype: xfs
         - mkmnt: True
-      file:
-        - directory
+      file.directory:
         - user: mfs
         - group: mfs
         - require:
@@ -376,8 +378,7 @@ a MooseFS distributed filesystem chunkserver:
     {% endfor %}
 
     '/etc/mfshdd.cfg':
-      file:
-        - managed
+      file.managed:
         - source: salt://moosefs/mfshdd.cfg
         - user: root
         - group: root
@@ -387,8 +388,7 @@ a MooseFS distributed filesystem chunkserver:
           - pkg: mfs-chunkserver
 
     '/etc/mfschunkserver.cfg':
-      file:
-        - managed
+      file.managed:
         - source: salt://moosefs/mfschunkserver.cfg
         - user: root
         - group: root
@@ -421,43 +421,45 @@ Introducing the Python Renderer
 -------------------------------
 
 Sometimes the chosen default renderer might not have enough logical power to
-accomplish the needed task. When this happens, the python renderer can be
-used. Normally a yaml renderer should be used for the majority of SLS files,
+accomplish the needed task. When this happens, the Python renderer can be
+used. Normally a YAML renderer should be used for the majority of SLS files,
 but a SLS file set to use another renderer can be easily added to the tree.
 
-This example shows a very basic python SLS file:
+This example shows a very basic Python SLS file:
 
-``/python/django.sls``
+``/python/django.sls:``
 
 .. code-block:: python
+   :linenos:
 
     #!py
 
     def run():
-    '''
-    Install the django package
-    '''
-    return {'include': ['python'],
-            'django': {'pkg': ['installed']}}
+        '''
+        Install the django package
+        '''
+        return {'include': ['python'],
+                'django': {'pkg': ['installed']}}
 
 This is a very simple example, the first line has a SLS shebang line that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
 Then the run function is defined, the return value from the run function
 must be a Salt friendly data structure, or better known as a Salt
-``HighState`` data structure.
+:doc:`HighState data structure</ref/states/highstate>`.
 
-This python example would look like this if it were written in YAML:
+This Python example would look like this if it were written in YAML:
 
 .. code-block:: yaml
+   :linenos:
 
     include:
       - python
 
     django:
-      pkg:
-        - installed
+      pkg.installed
 
 This clearly illustrates, that not only is using the YAML renderer a wise
 decision as the default, but that unbridled power can be obtained where
-needed by using a pure python SLS.
+needed by using a pure Python SLS.
 
+Now onto the :doc:`States tutorial, part 1</topics/tutorials/states_pt1>`.

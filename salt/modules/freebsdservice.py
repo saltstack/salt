@@ -17,6 +17,10 @@ def __virtual__():
 def get_enabled():
     '''
     Return what services are set to run on boot
+
+    CLI Example::
+
+        salt '*' service.get_enabled
     '''
     ret = []
     for rcfn in ('/etc/rc.conf', '/etc/rc.conf.local'):
@@ -40,15 +44,23 @@ def get_enabled():
 def get_disabled():
     '''
     Return what services are available but not enabled to start at boot
+
+    CLI Example::
+
+        salt '*' service.get_disabled
     '''
     en_ = get_enabled()
     all_ = get_all()
-    return sorted(set(all_).difference(set(en_)))
+    return sorted(set(all_) - set(en_))
 
 
 def get_all():
     '''
     Return a list of all available services
+
+    CLI Example::
+
+        salt '*' service.get_all
     '''
     ret = set()
     for rcdir in ('/etc/rc.d/', '/usr/local/etc/rc.d/'):
@@ -57,8 +69,7 @@ def get_all():
     for srv in ret:
         if srv.isupper():
             rm_.add(srv)
-    ret.difference(rm_)
-    return sorted(ret)
+    return sorted(ret - rm_)
 
 
 def start(name):

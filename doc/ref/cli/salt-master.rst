@@ -2,7 +2,7 @@
 ``salt-master``
 ===============
 
-The salt master daemon, used to control the salt minions
+The Salt master daemon, used to control the Salt minions
 
 Synopsis
 ========
@@ -12,7 +12,7 @@ salt-master [ options ]
 Description
 ===========
 
-The master daemon controls the salt minions
+The master daemon controls the Salt minions
 
 Options
 =======
@@ -25,7 +25,7 @@ Options
 
 .. option:: -d, --daemon
 
-    Run the salt master as a daemon
+    Run the Salt master as a daemon
 
 .. option:: -c CONFIG, --config=CONFIG
 
@@ -35,8 +35,19 @@ Options
 
     Specify user to run minion
 
+.. option:: --pid-file PIDFILE
+
+    Specify the location of the pidfile.
+
 .. option:: -l LOG_LEVEL, --log-level=LOG_LEVEL
 
     Console log level. One of ``info``, ``none``, ``garbage``,
     ``trace``, ``warning``, ``error``, ``debug``. For the logfile
     settings see the config file. Default: ``warning``.
+
+See also
+========
+
+:manpage:`salt(1)`
+:manpage:`salt(7)`
+:manpage:`salt-minion(1)`

@@ -1,11 +1,16 @@
 '''
 Return data to a mongodb server
 
-This is the default interface for returning data for the butter statd subsytem
+Required python modules: pymongo
 '''
 
 import logging
-import pymongo
+
+try:
+    import pymongo
+    has_pymongo = True
+except ImportError:
+    has_pymongo = False
 
 
 log = logging.getLogger(__name__)
@@ -15,6 +20,12 @@ __opts__ = {'mongo.db': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
             'mongo.user': ''}
+
+
+def __virtual__():
+    if not has_pymongo:
+        return False
+    return 'mongo_return'
 
 
 def returner(ret):

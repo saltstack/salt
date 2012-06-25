@@ -1,6 +1,7 @@
 '''
-Service Management
-==================
+Starting or restarting of services and daemons.
+===============================================
+
 Services are defined as system daemons typically started with system init or
 rc scripts, services can be defined as running or dead.
 
@@ -10,6 +11,7 @@ rc scripts, services can be defined as running or dead.
       service:
         - running
 '''
+
 
 def __virtual__():
     '''
@@ -47,7 +49,7 @@ def _enable(name, started):
            'comment': ''}
 
     # Check to see if this minion supports enable
-    if not 'service.enable' in __salt__:
+    if not 'service.enable' in __salt__ or not 'service.enabled' in __salt__:
         if started is True:
             ret['comment'] = ('Enable is not available on this minion,'
                 ' service {0} started').format(name)
@@ -79,6 +81,11 @@ def _enable(name, started):
             return ret
 
     # Service needs to be enabled
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Service {0} set to be enabled'.format(name)
+        return ret
+
     if __salt__['service.enable'](name):
         # Service has been enabled
         if started is True:
@@ -126,7 +133,7 @@ def _disable(name, started):
            'comment': ''}
 
     # is enable/disable available?
-    if not 'service.disable' in __salt__:
+    if not 'service.disable' in __salt__ or not 'service.disabled' in __salt__:
         if started is True:
             ret['comment'] = ('Disable is not available on this minion,'
                 ' service {0} started').format(name)
@@ -158,6 +165,11 @@ def _disable(name, started):
             return ret
 
     # Service needs to be disabled
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Service {0} set to be disabled'.format(name)
+        return ret
+
     if __salt__['service.disable'](name):
         # Service has been disabled
         if started is True:
@@ -223,6 +235,11 @@ def running(name, enable=None, sig=None):
         else:
             return ret
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Service {0} is set to start'.format(name)
+        return ret
+
     changes = {name: __salt__['service.start'](name)}
 
     if not changes[name]:
@@ -270,6 +287,10 @@ def dead(name, enable=None, sig=None):
             return _disable(name, None)
         else:
             return ret
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Service {0} is set to be killed'.format(name)
+        return ret
 
     changes = {name: __salt__['service.stop'](name)}
 
@@ -291,7 +312,33 @@ def dead(name, enable=None, sig=None):
         return ret
 
 
-def watcher(name, sig=None):
+def enabled(name):
+    '''
+    Verify that the service is enabled on boot, only use this state if you
+    don't want to manage the running process, remember that if you want to
+    enable a running service to use the enable: True option for the running
+    or dead function.
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _enable(name, None)
+
+
+def disabled(name):
+    '''
+    Verify that the service is disabled on boot, only use this state if you
+    don't want to manage the running process, remember that if you want to
+    disable a service to use the enable: False option for the running or dead
+    function.
+
+    name
+        The name of the init or rc script used to manage the service
+    '''
+    return _disable(name, None)
+
+
+def mod_watch(name, sig=None, reload=False):
     '''
     The service watcher, called to invoke the watch command.
 
@@ -302,7 +349,10 @@ def watcher(name, sig=None):
         The string to search for when looking for the service process with ps
     '''
     if __salt__['service.status'](name, sig):
-        changes = {name: __salt__['service.restart'](name)}
+        if 'service.reload' in __salt__ and reload:
+            changes = {name: __salt__['service.reload'](name)}
+        else:
+            changes = {name: __salt__['service.restart'](name)}
         return {'name': name,
                 'changes': changes,
                 'result': True,
@@ -312,23 +362,3 @@ def watcher(name, sig=None):
             'changes': {},
             'result': True,
             'comment': 'Service {0} started'.format(name)}
-
-
-def enabled(name):
-    '''
-    Verify that the service is enabled on boot
-
-    name
-        The name of the init or rc script used to manage the service
-    '''
-    return _enable(name, None)
-
-
-def disabled(name):
-    '''
-    Verify that the service is disabled on boot
-
-    name
-        The name of the init or rc script used to manage the service
-    '''
-    return _disable(name, None)

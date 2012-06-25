@@ -1,6 +1,6 @@
 '''
-Command Executions
-==================
+Execution of arbitrary commands.
+================================
 
 The cmd state module manages the enforcement of executed commands, this
 state can tell a command to run under certain circumstances.
@@ -27,15 +27,13 @@ syslog if there is no disk space:
 .. code-block:: yaml
 
     > /var/log/messages:
-      cmd:
-        - run
+      cmd.run:
         - unless: echo 'foo' > /tmp/.test
-
 '''
 
 import grp
 import os
-import pwd
+from salt.exceptions import CommandExecutionError
 
 
 def wait(name,
@@ -43,7 +41,8 @@ def wait(name,
         unless=None,
         cwd='/root',
         user=None,
-        group=None):
+        group=None,
+        shell=None):
     '''
     Run the given command only if the watch statement calls it
 
@@ -68,18 +67,24 @@ def wait(name,
 
     group
         The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to /bin/sh
     '''
     return {'name': name,
             'changes': {},
             'result': True,
             'comment': ''}
 
+
 def run(name,
         onlyif=None,
         unless=None,
         cwd='/root',
         user=None,
-        group=None):
+        group=None,
+        shell=None,
+        env=()):
     '''
     Run a command if certain circumstances are met
 
@@ -104,49 +109,76 @@ def run(name,
 
     group
         The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to the shell grain
     '''
     ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
 
-    if onlyif:
-        if __salt__['cmd.retcode'](onlyif) != 0:
-            ret['comment'] = 'onlyif exec failed'
-            ret['result'] = True
-            return ret
-
-    if unless:
-        if __salt__['cmd.retcode'](unless) == 0:
-            ret['comment'] = 'unless executed successfully'
-            ret['result'] = True
-            return ret
-
     if not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory is not available'
         return ret
 
+    if env:
+        _env = {}
+        for var in env.split():
+            try:
+                k, v = var.split('=')
+                _env[k] = v
+            except ValueError:
+                ret['comment'] = 'Invalid enviromental var: "{0}"'.format(var)
+                return ret
+        env = _env
+
     pgid = os.getegid()
 
-    if group:
-        try:
-            egid = grp.getgrnam(group).gr_gid
-            os.setegid(egid)
-        except KeyError:
-            ret['comment'] = 'The group ' + group + ' is not available'
-            return ret
-
-    # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](name, cwd, runas=user)
-    except CommandExecutionError as e:
-        ret['comment'] = e
+        if group:
+            try:
+                egid = grp.getgrnam(group).gr_gid
+                if not __opts__['test']:
+                    os.setegid(egid)
+            except KeyError:
+                ret['comment'] = 'The group {0} is not available'.format(group)
+                return ret
+
+        cmd_kwargs = {'cwd': cwd,
+                      'runas': user,
+                      'shell': shell or __grains__['shell'],
+                      'env': env}
+
+        if onlyif:
+            if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+                ret['comment'] = 'onlyif exec failed'
+                ret['result'] = True
+                return ret
+
+        if unless:
+            if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+                ret['comment'] = 'unless executed successfully'
+                ret['result'] = True
+                return ret
+
+        # Wow, we passed the test, run this sucker!
+        if not __opts__['test']:
+            try:
+                cmd_all = __salt__['cmd.run_all'](name, **cmd_kwargs)
+            except CommandExecutionError as e:
+                ret['comment'] = str(e)
+                return ret
+
+            ret['changes'] = cmd_all
+            ret['result'] = not bool(cmd_all['retcode'])
+            ret['comment'] = 'Command "{0}" run'.format(name)
+            return ret
+        ret['result'] = None
+        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
         return ret
 
-    ret['changes'] = cmd_all
-    ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = 'Command "' + name + '" run'
-    os.setegid(pgid)
-    return ret
+    finally:
+        os.setegid(pgid)
 
-watcher = run
+mod_watch = run

@@ -4,6 +4,27 @@ Package support for FreeBSD
 
 import os
 
+def _check_pkgng():
+    '''
+    Looks to see if pkgng is being used by checking if database exists
+    '''
+    if os.path.isfile('/var/db/pkg/repo.sqlite'):
+        return True
+    return False
+
+
+def search(pkg_name):
+    '''
+    Use `pkg search` if pkg is being used.
+
+    CLI Example::
+
+        salt '*' pkg.pkgng_search 'mysql-server'
+    '''
+    if _check_pkgng():
+        res = __salt__['cmd.run']('pkg search {0}'.format(pkg_name))
+        res = [ x for x in res.split('\n') ]
+        return { "Results" : res }
 
 def __virtual__():
     '''
@@ -23,7 +44,6 @@ def _list_removed(old, new):
     return pkgs
 
 
-# FIXME: Unused argument 'name' (pylint is your friend)
 def available_version(name):
     '''
     The available version of the package in the repository
@@ -50,6 +70,15 @@ def version(name):
         return ''
 
 
+def refresh_db():
+    '''
+    Use pkg update to get latest repo.txz
+    '''
+    if _check_pkgng():
+        __salt__['cmd.run']('pkg update')
+    return {}
+
+
 def list_pkgs():
     '''
     List the packages currently installed as a dict::
@@ -60,8 +89,12 @@ def list_pkgs():
 
         salt '*' pkg.list_pkgs
     '''
+    if _check_pkgng():
+        pkg_command = "pkg info"
+    else:
+        pkg_command = "pkg_info"
     ret = {}
-    for line in __salt__['cmd.run']('pkg_info').split('\n'):
+    for line in __salt__['cmd.run'](pkg_command).split('\n'):
         if not line:
             continue
         comps = line.split(' ')[0].split('-')
@@ -85,7 +118,7 @@ def refresh_db():
         __salt__['cmd.run']('portsnap update')
 
 
-def install(name, **kwargs):
+def install(name, *args, **kwargs):
     '''
     Install the passed package
 
@@ -98,8 +131,12 @@ def install(name, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
+    if _check_pkgng:
+        pkg_command = 'pkg install -y'
+    else:
+        pkg_command = 'pkg_add -r'
     old = list_pkgs()
-    __salt__['cmd.retcode']('pkg_add -r {0}'.format(name))
+    __salt__['cmd.retcode']('%s {0}'.format(name) % pkg_command)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -115,6 +152,7 @@ def install(name, **kwargs):
             # the package is freshly installed
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
+    rehash()
     return pkgs
 
 
@@ -148,6 +186,7 @@ def upgrade():
             # the package is freshly installed
             pkgs[npkg] = {'old': '',
                           'new': new[npkg]}
+    rehash()
     return pkgs
 
 
@@ -164,7 +203,11 @@ def remove(name):
     old = list_pkgs()
     if name in old:
         name = '{0}-{1}'.format(name, old[name])
-        __salt__['cmd.retcode']('pkg_delete {0}'.format(name))
+        if _check_pkgng():
+            pkg_command = 'pkg delete -y'
+        else:
+            pkg_command - 'pkg_delete'
+        __salt__['cmd.retcode']('%s {0}'.format(name)% pkg_command)
     new = list_pkgs()
     return _list_removed(old, new)
 
@@ -180,3 +223,17 @@ def purge(name):
         salt '*' pkg.purge <package name>
     '''
     return remove(name)
+
+def rehash():
+    '''
+    Recomputes internal hash table for the PATH variable.
+    Use whenever a new command is created during the current
+    session.
+
+    CLI Example::
+
+        salt '*' pkg.rehash
+    '''
+    shell =  __salt__['cmd.run']('echo $SHELL').split('/')
+    if shell[len(shell)-1] in ["csh","tcsh"]:
+        __salt__['cmd.run']('rehash')

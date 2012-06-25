@@ -6,17 +6,35 @@ data
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
+# Import python libs
 import os
-import grp
-import pwd
+import re
 import time
 import hashlib
+import stat
+import fnmatch
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
+# Import salt libs
 import salt.utils.find
 from salt.exceptions import SaltInvocationError
 
+def __virtual__():
+    '''
+    Only work on posix-like systems
+    '''
+    # win_file takes care of windows
+    if __grains__['os'] == 'Windows':
+        return False
+    return 'file'
+
+
 __outputter__ = {
-    'touch': 'txt',
+    'touch':  'txt',
     'append': 'txt',
 }
 
@@ -162,7 +180,7 @@ def set_mode(path, mode):
         return 'File not found'
     try:
         os.chmod(path, int(mode, 8))
-    except:
+    except Exception:
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
@@ -221,18 +239,19 @@ def get_sum(path, form='md5'):
     if not os.path.isfile(path):
         return 'File not found'
     try:
-        return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
-    except (IOError, OSError), e:
+        with open(path, 'rb') as f:
+            return getattr(hashlib, form)(f.read()).hexdigest()
+    except (IOError, OSError) as e:
         return 'File Error: %s' % (str(e))
-    except AttributeError, e:
+    except AttributeError as e:
         return 'Hash ' + form + ' not supported'
-    except NameError, e:
+    except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
-    except Exception, e:
+    except Exception as e:
         return str(e)
 
 
-def find(path, *opts):
+def find(path, **kwargs):
     '''
     Approximate the Unix find(1) command and return a list of paths that
     meet the specified critera.
@@ -323,27 +342,28 @@ def find(path, *opts):
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
         salt '*' file.find /var/log name=\*.[0-9] mtime=+30d size=+10m delete
     '''
-    opts_dict = {}
-    for opt in opts:
-        key, value = opt.split('=', 1)
-        opts_dict[key] = value
     try:
-        f = salt.utils.find.Finder(opts_dict)
-    except ValueError, ex:
+        f = salt.utils.find.Finder(kwargs)
+    except ValueError as ex:
         return 'error: {0}'.format(ex)
 
     ret = [p for p in f.find(path)]
     ret.sort()
     return ret
 
-def _sed_esc(s):
+def _sed_esc(s, escape_all=False):
     '''
     Escape single quotes and forward slashes
     '''
-    return '{0}'.format(s).replace("'", "'\"'\"'").replace("/", "\/")
+    special_chars = "^.[$()|*+?{"
+    s = s.replace("'", "'\"'\"'").replace("/", "\/")
+    if escape_all:
+        for ch in special_chars:
+            s = s.replace(ch, "\\" + ch)
+    return s
 
 def sed(path, before, after, limit='', backup='.bak', options='-r -e',
-        flags='g'):
+        flags='g', escape_all=False):
     '''
     Make a simple edit to a file
 
@@ -372,19 +392,23 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     Forward slashes and single quotes will be escaped automatically in the
     ``before`` and ``after`` patterns.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.sed /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
 
     .. versionadded:: 0.9.5
     '''
     # Largely inspired by Fabric's contrib.files.sed()
-
-    before = _sed_esc(before)
-    after = _sed_esc(after)
+    # XXX:dc: Do we really want to always force escaping?
+    #
+    # Mandate that before and after are strings
+    before = str(before)
+    after = str(after)
+    before = _sed_esc(before, escape_all)
+    after = _sed_esc(after, escape_all)
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
-            backup = '-i{0} '.format(backup) if backup else '',
+            backup = '-i{0} '.format(backup) if backup else '-i ',
             options = options,
             limit = '/{0}/ '.format(limit) if limit else '',
             before = before,
@@ -393,6 +417,7 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
             path = path)
 
     return __salt__['cmd.run'](cmd)
+
 
 def uncomment(path, regex, char='#', backup='.bak'):
     '''
@@ -413,7 +438,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    Usage::
+    CLI Example::
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
 
@@ -426,6 +451,7 @@ def uncomment(path, regex, char='#', backup='.bak'):
         after=r'\1',
         limit=regex.lstrip('^'),
         backup=backup)
+
 
 def comment(path, regex, char='#', backup='.bak'):
     '''
@@ -450,7 +476,7 @@ def comment(path, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    Usage::
+    CLI Example::
 
         salt '*' file.comment /etc/modules pcspkr
 
@@ -458,7 +484,7 @@ def comment(path, regex, char='#', backup='.bak'):
     '''
     # Largely inspired by Fabric's contrib.files.comment()
 
-    regex = "{0}({1}){2}".format(
+    regex = '{0}({1}){2}'.format(
             '^' if regex.startswith('^') else '',
             regex.lstrip('^').rstrip('$'),
             '$' if regex.endswith('$') else '')
@@ -469,31 +495,79 @@ def comment(path, regex, char='#', backup='.bak'):
         after=r'{0}\1'.format(char),
         backup=backup)
 
-def contains(path, text, limit=''):
+
+def contains(path, text):
     '''
     Return True if the file at ``path`` contains ``text``
 
-    Usage::
+    CLI Example::
 
         salt '*' file.contains /etc/crontab 'mymaintenance.sh'
 
     .. versionadded:: 0.9.5
     '''
-    # Largely inspired by Fabric's contrib.files.contains()
-
     if not os.path.exists(path):
         return False
 
-    result = __salt__['file.sed'](path, text, '&', limit=limit, backup='',
-            options='-n -r -e', flags='gp')
+    try:
+        with open(path, 'r') as fp_:
+            for line in fp_:
+                if text.strip() == line.strip():
+                    return True
+        return False
+    except (IOError, OSError):
+        return False
 
-    return bool(result)
+
+def contains_regex(path, regex, lchar=''):
+    '''
+    Return True if the given regular expression matches anything in the text
+    of a given file
+
+    CLI Example::
+
+        salt '*' /etc/crontab '^maint'
+    '''
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, 'r') as fp_:
+            for line in  fp_:
+                if re.search(regex, line.lstrip(lchar)):
+                    return True
+            return False
+    except (IOError, OSError):
+        return False
+
+
+def contains_glob(path, glob):
+    '''
+    Return True if the given glob matches a string in the named file
+
+    CLI Example::
+
+        salt '*' /etc/foobar '*cheese*'
+    '''
+    if not os.path.exists(path):
+        return False
+
+    try:
+        with open(path, 'r') as fp_:
+            data = fp_.read()
+            if fnmatch.fnmatch(data, glob):
+                return True
+            else:
+                return False
+    except (IOError, OSError):
+        return False
+
 
 def append(path, *args):
     '''
     Append text to the end of a file
 
-    Usage::
+    CLI Example::
 
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt."\\
@@ -507,7 +581,8 @@ def append(path, *args):
         for line in args:
             f.write('{0}\n'.format(line))
 
-    return "Wrote {0} lines to '{1}'".format(len(args), path)
+    return 'Wrote {0} lines to "{1}"'.format(len(args), path)
+
 
 def touch(name, atime=None, mtime=None):
     '''
@@ -520,7 +595,8 @@ def touch(name, atime=None, mtime=None):
     mtime:
         Last modification in Unix epoch time
 
-    Usage::
+    CLI Example::
+
         salt '*' file.touch /var/log/emptyfile
 
     .. versionadded:: 0.9.5
@@ -530,7 +606,7 @@ def touch(name, atime=None, mtime=None):
     if mtime and mtime.isdigit():
         mtime = int(mtime)
     try:
-        with open(name, "a"):
+        with open(name, 'a'):
             if not atime and not mtime:
                 times = None
             elif not mtime and atime:
@@ -541,9 +617,55 @@ def touch(name, atime=None, mtime=None):
                 times = (atime, mtime)
             os.utime(name, times)
     except TypeError as exc:
-        msg = "atime and mtime must be integers"
+        msg = 'atime and mtime must be integers'
         raise SaltInvocationError(msg)
     except (IOError, OSError) as exc:
         return False
 
     return os.path.exists(name)
+
+
+def stats(path, hash_type='md5', follow_symlink=False):
+    '''
+    Return a dict containing the stats for a given file
+
+    CLI Example::
+
+        salt '*' file.stats /etc/passwd
+    '''
+    ret = {}
+    if not os.path.exists(path):
+        return ret
+    if follow_symlink:
+        pstat = os.stat(path)
+    else:
+        pstat = os.lstat(path)
+    ret['inode'] = pstat.st_ino
+    ret['uid'] = pstat.st_uid
+    ret['gid'] = pstat.st_gid
+    ret['group'] = gid_to_group(pstat.st_gid)
+    ret['user'] = uid_to_user(pstat.st_uid)
+    ret['atime'] = pstat.st_atime
+    ret['mtime'] = pstat.st_mtime
+    ret['ctime'] = pstat.st_ctime
+    ret['size'] = pstat.st_size
+    ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['sum'] = get_sum(path, hash_type)
+    ret['type'] = 'file'
+    if stat.S_ISDIR(pstat.st_mode):
+        ret['type'] = 'dir'
+    if stat.S_ISCHR(pstat.st_mode):
+        ret['type'] = 'char'
+    if stat.S_ISBLK(pstat.st_mode):
+        ret['type'] = 'block'
+    if stat.S_ISREG(pstat.st_mode):
+        ret['type'] = 'file'
+    if stat.S_ISLNK(pstat.st_mode):
+        ret['type'] = 'link'
+    if stat.S_ISFIFO(pstat.st_mode):
+        ret['type'] = 'pipe'
+    if stat.S_ISSOCK(pstat.st_mode):
+        ret['type'] = 'socket'
+    ret['target'] = os.path.realpath(path)
+    return ret
+

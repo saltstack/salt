@@ -33,6 +33,38 @@ def available_version(name):
     return __salt__['cmd.run']('pacman -Sp --print-format %v {0}'.format(name))
 
 
+def upgrade_available(name):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example::
+
+        salt '*' pkg.upgrade_available <package name>
+    '''
+    return name in __salt__['cmd.run'](
+            'pacman -Spu --print-format %n | egrep "^\S+$"').split()
+
+
+def list_upgrades():
+    '''
+    List all available package upgrades on this system
+
+    CLI Example::
+
+        salt '*' pkg.list_upgrades
+    '''
+    upgrades = {}
+    lines = __salt__['cmd.run'](
+            'pacman -Sypu --print-format "%n %v" | egrep -v "^\s|^:"'
+            ).split('\n')
+    for line in lines:
+        comps = line.split(' ')
+        if len(comps) < 2:
+            continue
+        upgrades[comps[0]] = comps[1]
+    return upgrades
+
+
 def version(name):
     '''
     Returns a version if the package is installed, else returns an empty string
@@ -79,7 +111,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'pacman -Sy'
+    cmd = 'LANG=C pacman -Sy'
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
@@ -91,6 +123,7 @@ def refresh_db():
         if 'is up to date' in line:
             ret[key] = False
         elif 'downloading' in line:
+            key = line.strip().split()[1].split('.')[0]
             ret[key] = True
     return ret
 
@@ -108,10 +141,16 @@ def install(name, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
+    fname = name
+    for vkey, vsign in (('gt', '>'), ('lt', '<'), ('eq', '='), ('version', '=')):
+        if vkey in kwargs and kwargs[vkey] is not None:
+            fname = '"{0}{1}{2}"'.format(name, vsign, kwargs[vkey])
+            break
     old = list_pkgs()
-    cmd = 'pacman -S --noprogressbar --noconfirm ' + name
+    cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
     if refresh:
-        cmd = 'pacman -Syu --noprogressbar --noconfirm ' + name
+        cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
+
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
@@ -176,7 +215,7 @@ def remove(name):
         salt '*' pkg.remove <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
+    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
@@ -194,7 +233,7 @@ def purge(name):
         salt '*' pkg.purge <package name>
     '''
     old = list_pkgs()
-    cmd = 'pacman -R --noprogressbar --noconfirm ' + name
+    cmd = 'pacman -R --noprogressbar --noconfirm {0}'.format(name)
     __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)

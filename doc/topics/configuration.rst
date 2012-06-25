@@ -54,6 +54,10 @@ Running Salt
     line or assign ``user`` in the
     :doc:`configuration file</ref/configuration/master>`.
 
+
+There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`
+available.
+
 Manage Salt public keys
 =======================
 
@@ -62,7 +66,7 @@ Salt manages authentication with RSA public keys. The keys are managed on the
 checks into the master the master will save a copy of the minion key. Before
 the master can send commands to the minion the key needs to be "accepted".
 
-1.  List the accepted and unaccepted salt keys::
+1.  List the accepted and unaccepted Salt keys::
 
         salt-key -L
 

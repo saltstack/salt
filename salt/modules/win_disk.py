@@ -1,11 +1,11 @@
 '''
 Module for gathering disk information on Windows
 '''
-is_windows = True
 try:
     import ctypes
     import string
     import win32api
+    is_windows = True
 except ImportError:
     is_windows = False
 
@@ -37,24 +37,24 @@ def usage():
             try:
                 sectorspercluster, bytespersector, freeclusters, totalclusters =\
                         win32api.GetDiskFreeSpace('{0}:\\'.format(drive))
-                totalsize = sectorspercluster * bytespersector * totalclusters 
-                available_space = sectorspercluster * bytespersector * freeclusters 
+                totalsize = sectorspercluster * bytespersector * totalclusters
+                available_space = sectorspercluster * bytespersector * freeclusters
                 used = totalsize - available_space
                 capacity = int(used / float(totalsize) * 100)
                 ret['{0}:\\'.format(drive)] = {
                     'filesystem': '{0}:\\'.format(drive),
-                    '1K-blocks': totalsize, 
-                    'used': used, 
+                    '1K-blocks': totalsize,
+                    'used': used,
                     'available': available_space,
                     'capacity': '{0}%'.format(capacity),
                 }
-            except:
+            except Exception:
                 ret['{0}:\\'.format(drive)] = {
                     'filesystem': '{0}:\\'.format(drive),
-                    '1K-blocks': None, 
-                    'used': None, 
+                    '1K-blocks': None,
+                    'used': None,
                     'available': None,
-                    'capacity': None, 
+                    'capacity': None,
                 }
         return ret
 

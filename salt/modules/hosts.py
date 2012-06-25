@@ -5,6 +5,11 @@ Manage the information in the hosts file
 import os
 
 def __get_hosts_filename():
+    '''
+    Return the path to the appropriate hosts file
+    '''
+    if 'hosts.file' in __opts__:
+        return __opts__['hosts.file']
     if __grains__['kernel'].startswith('Windows'):
         return 'C:\Windows\System32\drivers\etc\hosts'
     else:
@@ -44,6 +49,7 @@ def get_ip(host):
     Return the ip associated with the named host
 
     CLI Example::
+
         salt '*' hosts.get_ip <hostname>
     '''
     hosts = list_hosts()
@@ -62,6 +68,7 @@ def get_alias(ip):
     Return the list of aliases associated with an ip
 
     CLI Example::
+
         salt '*' hosts.get_alias <ip addr>
     '''
     hosts = list_hosts()
@@ -75,14 +82,11 @@ def has_pair(ip, alias):
     Return true if the alias is set
 
     CLI Example::
+
         salt '*' hosts.has_pair <ip> <alias>
     '''
     hosts = list_hosts()
-    if ip not in hosts:
-        return False
-    if alias in hosts[ip]:
-        return True
-    return False
+    return ip in hosts and alias in hosts[ip]
 
 
 def set_host(ip, alias):
@@ -91,6 +95,7 @@ def set_host(ip, alias):
     any previous entry for the given ip
 
     CLI Example::
+
         salt '*' hosts.set_host <ip> <alias>
     '''
     hfn = __get_hosts_filename()
@@ -126,6 +131,7 @@ def rm_host(ip, alias):
     Remove a host entry from the hosts file
 
     CLI Example::
+
         salt '*' hosts.rm_host <ip> <alias>
     '''
     if not has_pair(ip, alias):
@@ -140,15 +146,17 @@ def rm_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = comps[0] + '\t'
+            newline = '{0}\t'.format(comps[0])
             for existing in comps[1:]:
                 if existing == alias:
                     continue
-                newline += '\t' + existing
+                newline += '\t{0}'.format(existing)
             if newline.strip() == ip:
+                # No aliases exist for the line, make it empty
                 lines[ind] = ''
             else:
-                lines[ind] = newline
+                # Only an alias was removed
+                lines[ind] = '{0}\n'.format(newline)
     open(hfn, 'w+').writelines(lines)
     return True
 
@@ -159,6 +167,7 @@ def add_host(ip, alias):
     it with the given host
 
     CLI Example::
+
         salt '*' hosts.add_host <ip> <alias>
     '''
     hfn = __get_hosts_filename()
@@ -177,7 +186,8 @@ def add_host(ip, alias):
             newline = comps[0] + '\t'
             for existing in comps[1:]:
                 newline += '\t' + existing
-            newline += '\t' + alias
+            newline += '\t' + alias + '\n'
+            lines.remove(lines[ind])
             lines.append(newline)
             ovr = True
             # leave any other matching entries alone

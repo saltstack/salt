@@ -1,24 +1,43 @@
 '''
 Manage users with the useradd command
 '''
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
-import grp
-import pwd
+from salt._compat import string_types, callable
 
 
 def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
-    return 'user' if __grains__['kernel'] == 'Linux' else False
+    import sys
+    if __grains__['kernel'] == 'Darwin':
+        mod = sys.modules[__name__]
+        for attr in dir(mod):
+
+            if callable(getattr(mod, attr)):
+                if not attr in ('info', 'list_groups', '__virtual__'):
+                    delattr(mod, attr)
+    return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
 
 def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=False,
-        shell='/bin/false'):
+        home=True,
+        shell=None,
+        fullname=None,
+        roomnumber=None,
+        workphone=None,
+        homephone=None,
+        other=None,
+        unique=True,
+        system=False):
     '''
     Add a user to the minion
 
@@ -26,9 +45,11 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
-    cmd = 'useradd -s {0} '.format(shell)
+    cmd = 'useradd '
+    if shell:
+        cmd += '-s {0} '.format(shell)
     if uid:
         cmd += '-u {0} '.format(uid)
     if gid:
@@ -36,11 +57,39 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home:
-        cmd += '-m -d {0} '.format(home)
+        if home is not True:
+            cmd += '-d {0} '.format(home)
+        else:
+            if not system:
+                cmd += '-m '
+    if not unique:
+        cmd += '-o '
+    if system:
+        cmd += '-r '
     cmd += name
-    ret = __salt__['cmd.run_all'](cmd)
-
-    return not ret['retcode']
+    ret = __salt__['cmd.retcode'](cmd)
+    if ret != 0:
+        return False
+    else:
+        # At this point, the user was successfully created, so return true
+        # regardless of the outcome of the below functions. If there is a
+        # problem wth changing any of the user's info below, it will be raised
+        # in a future highstate call. If anyone has a better idea on how to do
+        # this, feel free to change it, but I didn't think it was a good idea
+        # to return False when the user was successfully created since A) the
+        # user does exist, and B) running useradd again would result in a
+        # nonzero exit status and be interpreted as a False result.
+        if fullname:
+            chfullname(name, fullname)
+        if roomnumber:
+            chroomnumber(name, roomnumber)
+        if workphone:
+            chworkphone(name, workphone)
+        if homephone:
+            chhomephone(name, homephone)
+        if other:
+            chother(name, other)
+        return True
 
 
 def delete(name, remove=False, force=False):
@@ -92,8 +141,7 @@ def chuid(name, uid):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
-        if post_info['uid'] == uid:
-            return True
+        return post_info['uid'] == uid
     return False
 
 
@@ -112,8 +160,7 @@ def chgid(name, gid):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['gid'] != pre_info['gid']:
-        if post_info['gid'] == gid:
-            return True
+        return post_info['gid'] == gid
     return False
 
 
@@ -132,8 +179,7 @@ def chshell(name, shell):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
-        if post_info['shell'] == shell:
-            return True
+        return post_info['shell'] == shell
     return False
 
 
@@ -156,8 +202,7 @@ def chhome(name, home, persist=False):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
-        if post_info['home'] == home:
-            return True
+        return post_info['home'] == home
     return False
 
 
@@ -170,7 +215,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
@@ -180,8 +225,101 @@ def chgroups(name, groups, append=False):
         cmd += '-a'
     __salt__['cmd.run'](cmd)
     agrps = set(list_groups(name))
-    if ugrps.difference(agrps):
+    return len(ugrps - agrps) == 0
+
+
+def chfullname(name, fullname):
+    '''
+    Change the users Full Name
+
+    CLI Example::
+
+        salt '*' user.chfullname foo "Foo Bar"
+    '''
+    pre_info = info(name)
+    if fullname == pre_info['fullname']:
         return True
+    cmd = 'chfn -f "{0}" {1}'.format(fullname, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['fullname'] != pre_info['fullname']:
+        return post_info['fullname'] == fullname
+    return False
+
+
+def chroomnumber(name, roomnumber):
+    '''
+    Change the user's Room Number
+
+    CLI Example::
+
+        salt '*' user.chroomnumber foo 123
+    '''
+    pre_info = info(name)
+    if roomnumber == pre_info['roomnumber']:
+        return True
+    cmd = 'chfn -r "{0}" {1}'.format(roomnumber, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['roomnumber'] != pre_info['roomnumber']:
+        return post_info['roomnumber'] == roomnumber
+    return False
+
+
+def chworkphone(name, workphone):
+    '''
+    Change the user's Work Phone
+
+    CLI Example::
+
+        salt '*' user.chworkphone foo "7735550123"
+    '''
+    pre_info = info(name)
+    if workphone == pre_info['workphone']:
+        return True
+    cmd = 'chfn -w "{0}" {1}'.format(workphone, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['workphone'] != pre_info['workphone']:
+        return post_info['workphone'] == workphone
+    return False
+
+
+def chhomephone(name, homephone):
+    '''
+    Change the user's Home Phone
+
+    CLI Example::
+
+        salt '*' user.chhomephone foo "7735551234"
+    '''
+    pre_info = info(name)
+    if homephone == pre_info['homephone']:
+        return True
+    cmd = 'chfn -h "{0}" {1}'.format(homephone, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['homephone'] != pre_info['homephone']:
+        return post_info['homephone'] == homephone
+    return False
+
+
+def chother(name, other):
+    '''
+    Change the user's "Other" GECOS field
+
+    CLI Example::
+
+        salt '*' user.chother foo "fax=7735555678"
+    '''
+    pre_info = info(name)
+    if other == pre_info['other']:
+        return True
+    cmd = 'chfn -o "{0}" {1}'.format(other, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['other'] != pre_info['other']:
+        return post_info['other'] == other
     return False
 
 
@@ -203,6 +341,16 @@ def info(name):
         ret['passwd'] = data.pw_passwd
         ret['shell'] = data.pw_shell
         ret['uid'] = data.pw_uid
+        # Put GECOS info into a list
+        gecos_field = data.pw_gecos.split(',', 4)
+        # Assign empty strings for any unspecified GECOS fields
+        while len(gecos_field) < 5:
+            gecos_field.append('')
+        ret['fullname'] = gecos_field[0]
+        ret['roomnumber'] = gecos_field[1]
+        ret['workphone'] = gecos_field[2]
+        ret['homephone'] = gecos_field[3]
+        ret['other'] = gecos_field[4]
     except KeyError:
         ret['gid'] = ''
         ret['groups'] = ''
@@ -211,6 +359,11 @@ def info(name):
         ret['passwd'] = ''
         ret['shell'] = ''
         ret['uid'] = ''
+        ret['fullname'] = ''
+        ret['roomnumber'] = ''
+        ret['workphone'] = ''
+        ret['homephone'] = ''
+        ret['other'] = ''
     return ret
 
 
@@ -220,12 +373,12 @@ def list_groups(name):
 
     CLI Example::
 
-        salt '*' user.groups foo
+        salt '*' user.list_groups foo
     '''
     ugrp = set()
 
     for group in grp.getgrall():
-        if group.gr_mem.count(name):
+        if name in group.gr_mem:
             ugrp.add(group.gr_name)
 
     return sorted(list(ugrp))

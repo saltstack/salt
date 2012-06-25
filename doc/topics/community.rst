@@ -17,9 +17,9 @@ Join the `salt-users mailing list`_. It is the best place to ask questions
 about Salt and see whats going on with Salt development! The Salt mailing list
 is hosted by Google Groups. It is open to new members.
 
-http://groups.google.com/group/salt-users
+https://groups.google.com/forum/#!forum/salt-users
 
-.. _`salt-users mailing list`: http://groups.google.com/group/salt-users
+.. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
 .. _community-irc:
 
@@ -29,8 +29,11 @@ IRC
 The ``#salt`` IRC channel is hosted on the popular `Freenode`__ network. You
 can use the `Freenode webchat client`__ right from your browser.
 
+`Logs of the IRC channel activity`__ are being collected courtesy of Moritz Lenz.
+
 .. __: http://freenode.net/irc_servers.shtml
 .. __: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+.. __: http://irclog.perlgeek.de/salt/
 
 .. _community-github:
 
@@ -53,6 +56,19 @@ News and thoughts on Salt and related projects is often posted on Thomas' blog
 http://red45.wordpress.com/
 
 .. _`The Red45`: http://red45.wordpress.com/
+
+
+Example Salt States
+===================
+The official ``salt-states`` repository is:
+https://github.com/saltstack/salt-states
+
+A few examples of salt states from the community:
+
+* https://github.com/blast-hardcheese/blast-salt-states
+* https://github.com/kevingranade/kevingranade-salt-state
+* https://github.com/uggedal/states
+* https://github.com/mattmcclean/salt-openstack/tree/master/salt
 
 Follow on ohloh
 ===============
@@ -88,3 +104,7 @@ The goal here it to make contributions clear, make sure there is a trail for
 where the code has come from, but most importantly, to give credit where credit
 is due!
 
+The `Open Comparison Contributing Docs`__ has some good suggestions and tips for
+those who are looking forward to contribute.
+
+.. __: http://opencomparison.readthedocs.org/en/latest/contributing.html

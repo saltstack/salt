@@ -1,6 +1,6 @@
 '''
-Cron Management
-===============
+Management of cron, the Unix command scheduler.
+===============================================
 
 The cron state module allows for user crontabs to be cleanly managed.
 
@@ -15,8 +15,7 @@ and existing cron that looks like this:
 .. code-block:: yaml
 
     date > /tmp/crontest:
-      cron:
-        - present
+      cron.present:
         - user: root
         - minute: 5
 
@@ -25,8 +24,7 @@ Is changed to this:
 .. code-block:: yaml
 
     date > /tmp/crontest:
-      cron:
-        - present
+      cron.present:
         - user: root
         - minute: 7
         - hour: 2
@@ -34,6 +32,23 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 '''
+
+
+def _check_cron(cmd, user, minute, hour, dom, month, dow):
+    '''
+    Return the changes
+    '''
+    lst = __salt__['cron.list_tab'](user)
+    for cron in lst['crons']:
+        if cmd == cron['cmd']:
+            if not minute == cron['min'] or \
+                    not hour == cron['hour'] or \
+                    not dom == cron['daymonth'] or \
+                    not month == cron['month'] or \
+                    not dow == cron['dayweek']:
+                return 'update'
+            return 'present'
+    return 'absent'
 
 
 def present(name,
@@ -80,6 +95,25 @@ def present(name,
            'comment': '',
            'name': name,
            'result': True}
+    if __opts__['test']:
+        status = _check_cron(
+                name,
+                user,
+                minute,
+                hour,
+                daymonth,
+                month,
+                dayweek)
+        ret['result'] = None
+        if status == 'absent':
+            ret['comment'] = 'Cron {0} is set to be added'.format(name)
+        elif status == 'present':
+            ret['result'] = True
+            ret['comment'] = 'Cron {0} already present'.format(name)
+        elif status == 'update':
+            ret['comment'] = 'Cron {0} is set to be updated'.format(name)
+        return ret
+
     data = __salt__['cron.set_job'](
             dom=daymonth,
             dow=dayweek,
@@ -149,6 +183,24 @@ def absent(name,
            'result': True,
            'changes': {},
            'comment': ''}
+
+    if __opts__['test']:
+        status = _check_cron(
+                name,
+                user,
+                minute,
+                hour,
+                daymonth,
+                month,
+                dayweek)
+        ret['result'] = None
+        if status == 'absent':
+            ret['result'] = True
+            ret['comment'] = 'Cron {0} is absent'.format(name)
+        elif status == 'present' or status == 'update':
+            ret['comment'] = 'Cron {0} is set to be removed'.format(name)
+        return ret
+
     data = __salt__['cron.rm_job'](
             user,
             minute,

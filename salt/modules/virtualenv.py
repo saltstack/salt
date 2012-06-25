@@ -1,28 +1,25 @@
 '''
 Create virtualenv environments
 '''
-import salt.utils
+from salt import utils
+
 
 __opts__ = {
     'venv_bin': 'virtualenv',
 }
 
-def __virtual__():
-    '''
-    Only load the module if virtualenv is installed
-    '''
-    cmd = __opts__.get('venv_bin', 'virtualenv')
-    return 'virtualenv' if salt.utils.which(cmd) else False
 
 def create(path,
-        venv_bin='',
+        venv_bin=__opts__['venv_bin'],
         no_site_packages=False,
         system_site_packages=False,
+        distribute=False,
         clear=False,
         python='',
         extra_search_dir='',
         never_download=False,
-        prompt=''):
+        prompt='',
+        runas=None):
     '''
     Create a virtualenv
 
@@ -35,6 +32,8 @@ def create(path,
         Passthrough argument given to virtualenv
     system_site_packages : False
         Passthrough argument given to virtualenv
+    distribute : False
+        Passthrough argument given to virtualenv
     clear : False
         Passthrough argument given to virtualenv
     python : (default)
@@ -45,16 +44,22 @@ def create(path,
         Passthrough argument given to virtualenv
     prompt : (default)
         Passthrough argument given to virtualenv
+    runas : None
+        Set ownership for the virtualenv
 
     CLI Example::
 
-        salt '*' pip.virtualenv /path/to/new/virtualenv
+        salt '*' virtualenv.create /path/to/new/virtualenv
     '''
+    # raise CommandNotFoundError if venv_bin is missing
+    utils.check_or_die(venv_bin)
+
     cmd = '{venv_bin} {args} {path}'.format(
-            venv_bin=venv_bin if venv_bin else __opts__['venv_bin'],
+            venv_bin=venv_bin,
             args=''.join([
                 ' --no-site-packages' if no_site_packages else '',
                 ' --system-site-packages' if system_site_packages else '',
+                ' --distribute' if distribute else '',
                 ' --clear' if clear else '',
                 ' --python {0}'.format(python) if python else '',
                 ' --extra-search-dir {0}'.format(extra_search_dir
@@ -63,4 +68,4 @@ def create(path,
                 ' --prompt {0}'.format(prompt) if prompt else '']),
             path=path)
 
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, runas=runas)

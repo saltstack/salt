@@ -1,17 +1,27 @@
 '''
 Many aspects of the salt payload need to be managed, from the return of
-encrypted keys to general payload dynamics and packaging, these happen in here
+encrypted keys to general payload dynamics and packaging, these happen
+in here
 '''
 
-import cPickle as pickle
+from salt._compat import pickle
 
-import msgpack
+try:
+    # Attempt to import msgpack
+    import msgpack
+    # There is a serialization issue on ARM and potentially other platforms
+    # for some msgpack bindings, check for it
+    if msgpack.loads(msgpack.dumps([1,2,3])) is None:
+        raise ImportError
+except ImportError:
+    # Fall back to msgpack_pure
+    import msgpack_pure as msgpack
 
 
 def package(payload):
     '''
-    This method for now just wraps msgpack.dumps, but it is here so that we can
-    make the serialization a custom option in the future with ease.
+    This method for now just wraps msgpack.dumps, but it is here so that
+    we can make the serialization a custom option in the future with ease.
     '''
     return msgpack.dumps(payload)
 
@@ -20,7 +30,7 @@ def unpackage(package_):
     '''
     Unpackages a payload
     '''
-    return msgpack.loads(package_)
+    return msgpack.loads(package_, use_list=True)
 
 
 def format_payload(enc, **kwargs):
@@ -34,6 +44,7 @@ def format_payload(enc, **kwargs):
         load[key] = kwargs[key]
     payload['load'] = load
     return package(payload)
+
 
 class Serial(object):
     '''
@@ -49,18 +60,19 @@ class Serial(object):
         Run the correct loads serialization format
         '''
         if self.serial == 'msgpack':
-            return msgpack.loads(msg)
+            return msgpack.loads(msg, use_list=True)
         elif self.serial == 'pickle':
             try:
                 return pickle.loads(msg)
-            except:
-                return msgpack.loads(msg)
+            except Exception:
+                return msgpack.loads(msg, use_list=True)
 
     def load(self, fn_):
         '''
         Run the correct serialization to load a file
         '''
         data = fn_.read()
+        fn_.close()
         return self.loads(data)
 
     def dumps(self, msg):
@@ -77,3 +89,4 @@ class Serial(object):
         Serialize the correct data into the named file object
         '''
         fn_.write(self.dumps(msg))
+        fn_.close()

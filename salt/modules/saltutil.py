@@ -12,6 +12,7 @@ import logging
 
 # Import Salt libs
 import salt.payload
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def _sync(form, env):
     '''
     Sync the given directory in the given environment
     '''
-    if isinstance(env, str):
+    if isinstance(env, string_types):
         env = env.split(',')
     ret = []
     remote = set()
@@ -47,10 +48,12 @@ def _sync(form, env):
             shutil.copyfile(fn_, dest)
             ret.append('{0}.{1}'.format(form, os.path.basename(fn_)))
     if ret:
-        open(os.path.join(__opts__['cachedir'], 'module_refresh'), 'w+').write('')
+        mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
+        with open(mod_file, 'a+') as f:
+            f.write('')
     if __opts__.get('clean_dynamic_modules', True):
         current = set(os.listdir(mod_dir))
-        for fn_ in current.difference(remote):
+        for fn_ in current - remote:
             full = os.path.join(mod_dir, fn_)
             if os.path.isfile(full):
                 os.remove(full)
@@ -145,6 +148,23 @@ def sync_all(env='base'):
     return ret
 
 
+def refresh_pillar():
+    '''
+    Queue the minion to refresh the pillar data.
+
+    CLI Example::
+
+        salt '*' saltutil.refresh_pillar
+    '''
+    mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
+    try:
+        with open(mod_file, 'a+') as f:
+            f.write('pillar')
+        return True
+    except IOError:
+        return False
+
+
 def running():
     '''
     Return the data on all running processes salt on the minion
@@ -163,6 +183,9 @@ def running():
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
         data = serial.loads(open(path, 'rb').read())
+        if not isinstance(data, dict):
+            # Invalid serial object
+            continue
         if not procs.get(str(data['pid'])):
             # The process is no longer running, clear out the file and
             # continue

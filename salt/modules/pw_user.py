@@ -1,10 +1,15 @@
 '''
 Manage users with the useradd command
 '''
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
-import grp
 import os
-import pwd
+
+from salt._compat import string_types
 
 
 def __virtual__():
@@ -18,8 +23,10 @@ def add(name,
         uid=None,
         gid=None,
         groups=None,
-        home=False,
-        shell='/bin/false'):
+        home=True,
+        shell=None,
+        system=False,
+        **kwargs):
     '''
     Add a user to the minion
 
@@ -27,9 +34,11 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
-    cmd = 'pw useradd -s {0} '.format(shell)
+    cmd = 'pw useradd '
+    if shell:
+        cmd += '-s {0} '.format(shell)
     if uid:
         cmd += '-u {0} '.format(uid)
     if gid:
@@ -37,7 +46,10 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home:
-        cmd += '-m -b {0} '.format(os.dirname(home))
+        if home is True:
+            cmd += '-m '
+        else:
+            cmd += '-m -b {0} '.format(os.path.dirname(home))
     cmd += '-n {0}'.format(name)
     ret = __salt__['cmd.run_all'](cmd)
 
@@ -91,8 +103,7 @@ def chuid(name, uid):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
-        if post_info['uid'] == uid:
-            return True
+        return post_info['uid'] == uid
     return False
 
 
@@ -111,8 +122,7 @@ def chgid(name, gid):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['gid'] != pre_info['gid']:
-        if post_info['gid'] == gid:
-            return True
+        return post_info['gid'] == gid
     return False
 
 
@@ -131,8 +141,7 @@ def chshell(name, shell):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
-        if post_info['shell'] == shell:
-            return True
+        return post_info['shell'] == shell
     return False
 
 
@@ -155,8 +164,7 @@ def chhome(name, home, persist=False):
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
-        if post_info['home'] == home:
-            return True
+        return post_info['home'] == home
     return False
 
 
@@ -169,19 +177,17 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, basestring):
+    if isinstance(groups, string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
-    cmd = 'pw usermod -G {0} {1} '.format(','.join(groups), name)
+    cmd = 'pw usermod -G {0} -n {1} '.format(','.join(groups), name)
     if append:
         cmd += '-a'
     __salt__['cmd.run'](cmd)
     agrps = set(list_groups(name))
-    if ugrps.difference(agrps):
-        return True
-    return False
+    return len(ugrps - agrps) == 0
 
 
 def info(name):
@@ -210,10 +216,10 @@ def list_groups(name):
 
     CLI Example::
 
-        salt '*' user.groups foo
+        salt '*' user.list_groups foo
     '''
     ugrp = set()
     for group in grp.getgrall():
-        if group.gr_mem.count(name):
+        if name in group.gr_mem:
             ugrp.add(group.gr_name)
     return sorted(list(ugrp))

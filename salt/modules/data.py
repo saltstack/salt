@@ -1,11 +1,26 @@
 '''
-Manage a local persistent data structure that can hold any arbitrairy data
+Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion
 '''
 
 import os
 import salt.payload
 import ast
+
+def clear():
+    '''
+    Clear out all of the data in the minion datastore, this function is
+    destructive!
+
+    CLI Example::
+
+        salt '*' data.clear
+    '''
+    try:
+        os.remove(os.path.join(__opts__['cachedir'], 'datastore'))
+    except IOError:
+        pass
+    return True
 
 def load():
     '''
@@ -29,7 +44,7 @@ def dump(new_data):
 
     CLI Example::
 
-        salt '*' data.dump '{'eggs': 'spam'}' 
+        salt '*' data.dump '{'eggs': 'spam'}'
     '''
     if not isinstance(new_data, dict):
         if isinstance(ast.literal_eval(new_data), dict):
@@ -38,11 +53,10 @@ def dump(new_data):
             return False
 
     try:
-        fn_ = open(os.path.join(__opts__['cachedir'], 'datastore'), "w")
-        
-        serial = salt.payload.Serial(__opts__)
-        serial.dump(new_data, fn_)
-        
+        with open(os.path.join(__opts__['cachedir'], 'datastore'), "w") as fn_:
+            serial = salt.payload.Serial(__opts__)
+            serial.dump(new_data, fn_)
+
         return True
 
     except (IOError, OSError):
@@ -66,7 +80,7 @@ def getval(key):
     Get a value from the minion datastore
 
     CLI Example::
-        
+
         salt '*' data.getval <key>
     '''
     store = load()
@@ -77,11 +91,12 @@ def getvals(keys):
     Get values from the minion datastore
 
     CLI Example::
-        
+
         salt '*' data.getvals <key>
     '''
     store = load()
     ret = []
     for key in keys:
-        ret.append(store[key])
+        if key in store:
+            ret.append(store[key])
     return ret

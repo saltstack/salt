@@ -2,26 +2,47 @@
 A simple way of setting the output format for data from modules
 '''
 
+# Import Python libs
 import json
 import pprint
 
+# Import third party libs
 import yaml
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
-except:
+except Exception:
     pass
 
+# Import Salt libs
 import salt.utils
+from salt._compat import string_types
+from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
 
 
-def remove_colors():
+def display_output(ret, out, opts):
     '''
-    Access all of the utility colors and change them to empty strings
+    Display the output of a command in the terminal
     '''
-    pass
+    if isinstance(ret, list) or isinstance(ret, dict):
+        if opts['raw_out']:
+            printout = get_outputter('raw')
+        elif opts['json_out']:
+            printout = get_outputter('json')
+        elif opts['txt_out']:
+            printout = get_outputter('txt')
+        elif opts['yaml_out']:
+            printout = get_outputter('yaml')
+        elif out:
+            printout = get_outputter(out)
+        else:
+            printout = get_outputter(None)
+    # Pretty print any salt exceptions
+    elif isinstance(ret, SaltException):
+        printout = get_outputter("txt")
+    printout(ret)
 
 
 class Outputter(object):
@@ -43,9 +64,9 @@ class Outputter(object):
 
 class HighStateOutputter(Outputter):
     '''
-    Not a command line option, the HighStateOutputter is only meant to be used
-    with the state.highstate function, or a function that returns highstate
-    return data
+    Not a command line option, the HighStateOutputter is only meant to
+    be used with the state.highstate function, or a function that returns
+    highstate return data
     '''
     supports = 'highstate'
 
@@ -63,14 +84,28 @@ class HighStateOutputter(Outputter):
                     hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
+                # Verify that the needed data is present
+                for tname, info in data[host].items():
+                    if not '__run_num__' in info:
+                        err = ('The State execution failed to record the order '
+                               'in which all states were executed. The state '
+                               'return missing data is:')
+                        print(err)
+                        pprint.pprint(info)
                 # Everything rendered as it should display the output
-                for tname, ret in data[host].items():
+                for tname in sorted(
+                        data[host],
+                        key=lambda k: data[host][k].get('__run_num__', 0)):
+                    ret = data[host][tname]
                     tcolor = colors['GREEN']
                     if ret['changes']:
                         tcolor = colors['CYAN']
-                    if not ret['result']:
+                    if ret['result'] is False:
                         hcolor = colors['RED']
                         tcolor = colors['RED']
+                    if ret['result'] is None:
+                        hcolor = colors['YELLOW']
+                        tcolor = colors['YELLOW']
                     comps = tname.split('_|-')
                     hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                                   .format(tcolor, comps[0], colors)))
@@ -96,7 +131,7 @@ class HighStateOutputter(Outputter):
                         ))
                     changes = '        Changes:   '
                     for key in ret['changes']:
-                        if isinstance(ret['changes'][key], str):
+                        if isinstance(ret['changes'][key], string_types):
                             changes += (key + ': ' + ret['changes'][key] +
                                         '\n                   ')
                         elif isinstance(ret['changes'][key], dict):
@@ -109,9 +144,9 @@ class HighStateOutputter(Outputter):
                                         '\n                   ')
                     hstrs.append(('{0}{1}{2[ENDC]}'
                                   .format(tcolor, changes, colors)))
-            print('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors))
+            print(('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
             for hstr in hstrs:
-                print hstr
+                print(hstr)
 
 
 class RawOutputter(Outputter):
@@ -121,27 +156,26 @@ class RawOutputter(Outputter):
     supports = 'raw'
 
     def __call__(self, data, **kwargs):
-        print data
+        print(data)
 
 
 class TxtOutputter(Outputter):
     '''
-    Plain text output. Primarily for returning output from
-    shell commands in the exact same way they would output
-    on the shell when ran directly.
+    Plain text output. Primarily for returning output from shell commands
+    in the exact same way they would output on the shell when ran directly.
     '''
     supports = 'txt'
 
     def __call__(self, data, **kwargs):
         if hasattr(data, 'keys'):
-            for key in data.keys():
+            for key in data:
                 value = data[key]
                 # Don't blow up on non-strings
                 try:
                     for line in value.split('\n'):
-                        print '{0}: {1}'.format(key, line)
+                        print('{0}: {1}'.format(key, line))
                 except AttributeError:
-                    print '{0}: {1}'.format(key, value)
+                    print('{0}: {1}'.format(key, value))
         else:
             # For non-dictionary data, just use print
             RawOutputter()(data)
@@ -164,7 +198,7 @@ class JSONOutputter(Outputter):
         except TypeError:
             # Return valid json for unserializable objects
             ret = json.dumps({})
-        print ret
+        print(ret)
 
 
 class YamlOutputter(Outputter):
@@ -176,7 +210,7 @@ class YamlOutputter(Outputter):
     def __call__(self, data, **kwargs):
         if 'color' in kwargs:
             kwargs.pop('color')
-        print yaml.dump(data, **kwargs)
+        print(yaml.dump(data, **kwargs))
 
 
 def get_outputter(name=None):

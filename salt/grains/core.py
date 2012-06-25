@@ -22,8 +22,8 @@ import salt.utils
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
-import salt.modules.cmd
-__salt__ = {'cmd.run': salt.modules.cmd._run_quiet}
+import salt.modules.cmdmod
+__salt__ = {'cmd.run': salt.modules.cmdmod._run_quiet}
 
 
 def _kernel():
@@ -45,6 +45,7 @@ def _kernel():
         grains['kernel'] = 'Unknown'
     return grains
 
+
 def _windows_cpudata():
     '''
     Return the cpu information for Windows systems architecture
@@ -59,6 +60,7 @@ def _windows_cpudata():
         grains['num_cpus'] = os.environ['NUMBER_OF_PROCESSORS']
     grains['cpu_model'] = platform.processor()
     return grains
+
 
 def _linux_cpudata():
     '''
@@ -114,8 +116,8 @@ def _freebsd_cpudata():
 
     if sysctl:
         machine_cmd = '{0} -n hw.machine'.format(sysctl)
-        ncpu_cmd    = '{0} -n hw.ncpu'.format(sysctl)
-        model_cpu   = '{0} -n hw.model'.format(sysctl)
+        ncpu_cmd = '{0} -n hw.ncpu'.format(sysctl)
+        model_cpu = '{0} -n hw.model'.format(sysctl)
         grains['num_cpus'] = __salt__['cmd.run'](ncpu_cmd).strip()
         grains['cpu_model'] = __salt__['cmd.run'](model_cpu).strip()
         grains['cpuarch'] = __salt__['cmd.run'](machine_cmd).strip()
@@ -140,20 +142,20 @@ def _memdata(osdata):
                     continue
                 if comps[0].strip() == 'MemTotal':
                     grains['mem_total'] = int(comps[1].split()[0]) / 1024
-    elif osdata['kernel'] in ('FreeBSD','OpenBSD'):
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD'):
         sysctl = salt.utils.which('sysctl')
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
     elif osdata['kernel'] == 'Windows':
-       for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
-           comps = line.split(':')
-           if not len(comps) > 1:
-               continue
-           if comps[0].strip() == 'Total Physical Memory':
-               grains['mem_total'] = int(comps[1].split()[0].replace(',', ''))
-               break
-
+        for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
+            comps = line.split(':')
+            if not len(comps) > 1:
+                continue
+            if comps[0].strip() == 'Total Physical Memory':
+                # Windows XP use '.' as separator and Windows 2008 Server R2 use ','
+                grains['mem_total'] = int(comps[1].split()[0].replace('.', '').replace(',', ''))
+                break
     return grains
 
 
@@ -194,7 +196,7 @@ def _virtual(osdata):
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
             grains['virtual'] = 'kvm'
-    choices =  ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
+    choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
@@ -239,13 +241,18 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
         sysctl = salt.utils.which('sysctl')
+        kenv = salt.utils.which('kenv')
+        if kenv:
+            product = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv)).strip()
+            if product.startswith('VMware'):
+                grains['virtual'] = 'VMware'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl)).strip()
-            jail  = __salt__['cmd.run']('{0} security.jail.jailed'.format(sysctl)).strip()
+            jail = __salt__['cmd.run']('{0} -n security.jail.jailed'.format(sysctl)).strip()
             if jail:
                 grains['virtual_subtype'] = 'jail'
-        if 'QEMU Virtual CPU' in model:
-            grains['virtual'] = 'kvm'
+            if 'QEMU Virtual CPU' in model:
+                grains['virtual'] = 'kvm'
     return grains
 
 
@@ -257,6 +264,10 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'Darwin')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
+    elif osdata['os'] == 'Windows':
+        grains['ps'] = 'tasklist.exe'
+    elif osdata.get('virtual', '') == 'openvzhn':
+        grains['ps'] = 'vzps -E 0 -efH|cut -b 6-'
     else:
         grains['ps'] = 'ps -efH'
     return grains
@@ -280,6 +291,7 @@ def _linux_platform_data(osdata):
         grains['oscodename'] = oscodename
     return grains
 
+
 def _windows_platform_data(osdata):
     '''
     Use the platform module for as much as we can.
@@ -295,7 +307,7 @@ def _windows_platform_data(osdata):
     #    inputlocale
     #    timezone
     #    windowsdomain
-        
+
     grains = {}
     (osname, hostname, osrelease, osversion, machine, processor) = platform.uname()
     if 'os' not in osdata and osname:
@@ -306,7 +318,7 @@ def _windows_platform_data(osdata):
         grains['osversion'] = osversion
     get_these_grains = {
         'OS Manufacturer': 'osmanufacturer',
-        'System Manufacturer': 'manufacturer', 
+        'System Manufacturer': 'manufacturer',
         'System Model': 'productname',
         'BIOS Version': 'biosversion',
         'OS Name': 'osfullname',
@@ -325,6 +337,14 @@ def _windows_platform_data(osdata):
             grains[get_these_grains[item]] = value
     return grains
 
+
+def id_():
+    '''
+    Return the id
+    '''
+    return {'id': __opts__['id']}
+
+
 def os_data():
     '''
     Return grains pertaining to the operating system
@@ -333,10 +353,12 @@ def os_data():
     if 'os' in os.environ:
         if os.environ['os'].startswith('Windows'):
             grains['os'] = 'Windows'
+            grains['os_family'] = 'Windows'
             grains['kernel'] = 'Windows'
             grains.update(_memdata(grains))
             grains.update(_windows_platform_data(grains))
             grains.update(_windows_cpudata())
+            grains.update(_ps(grains))
             return grains
     grains.update(_kernel())
 
@@ -358,8 +380,10 @@ def os_data():
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
+            grains['os_family'] = 'Arch'
         elif os.path.isfile('/etc/debian_version'):
             grains['os'] = 'Debian'
+            grains['os_family'] = 'Debian'
             if 'lsb_distrib_id' in grains:
                 if 'Ubuntu' in grains['lsb_distrib_id']:
                     grains['os'] = 'Ubuntu'
@@ -368,30 +392,42 @@ def os_data():
                     grains['os'] = 'Ubuntu'
         elif os.path.isfile('/etc/gentoo-release'):
             grains['os'] = 'Gentoo'
+            grains['os_family'] = 'Gentoo'
         elif os.path.isfile('/etc/fedora-release'):
             grains['os'] = 'Fedora'
+            grains['os_family'] = 'RedHat'
         elif os.path.isfile('/etc/mandriva-version'):
             grains['os'] = 'Mandriva'
+            grains['os_family'] = 'Mandriva'
         elif os.path.isfile('/etc/mandrake-version'):
             grains['os'] = 'Mandrake'
+            grains['os_family'] = 'Mandriva'
         elif os.path.isfile('/etc/mageia-version'):
             grains['os'] = 'Mageia'
+            grains['os_family'] = 'Mageia'
         elif os.path.isfile('/etc/meego-version'):
             grains['os'] = 'MeeGo'
+            grains['os_family'] = 'MeeGo'
         elif os.path.isfile('/etc/vmware-version'):
             grains['os'] = 'VMWareESX'
+            grains['os_family'] = 'VMWare'
         elif os.path.isfile('/etc/bluewhite64-version'):
             grains['os'] = 'Bluewhite64'
+            grains['os_family'] = 'Bluewhite'
         elif os.path.isfile('/etc/slamd64-version'):
             grains['os'] = 'Slamd64'
+            grains['os_family'] = 'Slackware'
         elif os.path.isfile('/etc/slackware-version'):
             grains['os'] = 'Slackware'
+            grains['os_family'] = 'Slackware'
         elif os.path.isfile('/etc/enterprise-release'):
+            grains['os_family'] = 'Oracle'
             if os.path.isfile('/etc/ovs-release'):
                 grains['os'] = 'OVS'
             else:
                 grains['os'] = 'OEL'
         elif os.path.isfile('/etc/redhat-release'):
+            grains['os_family'] = 'RedHat'
             data = open('/etc/redhat-release', 'r').read()
             if 'centos' in data.lower():
                 grains['os'] = 'CentOS'
@@ -400,6 +436,7 @@ def os_data():
             else:
                 grains['os'] = 'RedHat'
         elif os.path.isfile('/etc/SuSE-release'):
+            grains['os_family'] = 'Suse'
             data = open('/etc/SuSE-release', 'r').read()
             if 'SUSE LINUX Enterprise Server' in data:
                 grains['os'] = 'SLES'
@@ -414,14 +451,20 @@ def os_data():
         # If the Linux version can not be determined
         if not 'os' in grains:
             grains['os'] = 'Unknown {0}'.format(grains['kernel'])
+            grains['os_family'] = 'Unknown'
     elif grains['kernel'] == 'sunos':
         grains['os'] = 'Solaris'
+        grains['os_family'] = 'Solaris'
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
+        grains['os_family'] = 'VMWare'
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
+        grains['os_family'] = 'MacOS'
+        grains.update(_freebsd_cpudata())
     else:
         grains['os'] = grains['kernel']
+        grains['os_family'] = grains['kernel']
     if grains['kernel'] == 'Linux':
         grains.update(_linux_cpudata())
     elif grains['kernel'] in ('FreeBSD', 'OpenBSD'):
@@ -470,6 +513,7 @@ def path():
     #   path
     return {'path': os.environ['PATH'].strip()}
 
+
 def pythonversion():
     '''
     Return the Python version
@@ -478,6 +522,7 @@ def pythonversion():
     #   pythonversion
     return {'pythonversion': list(sys.version_info)}
 
+
 def pythonpath():
     '''
     Return the Python path
@@ -485,6 +530,7 @@ def pythonpath():
     # Provides:
     #   pythonpath
     return {'pythonpath': sys.path}
+
 
 def saltpath():
     '''
@@ -495,6 +541,7 @@ def saltpath():
     path = os.path.abspath(os.path.join(__file__, os.path.pardir))
     return {'saltpath': os.path.dirname(path)}
 
+
 def saltversion():
     '''
     Return the version of salt
@@ -503,6 +550,7 @@ def saltversion():
     #   saltversion
     from salt import __version__
     return {'saltversion': __version__}
+
 
 # Relatively complex mini-algorithm to iterate over the various
 # sections of dmidecode output and return matches for  specific
@@ -527,7 +575,8 @@ def _dmidecode_data(regex_dict):
 
         # Look at every line for the right section
         for line in out.split('\n'):
-            if not line: continue
+            if not line:
+                continue
             # We've found it, woohoo!
             if re.match(section, line):
                 section_found = True
@@ -544,7 +593,8 @@ def _dmidecode_data(regex_dict):
                 grain = regex_dict[section][item]
                 # Skip to the next iteration if this grain
                 # has been found in the dmidecode output.
-                if grain in ret: continue
+                if grain in ret:
+                    continue
 
                 match = regex.match(line)
 
@@ -582,4 +632,23 @@ def _hw_data(osdata):
             },
         }
         grains.update(_dmidecode_data(linux_dmi_regex))
+    # On FreeBSD /bin/kenv (already in base system) can be used instead of dmidecode
+    elif osdata['kernel'] == 'FreeBSD':
+        kenv = salt.utils.which('kenv')
+        if kenv:
+            grains['biosreleasedate'] = __salt__['cmd.run']('{0} smbios.bios.reldate'.format(kenv)).strip()
+            grains['biosversion'] = __salt__['cmd.run']('{0} smbios.bios.version'.format(kenv)).strip()
+            grains['manufacturer'] = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv)).strip()
+            grains['serialnumber'] = __salt__['cmd.run']('{0} smbios.system.serial'.format(kenv)).strip()
+            grains['productname'] = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv)).strip()
     return grains
+
+
+def get_server_id():
+    '''
+    Provides an integer based on the FQDN of a machine.
+    Useful as server-id in MySQL replication or anywhere else you'll need an ID like this.
+    '''
+    # Provides:
+    #   server_id
+    return {'server_id': abs(hash(__opts__['id']) % (2 ** 31))}
