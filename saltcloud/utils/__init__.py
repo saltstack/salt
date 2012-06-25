@@ -15,6 +15,14 @@ import salt.crypt
 from jinja2 import Template
 import yaml
 
+NSTATES = {
+        0: 'running',
+        1: 'rebooting',
+        2: 'terminated',
+        3: 'pending',
+        }
+
+
 def os_script(os_, vm_=None, opts=None, minion=''):
     '''
     Return the script as a string for the specific os
