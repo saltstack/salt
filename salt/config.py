@@ -112,6 +112,24 @@ def include_config(opts, orig_path):
     return opts
 
 
+def include_config_dir(opts, orig_path):
+    '''
+    Parses extra configuration files specified in an include directory.
+    '''
+    include_dir_path = opts['include_dir']
+    if not os.path.isabs(include_dir_path):
+        include_dir_path = os.path.join(os.path.dirname(orig_path), include_dir_path)
+    if os.path.isdir(include_dir_path):
+        for path in os.listdir(include_dir_path):
+            try:
+                path = os.path.join(include_dir_path, path)
+                opts.update(_read_conf_file(path))
+            except Exception as e:
+                msg = 'Error parsing configuration file: {0} - {1}'
+                log.warn(msg.format(path, e))
+    return opts
+
+
 def prepend_root_dir(opts, path_options):
     '''
     Prepends the options that represent filesystem paths with value of the
@@ -177,6 +195,9 @@ def minion_config(path):
 
     if 'include' in opts:
         opts = include_config(opts, path)
+
+    if 'include_dir' in opts:
+        opts = include_config_dir(opts, path)
 
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
