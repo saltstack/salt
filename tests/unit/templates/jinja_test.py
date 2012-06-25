@@ -43,7 +43,8 @@ class TestSaltCacheLoader(TestCase):
         fc = MockFileClient(loader)
         res = loader.get_source(None, 'hello_simple')
         assert len(res) == 3
-        self.assertEqual(res[0], 'world\n')
+        # res[0] on Windows is unicode and use os.linesep so it works cross OS
+        self.assertEqual(str(res[0]), 'world' + os.linesep)
         tmpl_dir = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), "Template up to date?"
