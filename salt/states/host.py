@@ -10,7 +10,9 @@ The /etc/hosts file can be managed to contain definitions for specific hosts:
       host.present:
         - ip: 192.168.0.42
 
-Or using the "names:" directive, you can put several names for the same IP. (Do not try one name with space-seperated values).
+Or using the "names:" directive, you can put several names for the same IP.
+(Do not try one name with space-seperated values).
+
 .. code-block:: yaml
 
     server1:
@@ -20,7 +22,8 @@ Or using the "names:" directive, you can put several names for the same IP. (Do 
           - server1
           - florida
           
-NOTE: changing the IP or name(s) in the present() function does not cause an update to remove the old entry.
+NOTE: changing the IP or name(s) in the present() function does not cause an
+update to remove the old entry.
 '''
 
 
