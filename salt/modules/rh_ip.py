@@ -733,7 +733,7 @@ def get_network_settings():
     return _read_file(_RH_NETWORK_FILE)
 
 
-def apply_network_settings():
+def apply_network_settings(opts):
     '''
     Apply global network configuration.
 
@@ -741,7 +741,10 @@ def apply_network_settings():
 
         salt '*' ip.apply_network_settings
     '''
-    __salt__['service.restart']('network')
+    if opts['require_reboot'] in _CONFIG_TRUE:
+        log.warning('The network state sls is requiring a reboot of the system to properly apply network configuration.')
+    else:
+        __salt__['service.restart']('network')
 
 
 def build_network_settings(settings):

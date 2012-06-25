@@ -17,6 +17,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - hostname: server1.example.com
         - gateway: 192.168.0.1
         - gatewaydev: eth0
+        - require_reboot: True
 
     eth0:
       network.managed:
@@ -248,7 +249,7 @@ def system(
 
     # Apply global network settings
     try:
-        __salt__['ip.apply_network_settings']()
+        __salt__['ip.apply_network_settings'](kwargs)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message
