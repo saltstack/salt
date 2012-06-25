@@ -142,6 +142,23 @@ master.
 
     acceptance_wait_time: 10
 
+.. conf_minion:: include_dir
+
+``include_dir``
+------------------------
+
+Default: ``not defined``
+
+Specify a directory where extra config files can be loaded from. These
+config files are loaded last, so they will override anything already
+defined in the main configuration file. This can be an absolute path
+or relative to the location of the minion configuration file.
+
+.. code-block:: yaml
+    
+    include_dir: /etc/salt/minion.d
+    include_dir: minion.d
+
 Minion Module Management
 ------------------------
 

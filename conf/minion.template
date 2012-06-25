@@ -49,6 +49,12 @@
 # seconds, between those reconnection attempts.
 #acceptance_wait_time = 10
 
+# Specify a directory where extra config files can be loaded from. These
+# config files are loaded last, so they will override anything already
+# defined in the main configuration file. This can be an absolute path
+# or relative to the location of the minion configuration file.
+#include_dir: minion.d
+
 # When healing a dns_check is run, this is to make sure that the originally
 # resolved dns has not changed, if this is something that does not happen in
 # your environment then set this value to False.
