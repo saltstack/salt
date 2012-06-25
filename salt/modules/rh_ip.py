@@ -532,7 +532,7 @@ def _parse_settings_eth(opts, iface):
                 _raise_error_iface(iface, opts[opt], valid)
 
     return result
-##########
+
 def _parse_network_settings(opts, current):
     '''
     Filters given options and outputs valid settings for
