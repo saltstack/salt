@@ -306,7 +306,7 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'apt-get --just-print upgrade'
+    cmd = 'apt-get --just-print dist-upgrade'
     out = __salt__['cmd.run_stdout'](cmd)
 
     # rexp parses lines that look like the following:
