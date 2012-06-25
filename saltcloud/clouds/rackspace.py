@@ -10,12 +10,13 @@ import os
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
+from libcloud.compute.types import NodeState
 
 # Import salt libs
 import saltcloud.utils
 
 
-def get_conn(vm_):
+def get_conn():
     '''
     Return a conn object for the passed vm data
     '''
@@ -99,7 +100,7 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
-    conn = get_conn(vm_)
+    conn = get_conn()
     kwargs = {}
     kwargs['name'] = vm_['name']
     kwargs['deploy'] = script(vm_)
@@ -112,3 +113,20 @@ def create(vm_):
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
 
+
+def list_nodes():
+    '''
+    Return a list of the vms that are on the provider
+    '''
+    conn = get_conn() 
+    nodes = conn.list_nodes()
+    ret = {}
+    for node in nodes:
+        ret[node.name] = {
+                'id': node.id,
+                'image': node.image,
+                'private_ips': node.private_ips,
+                'public_ips': node.public_ips,
+                'size': node.size,
+                'state': node.state}
+    return ret
