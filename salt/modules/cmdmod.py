@@ -304,7 +304,7 @@ def script_retcode(
             env,
             template,
             retcode=True,
-            **kwargs)
+            **kwargs)['retcode']
 
 def which(cmd):
     '''
