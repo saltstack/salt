@@ -564,16 +564,16 @@ def _parse_network_settings(opts, current):
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
         except:
-            _raise_error_network('hostname', 'server1.example.com')
+            _raise_error_network('hostname', ['server1.example.com'])
+
+    if opts['hostname']:
+        result['hostname'] = opts['hostname']
     else:
-        if opts['hostname']:
-            result['hostname'] = opts['hostname']
-        else:
-            _raise_error_network('hostname', 'server1.example.com')
+        _raise_error_network('hostname', ['server1.example.com'])
 
     for opt in opts:
         if opt not in ['networking', 'hostname']:
-          result[opt] = opts[opt] 
+          result[opt] = opts[opt]
 
     return result
 
@@ -755,14 +755,11 @@ def build_network_settings(settings):
 
         salt '*' ip.build_network_settings <settings>
     '''
-    # Required Values
-    required_network_settings = ['networking','hostname']
-
     # Read current configuration and store default values
     current_network_settings = _parse_rh_config(_RH_NETWORK_FILE)
 
     # Build settings
-    opts = _parse_network_settings(settings,current_network_settings) 
+    opts = _parse_network_settings(settings,current_network_settings)
     template = env.get_template('network.jinja')
     network = template.render(opts)
 
