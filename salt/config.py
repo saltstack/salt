@@ -117,8 +117,18 @@ def include_config_dir(opts, orig_path):
     Parses extra configuration files specified in an include directory.
     '''
     include_dir_path = opts['include_dir']
+    if not include_dir_path:
+        log.warn('Error parsing configuration file: empty value for include_dir')
+        return opts
+
     if not os.path.isabs(include_dir_path):
         include_dir_path = os.path.join(os.path.dirname(orig_path), include_dir_path)
+
+    if not os.path.exists(include_dir_path):
+        msg = 'Error parsing configuration file: include_dir {0} does not exist'
+        log.warn(msg.format(include_dir_path))
+        return opts
+
     if os.path.isdir(include_dir_path):
         for path in os.listdir(include_dir_path):
             try:
@@ -127,6 +137,7 @@ def include_config_dir(opts, orig_path):
             except Exception as e:
                 msg = 'Error parsing configuration file: {0} - {1}'
                 log.warn(msg.format(path, e))
+
     return opts
 
 
