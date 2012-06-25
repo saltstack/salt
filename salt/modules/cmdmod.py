@@ -248,7 +248,7 @@ def script(
     server.
 
     The script will be executed directly, so it can be written in any available
-    programming language and can be a compatible binary executible file.
+    programming language.
 
     The script can also be formated as a template, the default is jinja.
 
@@ -286,11 +286,11 @@ def script_retcode(
     server.
 
     The script will be executed directly, so it can be written in any available
-    programming language and can be a compatible binary executible file.
+    programming language.
 
     The script can also be formated as a template, the default is jinja.
 
-    Only evealuate the script return code and do not block for terminlat output
+    Only evaluate the script return code and do not block for terminal output
 
     CLI Example::
 
