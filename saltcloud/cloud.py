@@ -88,7 +88,7 @@ class Cloud(object):
             for vm_ in self.opts['vm']:
                 if vm_['profile'] == self.opts['profile']:
                     # It all checks out, make the vm
-                    if name in pmap[provider(vm_)]:
+                    if name in pmap[self.provider(vm_)]:
                         # The specified vm already exists, don't make it anew
                         continue
                     vm_['name'] = name
