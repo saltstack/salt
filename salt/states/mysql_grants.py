@@ -2,6 +2,8 @@
 Management of MySQL grants (user permissions).
 ==============================================
 
+NOTE: Ensure that salt.modules.mysql has it's dependency and is properly configured.
+
 The mysql_grants module is used to grant and revoke MySQL permissions.
 
 The ``name`` you pass in purely symbolic and does not have anything to do
