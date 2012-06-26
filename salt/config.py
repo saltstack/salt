@@ -94,18 +94,32 @@ def load_config(opts, path, env_var):
 
 def include_config(opts, orig_path):
     '''
-    Parses an extra configuration file specified in an include list in the
+    Parses extra configuration file(s) specified in an include list in the
     main config file.
     '''
     include = opts.get('include', [])
+
+    # Protect against empty option
+    if not include:
+        log.warn("Error parsing configuration file: 'include' option is empty")
+        return opts
+    
     if isinstance(include, str):
         include = [include]
+
     for path in include:
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(orig_path), path)
+
+        # Catch situation where user typos path in config; also warns for
+        # empty include dir (which might be by design)        
+        if len(glob.glob(path)) == 0:
+            msg = "Warning parsing configuration file: 'include' path/glob '{0}' matches no files"
+            log.warn(msg.format(path))
+
         for fn_ in glob.glob(path):
             try:
-                opts.update(_read_conf_file(path))
+                opts.update(_read_conf_file(fn_))
             except Exception as e:
                 msg = 'Error parsing configuration file: {0} - {1}'
                 log.warn(msg.format(fn_, e))
