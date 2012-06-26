@@ -105,8 +105,7 @@ class Map(Cloud):
     Create a vm stateful map execution object
     '''
     def __init__(self, opts):
-        self.opts = opts
-        self.cloud = saltcloud.cloud.Cloud(self.opts)
+        Cloud.__init__(self, opts)
         self.map = self.read()
 
     def read(self):
