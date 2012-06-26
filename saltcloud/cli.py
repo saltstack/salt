@@ -57,7 +57,7 @@ class SaltCloud(object):
         parser.add_option('-m',
                 '--map',
                 dest='map',
-                default=None,
+                default='',
                 help='Specify a cloud map file to use for deployment')
 
         parser.add_option('-P',
