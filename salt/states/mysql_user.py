@@ -2,6 +2,8 @@
 Management of MySQL users.
 ==========================
 
+NOTE: Ensure that salt.modules.mysql has its dependency and is properly configured.
+
 The mysql_user module is used manage MySQL users.
 
 .. code-block:: yaml
@@ -34,7 +36,8 @@ def present(name,
         The password
 
     password_hash
-        The password in hashed form
+        The password in hashed form. Be sure to quote the password because YAML does't like the *
+        SELECT PASSWORD('mypass') ==> *6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4
     '''
     ret = {'name': name,
            'changes': {},
