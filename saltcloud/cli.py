@@ -12,6 +12,7 @@ Primary interfaces for the salt-cloud system
 # Import python libs
 import optparse
 import os
+import pprint
 
 # Import salt libs
 import saltcloud.config
@@ -66,6 +67,14 @@ class SaltCloud(object):
                 action='store_true',
                 help='Build all of the specified virtual machines in parallel')
 
+        parser.add_option('-Q',
+                '--query',
+                dest='query',
+                default=False,
+                action='store_true',
+                help=('Execute a query and return information about the nodes '
+                      'running on configured cloud providers'))
+
         parser.add_option('-C',
                 '--cloud-config',
                 dest='cloud_config',
@@ -109,9 +118,10 @@ class SaltCloud(object):
         import logging
         # If statement here for when cloud query is added
         import saltcloud.cloud
-        if self.opts.get('names', False) and self.opts['profile']:
-            cloud = saltcloud.cloud.Cloud(self.opts)
-            cloud.run_profile()
+        mapper = saltcloud.cloud.Map(self.opts)
+        if self.opts['query']:
+            pprint.pprint(mapper.map_providers())
+        elif self.opts.get('names', False) and self.opts['profile']:
+            mapper.run_profile()
         elif self.opts['map']:
-            mapper = saltcloud.cloud.Map(self.opts)
             mapper.run_map()
