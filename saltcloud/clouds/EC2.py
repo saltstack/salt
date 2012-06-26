@@ -14,17 +14,14 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 # Import salt libs
 import saltcloud.utils
 
+# Import paramiko
+import paramiko
 
-def get_conn(vm_):
+def get_conn():
     '''
     Return a conn object for the passed vm data
     '''
     prov = 'EC2'
-    if 'location' in vm_:
-        prov += '_{0}'.format(vm_['location'])
-    elif 'location' in __opts__:
-        if __opts__['location']:
-            prov += '_{0}'.format(__opts__['location'])
     if not hasattr(Provider, prov):
         return None
     driver = get_driver(getattr(Provider, 'EC2'))
@@ -60,8 +57,17 @@ def script(vm_):
         os_ = vm_['os']
     if not os_:
         os_ = __opts__['os']
+    deployment = ''
+    for line in saltcloud.utils.os_script(os_).split('\n'):
+        if line.startswith('#'):
+            deployment += '{0}\n'.format(line)
+            continue
+        elif not line:
+            deployment += '{0}\n'.format(line)
+            continue
+        deployment += 'sudo -S {0}\n'.format(line)
     return ScriptDeployment(
-            saltcloud.utils.os_script(os_),
+            deployment,
             name='/home/ec2-user/deployment.sh'
             )
 
@@ -136,9 +142,9 @@ def create(vm_):
     Create a single vm from a data dict
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
-    conn = get_conn(vm_)
+    conn = get_conn()
     kwargs = {'ssh_username': 'ec2-user',
-              'ssh_key': '/root/.ssh/id_rsa'}
+              'ssh_key': __opts__['EC2.private_key']}
     kwargs['name'] = vm_['name']
     kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
@@ -150,6 +156,16 @@ def create(vm_):
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
     data = conn.deploy_node(**kwargs)
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(
+            data.public_ips[0],
+            username=kwargs['ssh_username'],
+            key_filename=kwargs['ssh_key'])
+    chan = ssh.get_transport().open_session()
+    chan.get_pty()
+    chan.exec_command('/home/ec2-user/deployment.sh')
+    print(chan.recv(1024))
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
