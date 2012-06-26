@@ -2,9 +2,10 @@
 Management of MySQL users.
 ==========================
 
-NOTE: Ensure that salt.modules.mysql has its dependency and is properly configured.
+NOTE: This module requires the MySQLdb python module and the proper settings in the minion config file.
+See salt.modules.mysql for more information.
 
-The mysql_user module is used manage MySQL users.
+The mysql_user module is used to manage MySQL users.
 
 .. code-block:: yaml
 
