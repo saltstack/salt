@@ -113,27 +113,47 @@ def securitygroup(vm_):
             )
 
 
+def list_nodes():
+    '''
+    Return a list of the vms that are on the provider
+    '''
+    conn = get_conn() 
+    nodes = conn.list_nodes()
+    ret = {}
+    for node in nodes:
+        ret[node.name] = {
+                'id': node.id,
+                'image': node.image,
+                'private_ips': node.private_ips,
+                'public_ips': node.public_ips,
+                'size': node.size,
+                'state': node.state}
+    return ret
+
+
 def create(vm_):
     '''
     Create a single vm from a data dict
     '''
+    print('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn(vm_)
     kwargs = {'ssh_username': 'ec2-user',
               'ssh_key': '/root/.ssh/id_rsa'}
     kwargs['name'] = vm_['name']
-    print('Setting up deployment script')
     kwargs['deploy'] = script(vm_)
-    print('Getting the image')
     kwargs['image'] = get_image(conn, vm_)
-    print('Getting the size')
     kwargs['size'] = get_size(conn, vm_)
-    print('Getting security data')
     ex_keyname = keyname(vm_)
     if ex_keyname:
         kwargs['ex_keyname'] = ex_keyname
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
-    print('Running deploy')
-    return conn.deploy_node(**kwargs)
+    data = conn.deploy_node(**kwargs)
+    print('Created Cloud VM {0} with the following values:'.format(
+        vm_['name']
+        ))
+    for key, val in data.__dict__.items():
+        print('  {0}: {1}'.format(key, val))
+
 
