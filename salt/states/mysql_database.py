@@ -2,8 +2,10 @@
 Management of MySQL databases (schemas).
 ========================================
 
+NOTE: Ensure that salt.modules.mysql has its dependency and is properly configured.
+
 The mysql_database module is used to create and manage MySQL databases.
-Databases can be set as either absent or present
+Databases can be set as either absent or present.
 
 .. code-block:: yaml
 
