@@ -415,7 +415,7 @@ Default: ``not defined``
 The minion can include configuration from other files. To enable this,
 pass a list of paths to this option. The paths can be either relative or
 absolute; if relative, they are considered to be relative to the directory
-the main minion configuration file lives in . Paths can make use of 
+the main minion configuration file lives in. Paths can make use of 
 shell-style globbing. If no files are matched by a path passed to this
 option then the minion will log a warning message.
 
