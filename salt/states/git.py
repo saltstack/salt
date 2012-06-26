@@ -37,13 +37,13 @@ def latest(name,
     name
         Address of the remote repository as passed to "git clone"
     rev
-        The remote branch or revision to checkout after clone / before update
+        The remote branch, tag, or revision ID to checkout after clone / before update
     target
         Name of the target directory where repository is about to be cloned
     runas
         Name of the user performing repository management operations
     force
-        Force git to clone into pre-existing directories (deletes contnents)
+        Force git to clone into pre-existing directories (deletes contents)
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
