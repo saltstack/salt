@@ -30,6 +30,25 @@ class Cloud(object):
             if '{0}.create'.format(self.opts['provider']) in self.clouds:
                 return self.opts['provider']
 
+    def map_providers(self):
+        '''
+        Return a mapping of what named vms are running on what vm providers
+        based on what providers are defined in the configs and vms
+        '''
+        provs = set()
+        pmap = {}
+        for vm_ in self.opts['vm']:
+            provs.add(self.provider(vm_))
+        for prov in provs:
+            fun = '{0}.list_nodes'.format(prov)
+            if not fun in self.clouds:
+                print('Public cloud provider {0} is not available'.format(
+                    self.provider(vm_))
+                    )
+                continue
+            pmap[prov] = self.clouds[fun]()
+        return pmap
+
     def create_all(self):
         '''
         Create/Verify the vms in the vm data
@@ -59,9 +78,14 @@ class Cloud(object):
         Parse over the options passed on the command line and determine how to
         handle them
         '''
+        pmap = self.map_providers()
         for name in self.opts['names']:
             for vm_ in self.opts['vm']:
                 if vm_['profile'] == self.opts['profile']:
+                    # It all checks out, make the vm
+                    if name in pmap[provider(vm_)]:
+                        # The specified vm already exists, don't make it anew
+                        continue
                     vm_['name'] = name
                     if self.opts['parallel']:
                         multiprocessing.Process(
