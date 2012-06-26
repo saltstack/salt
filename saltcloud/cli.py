@@ -108,12 +108,10 @@ class SaltCloud(object):
             salt.log.set_logger_level(name, level)
         import logging
         # If statement here for when cloud query is added
-
+        import saltcloud.cloud
         if self.opts.get('names', False) and self.opts['profile']:
-            import saltcloud.cloud
             cloud = saltcloud.cloud.Cloud(self.opts)
             cloud.run_profile()
         elif self.opts['map']:
-            import saltcloud.mapper
-            mapper = saltcloud.mapper.Map(self.opts)
+            mapper = saltcloud.cloud.Map(self.opts)
             mapper.run_map()
