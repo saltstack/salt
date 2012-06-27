@@ -1013,7 +1013,7 @@ class State(object):
         Enforce the states in a template
         '''
         high = compile_template(
-            template, self.renderers, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high
@@ -1023,7 +1023,7 @@ class State(object):
         Enforce the states in a template, pass the template as a string
         '''
         high = compile_template_str(
-            template, self.renderers, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high
