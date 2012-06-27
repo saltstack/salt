@@ -66,14 +66,16 @@ def verify_socket(interface, pub_port, ret_port):
     Attempt to bind to the sockets to verify that they are available
     '''
     result = False
-    for port in [pub_port, ret_port]:
-        try:
-            tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tcpsock.bind((interface, int(port)))
-            tcpsock.close()
-            return True
-        except Exception:
-            return False
+    try:
+        pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        pubsock.bind((interface, int(pub_port)))
+        pubsock.close()
+        retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        retsock.bind((interface, int(ret_port)))
+        retsock.close()
+        return True
+    except Exception:
+        return False
 
 
 def verify_env(dirs, user):
