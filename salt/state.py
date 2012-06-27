@@ -343,7 +343,10 @@ class State(object):
             # Check to see if the service has a mod_watch function, if it does
             # not, then just require
             if not '{0}.mod_watch'.format(data['state']) in self.states:
-                data['require'] = data.pop('watch')
+                if 'require' in data:
+                    data['require'].extend(data.pop('watch'))
+                else:
+                    data['require'] = data.pop('watch')
                 reqdec = 'require'
             else:
                 reqdec = 'watch'
