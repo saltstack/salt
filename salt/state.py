@@ -342,6 +342,9 @@ class State(object):
         if 'watch' in data:
             # Check to see if the service has a mod_watch function, if it does
             # not, then just require
+            # to just require extend the require statement with the contents
+            # of watch so that the mod_watch function is not called and the
+            # requisite capability is still used
             if not '{0}.mod_watch'.format(data['state']) in self.states:
                 if 'require' in data:
                     data['require'].extend(data.pop('watch'))
