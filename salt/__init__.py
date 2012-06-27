@@ -13,7 +13,7 @@ import optparse
 try:
     import salt.config
     from salt.utils.process import set_pidfile
-    from salt.utils.verify import check_user, verify_env
+    from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
@@ -101,6 +101,14 @@ class Master(object):
         import logging
         log = logging.getLogger(__name__)
         # Late import so logging works correctly
+        if not verify_socket(
+                self.opts['interface'],
+                self.opts['publish_port'],
+                self.opts['ret_port']
+                ):
+            log.critical('The ports are not available to bind')
+            sys.exit(4)
+
         import salt.master
         master = salt.master.Master(self.opts)
         if self.cli['daemon']:
