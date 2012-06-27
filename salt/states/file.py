@@ -1668,17 +1668,14 @@ def rename(name, source, force=False, makedirs=False):
         The location of the file to rename to
 
     source
-        The location 
+        The location of the file to move to the location specified with name
 
-    source_hash:
-        This can be either a file which contains a source hash string for
-        the source, or a source hash string. The source hash string is the
-        hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+    force:
+        If the target location is present then the file will not be moved,
+        specify "force: True" to overwrite the target file
 
-    user
-        The user to own the file, this defaults to the user salt is running as
-        on the minion
+    makedirs:
+        If the target subdirectories don't exist create them
 
     '''
     ret = {
@@ -1709,7 +1706,16 @@ def rename(name, source, force=False, makedirs=False):
                 )
         ret['result'] = None
         return ret
-
+    # Run makedirs
+    dname = os.path.dirname(name)
+    if not os.path.isdir(dname):
+        if makedirs:
+            os.makedirs(dname)
+        else:
+            return _error(
+                    ret,
+                    'The target directory {0} is not present'.format(dname))
+    # All tests pass, move the file into place
     try:
         shutil.move(source, name)
     except (IOError, OSError):
