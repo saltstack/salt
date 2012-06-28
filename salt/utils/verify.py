@@ -7,6 +7,7 @@ import re
 import sys
 import stat
 import getpass
+import socket
 import logging
 
 log = logging.getLogger(__name__)
@@ -58,6 +59,23 @@ def zmq_version():
             'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
             'org/pipermail/zeromq-dev/2011-June/012094.html')
     return False
+
+
+def verify_socket(interface, pub_port, ret_port):
+    '''
+    Attempt to bind to the sockets to verify that they are available
+    '''
+    result = False
+    try:
+        pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        pubsock.bind((interface, int(pub_port)))
+        pubsock.close()
+        retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        retsock.bind((interface, int(ret_port)))
+        retsock.close()
+        return True
+    except Exception:
+        return False
 
 
 def verify_env(dirs, user):

@@ -262,7 +262,7 @@ Salt Caller API
 
 The Salt minion caller api can be used to simplify the execution and use of
 minion elements. The caller api is useful for accessing the Salt api, direct
-access to the state functions, using the matcher interface on a single minion
+access to the state functions, using the matcher interface on a single minion,
 and as an api for the peer interface. Using the api is fairly straightforward:
 
 .. code-block:: yaml

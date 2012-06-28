@@ -2,8 +2,11 @@
 Management of MySQL databases (schemas).
 ========================================
 
+NOTE: This module requires the MySQLdb python module and the proper settings in the minion config file.
+See salt.modules.mysql for more information.
+
 The mysql_database module is used to create and manage MySQL databases.
-Databases can be set as either absent or present
+Databases can be set as either absent or present.
 
 .. code-block:: yaml
 

@@ -234,6 +234,78 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
             )['retcode']
 
 
+def script(
+        source,
+        cwd=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        env='base',
+        template='jinja',
+        **kwargs):
+    '''
+    Download a script from a remote location and execute the script locally.
+    The script can be located on the salt master file server or on an http/ftp
+    server.
+
+    The script will be executed directly, so it can be written in any available
+    programming language.
+
+    The script can also be formated as a template, the default is jinja.
+
+    CLI Example::
+
+        salt '*' cmd.script salt://scripts/runme.sh
+    '''
+    fd_, path = tempfile.mkstemp()
+    os.close(fd_)
+    fn_ = __salt__['cp.get_template'](source, path, template, env, **kwargs)
+    os.chmod(path, 320)
+    ret = _run(
+            path,
+            cwd=cwd,
+            quiet=kwargs.get('quiet', False),
+            runas=runas,
+            shell=shell,
+            retcode=kwargs.get('retcode', False),
+            )
+    os.remove(path)
+    return ret
+
+
+def script_retcode(
+        source,
+        cwd=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        env='base',
+        template='jinja',
+        **kwargs):
+    '''
+    Download a script from a remote location and execute the script locally.
+    The script can be located on the salt master file server or on an http/ftp
+    server.
+
+    The script will be executed directly, so it can be written in any available
+    programming language.
+
+    The script can also be formated as a template, the default is jinja.
+
+    Only evaluate the script return code and do not block for terminal output
+
+    CLI Example::
+
+        salt '*' cmd.script_retcode salt://scripts/runme.sh
+    '''
+    return script(
+            source,
+            cwd,
+            runas,
+            shell,
+            env,
+            template,
+            retcode=True,
+            **kwargs)['retcode']
+
 def which(cmd):
     '''
     Returns the path of an executable available on the minion, None otherwise

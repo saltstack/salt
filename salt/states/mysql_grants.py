@@ -2,6 +2,9 @@
 Management of MySQL grants (user permissions).
 ==============================================
 
+NOTE: This module requires the MySQLdb python module and the proper settings in the minion config file.
+See salt.modules.mysql for more information.
+
 The mysql_grants module is used to grant and revoke MySQL permissions.
 
 The ``name`` you pass in purely symbolic and does not have anything to do
