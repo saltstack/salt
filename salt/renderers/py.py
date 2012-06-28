@@ -1,7 +1,7 @@
 '''
 Pure python state renderer
 
-The sls file should contain a function called ``sls`` which returns high state
+The sls file should contain a function called ``run`` which returns high state
 data
 '''
 
