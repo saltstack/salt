@@ -18,7 +18,7 @@ The mysql_user module is used to manage MySQL users.
 
 def __virtual__():
     '''
-    Olny load if the mysql module is in __salt__
+    Only load if the mysql module is in __salt__
     '''
     return 'mysql_user' if 'mysql.user_create' in __salt__ else False
 

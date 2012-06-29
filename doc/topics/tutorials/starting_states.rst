@@ -462,4 +462,18 @@ This clearly illustrates, that not only is using the YAML renderer a wise
 decision as the default, but that unbridled power can be obtained where
 needed by using a pure Python SLS.
 
+
+Running and debugging salt states.
+----------------------------------
+
+after writing out your top.sls file, to run it you call
+``salt '*' state.highstate``. If you get back just the hostnames with 
+a : after, but no return, then chances are there is a problem with the sls
+files.  To debug these, to see what's going on, and see the errors, use the
+``salt-call`` command like so: ``salt-call state.highstate -l debug``. This
+should help you figure out what's going wrong.  You can also start the minions
+in the foreground in debug mode, as a possible way to help debug as well.
+To start the minion in debug mode call it like this: ``salt-minion -l debug``.
+
+
 Now onto the :doc:`States tutorial, part 1</topics/tutorials/states_pt1>`.
