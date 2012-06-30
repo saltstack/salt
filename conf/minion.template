@@ -1,4 +1,3 @@
-# DO NOT MODIFY THIS FILE.  Copy it to: /etc/salt/minion
 ##### Primary configuration settings #####
 ##########################################
 # Set the location of the salt master server, if the master server cannot be
