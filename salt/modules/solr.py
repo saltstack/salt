@@ -632,7 +632,7 @@ def is_replication_enabled(host=None, core_name=None):
     ret = _get_return_dict()
     success = True
     # since only slaves can call this let's check the config:
-    if self._is_master() and is_none(host) is None:
+    if _is_master() and host is None:
         errors = ['Only "slave" minions can run "is_replication_enabled"']
         return ret.update({'success': False, 'errors': errors})
 
@@ -642,7 +642,7 @@ def is_replication_enabled(host=None, core_name=None):
             slave = resp['data']['details']['slave']
             # we need to initialize this to false in case there is an error
             # on the master and we can't get this info.
-            replication_enabled = 'false'
+            enabled = 'false'
             master_url = slave['masterUrl']
             #check for errors on the slave
             if 'ERROR' in slave:

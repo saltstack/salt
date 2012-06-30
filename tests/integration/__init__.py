@@ -5,11 +5,14 @@ Set up the Salt integration test suite
 # Import Python libs
 import multiprocessing
 import os
-import pwd
 import sys
 import shutil
 import signal
 import subprocess
+try:
+    import pwd
+except ImportError:
+    pass
 
 # Import Salt libs
 import salt
