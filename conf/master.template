@@ -1,4 +1,3 @@
-# DO NOT MODIFY THIS FILE.  Copy it to: /etc/salt/master
 ##### Primary configuration settings #####
 ##########################################
 # The address of the interface to bind to

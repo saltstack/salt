@@ -617,6 +617,16 @@ class AESFuncs(object):
                 load['opts']['id'],
                 load['opts']['environment'])
 
+    def _minion_event(self, load):
+        '''
+        Receive an event from the minion and fire it on the master event
+        interface
+        '''
+        if 'id' not in load or 'tag' not in load or 'data':
+            return False
+        tag = '{0}_{1}'.format(load['tag'], load['id'])
+        return self.event.fire_event(load['data'], tag)
+
     def _return(self, load):
         '''
         Handle the return data sent from the minions

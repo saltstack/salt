@@ -833,7 +833,7 @@ class LocalClient(object):
             # forms possible
             minions = tgt
         elif not minions:
-            return {'jid': '0',
+            return {'jid': None,
                     'minions': minions}
 
         # Generate the standard keyword args to feed to format_payload
@@ -934,4 +934,3 @@ class Caller(object):
         func = self.sminion.functions[fun]
         args, kw = salt.minion.detect_kwargs(func, args, kwargs)
         return func(*args, **kw)
-

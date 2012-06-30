@@ -691,7 +691,10 @@ class SaltCall(object):
         Parse the command line arguments
         '''
         usage = "%prog [options] <function> [arguments]"
-        parser = optparse.OptionParser(version='%%prog %s'.format(VERSION), usage=usage)
+        parser = optparse.OptionParser(
+                version='salt-call {0}'.format(VERSION),
+                usage=usage
+                )
 
         parser.add_option('-g',
                 '--grains',

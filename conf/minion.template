@@ -1,4 +1,3 @@
-# DO NOT MODIFY THIS FILE.  Copy it to: /etc/salt/minion
 ##### Primary configuration settings #####
 ##########################################
 # Set the location of the salt master server, if the master server cannot be
@@ -54,6 +53,26 @@
 # your environment then set this value to False.
 #dns_check: True
 
+# The minion can include configuration from other files. To enable this,
+# pass a list of paths to this option. The paths can be either relative or
+# absolute; if relative, they are considered to be relative to the directory
+# the main minion configuration file lives in (this file). Paths can make use
+# of shell-style globbing. If no files are matched by a path passed to this
+# option then the minion will log a warning message.
+# 
+# Examples:
+# Include any config files in minion.d (minion.d is a directory
+# in the same directory as the main minion config file)
+#include: minion.d/*
+# 
+# Include a config file from some other path:
+#include: /etc/salt/extra_config
+#
+# Include config from several files and directories:
+#include:
+# - /etc/salt/extra_config
+# - /etc/roles/webserver
+# - minion.d/*
 
 #####   Minion module management     #####
 ##########################################

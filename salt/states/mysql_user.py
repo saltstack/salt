@@ -2,7 +2,10 @@
 Management of MySQL users.
 ==========================
 
-The mysql_user module is used manage MySQL users.
+NOTE: This module requires the MySQLdb python module and the proper settings in the minion config file.
+See salt.modules.mysql for more information.
+
+The mysql_user module is used to manage MySQL users.
 
 .. code-block:: yaml
 
@@ -15,7 +18,7 @@ The mysql_user module is used manage MySQL users.
 
 def __virtual__():
     '''
-    Olny load if the mysql module is in __salt__
+    Only load if the mysql module is in __salt__
     '''
     return 'mysql_user' if 'mysql.user_create' in __salt__ else False
 
@@ -34,7 +37,8 @@ def present(name,
         The password
 
     password_hash
-        The password in hashed form
+        The password in hashed form. Be sure to quote the password because YAML does't like the *
+        SELECT PASSWORD('mypass') ==> *6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4
     '''
     ret = {'name': name,
            'changes': {},

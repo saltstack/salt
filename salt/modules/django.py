@@ -4,6 +4,7 @@ Manage Django sites
 
 import os
 
+
 def _get_django_admin(bin_env):
     '''
     Return the django admin
@@ -11,7 +12,7 @@ def _get_django_admin(bin_env):
     if not bin_env:
         da = 'django-admin.py'
     else:
-        # try to get pip bin from env
+        # try to get django-admin.py bin from env
         if os.path.exists(os.path.join(bin_env, 'bin', 'django-admin.py')):
             da = os.path.join(bin_env, 'bin', 'django-admin.py')
         else:
@@ -39,7 +40,6 @@ def command(settings_module,
     for key, value in kwargs.items():
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
-
     return __salt__['cmd.run'](cmd)
 
 
@@ -60,17 +60,20 @@ def syncdb(settings_module,
 
         salt '*' django.syncdb settings.py
     '''
-    da = _get_django_admin(bin_env)
-    cmd = '{0} syncdb --settings={1}'.format(da, settings_module)
+    args = []
+    kwargs = {}
     if migrate:
-        cmd = '{0} --migrate'.format(cmd)
+        args.append('migrate')
     if database:
-        cmd = '{0} --database={1}'.format(cmd, database)
-    if pythonpath:
-        cmd = '{0} --pythonpath={1}'.format(cmd, pythonpath)
+        kwargs['database'] = database
     if noinput:
-        cmd = '{0} --noinput'.format(cmd)
-    return __salt__['cmd.run'](cmd)
+        args.append('noinput')
+
+    return command(settings_module,
+                  'syncdb',
+                   bin_env,
+                   pythonpath,
+                   *args, **kwargs)
 
 
 def createsuperuser(settings_module,
@@ -88,14 +91,18 @@ def createsuperuser(settings_module,
 
         salt '*' django.createsuperuser settings.py user user@example.com
     '''
-    da = _get_django_admin(bin_env)
-    cmd = "{0} createsuperuser --settings={1} --noinput --email='{2}' --username={3}".format(
-            da, settings_module, email, username)
+    args = ['noinput']
+    kwargs = dict(
+        email=email,
+        username=username,
+    )
     if database:
-        cmd = '{0} --database={1}'.format(cmd, database)
-    if pythonpath:
-        cmd = '{0} --pythonpath={1}'.format(cmd, pythonpath)
-    return __salt__['cmd.run'](cmd)
+        kwargs['database'] = database
+    return command(settings_module,
+                   'createsuperuser',
+                   bin_env,
+                   pythonpath,
+                   *args, **kwargs)
 
 
 def loaddata(settings_module,
@@ -138,25 +145,26 @@ def collectstatic(settings_module,
     that can easily be served in production.
 
     CLI Example::
-    
+
         salt '*' django.collectstatic settings.py
     '''
-    da = _get_django_admin(bin_env)
-    cmd = '{0} collectstatic --settings={1} --noinput'.format(
-            da, settings_module)
+    args = []
+    kwargs = {}
     if no_post_process:
-        cmd = '{0} --no-post-process'.format(cmd)
+        args.append('no-post-process')
     if ignore:
-        cmd = '{0} --ignore='.format(cmd, ignore)
+        kwargs['ignore'] = ignore
     if dry_run:
-        cmd = '{0} --dry-run'.format(cmd)
+        args.append('dry-run')
     if clear:
-        cmd = '{0} --clear'.format(cmd)
+        args.append('clear')
     if link:
-        cmd = '{0} --link'.format(cmd)
+        args.append('link')
     if no_default_ignore:
-        cmd = '{0} --no-default-ignore'.format(cmd)
-    if pythonpath:
-        cmd = '{0} --pythonpath={1}'.format(cmd, pythonpath)
+        args.append('no-default-ignore')
 
-    return __salt__['cmd.run'](cmd)
+    return command(settings_module,
+                   'collectstatic',
+                   bin_env,
+                   pythonpath,
+                   *args, **kwargs)
