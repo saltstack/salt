@@ -2,12 +2,10 @@
 Tests for the file state
 '''
 # Import python libs
-import os
-#
+
 # Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
+import tempfile
 
 
 class CMDTest(integration.ModuleCase):
@@ -18,7 +16,8 @@ class CMDTest(integration.ModuleCase):
         '''
         cmd.run
         '''
-        ret = self.run_state('cmd.run', name='ls', cwd='/')
+
+        ret = self.run_state('cmd.run', name='ls', cwd=tempfile.gettempdir())
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
@@ -26,6 +25,7 @@ class CMDTest(integration.ModuleCase):
         '''
         cmd.run test interface
         '''
-        ret = self.run_state('cmd.run', name='ls', test=True)
+        ret = self.run_state('cmd.run', name='ls',
+                             cwd=tempfile.gettempdir(), test=True)
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
