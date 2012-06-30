@@ -198,9 +198,15 @@ def chown(path, user, group):
     gid = group_to_gid(group)
     err = ''
     if uid == '':
-        err += 'User does not exist\n'
+        if user != '':
+            err += 'User does not exist\n'
+        else:
+            uid = -1
     if gid == '':
-        err += 'Group does not exist\n'
+        if group != '':
+            err += 'Group does not exist\n'
+        else:
+            gid = -1
     if not os.path.exists(path):
         err += 'File not found'
     if err:
