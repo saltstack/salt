@@ -14,12 +14,16 @@ from distutils.sysconfig import get_python_lib, PREFIX
 # Use setuptools if available, else fallback to distutils.
 # As an example, setuptools is available in virtualenvs and buildouts through
 # Setuptools or Distribute.
-try:
-    from setuptools import setup
-    with_setuptools = True
-except ImportError:
+with_setuptools = False
+if 'SETUPTOOLS' in os.environ:
+    try:
+        from setuptools import setup
+        with_setuptools = True
+    except:
+        with_setuptools = False
+
+if with_setuptools == False:
     from distutils.core import setup
-    with_setuptools = False
 
 
 exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
