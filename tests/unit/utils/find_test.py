@@ -192,11 +192,19 @@ class TestFind(TestCase):
     def test_group_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.GroupOption, 'group', 'notexist')
 
-        option = salt.utils.find.GroupOption('group', 'root')
+        if sys.platform == 'darwin':
+            group_name = 'wheel'
+        else:
+            group_name = 'root'
+        option = salt.utils.find.GroupOption('group', group_name)
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
     def test_group_option_match(self):
-        option = salt.utils.find.GroupOption('group', 'root')
+        if sys.platform == 'darwin':
+            group_name = 'wheel'
+        else:
+            group_name = 'root'
+        option = salt.utils.find.GroupOption('group', group_name)
         self.assertEqual(option.match('', '', [0] * 6), True)
 
         option = salt.utils.find.GroupOption('group', '500')
@@ -331,7 +339,11 @@ class TestPrintOption(TestCase):
         self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
         option = salt.utils.find.PrintOption('print', 'group')
-        self.assertEqual(option.execute('', [0] * 10), 'root')
+        if sys.platform == 'darwin':
+            group_name = 'wheel'
+        else:
+            group_name = 'root'
+        self.assertEqual(option.execute('', [0] * 10), group_name)
 
         # This seems to be not working in Ubuntu 12.04 32 bit
         #option = salt.utils.find.PrintOption('print', 'group')
@@ -408,7 +420,11 @@ class TestFinder(TestCase):
                     'PrintOption')
         self.assertEqual(str(finder.criteria[0].__class__)[-13:-2], 'OwnerOption')
 
-        finder = salt.utils.find.Finder({'group': 'root'})
+        if sys.platform == 'darwin':
+            group_name = 'wheel'
+        else:
+            group_name = 'root'
+        finder = salt.utils.find.Finder({'group': group_name})
         self.assertEqual(str(finder.actions[0].__class__)[-13:-2],
                     'PrintOption')
         self.assertEqual(str(finder.criteria[0].__class__)[-13:-2], 'GroupOption')
