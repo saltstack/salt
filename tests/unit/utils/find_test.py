@@ -366,7 +366,6 @@ class TestPrintOption(TestCase):
         else:
             group_name = 'root'
         self.assertEqual(option.execute('', [0] * 10), group_name)
-        self.assertEqual(option.execute('', [0] * 10), 'root')
 
         # This seems to be not working in Ubuntu 12.04 32 bit
         #option = salt.utils.find.PrintOption('print', 'group')
