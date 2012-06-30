@@ -26,6 +26,9 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
+__dflt_log_datefmt = '%H:%M:%S'
+__dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
+__dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 def _validate_file_roots(file_roots):
     '''
@@ -86,8 +89,12 @@ def load_config(opts, path, env_var):
             opts.update(_read_conf_file(path))
             opts['conf_file'] = path
         except Exception as e:
+            import salt.log
             msg = 'Error parsing configuration file: {0} - {1}'
-            log.warn(msg.format(path, e))
+            if salt.log.is_console_configured():
+                log.warn(msg.format(path, e))
+            else:
+                print msg.format(path, e)
     else:
         log.debug('Missing configuration file: {0}'.format(path))
 
@@ -164,6 +171,10 @@ def minion_config(path):
             'sub_timeout': 60,
             'log_file': '/var/log/salt/minion',
             'log_level': 'warning',
+            'log_level_logfile': None,
+            'log_datefmt': __dflt_log_datefmt,
+            'log_fmt_console': __dflt_log_fmt_console,
+            'log_fmt_logfile': __dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
@@ -242,6 +253,10 @@ def master_config(path):
             'job_cache': True,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
+            'log_level_logfile': None,
+            'log_datefmt': __dflt_log_datefmt,
+            'log_fmt_console': __dflt_log_fmt_console,
+            'log_fmt_logfile': __dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],

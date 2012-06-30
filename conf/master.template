@@ -231,9 +231,21 @@
 #log_file: /var/log/salt/master
 #
 # The level of messages to send to the log file.
-# One of 'info', 'quiet', 'critical', 'error', 'debug', 'warning'.
+# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 # Default: 'warning'
 #log_level: warning
+#log_level_logfile:
+#
+# The date and time format used in log messages. Allowed date/time formating
+# can be seen here:
+#	http://docs.python.org/library/time.html#time.strftime
+#log_datefmt: '%H:%M:%S'
+#
+# The format of the console logging messages. Allowed formatting options can
+# be seen here:
+#	http://docs.python.org/library/logging.html#logrecord-attributes
+#log_fmt_console: '[%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 #
 # Logger levels can be used to tweak specific loggers logging levels.
 # For example, if you want to have the salt library at the 'warning' level,
