@@ -34,7 +34,11 @@ def mako(sfn, string=False, **kwargs):
         fd_, tgt = tempfile.mkstemp()
         os.close(fd_)
         if 'context' in kwargs:
-            passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
+            passthrough = (
+                kwargs['context']
+                if isinstance(kwargs['context'], dict)
+                else {}
+            )
         for kwarg in kwargs:
             if kwarg == 'context':
                 continue
@@ -81,7 +85,11 @@ def jinja(sfn, string=False, **kwargs):
         fd_, tgt = tempfile.mkstemp()
         os.close(fd_)
         if 'context' in kwargs:
-            passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
+            passthrough = (
+                kwargs['context']
+                if isinstance(kwargs['context'], dict)
+                else {}
+            )
         for kwarg in kwargs:
             if kwarg == 'context':
                 continue

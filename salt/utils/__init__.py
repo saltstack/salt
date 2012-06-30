@@ -114,9 +114,15 @@ def daemonize():
                     0,
                     'runas',
                     executablepath,
-                    os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
+                    os.path.join(
+                        pypath[0],
+                        os.sep,
+                        pypath[1],
+                        'Lib\\site-packages\\salt\\utils\\saltminionservice.py'
+                    ),
                     os.path.join(pypath[0], os.sep, pypath[1]),
-                    0)
+                    0
+                )
                 sys.exit(0)
             else:
                 from . import saltminionservice
@@ -128,7 +134,11 @@ def daemonize():
                     status = win32serviceutil.QueryServiceStatus(servicename)
                 except win32service.error as details:
                     if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
-                        saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
+                        saltminionservice.instart(
+                            saltminionservice.MinionService,
+                            servicename,
+                            'Salt Minion'
+                        )
                         sys.exit(0)
                 if status[1] == win32service.SERVICE_RUNNING:
                     win32serviceutil.StopServiceWithDeps(servicename)

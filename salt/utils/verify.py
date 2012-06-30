@@ -106,7 +106,8 @@ def verify_env(dirs, user):
                     os.chown(dir_, uid, gid)
                 os.umask(cumask)
             except OSError as e:
-                sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
+                msg = 'Failed to create directory path "{0}" - {1}\n'
+                sys.stderr.write(msg.format(dir_, e))
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
@@ -144,7 +145,8 @@ def verify_env(dirs, user):
             if os.access(dir_, os.W_OK):
                 os.chmod(dir_, 448)
             else:
-                msg = 'Unable to securely set the permissions of "{0}".'.format(dir_)
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
                 log.critical(msg)
     # Run the extra verification checks
     zmq_version()
