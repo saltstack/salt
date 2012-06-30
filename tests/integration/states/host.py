@@ -21,7 +21,9 @@ class HostTest(integration.ModuleCase):
         '''
         host.present
         '''
-        ret = self.run_state('host.present', name='spam.bacon', ip='10.10.10.10')
+        ret = self.run_state(
+            'host.present', name='spam.bacon', ip='10.10.10.10'
+        )
         result = self.state_result(ret)
         self.assertTrue(result)
         with open(HFILE) as fp_:

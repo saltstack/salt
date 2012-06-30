@@ -25,7 +25,9 @@ class TestGemModule(TestCase):
                         {'rvm.is_installed': MagicMock(return_value=True),
                          'rvm.do': mock}):
             gem._gem("install rails", ruby="1.9.3")
-            mock.assert_called_once_with("1.9.3", "gem install rails", runas=None)
+            mock.assert_called_once_with(
+                "1.9.3", "gem install rails", runas=None
+            )
 
     def test_list(self):
         output = '''

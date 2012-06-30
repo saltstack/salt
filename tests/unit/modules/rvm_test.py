@@ -17,7 +17,9 @@ class TestRvmModule(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm._rvm("install", "1.9.3")
-            mock.assert_called_once_with("/usr/local/rvm/bin/rvm install 1.9.3", runas=None)
+            mock.assert_called_once_with(
+                "/usr/local/rvm/bin/rvm install 1.9.3", runas=None
+            )
 
     def test__rvm_do(self):
         mock = MagicMock(return_value=None)

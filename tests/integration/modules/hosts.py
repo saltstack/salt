@@ -62,7 +62,9 @@ class HostsModuleTest(integration.ModuleCase):
         hosts.get_ip
         '''
         self.__clean_hosts()
-        self.assertEqual(self.run_function('hosts.get_ip', ['myname']), '127.0.0.1')
+        self.assertEqual(
+            self.run_function('hosts.get_ip', ['myname']), '127.0.0.1'
+        )
         self.assertEqual(self.run_function('hosts.get_ip', ['othername']), '')
         self.__clear_hosts()
         self.assertEqual(self.run_function('hosts.get_ip', ['othername']), '')
@@ -72,18 +74,31 @@ class HostsModuleTest(integration.ModuleCase):
         hosts.get_alias
         '''
         self.__clean_hosts()
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), ['localhost', 'myname'])
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.2']), [])
+        self.assertEqual(
+            self.run_function('hosts.get_alias', ['127.0.0.1']),
+            ['localhost', 'myname']
+        )
+        self.assertEqual(
+            self.run_function('hosts.get_alias', ['127.0.0.2']),
+            []
+        )
         self.__clear_hosts()
-        self.assertEqual(self.run_function('hosts.get_alias', ['127.0.0.1']), [])
+        self.assertEqual(
+            self.run_function('hosts.get_alias', ['127.0.0.1']),
+            []
+        )
 
     def test_has_pair(self):
         '''
         hosts.has_pair
         '''
         self.__clean_hosts()
-        self.assertTrue(self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']))
-        self.assertFalse(self.run_function('hosts.has_pair', ['127.0.0.1', 'othername']))
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
+        )
+        self.assertFalse(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'othername'])
+        )
 
     def test_set_host(self):
         '''
@@ -91,10 +106,15 @@ class HostsModuleTest(integration.ModuleCase):
         '''
         self.__clean_hosts()
         assert self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
-        self.assertTrue(self.run_function('hosts.has_pair', ['192.168.1.123', 'newip']))
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
+        )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
         assert self.run_function('hosts.set_host', ['127.0.0.1', 'localhost'])
-        self.assertFalse(self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']), 'should remove second entry')
+        self.assertFalse(
+            self.run_function('hosts.has_pair', ['127.0.0.1', 'myname']),
+            'should remove second entry'
+        )
 
     def test_add_host(self):
         '''
@@ -102,9 +122,13 @@ class HostsModuleTest(integration.ModuleCase):
         '''
         self.__clean_hosts()
         assert self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
-        self.assertTrue(self.run_function('hosts.has_pair', ['192.168.1.123', 'newip']))
+        self.assertTrue(
+            self.run_function('hosts.has_pair', ['192.168.1.123', 'newip'])
+        )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
-        assert self.run_function('hosts.add_host', ['127.0.0.1', 'othernameip'])
+        assert self.run_function(
+            'hosts.add_host', ['127.0.0.1', 'othernameip']
+        )
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
 
     def test_rm_host(self):
@@ -126,14 +150,24 @@ class HostsModuleTest(integration.ModuleCase):
         f = open(HFN, 'w')
         f.close()
 
-        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1.fqdn.com'])
+        assert self.run_function(
+            'hosts.add_host', ['192.168.1.1', 'host1.fqdn.com']
+        )
         assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1'])
-        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2.fqdn.com'])
+        assert self.run_function(
+            'hosts.add_host', ['192.168.1.2', 'host2.fqdn.com']
+        )
         assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2'])
         assert self.run_function('hosts.add_host', ['192.168.1.2', 'oldhost2'])
-        assert self.run_function('hosts.add_host', ['192.168.1.3', 'host3.fqdn.com'])
-        assert self.run_function('hosts.add_host', ['192.168.1.2', 'host2-reorder'])
-        assert self.run_function('hosts.add_host', ['192.168.1.1', 'host1-reorder'])
+        assert self.run_function(
+            'hosts.add_host', ['192.168.1.3', 'host3.fqdn.com']
+        )
+        assert self.run_function(
+            'hosts.add_host', ['192.168.1.2', 'host2-reorder']
+        )
+        assert self.run_function(
+            'hosts.add_host', ['192.168.1.1', 'host1-reorder']
+        )
 
         # now read the lines and ensure they're formatted correctly
         lines = open(HFN, 'r').readlines()
