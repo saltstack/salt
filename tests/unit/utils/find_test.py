@@ -338,35 +338,9 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption('print', 'mtime')
         self.assertEqual(option.execute(hello_file, range(10)), 8)
 
-        @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
-        def _test_print_user():
-            option = salt.utils.find.PrintOption('print', 'user')
-            self.assertEqual(option.execute('', [0] * 10), 'root')
-
-            option = salt.utils.find.PrintOption('print', 'user')
-            self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
-
-        @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
-        def _test_print_group():
-            option = salt.utils.find.PrintOption('print', 'group')
-            if sys.platform == 'darwin':
-                group_name = 'wheel'
-            else:
-                group_name = 'root'
-            self.assertEqual(option.execute('', [0] * 10), group_name)
-
-            # This seems to be not working in Ubuntu 12.04 32 bit
-            #option = salt.utils.find.PrintOption('print', 'group')
-            #self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
-
         option = salt.utils.find.PrintOption('print', 'md5')
         self.assertEqual(option.execute(hello_file, os.stat(hello_file)),
             'acbd18db4cc2f85cedef654fccc4a4d8')
-
-        @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
-        def _test_print_md5():
-            option = salt.utils.find.PrintOption('print', 'md5')
-            self.assertEqual(option.execute('/dev/null', os.stat('/dev/null')), '')
 
         option = salt.utils.find.PrintOption('print', 'path name')
         self.assertEqual(option.execute('test_name', [0] * 9),
@@ -375,6 +349,33 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption('print', 'size name')
         self.assertEqual(option.execute('test_name', [0] * 9),
             [0, 'test_name'])
+
+    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    def test_print_user(self):
+        option = salt.utils.find.PrintOption('print', 'user')
+        self.assertEqual(option.execute('', [0] * 10), 'root')
+
+        option = salt.utils.find.PrintOption('print', 'user')
+        self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
+
+    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    def test_print_group(self):
+        option = salt.utils.find.PrintOption('print', 'group')
+        if sys.platform == 'darwin':
+            group_name = 'wheel'
+        else:
+            group_name = 'root'
+        self.assertEqual(option.execute('', [0] * 10), group_name)
+        self.assertEqual(option.execute('', [0] * 10), 'root')
+
+        # This seems to be not working in Ubuntu 12.04 32 bit
+        #option = salt.utils.find.PrintOption('print', 'group')
+        #self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
+
+    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    def test_print_md5(self):
+        option = salt.utils.find.PrintOption('print', 'md5')
+        self.assertEqual(option.execute('/dev/null', os.stat('/dev/null')), '')
 
 
 class TestFinder(TestCase):
