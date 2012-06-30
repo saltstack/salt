@@ -23,7 +23,9 @@ import salt.runner
 from salt.utils.verify import verify_env
 from saltunittest import TestCase
 
-INTEGRATION_TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+INTEGRATION_TEST_DIR = os.path.dirname(
+    os.path.normpath(os.path.abspath(__file__))
+)
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
@@ -42,55 +44,68 @@ class TestDaemon(object):
         Start a master and minion
         '''
         self.master_opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        )
         self.minion_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'))
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+        )
         self.sub_minion_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion'))
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
+        )
         self.smaster_opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'))
+            os.path.join(
+                INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
+            )
+        )
         self.syndic_opts = salt.config.minion_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'))
         self.syndic_opts['_master_conf_file'] = os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files/conf/master'
-                )
+            INTEGRATION_TEST_DIR,
+            'files/conf/master'
+        )
         # Set up config options that require internal data
         self.master_opts['pillar_roots'] = {
-                'base': [os.path.join(FILES, 'pillar', 'base')]
-                }
+            'base': [os.path.join(FILES, 'pillar', 'base')]
+        }
         self.master_opts['file_roots'] = {
-                'base': [os.path.join(FILES, 'file', 'base')]
-                }
+            'base': [os.path.join(FILES, 'file', 'base')]
+        }
         self.master_opts['ext_pillar'] = [
-                {'cmd_yaml': 'cat {0}'.format(
-                    os.path.join(
-                        FILES,
-                        'ext.yaml'
-                        )
-                    )}
-                ]
+            {'cmd_yaml': 'cat {0}'.format(
+                os.path.join(
+                    FILES,
+                    'ext.yaml'
+                )
+            )}
+        ]
         # clean up the old files
         self._clean()
         self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
         self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
         verify_env([
-                    os.path.join(self.master_opts['pki_dir'], 'minions'),
-                    os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.master_opts['pki_dir'], 'minions_rejected'),
-                    os.path.join(self.master_opts['cachedir'], 'jobs'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'minions'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'minions_rejected'),
-                    os.path.join(self.smaster_opts['cachedir'], 'jobs'),
-                    os.path.dirname(self.master_opts['log_file']),
-                    self.minion_opts['extension_modules'],
-                    self.sub_minion_opts['extension_modules'],
-                    self.sub_minion_opts['pki_dir'],
-                    self.master_opts['sock_dir'],
-                    self.smaster_opts['sock_dir'],
-                    ],
-                    pwd.getpwuid(os.getuid())[0])
+                os.path.join(self.master_opts['pki_dir'], 'minions'),
+                os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
+                os.path.join(
+                    self.master_opts['pki_dir'], 'minions_rejected'
+                ),
+                os.path.join(self.master_opts['cachedir'], 'jobs'),
+                os.path.join(self.smaster_opts['pki_dir'], 'minions'),
+                os.path.join(
+                    self.smaster_opts['pki_dir'], 'minions_pre'
+                ),
+                os.path.join(
+                    self.smaster_opts['pki_dir'], 'minions_rejected'
+                ),
+                os.path.join(self.smaster_opts['cachedir'], 'jobs'),
+                os.path.dirname(self.master_opts['log_file']),
+                self.minion_opts['extension_modules'],
+                self.sub_minion_opts['extension_modules'],
+                self.sub_minion_opts['pki_dir'],
+                self.master_opts['sock_dir'],
+                self.smaster_opts['sock_dir'],
+            ],
+            pwd.getpwuid(os.getuid())[0]
+        )
 
         master = salt.master.Master(self.master_opts)
         self.master_process = multiprocessing.Process(target=master.start)
@@ -102,7 +117,8 @@ class TestDaemon(object):
 
         sub_minion = salt.minion.Minion(self.sub_minion_opts)
         self.sub_minion_process = multiprocessing.Process(
-                target=sub_minion.tune_in)
+            target=sub_minion.tune_in
+        )
         self.sub_minion_process.start()
 
         smaster = salt.master.Master(self.smaster_opts)
