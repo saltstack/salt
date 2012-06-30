@@ -78,7 +78,7 @@ this system that is as versatile as it is practical. Last but not least,
 security is an intrinsic part of Salt and something not just
 influencing how source code is written and how tests are done, but
 also something that defines the overall architecture and has heavy
-influence on the core design tenants.
+influence on the core design tenets.
 
 Open
 ====
