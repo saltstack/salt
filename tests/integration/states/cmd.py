@@ -18,7 +18,7 @@ class CMDTest(integration.ModuleCase):
         '''
         cmd.run
         '''
-        ret = self.run_state('cmd.run', name='ls')
+        ret = self.run_state('cmd.run', name='ls', cwd='/')
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
