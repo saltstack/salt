@@ -152,6 +152,10 @@ def _parse_settings_bond(opts, iface):
     expecting.
     '''
 
+    # Check to make sure this is a bond interface
+    if not opts['type'] == 'bond':
+        return False
+
     # Bonding settings
     if 'mode' not in opts:
         #TODO raise an error
@@ -632,6 +636,7 @@ def _write_file_network(data, filename):
 def build_bond(iface, settings):
     '''
     Create a bond script in /etc/modprobe.d with the passed settings
+    and load the bonding kernel module.
 
     CLI Example::
 
@@ -642,6 +647,8 @@ def build_bond(iface, settings):
     data = template.render({'name': iface, 'bonding': opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    __salt__['kmod.load']('bonding')
+
     return _read_file(path)
 
 
