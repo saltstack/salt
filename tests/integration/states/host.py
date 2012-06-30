@@ -13,21 +13,19 @@ HFILE = os.path.join(integration.TMP, 'hosts')
 
 
 class HostTest(integration.ModuleCase):
-    def setUp(self):
-        shutil.copy(os.path.join(
-                integration.INTEGRATION_TEST_DIR, 'files', 'hosts'),
-                    self.master_opts['hosts.file'])
-        shutil.copy(os.path.join(
-                integration.INTEGRATION_TEST_DIR, 'files', 'hosts'),
-                    self.minion_opts['hosts.file'])
-
-    def tearDown(self):
-        os.remove(self.master_opts['hosts.file'])
-        os.remove(self.minion_opts['hosts.file'])
-
     '''
     Validate the host state
     '''
+
+    def setUp(self):
+        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFILE)
+        super(HostTest, self).setUp()
+
+    def tearDown(self):
+        if os.path.exists(HFILE):
+            os.remove(HFILE)
+        super(HostTest, self).tearDown()
+
     def test_present(self):
         '''
         host.present
