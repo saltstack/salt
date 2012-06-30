@@ -199,6 +199,7 @@ def run(name,
     finally:
         os.setegid(pgid)
 
+
 def script(name,
         source=None,
         template=None,
@@ -247,7 +248,7 @@ def script(name,
     if not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory is not available'
         return ret
-    
+
     if env is None:
         env = kwargs.get('__env__', 'base')
 
@@ -277,7 +278,8 @@ def script(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Command "{0}" would have been executed'.format(name)
+            ret['comment'] = 'Command "{0}" would have been executed'
+            ret['comment'] = ret['comment'].format(name)
             return ret
 
         # Wow, we passed the test, run this sucker!
