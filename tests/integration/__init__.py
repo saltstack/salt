@@ -71,6 +71,10 @@ class TestDaemon(object):
         self._clean()
         self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
         self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
+        shutil.copy(os.path.join(INTEGRATION_TEST_DIR, 'files', 'hosts'),
+                    self.master_opts['hosts.file'])
+        shutil.copy(os.path.join(INTEGRATION_TEST_DIR, 'files', 'hosts'),
+                    self.minion_opts['hosts.file'])
         verify_env([
                     os.path.join(self.master_opts['pki_dir'], 'minions'),
                     os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
