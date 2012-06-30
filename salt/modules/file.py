@@ -12,6 +12,7 @@ import re
 import time
 import hashlib
 import stat
+import sys
 import fnmatch
 try:
     import grp
@@ -406,6 +407,8 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
     before = _sed_esc(before, escape_all)
     after = _sed_esc(after, escape_all)
+    if sys.platform == 'darwin':
+        options = options.replace('-r', '-E')
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
             backup = '-i{0} '.format(backup) if backup else '-i ',
@@ -668,4 +671,3 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
-
