@@ -1,9 +1,10 @@
 import logging
 import os
+import sys
 import stat
 import tempfile
 
-from saltunittest import TestCase
+from saltunittest import skipIf, TestCase
 
 from salt.utils.verify import (
     check_user,
@@ -32,6 +33,7 @@ class TestVerify(TestCase):
     def test_no_user(self):
         self.assertFalse(check_user('nouser', self.logger))
 
+    @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp()
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
