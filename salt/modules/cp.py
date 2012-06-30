@@ -54,7 +54,7 @@ def get_file(path, dest, env='base'):
 
 def get_template(path, dest, template='jinja', env='base', **kwargs):
     '''
-    Render a file as a template before settign it down
+    Render a file as a template before setting it down
 
     CLI Example::
 

@@ -833,7 +833,7 @@ class LocalClient(object):
             # forms possible
             minions = tgt
         elif not minions:
-            return {'jid': '0',
+            return {'jid': None,
                     'minions': minions}
 
         # Generate the standard keyword args to feed to format_payload
@@ -918,3 +918,19 @@ class FunctionWrapper(dict):
             for _key, _val in kwargs:
                 args.append('{0}={1}'.format(_key, _val))
             return self.local.cmd(self.minion, key, args)
+
+class Caller(object):
+    '''
+    Create an object used to call salt functions directly on a minion
+    '''
+    def __init__(self, c_path='/etc/salt/minion'):
+        self.opts = salt.config.minion_config(c_path)
+        self.sminion = salt.minion.SMinion(self.opts)
+
+    def function(self, fun, *args, **kwargs):
+        '''
+        Call a single salt function
+        '''
+        func = self.sminion.functions[fun]
+        args, kw = salt.minion.detect_kwargs(func, args, kwargs)
+        return func(*args, **kw)

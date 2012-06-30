@@ -1634,7 +1634,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         'changes': {},
     }
     if not os.path.isabs(name):
-        _error(
+        return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
     if __opts__['test']:
@@ -1655,4 +1655,74 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     elif exists and ret['result']:
         ret['comment'] = 'Updated times on file {0}'.format(name)
 
+    return ret
+
+
+def rename(name, source, force=False, makedirs=False):
+    '''
+    If the source file exists on the system, rename it to the named file. The
+    named file will not be overwritten if it already exists unless the force
+    option is set to True.
+
+    name
+        The location of the file to rename to
+
+    source
+        The location of the file to move to the location specified with name
+
+    force:
+        If the target location is present then the file will not be moved,
+        specify "force: True" to overwrite the target file
+
+    makedirs:
+        If the target subdirectories don't exist create them
+
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'comment': '',
+        'result': True}
+
+    if not os.path.isabs(name):
+        return _error(
+            ret, 'Specified file {0} is not an absolute path'.format(name))
+
+    if not os.path.isfile(source):
+        ret['comment'] = ('Source file "{0}" has already been moved out of '
+                          'place').format(source)
+        return ret
+
+    if os.path.isfile(source) and os.path.isfile(name) and not force:
+        ret['comment'] = ('The target file "{0}" exists and will not be '
+                          'overwritten').format(name)
+        ret['result'] = False
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'File "{0}" is set to be moved to "{1}"'.format(
+                source,
+                name
+                )
+        ret['result'] = None
+        return ret
+    # Run makedirs
+    dname = os.path.dirname(name)
+    if not os.path.isdir(dname):
+        if makedirs:
+            os.makedirs(dname)
+        else:
+            return _error(
+                    ret,
+                    'The target directory {0} is not present'.format(dname))
+    # All tests pass, move the file into place
+    try:
+        shutil.move(source, name)
+    except (IOError, OSError):
+        return _error(
+            ret, 'Failed to move "{0}" to "{1}"'.format(source, name))
+        return ret
+
+    ret['comment'] = 'Moved "{0}" to "{1}"'.format(source, name)
+    ret['changes'] = {name: source}
     return ret

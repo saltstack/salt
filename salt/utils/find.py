@@ -77,15 +77,19 @@ print-opts: a comma and/or space separated list of one or more of the following:
     user:  user name
 '''
 
-import grp
 import hashlib
 import logging
 import os
-import pwd
 import re
 import stat
 import sys
 import time
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
+
 
 from salt._compat import MAX_SIZE
 

@@ -9,12 +9,15 @@ data
 # Import python libs
 import os
 import re
-import grp
-import pwd
 import time
 import hashlib
 import stat
 import fnmatch
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.utils.find

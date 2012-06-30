@@ -1,6 +1,8 @@
 '''
 Module to provide MySQL compatibility to salt.
 
+REQUIREMENT 1:
+
 In order to connect to MySQL, certain configuration is required
 in /etc/salt/minion on the relevant minions. Some sample configs
 might look like::
@@ -14,6 +16,8 @@ might look like::
 You can also use a defaults file::
 
     mysql.default_file: '/etc/mysql/debian.cnf'
+
+REQUIREMENT 2:
 
 Required python modules: MySQLdb
 '''
@@ -599,6 +603,8 @@ def grant_add(grant,
     '''
     Adds a grant to the MySQL server.
 
+    For database, make sure you specify database.table or database.*
+    
     CLI Example::
 
         salt '*' mysql.grant_add 'SELECT|INSERT|UPDATE|...' 'database.*' 'frank' 'localhost'

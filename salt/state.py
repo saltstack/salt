@@ -342,8 +342,14 @@ class State(object):
         if 'watch' in data:
             # Check to see if the service has a mod_watch function, if it does
             # not, then just require
+            # to just require extend the require statement with the contents
+            # of watch so that the mod_watch function is not called and the
+            # requisite capability is still used
             if not '{0}.mod_watch'.format(data['state']) in self.states:
-                data['require'] = data.pop('watch')
+                if 'require' in data:
+                    data['require'].extend(data.pop('watch'))
+                else:
+                    data['require'] = data.pop('watch')
                 reqdec = 'require'
             else:
                 reqdec = 'watch'
@@ -1013,7 +1019,7 @@ class State(object):
         Enforce the states in a template
         '''
         high = compile_template(
-            template, self.renderers, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high
@@ -1023,7 +1029,7 @@ class State(object):
         Enforce the states in a template, pass the template as a string
         '''
         high = compile_template_str(
-            template, self.renderers, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high

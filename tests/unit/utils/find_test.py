@@ -3,7 +3,8 @@ import sys
 import shutil
 import tempfile
 import stat
-from saltunittest import TestCase, TestLoader, TextTestRunner
+import platform
+from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 import salt.utils.find
 
@@ -176,12 +177,14 @@ class TestFind(TestCase):
         option = salt.utils.find.TypeOption('type', 's')
         self.assertEqual(option.match('', '', [stat.S_IFSOCK]), True)
 
+    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_owner_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.OwnerOption, 'owner', 'notexist')
 
         option = salt.utils.find.OwnerOption('owner', 'root')
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
+    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_owner_option_match(self):
         option = salt.utils.find.OwnerOption('owner', 'root')
         self.assertEqual(option.match('', '', [0] * 5), True)
@@ -189,6 +192,7 @@ class TestFind(TestCase):
         option = salt.utils.find.OwnerOption('owner', '500')
         self.assertEqual(option.match('', '', [500] * 5), True)
 
+    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_group_option_requires(self):
         self.assertRaises(ValueError, salt.utils.find.GroupOption, 'group', 'notexist')
 
@@ -199,6 +203,7 @@ class TestFind(TestCase):
         option = salt.utils.find.GroupOption('group', group_name)
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
+    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_group_option_match(self):
         if sys.platform == 'darwin':
             group_name = 'wheel'
@@ -265,6 +270,7 @@ class TestGrepOption(TestCase):
         option = salt.utils.find.GrepOption('grep', 'bar')
         self.assertEqual(option.match(self.tmpdir, 'hello.txt', os.stat(hello_file)), None)
 
+    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_grep_option_match_dev_null(self):
         option = salt.utils.find.GrepOption('grep', 'foo')
         self.assertEqual(option.match('dev', 'null', os.stat('/dev/null')), None)
@@ -332,29 +338,35 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption('print', 'mtime')
         self.assertEqual(option.execute(hello_file, range(10)), 8)
 
-        option = salt.utils.find.PrintOption('print', 'user')
-        self.assertEqual(option.execute('', [0] * 10), 'root')
+        @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+        def _test_print_user():
+            option = salt.utils.find.PrintOption('print', 'user')
+            self.assertEqual(option.execute('', [0] * 10), 'root')
 
-        option = salt.utils.find.PrintOption('print', 'user')
-        self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
+            option = salt.utils.find.PrintOption('print', 'user')
+            self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
-        option = salt.utils.find.PrintOption('print', 'group')
-        if sys.platform == 'darwin':
-            group_name = 'wheel'
-        else:
-            group_name = 'root'
-        self.assertEqual(option.execute('', [0] * 10), group_name)
+        @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+        def _test_print_group():
+            option = salt.utils.find.PrintOption('print', 'group')
+            if sys.platform == 'darwin':
+                group_name = 'wheel'
+            else:
+                group_name = 'root'
+            self.assertEqual(option.execute('', [0] * 10), group_name)
 
-        # This seems to be not working in Ubuntu 12.04 32 bit
-        #option = salt.utils.find.PrintOption('print', 'group')
-        #self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
+            # This seems to be not working in Ubuntu 12.04 32 bit
+            #option = salt.utils.find.PrintOption('print', 'group')
+            #self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
         option = salt.utils.find.PrintOption('print', 'md5')
         self.assertEqual(option.execute(hello_file, os.stat(hello_file)),
             'acbd18db4cc2f85cedef654fccc4a4d8')
 
-        option = salt.utils.find.PrintOption('print', 'md5')
-        self.assertEqual(option.execute('/dev/null', os.stat('/dev/null')), '')
+        @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+        def _test_print_md5():
+            option = salt.utils.find.PrintOption('print', 'md5')
+            self.assertEqual(option.execute('/dev/null', os.stat('/dev/null')), '')
 
         option = salt.utils.find.PrintOption('print', 'path name')
         self.assertEqual(option.execute('test_name', [0] * 9),
@@ -374,7 +386,7 @@ class TestFinder(TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
         super(TestFinder, self).tearDown()
-
+    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_init(self):
         finder = salt.utils.find.Finder({})
         self.assertEqual(str(finder.actions[0].__class__)[-13:-2],
