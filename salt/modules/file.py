@@ -216,14 +216,6 @@ def chgrp(path, group):
 
         salt '*' file.chgrp /etc/passwd root
     '''
-    gid = group_to_gid(group)
-    err = ''
-    if gid == '':
-        err += 'Group does not exist\n'
-    if not os.path.exists(path):
-        err += 'File not found'
-    if err:
-        return err
     user = get_user(path)
     return chown(path, user, group)
 
