@@ -5,15 +5,20 @@ Test the django module
 import sys
 
 # Import Salt libs
-from saltunittest import TestLoader, TextTestRunner
+from saltunittest import TestLoader, TextTestRunner, skipIf
 import integration
 from integration import TestDaemon
 from salt.modules import django
 django.__salt__ = {}
 
-from mock import MagicMock, patch
+try:
+    from mock import MagicMock, patch
+    has_mock = True
+except ImportError:
+    has_mock = False
 
 
+@skipIf(has_mock is False, "mock python module is unavailable")
 class DjangoModuleTest(integration.ModuleCase):
     '''
     Test the django module
