@@ -183,6 +183,7 @@ class ModuleCase(TestCase):
         '''
         return self.run_function('state.single', [function], **kwargs)
 
+    @property
     def minion_opts(self):
         '''
         Return the options used for the minion
@@ -194,6 +195,7 @@ class ModuleCase(TestCase):
                     )
                 )
 
+    @property
     def master_opts(self):
         '''
         Return the options used for the minion
