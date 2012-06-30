@@ -198,12 +198,12 @@ def chown(path, user, group):
     gid = group_to_gid(group)
     err = ''
     if uid == '':
-        if user != '':
+        if not user:
             err += 'User does not exist\n'
         else:
             uid = -1
     if gid == '':
-        if group != '':
+        if not group:
             err += 'Group does not exist\n'
         else:
             gid = -1
