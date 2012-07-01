@@ -1,1 +1,1 @@
-../../HACKING
+../../HACKING.rst
