@@ -6,14 +6,13 @@ import os
 import re
 import sys
 import stat
-import getpass
 import socket
+import getpass
 import logging
 
+from salt.exceptions import SaltClientError
+
 log = logging.getLogger(__name__)
-
-__all__ = ('zmq_version', 'verify_env', 'check_user')
-
 
 def zmq_version():
     '''
@@ -174,3 +173,30 @@ def check_user(user, log):
         log.critical(msg)
         return False
     return True
+
+def check_parent_dirs(fname, user='root'):
+    '''
+    Walk from the root up to a directory and verify that the current
+    user has access to read each directory. This is used for  making
+    sure a user can read all parent directories of the minion's  key
+    before trying to go and generate a new key and raising an IOError
+    '''
+    # TODO: Test the below line on Windows
+    dir_comps = fname.split(os.path.sep)[1:-1]
+    # Loop over all parent directories of the minion key
+    # to properly test if salt has read access to  them.
+    for i,dirname in enumerate(dir_comps):
+        # Create the full path to the directory using a list slice
+        d = os.path.join(os.path.sep, *dir_comps[:i + 1])
+        msg ='Could not access directory {0}.'.format(d)
+        current_user = getpass.getuser()
+        # Make the error message more intelligent based on how
+        # the user invokes salt-call or whatever other script.
+        if user != current_user:
+            msg += ' Try running as user {0}.'.format(user)
+        else:
+            msg += ' Please give {0} read permissions.'.format(user, d)
+        if not os.access(d, os.R_OK):
+            # Propagate this exception up so there isn't a sys.exit()
+            # in the middle of code that could be imported elsewhere.
+            raise SaltClientError(msg)
