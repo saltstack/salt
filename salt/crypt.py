@@ -8,6 +8,7 @@ authenticating peers
 import os
 import sys
 import hmac
+import getpass
 import hashlib
 import logging
 import tempfile
@@ -98,7 +99,7 @@ class MasterKeys(dict):
                 key = RSA.load_key(self.rsa_path)
             except Exception:
                 # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a passphrase
+                # open it and then save it back without a pass phrase
                 key = clean_old_key(self.rsa_path)
 
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
@@ -141,17 +142,50 @@ class Auth(object):
         else:
             self.mpub = 'minion_master.pub'
 
+    def _check_dir_access(self):
+        '''
+        Check that all parent directories of the minion key
+        are readable before trying to create a new minion
+        key and failing. This also gives a friendly error
+        message based on how the user configured and runs
+        salt-call
+        '''
+        if not self.rsa_path: return
+
+        dir_comps = self.rsa_path.split(os.path.sep)[1:-1]
+        # Loop over all parent directories of the minion key
+        # to properly test if salt has read access to  them.
+        for i,dirname in enumerate(dir_comps):
+            # Create the full path to the directory using a list slice
+            d = os.path.join(os.path.sep, *dir_comps[:i + 1])
+            msg ='Could not access directory {0}.'.format(d)
+            user = self.opts.get('user', 'root')
+            current_user = getpass.getuser()
+            # Make the error message more intelligent based on how
+            # the user invokes salt-call or whatever other script.
+            if user != current_user:
+                msg += ' Try running as user {0}.'.format(user)
+            else:
+                msg += ' Please give {0} read permissions.'.format(user, d)
+            if not os.access(d, os.R_OK):
+                # Propagate this exception up so there isn't a sys.exit()
+                # in the middle of code that could be imported elsewhere.
+                log.critical(msg)
+                raise SaltClientError(msg)
+
     def get_keys(self):
         '''
         Returns a key objects for the minion
         '''
         key = None
+        # Make sure all key parent directories are accessible
+        self._check_dir_access()
         if os.path.exists(self.rsa_path):
             try:
                 key = RSA.load_key(self.rsa_path)
             except Exception:
                 # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a passphrase
+                # open it and then save it back without a pass phrase
                 key = clean_old_key(self.rsa_path)
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:
