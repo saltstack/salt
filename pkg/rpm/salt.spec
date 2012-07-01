@@ -45,6 +45,7 @@ Requires: python27-PyYAML
 Requires: python27-M2Crypto
 Requires: python27-PyXML
 Requires: python27-msgpack
+Requires: python27-distribute
 
 Requires(post): chkconfig
 Requires(preun): chkconfig
