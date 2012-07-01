@@ -1,3 +1,4 @@
+import getpass
 import logging
 import os
 import sys
@@ -28,7 +29,7 @@ class TestVerify(TestCase):
         self.assertFalse(zmq_version())
 
     def test_user(self):
-        self.assertTrue(check_user(os.getlogin(), self.logger))
+        self.assertTrue(check_user(getpass.getuser(), self.logger))
 
     def test_no_user(self):
         self.assertFalse(check_user('nouser', self.logger))
@@ -37,7 +38,7 @@ class TestVerify(TestCase):
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp()
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
-        verify_env([var_dir], os.getlogin())
+        verify_env([var_dir], getpass.getuser())
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)
         self.assertEqual(dir_stat.st_uid, os.getuid())
