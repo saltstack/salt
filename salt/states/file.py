@@ -671,7 +671,7 @@ def _symlink_check(name, target, force):
                           'make way for a new symlink targeting {1}').format(
                                   name, target)
         return _error(ret, ('File or directory exists where the symlink {0} '
-                            'should be'.format(name)))
+                            'should be. Did you mean to use force?'.format(name)))
 
 
 def symlink(name, target, force=False, makedirs=False):
