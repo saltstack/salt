@@ -27,7 +27,7 @@ class FileModuleTest(integration.ModuleCase):
         user = os.getlogin()
         if sys.platform == 'darwin':
             group = 'staff'
-        elif sys.platform == 'linux':
+        elif sys.platform.startswith('linux'):
             group = os.getlogin()
         ret = self.run_function('file.chown',
                                 arg=[self.myfile, user, group])
@@ -58,7 +58,7 @@ class FileModuleTest(integration.ModuleCase):
         user = os.getlogin()
         if sys.platform == 'darwin':
             group = 'staff'
-        elif sys.platform == 'linux':
+        elif sys.platform.startswith('linux'):
             group = os.getlogin()
         ret = self.run_function('file.chown',
                                 arg=['/tmp/nosuchfile', user, group])
@@ -79,7 +79,7 @@ class FileModuleTest(integration.ModuleCase):
     def test_chgrp(self):
         if sys.platform == 'darwin':
             group = 'everyone'
-        elif sys.platform == 'linux':
+        elif sys.platform.startswith('linux'):
             group = os.getlogin()
         ret = self.run_function('file.chgrp',
                                 arg=[self.myfile, group])
