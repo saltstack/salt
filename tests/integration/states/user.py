@@ -25,7 +25,7 @@ class UserTest(integration.ModuleCase):
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
-    @skipIf(not (os.geteuid()==0)) #you must be this root
+    @skipIf(not (os.geteuid()==0),'you must be this root to run this test')
     def test_user_not_present(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -35,7 +35,7 @@ class UserTest(integration.ModuleCase):
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
-    @skipIf(not (os.geteuid()==0)) #you must be this root
+    @skipIf(not (os.geteuid()==0), 'you must be this root to run this test')
     def test_user_present_nondefault(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
