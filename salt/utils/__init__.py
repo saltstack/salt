@@ -92,7 +92,12 @@ def get_colors(use=True):
             'ENDC': '\033[0m',
             }
 
-    if not use or not os.isatty(sys.stdout.fileno()):
+    try:
+        fileno = sys.stdout.fileno()
+    except AttributeError:
+        fileno = -1  # sys.stdout is StringIO or fake
+
+    if not use or not os.isatty(fileno):
         for color in colors:
             colors[color] = ''
 
