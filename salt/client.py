@@ -42,6 +42,7 @@ import zmq
 import salt.config
 import salt.payload
 import salt.utils
+import salt.utils.verify
 import salt.utils.event
 from salt.exceptions import SaltClientError, SaltInvocationError
 
@@ -83,8 +84,11 @@ class LocalClient(object):
         '''
         try:
             keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-            key = open(keyfile, 'r').read()
-            return key
+            # Make sure all key parent directories are accessible
+            user = self.opts.get('user', 'root')
+            salt.utils.verify.check_parent_dirs(keyfile, user)
+            with open(keyfile, 'r') as KEY:
+                return KEY.read()
         except (OSError, IOError):
             raise SaltClientError(('Problem reading the salt root key. Are'
                                    ' you root?'))

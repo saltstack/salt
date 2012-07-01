@@ -38,7 +38,7 @@ class Caller(object):
         try:
             self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
-            sys.exit(1)
+            raise SystemExit(str(exc))
 
     def call(self):
         '''
