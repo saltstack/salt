@@ -88,16 +88,19 @@ class Master(object):
         '''
         Run the sequence to start a salt master server
         '''
-        verify_env([self.opts['pki_dir'],
-                    os.path.join(self.opts['pki_dir'], 'minions'),
-                    os.path.join(self.opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.opts['pki_dir'], 'minions_rejected'),
-                    self.opts['cachedir'],
-                    os.path.join(self.opts['cachedir'], 'jobs'),
-                    os.path.dirname(self.opts['log_file']),
-                    self.opts['sock_dir'],
-                    ],
-                    self.opts['user'])
+        try:
+            verify_env([
+                self.opts['pki_dir'],
+                os.path.join(self.opts['pki_dir'], 'minions'),
+                os.path.join(self.opts['pki_dir'], 'minions_pre'),
+                os.path.join(self.opts['pki_dir'], 'minions_rejected'),
+                self.opts['cachedir'],
+                os.path.join(self.opts['cachedir'], 'jobs'),
+                os.path.dirname(self.opts['log_file']),
+                self.opts['sock_dir'],
+            ], self.opts['user'])
+        except OSError, err:
+            sys.exit(err.errno)
 
         import salt.log
         salt.log.setup_logfile_logger(
@@ -202,12 +205,15 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
-        verify_env([self.opts['pki_dir'],
-            self.opts['cachedir'],
-            self.opts['extension_modules'],
-            os.path.dirname(self.opts['log_file']),
-                ],
-                self.opts['user'])
+        try:
+            verify_env([
+                self.opts['pki_dir'],
+                self.opts['cachedir'],
+                self.opts['extension_modules'],
+                os.path.dirname(self.opts['log_file']),
+            ], self.opts['user'])
+        except OSError, err:
+            sys.exit(err.errno)
 
         import salt.log
         salt.log.setup_logfile_logger(
@@ -335,10 +341,13 @@ class Syndic(object):
         '''
         Execute this method to start up a syndic.
         '''
-        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
+        try:
+            verify_env([
+                self.opts['pki_dir'], self.opts['cachedir'],
                 os.path.dirname(self.opts['log_file']),
-                ],
-                self.opts['user'])
+            ], self.opts['user'])
+        except OSError, err:
+            sys.exit(err.errno)
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']
