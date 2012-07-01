@@ -25,7 +25,13 @@ if 'USE_SETUPTOOLS' in os.environ:
 if with_setuptools is False:
     from distutils.core import setup
 
-exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
+salt_version = os.path.join(os.path.abspath(
+    os.path.dirname(__file__)), 'salt', 'version.py')
+
+salt_reqs = os.path.join(os.path.abspath(
+    os.path.dirname(__file__)), 'requirements.txt')
+
+exec(compile(open(salt_version).read(), salt_version, 'exec'))
 
 
 class TestCommand(Command):
@@ -70,7 +76,7 @@ else:
 libraries = ['ws2_32'] if sys.platform == 'win32' else []
 
 requirements = ''
-with open('requirements.txt') as f:
+with open(salt_reqs) as f:
     requirements = f.read()
 
 
