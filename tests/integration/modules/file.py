@@ -1,4 +1,5 @@
 # Import python libs
+import getpass
 import grp
 import os
 import sys
@@ -24,11 +25,11 @@ class FileModuleTest(integration.ModuleCase):
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown(self):
-        user = os.getlogin()
+        user = getpass.getuser()
         if sys.platform == 'darwin':
             group = 'staff'
-        elif sys.platform == 'linux':
-            group = os.getlogin()
+        elif sys.platform.startswith('linux'):
+            group = getpass.getuser()
         ret = self.run_function('file.chown',
                                 arg=[self.myfile, user, group])
         self.assertIsNone(ret)
@@ -39,7 +40,7 @@ class FileModuleTest(integration.ModuleCase):
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown_no_user(self):
         user = 'notanyuseriknow'
-        group = os.getlogin()
+        group = getpass.getuser()
         ret = self.run_function('file.chown',
                                 arg=[self.myfile, user, group])
         self.assertIn('not exist', ret)
@@ -55,11 +56,11 @@ class FileModuleTest(integration.ModuleCase):
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown_no_path(self):
-        user = os.getlogin()
+        user = getpass.getuser()
         if sys.platform == 'darwin':
             group = 'staff'
-        elif sys.platform == 'linux':
-            group = os.getlogin()
+        elif sys.platform.startswith('linux'):
+            group = getpass.getuser()
         ret = self.run_function('file.chown',
                                 arg=['/tmp/nosuchfile', user, group])
         self.assertIn('File not found', ret)
@@ -79,8 +80,8 @@ class FileModuleTest(integration.ModuleCase):
     def test_chgrp(self):
         if sys.platform == 'darwin':
             group = 'everyone'
-        elif sys.platform == 'linux':
-            group = os.getlogin()
+        elif sys.platform.startswith('linux'):
+            group = getpass.getuser()
         ret = self.run_function('file.chgrp',
                                 arg=[self.myfile, group])
         self.assertIsNone(ret)
