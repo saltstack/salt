@@ -46,7 +46,7 @@ _RH_NETWORK_CONF_FILES = '/etc/modprobe.d'
 _MAC_REGEX = re.compile('([0-9A-F]{1,2}:){5}[0-9A-F]{1,2}')
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
-_IFACE_TYPES = [
+_IFACE_KINDS = [
     'eth', 'bond', 'alias', 'clone',
     'ipsec', 'dialup', 'slave', 'vlan',
 ]
@@ -477,7 +477,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
-def _parse_settings_eth(opts, type, iface):
+def _parse_settings_eth(opts, iface_kind, iface):
     '''
     Fiters given options and outputs valid settings for a
     network interface.
@@ -498,15 +498,15 @@ def _parse_settings_eth(opts, type, iface):
     if ethtool:
         result['ethtool'] = ethtool
 
-    if type == 'slave':
+    if iface_kind == 'slave':
         result['proto'] = 'none'
 
-    if type == 'bond':
+    if iface_kind == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
             result['bonding'] = bonding
 
-    if type not in ['bond', 'vlan']:
+    if iface_kind not in ['bond', 'vlan']:
         if 'addr' in opts:
             if _MAC_REGEX.match(opts['addr']):
                 result['addr'] = opts['addr']
@@ -648,7 +648,7 @@ def build_bond(iface, settings):
     return _read_file(path)
 
 
-def build_interface(iface, type, settings):
+def build_interface(iface, iface_kind, settings):
     '''
     Build an interface script for a network interface.
 
@@ -656,21 +656,21 @@ def build_interface(iface, type, settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
-    if type not in _IFACE_TYPES:
-        _raise_error_iface(iface, type, _IFACE_TYPES)
+    if iface_kind not in _IFACE_KINDS:
+        _raise_error_iface(iface, iface_kind, _IFACE_KINDS)
 
-    if type == 'slave':
+    if iface_kind == 'slave':
         settings['slave'] = 'yes'
         if 'master' not in settings:
             msg = 'master is a required setting for slave interfaces'
             log.error(msg)
             raise AttributeError(msg)
 
-    if type == 'vlan':
+    if iface_kind == 'vlan':
         settings['vlan'] = 'yes'
 
-    if type in ['eth', 'bond', 'slave', 'vlan']:
-        opts = _parse_settings_eth(settings, type, iface)
+    if iface_kind in ['eth', 'bond', 'slave', 'vlan']:
+        opts = _parse_settings_eth(settings, iface_kind, iface)
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
