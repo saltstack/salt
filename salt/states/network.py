@@ -22,7 +22,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
     eth0:
       network.managed:
         - enabled: True
-        - kind: eth
+        - type: eth
         - proto: none
         - ipaddr: 10.1.0.1
         - netmask: 255.255.255.0
@@ -31,17 +31,17 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
           - 8.8.4.4
     eth2:
       network.managed:
-        - kind: slave
+        - type: slave
         - master: bond0
 
     eth3:
       network.managed:
-        - kind: slave
+        - type: slave
         - master: bond0
 
     bond0:
       network.managed:
-        - kind: bond
+        - type: bond
         - ipaddr: 10.1.0.1
         - netmask: 255.255.255.0
         - dns:
@@ -79,7 +79,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 
     bond0.2:
       network.managed:
-        - kind: vlan
+        - type: vlan
         - ipaddr: 10.1.0.2
         - use:
           - network: bond0
@@ -88,7 +88,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 
     bond0.3:
       network.managed:
-        - kind: vlan
+        - type: vlan
         - ipaddr: 10.1.0.3
         - use:
           - network: bond0
@@ -97,7 +97,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 
     bond0.10:
       network.managed:
-        - kind: vlan
+        - type: vlan
         - ipaddr: 10.1.0.4
         - use:
           - network: bond0
@@ -106,7 +106,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 
     bond0.12:
       network.managed:
-        - kind: vlan
+        - type: vlan
         - ipaddr: 10.1.0.5
         - use:
           - network: bond0
@@ -117,7 +117,7 @@ import difflib
 
 def managed(
         name,
-        kind,
+        type,
         enabled=True,
         **kwargs
         ):
@@ -127,7 +127,7 @@ def managed(
     name
         The name of the interface to manage
 
-    kind
+    type
         Type of interface and configuration.
 
     enabled
@@ -148,7 +148,7 @@ def managed(
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
-        new = __salt__['ip.build_interface'](name, kind, kwargs)
+        new = __salt__['ip.build_interface'](name, type, kwargs)
         if __opts__['test']:
             if old == new:
                 return ret
@@ -172,7 +172,7 @@ def managed(
         return ret
 
     # Setup up bond modprobe script if required
-    if kind == 'bond':
+    if type == 'bond':
         try:
             old = __salt__['ip.get_bond'](name)
             new = __salt__['ip.build_bond'](name, kwargs)
