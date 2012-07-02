@@ -12,6 +12,7 @@ import re
 import time
 import hashlib
 import stat
+import sys
 import fnmatch
 try:
     import grp
@@ -197,9 +198,15 @@ def chown(path, user, group):
     gid = group_to_gid(group)
     err = ''
     if uid == '':
-        err += 'User does not exist\n'
+        if user:
+            err += 'User does not exist\n'
+        else:
+            uid = -1
     if gid == '':
-        err += 'Group does not exist\n'
+        if group:
+            err += 'Group does not exist\n'
+        else:
+            gid = -1
     if not os.path.exists(path):
         err += 'File not found'
     if err:
@@ -215,14 +222,6 @@ def chgrp(path, group):
 
         salt '*' file.chgrp /etc/passwd root
     '''
-    gid = group_to_gid(group)
-    err = ''
-    if gid == '':
-        err += 'Group does not exist\n'
-    if not os.path.exists(path):
-        err += 'File not found'
-    if err:
-        return err
     user = get_user(path)
     return chown(path, user, group)
 
@@ -406,6 +405,8 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
     before = _sed_esc(before, escape_all)
     after = _sed_esc(after, escape_all)
+    if sys.platform == 'darwin':
+        options = options.replace('-r', '-E')
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
             backup = '-i{0} '.format(backup) if backup else '-i ',
@@ -668,4 +669,3 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
-
