@@ -152,15 +152,6 @@ def _parse_settings_bond(opts, iface):
     expecting.
     '''
 
-    # Check to make sure this is a bond interface
-    if not opts['type'] == 'bond':
-        return False
-
-    # Bonding settings
-    if 'mode' not in opts:
-        #TODO raise an error
-        return
-
     bond_def = {
         # Link monitoring in milliseconds. Most NICs support this
         'miimon': '100',
@@ -486,7 +477,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
-def _parse_settings_eth(opts, iface):
+def _parse_settings_eth(opts, type, iface):
     '''
     Fiters given options and outputs valid settings for a
     network interface.
@@ -507,9 +498,10 @@ def _parse_settings_eth(opts, iface):
     if ethtool:
         result['ethtool'] = ethtool
 
-    bonding = _parse_settings_bond(opts, iface)
-    if bonding:
-        result['bonding'] = bonding
+    if type == 'bond':
+        bonding = _parse_settings_bond(opts, iface)
+        if bonding:
+            result['bonding'] = bonding
 
     if 'addr' in opts:
         if _MAC_REGEX.match(opts['addr']):
@@ -674,7 +666,7 @@ def build_interface(iface, type, settings):
         settings['vlan'] = 'yes'
 
     if type in ['eth', 'bond', 'slave', 'vlan']:
-        opts = _parse_settings_eth(settings, iface)
+        opts = _parse_settings_eth(settings, type, iface)
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
