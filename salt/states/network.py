@@ -137,6 +137,10 @@ def managed(
         The IP parameters for this interface.
 
     '''
+    # For this function we are purposefully overwriting a bif
+    # to enance the user experience. This does not look like
+    # it will cause a problem. Just giving a heads up in case
+    # it does create a problem.
 
     ret = {
         'name': name,
