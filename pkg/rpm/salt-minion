@@ -19,8 +19,8 @@
 #
 # processname: /usr/bin/salt-minion
 
-SALTMINION=/usr/bin/salt-minion
-PYTHON=/usr/bin/python
+SALTMINION=/usr/local/bin/salt-minion
+PYTHON=/usr/local/bin/python
 
 # Sanity checks.
 [ -x $SALTMINION ] || exit 0

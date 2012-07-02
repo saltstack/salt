@@ -19,8 +19,8 @@
 #
 # processname: /usr/bin/salt-syndic
 
-SALTSYNDIC=/usr/bin/salt-syndic
-PYTHON=/usr/bin/python
+SALTSYNDIC=/usr/local/bin/salt-syndic
+PYTHON=/usr/local/bin/python
 
 # Sanity checks.
 [ -x $SALTSYNDIC ] || exit 0

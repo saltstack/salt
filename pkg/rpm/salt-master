@@ -19,8 +19,8 @@
 #
 # processname: /usr/bin/salt-master
 
-SALTMASTER=/usr/bin/salt-master
-PYTHON=/usr/bin/python
+SALTMASTER=/usr/local/bin/salt-master
+PYTHON=/usr/local/bin/python
 
 # Sanity checks.
 [ -x $SALTMASTER ] || exit 0
