@@ -498,20 +498,24 @@ def _parse_settings_eth(opts, type, iface):
     if ethtool:
         result['ethtool'] = ethtool
 
+    if type == 'slave':
+        result['proto'] = 'none'
+
     if type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
             result['bonding'] = bonding
 
-    if 'addr' in opts:
-        if _MAC_REGEX.match(opts['addr']):
-            result['addr'] = opts['addr']
+    if type not in ['bond', 'vlan']:
+        if 'addr' in opts:
+            if _MAC_REGEX.match(opts['addr']):
+                result['addr'] = opts['addr']
+            else:
+                _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
         else:
-            _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
-    else:
-        ifaces = __salt__['network.interfaces']()
-        if iface in ifaces and 'hwaddr' in ifaces[iface]:
-            result['addr'] = ifaces[iface]['hwaddr']
+            ifaces = __salt__['network.interfaces']()
+            if iface in ifaces and 'hwaddr' in ifaces[iface]:
+                result['addr'] = ifaces[iface]['hwaddr']
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr']:
         if opt in opts:
