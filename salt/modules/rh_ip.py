@@ -746,8 +746,9 @@ def apply_network_settings(opts):
     '''
     if opts['require_reboot'] in _CONFIG_TRUE:
         log.warning('The network state sls is requiring a reboot of the system to properly apply network configuration.')
+        return
     else:
-        __salt__['service.restart']('network')
+        return __salt__['service.restart']('network')
 
 
 def build_network_settings(settings):
