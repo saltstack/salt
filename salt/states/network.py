@@ -250,7 +250,7 @@ def system(
     # Apply global network settings
     try:
         __salt__['ip.apply_network_settings'](kwargs)
-    except Exception as error:
+    except AttributeError as error:
         ret['result'] = False
         ret['comment'] = error.message
         return ret
