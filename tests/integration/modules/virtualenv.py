@@ -19,9 +19,6 @@ class VirtualenvModuleTest(integration.ModuleCase):
         if not ret:
             self.skipTest("virtualenv not installed")
         self.venv_test_dir = tempfile.mkdtemp()
-        self.client.cmd('minion',
-                        'cmd.run',
-                        ['mkdir -p {0}'.format(self.venv_test_dir)])
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
     def test_create_defaults(self):
@@ -38,9 +35,7 @@ class VirtualenvModuleTest(integration.ModuleCase):
                           [self.venv_dir],
                           system_site_packages=True)
         with_site = self.run_function('pip.freeze', bin_env=pip_bin)
-        self.client.cmd('minion',
-                        'cmd.run',
-                        ['rm -r {0}'.format(self.venv_dir)])
+        self.run_function('file.remove', [self.venv_dir])
         self.run_function('virtualenv.create',
                           [self.venv_dir])
         without_site = self.run_function('pip.freeze', bin_env=pip_bin)
@@ -60,9 +55,7 @@ class VirtualenvModuleTest(integration.ModuleCase):
         self.assertFalse('pep8' in packages)
 
     def tearDown(self):
-        self.client.cmd('minion',
-                        'cmd.run',
-                        ['rm -r {0}'.format(self.venv_test_dir)])
+        self.run_function('file.remove', [self.venv_test_dir])
 
 if __name__ == "__main__":
     loader = TestLoader()
