@@ -765,7 +765,7 @@ def absent(name):
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            os.remove(name)
+            __salt__['file.remove'](name)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
