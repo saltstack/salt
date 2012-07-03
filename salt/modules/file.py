@@ -11,6 +11,7 @@ import os
 import re
 import time
 import hashlib
+import shutil
 import stat
 import sys
 import fnmatch
@@ -22,7 +23,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.find
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 def __virtual__():
     '''
@@ -669,3 +670,20 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
+
+
+def remove(path):
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    if os.path.exists(path):
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+                return True
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+                return True
+        except (OSError, IOError):
+            raise CommandExecutionError('Could not remove "{0}"'.format(path))
+    return False

@@ -2,9 +2,12 @@
 import getpass
 import grp
 import os
+import shutil
 import sys
 
 # Import salt libs
+from salt.exceptions import CommandExecutionError
+
 from saltunittest import skipIf
 import integration
 
@@ -17,10 +20,13 @@ class FileModuleTest(integration.ModuleCase):
         self.myfile = os.path.join(integration.TMP, 'myfile')
         with open(self.myfile, 'w+') as fp:
             fp.write("Hello\n")
+        self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
+        os.makedirs(self.mydir)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
         os.remove(self.myfile)
+        shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
@@ -94,3 +100,16 @@ class FileModuleTest(integration.ModuleCase):
         ret = self.run_function('file.chgrp',
                                 arg=[self.myfile, group])
         self.assertIn('not exist', ret)
+
+    def test_remove_file(self):
+        ret = self.run_function('file.remove', args=[self.myfile])
+        self.assertTrue(ret)
+
+    def test_remove_dir(self):
+        ret = self.run_function('file.remove', args=[self.mydir])
+        self.assertTrue(ret)
+
+    def test_cannot_remove(self):
+        ret = self.run_function('file.remove', args=['/dev/tty'])
+        self.assertEqual(
+            'ERROR executing file.remove: File path must be absolute.', ret)
