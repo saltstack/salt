@@ -9,7 +9,7 @@
 
 Name: salt
 Version: 0.10.1dev
-Release: 3talkos
+Release: 4talkos
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
