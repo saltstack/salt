@@ -42,6 +42,10 @@ Then::
 
     cd doc; make html
 
+- The docs then are built in the ``docs/_build/html/`` folder. If you make changes and want to see the results, ``make html`` again.
+- The docs use ``reStructuredText`` for markup. See a live demo at http://rst.ninjs.org/
+- The help information on each module or state is culled from the python code that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``
+
 
 Getting the tests running
 -------------------------
