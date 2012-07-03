@@ -130,6 +130,20 @@ def sync_returners(env='base'):
     return _sync('returners', env)
 
 
+def sync_runners(env='base'):
+    '''
+    Sync the runners from the _runners directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _runners directory, base is the default
+    environment.
+
+    CLI Example::
+
+        salt '*' saltutil.sync_runners
+    '''
+    return _sync('runners', env)
+
+
 def sync_all(env='base'):
     '''
     Sync down all of the dynamic modules from the file server for a specific
@@ -145,6 +159,7 @@ def sync_all(env='base'):
     ret.append(sync_grains(env))
     ret.append(sync_renderers(env))
     ret.append(sync_returners(env))
+    ret.append(sync_runners(env))
     return ret
 
 
