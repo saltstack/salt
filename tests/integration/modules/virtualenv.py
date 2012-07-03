@@ -11,7 +11,7 @@ from integration import TestDaemon
 
 class VirtualenvModuleTest(integration.ModuleCase):
     '''
-    Validate the pip module
+    Validate the virtualenv module
     '''
     def setUp(self):
         super(VirtualenvModuleTest, self).setUp()
