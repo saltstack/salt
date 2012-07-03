@@ -477,7 +477,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
-def _parse_settings_eth(opts, type, iface):
+def _parse_settings_eth(opts, iface_type, iface):
     '''
     Fiters given options and outputs valid settings for a
     network interface.
@@ -498,15 +498,15 @@ def _parse_settings_eth(opts, type, iface):
     if ethtool:
         result['ethtool'] = ethtool
 
-    if type == 'slave':
+    if iface_type == 'slave':
         result['proto'] = 'none'
 
-    if type == 'bond':
+    if iface_type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
             result['bonding'] = bonding
 
-    if type not in ['bond', 'vlan']:
+    if iface_type not in ['bond', 'vlan']:
         if 'addr' in opts:
             if _MAC_REGEX.match(opts['addr']):
                 result['addr'] = opts['addr']
@@ -648,7 +648,7 @@ def build_bond(iface, settings):
     return _read_file(path)
 
 
-def build_interface(iface, type, settings):
+def build_interface(iface, iface_type, settings):
     '''
     Build an interface script for a network interface.
 
@@ -656,21 +656,21 @@ def build_interface(iface, type, settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
-    if type not in _IFACE_TYPES:
-        _raise_error_iface(iface, type, _IFACE_TYPES)
+    if iface_type not in _IFACE_TYPES:
+        _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
-    if type == 'slave':
+    if iface_type == 'slave':
         settings['slave'] = 'yes'
         if 'master' not in settings:
             msg = 'master is a required setting for slave interfaces'
             log.error(msg)
             raise AttributeError(msg)
 
-    if type == 'vlan':
+    if iface_type == 'vlan':
         settings['vlan'] = 'yes'
 
-    if type in ['eth', 'bond', 'slave', 'vlan']:
-        opts = _parse_settings_eth(settings, type, iface)
+    if iface_type in ['eth', 'bond', 'slave', 'vlan']:
+        opts = _parse_settings_eth(settings, iface_type, iface)
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
