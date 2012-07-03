@@ -32,6 +32,15 @@ those who are looking forward to contribute.
 
 .. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
 
+Editing and Previewing the Docs
+-------------------------------
+You need ``sphinx-build`` to build the docs. In Debian/ubuntu, this is provided in the ``python-sphinx`` package.
+
+Then::
+
+    cd doc; make html
+
+
 Getting the tests running
 -------------------------
 
