@@ -319,8 +319,8 @@ def _get_upgradable():
     rexp = re.compile('(?m)^Conf '
                       '([^ ]+) ' # Package name
                       '\(([^ ]+) ' # Version
-                      '([^ ]+) ' # Release
-                      '\[([^\]]+)\]\)$') # Arch
+                      '([^ ]+)' # Release
+                      '(?: \[([^\]]+)\])?\)$') # Arch
     keys = ['name', 'version', 'release', 'arch']
     _get = lambda l, k: l[keys.index(k)]
 
