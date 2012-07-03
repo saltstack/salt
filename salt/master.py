@@ -211,7 +211,13 @@ class Publisher(multiprocessing.Process):
         context = zmq.Context(1)
         # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
-        pub_sock.setsockopt(zmq.HWM, 1)
+        # if 2.1 >= zmq < 3.0, we only have one HWM setting
+        try:
+            pub_sock.setsockopt(zmq.HWM, 1)
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            pub_sock.setsockopt(zmq.SNDHWM, 1)
+            pub_sock.setsockopt(zmq.RCVHWM, 1)
         pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
