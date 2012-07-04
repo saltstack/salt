@@ -27,10 +27,25 @@ The goal here it to make contributions clear, make sure there is a trail for
 where the code has come from, but most importantly, to give credit where credit
 is due!
 
-The `Open Comparison Contributing Docs`__ has some good suggestions and tips for
-those who are looking forward to contribute.
+The `Open Comparison Contributing Docs`__ explains the workflow for forking, cloning, branching, 
+committing, and sending a pull request for the git repository.
+
+``git pull upstream develop`` is a shorter way to update your local repository to the latest version.
 
 .. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
+
+Editing and Previewing the Docs
+-------------------------------
+You need ``sphinx-build`` to build the docs. In Debian/ubuntu, this is provided in the ``python-sphinx`` package.
+
+Then::
+
+    cd doc; make html
+
+- The docs then are built in the ``docs/_build/html/`` folder. If you make changes and want to see the results, ``make html`` again.
+- The docs use ``reStructuredText`` for markup. See a live demo at http://rst.ninjs.org/
+- The help information on each module or state is culled from the python code that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``
+
 
 Getting the tests running
 -------------------------
