@@ -6,19 +6,19 @@ welcome!
 
 To assist in Salt development, you can help in a number of ways.
 
-Posting patches to the mailing list
------------------------------------
-
-If you have a patch for Salt, please format it via :command:`git format-patch` and
-send it to the Salt users mailing list. This allows the patch to give you the
-contributor the credit for your patch, and gives the Salt community an archive
-of the patch and a place for discussion.
-
 Setting a Github pull request
 -----------------------------
 
-This is probably the preferred method for contributions, simply create a Github
+This is the preferred method for contributions, simply create a Github
 fork, commit your changes to the fork, and then open up a pull request.
+
+Posting patches to the mailing list
+-----------------------------------
+
+If you have a patch for Salt, please format it via :command:`git format-patch`
+and send it to the Salt users mailing list. This allows the patch to give you
+the contributor the credit for your patch, and gives the Salt community an
+archive of the patch and a place for discussion.
 
 Contributions Welcome!
 ----------------------
@@ -27,24 +27,30 @@ The goal here it to make contributions clear, make sure there is a trail for
 where the code has come from, but most importantly, to give credit where credit
 is due!
 
-The `Open Comparison Contributing Docs`__ explains the workflow for forking, cloning, branching, 
-committing, and sending a pull request for the git repository.
+The `Open Comparison Contributing Docs`__ explains the workflow for forking,
+cloning, branching, committing, and sending a pull request for the git
+repository.
 
-``git pull upstream develop`` is a shorter way to update your local repository to the latest version.
+``git pull upstream develop`` is a shorter way to update your local repository
+to the latest version.
 
 .. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
 
 Editing and Previewing the Docs
 -------------------------------
-You need ``sphinx-build`` to build the docs. In Debian/ubuntu, this is provided in the ``python-sphinx`` package.
+You need ``sphinx-build`` to build the docs. In Debian/ubuntu, this is provided
+in the ``python-sphinx`` package.
 
 Then::
 
     cd doc; make html
 
-- The docs then are built in the ``docs/_build/html/`` folder. If you make changes and want to see the results, ``make html`` again.
-- The docs use ``reStructuredText`` for markup. See a live demo at http://rst.ninjs.org/
-- The help information on each module or state is culled from the python code that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``
+- The docs then are built in the ``docs/_build/html/`` folder. If you make
+  changes and want to see the results, ``make html`` again.
+- The docs use ``reStructuredText`` for markup. See a live demo at
+  http://rst.ninjs.org/
+- The help information on each module or state is culled from the python code
+  that runs for that piece. Find them in ``salt/modules/`` or ``salt/states/``
 
 
 Getting the tests running
