@@ -183,7 +183,7 @@ class TestFind(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_owner_option_requires(self):
-        self.assertRaises(i
+        self.assertRaises(
             ValueError, salt.utils.find.OwnerOption, 'owner', 'notexist'
         )
 
