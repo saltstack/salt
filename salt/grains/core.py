@@ -662,3 +662,40 @@ def get_server_id():
     # Provides:
     #   server_id
     return {'server_id': abs(hash(__opts__['id']) % (2 ** 31))}
+
+def uptime():
+    '''
+    Get various uptime statistics for machine
+    Provides
+        uptime days
+        uptime hours
+        uptime minutes
+        uptime seconds
+    '''
+    grains = {}
+    raw = __salt__['cmd.run']('uptime').replace(',','')
+    array = raw.split()
+    if len(array) < 11:
+        days = 0
+        numberforsplit = 2
+    else:
+        days = int(raw.split()[2])
+        numberforsplit = 4
+    if 'min' in raw:
+        hours = 0
+        minutes = int(raw[4])
+    else:
+        hours, minutes = map(int,raw.split()[numberforsplit].split(':'))
+    totalsecs = days*24*60*60 + hours*60*60 + minutes*60
+
+    grains = {
+        'uptime_days': days,
+        'uptime_hours': hours,
+        'uptime_minutes': minutes,
+        'uptime_seconds': totalsecs,
+    }
+
+    if platform.system != 'Windows':
+        return grains
+    else:
+        return {}
