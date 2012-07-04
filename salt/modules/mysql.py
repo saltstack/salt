@@ -109,24 +109,24 @@ def query(database, query):
     CLI Example::
 
         salt '*' mysql.query mydb "UPDATE mytable set myfield=1 limit 1"
-        returns: [{'query time': {'h': '39.0ms', 'raw': '0.03899'}},
-           {'rows affected': 1L}]
+        returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
+        'rows affected': 1L}
 
         salt '*' mysql.query mydb "SELECT id,name,cash from users limit 3"
-        returns: [{'query time': {'h': '1.0ms', 'raw': '0.001'}},
-           {'rows returned': 3L},
-           {'columns': ['id', 'name', 'cash']},
-           {'results': [(1L, 'User 1', Decimal('110.000000')),
+        returns: {'columns': ('id', 'name', 'cash'),
+            'query time': {'human': '1.0ms', 'raw': '0.001'},
+            'results': ((1L, 'User 1', Decimal('110.000000')),
                         (2L, 'User 2', Decimal('215.636756')),
-                        (3L, 'User 3', Decimal('0.040000'))]}]
+                        (3L, 'User 3', Decimal('0.040000'))),
+            'rows returned': 3L}
 
         salt '*' mysql.query mydb "insert into users values (null,'user 4', 5)"
-        returns: [{'query time': {'h': '39.0ms', 'raw': '0.03899'}},
-            {'rows affected': 1L}
+        returns: {'query time': {'human': '25.6ms', 'raw': '0.02563'},
+           'rows affected': 1L}
 
         salt '*' mysql.query mydb "delete from users where id = 4 limit 1""
-        returns: [{'query time': {'h': '39.0ms', 'raw': '0.03899'}},
-            {'rows affected': 1L}
+        returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
+            'rows affected': 1L}
     '''
 
     import time
