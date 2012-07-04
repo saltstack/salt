@@ -137,10 +137,9 @@ def query(database, query):
     #I don't think it handles multiple queries at once, so adding "commit" might not work.
     #This should be accessible via {{ salt[mysql.query mydb "myquery"]}} but there's too much extra info here.
     ret = {}
-    db = connect()
+    db = connect(**{'db': database})
     cur = db.cursor()
     start = time.time()
-    cur.execute("USE " + database)
     affected = cur.execute(query)
     log.debug('Using db: ' + database + ' to run query: ' + query)
     results = cur.fetchall()
