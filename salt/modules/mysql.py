@@ -136,7 +136,7 @@ def query(database, query):
     #Doesn't do anything about sql warnings, e.g. empty values on an insert.
     #I don't think it handles multiple queries at once, so adding "commit" might not work.
     #This should be accessible via {{ salt[mysql.query mydb "myquery"]}} but there's too much extra info here.
-    ret = []
+    ret = {}
     db = connect()
     cur = db.cursor()
     start = time.time()
@@ -149,21 +149,17 @@ def query(database, query):
         elapsed_h = str(round(elapsed * 1000, 1)) + 'ms'
     else:
         elapsed_h = str(round(elapsed, 2)) + 's'
-    ret.append({'query time': {'human': elapsed_h, 'raw': str(round(elapsed, 5))}})
+    ret['query time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
     if len(results) == 0:
-        ret.append({'rows affected': affected})
+        ret['rows affected'] = affected
         return ret
     else:
-        ret.append({'rows returned': affected})
-        desc = []
+        ret['rows returned'] = affected
+        columns = ()
         for column in cur.description:
-            desc.append(column[0])
-        ret.append({'columns': desc})
-        myresults = []
-        for dbs in results:
-            myresults.append(dbs)
-        ret.append({'results': myresults})
-        #log.debug(results)
+            columns += (column[0],)
+        ret['columns'] = columns
+        ret['results'] = results
         return ret
 
 def status():
