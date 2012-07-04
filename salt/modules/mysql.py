@@ -101,6 +101,67 @@ def connect(**kwargs):
     db.autocommit(True)
     return db
 
+def query(database, query):
+    '''
+    Run an arbitrary SQL query and return the results or
+    the number of affected rows.
+
+    CLI Example::
+
+        salt '*' mysql.query mydb "UPDATE mytable set myfield=1 limit 1"
+        returns: {'rows affected': 1L}
+
+        salt '*' mysql.query mydb "SELECT id,name,cash from users limit 3"
+        returns: [{'rows returned': 3L},
+           ['id', 'name', 'cash'],
+           (1L, 'User 1', Decimal('110.000000')),
+           (2L, 'User 2', Decimal('215.636756')),
+           (3L, 'User 3', Decimal('0.040000'))]
+
+        salt '*' mysql.query mydb "insert into users values (null,'user 4', 5)"
+        returns: {'rows affected': 1L}
+
+        salt '*' mysql.query mydb "delete from users where id = 4 limit 1""
+        returns: {'rows affected': 1L}
+    '''
+    #try:
+    import time
+    #except ImportError:
+    #    timer = False
+
+    #Doesn't do anything about sql warnings, e.g. empty values on an insert.
+    #I don't think it handles multiple queries at once, so adding "commit" might not work.
+    #This should be accessible via {{ salt[mysql.query mydb "myquery"]}} but there's too much extra info here.
+    ret = []
+    db = connect()
+    cur = db.cursor()
+    start = time.time()
+    cur.execute("USE " + database)
+    affected = cur.execute(query)
+    log.debug('Using db: ' + database + ' to run query: ' + query)
+    results = cur.fetchall()
+    elapsed = (time.time() - start)
+    #log.debug('Start time: ' + str(start) + ' end time: ' + str(time.time()) + 'total elapsed: ' + str(elapsed))
+    if elapsed < 0.200:
+        elapsed_h = str(round(elapsed * 1000, 1)) + 'ms'
+    else:
+        elapsed_h = str(round(elapsed, 2)) + 's'
+    ret.append({'query time': {'human': elapsed_h, 'raw': str(round(elapsed, 5))}})
+    if len(results) == 0:
+        ret.append({'rows affected': affected})
+        return ret
+    else:
+        ret.append({'rows returned': affected})
+        desc = []
+        for column in cur.description:
+            desc.append(column[0])
+        ret.append({'columns': desc})
+        myresults = []
+        for dbs in results:
+            myresults.append(dbs)
+        ret.append({'results': myresults})
+        #log.debug(results)
+        return ret
 
 def status():
     '''
