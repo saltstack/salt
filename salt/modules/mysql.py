@@ -128,10 +128,8 @@ def query(database, query):
         returns: [{'query time': {'h': '39.0ms', 'raw': '0.03899'}},
             {'rows affected': 1L}
     '''
-    #try:
+
     import time
-    #except ImportError:
-    #    timer = False
 
     #Doesn't do anything about sql warnings, e.g. empty values on an insert.
     #I don't think it handles multiple queries at once, so adding "commit" might not work.
