@@ -4,7 +4,11 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 '''
 
+import sys
+import salt.log
 from salt._compat import pickle
+
+log = salt.log.logging.getLogger(__name__)
 
 try:
     # Attempt to import msgpack
@@ -15,7 +19,15 @@ try:
         raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
-    import msgpack_pure as msgpack
+    try:
+        import msgpack_pure as msgpack
+    except ImportError:
+        # TODO: Come up with a sane way to get a configured logfile
+        #       and write to the logfile when this error is hit also
+        log_format = '[%(levelname)-8s] %(message)s'
+        salt.log.setup_console_logger(log_format=log_format)
+        log.fatal('Unable to import msgpack or msgpack_pure python modules')
+        sys.exit(1)
 
 
 def package(payload):

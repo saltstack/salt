@@ -3,13 +3,18 @@ import os
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from saltunittest import TestCase, TestLoader, TextTestRunner
-from mock import MagicMock, patch
+from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+try:
+    from mock import MagicMock, patch
+    has_mock = True
+except ImportError:
+    has_mock = False
 
 import salt.modules.gem as gem
 gem.__salt__ = {}
 
 
+@skipIf(has_mock is False, "mock python module is unavailable")
 class TestGemModule(TestCase):
 
     def test__gem(self):

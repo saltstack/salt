@@ -138,6 +138,10 @@ def managed(
         The IP parameters for this interface.
 
     '''
+    # For this function we are purposefully overwriting a bif
+    # to enance the user experience. This does not look like
+    # it will cause a problem. Just giving a heads up in case
+    # it does create a problem.
 
     ret = {
         'name': name,
@@ -256,7 +260,7 @@ def system(
     # Apply global network settings
     try:
         __salt__['ip.apply_network_settings'](kwargs)
-    except Exception as error:
+    except AttributeError as error:
         ret['result'] = False
         ret['comment'] = error.message
         return ret

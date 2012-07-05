@@ -16,7 +16,11 @@ import salt.minion
 from salt._compat import string_types
 
 # Custom exceptions
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+from salt.exceptions import (
+    SaltClientError,
+    CommandNotFoundError,
+    CommandExecutionError,
+)
 
 
 class Caller(object):
@@ -28,7 +32,13 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
-        self.minion = salt.minion.SMinion(opts)
+        # Handle this here so other deeper code which might
+        # be imported as part of the salt api doesn't do  a
+        # nasty sys.exit() and tick off our developer users
+        try:
+            self.minion = salt.minion.SMinion(opts)
+        except SaltClientError as exc:
+            raise SystemExit(str(exc))
 
     def call(self):
         '''

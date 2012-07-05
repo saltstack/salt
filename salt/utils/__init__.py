@@ -92,7 +92,12 @@ def get_colors(use=True):
             'ENDC': '\033[0m',
             }
 
-    if not use or not os.isatty(sys.stdout.fileno()):
+    try:
+        fileno = sys.stdout.fileno()
+    except AttributeError:
+        fileno = -1  # sys.stdout is StringIO or fake
+
+    if not use or not os.isatty(fileno):
         for color in colors:
             colors[color] = ''
 
@@ -322,11 +327,16 @@ def dns_check(addr, safe=False):
         try:
             addr = socket.gethostbyname(addr)
         except socket.gaierror:
-            err = ('This master address: {0} was previously resolvable but '
+            err = ('This master address: \'{0}\' was previously resolvable but '
                   'now fails to resolve! The previously resolved ip addr '
                   'will continue to be used').format(addr)
             if safe:
-                log.error(err)
+                import salt.log
+                if salt.log.is_console_configured():
+                    # If logging is not configured it also means that either
+                    # the master or minion instance calling this hasn't even
+                    # started running
+                    log.error(err)
                 raise SaltClientError
             else:
                 err = err.format(addr)

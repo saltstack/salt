@@ -211,7 +211,13 @@ class Publisher(multiprocessing.Process):
         context = zmq.Context(1)
         # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
-        pub_sock.setsockopt(zmq.HWM, 1)
+        # if 2.1 >= zmq < 3.0, we only have one HWM setting
+        try:
+            pub_sock.setsockopt(zmq.HWM, 1)
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            pub_sock.setsockopt(zmq.SNDHWM, 1)
+            pub_sock.setsockopt(zmq.RCVHWM, 1)
         pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -616,6 +622,16 @@ class AESFuncs(object):
                 load['grains'],
                 load['opts']['id'],
                 load['opts']['environment'])
+
+    def _minion_event(self, load):
+        '''
+        Receive an event from the minion and fire it on the master event
+        interface
+        '''
+        if 'id' not in load or 'tag' not in load or 'data' not in load:
+            return False
+        tag = '{0}_{1}'.format(load['tag'], load['id'])
+        return self.event.fire_event(load['data'], tag)
 
     def _return(self, load):
         '''

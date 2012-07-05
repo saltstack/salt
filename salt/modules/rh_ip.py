@@ -152,11 +152,6 @@ def _parse_settings_bond(opts, iface):
     expecting.
     '''
 
-    # Bonding settings
-    if 'mode' not in opts:
-        #TODO raise an error
-        return
-
     bond_def = {
         # Link monitoring in milliseconds. Most NICs support this
         'miimon': '100',
@@ -482,7 +477,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
-def _parse_settings_eth(opts, iface):
+def _parse_settings_eth(opts, iface_type, iface):
     '''
     Fiters given options and outputs valid settings for a
     network interface.
@@ -503,19 +498,24 @@ def _parse_settings_eth(opts, iface):
     if ethtool:
         result['ethtool'] = ethtool
 
-    bonding = _parse_settings_bond(opts, iface)
-    if bonding:
-        result['bonding'] = bonding
+    if iface_type == 'slave':
+        result['proto'] = 'none'
 
-    if 'addr' in opts:
-        if _MAC_REGEX.match(opts['addr']):
-            result['addr'] = opts['addr']
+    if iface_type == 'bond':
+        bonding = _parse_settings_bond(opts, iface)
+        if bonding:
+            result['bonding'] = bonding
+
+    if iface_type not in ['bond', 'vlan']:
+        if 'addr' in opts:
+            if _MAC_REGEX.match(opts['addr']):
+                result['addr'] = opts['addr']
+            else:
+                _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
         else:
-            _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
-    else:
-        ifaces = __salt__['network.interfaces']()
-        if iface in ifaces and 'hwaddr' in ifaces[iface]:
-            result['addr'] = ifaces[iface]['hwaddr']
+            ifaces = __salt__['network.interfaces']()
+            if iface in ifaces and 'hwaddr' in ifaces[iface]:
+                result['addr'] = ifaces[iface]['hwaddr']
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr']:
         if opt in opts:
@@ -632,6 +632,7 @@ def _write_file_network(data, filename):
 def build_bond(iface, settings):
     '''
     Create a bond script in /etc/modprobe.d with the passed settings
+    and load the bonding kernel module.
 
     CLI Example::
 
@@ -642,10 +643,12 @@ def build_bond(iface, settings):
     data = template.render({'name': iface, 'bonding': opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    __salt__['kmod.load']('bonding')
+
     return _read_file(path)
 
 
-def build_interface(iface, type, settings):
+def build_interface(iface, iface_type, settings):
     '''
     Build an interface script for a network interface.
 
@@ -653,21 +656,21 @@ def build_interface(iface, type, settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
-    if type not in _IFACE_TYPES:
-        _raise_error_iface(iface, type, _IFACE_TYPES)
+    if iface_type not in _IFACE_TYPES:
+        _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
-    if type == 'slave':
+    if iface_type == 'slave':
         settings['slave'] = 'yes'
         if 'master' not in settings:
             msg = 'master is a required setting for slave interfaces'
             log.error(msg)
             raise AttributeError(msg)
 
-    if type == 'vlan':
+    if iface_type == 'vlan':
         settings['vlan'] = 'yes'
 
-    if type in ['eth', 'bond', 'slave', 'vlan']:
-        opts = _parse_settings_eth(settings, iface)
+    if iface_type in ['eth', 'bond', 'slave', 'vlan']:
+        opts = _parse_settings_eth(settings, iface_type, iface)
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
@@ -741,11 +744,14 @@ def apply_network_settings(opts):
 
         salt '*' ip.apply_network_settings
     '''
+    if not 'require_reboot' in opts:
+        opts['require_reboot'] = False
+
     if opts['require_reboot'] in _CONFIG_TRUE:
         log.warning('The network state sls is requiring a reboot of the system to properly apply network configuration.')
+        return True
     else:
-        __salt__['service.restart']('network')
-
+        return __salt__['service.restart']('network')
 
 def build_network_settings(settings):
     '''

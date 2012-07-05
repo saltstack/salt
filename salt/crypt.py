@@ -8,20 +8,22 @@ authenticating peers
 import os
 import sys
 import hmac
+import getpass
 import hashlib
 import logging
 import tempfile
 
 # Import Cryptography libs
-from Crypto.Cipher import AES
 from M2Crypto import RSA
+from Crypto.Cipher import AES
 
 # Import zeromq libs
 import zmq
 
 # Import salt utils
-import salt.payload
 import salt.utils
+import salt.payload
+import salt.utils.verify
 from salt.exceptions import AuthenticationError, SaltClientError
 
 log = logging.getLogger(__name__)
@@ -98,7 +100,7 @@ class MasterKeys(dict):
                 key = RSA.load_key(self.rsa_path)
             except Exception:
                 # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a passphrase
+                # open it and then save it back without a pass phrase
                 key = clean_old_key(self.rsa_path)
 
             log.debug('Loaded master key: {0}'.format(self.rsa_path))
@@ -146,12 +148,16 @@ class Auth(object):
         Returns a key objects for the minion
         '''
         key = None
+        # Make sure all key parent directories are accessible
+        user = self.opts.get('user', 'root')
+        salt.utils.verify.check_parent_dirs(self.rsa_path, user)
+
         if os.path.exists(self.rsa_path):
             try:
                 key = RSA.load_key(self.rsa_path)
             except Exception:
                 # This is probably an "old key", we need to use m2crypto to
-                # open it and then save it back without a passphrase
+                # open it and then save it back without a pass phrase
                 key = clean_old_key(self.rsa_path)
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:

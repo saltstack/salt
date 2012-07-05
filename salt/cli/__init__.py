@@ -616,7 +616,7 @@ class SaltKey(object):
                 dest='conf_file',
                 default='/etc/salt/master',
                 help='Pass in an alternative configuration file')
-        
+
         parser.add_option('--raw-out',
                 default=False,
                 action='store_true',
@@ -847,4 +847,10 @@ class SaltRun(object):
         Execute salt-run
         '''
         runner = salt.runner.Runner(self.opts)
-        runner.run()
+        # Run this here so SystemExit isn't raised
+        # anywhere else when someone tries to  use
+        # the runners via the python api
+        try:
+            runner.run()
+        except SaltClientError as exc:
+            raise SystemExit(str(exc))
