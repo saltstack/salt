@@ -64,8 +64,12 @@ class Serial(object):
     serialization in Salt
     '''
     def __init__(self, opts):
-        self.opts = opts
-        self.serial = self.opts.get('serial', 'msgpack')
+        if isinstance(opts, dict):
+            self.serial = self.opts.get('serial', 'msgpack')
+        elif isinstance(opts, str):
+            self.serial = opts
+        else:
+            self.serial = 'msgpack'
 
     def loads(self, msg):
         '''
@@ -102,3 +106,46 @@ class Serial(object):
         '''
         fn_.write(self.dumps(msg))
         fn_.close()
+
+
+class SREQ(object):
+    '''
+    Create a generic interface to wrap salt zeromq req calls. 
+    '''
+    def __init__(self, master, serial='msgpack', timeout=10, linger=0):
+        self.master = master
+        self.serial = Serial(serial)
+        context = zmq.Context()
+        self.socket = context.socket(zmq.REQ)
+        self.socket.linger = linger
+        self.socket.connect(master)
+
+    def send(enc, load):
+        '''
+        Takes two arguments, the encryption type and the base payload
+        '''
+        payload = {'enc': enc}
+        if enc == 'clear':
+            eload = load
+        elif enc == 'aes':
+            eload = load
+        elif enc == 'pub':
+            eload = load
+        payload['load'] = eload
+        package = self.serial.dumps(payload)
+        self.socket.send(package)
+        poller = zmq.Poller()
+        poller.register(self.socket, zmq.POLLIN)
+        if not poller.poll(timeout):
+            raise SaltReqTimeoutError
+        ret = self.serial.loads(socket.recv())
+        poller.unregister(self.socket)
+        return ret
+
+    def send_auto(payload):
+        '''
+        Detect the encryption type based on the payload
+        '''
+        enc = payload.get('enc', 'clear')
+        load = payload.get('load', {})
+        return self.send(enc, load)
