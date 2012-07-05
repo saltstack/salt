@@ -145,24 +145,3 @@ able to send remote commands. Depending on the primary way you want to
 manage your machines you may either want to visit the section regarding Salt 
 States, or the section on Modules.
 
-Debian
-------
-
-`A deb package is currently in testing`__ for inclusion in apt. Until that is
-accepted you can install Salt by downloading the latest ``.deb`` in the
-`downloads section on GitHub`__ and installing that manually using ``dpkg -i``.
-
-.. __: http://mentors.debian.net/package/salt
-.. __: https://github.com/saltstack/salt/downloads
-
-.. admonition:: Installing ZeroMQ on Squeeze (Debian 6)
-
-    There is a `python-zmq`__ package available in Debian \"wheezy (testing)\".
-    If you don't have that repo enabled the best way to install Salt and pyzmq
-    is by using ``pip`` (or ``easy_install``):
-
-    .. code-block:: bash
-
-        pip install pyzmq salt
-
-.. __: http://packages.debian.org/search?keywords=python-zmq
