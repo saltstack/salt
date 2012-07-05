@@ -177,6 +177,8 @@ def _virtual(osdata):
         if 'Vendor: QEMU' in output:
             # FIXME: Make this detect between kvm or qemu
             grains['virtual'] = 'kvm'
+        if 'Vendor: Bochs' in output:
+            grains['virtual'] = 'kvm'
         elif 'VirtualBox' in output:
             grains['virtual'] = 'VirtualBox'
         # Product Name: VMware Virtual Platform
@@ -195,6 +197,8 @@ def _virtual(osdata):
         elif 'virtualbox' in model:
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
+            grains['virtual'] = 'kvm'
+        elif 'virtio' in model:
             grains['virtual'] = 'kvm'
     choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
