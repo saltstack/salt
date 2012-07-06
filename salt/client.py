@@ -862,7 +862,6 @@ class LocalClient(object):
 
         sreq = salt.payload.SREQ(
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                self.opts['serial'],
                 )
         payload = sreq.send('clear', payload_kwargs)
         return {'jid': payload['load']['jid'],
