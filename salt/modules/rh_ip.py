@@ -712,7 +712,7 @@ def build_interface(iface, iface_type, settings):
     return _read_file(path)
 
 
-def down(iface):
+def down(iface, iface_type, opts):
     '''
     Shutdown a network interface
 
@@ -720,7 +720,10 @@ def down(iface):
 
         salt '*' ip.down eth0
     '''
-    __salt__['cmd.run']('ifdown %s' % iface)
+    # Slave devices are controlled by the master.
+    if iface_type not in ['slave']:
+        return __salt__['cmd.run']('ifdown %s' % iface)
+    return None
 
 
 def get_bond(iface):
@@ -747,7 +750,7 @@ def get_interface(iface):
     return _read_file(path)
 
 
-def up(iface):
+def up(iface, iface_type, opts):
     '''
     Start up a network interface
 
@@ -755,7 +758,10 @@ def up(iface):
 
         salt '*' ip.up eth0
     '''
-    __salt__['cmd.run']('ifup %s' % iface)
+    # Slave devices are controlled by the master.
+    if iface_type not in ['slave']:
+        return __salt__['cmd.run']('ifup %s' % iface)
+    return None
 
 
 def get_network_settings():
