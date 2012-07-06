@@ -152,7 +152,7 @@ def managed(
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
-        new = __salt__['ip.build_interface'](name, type, kwargs)
+        new = __salt__['ip.build_interface'](name, type, enabled, kwargs)
         if __opts__['test']:
             if old == new:
                 return ret

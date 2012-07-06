@@ -477,7 +477,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
-def _parse_settings_eth(opts, iface_type, iface):
+def _parse_settings_eth(opts, iface_type, enabled, iface):
     '''
     Fiters given options and outputs valid settings for a
     network interface.
@@ -535,13 +535,10 @@ def _parse_settings_eth(opts, iface_type, iface):
         log.warning('''The 'onboot' option is controlled by the 'enabled' option.
                 Interface: %s Enabled: %s''' % (iface, opts['enabled']))
 
-    if 'enabled' in opts:
-        if opts['enabled'] in _CONFIG_TRUE:
-            result['onboot'] = 'yes'
-        elif opts['enabled'] in _CONFIG_FALSE:
-            result['onboot'] = 'no'
-        else:
-            _raise_error_iface(iface, opts['enabled'], valid)
+    if 'enabled':
+        result['onboot'] = 'yes'
+    else:
+        result['onboot'] = 'no'
 
     # If the interface is defined then we want to always take
     # control away from non-root users; unless the administrator
@@ -673,7 +670,7 @@ def build_bond(iface, settings):
     return _read_file(path)
 
 
-def build_interface(iface, iface_type, settings):
+def build_interface(iface, iface_type, enabled, settings):
     '''
     Build an interface script for a network interface.
 
@@ -695,7 +692,7 @@ def build_interface(iface, iface_type, settings):
         settings['vlan'] = 'yes'
 
     if iface_type in ['eth', 'bond', 'slave', 'vlan']:
-        opts = _parse_settings_eth(settings, iface_type, iface)
+        opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         template = env.get_template('eth.jinja')
         ifcfg = template.render(opts)
 
