@@ -70,7 +70,7 @@ class Serial(object):
     '''
     def __init__(self, opts):
         if isinstance(opts, dict):
-            self.serial = self.opts.get('serial', 'msgpack')
+            self.serial = opts.get('serial', 'msgpack')
         elif isinstance(opts, str):
             self.serial = opts
         else:
