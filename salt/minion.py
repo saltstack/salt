@@ -472,13 +472,43 @@ class Minion(object):
         Lock onto the publisher. This is the main event loop for the minion
         '''
         context = zmq.Context()
+
+        # Prepare the minion event system
+        #
+        # Start with the publish socket
+        epub_sock = context.socket(zmq.PUB)
+        epub_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'minion_event_pub.ipc')
+                )
+        # Create the pull socket
+        epull_sock = context.socket(zmq.PULL)
+        epull_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'minion_event_pull.ipc')
+                )
+        # Bind the event sockets
+        epub_sock.bind(epub_uri)
+        epull_sock.bind(epull_uri)
+        # Restrict access to the sockets
+        os.chmod(
+                os.path.join(self.opts['sock_dir'],
+                    'minion_event_pub.ipc'),
+                448
+                )
+        os.chmod(
+                os.path.join(self.opts['sock_dir'],
+                    'minion_event_pull.ipc'),
+                448
+                )
+
         poller = zmq.Poller()
+        epoller = zmq.Poller()
         socket = context.socket(zmq.SUB)
         socket.setsockopt(zmq.SUBSCRIBE, '')
         if self.opts['sub_timeout']:
             socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         socket.connect(self.master_pub)
         poller.register(socket, zmq.POLLIN)
+        epoller.register(epull_sock, zmq.POLLIN)
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -513,6 +543,13 @@ class Minion(object):
                 time.sleep(0.05)
                 multiprocessing.active_children()
                 self.passive_refresh()
+                # Check the event system
+                if epoller.poll(1):
+                    try:
+                        package = epull_sock.recv(zmq.NOBLOCK)
+                        epub_sock.send(package)
+                    except Exception:
+                        pass
         else:
             while True:
                 socks = dict(poller.poll(60))
