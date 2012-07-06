@@ -522,7 +522,7 @@ def _parse_settings_eth(opts, iface_type, iface):
             result[opt] = opts[opt]
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onboot', 'peerdns', 'slave', 'userctl', 'vlan']:
+    for opt in ['peerdns', 'slave', 'vlan']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
@@ -530,6 +530,39 @@ def _parse_settings_eth(opts, iface_type, iface):
                 result[opt] = 'no'
             else:
                 _raise_error_iface(iface, opts[opt], valid)
+
+    # We want to honor the onboot parameter set by administrator.
+    # If said administraor does not choose to set this option, we
+    # want to check to see if he has this interface enabled,
+    # which is a required setting. If enabled, we assume enabled.
+    if 'onboot' in opts:
+        if opts[opt] in _CONFIG_TRUE:
+            result[opt] = 'yes'
+        elif opts[opt] in _CONFIG_FALSE:
+            result[opt] = 'no'
+        else:
+            _raise_error_iface(iface, opts[opt], valid)
+    else:
+        if 'enabled' in opts:
+            if opts['enabled'] _CONFIG_TRUE:
+                result['onboot'] = 'yes'
+            elif opts['enabled'] _CONFIG_FALSE:
+                result['onboot'] = 'no'
+            else:
+                _raise_error_iface(iface, opts['enabled'], valid)
+
+    # If the interface is defined then we want to always take
+    # control away from non-root users; unless the administrator
+    # wants to allow non-root users to control the device.
+    if 'userctl' in opts:
+        if opts['userctl'] in _CONFIG_TRUE:
+            result['userctl'] = 'yes'
+        elif opts['userctl'] in _CONFIG_FALSE:
+            result['userctl'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['userctl'], valid)
+    else:
+        result['userctl'] = 'no'
 
     return result
 
