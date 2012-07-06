@@ -4,7 +4,19 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 '''
 
+# Import python libs
+import sys
+
+# Import salt libs
+import salt.log
+import salt.crypt
+from salt.exceptions import SaltReqTimeoutError
 from salt._compat import pickle
+
+# Import zeromq
+import zmq
+
+log = salt.log.logging.getLogger(__name__)
 
 try:
     # Attempt to import msgpack
@@ -15,7 +27,15 @@ try:
         raise ImportError
 except ImportError:
     # Fall back to msgpack_pure
-    import msgpack_pure as msgpack
+    try:
+        import msgpack_pure as msgpack
+    except ImportError:
+        # TODO: Come up with a sane way to get a configured logfile
+        #       and write to the logfile when this error is hit also
+        log_format = '[%(levelname)-8s] %(message)s'
+        salt.log.setup_console_logger(log_format=log_format)
+        log.fatal('Unable to import msgpack or msgpack_pure python modules')
+        sys.exit(1)
 
 
 def package(payload):
@@ -52,8 +72,12 @@ class Serial(object):
     serialization in Salt
     '''
     def __init__(self, opts):
-        self.opts = opts
-        self.serial = self.opts.get('serial', 'msgpack')
+        if isinstance(opts, dict):
+            self.serial = opts.get('serial', 'msgpack')
+        elif isinstance(opts, str):
+            self.serial = opts
+        else:
+            self.serial = 'msgpack'
 
     def loads(self, msg):
         '''
@@ -90,3 +114,45 @@ class Serial(object):
         '''
         fn_.write(self.dumps(msg))
         fn_.close()
+
+
+class SREQ(object):
+    '''
+    Create a generic interface to wrap salt zeromq req calls. 
+    '''
+    def __init__(self, master, serial='msgpack', linger=0):
+        self.master = master
+        self.serial = Serial(serial)
+        context = zmq.Context()
+        self.socket = context.socket(zmq.REQ)
+        self.socket.linger = linger
+        self.socket.connect(master)
+
+    def send(self, enc, load, tries=1, timeout=60):
+        '''
+        Takes two arguments, the encryption type and the base payload
+        '''
+        payload = {'enc': enc}
+        payload['load'] = load
+        package = self.serial.dumps(payload)
+        self.socket.send(package)
+        poller = zmq.Poller()
+        poller.register(self.socket, zmq.POLLIN)
+        tried = 0
+        while True:
+            if not poller.poll(timeout*1000) and tried >= tries:
+                raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
+            else:
+                break
+            tried += 1
+        ret = self.serial.loads(self.socket.recv())
+        poller.unregister(self.socket)
+        return ret
+
+    def send_auto(self, payload):
+        '''
+        Detect the encryption type based on the payload
+        '''
+        enc = payload.get('enc', 'clear')
+        load = payload.get('load', {})
+        return self.send(enc, load)

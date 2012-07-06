@@ -10,7 +10,7 @@ Dependencies
 
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
-* `Python 2.6`_
+* `Python 2.6`_ >= 2.6 <3.0
 * `ZeroMQ`_ >= 2.1.9
 * `pyzmq`_ >= 2.1.9 - ZeroMQ Python bindings
 * `PyCrypto`_ - The Python cryptography toolkit
@@ -40,6 +40,7 @@ Platform-specific installation instructions
 
     arch
     debian
+    ubuntu
     fedora
     freebsd
     gentoo

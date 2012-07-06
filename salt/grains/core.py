@@ -177,6 +177,8 @@ def _virtual(osdata):
         if 'Vendor: QEMU' in output:
             # FIXME: Make this detect between kvm or qemu
             grains['virtual'] = 'kvm'
+        if 'Vendor: Bochs' in output:
+            grains['virtual'] = 'kvm'
         elif 'VirtualBox' in output:
             grains['virtual'] = 'VirtualBox'
         # Product Name: VMware Virtual Platform
@@ -195,6 +197,8 @@ def _virtual(osdata):
         elif 'virtualbox' in model:
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
+            grains['virtual'] = 'kvm'
+        elif 'virtio' in model:
             grains['virtual'] = 'kvm'
     choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
@@ -641,6 +645,16 @@ def _hw_data(osdata):
             grains['manufacturer'] = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv)).strip()
             grains['serialnumber'] = __salt__['cmd.run']('{0} smbios.system.serial'.format(kenv)).strip()
             grains['productname'] = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv)).strip()
+    elif osdata['kernel'] == 'OpenBSD':
+        sysctl = salt.utils.which('sysctl')
+        vendor_cmd = '{0} -n hw.vendor'.format(sysctl)
+        product_cmd = '{0} -n hw.product'.format(sysctl)
+        version_cmd = '{0} -n hw.version'.format(sysctl)
+        serial_cmd = '{0} -n hw.serialno'.format(sysctl)
+        grains['biosversion'] = __salt__['cmd.run'](version_cmd).strip()
+        grains['manufacturer'] = __salt__['cmd.run'](vendor_cmd).strip()
+        grains['productname'] = __salt__['cmd.run'](product_cmd).strip()
+        grains['serialnumber'] = __salt__['cmd.run'](serial_cmd).strip()
     return grains
 
 

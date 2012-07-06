@@ -42,6 +42,7 @@ import zmq
 import salt.config
 import salt.payload
 import salt.utils
+import salt.utils.verify
 import salt.utils.event
 from salt.exceptions import SaltClientError, SaltInvocationError
 
@@ -81,11 +82,16 @@ class LocalClient(object):
         '''
         Read in the rotating master authentication key
         '''
+        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
+        # Make sure all key parent directories are accessible
+        user = self.opts.get('user', 'root')
+        salt.utils.verify.check_parent_dirs(keyfile, user)
+
         try:
-            keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-            key = open(keyfile, 'r').read()
-            return key
+            with open(keyfile, 'r') as KEY:
+                return KEY.read()
         except (OSError, IOError):
+            # In theory, this should never get hit. Belt & suspenders baby!
             raise SaltClientError(('Problem reading the salt root key. Are'
                                    ' you root?'))
 
@@ -854,19 +860,10 @@ class LocalClient(object):
         if self.opts['order_masters']:
             payload_kwargs['to'] = timeout
 
-        package = salt.payload.format_payload('clear', **payload_kwargs)
-
-        # Prep zmq
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.linger = 0
-        socket.connect(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(
-                    self.opts
-                    )
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
-        socket.send(package)
-        payload = self.serial.loads(socket.recv())
+        payload = sreq.send('clear', payload_kwargs)
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 

@@ -3,14 +3,20 @@ import os
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from saltunittest import TestCase, TestLoader, TextTestRunner
-from mock import MagicMock, patch
+from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+try:
+    from mock import MagicMock, patch
+    has_mock = True
+except ImportError:
+    has_mock = False
 
-import salt.modules.rvm as rvm
-rvm.__salt__ = {
-    'cmd.has_exec': MagicMock(return_value=True)}
+if has_mock:
+    import salt.modules.rvm as rvm
+    rvm.__salt__ = {
+        'cmd.has_exec': MagicMock(return_value=True)}
 
 
+@skipIf(has_mock is False, "mock python module is unavailable")
 class TestRvmModule(TestCase):
 
     def test__rvm(self):

@@ -163,6 +163,7 @@ def parse_opts():
         options.shell = True
         options.unit = True
         options.runner = True
+        options.state = True
     return options
 
 
