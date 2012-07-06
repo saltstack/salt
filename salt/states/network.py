@@ -225,7 +225,7 @@ def system(
         'result': True,
         'comment': 'Global network settings are up to date.'
     }
-
+    apply_net_settings = False
     # Build global network settings 
     try:
         old = __salt__['ip.get_network_settings']()
@@ -242,9 +242,11 @@ def system(
                 ret['comment'] = 'Global network settings are set to be updated.'
                 return ret
         if not old and new:
+            apply_net_settings = True
             ret['changes']['network_settings'] = 'Added global network settings.'
         elif old != new:
             diff = difflib.unified_diff(old, new)
+            apply_net_settings = True
             ret['changes']['network_settings'] = ''.join(diff)
     except AttributeError as error:
         ret['result'] = False
@@ -252,11 +254,12 @@ def system(
         return ret
 
     # Apply global network settings
-    try:
-        __salt__['ip.apply_network_settings'](kwargs)
-    except AttributeError as error:
-        ret['result'] = False
-        ret['comment'] = error.message
-        return ret
+    if apply_net_settings:
+        try:
+            __salt__['ip.apply_network_settings'](kwargs)
+        except AttributeError as error:
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
 
     return ret
