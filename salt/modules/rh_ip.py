@@ -688,9 +688,9 @@ def build_bond(iface, settings):
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
     if rh_major == '5':
-        __salt__['cmd.run']('sed -i -e "/^alias\sbond.*/d" /etc/modprobe.conf')
-        __salt__['cmd.run']('sed -i -e "/^options\sbond.*/d" /etc/modprobe.conf')
-        __salt__['file.append']('/etc/modprobe.conf %s' % data)
+        __salt__['cmd.run']('sed -i -e "/^alias\s%s.*/d" /etc/modprobe.conf' % iface)
+        __salt__['cmd.run']('sed -i -e "/^options\s%s.*/d" /etc/modprobe.conf' % iface)
+        __salt__['cmd.run']('cat %s >> /etc/modprobe.conf' % path)
     __salt__['kmod.load']('bonding')
 
     return _read_file(path)
