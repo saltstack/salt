@@ -536,12 +536,12 @@ def _parse_settings_eth(opts, iface_type, iface):
     # want to check to see if he has this interface enabled,
     # which is a required setting. If enabled, we assume enabled.
     if 'onboot' in opts:
-        if opts[opt] in _CONFIG_TRUE:
-            result[opt] = 'yes'
-        elif opts[opt] in _CONFIG_FALSE:
-            result[opt] = 'no'
+        if opts['onboot'] in _CONFIG_TRUE:
+            result['onboot'] = 'yes'
+        elif opts['onboot'] in _CONFIG_FALSE:
+            result['onboot'] = 'no'
         else:
-            _raise_error_iface(iface, opts[opt], valid)
+            _raise_error_iface(iface, opts['onboot'], valid)
     else:
         if 'enabled' in opts:
             if opts['enabled'] in _CONFIG_TRUE:
