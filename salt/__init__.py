@@ -209,6 +209,7 @@ class Minion(object):
             verify_env([
                 self.opts['pki_dir'],
                 self.opts['cachedir'],
+                self.opts['sock_dir'],
                 self.opts['extension_modules'],
                 os.path.dirname(self.opts['log_file']),
             ], self.opts['user'])
