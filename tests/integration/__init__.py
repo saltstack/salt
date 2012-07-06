@@ -168,7 +168,12 @@ class ModuleCase(TestCase):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=5, kwarg=kwargs)
+        orig = self.client.cmd(
+                'minion',
+                function,
+                arg,
+                timeout=100,
+                kwarg=kwargs)
         return orig['minion']
 
     def state_result(self, ret):
