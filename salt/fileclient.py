@@ -15,7 +15,7 @@ import yaml
 import zmq
 
 # Import salt libs
-from salt.exceptions import MinionError
+from salt.exceptions import MinionError, SaltReqTimeoutError
 import salt.client
 import salt.crypt
 import salt.loader
@@ -604,7 +604,6 @@ class RemoteClient(Client):
         '''
         load = {'env': env,
                 'cmd': '_file_list'}
-        self.socket.send(self.serial.dumps(payload))
         try:
             return self.auth.crypticle.loads(
                     self.sreq.send(
