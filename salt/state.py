@@ -32,6 +32,7 @@ import salt.fileclient
 from salt._compat import string_types, callable
 
 from salt.template import compile_template, compile_template_str
+from salt.exceptions import SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
 
