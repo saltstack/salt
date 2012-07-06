@@ -516,50 +516,63 @@ class Minion(object):
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
-                socks = dict(poller.poll(self.opts['sub_timeout']))
-                if socket in socks and socks[socket] == zmq.POLLIN:
-                    payload = self.serial.loads(socket.recv())
-                    self._handle_payload(payload)
-                    last = time.time()
-                if time.time() - last > self.opts['sub_timeout']:
-                    # It has been a while since the last command, make sure
-                    # the connection is fresh by reconnecting
-                    if self.opts['dns_check']:
+                try:
+                    socks = dict(poller.poll(self.opts['sub_timeout']))
+                    if socket in socks and socks[socket] == zmq.POLLIN:
+                        payload = self.serial.loads(socket.recv())
+                        self._handle_payload(payload)
+                        last = time.time()
+                    if time.time() - last > self.opts['sub_timeout']:
+                        # It has been a while since the last command, make sure
+                        # the connection is fresh by reconnecting
+                        if self.opts['dns_check']:
+                            try:
+                                # Verify that the dns entry has not changed
+                                self.opts['master_ip'] = salt.utils.dns_check(
+                                    self.opts['master'], safe=True)
+                            except SaltClientError:
+                                # Failed to update the dns, keep the old addr
+                                pass
+                        poller.unregister(socket)
+                        socket.close()
+                        socket = context.socket(zmq.SUB)
+                        socket.setsockopt(zmq.SUBSCRIBE, '')
+                        socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+                        socket.connect(self.master_pub)
+                        poller.register(socket, zmq.POLLIN)
+                        last = time.time()
+                    time.sleep(0.05)
+                    multiprocessing.active_children()
+                    self.passive_refresh()
+                    # Check the event system
+                    if epoller.poll(1):
                         try:
-                            # Verify that the dns entry has not changed
-                            self.opts['master_ip'] = salt.utils.dns_check(
-                                self.opts['master'], safe=True)
-                        except SaltClientError:
-                            # Failed to update the dns, keep the old addr
+                            package = epull_sock.recv(zmq.NOBLOCK)
+                            epub_sock.send(package)
+                        except Exception:
                             pass
-                    poller.unregister(socket)
-                    socket.close()
-                    socket = context.socket(zmq.SUB)
-                    socket.setsockopt(zmq.SUBSCRIBE, '')
-                    socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-                    socket.connect(self.master_pub)
-                    poller.register(socket, zmq.POLLIN)
-                    last = time.time()
-                time.sleep(0.05)
-                multiprocessing.active_children()
-                self.passive_refresh()
-                # Check the event system
-                if epoller.poll(1):
-                    try:
-                        package = epull_sock.recv(zmq.NOBLOCK)
-                        epub_sock.send(package)
-                    except Exception:
-                        pass
+                except Exception as exc:
+                    log.critical('A fault occured in the main minion loop {0}'.format(exc))
         else:
             while True:
-                socks = dict(poller.poll(60))
-                if socket in socks and socks[socket] == zmq.POLLIN:
-                    payload = self.serial.loads(socket.recv())
-                    self._handle_payload(payload)
-                    last = time.time()
-                time.sleep(0.05)
-                multiprocessing.active_children()
-                self.passive_refresh()
+                try:
+                    socks = dict(poller.poll(60))
+                    if socket in socks and socks[socket] == zmq.POLLIN:
+                        payload = self.serial.loads(socket.recv())
+                        self._handle_payload(payload)
+                        last = time.time()
+                    time.sleep(0.05)
+                    multiprocessing.active_children()
+                    self.passive_refresh()
+                    # Check the event system
+                    if epoller.poll(1):
+                        try:
+                            package = epull_sock.recv(zmq.NOBLOCK)
+                            epub_sock.send(package)
+                        except Exception:
+                            pass
+                except Exception as exc:
+                    log.critical('A fault occured in the main minion loop {0}'.format(exc))
 
 
 class Syndic(salt.client.LocalClient, Minion):
