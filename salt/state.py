@@ -1585,25 +1585,20 @@ class RemoteHighState(object):
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         self.auth = salt.crypt.SAuth(opts)
-        self.socket = self.__get_socket()
-
-    def __get_socket(self):
-        '''
-        Return the zeromq socket to use
-        '''
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        return socket
 
     def compile_master(self):
         '''
         Return the state data from the master
         '''
-        payload = {'enc': 'aes'}
         load = {'grains': self.grains,
                 'opts': self.opts,
                 'cmd': '_master_state'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(sreq.send(
+                    'aes',
+                    self.auth.crypticle.dumps(load),
+                    3,
+                    72000))
+        except SaltReqTimeoutError:
+            return {}
+
