@@ -544,9 +544,9 @@ def _parse_settings_eth(opts, iface_type, iface):
             _raise_error_iface(iface, opts[opt], valid)
     else:
         if 'enabled' in opts:
-            if opts['enabled'] _CONFIG_TRUE:
+            if opts['enabled'] in _CONFIG_TRUE:
                 result['onboot'] = 'yes'
-            elif opts['enabled'] _CONFIG_FALSE:
+            elif opts['enabled'] in _CONFIG_FALSE:
                 result['onboot'] = 'no'
             else:
                 _raise_error_iface(iface, opts['enabled'], valid)
