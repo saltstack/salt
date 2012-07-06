@@ -54,7 +54,7 @@ def _publish(
         if isinstance(arg, string_types):
             arg = arg.split(',')
 
-    sreq = salt.payload(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {
