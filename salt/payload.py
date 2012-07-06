@@ -10,6 +10,7 @@ import sys
 # Import salt libs
 import salt.log
 import salt.crypt
+from salt.exceptions import SaltReqTimeoutError
 from salt._compat import pickle
 
 # Import zeromq
@@ -138,7 +139,7 @@ class SREQ(object):
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
         if not poller.poll(timeout):
-            raise SaltReqTimeoutError
+            raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
         ret = self.serial.loads(self.socket.recv())
         poller.unregister(self.socket)
         return ret
