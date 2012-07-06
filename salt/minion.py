@@ -20,7 +20,7 @@ import zmq
 # Import salt libs
 from salt.exceptions import AuthenticationError, \
     CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltClientError
+    SaltClientError, SaltReqTimeoutError
 import salt.client
 import salt.crypt
 import salt.loader
