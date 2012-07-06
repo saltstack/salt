@@ -128,7 +128,7 @@ class SREQ(object):
         self.socket.linger = linger
         self.socket.connect(master)
 
-    def send(self, enc, load, tries=1, timeout=10):
+    def send(self, enc, load, tries=1, timeout=60):
         '''
         Takes two arguments, the encryption type and the base payload
         '''
@@ -138,8 +138,13 @@ class SREQ(object):
         self.socket.send(package)
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
-        if not poller.poll(timeout*1000):
-            raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
+        tried = 0
+        while True:
+            if not poller.poll(timeout*1000) and tried >= tries:
+                raise SaltReqTimeoutError('Waited {0} seconds'.format(timeout))
+            else:
+                break
+            tried += 1
         ret = self.serial.loads(self.socket.recv())
         poller.unregister(self.socket)
         return ret
