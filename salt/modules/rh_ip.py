@@ -531,25 +531,17 @@ def _parse_settings_eth(opts, iface_type, iface):
             else:
                 _raise_error_iface(iface, opts[opt], valid)
 
-    # We want to honor the onboot parameter set by administrator.
-    # If said administraor does not choose to set this option, we
-    # want to check to see if he has this interface enabled,
-    # which is a required setting. If enabled, we assume enabled.
     if 'onboot' in opts:
-        if opts['onboot'] in _CONFIG_TRUE:
+        log.warning('''The 'onboot' option is controlled by the 'enabled' option.
+                Interface: %s Enabled: %s''' % (iface, opts['enabled'])
+
+    if 'enabled' in opts:
+        if opts['enabled'] in _CONFIG_TRUE:
             result['onboot'] = 'yes'
-        elif opts['onboot'] in _CONFIG_FALSE:
+        elif opts['enabled'] in _CONFIG_FALSE:
             result['onboot'] = 'no'
         else:
-            _raise_error_iface(iface, opts['onboot'], valid)
-    else:
-        if 'enabled' in opts:
-            if opts['enabled'] in _CONFIG_TRUE:
-                result['onboot'] = 'yes'
-            elif opts['enabled'] in _CONFIG_FALSE:
-                result['onboot'] = 'no'
-            else:
-                _raise_error_iface(iface, opts['enabled'], valid)
+            _raise_error_iface(iface, opts['enabled'], valid)
 
     # If the interface is defined then we want to always take
     # control away from non-root users; unless the administrator
