@@ -690,7 +690,7 @@ def build_bond(iface, settings):
     if rh_major == '5':
         __salt__['cmd.run']('sed -i -e "/^alias\sbond.*/d" /etc/modprobe.conf')
         __salt__['cmd.run']('sed -i -e "/^options\sbond.*/d" /etc/modprobe.conf')
-        __salt__['file.append']('/etc/modprobe.conf %s' data)
+        __salt__['file.append']('/etc/modprobe.conf %s' % data)
     __salt__['kmod.load']('bonding')
 
     return _read_file(path)
