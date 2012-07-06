@@ -860,19 +860,11 @@ class LocalClient(object):
         if self.opts['order_masters']:
             payload_kwargs['to'] = timeout
 
-        package = salt.payload.format_payload('clear', **payload_kwargs)
-
-        # Prep zmq
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.linger = 0
-        socket.connect(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(
-                    self.opts
-                    )
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                self.opts['serial'],
                 )
-        socket.send(package)
-        payload = self.serial.loads(socket.recv())
+        payload = sreq.send('clear', payload_kwargs)
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 
