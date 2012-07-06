@@ -4,9 +4,14 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 '''
 
+# Import python libs
 import sys
+
+# Import salt libs
 import salt.log
+import salt.crypt
 from salt._compat import pickle
+
 
 log = salt.log.logging.getLogger(__name__)
 
@@ -112,7 +117,7 @@ class SREQ(object):
     '''
     Create a generic interface to wrap salt zeromq req calls. 
     '''
-    def __init__(self, master, serial='msgpack', timeout=10, linger=0):
+    def __init__(self, master, serial='msgpack', linger=0):
         self.master = master
         self.serial = Serial(serial)
         context = zmq.Context()
@@ -120,18 +125,12 @@ class SREQ(object):
         self.socket.linger = linger
         self.socket.connect(master)
 
-    def send(enc, load):
+    def send(enc, load, tries=1, timeout=10):
         '''
         Takes two arguments, the encryption type and the base payload
         '''
         payload = {'enc': enc}
-        if enc == 'clear':
-            eload = load
-        elif enc == 'aes':
-            eload = load
-        elif enc == 'pub':
-            eload = load
-        payload['load'] = eload
+        payload['load'] = load
         package = self.serial.dumps(payload)
         self.socket.send(package)
         poller = zmq.Poller()
