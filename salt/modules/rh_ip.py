@@ -38,7 +38,11 @@ _RH_CONFIG_OPTS = [
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
     'arp_ip_target', 'downdelay', 'updelay',
-    'use_carrier', 'lacp_rate', 'hashing-algorithm'
+    'use_carrier', 'lacp_rate', 'hashing-algorithm',
+    'max_bonds', 'tx_queues', 'num_grat_arp',
+    'num_unsol_na', 'primary', 'primary_reselect',
+    'ad_select', 'xmit_hash_policy', 'arp_validate',
+    'fail_over_mac', 'all_slaves_active', 'resend_igmp'
 ]
 _RH_NETWORK_SCRIPT_DIR = '/etc/sysconfig/network-scripts'
 _RH_NETWORK_FILE = '/etc/sysconfig/network'
@@ -153,10 +157,18 @@ def _parse_settings_bond(opts, iface):
     '''
 
     bond_def = {
+        # 803.ad aggregation selection logic
+        # 0 for stable (default)
+        # 1 for bandwidth
+        # 2 for count
+        'ad_select' : '0',
+        # Max number of transmit queues (default = 16)
+        'tx_queues' : '16',
         # Link monitoring in milliseconds. Most NICs support this
         'miimon': '100',
+        # arp interval in milliseconds
         'arp_interval': '250',
-        # miimon * 2
+        # Delay before considering link down in milliseconds (miimon * 2)
         'downdelay': '200',
         # lacp_rate 0: Slow - every 30 seconds
         # lacp_rate 1: Fast - every 1 second
@@ -176,18 +188,25 @@ def _parse_settings_bond(opts, iface):
     }
 
     if opts['mode'] in ['balance-rr', '0']:
+        log.info('Device: %s Bonding Mode: load balancing (round-robin)' % (iface))
         return _parse_settings_bond_0(opts, iface, bond_def)
     elif opts['mode'] in ['active-backup', '1']:
+        log.info('Device: %s Bonding Mode: fault-tolerance (active-backup)' % (iface))
         return _parse_settings_bond_1(opts, iface, bond_def)
     elif opts['mode'] in ['balance-xor', '2']:
+        log.info('Device: %s Bonding Mode: load balancing (xor)' % (iface))
         return _parse_settings_bond_2(opts, iface, bond_def)
     elif opts['mode'] in ['broadcast', '3']:
+        log.info('Device: %s Bonding Mode: fault-tolerance (broadcast)' % (iface))
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts['mode'] in ['802.3ad', '4']:
+        log.info('Device: %s Bonding Mode: IEEE 802.3ad Dynamic link aggregation' % (iface))
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts['mode'] in ['balance-tlb', '5']:
+        log.info('Device: %s Bonding Mode: transmit load balancing' % (iface))
         return _parse_settings_bond_5(opts, iface, bond_def)
     elif opts['mode'] in ['balance-alb', '6']:
+        log.info('Device: %s Bonding Mode: adaptive load balancing' % (iface))
         return _parse_settings_bond_6(opts, iface, bond_def)
     else:
         valid = [
@@ -207,6 +226,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     '''
     bond = {'mode': '0'}
 
+    # arp targets in n.n.n.n form
     valid = ['list of ips (up to 16)']
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
@@ -364,7 +384,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
 
     bond = {'mode': '4'}
 
-    for bo in ['miimon', 'downdelay', 'updelay', 'lacp_rate']:
+    for bo in ['miimon', 'downdelay', 'updelay', 'lacp_rate', 'ad_select']:
         if bo in opts:
             if bo == 'lacp_rate':
                 if opts[bo] == 'fast':
@@ -477,7 +497,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     return bond
 
 
-def _parse_settings_eth(opts, iface_type, iface):
+def _parse_settings_eth(opts, iface_type, enabled, iface):
     '''
     Fiters given options and outputs valid settings for a
     network interface.
@@ -522,7 +542,7 @@ def _parse_settings_eth(opts, iface_type, iface):
             result[opt] = opts[opt]
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onboot', 'peerdns', 'slave', 'userctl', 'vlan']:
+    for opt in ['peerdns', 'slave', 'vlan']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
@@ -530,6 +550,27 @@ def _parse_settings_eth(opts, iface_type, iface):
                 result[opt] = 'no'
             else:
                 _raise_error_iface(iface, opts[opt], valid)
+
+    if 'onboot' in opts:
+        log.warning('''The 'onboot' option is controlled by the 'enabled' option. Interface: %s Enabled: %s''' % (iface, enabled))
+
+    if enabled:
+        result['onboot'] = 'yes'
+    else:
+        result['onboot'] = 'no'
+
+    # If the interface is defined then we want to always take
+    # control away from non-root users; unless the administrator
+    # wants to allow non-root users to control the device.
+    if 'userctl' in opts:
+        if opts['userctl'] in _CONFIG_TRUE:
+            result['userctl'] = 'yes'
+        elif opts['userctl'] in _CONFIG_FALSE:
+            result['userctl'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['userctl'], valid)
+    else:
+        result['userctl'] = 'no'
 
     return result
 
@@ -636,19 +677,26 @@ def build_bond(iface, settings):
 
     CLI Example::
 
-        salt '*' ip.build_bond br0 mode=balance-alb
+        salt '*' ip.build_bond bond0 mode=balance-alb
     '''
+    rh_major = __grains__['osrelease'][:1]
+    rh_minor = __grains__['osrelease'][2:]
+
     opts = _parse_settings_bond(settings, iface)
     template = env.get_template('conf.jinja')
     data = template.render({'name': iface, 'bonding': opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    if rh_major == '5':
+        __salt__['cmd.run']('sed -i -e "/^alias\s%s.*/d" /etc/modprobe.conf' % iface)
+        __salt__['cmd.run']('sed -i -e "/^options\s%s.*/d" /etc/modprobe.conf' % iface)
+        __salt__['cmd.run']('cat %s >> /etc/modprobe.conf' % path)
     __salt__['kmod.load']('bonding')
 
     return _read_file(path)
 
 
-def build_interface(iface, iface_type, settings):
+def build_interface(iface, iface_type, enabled, settings):
     '''
     Build an interface script for a network interface.
 
@@ -656,6 +704,9 @@ def build_interface(iface, iface_type, settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
+    rh_major = __grains__['osrelease'][:1]
+    rh_minor = __grains__['osrelease'][2:]
+
     if iface_type not in _IFACE_TYPES:
         _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
@@ -670,8 +721,8 @@ def build_interface(iface, iface_type, settings):
         settings['vlan'] = 'yes'
 
     if iface_type in ['eth', 'bond', 'slave', 'vlan']:
-        opts = _parse_settings_eth(settings, iface_type, iface)
-        template = env.get_template('eth.jinja')
+        opts = _parse_settings_eth(settings, iface_type, enabled, iface)
+        template = env.get_template('rh%s_eth.jinja' % rh_major)
         ifcfg = template.render(opts)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s')
@@ -679,7 +730,7 @@ def build_interface(iface, iface_type, settings):
     return _read_file(path)
 
 
-def down(iface):
+def down(iface, iface_type, opts):
     '''
     Shutdown a network interface
 
@@ -687,7 +738,10 @@ def down(iface):
 
         salt '*' ip.down eth0
     '''
-    __salt__['cmd.run']('ifdown %s' % iface)
+    # Slave devices are controlled by the master.
+    if iface_type not in ['slave']:
+        return __salt__['cmd.run']('ifdown %s' % iface)
+    return None
 
 
 def get_bond(iface):
@@ -696,7 +750,7 @@ def get_bond(iface):
 
     CLI Example::
 
-        salt '*' ip.get_bond br0
+        salt '*' ip.get_bond bond0
     '''
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
     return _read_file(path)
@@ -714,7 +768,7 @@ def get_interface(iface):
     return _read_file(path)
 
 
-def up(iface):
+def up(iface, iface_type, opts):
     '''
     Start up a network interface
 
@@ -722,7 +776,10 @@ def up(iface):
 
         salt '*' ip.up eth0
     '''
-    __salt__['cmd.run']('ifup %s' % iface)
+    # Slave devices are controlled by the master.
+    if iface_type not in ['slave']:
+        return __salt__['cmd.run']('ifup %s' % iface)
+    return None
 
 
 def get_network_settings():
