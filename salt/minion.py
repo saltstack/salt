@@ -374,10 +374,7 @@ class Minion(object):
                     # The file is gone already
                     pass
         log.info('Returning information for job: {0}'.format(ret['jid']))
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        payload = {'enc': 'aes'}
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'jid': ret['jid'],
@@ -399,10 +396,10 @@ class Minion(object):
                     load['out'] = oput
         except KeyError:
             pass
-        payload['load'] = self.crypticle.dumps(load)
-        data = self.serial.dumps(payload)
-        socket.send(data)
-        ret_val = self.serial.loads(socket.recv())
+        try:
+            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+        except SaltReqTimeoutError:
+            ret_val = ''
         if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
