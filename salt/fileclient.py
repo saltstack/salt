@@ -533,6 +533,7 @@ class RemoteClient(Client):
     def __init__(self, opts):
         Client.__init__(self, opts)
         self.auth = salt.crypt.SAuth(opts)
+        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
         self.socket = self.__get_socket()
 
     def __get_socket(self):
@@ -552,7 +553,6 @@ class RemoteClient(Client):
         cache
         '''
         path = self._check_proto(path)
-        payload = {'enc': 'aes'}
         load = {'path': path,
                 'env': env,
                 'cmd': '_serve_file'}
@@ -570,9 +570,16 @@ class RemoteClient(Client):
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            payload['load'] = self.auth.crypticle.dumps(load)
-            self.socket.send(self.serial.dumps(payload))
-            data = self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+            try:
+                data = self.auth.crypticle.loads(
+                        self.sreq.send(
+                            'aes',
+                            self.auth.crypticle.dumps(load),
+                            3,
+                            60)
+                        )
+            except SaltReqTimeoutError:
+                return ''
             if not data['data']:
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master
@@ -595,12 +602,19 @@ class RemoteClient(Client):
         '''
         List the files on the master
         '''
-        payload = {'enc': 'aes'}
         load = {'env': env,
                 'cmd': '_file_list'}
-        payload['load'] = self.auth.crypticle.dumps(load)
         self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(
+                    self.sreq.send(
+                        'aes',
+                        self.auth.crypticle.dumps(load),
+                        3,
+                        60)
+                    )
+        except SaltReqTimeoutError:
+            return ''
 
     def file_list_emptydirs(self, env='base'):
         '''
