@@ -677,13 +677,20 @@ def build_bond(iface, settings):
 
     CLI Example::
 
-        salt '*' ip.build_bond br0 mode=balance-alb
+        salt '*' ip.build_bond bond0 mode=balance-alb
     '''
+    rh_major = __grains__['osrelease'][:1]
+    rh_minor = __grains__['osrelease'][2:]
+
     opts = _parse_settings_bond(settings, iface)
     template = env.get_template('conf.jinja')
     data = template.render({'name': iface, 'bonding': opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    if rh_major == '5':
+        __salt__['cmd.run']('sed -i -e "/^alias\sbond.*/d" /etc/modprobe.conf')
+        __salt__['cmd.run']('sed -i -e "/^options\sbond.*/d" /etc/modprobe.conf')
+        __salt__['file.append']('/etc/modprobe.conf %s' data)
     __salt__['kmod.load']('bonding')
 
     return _read_file(path)
@@ -697,6 +704,9 @@ def build_interface(iface, iface_type, enabled, settings):
 
         salt '*' ip.build_interface eth0 eth <settings>
     '''
+    rh_major = __grains__['osrelease'][:1]
+    rh_minor = __grains__['osrelease'][2:]
+
     if iface_type not in _IFACE_TYPES:
         _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
@@ -712,7 +722,7 @@ def build_interface(iface, iface_type, enabled, settings):
 
     if iface_type in ['eth', 'bond', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
-        template = env.get_template('eth.jinja')
+        template = env.get_template('rh%s_eth.jinja' % rh_major)
         ifcfg = template.render(opts)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s')
@@ -740,7 +750,7 @@ def get_bond(iface):
 
     CLI Example::
 
-        salt '*' ip.get_bond br0
+        salt '*' ip.get_bond bond0
     '''
     path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
     return _read_file(path)
