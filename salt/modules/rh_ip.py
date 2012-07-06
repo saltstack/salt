@@ -532,10 +532,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _raise_error_iface(iface, opts[opt], valid)
 
     if 'onboot' in opts:
-        log.warning('''The 'onboot' option is controlled by the 'enabled' option.
-                Interface: %s Enabled: %s''' % (iface, enabled))
+        log.warning('''The 'onboot' option is controlled by the 'enabled' option. Interface: %s Enabled: %s''' % (iface, enabled))
 
-    if 'enabled':
+    if enabled:
         result['onboot'] = 'yes'
     else:
         result['onboot'] = 'no'
