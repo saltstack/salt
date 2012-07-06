@@ -194,9 +194,9 @@ def managed(
     #Bring up/shutdown interface
     try:
         if enabled:
-            __salt__['ip.up'](name)
+            __salt__['ip.up'](name, type, kwargs)
         else:
-            __salt__['ip.down'](name)
+            __salt__['ip.down'](name, type, kwargs)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message
