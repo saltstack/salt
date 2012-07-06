@@ -12,6 +12,8 @@ import salt.log
 import salt.crypt
 from salt._compat import pickle
 
+# Import zeromq
+import zmq
 
 log = salt.log.logging.getLogger(__name__)
 
@@ -125,7 +127,7 @@ class SREQ(object):
         self.socket.linger = linger
         self.socket.connect(master)
 
-    def send(enc, load, tries=1, timeout=10):
+    def send(self, enc, load, tries=1, timeout=10):
         '''
         Takes two arguments, the encryption type and the base payload
         '''
@@ -137,11 +139,11 @@ class SREQ(object):
         poller.register(self.socket, zmq.POLLIN)
         if not poller.poll(timeout):
             raise SaltReqTimeoutError
-        ret = self.serial.loads(socket.recv())
+        ret = self.serial.loads(self.socket.recv())
         poller.unregister(self.socket)
         return ret
 
-    def send_auto(payload):
+    def send_auto(self, payload):
         '''
         Detect the encryption type based on the payload
         '''
