@@ -534,16 +534,6 @@ class RemoteClient(Client):
         Client.__init__(self, opts)
         self.auth = salt.crypt.SAuth(opts)
         self.sreq = salt.payload.SREQ(self.opts['master_uri'])
-        self.socket = self.__get_socket()
-
-    def __get_socket(self):
-        '''
-        Return the ZeroMQ socket to use
-        '''
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        return socket
 
     def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
@@ -619,12 +609,18 @@ class RemoteClient(Client):
         '''
         List the empty dirs on the master
         '''
-        payload = {'enc': 'aes'}
         load = {'env': env,
                 'cmd': '_file_list_emptydirs'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(
+                    self.sreq.send(
+                        'aes',
+                        self.auth.crypticle.dumps(load),
+                        3,
+                        60)
+                    )
+        except SaltReqTimeoutError:
+            return ''
 
     def hash_file(self, path, env='base'):
         '''
@@ -646,43 +642,67 @@ class RemoteClient(Client):
                     ret['hsum'] = hashlib.md5(f.read()).hexdigest()
                 ret['hash_type'] = 'md5'
                 return ret
-        payload = {'enc': 'aes'}
         load = {'path': path,
                 'env': env,
                 'cmd': '_file_hash'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(
+                    self.sreq.send(
+                        'aes',
+                        self.auth.crypticle.dumps(load),
+                        3,
+                        60)
+                    )
+        except SaltReqTimeoutError:
+            return ''
 
     def list_env(self, path, env='base'):
         '''
         Return a list of the files in the file server's specified environment
         '''
-        payload = {'enc': 'aes'}
         load = {'env': env,
                 'cmd': '_file_list'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(
+                    self.sreq.send(
+                        'aes',
+                        self.auth.crypticle.dumps(load),
+                        3,
+                        60)
+                    )
+        except SaltReqTimeoutError:
+            return ''
 
     def master_opts(self):
         '''
         Return the master opts data
         '''
-        payload = {'enc': 'aes'}
         load = {'cmd': '_master_opts'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(
+                    self.sreq.send(
+                        'aes',
+                        self.auth.crypticle.dumps(load),
+                        3,
+                        60)
+                    )
+        except SaltReqTimeoutError:
+            return ''
 
     def ext_nodes(self):
         '''
         Return the metadata derived from the external nodes system on the
         master.
         '''
-        payload = {'enc': 'aes'}
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id']}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(
+                    self.sreq.send(
+                        'aes',
+                        self.auth.crypticle.dumps(load),
+                        3,
+                        60)
+                    )
+        except SaltReqTimeoutError:
+            return ''
