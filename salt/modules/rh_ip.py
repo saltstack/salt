@@ -61,25 +61,25 @@ def _error_msg_iface(iface, option, expected):
     Build an appropriate error message from a given option and
     a list of expected values.
     '''
-    msg = 'Invalid option -- Interface: %s, Option: %s, Expected: [%s]'
-    return msg % (iface, option, '|'.join(expected))
+    msg = 'Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]'
+    return msg.format(iface, option, '|'.join(expected))
 
 
 def _log_default_iface(iface, opt, value):
-    msg = 'Using default option -- Interface: %s Option: %s Value: %s'
-    log.info(msg % (iface, opt, value))
+    msg = 'Using default option -- Interface: {0} Option: {1} Value: {2}'
+    log.info(msg.format(iface, opt, value))
 
 def _error_msg_network(option, expected):
     '''
     Build an appropriate error message from a given option and
     a list of expected values.
     '''
-    msg = 'Invalid network setting -- Setting: %s, Expected: [%s]'
-    return msg % (option, '|'.join(expected))
+    msg = 'Invalid network setting -- Setting: {0}, Expected: [{1}]'
+    return msg.format(option, '|'.join(expected))
 
 def _log_default_network(opt, value):
-    msg = 'Using existing setting -- Setting: %s Value: %s'
-    log.info(msg % (opt, value))
+    msg = 'Using existing setting -- Setting: {0} Value: {1}'
+    log.info(msg.format(opt, value))
 
 def _parse_rh_config(path):
     rh_config = _read_file(path)
@@ -188,25 +188,25 @@ def _parse_settings_bond(opts, iface):
     }
 
     if opts['mode'] in ['balance-rr', '0']:
-        log.info('Device: %s Bonding Mode: load balancing (round-robin)' % (iface))
+        log.info('Device: {0} Bonding Mode: load balancing (round-robin)'.format(iface))
         return _parse_settings_bond_0(opts, iface, bond_def)
     elif opts['mode'] in ['active-backup', '1']:
-        log.info('Device: %s Bonding Mode: fault-tolerance (active-backup)' % (iface))
+        log.info('Device: {0} Bonding Mode: fault-tolerance (active-backup)'.format(iface))
         return _parse_settings_bond_1(opts, iface, bond_def)
     elif opts['mode'] in ['balance-xor', '2']:
-        log.info('Device: %s Bonding Mode: load balancing (xor)' % (iface))
+        log.info('Device: {0} Bonding Mode: load balancing (xor)'.format(iface))
         return _parse_settings_bond_2(opts, iface, bond_def)
     elif opts['mode'] in ['broadcast', '3']:
-        log.info('Device: %s Bonding Mode: fault-tolerance (broadcast)' % (iface))
+        log.info('Device: {0} Bonding Mode: fault-tolerance (broadcast)'.format(iface))
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts['mode'] in ['802.3ad', '4']:
-        log.info('Device: %s Bonding Mode: IEEE 802.3ad Dynamic link aggregation' % (iface))
+        log.info('Device: {0} Bonding Mode: IEEE 802.3ad Dynamic link aggregation'.format(iface))
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts['mode'] in ['balance-tlb', '5']:
-        log.info('Device: %s Bonding Mode: transmit load balancing' % (iface))
+        log.info('Device: {0} Bonding Mode: transmit load balancing'.format(iface))
         return _parse_settings_bond_5(opts, iface, bond_def)
     elif opts['mode'] in ['balance-alb', '6']:
-        log.info('Device: %s Bonding Mode: adaptive load balancing' % (iface))
+        log.info('Device: {0} Bonding Mode: adaptive load balancing'.format(iface))
         return _parse_settings_bond_6(opts, iface, bond_def)
     else:
         valid = [
@@ -552,7 +552,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _raise_error_iface(iface, opts[opt], valid)
 
     if 'onboot' in opts:
-        log.warning('''The 'onboot' option is controlled by the 'enabled' option. Interface: %s Enabled: %s''' % (iface, enabled))
+        log.warning('''The 'onboot' option is controlled by the 'enabled' option. Interface: {0} Enabled: {1}'''.format(iface, enabled))
 
     if enabled:
         result['onboot'] = 'yes'
@@ -651,10 +651,10 @@ def _write_file_iface(iface, data, folder, pattern):
     '''
     Writes a file to disk
     '''
-    filename = join(folder, pattern % iface)
+    filename = join(folder, pattern.format(iface))
     if not exists(folder):
-        msg = '%s cannot be written. %s does not exists'
-        msg = msg % (filename, folder)
+        msg = '{0} cannot be written. {1} does not exists'
+        msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
     fout = open(filename, 'w')
@@ -685,12 +685,12 @@ def build_bond(iface, settings):
     opts = _parse_settings_bond(settings, iface)
     template = env.get_template('conf.jinja')
     data = template.render({'name': iface, 'bonding': opts})
-    _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '%s.conf')
-    path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, '{0}.conf')
+    path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
-        __salt__['cmd.run']('sed -i -e "/^alias\s%s.*/d" /etc/modprobe.conf' % iface)
-        __salt__['cmd.run']('sed -i -e "/^options\s%s.*/d" /etc/modprobe.conf' % iface)
-        __salt__['cmd.run']('cat %s >> /etc/modprobe.conf' % path)
+        __salt__['cmd.run']('sed -i -e "/^alias\s{0}.*/d" /etc/modprobe.conf'.format(iface))
+        __salt__['cmd.run']('sed -i -e "/^options\s{0}.*/d" /etc/modprobe.conf'.format(iface))
+        __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
     __salt__['kmod.load']('bonding')
 
     return _read_file(path)
@@ -722,11 +722,11 @@ def build_interface(iface, iface_type, enabled, settings):
 
     if iface_type in ['eth', 'bond', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
-        template = env.get_template('rh%s_eth.jinja' % rh_major)
+        template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
         ifcfg = template.render(opts)
 
-    _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s')
-    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
+    _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}')
+    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
     return _read_file(path)
 
 
@@ -740,7 +740,7 @@ def down(iface, iface_type, opts):
     '''
     # Slave devices are controlled by the master.
     if iface_type not in ['slave']:
-        return __salt__['cmd.run']('ifdown %s' % iface)
+        return __salt__['cmd.run']('ifdown {0}'.format(iface))
     return None
 
 
@@ -752,7 +752,7 @@ def get_bond(iface):
 
         salt '*' ip.get_bond bond0
     '''
-    path = join(_RH_NETWORK_CONF_FILES, '%s.conf' % iface)
+    path = join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     return _read_file(path)
 
 
@@ -764,7 +764,7 @@ def get_interface(iface):
 
         salt '*' ip.get_interface eth0
     '''
-    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-%s' % iface)
+    path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
     return _read_file(path)
 
 
@@ -778,7 +778,7 @@ def up(iface, iface_type, opts):
     '''
     # Slave devices are controlled by the master.
     if iface_type not in ['slave']:
-        return __salt__['cmd.run']('ifup %s' % iface)
+        return __salt__['cmd.run']('ifup {0}'.format(iface))
     return None
 
 
