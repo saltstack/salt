@@ -30,7 +30,9 @@ def latest(name,
            rev=None,
            target=None,
            runas=None,
-           force=None):
+           force=None,
+           submodules=False,
+        ):
     '''
     Make sure the repository is cloned to the given directory and is up to date
 
@@ -44,6 +46,8 @@ def latest(name,
         Name of the user performing repository management operations
     force
         Force git to clone into pre-existing directories (deletes contents)
+    submodules
+        Update submodules on clone or branch change (Default: False)
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -68,6 +72,10 @@ def latest(name,
         if rev:
             __salt__['git.checkout'](target, rev, user=runas)
         __salt__['git.pull'](target, user=runas)
+
+        if submodules:
+            __salt__['git.submodule'](target, user=runas)
+
         new_rev = __salt__['git.revision'](cwd=target, user=runas)
         if current_rev != new_rev:
             log.info('Repository {0} updated: {1} => {2}'.format(target,
@@ -103,6 +111,9 @@ def latest(name,
 
         if rev:
             __salt__['git.checkout'](target, rev, user=runas)
+
+        if submodules:
+            __salt__['git.submodule'](target, user=runas)
 
         new_rev = __salt__['git.revision'](cwd=target, user=runas)
 
