@@ -100,13 +100,18 @@ def latest(name,
         result = __salt__['git.clone'](target, name, user=runas)
         if not os.path.isdir(target):
             return _fail(ret, result)
+
         if rev:
             __salt__['git.checkout'](target, rev, user=runas)
-        else:
-            message = 'Repository {0} cloned to {1}'.format(name, target)
-            log.info(message)
-            ret['comment'] = message
-            ret['changes']['new'] = name
+
+        new_rev = __salt__['git.revision'](cwd=target, user=runas)
+
+        message = 'Repository {0} cloned to {1}'.format(name, target)
+        log.info(message)
+        ret['comment'] = message
+
+        ret['changes']['new'] = name
+        ret['changes']['revision'] = new_rev
     return ret
 
 
