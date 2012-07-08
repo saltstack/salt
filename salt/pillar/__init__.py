@@ -42,22 +42,6 @@ def hiera(conf, grains=None):
     return yaml.safe_load(out)
 
 
-def cmd_yaml(command, grains=None):
-    '''
-    Execute a command and read the output as YAML
-    '''
-    out = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            shell=True
-            ).communicate()[0]
-    return yaml.safe_load(out)
-
-
-ext_pillar = {'hiera': hiera,
-              'cmd_yaml': cmd_yaml}
-
-
 def get_pillar(opts, grains, id_, env=None):
     '''
     Return the correct pillar driver based on the file_client option
