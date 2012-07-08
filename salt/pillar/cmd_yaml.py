@@ -1,14 +1,14 @@
 '''
-Execute a command and read the output as YAML
+Execute a command and read the output as YAML. The YAML data is then directly
+overlaid onto the minion's pillar data
 '''
+
+# Import third party libs
+import yaml
+
 
 def ext_pillar(command):
     '''
     Execute a command and read the output as YAML
     '''
-    out = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            shell=True
-            ).communicate()[0]
-    return yaml.safe_load(out)
+    return yaml.safe_load(__salt__['cmd.run'](command))
