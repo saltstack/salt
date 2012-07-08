@@ -12,6 +12,8 @@ import imp
 import salt
 import logging
 import tempfile
+
+# Import Salt libs
 from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
