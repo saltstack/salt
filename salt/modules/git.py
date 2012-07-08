@@ -312,3 +312,26 @@ def init(cwd, opts=None, user=None):
 
     cmd = 'git init {0} {1}'.format(cwd, opts)
     return __salt__['cmd.run'](cmd, runas=user)
+
+def submodule(cwd, init=True, opts=None, user=None):
+    '''
+    Initialize git submodules
+
+    cwd
+        The path to the Git repository
+
+    init : True
+        Ensure that new submodules are initialized
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+    '''
+    _check_git()
+
+    if not opts:
+        opts = ''
+    cmd = 'git submodule update {0} {1}'.format('--init' if init else '', opts)
+    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
