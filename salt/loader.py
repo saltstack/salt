@@ -85,7 +85,7 @@ def pillars(opts):
     '''
     Returns the returner modules
     '''
-    load = _create_loader(opts, 'pillars', 'pillar')
+    load = _create_loader(opts, 'pillar', 'pillar')
     return load.filter_func('ext_pillar')
 
 
