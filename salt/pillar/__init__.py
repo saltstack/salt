@@ -108,6 +108,7 @@ class Pillar(object):
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
         self.rend = salt.loader.render(self.opts, {})
+        self.ext_pillars = salt.loader.pillars(self.opts, grains)
 
     def __gen_opts(self, opts, grains, id_, env=None):
         '''
@@ -349,13 +350,18 @@ class Pillar(object):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
             for key, val in run.items():
-                if key not in ext_pillar:
+                if key not in self.pillars:
                     err = ('Specified ext_pillar interface {0} is '
                            'unavailable').format(key)
                     log.critical(err)
-                    return {}
+                    continue
                 try:
-                    ext.update(ext_pillar[key](val, self.opts['grains']))
+                    if isinstance(val, dict):
+                        ext.update(self.pillars[key](**val))
+                    elif isinstance(val, list):
+                        ext.update(self.pillars[key](*val))
+                    else:
+                        ext.update(self.pillars[key](val))
                 except Exception as e:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext
