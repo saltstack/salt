@@ -89,6 +89,8 @@ class TestDaemon(object):
                     self.sub_minion_opts['pki_dir'],
                     self.master_opts['sock_dir'],
                     self.smaster_opts['sock_dir'],
+                    self.sub_minion_opts['sock_dir'],
+                    self.minion_opts['sock_dir'],
                     ],
                     pwd.getpwuid(os.getuid())[0])
 
