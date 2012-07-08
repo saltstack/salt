@@ -79,6 +79,14 @@ def returners(opts):
     return load.filter_func('returner')
 
 
+def pillars(opts):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'pillars', 'pillar')
+    return load.filter_func('ext_pillar')
+
+
 def states(opts, functions):
     '''
     Returns the state modules
