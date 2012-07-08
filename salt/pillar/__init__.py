@@ -108,7 +108,7 @@ class Pillar(object):
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
         self.rend = salt.loader.render(self.opts, {})
-        self.ext_pillars = salt.loader.pillars(self.opts, grains)
+        self.ext_pillars = salt.loader.pillars(self.opts)
 
     def __gen_opts(self, opts, grains, id_, env=None):
         '''
@@ -336,6 +336,7 @@ class Pillar(object):
         '''
         Render the external pillar data
         '''
+        print self.ext_pillars.keys()
         if not 'ext_pillar' in self.opts:
             return  {}
         if not isinstance(self.opts['ext_pillar'], list):
@@ -346,22 +347,19 @@ class Pillar(object):
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
-            if len(run) != 1:
-                log.critical('The "ext_pillar" option is malformed')
-                return {}
             for key, val in run.items():
-                if key not in self.pillars:
+                if key not in self.ext_pillars:
                     err = ('Specified ext_pillar interface {0} is '
                            'unavailable').format(key)
                     log.critical(err)
                     continue
                 try:
                     if isinstance(val, dict):
-                        ext.update(self.pillars[key](**val))
+                        ext.update(self.ext_pillars[key](**val))
                     elif isinstance(val, list):
-                        ext.update(self.pillars[key](*val))
+                        ext.update(self.ext_pillars[key](*val))
                     else:
-                        ext.update(self.pillars[key](val))
+                        ext.update(self.ext_pillars[key](val))
                 except Exception as e:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext
