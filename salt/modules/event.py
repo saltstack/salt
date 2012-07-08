@@ -3,27 +3,37 @@ Fire events on the minion, events can be fired up to the master
 '''
 # Import Salt libs
 import salt.crypt
+import salt.utils.event
 import salt.payload
-
-# Import third party libs
-import zmq
 
 def fire_master(data, tag):
     '''
     Fire an event off on the master server
+
+    CLI Example::
+
+        salt '*' event.fire_master 'stuff to be in the event' 'tag'
     '''
-    serial = salt.payload.Serial(__opts__)
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect(__opts__['master_uri'])
     load = {'id': __opts__['id'],
             'tag': tag,
             'data': data,
             'cmd': '_minion_event'}
     auth = salt.crypt.SAuth(__opts__)
-    payload = {'enc': 'aes'}
-    payload['load'] = auth.crypticle.dumps(load)
-    auth = salt.crypt.SAuth(__opts__)
-    socket.send(serial.dumps(payload))
-    socket.recv()
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    try:
+        sreq.send('aes', auth.crypticle.dumps(load))
+    except:
+        pass
     return True
+
+
+def fire(data, tag):
+    '''
+    Fire an event on the local minion event bus
+
+    CLI Example::
+
+        salt '*' event.fire 'stuff to be in the event' 'tag'
+    '''
+    esock = salt.utils.event.MinionEvent(__opts__['sock_dir'])
+    return esock.fire_event(data, tag)
