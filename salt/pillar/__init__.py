@@ -336,7 +336,6 @@ class Pillar(object):
         '''
         Render the external pillar data
         '''
-        print self.ext_pillars.keys()
         if not 'ext_pillar' in self.opts:
             return  {}
         if not isinstance(self.opts['ext_pillar'], list):
