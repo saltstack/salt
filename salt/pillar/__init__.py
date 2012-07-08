@@ -24,24 +24,6 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-def hiera(conf, grains=None):
-    '''
-    Execute hiera and return the data
-    '''
-    if not isinstance(grains, dict):
-        grains = {}
-    cmd = 'hiera {0}'.format(conf)
-    for key, val in grains.items():
-        if isinstance(val, string_types):
-            cmd += ' {0}={1}'.format(key, val)
-    out = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            shell=True
-            ).communicate()[0]
-    return yaml.safe_load(out)
-
-
 def get_pillar(opts, grains, id_, env=None):
     '''
     Return the correct pillar driver based on the file_client option
