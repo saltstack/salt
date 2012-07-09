@@ -37,7 +37,8 @@ class TestSaltCacheLoader(TestCase):
 
     def test_mockclient(self):
         '''
-        A MockFileClient is used that records all file request normally send to the master.
+        A MockFileClient is used that records all file requests normally sent
+        to the master.
         '''
         loader = SaltCacheLoader({'cachedir': TEMPLATES_DIR}, 'test')
         fc = MockFileClient(loader)

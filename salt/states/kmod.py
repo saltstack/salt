@@ -74,7 +74,8 @@ def absent(name):
             # Found the module, unload it!
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'] = 'Module {0} is set to be unloaded'.format(name)
+                ret['comment'] = 'Module {0} is set to be unloaded'
+                ret['comment'] = ret['comment'].format(name)
                 return ret
             for mod in __salt__['kmod.load'](name):
                 ret['changes'][mod] = 'removed'

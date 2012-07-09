@@ -15,6 +15,7 @@ import tempfile
 # Import Salt libs
 import salt.utils.event
 
+
 def parse():
     '''
     Parse the script command line inputs
@@ -37,7 +38,7 @@ def parse():
     options, args = parser.parse_args()
 
     opts = {}
-    
+
     for k, v in options.__dict__.items():
         if v is not None:
             opts[k] = v
@@ -58,7 +59,7 @@ def listen(sock_dir, node):
         if ret is None:
             continue
         print('Event fired at {0}'.format(time.asctime()))
-        print('*'*25)
+        print('*' * 25)
         print('Tag: {0}'.format(ret['tag']))
         print('Data:')
         pprint.pprint(ret['data'])
