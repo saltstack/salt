@@ -86,14 +86,22 @@ def latest(name,
                     current_rev, new_rev)
     else:
         if os.path.isdir(target):
+            # git clone is required, but target exists -- however it is empty
+            if not os.listdir(target):
+                log.debug(
+                    'target {0} found, but not a git repository. Since empty,'
+                    ' automatically deleting.'.format(target))
+                shutil.rmtree(target)
+            # git clone is required, target exists but force is turned on
+            elif force:
+                log.debug(
+                    'target {0} found, but not a git repository. Since force option'
+                    ' is in use, deleting.'.format(target))
+                shutil.rmtree(target)
             # git clone is required, but target exists and is non-empty
-            if not force:
+            else:
                 return _fail(ret, 'Directory exists, is non-empty, and force '
                     'option not in use')
-            log.debug(
-                    'target {0} found, but not a git repository. force option'
-                    ' is in use, deleting {0}...'.format(target))
-            shutil.rmtree(target)
         else:
             # git clone is required
             log.debug(
