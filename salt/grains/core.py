@@ -439,6 +439,11 @@ def os_data():
                 grains['os'] = 'Scientific'
             else:
                 grains['os'] = 'RedHat'
+        elif os.path.isfile('/etc/system-release'):
+            grains['os_family'] = 'RedHat'
+            data = open('/etc/system-release', 'r').read()
+            if 'amazon' in data.lower():
+                grains['os'] = 'Amazon'
         elif os.path.isfile('/etc/SuSE-release'):
             grains['os_family'] = 'Suse'
             data = open('/etc/SuSE-release', 'r').read()

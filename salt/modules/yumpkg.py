@@ -30,6 +30,8 @@ def __virtual__():
             return 'pkg'
         else:
             return False
+    elif __grains__['os'] == 'Amazon':
+        return 'pkg'
     else:
         if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) >= 6:
