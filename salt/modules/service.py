@@ -13,6 +13,7 @@ grainmap = {
            'Ubuntu': '/etc/init.d',
            'Gentoo': '/etc/init.d',
            'CentOS': '/etc/init.d',
+           'Amazon': '/etc/init.d',
            'SunOS': '/etc/init.d',
           }
 
