@@ -6,6 +6,8 @@ Manage ruby gems.
 import re
 
 
+__opts__ = {}
+
 def _gem(command, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
     if __salt__['rvm.is_installed']():
