@@ -82,30 +82,26 @@ class TestDaemon(object):
         self._clean()
         self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
         self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
-        verify_env([
-                os.path.join(self.master_opts['pki_dir'], 'minions'),
-                os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
-                os.path.join(
-                    self.master_opts['pki_dir'], 'minions_rejected'
-                ),
-                os.path.join(self.master_opts['cachedir'], 'jobs'),
-                os.path.join(self.smaster_opts['pki_dir'], 'minions'),
-                os.path.join(
-                    self.smaster_opts['pki_dir'], 'minions_pre'
-                ),
-                os.path.join(
-                    self.smaster_opts['pki_dir'], 'minions_rejected'
-                ),
-                os.path.join(self.smaster_opts['cachedir'], 'jobs'),
-                os.path.dirname(self.master_opts['log_file']),
-                self.minion_opts['extension_modules'],
-                self.sub_minion_opts['extension_modules'],
-                self.sub_minion_opts['pki_dir'],
-                self.master_opts['sock_dir'],
-                self.smaster_opts['sock_dir'],
-            ],
-            pwd.getpwuid(os.getuid())[0]
-        )
+        verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
+                    os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
+                    os.path.join(self.master_opts['pki_dir'],
+                                 'minions_rejected'),
+                    os.path.join(self.master_opts['cachedir'], 'jobs'),
+                    os.path.join(self.smaster_opts['pki_dir'], 'minions'),
+                    os.path.join(self.smaster_opts['pki_dir'], 'minions_pre'),
+                    os.path.join(self.smaster_opts['pki_dir'],
+                                 'minions_rejected'),
+                    os.path.join(self.smaster_opts['cachedir'], 'jobs'),
+                    os.path.dirname(self.master_opts['log_file']),
+                    self.minion_opts['extension_modules'],
+                    self.sub_minion_opts['extension_modules'],
+                    self.sub_minion_opts['pki_dir'],
+                    self.master_opts['sock_dir'],
+                    self.smaster_opts['sock_dir'],
+                    self.sub_minion_opts['sock_dir'],
+                    self.minion_opts['sock_dir'],
+                    ],
+                   pwd.getpwuid(os.getuid())[0])
 
         master = salt.master.Master(self.master_opts)
         self.master_process = multiprocessing.Process(target=master.start)
@@ -173,18 +169,22 @@ class ModuleCase(TestCase):
         Generate the tools to test a module
         '''
         self.client = salt.client.LocalClient(
-                os.path.join(
-                    INTEGRATION_TEST_DIR,
-                    'files', 'conf', 'master'
-                    )
-                )
+            os.path.join(
+                INTEGRATION_TEST_DIR,
+                'files', 'conf', 'master'
+            )
+        )
 
     def run_function(self, function, arg=(), **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=5, kwarg=kwargs)
+        orig = self.client.cmd('minion',
+                               function,
+                               arg,
+                               timeout=100,
+                               kwarg=kwargs)
         return orig['minion']
 
     def state_result(self, ret):
@@ -205,11 +205,11 @@ class ModuleCase(TestCase):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-                os.path.join(
-                    INTEGRATION_TEST_DIR,
-                    'files', 'conf', 'minion'
-                    )
-                )
+            os.path.join(
+                INTEGRATION_TEST_DIR,
+                'files', 'conf', 'minion'
+            )
+        )
 
     @property
     def master_opts(self):
@@ -217,11 +217,11 @@ class ModuleCase(TestCase):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-                os.path.join(
-                    INTEGRATION_TEST_DIR,
-                    'files', 'conf', 'master'
-                    )
-                )
+            os.path.join(
+                INTEGRATION_TEST_DIR,
+                'files', 'conf', 'master'
+            )
+        )
 
 
 class SyndicCase(TestCase):
@@ -233,11 +233,11 @@ class SyndicCase(TestCase):
         Generate the tools to test a module
         '''
         self.client = salt.client.LocalClient(
-                os.path.join(
-                    INTEGRATION_TEST_DIR,
-                    'files', 'conf', 'syndic_master'
-                    )
-                )
+            os.path.join(
+                INTEGRATION_TEST_DIR,
+                'files', 'conf', 'syndic_master'
+            )
+        )
 
     def run_function(self, function, arg=()):
         '''
@@ -261,11 +261,10 @@ class ShellCase(TestCase):
             return False
         ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
-        data = subprocess.Popen(
-                cmd,
-                shell=True,
-                stdout=subprocess.PIPE
-                ).communicate()[0].split('\n')
+        data = subprocess.Popen(cmd,
+                                shell=True,
+                                stdout=subprocess.PIPE
+                                ).communicate()[0].split('\n')
         return data
 
     def run_salt(self, arg_str):
@@ -291,8 +290,8 @@ class ShellCase(TestCase):
         '''
         ret = {}
         ret['out'] = self.run_run(
-                '{0} {1} {2}'.format(options, fun, ' '.join(arg))
-                )
+            '{0} {1} {2}'.format(options, fun, ' '.join(arg))
+        )
         opts = salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
         opts.update({'doc': False,
