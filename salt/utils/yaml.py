@@ -52,7 +52,8 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
 
     def construct_scalar(self, node):
         '''
-        Verify integers and pass them in correctly is they are declared as octal
+        Verify integers and pass them in correctly is they are declared
+        as octal
         '''
         if node.tag == 'tag:yaml.org,2002:int':
             if node.value == '0':

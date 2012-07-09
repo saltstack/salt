@@ -13,7 +13,9 @@ class PipModuleTest(integration.ModuleCase):
     '''
     def setUp(self):
         super(PipModuleTest, self).setUp()
-        ret = self.run_function('cmd.which_bin', [['pip2', 'pip', 'pip-python']])
+        ret = self.run_function(
+            'cmd.which_bin', [['pip2', 'pip', 'pip-python']]
+        )
         if not ret:
             self.skipTest("pip not installed")
 

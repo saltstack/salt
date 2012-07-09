@@ -67,7 +67,9 @@ class MatchTest(integration.ShellCase):
         '''
         test salt grain matcher
         '''
-        data = self.run_salt('-t 1 --grain-pcre "test_grain:^cheese$" test.ping')
+        data = self.run_salt(
+            '-t 1 --grain-pcre "test_grain:^cheese$" test.ping'
+        )
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)

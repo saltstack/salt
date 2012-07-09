@@ -22,17 +22,22 @@ if 'SETUPTOOLS' in os.environ:
     except:
         with_setuptools = False
 
-if with_setuptools == False:
+if with_setuptools is False:
     from distutils.core import setup
 
-
 exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
+
 
 class TestCommand(Command):
     description = 'Run tests'
     user_options = []
-    def initialize_options(self): pass
-    def finalize_options(self): pass
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
     def run(self):
         from subprocess import Popen
         self.run_command('build')
@@ -64,7 +69,7 @@ else:
 
 libraries = ['ws2_32'] if sys.platform == 'win32' else []
 
-requirements=''
+requirements = ''
 with open('requirements.txt') as f:
     requirements = f.read()
 
@@ -85,7 +90,8 @@ setup_kwargs = {'name': NAME,
                                 'Intended Audience :: Developers',
                                 'Intended Audience :: Information Technology',
                                 'Intended Audience :: System Administrators',
-                                'License :: OSI Approved :: Apache Software License',
+                                ('License :: OSI Approved ::'
+                                 ' Apache Software License'),
                                 'Operating System :: POSIX :: Linux',
                                 'Topic :: System :: Clustering',
                                 'Topic :: System :: Distributed Computing',
@@ -102,9 +108,7 @@ setup_kwargs = {'name': NAME,
                              'salt.states',
                              'salt.utils',
                              ],
-                'package_data': {
-                                 'salt.modules': ['rh_ip/*.jinja'],
-                                 },
+                'package_data': {'salt.modules': ['rh_ip/*.jinja']},
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-master.1',
                                  'doc/man/salt-key.1',
@@ -114,7 +118,7 @@ setup_kwargs = {'name': NAME,
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-run.1',
                                  'doc/man/salt-minion.1',
-                                ]),
+                                 ]),
                                ('share/man/man7', ['doc/man/salt.7']),
                                ],
                 'install_requires': requirements,
@@ -122,8 +126,7 @@ setup_kwargs = {'name': NAME,
 
 if with_setuptools:
     setup_kwargs['entry_points'] = {
-        "console_scripts": [
-                            "salt-master = salt.scripts:salt_master",
+        "console_scripts": ["salt-master = salt.scripts:salt_master",
                             "salt-minion = salt.scripts:salt_minion",
                             "salt-syndic = salt.scripts:salt_syndic",
                             "salt-key = salt.scripts:salt_key",

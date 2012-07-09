@@ -1033,7 +1033,9 @@ def managed(name,
                     ret['changes']['new'] = 'file {0} created'.format(name)
                     ret['comment'] = 'Empty file'
                 else:
-                    return _error(ret, 'Empty file {0} not created'.format(name))
+                    return _error(
+                        ret, 'Empty file {0} not created'.format(name)
+                    )
 
             if mode:
                 os.umask(current_umask)

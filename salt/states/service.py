@@ -28,11 +28,11 @@ def _get_stat(name, sig):
     stat = False
     if sig:
         if sig == 'detect':
-            cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-                        __grains__, name)
+            cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'"
+            cmd = cmd.format(__grains__, name)
         else:
-            cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-                        __grains__, sig)
+            cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'"
+            cmd = cmd.format(__grains__, sig)
         stat = bool(__salt__['cmd.run'](cmd))
     else:
         stat = __salt__['service.status'](name)

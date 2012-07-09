@@ -33,7 +33,7 @@ name.
         - names:
           - AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==
           - ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== user@domain
-          - option3="value3" ssh-dss AAAAB3NzaC1kcQ9fJ5bYTEyY== other@testdomain
+          - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
 

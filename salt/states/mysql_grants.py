@@ -2,7 +2,8 @@
 Management of MySQL grants (user permissions).
 ==============================================
 
-NOTE: This module requires the MySQLdb python module and the proper settings in the minion config file.
+NOTE: This module requires the MySQLdb python module and the proper
+settings in the minion config file.
 See salt.modules.mysql for more information.
 
 The mysql_grants module is used to grant and revoke MySQL permissions.
@@ -80,18 +81,16 @@ def present(name,
     excape
         Defines if the database value gets escaped or not. default: True
     '''
+    comment = 'Grant {0} on {1} to {2}@{3} is already present'
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Grant {0} on {1} to {2}@{3} is already present'.format(
-               grant,
-               database,
-               user,
-               host
-               )
+           'comment': comment.format(grant, database, user, host)
            }
     # check if grant exists
-    if __salt__['mysql.grant_exists'](grant, database, user, host, grant_option, escape):
+    if __salt__['mysql.grant_exists'](
+        grant, database, user, host, grant_option, escape
+    ):
         return ret
 
     # The grant is not present, make it!
@@ -99,21 +98,15 @@ def present(name,
         ret['result'] = None
         ret['comment'] = 'MySQL grant {0} is set to be created'.format(name)
         return ret
-    if __salt__['mysql.grant_add'](grant, database, user, host, grant_option, escape):
-        ret['comment'] = 'Grant {0} on {1} to {2}@{3} has been added'.format(
-                grant,
-                database,
-                user,
-                host
-                )
+    if __salt__['mysql.grant_add'](
+        grant, database, user, host, grant_option, escape
+    ):
+        ret['comment'] = 'Grant {0} on {1} to {2}@{3} has been added'
+        ret['comment'] = ret['comment'].format(grant, database, user, host)
         ret['changes'][name] = 'Present'
     else:
-        ret['comment'] = 'Failed to execute: "GRANT {0} ON {1} TO {2}@{3}"'.format(
-                grant,
-                database,
-                user,
-                host
-                )
+        ret['comment'] = 'Failed to execute: "GRANT {0} ON {1} TO {2}@{3}"'
+        ret['comment'] = ret['comment'].format(grant, database, user, host)
         ret['result'] = False
     return ret
 
@@ -158,9 +151,8 @@ def absent(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'MySQL grant {0} is set to be revoked'.format(
-                    name
-                    )
+            ret['comment'] = 'MySQL grant {0} is set to be revoked'
+            ret['comment'] = ret['comment'].format(name)
             return ret
         if __salt__['mysql.grant_revoke'](
                 grant,
@@ -168,13 +160,8 @@ def absent(name,
                 user,
                 host,
                 grant_option):
-            ret['comment'] = ('Grant {0} on {1} for {2}@{3} has been'
-                              ' revoked').format(
-                                      grant,
-                                      database,
-                                      user,
-                                      host
-                                      )
+            ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been revoked'
+            ret['comment'].format(grant, database, user, host)
             ret['changes'][name] = 'Absent'
             return ret
 

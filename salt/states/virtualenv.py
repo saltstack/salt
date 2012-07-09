@@ -67,9 +67,10 @@ def managed(name,
 
     # If it already exists, grab the version for posterity
     if venv_exists and clear:
-        ret['changes']['cleared_packages'] = __salt__['pip.freeze'](bin_env=name)
-        ret['changes']['old'] = __salt__['cmd.run_stderr'](
-                    '{0} -V'.format(venv_py)).strip('\n')
+        ret['changes']['cleared_packages'] = \
+            __salt__['pip.freeze'](bin_env=name)
+        ret['changes']['old'] = \
+            __salt__['cmd.run_stderr']('{0} -V'.format(venv_py)).strip('\n')
 
     # Create (or clear) the virtualenv
     if __opts__['test']:
@@ -106,7 +107,9 @@ def managed(name,
         if requirements.startswith('salt://'):
             requirements = __salt__['cp.cache_file'](requirements, __env__)
         before = set(__salt__['pip.freeze'](bin_env=name))
-        __salt__['pip.install'](requirements=requirements, bin_env=name, runas=runas, cwd=cwd)
+        __salt__['pip.install'](
+            requirements=requirements, bin_env=name, runas=runas, cwd=cwd
+        )
         after = set(__salt__['pip.freeze'](bin_env=name))
 
         new = list(after - before)
