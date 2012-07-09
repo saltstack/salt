@@ -77,10 +77,10 @@ def verify_socket(interface, pub_port, ret_port):
     except Exception:
         log.warn("Unable to bind socket, this might not be a problem."
                  " Is there another salt-master running?")
+        result = False
     finally:
         pubsock.close()
         retsock.close()
-        result = False
 
     return True  # TODO: Make this test actually function as advertised
                  # Disabled check as per github issue number 1594
