@@ -15,6 +15,7 @@ Full list of builtin modules
 
 .. autosummary::
     :toctree:
+    :template: autosummary.rst.tmpl
 
     aliases
     apache
