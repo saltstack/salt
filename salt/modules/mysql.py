@@ -43,6 +43,9 @@ def __virtual__():
     if any(k.startswith('mysql.') for k in list(__opts__)):
         if has_mysqldb:
             return 'mysql'
+    elif any(k.startswith('mysql.') for k in list(__pillar__)):
+        if has_mysqldb:
+            return 'mysql'
     return False
 
 
@@ -87,14 +90,17 @@ def connect(**kwargs):
     def _connarg(name, key=None):
         '''
         Add key to connargs, only if name exists in our
-        kwargs or as mysql.<name> in __opts__
+        kwargs or as mysql.<name> in __opts__ or __pillar__
+        Evaluate in said order - kwargs, opts then pillar
         '''
         if key is None:
             key = name
         if name in kwargs:
             connargs[key] = kwargs[name]
-        elif 'mysql.%s' % name in __opts__:
-            connargs[key] = __opts__['mysql.%s' % name]
+        elif 'mysql.{0}'.format(name) in __opts__:
+            connargs[key] = __opts__['mysql.{0}'.format(name)]
+        elif 'mysql.{0}'.format(name) in __pillar__:
+            connargs[key] = __pillar__['mysql.{0}'.format(name)]
 
     _connarg('host')
     _connarg('user')
