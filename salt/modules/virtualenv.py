@@ -6,6 +6,7 @@ from salt import utils
 
 
 __opts__ = {}
+__pillar__ = {}
 
 
 def create(path,

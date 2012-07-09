@@ -7,6 +7,7 @@ import re
 
 
 __opts__ = {}
+__pillar__ = {}
 
 def _gem(command, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
