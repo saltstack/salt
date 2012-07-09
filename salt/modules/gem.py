@@ -2,10 +2,7 @@
 Manage ruby gems.
 '''
 
-__opts__ = {
-    'rvm.runas': None,
-}
-
+# Import python libs
 import re
 
 
@@ -15,7 +12,9 @@ def _gem(command, ruby=None, runas=None):
         return __salt__['rvm.do'](ruby, cmdline, runas=runas)
 
     ret = __salt__['cmd.run_all'](
-        cmdline, runas=runas or __opts__['rvm.runas'])
+        cmdline,
+        runas=runas or __opts__.get('rvm.runas') or __pillar__.get('rvm.runas')
+        )
 
     if ret['retcode'] == 0:
         return ret['stdout']
