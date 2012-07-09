@@ -5,6 +5,9 @@ Create virtualenv environments
 from salt import utils
 
 
+__opts__ = {}
+
+
 def create(path,
         venv_bin=None,
         no_site_packages=False,
