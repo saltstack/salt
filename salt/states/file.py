@@ -130,7 +130,18 @@ def _makedirs(path, user=None, group=None, mode=None):
         # makedirs=True, make sure that any created dirs
         # are created with the same user  and  group  to
         # follow the principal of least surprise method.
-        _check_perms(directory, None, user, group, mode)
+        nmode = ''
+        if mode:
+            for char in mode:
+                if char == '0':
+                    nmode += char
+                elif int(char) % 2 == 1:
+                    # Is executable, continue
+                    nmode += char
+                else:
+                    # The mode is even, it need an executable bit
+                    nmode += str(int(char) + 1)
+        _check_perms(directory, None, user, group, nmode)
 
 
 def _is_bin(path):
