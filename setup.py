@@ -22,7 +22,7 @@ if 'SETUPTOOLS' in os.environ:
     except:
         with_setuptools = False
 
-if with_setuptools == False:
+if with_setuptools is False:
     from distutils.core import setup
 
 exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
@@ -74,63 +74,59 @@ with open('requirements.txt') as f:
     requirements = f.read()
 
 
-setup_kwargs = {
-    'name': NAME,
-    'version': VER,
-    'description': DESC,
-    'author': 'Thomas S Hatch',
-    'author_email': 'thatch45@gmail.com',
-    'url': 'http://saltstack.org',
-    'cmdclass': {'test': TestCommand},
-    'classifiers': [
-        'Programming Language :: Python',
-        'Programming Language :: Cython',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-        'Development Status :: 5 - Production/Stable',
-        'Environment :: Console',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Information Technology',
-        'Intended Audience :: System Administrators',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: POSIX :: Linux',
-        'Topic :: System :: Clustering',
-        'Topic :: System :: Distributed Computing',
-    ],
-    'packages': [
-        'salt',
-        'salt.cli',
-        'salt.ext',
-        'salt.grains',
-        'salt.modules',
-        'salt.renderers',
-        'salt.returners',
-        'salt.runners',
-        'salt.states',
-        'salt.utils',
-    ],
-    'package_data': {
-        'salt.modules': ['rh_ip/*.jinja'],
-    },
-    'data_files': [('share/man/man1',
-        ['doc/man/salt-master.1',
-            'doc/man/salt-key.1',
-            'doc/man/salt.1',
-            'doc/man/salt-cp.1',
-            'doc/man/salt-call.1',
-            'doc/man/salt-syndic.1',
-            'doc/man/salt-run.1',
-            'doc/man/salt-minion.1',
-        ]),
-        ('share/man/man7', ['doc/man/salt.7']),
-    ],
-    'install_requires': requirements,
-}
+setup_kwargs = {'name': NAME,
+                'version': VER,
+                'description': DESC,
+                'author': 'Thomas S Hatch',
+                'author_email': 'thatch45@gmail.com',
+                'url': 'http://saltstack.org',
+                'cmdclass': {'test': TestCommand},
+                'classifiers': ['Programming Language :: Python',
+                                'Programming Language :: Cython',
+                                'Programming Language :: Python :: 2.6',
+                                'Programming Language :: Python :: 2.7',
+                                'Development Status :: 5 - Production/Stable',
+                                'Environment :: Console',
+                                'Intended Audience :: Developers',
+                                'Intended Audience :: Information Technology',
+                                'Intended Audience :: System Administrators',
+                                ('License :: OSI Approved ::'
+                                 ' Apache Software License'),
+                                'Operating System :: POSIX :: Linux',
+                                'Topic :: System :: Clustering',
+                                'Topic :: System :: Distributed Computing',
+                                ],
+                'packages': ['salt',
+                             'salt.cli',
+                             'salt.ext',
+                             'salt.grains',
+                             'salt.modules',
+                             'salt.pillar',
+                             'salt.renderers',
+                             'salt.returners',
+                             'salt.runners',
+                             'salt.states',
+                             'salt.utils',
+                             ],
+                'package_data': {'salt.modules': ['rh_ip/*.jinja']},
+                'data_files': [('share/man/man1',
+                                ['doc/man/salt-master.1',
+                                 'doc/man/salt-key.1',
+                                 'doc/man/salt.1',
+                                 'doc/man/salt-cp.1',
+                                 'doc/man/salt-call.1',
+                                 'doc/man/salt-syndic.1',
+                                 'doc/man/salt-run.1',
+                                 'doc/man/salt-minion.1',
+                                 ]),
+                               ('share/man/man7', ['doc/man/salt.7']),
+                               ],
+                'install_requires': requirements,
+                }
 
 if with_setuptools:
     setup_kwargs['entry_points'] = {
-        "console_scripts": [
-                            "salt-master = salt.scripts:salt_master",
+        "console_scripts": ["salt-master = salt.scripts:salt_master",
                             "salt-minion = salt.scripts:salt_minion",
                             "salt-syndic = salt.scripts:salt_syndic",
                             "salt-key = salt.scripts:salt_key",

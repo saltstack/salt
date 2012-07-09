@@ -30,6 +30,8 @@ def __virtual__():
             return 'pkg'
         else:
             return False
+    elif __grains__['os'] == 'Amazon':
+        return 'pkg'
     else:
         if __grains__['os'] in dists:
             if int(__grains__['osrelease'].split('.')[0]) >= 6:
@@ -237,7 +239,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     for pkg in pkgs:
         try:
             yb.install(name=pkg)
-        except yum.Errors.InstallError:
+        except Exception:
             log.error('Package {0} failed to install'.format(pkg))
     # Resolve Deps before attempting install.  This needs to be improved
     # by also tracking any deps that may get upgraded/installed during this

@@ -24,7 +24,7 @@ import zmq
 import salt.utils
 import salt.payload
 import salt.utils.verify
-from salt.exceptions import AuthenticationError, SaltClientError
+from salt.exceptions import AuthenticationError, SaltClientError, SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
 
@@ -241,15 +241,17 @@ class Auth(object):
         '''
         auth = {}
         try:
-            self.opts['master_ip'] = salt.utils.dns_check(self.opts['master'], True)
+            self.opts['master_ip'] = salt.utils.dns_check(
+                    self.opts['master'],
+                    True
+                    )
         except SaltClientError:
             return 'retry'
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        payload = self.serial.dumps(self.minion_sign_in_payload())
-        socket.send(payload)
-        payload = self.serial.loads(socket.recv())
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            payload = sreq.send_auto(self.minion_sign_in_payload())
+        except SaltReqTimeoutError:
+            return 'retry'
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:

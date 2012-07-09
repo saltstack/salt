@@ -12,6 +12,8 @@ import imp
 import salt
 import logging
 import tempfile
+
+# Import Salt libs
 from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
@@ -77,6 +79,16 @@ def returners(opts):
     '''
     load = _create_loader(opts, 'returners', 'returner')
     return load.filter_func('returner')
+
+
+def pillars(opts, functions):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'pillar', 'pillar')
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.filter_func('ext_pillar', pack)
 
 
 def states(opts, functions):

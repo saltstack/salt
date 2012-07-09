@@ -40,6 +40,7 @@ Platform-specific installation instructions
 
     arch
     debian
+    ubuntu
     fedora
     freebsd
     gentoo

@@ -177,6 +177,8 @@ def _virtual(osdata):
         if 'Vendor: QEMU' in output:
             # FIXME: Make this detect between kvm or qemu
             grains['virtual'] = 'kvm'
+        if 'Vendor: Bochs' in output:
+            grains['virtual'] = 'kvm'
         elif 'VirtualBox' in output:
             grains['virtual'] = 'VirtualBox'
         # Product Name: VMware Virtual Platform
@@ -195,6 +197,8 @@ def _virtual(osdata):
         elif 'virtualbox' in model:
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
+            grains['virtual'] = 'kvm'
+        elif 'virtio' in model:
             grains['virtual'] = 'kvm'
     choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
@@ -435,6 +439,11 @@ def os_data():
                 grains['os'] = 'Scientific'
             else:
                 grains['os'] = 'RedHat'
+        elif os.path.isfile('/etc/system-release'):
+            grains['os_family'] = 'RedHat'
+            data = open('/etc/system-release', 'r').read()
+            if 'amazon' in data.lower():
+                grains['os'] = 'Amazon'
         elif os.path.isfile('/etc/SuSE-release'):
             grains['os_family'] = 'Suse'
             data = open('/etc/SuSE-release', 'r').read()

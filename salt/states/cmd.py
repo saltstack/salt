@@ -45,6 +45,8 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
     '''
     Execute the onlyif logic and return data if the onlyif fails
     '''
+    ret = {}
+
     if group:
         try:
             egid = grp.getgrnam(group).gr_gid
