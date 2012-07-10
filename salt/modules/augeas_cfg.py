@@ -33,7 +33,7 @@ def _recurmatch(path, aug):
                 yield x
 
 
-def lstrip_word(string, prefix):
+def _lstrip_word(string, prefix):
     '''
     Return a copy of the string after the specified prefix was removed
     from the beginning of the string
@@ -216,7 +216,7 @@ def ls(path):
     ret = {}
 
     for key, value in matches.iteritems():
-        name = lstrip_word(key, path)
+        name = _lstrip_word(key, path)
         if _match(key + '/*'):
             ret[name + '/'] = value  # has sub nodes, e.g. directory
         else:
