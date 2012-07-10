@@ -119,7 +119,7 @@ def query(database, query):
     Run an arbitrary SQL query and return the results or
     the number of affected rows.
 
-    CLI Example::
+    CLI Examples::
 
         salt '*' mysql.query mydb "UPDATE mytable set myfield=1 limit 1"
         returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
@@ -133,17 +133,22 @@ def query(database, query):
                         (3L, 'User 3', Decimal('0.040000'))),
             'rows returned': 3L}
 
-        salt '*' mysql.query mydb "insert into users values (null,'user 4', 5)"
+        salt '*' mysql.query mydb "INSERT into users values (null,'user 4', 5)"
         returns: {'query time': {'human': '25.6ms', 'raw': '0.02563'},
            'rows affected': 1L}
 
-        salt '*' mysql.query mydb "delete from users where id = 4 limit 1""
+        salt '*' mysql.query mydb "DELETE from users where id = 4 limit 1"
         returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
             'rows affected': 1L}
+
+    Jinja Example::
+
+        Run a query on "mydb" and use row 0, column 0's data.
+        {{ salt['mysql.query']("mydb","SELECT info from mytable limit 1")['results'][0][0] }}
+
     '''
     #Doesn't do anything about sql warnings, e.g. empty values on an insert.
     #I don't think it handles multiple queries at once, so adding "commit" might not work.
-    #This should be accessible via {{ salt[mysql.query mydb "myquery"]}} but there's too much extra info here.
     ret = {}
     db = connect(**{'db': database})
     cur = db.cursor()
