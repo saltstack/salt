@@ -17,6 +17,7 @@ import saltcloud.utils
 # Import paramiko
 import paramiko
 
+
 def get_conn():
     '''
     Return a conn object for the passed vm data

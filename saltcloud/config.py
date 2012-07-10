@@ -16,14 +16,6 @@ def cloud_config(path):
     opts = {# Provider defaults
             'provider': '',
             'location': '',
-            # User/Passwords/keys
-            'RACKSPACE.key': '',
-            'RACKSPACE.user': '',
-            'LINODE.apikey': '',
-            'EC2.id': '',
-            'EC2.key': '',
-            'EC2.keyname': '',
-            'EC2.securitygroup': '',
             # Global defaults
             'ssh_auth': '',
             'keysize': 4096,

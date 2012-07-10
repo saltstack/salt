@@ -15,6 +15,7 @@ import salt.client
 # Import third party libs
 import yaml
 
+
 class Cloud(object):
     '''
     An object for the creation of new inages
