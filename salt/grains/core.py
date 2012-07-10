@@ -382,6 +382,13 @@ def os_data():
                 if match:
                     # Adds: lsb_distrib_{id,release,codename,description}
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
+        try:
+            import lsb_release
+            release = lsb_release.get_distro_information()
+            for key, value in release.iteritems():
+                grains['lsb_{0}'.format(key.lower())] = value  # override /etc/lsb-release
+        except ImportError:
+            pass
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
             grains['os_family'] = 'Arch'
