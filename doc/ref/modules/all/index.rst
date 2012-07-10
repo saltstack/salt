@@ -21,6 +21,7 @@ Full list of builtin modules
     apache
     apt
     archive
+    augeas_cfg
     brew
     butterkvm
     cluster
