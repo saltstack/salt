@@ -82,7 +82,11 @@ class Cloud(object):
         saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
         vm_['pub_key'] = pub
         vm_['priv_key'] = priv
-        self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+        try:
+            self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+        except KeyError as exc:
+            print('Failed to create vm {0}. Configuration value {1} needs '
+                  'to be set'.format(vm_['name'], exc))
 
     def run_profile(self):
         '''
