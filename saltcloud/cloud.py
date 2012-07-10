@@ -51,7 +51,12 @@ class Cloud(object):
                     self.provider(vm_))
                     )
                 continue
-            pmap[prov] = self.clouds[fun]()
+            try:
+                pmap[prov] = self.clouds[fun]()
+            except Exception:
+                # Failed to communicate with the provider, don't list any
+                # nodes
+                pmap[prov] = []
         return pmap
 
     def create_all(self):
