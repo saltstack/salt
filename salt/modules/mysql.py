@@ -141,7 +141,7 @@ def query(database, query):
         returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
             'rows affected': 1L}
 
-    Jinga Example::
+    Jinja Example::
 
         Run a query on "mydb" and use row 0, column 0's data.
         {{ salt['mysql.query']("mydb","SELECT info from mytable limit 1")['results'][0][0] }}
