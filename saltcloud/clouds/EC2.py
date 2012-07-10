@@ -5,6 +5,7 @@ cloud virtual machines
 
 # Import python libs
 import os
+import subprocess
 
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -16,7 +17,6 @@ import saltcloud.utils
 
 # Import paramiko
 import paramiko
-
 
 def get_conn():
     '''
@@ -66,7 +66,7 @@ def script(vm_):
         elif not line:
             deployment += '{0}\n'.format(line)
             continue
-        deployment += 'sudo -S {0}\n'.format(line)
+        deployment += '{0}\n'.format(line)
     return ScriptDeployment(
             deployment,
             name='/home/ec2-user/deployment.sh'
@@ -156,21 +156,25 @@ def create(vm_):
     ex_securitygroup = securitygroup(vm_)
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
-    data = conn.deploy_node(**kwargs)
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(
-            data.public_ips[0],
-            username=kwargs['ssh_username'],
-            key_filename=kwargs['ssh_key'])
-    chan = ssh.get_transport().open_session()
-    chan.get_pty()
-    chan.exec_command('/home/ec2-user/deployment.sh')
-    print(chan.recv(1024))
+    try:
+        data = conn.deploy_node(**kwargs)
+    except Exception as exc:
+        err = ('The following exception was thrown by libcloud when trying to '
+               'run the initial deployment: {0}, the vm {1} has been created '
+               'but Salt could not be intsalled. Please verify that your ssh '
+               'keys are in order and that the security group is accepting '
+               'inbound connections from port 22.\n').format(exc, vm_['name'])
+        sys.stderr.write(err)
+        return False
+    cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "sudo '
+           '/home/ec2-user/deployment.sh"').format(
+                   __opts__['EC2.private_key'],
+                   'ec2-user',
+                   data.public_ips[0]
+                   )
+    subprocess.call(cmd, shell=True)
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
-
-
