@@ -33,7 +33,7 @@ def _recurmatch(path, aug):
                 yield x
 
 
-def lstrip_word(string, prefix):
+def _lstrip_word(string, prefix):
     '''
     Return a copy of the string after the specified prefix was removed
     from the beginning of the string
@@ -83,16 +83,28 @@ def setvalue(*args):
 
         salt '*' augeas.setvalue /files/etc/hosts/1/canonical localhost
 
-        salt '*' augeas.setvalue /files/etc/hosts/01/ipaddr 192.168.1.1 \
-                                 /files/etc/hosts/01/canonical hostname
+    This will set the first entry in /etc/hosts to localhost
 
-        salt '*' augeas.setvalue prefix=/files/etc/sudoers/ \
-                 "/spec[user = '%wheel']/user" "%wheel" \
-                 "/spec[user = '%wheel']/host_group/host" 'ALL' \
-                 "/spec[user = '%wheel']/host_group/command[1]" 'ALL' \
-                 "/spec[user = '%wheel']/host_group/command[1]/tag" 'PASSWD' \
-                 "/spec[user = '%wheel']/host_group/command[2]" '/usr/bin/apt-get' \
-                 "/spec[user = '%wheel']/host_group/command[2]/tag" NOPASSWD
+    CLI Example::
+
+        salt '*' augeas.setvalue /files/etc/hosts/01/ipaddr 192.168.1.1 \\
+                                 /files/etc/hosts/01/canonical test
+
+    Adds a new host to /etc/hosts the ip address 192.168.1.1 and hostname test
+
+    CLI Example::
+
+        salt '*' augeas.setvalue prefix=/files/etc/sudoers/ \\
+                 "spec[user = '%wheel']/user" "%wheel" \\
+                 "spec[user = '%wheel']/host_group/host" 'ALL' \\
+                 "spec[user = '%wheel']/host_group/command[1]" 'ALL' \\
+                 "spec[user = '%wheel']/host_group/command[1]/tag" 'PASSWD' \\
+                 "spec[user = '%wheel']/host_group/command[2]" '/usr/bin/apt-get' \\
+                 "spec[user = '%wheel']/host_group/command[2]/tag" NOPASSWD
+
+    Ensures that the following line is present in /etc/sudoers::
+
+        %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
     '''
 
 
@@ -216,7 +228,7 @@ def ls(path):
     ret = {}
 
     for key, value in matches.iteritems():
-        name = lstrip_word(key, path)
+        name = _lstrip_word(key, path)
         if _match(key + '/*'):
             ret[name + '/'] = value  # has sub nodes, e.g. directory
         else:
