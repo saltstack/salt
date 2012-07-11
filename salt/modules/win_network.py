@@ -4,6 +4,7 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 from salt.utils.interfaces import *
+from salt.utils.sockets import *
 
 __outputter__ = {
     'dig':     'txt',
