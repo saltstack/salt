@@ -17,6 +17,8 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - hostname: server1.example.com
         - gateway: 192.168.0.1
         - gatewaydev: eth0
+        - nozeroconf: True
+        - nisdomain: example.com
         - require_reboot: True
 
     eth0:
