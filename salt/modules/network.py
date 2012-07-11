@@ -4,6 +4,7 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 from salt.utils.interfaces import *
+from salt.utils.sockets import *
 
 __outputter__ = {
     'dig':     'txt',
@@ -17,7 +18,7 @@ def __virtual__():
     '''
 
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] == 'Windows':
+    if __grains__['os'] in ('Windows', 'FreeBSD'):
         return False
     return 'network'
 

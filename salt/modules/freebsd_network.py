@@ -3,6 +3,7 @@ Module for gathering and managing network information
 '''
 
 from salt.utils.interfaces import *
+from salt.utils.sockets import *
 
 __outputter__ = {
     'dig':     'txt',
@@ -14,7 +15,7 @@ def __virtual__():
     '''
     Only works on *BSD systems
     '''
-    if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
+    if __grains__['os'] in ('FreeBSD',):
         return 'network'
     return False
 
