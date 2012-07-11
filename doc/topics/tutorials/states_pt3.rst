@@ -167,7 +167,7 @@ rewritten as follows:
       - apache
 
     extend:
-      apache
+      apache:
         service:
           - watch:
             - file: mywebsite
