@@ -5,6 +5,7 @@ cloud virtual machines
 
 # Import python libs
 import os
+import sys
 import subprocess
 
 # Import libcloud
