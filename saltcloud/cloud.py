@@ -147,7 +147,7 @@ class Map(Cloud):
                         tvm['name'] = name
                         if self.opts['parallel']:
                             multiprocessing.Process(
-                                    target=lambda: self.cloud.create(tvm)
+                                    target=lambda: self.create(tvm)
                                     ).start()
                         else:
-                            self.cloud.create(tvm)
+                            self.create(tvm)
