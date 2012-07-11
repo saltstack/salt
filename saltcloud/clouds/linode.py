@@ -11,6 +11,7 @@ from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 from libcloud.compute.types import NodeState
+from libcloud.compute.base import NodeAuthPassword
 
 # Import salt libs
 import saltcloud.utils
@@ -26,21 +27,34 @@ def get_conn():
             )
 
 
-def ssh_pub(vm_):
+def get_location(conn, vm_):
     '''
-    Deploy the primary ssh authentication key
+    Return the node location to use
     '''
-    ssh = ''
-    if 'ssh_auth' in vm_:
-        if not os.path.isfile(vm_['ssh_auth']):
-            return None
-        ssh = vm_['ssh_auth']
-    if not ssh:
-        if not os.path.isfile(__opts__['ssh_auth']):
-            return None
-        ssh = __opts__['ssh_auth']
+    locations = conn.list_locations()
+    # Default to Dallas if not otherwise set
+    loc = 2
+    if 'location' in vm_:
+        loc = vm_['location']
+    elif 'LINODE.location' in __opts__:
+        loc = __opts__['LINODE.location']
+    for location in locations:
+        if str(location.id) == str(loc):
+            return location
+        if location.name == loc:
+            return location
 
-    return SSHKeyDeployment(open(os.path.expanduser(ssh)).read())
+
+def get_password(vm_):
+    '''
+    Return the password to use
+    '''
+    if 'password' in vm_:
+        return vm_['password']
+    elif 'passwd' in vm_:
+        return vm_['passwd']
+    elif 'LINODE.password' in __opts__:
+        return __opts__['LINODE.password']
 
 
 def get_image(conn, vm_):
@@ -105,6 +119,8 @@ def create(vm_):
     kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
+    kwargs['location'] = get_location(conn, vm_)
+    kwargs['auth'] = NodeAuthPassword(get_password(vm_))
     data = conn.deploy_node(**kwargs)
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
