@@ -258,13 +258,13 @@ class Syndic(object):
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
 
-    def __prep_opts(self):
+    def __prep_opts(self, cli):
         '''
         Generate the opts used by the syndic
         '''
-        opts = salt.config.master_config(self.cli['master_config'])
+        opts = salt.config.master_config(cli['master_config'])
         opts['_minion_conf_file'] = opts['conf_file']
-        opts.update(salt.config.minion_config(self.cli['minion_config']))
+        opts.update(salt.config.minion_config(cli['minion_config']))
         if 'syndic_master' in opts:
             # Some of the opts need to be changed to match the needed opts
             # in the minion class.
@@ -319,7 +319,14 @@ class Syndic(object):
                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
 
         options, args = parser.parse_args()
-        self.opts = self.__prep_opts()
+
+        cli = {'daemon': options.daemon,
+               'minion_config': options.minion_config,
+               'master_config': options.master_config,
+               'pidfile': options.pidfile,
+               'user': options.user}
+
+        self.opts = self.__prep_opts(cli)
 
         if not options.log_level:
             options.log_level = self.opts['log_level']
@@ -329,12 +336,6 @@ class Syndic(object):
             log_format=self.opts['log_fmt_console'],
             date_format=self.opts['log_datefmt']
         )
-
-        cli = {'daemon': options.daemon,
-               'minion_config': options.minion_config,
-               'master_config': options.master_config,
-               'pidfile': options.pidfile,
-               'user': options.user}
 
         return cli
 
