@@ -135,7 +135,7 @@ def latest(name,
     return ret
 
 
-def present(name, bare=True, force=False):
+def present(name, bare=True, runas=None, force=False):
     '''
     Make sure the repository is present in the given directory
 
@@ -143,6 +143,10 @@ def present(name, bare=True, force=False):
         Name of the directory where the repository is about to be created
     bare
         Create a bare repository (Default: True)
+    runas
+        Name of the user performing repository management operations
+    force
+        Force create a new repository into an pre-existing non-git directory (deletes contents)
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -155,26 +159,26 @@ def present(name, bare=True, force=False):
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error
         elif not force:
-            ret['result'] = False
-            ret['comment'] = ('Directory which does not contain a git repo '
-                              'is already present at {0}. To delete this '
-                              'directory and create a fresh git repo set '
-                              'force: True').format(name)
-            return ret
+            return _fail(ret,
+                         'Directory which does not contain a git repo '
+                         'is already present at {0}. To delete this '
+                         'directory and create a fresh git repo set '
+                         'force: True'.format(name))
 
     # Run test is set
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'New git repo set for creation at {0}'.format(name)
-        return ret
+        ret['changes']['new repository'] = name
+        return _neutral_test(ret, 'New git repo set for creation at {0}'.format(name))
 
     if os.path.isdir(name) and force:
         shutil.rmtree(name)
+
     opts = '--bare' if bare else ''
-    __salt__['git.init'](cwd=name, opts=opts)
+    __salt__['git.init'](cwd=name, user=runas, opts=opts)
 
     message = 'Initialized repository {0}'.format(name)
     log.info(message)
+    ret['changes']['new repository'] = name
     ret['comment'] = message
 
     return ret
