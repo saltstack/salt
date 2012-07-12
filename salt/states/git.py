@@ -135,8 +135,7 @@ def latest(name,
     return ret
 
 
-def present(name,
-            bare=True):
+def present(name, bare=True, force=False):
     '''
     Make sure the repository is present in the given directory
 
@@ -147,21 +146,36 @@ def present(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
+    # If the named directory is a git repo return True
     if os.path.isdir(name):
         if bare and os.path.isfile('{0}/HEAD'.format(name)):
             return ret
         elif not bare and os.path.isdir('{0}/.git'.format(name)):
             return ret
+        # Directory exists and is not a git repo, if force is set destroy the
+        # directory and recreate, otherwise throw an error
+        elif not force:
+            ret['result'] = False
+            ret['comment'] = ('Directory which does not contain a git repo '
+                              'is already present at {0}. To delete this '
+                              'directory and create a fresh git repo set '
+                              'force: True').format(name)
+            return ret
 
-        # TODO: delete directory?
-        # or switch directory (non-bare --> bare and vice versa?)
-    else:
-        opts = '--bare' if bare else ''
-        __salt__['git.init'](cwd=name, opts=opts)
+    # Run test is set
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'New git repo set for creation at {0}'.format(name)
+        return ret
 
-        message = 'Initialized repository {0}'.format(name)
-        log.info(message)
-        ret['comment'] = message
+    if os.path.isdir(name) and force:
+        shutil.rmtree(name)
+    opts = '--bare' if bare else ''
+    __salt__['git.init'](cwd=name, opts=opts)
+
+    message = 'Initialized repository {0}'.format(name)
+    log.info(message)
+    ret['comment'] = message
 
     return ret
 
