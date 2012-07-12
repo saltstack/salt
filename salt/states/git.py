@@ -135,6 +135,37 @@ def latest(name,
     return ret
 
 
+def present(name,
+            bare=True):
+    '''
+    Make sure the repository is present in the given directory
+
+    name
+        Name of the directory where the repository is about to be created
+    bare
+        Create a bare repository (Default: True)
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    if os.path.isdir(name):
+        if bare and os.path.isfile('{0}/HEAD'.format(name)):
+            return ret
+        elif not bare and os.path.isdir('{0}/.git'.format(name)):
+            return ret
+
+        # TODO: delete directory?
+        # or switch directory (non-bare --> bare and vice versa?)
+    else:
+        opts = '--bare' if bare else ''
+        __salt__['git.init'](cwd=name, opts=opts)
+
+        message = 'Initialized repository {0}'.format(name)
+        log.info(message)
+        ret['comment'] = message
+
+    return ret
+
+
 def _fail(ret, comment):
     ret['result'] = False
     ret['comment'] = comment
