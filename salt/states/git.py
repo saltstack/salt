@@ -167,6 +167,7 @@ def present(name, bare=True, runas=None, force=False):
 
     # Run test is set
     if __opts__['test']:
+        ret['changes']['new repository'] = name
         return _neutral_test(ret, 'New git repo set for creation at {0}'.format(name))
 
     if os.path.isdir(name) and force:
