@@ -1,5 +1,7 @@
 :orphan:
 
+.. _contents:
+
 Salt Cloud Documentation
 ========================
 
@@ -22,8 +24,8 @@ Salt cloud works via profiles and maps. Simple profiles for cloud vms are
 defined and can be used directly, or a map can be defined specifying
 a large group of virtual machines to create.
 
-1.  :doc: `Profiles <topics/profiles>`
-2.  :doc: `Maps <topics/maps>`
+1.  :doc:`Profiles <topics/profiles>`
+2.  :doc:`Maps <topics/map>`
 
 Extending Salt Cloud
 ====================
@@ -32,5 +34,5 @@ Salt cloud extenstions work in a way similar to Salt modules. Therefore
 extending Salt cloud to manage more public cloud providers and operating
 systems is easy.
 
-1.  :doc: `Adding Cloud Providers <topics/clouds>`
-2.  :doc: `Adding OS Support <topics/deploy>`
+1.  :doc:`Adding Cloud Providers <topics/cloud>`
+2.  :doc:`Adding OS Support <topics/deploy>`
