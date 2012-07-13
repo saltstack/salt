@@ -7,7 +7,7 @@ Salt Cloud Documentation
 
 Salt cloud is a public cloud provisioning tool. Salt cloud is made to integrate
 Salt into cloud providers in a clean way so that minions on public cloud
-systems can be quickly and easily modeled and provissioned.
+systems can be quickly and easily modeled and provisioned.
 
 Salt cloud allows for cloud based minions to be managed via virtual machine
 maps and profiles. This means that individual cloud vms can be created, or
@@ -49,12 +49,17 @@ a large group of virtual machines to create.
 Extending Salt Cloud
 ====================
 
-Salt cloud extenstions work in a way similar to Salt modules. Therefore
+Salt cloud extensions work in a way similar to Salt modules. Therefore
 extending Salt cloud to manage more public cloud providers and operating
 systems is easy.
 
 * :doc:`Adding Cloud Providers <topics/cloud>`
 * :doc:`Adding OS Support <topics/deploy>`
+
+Releases
+========
+
+* :doc:`Release Notes <topics/releases/index>`
 
 Reference
 =========
