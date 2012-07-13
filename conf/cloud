@@ -5,22 +5,14 @@
 # basis
 #provider: rackspace
 #
-# Set the default location for the passed cloud provider, this can be
-# overridden on a per vm basis
-#location:
-#
 # Set the size of minion keys to generate, defaults to 2048
 #keysize: 2048
 #
-# Set the location of the default ssh public key to embed in minions, this
-# setting must be applied
-#ssh_auth: /root/.ssh/id_dsa.pub
-#
 # Set the default os being deployed, this sets which deployment script to
 # apply, this must be set here or in all vm configurations
-#os: RHEL
+#os: RHEL6
 
-#####   Users, Passwords and Keys    #####
+#####    Cloud Provider Settings     #####
 ##########################################
 # Rackspace creds take the following options:
 #RACKSPACE.user: foobar
@@ -31,7 +23,9 @@
 #EC2.key: 'sildghsldkghsroegijenovdfnzlkgh'
 #EC2.keyname: default
 #EC2.securitygroup: default
+#EC2.private_key: /root/test.pem
 #
 # Linode takes the single api_key
 #LINODE.apikey: <Linode api key>
+#LINODE.password: F00BarBaz
 
