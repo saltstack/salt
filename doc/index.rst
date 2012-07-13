@@ -20,6 +20,13 @@ machines can be provisioned and then potentially never logged into.
 While Salt Cloud has been made to work with Salt, it is also a generic
 cloud management platform and can be used to manage non Salt centric clouds.
 
+Getting Started
+===============
+
+A quick guide covering getting started with Amazon EC2
+
+* :doc:`Getting Started With EC2 <topics/ec2>`
+
 Core Configuration
 ==================
 
