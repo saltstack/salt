@@ -1,3 +1,4 @@
 # pip requirements file for Salt Cloud
+salt
 apache-libcloud
 paramiko
