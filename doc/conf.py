@@ -18,6 +18,40 @@ import sys, os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
+class Mock(object):
+    '''
+    Mock out specified imports
+
+    This allows autodoc to do it's thing without having oodles of req'd
+    installed libs. This doesn't work with ``import *`` imports.
+
+    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return Mock()
+
+    @classmethod
+    def __getattr__(self, name):
+        if name in ('__file__', '__path__'):
+            return '/dev/null'
+        elif name[0] == name[0].upper():
+            return type(name, (), {})
+        else:
+            return Mock()
+
+MOCK_MODULES = [
+    'salt',
+    'salt.crypt',
+    'yaml',
+    'salt.loader',
+]
+
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = Mock()
+
 docs_basepath = os.path.abspath(os.path.dirname(__file__))
 addtl_paths = (
         os.pardir, # saltcloud (for autodoc)
