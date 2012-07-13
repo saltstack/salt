@@ -90,7 +90,7 @@ class SaltCloud(object):
         parser.add_option('-V',
                 '--profile',
                 '--profiles',
-                '--vm_config'
+                '--vm_config',
                 dest='vm_config',
                 default='/etc/salt/cloud.profiles',
                 help='The location of the saltcloud vm config file')
