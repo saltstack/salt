@@ -6,14 +6,6 @@ base_ec2:
   minion:
       cheese: edam
 
-arch_rs:
-  provider: rackspace
-  image: Arch 2011.10
-  size: 256 server
-  os: Arch
-  minion:
-      cheese: edam
-
 ubuntu_rs:
   provider: rackspace
   image: Ubuntu 12.04 LTS
