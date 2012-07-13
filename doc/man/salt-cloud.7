@@ -1,0 +1,172 @@
+.TH "SALT-CLOUD" "7" "July 13, 2012" "0.6.0" "salt-cloud"
+.SH NAME
+salt-cloud \- Salt Cloud Documentation
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.\" Man page generated from reStructuredText.
+.
+.SH VM PROFILES
+.sp
+Salt cloud designates virtual machines inside the profile configuration file.
+The profile configuration file defaults to \fB/etc/salt/cloud.vm\fP and is a
+yaml configuration. The syntax for declaring profiles is simple:
+.sp
+.nf
+.ft C
+fedora_rackspace:
+  provider: rackspace
+  image: Fedora 17
+  size: 256 server
+  os: Fedora
+.ft P
+.fi
+.sp
+A few key peices of information need to be declared and can change based on the
+public cloud provider. A number of additional paramaters can also be inserted:
+.sp
+.nf
+.ft C
+centos_rackspace:
+  provider: rackspace
+  image: CentOS 6.2
+  size: 1024 server
+  os: RHEL6
+  minion:
+    grains:
+      role: webserver
+    master: salt.example.com
+.ft P
+.fi
+.sp
+Some paramaters can be specified in the main Salt cloud config file and then
+are applied to all cloud profiles. For instance if only a single cloud provider
+is being used then the provider option can be declared in the Salt cloud config
+file.
+.SH CLOUD MAP FILE
+.sp
+A number of options exist when creating virtual machines. They can be managed
+directly from profiles and the command line execution, or a more complex map
+file can be created. The map file allows for a number fo virtual machines to
+be created and associated with specific profiles.
+.sp
+Map files have a simple format, specify a profile and then a list of virtual
+machines to make from said profile:
+.sp
+.nf
+.ft C
+fedora_smal:
+  \- web1
+  \- web2
+  \- web3
+  \- web3
+  \- web4
+  \- web5
+fedora_high:
+  \- redis1
+  \- redis2
+  \- redis3
+cent_high:
+  \- riak1
+  \- riak1
+  \- riak1
+  \- riak1
+  \- riak1
+.ft P
+.fi
+.sp
+This map file can then be called to roll out all of these virtual machines. Map
+files are called from the salt\-cloud command with the \-m option:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile
+.ft P
+.fi
+.sp
+Remember, that as with direct profile provisioning the \-P option can be passed
+to create the virtual machines in parallel:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-P
+.ft P
+.fi
+.SH WRITING CLOUD PROVIDER MODULES
+.sp
+Salt cloud runs on a module system similar to the main Salt project. The
+modules inside saltcloud exist in the \fBsaltcloud/clouds\fP directory of
+the salt\-cloud source.
+.sp
+Adding a provider requires that a cloud module is created. The cloud module
+needs to only impliment a single function \fBcreate\fP, which will accept a
+single virtual machine data structure. Whatever functions need to be called
+to execute the create function can and should be included in the provider
+module.
+.sp
+A good example to follow for writing a cloud provider module is the module
+provided for rackspace:
+.sp
+\fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/clouds/rackspace.py\fP
+.sp
+If possible it is prefered that libcloud is used to connect to public cloud
+systems, but if libcloud support is not available or another system makes more
+sense then by all means, use the other system to connect to the cloud provider.
+.SH OS SUPPORT FOR CLOUD VMS
+.sp
+Salt cloud works primarily by executing a script on the virtual machines as
+soon as they become available. The script that is executed is referenced in
+the cloud profile as the \fBos\fP.
+.sp
+The scipt should eb written in bash and is a Jinja template. Deploy scripts
+need to execute a number of functions to do a complate salt setup. These
+functions include:
+.INDENT 0.0
+.IP 1. 3
+Install the salt minion, if this can be done via system packages this method
+is HIGHLY preferred.
+.IP 2. 3
+Add the salt minion keys before the minion is started for the first time.
+The minion keys are available as strings that can be copied into place in
+the Jinja template under the dict named "vm"
+.IP 3. 3
+Start the salt\-minion daemon and enable it at startup time.
+.IP 4. 3
+Set up the minion configuration file from the "minion" data available in
+the Jinja template.
+.UNINDENT
+.sp
+A good, well commented, example of this process is the Fedora deployment
+script:
+.sp
+\fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh\fP
+.SH AUTHOR
+Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
+.SH COPYRIGHT
+2012, Thomas S Hatch
+.\" Generated by docutils manpage writer.
+.
