@@ -88,7 +88,6 @@ class SaltCloud(object):
                 help='The location of the salt master config file')
 
         parser.add_option('-V',
-                '--profile',
                 '--profiles',
                 '--vm_config',
                 dest='vm_config',
