@@ -6,8 +6,7 @@ Salt Cloud Table of Contents
     :maxdepth: 3
     :glob:
 
-    topics/index
     topics/profiles
-    topics/maps
-    topics/clouds
+    topics/map
+    topics/cloud
     topics/deploy
