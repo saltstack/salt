@@ -73,7 +73,7 @@ Options
 See also
 ========
 
-:manpage:`salt(1)`
 :manpage:`salt-cloud(7)`
+:manpage:`salt(7)`
 :manpage:`salt-master(1)`
 :manpage:`salt-minion(1)`
