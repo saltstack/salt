@@ -10,7 +10,7 @@ if os.environ.get('VIRTUAL_ENV'):
     from setuptools import setup
 
 exec(compile(
-    open("saltcloud/version.py").read(),"saltcloud/version.py",'exec')
+    open("saltcloud/version.py").read(), "saltcloud/version.py", 'exec')
     )
 
 NAME = 'saltcloud'
@@ -42,7 +42,7 @@ setup(
                 'saltcloud/utils',
                 'saltcloud/clouds',
                 ],
-      package_data = {
+      package_data={
           'saltcloud': ['deploy/*'],
       },
       scripts=['scripts/salt-cloud'],
