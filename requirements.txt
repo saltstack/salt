@@ -1,4 +1,5 @@
 # pip requirements file for Salt Cloud
 salt
+PyYAML
 apache-libcloud
 paramiko
