@@ -13,7 +13,7 @@ exec(compile(
     open("saltcloud/version.py").read(), "saltcloud/version.py", 'exec')
     )
 
-NAME = 'saltcloud'
+NAME = 'salt-cloud'
 VER = __version__
 DESC = ('Generic cloud provisioning system with build in functions ')
 
@@ -29,7 +29,7 @@ setup(
           'Programming Language :: Python',
           'Programming Language :: Python :: 2.6',
           'Programming Language :: Python :: 2.7',
-          'Development Status :: 3 - Alpha'
+          'Development Status :: 3 - Alpha',
           'Environment :: Console',
           'Intended Audience :: Developers',
           'Intended Audience :: Information Technology',
