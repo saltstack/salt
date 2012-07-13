@@ -88,9 +88,11 @@ class SaltCloud(object):
                 help='The location of the salt master config file')
 
         parser.add_option('-V',
-                '--vm-config',
+                '--profile',
+                '--profiles',
+                '--vm_config'
                 dest='vm_config',
-                default='/etc/salt/cloud.vm',
+                default='/etc/salt/cloud.profiles',
                 help='The location of the saltcloud vm config file')
 
         options, args = parser.parse_args()
