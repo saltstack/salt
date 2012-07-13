@@ -165,7 +165,7 @@ latex_logo = '_static/salt-vert.png'
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 authors = [
-    'Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file',
+    'Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file',
 ]
 
 man_pages = [
