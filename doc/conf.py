@@ -255,11 +255,16 @@ latex_documents = [
 
 # -- Options for manual page output --------------------------------------------
 
+### Manpage options
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
+authors = [
+    'Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file',
+]
+
 man_pages = [
-    ('index', 'salt-cloud', u'salt-cloud Documentation',
-     [u'Thomas S Hatch'], 1)
+    ('ref/cli/salt-cloud', 'salt', 'salt', authors, 1),
+    ('contents', 'salt-cloud', 'Salt Cloud Documentation', authors, 7),
 ]
 
 # If true, show URL addresses after external links.
