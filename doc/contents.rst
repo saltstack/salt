@@ -7,3 +7,7 @@ Salt Cloud Table of Contents
     :glob:
 
     topics/index
+    topics/profiles
+    topics/maps
+    topics/clouds
+    topics/deploy
