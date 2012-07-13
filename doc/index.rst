@@ -37,7 +37,7 @@ defined and can be used directly, or a map can be defined specifying
 a large group of virtual machines to create.
 
 * :doc:`Profiles <topics/profiles>`
-** :doc:`Maps <topics/map>`
+* :doc:`Maps <topics/map>`
 
 Extending Salt Cloud
 ====================
