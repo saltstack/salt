@@ -263,7 +263,7 @@ authors = [
 ]
 
 man_pages = [
-    ('ref/cli/salt-cloud', 'salt', 'salt', authors, 1),
+    ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
     ('contents', 'salt-cloud', 'Salt Cloud Documentation', authors, 7),
 ]
 
