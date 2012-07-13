@@ -12,6 +12,7 @@ Synopsis
     salt-cloud -m /etc/salt/cloud.map
 
     salt-cloud -p PROFILE NAME
+
     salt-cloud -p PROFILE NAME1 NAME2 NAME3 NAME4 NAME5 NAME6
 
 Description
