@@ -17,6 +17,18 @@ Virtual machines created with Salt cloud install salt on the target virtual
 machine and assign it to the specified master. This means that virtual
 machines can be provisioned and then potentially never logged into.
 
+While Salt Cloud has been made to work with Salt, it is also a generic
+cloud management platform and can be used to manage non Salt centric clouds.
+
+Core Configuration
+==================
+
+The core configuration of Salt cloud is handled in the cloud configuration
+file. This file is comprised of global configurations for interfacing with
+cloud providers.
+
+* :doc:`Core Configuration <topics/config>`
+
 Using Salt Cloud
 ================
 
@@ -24,8 +36,8 @@ Salt cloud works via profiles and maps. Simple profiles for cloud vms are
 defined and can be used directly, or a map can be defined specifying
 a large group of virtual machines to create.
 
-1.  :doc:`Profiles <topics/profiles>`
-2.  :doc:`Maps <topics/map>`
+* :doc:`Profiles <topics/profiles>`
+** :doc:`Maps <topics/map>`
 
 Extending Salt Cloud
 ====================
@@ -34,5 +46,10 @@ Salt cloud extenstions work in a way similar to Salt modules. Therefore
 extending Salt cloud to manage more public cloud providers and operating
 systems is easy.
 
-1.  :doc:`Adding Cloud Providers <topics/cloud>`
-2.  :doc:`Adding OS Support <topics/deploy>`
+* :doc:`Adding Cloud Providers <topics/cloud>`
+* :doc:`Adding OS Support <topics/deploy>`
+
+Reference
+=========
+
+* :doc:`contents`
