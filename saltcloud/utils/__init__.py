@@ -99,7 +99,7 @@ def minion_conf_string(opts, vm_):
     Return a string to be passed into the deployment script for the minion
     configuration file
     '''
-    minion = {}
+    minion = {'id': vm_[name]}
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
     return yaml.safe_dump(minion)
