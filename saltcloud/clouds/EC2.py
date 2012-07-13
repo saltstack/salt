@@ -52,24 +52,20 @@ def ssh_pub(vm_):
 
 def script(vm_):
     '''
-    Return the deployment object for managing a script
+    Return the script deployment object
     '''
-    os_ = ''
-    if 'os' in vm_:
-        os_ = vm_['os']
-    if not os_:
-        os_ = __opts__['os']
-    deployment = ''
-    for line in saltcloud.utils.os_script(os_).split('\n'):
-        if line.startswith('#'):
-            deployment += '{0}\n'.format(line)
-            continue
-        elif not line:
-            deployment += '{0}\n'.format(line)
-            continue
-        deployment += '{0}\n'.format(line)
+    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
     return ScriptDeployment(
-            deployment,
+            saltcloud.utils.os_script(
+                saltcloud.utils.get_option(
+                    'os',
+                    __opts__,
+                    vm_
+                    ),
+                vm_,
+                __opts__,
+                minion,
+                ),
             name='/home/ec2-user/deployment.sh'
             )
 
