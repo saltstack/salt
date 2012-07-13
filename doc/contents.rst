@@ -10,3 +10,9 @@ Salt Cloud Table of Contents
     topics/map
     topics/cloud
     topics/deploy
+    topics/config
+
+    ref/cli/man/salt-cloud
+
+    ref/releases/index
+    ref/releases/0.6.0
