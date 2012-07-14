@@ -24,40 +24,6 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-def hiera(conf, grains=None):
-    '''
-    Execute hiera and return the data
-    '''
-    if not isinstance(grains, dict):
-        grains = {}
-    cmd = 'hiera {0}'.format(conf)
-    for key, val in grains.items():
-        if isinstance(val, string_types):
-            cmd += ' {0}={1}'.format(key, val)
-    out = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            shell=True
-            ).communicate()[0]
-    return yaml.safe_load(out)
-
-
-def cmd_yaml(command, grains=None):
-    '''
-    Execute a command and read the output as YAML
-    '''
-    out = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            shell=True
-            ).communicate()[0]
-    return yaml.safe_load(out)
-
-
-ext_pillar = {'hiera': hiera,
-              'cmd_yaml': cmd_yaml}
-
-
 def get_pillar(opts, grains, id_, env=None):
     '''
     Return the correct pillar driver based on the file_client option
@@ -107,7 +73,9 @@ class Pillar(object):
         self.opts = self.__gen_opts(opts, grains, id_, env)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
-        self.rend = salt.loader.render(self.opts, {})
+        self.functions = salt.loader.minion_mods(self.opts)
+        self.rend = salt.loader.render(self.opts, self.functions)
+        self.ext_pillars = salt.loader.pillars(self.opts, self.functions)
 
     def __gen_opts(self, opts, grains, id_, env=None):
         '''
@@ -345,17 +313,19 @@ class Pillar(object):
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
-            if len(run) != 1:
-                log.critical('The "ext_pillar" option is malformed')
-                return {}
             for key, val in run.items():
-                if key not in ext_pillar:
+                if key not in self.ext_pillars:
                     err = ('Specified ext_pillar interface {0} is '
                            'unavailable').format(key)
                     log.critical(err)
-                    return {}
+                    continue
                 try:
-                    ext.update(ext_pillar[key](val, self.opts['grains']))
+                    if isinstance(val, dict):
+                        ext.update(self.ext_pillars[key](**val))
+                    elif isinstance(val, list):
+                        ext.update(self.ext_pillars[key](*val))
+                    else:
+                        ext.update(self.ext_pillars[key](val))
                 except Exception as e:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext

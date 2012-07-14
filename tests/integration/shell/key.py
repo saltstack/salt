@@ -62,7 +62,8 @@ class KeyTest(integration.ShellCase):
         '''
         data = self.run_key('-L --raw-out')
         expect = [
-            "{'unaccepted': [], 'accepted': ['minion', 'sub_minion'], 'rejected': []}",
+            "{'unaccepted': [], 'accepted': ['minion', "
+            "'sub_minion'], 'rejected': []}",
             ''
         ]
         self.assertEqual(data, expect)

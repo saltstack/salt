@@ -11,6 +11,8 @@ might look like::
     postgres.pass: ''
     postgres.db: 'postgres'
 
+This data can also be passed into pillar. Options passed into opts will
+overwrite options passed into pillar
 '''
 
 import logging
@@ -23,9 +25,9 @@ __opts__ = {}
 
 
 def __virtual__():
-    """
-    only load this module if the psql bin exists
-    """
+    '''
+    Only load this module if the psql bin exists
+    '''
     try:
         check_or_die('psql')
         return 'postgres'
@@ -63,11 +65,11 @@ def db_list(user=None, host=None, port=None):
         salt '*' postgres.db_list
     '''
     if not user:
-        user = __opts__['postgres.user']
+        user = __opts__.get('postgres.user') or __pillar__.get('postgres.user')
     if not host:
-        host = __opts__['postgres.host']
+        host = __opts__.get('postgres.host') or __pillar__.get('postgres.host')
     if not port:
-        port = __opts__['postgres.port']
+        port = __opts__.get('postgres.port') or __pillar__.get('postgres.port')
 
     ret = []
     cmd = "psql -l -h {host} -U {user} -p {port}".format(
@@ -204,11 +206,11 @@ def user_create(username,
         salt '*' postgres.user_create 'username' user='user' host='hostname' port='port' password='password'
     '''
     if not user:
-        user = __opts__['postgres.user']
+        user = __opts__.get('postgres.user') or __pillar__.get('postgres.user')
     if not host:
-        host = __opts__['postgres.host']
+        host = __opts__.get('postgres.host') or __pillar__.get('postgres.host')
     if not port:
-        port = __opts__['postgres.port']
+        port = __opts__.get('postgres.port') or __pillar__.get('postgres.port')
 
     sub_cmd = "CREATE USER {0} WITH".format(username, )
     if password:

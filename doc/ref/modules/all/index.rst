@@ -15,11 +15,13 @@ Full list of builtin modules
 
 .. autosummary::
     :toctree:
+    :template: autosummary.rst.tmpl
 
     aliases
     apache
     apt
     archive
+    augeas_cfg
     brew
     butterkvm
     cluster

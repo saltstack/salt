@@ -8,9 +8,9 @@ Cron declarations require a number of parameters. The timing parameters, need
 to be declared, minute, hour, daymonth, month and dayweek. The  user who's
 crontab is to be edited also needs to be defined.
 
-By default the timing arguments are all ``*`` and the user is root. When making
-changes to an existing cron job the name declaration is the unique factor, so if
-and existing cron that looks like this:
+By default the timing arguments are all ``*`` and the user is root. When
+making changes to an existing cron job the name declaration is the unique
+factor, so if and existing cron that looks like this:
 
 .. code-block:: yaml
 

@@ -1,7 +1,7 @@
 '''
-The module used to execute states in salt. A state is unlike a module execution
-in that instead of just executing a command it ensure that a certain state is
-present on the system.
+The module used to execute states in salt. A state is unlike a module
+execution in that instead of just executing a command it ensure that a
+certain state is present on the system.
 
 The data sent to the state calls is as follows:
     { 'state': '<state module name>',

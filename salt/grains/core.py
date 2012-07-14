@@ -382,6 +382,13 @@ def os_data():
                 if match:
                     # Adds: lsb_distrib_{id,release,codename,description}
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
+        try:
+            import lsb_release
+            release = lsb_release.get_distro_information()
+            for key, value in release.iteritems():
+                grains['lsb_{0}'.format(key.lower())] = value  # override /etc/lsb-release
+        except ImportError:
+            pass
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
             grains['os_family'] = 'Arch'
@@ -439,6 +446,11 @@ def os_data():
                 grains['os'] = 'Scientific'
             else:
                 grains['os'] = 'RedHat'
+        elif os.path.isfile('/etc/system-release'):
+            grains['os_family'] = 'RedHat'
+            data = open('/etc/system-release', 'r').read()
+            if 'amazon' in data.lower():
+                grains['os'] = 'Amazon'
         elif os.path.isfile('/etc/SuSE-release'):
             grains['os_family'] = 'Suse'
             data = open('/etc/SuSE-release', 'r').read()

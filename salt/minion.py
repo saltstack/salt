@@ -403,10 +403,7 @@ class Minion(object):
         if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
-            payload['load'] = self.crypticle.dumps(load)
-            data = self.serial.dumps(payload)
-            socket.send(data)
-            ret_val = self.serial.loads(socket.recv())
+            ret_val = sreq.send('aes', self.crypticle.dumps(load))
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
             fn_ = os.path.join(

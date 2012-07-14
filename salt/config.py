@@ -94,7 +94,7 @@ def load_config(opts, path, env_var):
             if salt.log.is_console_configured():
                 log.warn(msg.format(path, e))
             else:
-                print msg.format(path, e)
+                print(msg.format(path, e))
     else:
         log.debug('Missing configuration file: {0}'.format(path))
 

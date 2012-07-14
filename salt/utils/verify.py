@@ -64,18 +64,26 @@ def verify_socket(interface, pub_port, ret_port):
     '''
     Attempt to bind to the sockets to verify that they are available
     '''
-    result = False
+    result = None
+
+    pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         pubsock.bind((interface, int(pub_port)))
         pubsock.close()
-        retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         retsock.bind((interface, int(ret_port)))
         retsock.close()
-        return True
+        result = True
     except Exception:
-        return False
+        log.warn("Unable to bind socket, this might not be a problem."
+                 " Is there another salt-master running?")
+        result = False
+    finally:
+        pubsock.close()
+        retsock.close()
 
+    return True  # TODO: Make this test actually function as advertised
+                 # Disabled check as per github issue number 1594
 
 def verify_env(dirs, user):
     '''
@@ -105,7 +113,8 @@ def verify_env(dirs, user):
                     os.chown(dir_, uid, gid)
                 os.umask(cumask)
             except OSError as e:
-                sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
+                msg = 'Failed to create directory path "{0}" - {1}\n'
+                sys.stderr.write(msg.format(dir_, e))
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
@@ -143,7 +152,8 @@ def verify_env(dirs, user):
             if os.access(dir_, os.W_OK):
                 os.chmod(dir_, 448)
             else:
-                msg = 'Unable to securely set the permissions of "{0}".'.format(dir_)
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
                 log.critical(msg)
     # Run the extra verification checks
     zmq_version()

@@ -1,16 +1,16 @@
 '''
 Create virtualenv environments
 '''
+# Import python libs
 from salt import utils
 
 
-__opts__ = {
-    'venv_bin': 'virtualenv',
-}
+__opts__ = {}
+__pillar__ = {}
 
 
 def create(path,
-        venv_bin=__opts__['venv_bin'],
+        venv_bin=None,
         no_site_packages=False,
         system_site_packages=False,
         distribute=False,
@@ -51,6 +51,8 @@ def create(path,
 
         salt '*' virtualenv.create /path/to/new/virtualenv
     '''
+    if venv_bin is None:
+        venv_bin = __opts__.get('venv_bin') or __pillar__.get('venv_bin')
     # raise CommandNotFoundError if venv_bin is missing
     utils.check_or_die(venv_bin)
 

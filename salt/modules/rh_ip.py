@@ -612,8 +612,16 @@ def _parse_network_settings(opts, current):
     else:
         _raise_error_network('hostname', ['server1.example.com'])
 
+    if opts['nozeroconf'] in valid:
+        if opts['nozeroconf'] in _CONFIG_TRUE:
+            result['nozeroconf'] = 'true'
+        elif opts['nozeroconf'] in _CONFIG_FALSE:
+                result['nozeroconf'] = 'false'
+    else:
+        _raise_error_network('nozeroconf', valid)
+
     for opt in opts:
-        if opt not in ['networking', 'hostname']:
+        if opt not in ['networking', 'hostname', 'nozeroconf']:
           result[opt] = opts[opt]
 
     return result

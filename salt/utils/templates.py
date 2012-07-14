@@ -34,7 +34,11 @@ def mako(sfn, string=False, **kwargs):
         fd_, tgt = tempfile.mkstemp()
         os.close(fd_)
         if 'context' in kwargs:
-            passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
+            passthrough = (
+                kwargs['context']
+                if isinstance(kwargs['context'], dict)
+                else {}
+            )
         for kwarg in kwargs:
             if kwarg == 'context':
                 continue
@@ -81,7 +85,11 @@ def jinja(sfn, string=False, **kwargs):
         fd_, tgt = tempfile.mkstemp()
         os.close(fd_)
         if 'context' in kwargs:
-            passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
+            passthrough = (
+                kwargs['context']
+                if isinstance(kwargs['context'], dict)
+                else {}
+            )
         for kwarg in kwargs:
             if kwarg == 'context':
                 continue
@@ -148,8 +156,50 @@ def py(sfn, string=False, **kwargs):
         return {'result': False,
                 'data': trb}
 
+def wempy(sfn, string=False, **kwargs):
+    '''
+    Render a wempy template, returns the location of the rendered file,
+    return False if render fails.
+    Returns::
+
+        {'result': bool,
+         'data': <Error data or rendered file path>}
+    '''
+    try:
+        from wemplate.wemplate import TemplateParser as Template
+    except ImportError:
+        return {'result': False,
+                'data': 'Failed to import wempy'}
+    try:
+        passthrough = {}
+        fd_, tgt = tempfile.mkstemp()
+        os.close(fd_)
+        if 'context' in kwargs:
+            passthrough = kwargs['context'] if isinstance(kwargs['context'], dict) else {}
+        for kwarg in kwargs:
+            if kwarg == 'context':
+                continue
+            passthrough[kwarg] = kwargs[kwarg]
+        data = ''
+        with open(sfn, 'r') as src:
+            template = Template(src.read())
+            data = template.render(**passthrough)
+        if string:
+            salt.utils.safe_rm(tgt)
+            return {'result': True,
+                    'data': data}
+        with open(tgt, 'w+') as target:
+            target.write(data)
+        return {'result': True,
+                'data': tgt}
+    except Exception:
+        trb = traceback.format_exc()
+        return {'result': False,
+                'data': trb}
+
 template_registry = {
     'jinja': jinja,
     'mako': mako,
     'py': py,
+    'wempy': wempy,
 }
