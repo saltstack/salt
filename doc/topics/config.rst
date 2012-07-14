@@ -4,7 +4,7 @@ Core Configuration
 
 A number of core configuration options and some options that are global to
 the vm profiles can be set in the cloud config file. By default this file is
-located by default at ``/etc/salt/cloud``.
+located at ``/etc/salt/cloud``.
 
 Minion Configuration
 ====================
