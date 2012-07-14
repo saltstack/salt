@@ -8,10 +8,8 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
-%define salt_version %(%{__python} %{_sourcedir}/salt/version.py)
-
 Name: salt
-Version: %{salt_version}
+Version: 0.9.9.1
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
