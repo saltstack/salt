@@ -5,6 +5,11 @@ Installation
 The Salt system setup is amazingly simple, as this is one of the central design
 goals of Salt.
 
+.. seealso::
+
+    :doc:`Installing Salt for development </topics/hacking>` and contributing
+    to the project.
+
 Dependencies
 ------------
 
