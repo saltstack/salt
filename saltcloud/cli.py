@@ -75,6 +75,13 @@ class SaltCloud(object):
                 help=('Execute a query and return information about the nodes '
                       'running on configured cloud providers'))
 
+        parser.add_option('--list-images',
+                dest='list_images',
+                default=False,
+                action='store_true',
+                help=('Display a list of all images available in configured '
+                      'cloud providers'))
+
         parser.add_option('-C',
                 '--cloud-config',
                 dest='cloud_config',
