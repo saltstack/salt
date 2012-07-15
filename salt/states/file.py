@@ -585,7 +585,7 @@ def _check_dir_meta(
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name, source_sum['hash_type'])
+    stats = __salt__['file.stats'](name)
     changes = {}
     if not user is None and user != stats['user']:
         changes['user'] = user
