@@ -124,6 +124,10 @@ def _bsd_cpudata(osdata):
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
     grains['cpu_flags'] = []
+    try:
+        grains['num_cpus'] = int(grains['num_cpus'])
+    except Exception:
+        grains['num_cpus'] = 0
 
     return grains
 
