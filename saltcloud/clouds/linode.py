@@ -27,6 +27,20 @@ def get_conn():
             )
 
 
+def avail_images():
+    '''
+    Return a dict of all available vm images on the cloud provider with
+    relevant data
+    '''
+    conn = get_conn()
+    images = conn.list_images()
+    ret = {}
+    for img in images:
+        for attr in dir(img):
+            ret[attr] = getattr(img, attr)
+    return ret
+
+
 def get_location(conn, vm_):
     '''
     Return the node location to use
