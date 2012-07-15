@@ -216,7 +216,7 @@ class Pillar(object):
         Returns the high data derived from the top file
         '''
         tops, errors = self.get_tops()
-        return self.merge_tops(tops)
+        return self.merge_tops(tops), errors
 
     def top_matches(self, top):
         '''
@@ -351,5 +351,7 @@ class Pillar(object):
         pillar.update(self.ext_pillar())
         errors.extend(terrors)
         if errors:
-            return errors
+            for error in errors:
+                log.critical('Pillar render error: {0}'.format(error))
+            return {}
         return pillar
