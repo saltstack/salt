@@ -51,7 +51,7 @@ class Cloud(object):
         Return a mapping of what named vms are running on what vm providers
         based on what providers are defined in the configs and vms
         '''
-        provs = get_providers()
+        provs = self.get_providers()
         for prov in provs:
             fun = '{0}.list_nodes'.format(prov)
             if not fun in self.clouds:
@@ -71,7 +71,7 @@ class Cloud(object):
         '''
         Return a mapping of all image data for available providers
         '''
-        provs = get_providers()
+        provs = self.get_providers()
         images = {}
         for prov in provs:
             fun = '{0}.avail_images'.format(prov)
@@ -86,7 +86,7 @@ class Cloud(object):
         '''
         Return a mapping of all image data for available providers
         '''
-        provs = get_providers()
+        provs = self.get_providers()
         images = {}
         for prov in provs:
             fun = '{0}.avail_sizes'.format(prov)
