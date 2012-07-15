@@ -69,8 +69,10 @@ def verify_socket(interface, pub_port, ret_port):
     pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
+        pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         pubsock.bind((interface, int(pub_port)))
         pubsock.close()
+        retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         retsock.bind((interface, int(ret_port)))
         retsock.close()
         result = True
@@ -82,8 +84,8 @@ def verify_socket(interface, pub_port, ret_port):
         pubsock.close()
         retsock.close()
 
-    return True  # TODO: Make this test actually function as advertised
-                 # Disabled check as per github issue number 1594
+    return result
+
 
 def verify_env(dirs, user):
     '''
