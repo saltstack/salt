@@ -78,13 +78,19 @@ class SaltCloud(object):
         parser.add_option('--list-images',
                 dest='list_images',
                 default=False,
-                help=('Display a list of all images available in configured '
+                help=('Display a list of images available in configured '
+                      'cloud providers. Pass the cloud provider that '
+                      'available images are desired on, aka "linode", '
+                      'or pass "all" to list images for all configured '
                       'cloud providers'))
 
         parser.add_option('--list-sizes',
                 dest='list_sizes',
                 default=False,
-                help=('Display a list of all sizes available in configured '
+                help=('Display a list of sizes available in configured '
+                      'cloud providers. Pass the cloud provider that '
+                      'available sizes are desired on, aka "EC2", '
+                      'or pass "all" to list sizes for all configured '
                       'cloud providers'))
 
         parser.add_option('-C',
