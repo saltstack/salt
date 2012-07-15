@@ -8,6 +8,7 @@ Full Table of Contents
 
     topics/index
     topics/installation/index
+    topics/hacking
     topics/configuration
     topics/targeting/index
     topics/tutorials/modules
