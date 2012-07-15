@@ -143,8 +143,8 @@ restarted.
 Watch and the Watcher Function
 ------------------------------
 
-The watch requisite is based on the ``watcher`` function, state Python
-modules can include a function called watcher, this function is then called
+The watch requisite is based on the ``watcher`` function. Python state
+modules can include a function called ``watcher`` which is then called
 if the watch call is invoked. In the case of the service module the underlying
 service is restarted. In the case of the cmd state the command is executed.
 
