@@ -29,10 +29,11 @@ def __virtual__():
                'Fedora',
                'Gentoo',
                'Ubuntu',
-               'FreeBSD',
-               'Windows',
               ]
     if __grains__['os'] in disable:
+        return False
+    # Disable on all non-Linux OSes as well
+    if __grains__['kernel'] != 'Linux':
         return False
     return 'service'
 
