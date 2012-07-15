@@ -79,7 +79,22 @@ class Cloud(object):
                 # The capability to gather images is not supported by this
                 # cloud module
                 continue
-            images[prov] = self.clouds['fun']()
+            images[prov] = self.clouds[fun]()
+        return images
+
+    def size_list(self):
+        '''
+        Return a mapping of all image data for available providers
+        '''
+        provs = get_providers()
+        images = {}
+        for prov in provs:
+            fun = '{0}.avail_sizes'.format(prov)
+            if not fun in self.clouds:
+                # The capability to gather sizes is not supported by this
+                # cloud module
+                continue
+            images[prov] = self.clouds[fun]()
         return images
 
     def create_all(self):
