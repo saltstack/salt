@@ -112,32 +112,38 @@ class Pillar(object):
         tops = collections.defaultdict(list)
         include = collections.defaultdict(list)
         done = collections.defaultdict(list)
+        errors = []
         # Gather initial top files
-        if self.opts['environment']:
-            tops[self.opts['environment']] = [
-                    compile_template(
-                        self.client.cache_file(
-                            self.opts['state_top'],
-                            self.opts['environment']
-                            ),
-                        self.rend,
-                        self.opts['renderer'],
-                        self.opts['environment']
-                        )
-                    ]
-        else:
-            for env in self._get_envs():
-                tops[env].append(
+        try:
+            if self.opts['environment']:
+                tops[self.opts['environment']] = [
                         compile_template(
                             self.client.cache_file(
                                 self.opts['state_top'],
-                                env
+                                self.opts['environment']
                                 ),
                             self.rend,
                             self.opts['renderer'],
-                            env=env
+                            self.opts['environment']
                             )
-                        )
+                        ]
+            else:
+                for env in self._get_envs():
+                    tops[env].append(
+                            compile_template(
+                                self.client.cache_file(
+                                    self.opts['state_top'],
+                                    env
+                                    ),
+                                self.rend,
+                                self.opts['renderer'],
+                                env=env
+                                )
+                            )
+        except Exception as exc:
+            errors.append(
+                    ('Rendering Primary Top file failed, render error:\n{0}'
+                        .format(exc)))
 
         # Search initial top files for includes
         for env, ctops in tops.items():
@@ -157,23 +163,28 @@ class Pillar(object):
                 for sls in states:
                     if sls in done[env]:
                         continue
-                    tops[env].append(
-                            compile_template(
-                                self.client.get_state(
-                                    sls,
-                                    env
-                                    ),
-                                self.rend,
-                                self.opts['renderer'],
-                                env=env
+                    try:
+                        tops[env].append(
+                                compile_template(
+                                    self.client.get_state(
+                                        sls,
+                                        env
+                                        ),
+                                    self.rend,
+                                    self.opts['renderer'],
+                                    env=env
+                                    )
                                 )
-                            )
+                    except Exception as exc:
+                        errors.append(
+                                ('Rendering Top file {0} failed, render error'
+                                 ':\n{1}').format(sls, exc))
                     done[env].append(sls)
             for env in pops:
                 if env in include:
                     include.pop(env)
 
-        return tops
+        return tops, errors
 
     def merge_tops(self, tops):
         '''
@@ -204,7 +215,7 @@ class Pillar(object):
         '''
         Returns the high data derived from the top file
         '''
-        tops = self.get_tops()
+        tops, errors = self.get_tops()
         return self.merge_tops(tops)
 
     def top_matches(self, top):
@@ -334,10 +345,11 @@ class Pillar(object):
         '''
         Render the pillar dta and return
         '''
-        top = self.get_top()
+        top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
         pillar.update(self.ext_pillar())
+        errors.extend(terrors)
         if errors:
             return errors
         return pillar
