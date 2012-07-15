@@ -82,6 +82,13 @@ class SaltCloud(object):
                 help=('Display a list of all images available in configured '
                       'cloud providers'))
 
+        parser.add_option('--list-sizes',
+                dest='list_sizes',
+                default=False,
+                action='store_true',
+                help=('Display a list of all sizes available in configured '
+                      'cloud providers'))
+
         parser.add_option('-C',
                 '--cloud-config',
                 dest='cloud_config',
@@ -129,6 +136,10 @@ class SaltCloud(object):
         mapper = saltcloud.cloud.Map(self.opts)
         if self.opts['query']:
             pprint.pprint(mapper.map_providers())
+        if self.opts['list_images']:
+            pprint.pprint(mapper.image_list())
+        if self.opts['list_sizes']:
+            pprint.pprint(mapper.size_list())
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
         elif self.opts['map']:
