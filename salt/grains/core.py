@@ -112,12 +112,15 @@ def _bsd_cpudata(osdata):
     Return cpu information for BSD-like systems
     '''
     sysctl = salt.utils.which('sysctl')
+    arch = salt.utils.which('arch')
     cmds = {}
 
     if sysctl:
         cmds['num_cpus'] = '{0} -n hw.ncpu'.format(sysctl)
         cmds['cpu_model'] = '{0} -n hw.model'.format(sysctl)
         cmds['cpuarch'] = '{0} -n hw.machine'.format(sysctl)
+    if arch and osdata['kernel'] == 'OpenBSD':
+        cmds['cpuarch'] = '{0} -s'.format(arch)
 
     grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
     grains['cpu_flags'] = []
