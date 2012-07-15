@@ -455,7 +455,7 @@ def user_create(user,
 
     CLI Examples::
 
-        salt '*' mysql.user_create 'username' 'hostname' 'password
+        salt '*' mysql.user_create 'username' 'hostname' 'password'
 
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
     '''
