@@ -36,15 +36,22 @@ class Cloud(object):
             if '{0}.create'.format(self.opts['provider']) in self.clouds:
                 return self.opts['provider']
 
-    def map_providers(self):
+    def get_providers(self):
         '''
-        Return a mapping of what named vms are running on what vm providers
-        based on what providers are defined in the configs and vms
+        Return the providers configured within the vm settings
         '''
         provs = set()
         pmap = {}
         for vm_ in self.opts['vm']:
             provs.add(self.provider(vm_))
+        return provs
+
+    def map_providers(self):
+        '''
+        Return a mapping of what named vms are running on what vm providers
+        based on what providers are defined in the configs and vms
+        '''
+        provs = get_providers()
         for prov in provs:
             fun = '{0}.list_nodes'.format(prov)
             if not fun in self.clouds:
@@ -59,6 +66,21 @@ class Cloud(object):
                 # nodes
                 pmap[prov] = []
         return pmap
+
+    def image_list(self):
+        '''
+        Return a mapping of all image data for available providers
+        '''
+        provs = get_providers()
+        images = {}
+        for prov in provs:
+            fun = '{0}.avail_images'.format(prov)
+            if not fun in self.clouds:
+                # The capability to gather images is not supported by this
+                # cloud module
+                continue
+            images[prov] = self.clouds['fun']()
+        return images
 
     def create_all(self):
         '''
