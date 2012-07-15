@@ -53,10 +53,11 @@ def avail_images():
     images = conn.list_images()
     ret = {}
     for img in images:
+        ret[img.name] = {}
         for attr in dir(img):
             if attr.startswith('_'):
                 continue
-            ret[attr] = getattr(img, attr)
+            ret[img.name][attr] = getattr(img, attr)
     return ret
 
 
@@ -69,10 +70,11 @@ def avail_sizes():
     sizes = conn.list_sizes()
     ret = {}
     for size in sizes:
+        ret[size.name] = {}
         for attr in dir(size):
             if attr.startswith('_'):
                 continue
-            ret[attr] = getattr(size, attr)
+            ret[size.name][attr] = getattr(size, attr)
     return ret
 
 
