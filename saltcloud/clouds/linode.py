@@ -37,7 +37,25 @@ def avail_images():
     ret = {}
     for img in images:
         for attr in dir(img):
+            if attr.startswith('_'):
+                continue
             ret[attr] = getattr(img, attr)
+    return ret
+
+
+def avail_sizes():
+    '''
+    Return a dict of all available vm images on the cloud provider with
+    relevant data
+    '''
+    conn = get_conn()
+    sizes = conn.list_sizes()
+    ret = {}
+    for size in sizes:
+        for attr in dir(size):
+            if attr.startswith('_'):
+                continue
+            ret[attr] = getattr(size, attr)
     return ret
 
 
