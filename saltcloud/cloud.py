@@ -67,13 +67,17 @@ class Cloud(object):
                 pmap[prov] = []
         return pmap
 
-    def image_list(self):
+    def image_list(self, lookup='all'):
         '''
         Return a mapping of all image data for available providers
         '''
         provs = self.get_providers()
         images = {}
         for prov in provs:
+            # If all providers are not desired, then don't get them
+            if not lookup == 'all':
+                if not lookup == prov:
+                    continue
             fun = '{0}.avail_images'.format(prov)
             if not fun in self.clouds:
                 # The capability to gather images is not supported by this
@@ -82,13 +86,17 @@ class Cloud(object):
             images[prov] = self.clouds[fun]()
         return images
 
-    def size_list(self):
+    def size_list(self, lookup='all'):
         '''
         Return a mapping of all image data for available providers
         '''
         provs = self.get_providers()
         images = {}
         for prov in provs:
+            # If all providers are not desired, then don't get them
+            if not lookup == 'all':
+                if not lookup == prov:
+                    continue
             fun = '{0}.avail_sizes'.format(prov)
             if not fun in self.clouds:
                 # The capability to gather sizes is not supported by this
