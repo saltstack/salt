@@ -1383,7 +1383,8 @@ def recurse(name,
             keep.add(dest)
             if os.path.isdir(fn_) and include_empty:
                 #create empty dir
-                os.mkdir(dest, dir_mode)
+                os.mkdir(dest)
+                __salt__['file.set_mode'](dest, dir_mode)
             else:
                 # The destination file is not present, make it
                 # FIXME: no metadata (ownership, permissions) available
