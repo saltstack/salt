@@ -107,21 +107,21 @@ def _linux_cpudata():
     return grains
 
 
-def _freebsd_cpudata():
+def _bsd_cpudata(osdata):
     '''
-    Return cpu information for FreeBSD systems
+    Return cpu information for BSD-like systems
     '''
-    grains = {}
     sysctl = salt.utils.which('sysctl')
+    cmds = {}
 
     if sysctl:
-        machine_cmd = '{0} -n hw.machine'.format(sysctl)
-        ncpu_cmd = '{0} -n hw.ncpu'.format(sysctl)
-        model_cpu = '{0} -n hw.model'.format(sysctl)
-        grains['num_cpus'] = __salt__['cmd.run'](ncpu_cmd).strip()
-        grains['cpu_model'] = __salt__['cmd.run'](model_cpu).strip()
-        grains['cpuarch'] = __salt__['cmd.run'](machine_cmd).strip()
-        grains['cpu_flags'] = []
+        cmds['num_cpus'] = '{0} -n hw.ncpu'.format(sysctl)
+        cmds['cpu_model'] = '{0} -n hw.model'.format(sysctl)
+        cmds['cpuarch'] = '{0} -n hw.machine'.format(sysctl)
+
+    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
+    grains['cpu_flags'] = []
+
     return grains
 
 
@@ -477,15 +477,14 @@ def os_data():
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
         grains['os_family'] = 'MacOS'
-        grains.update(_freebsd_cpudata())
+        grains.update(_bsd_cpudata(grains))
     else:
         grains['os'] = grains['kernel']
         grains['os_family'] = grains['kernel']
     if grains['kernel'] == 'Linux':
         grains.update(_linux_cpudata())
     elif grains['kernel'] in ('FreeBSD', 'OpenBSD'):
-        # _freebsd_cpudata works on OpenBSD as well.
-        grains.update(_freebsd_cpudata())
+        grains.update(_bsd_cpudata(grains))
 
     grains.update(_memdata(grains))
 
