@@ -36,7 +36,7 @@ class ManageTest(integration.ShellCase):
 
 if __name__ == "__main__":
     loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(RunTest)
+    tests = loader.loadTestsFromTestCase(ManageTest)
     print('Setting up Salt daemons to execute tests')
     with TestDaemon():
         runner = TextTestRunner(verbosity=1).run(tests)

@@ -426,7 +426,7 @@ def resume(name):
     return True
 
 
-def set_autostart(name):
+def set_autostart(name, state='on'):
     '''
     Set the named virtual machine to autostart when the hypervisor boots
 

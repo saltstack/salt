@@ -709,7 +709,8 @@ def grant_revoke(grant,
                  database,
                  user,
                  host='localhost',
-                 grant_option=False):
+                 grant_option=False,
+                 escape=True):
     '''
     Removes a grant from the MySQL server.
 
