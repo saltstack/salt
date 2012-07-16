@@ -23,7 +23,7 @@ archive of the patch and a place for discussion.
 Contributions Welcome!
 ----------------------
 
-The goal here it to make contributions clear, make sure there is a trail for
+The goal here is to make contributions clear, make sure there is a trail for
 where the code has come from, but most importantly, to give credit where credit
 is due!
 
