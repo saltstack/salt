@@ -9,7 +9,7 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.9.9.1
+Version: 0.10.1
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -261,6 +261,9 @@ fi
 %endif
 
 %changelog
+* Sat Jun 16 2012 Clint Savage <herlo1@gmail.com> - 0.10.0-1
+- Moved to upstream release 0.10.0
+
 * Sat Apr 28 2012 Clint Savage <herlo1@gmail.com> - 0.9.9.1-1
 - Moved to upstream release 0.9.9.1
 
