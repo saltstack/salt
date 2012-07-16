@@ -13,7 +13,7 @@ Get started with Salt
     A list of `presentations and interviews on Salt`_ (including the FLOSS
     Weekly interview).
 
-.. _`presentations and interviews on Salt`: http://saltstack.org/presentations/
+.. _`presentations and interviews on Salt`: http://saltstack.org/learn/
 
 Salt is an open source tool to manage your infrastructure. Easy enough to get
 running in minutes and fast enough to manage tens of thousands of servers (and
