@@ -651,7 +651,7 @@ class SaltKey(object):
         for k, v in options.__dict__.items():
             if k == 'keysize':
                 if v < 2048:
-                    opts[k] = v
+                    opts[k] = 2048 
                 else:
                     opts[k] = v
             elif v is not None:
