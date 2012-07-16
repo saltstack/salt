@@ -101,7 +101,6 @@ autosummary_generate = True
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
-.. _`installation`: http://saltstack.org/install/
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. |latest| replace:: https://github.com/downloads/saltstack/salt/salt-%s.tar.gz
 """ % __version__
