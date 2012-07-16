@@ -463,10 +463,12 @@ def _check_recurse(
             tchange = _check_file_meta(
                     dest,
                     fn_,
+                    None,
                     source_sum,
                     user,
                     group,
-                    file_mode)
+                    file_mode,
+                    env)
             if tchange:
                 changes[name] = tchange
             keep.add(dest)
@@ -568,7 +570,7 @@ def _check_managed(
             )
     if comment:
         return False, comment
-    changes = _check_file_meta(name, sfn, source_sum, user, group, mode)
+    changes = _check_file_meta(name, sfn, source, source_sum, user, group, mode, env)
     if changes:
         comment = 'The following values are set to be changed:\n'
         for key, val in changes.items():
@@ -607,10 +609,12 @@ def _check_dir_meta(
 def _check_file_meta(
         name,
         sfn,
+        source,
         source_sum,
         user,
         group,
-        mode):
+        mode,
+        env):
     '''
     Check for the changes in the file metadata
     '''
@@ -623,6 +627,8 @@ def _check_file_meta(
         return changes
     if 'hsum' in source_sum:
         if source_sum['hsum'] != stats['sum']:
+            if not sfn and source:
+                sfn = __salt__['cp.cache_file'](source, env)
             if sfn:
                 with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
                     slines = src.readlines()
@@ -631,7 +637,6 @@ def _check_file_meta(
                         ''.join(difflib.unified_diff(nlines, slines))
                         )
             else:
-                # TODO Evaluate diff without downloading file from master
                 changes['sum'] = 'Checksum differs'
     if not user is None and user != stats['user']:
         changes['user'] = user
