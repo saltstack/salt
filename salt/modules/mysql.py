@@ -614,6 +614,11 @@ def __grant_generate(grant,
     # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = grant.replace(',', ', ').upper()
 
+    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
+    # grant_exists and grant_add ALL work correctly
+    if grant == 'ALL':
+        grant = 'ALL PRIVILEGES'
+
     db_part = database.rpartition('.')
     db = db_part[0]
     table = db_part[2]
