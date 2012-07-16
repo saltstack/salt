@@ -815,6 +815,13 @@ class SaltRun(object):
                 help=('Change the location of the master configuration; '
                       'default=/etc/salt/master'))
 
+        parser.add_option('-t',
+                '--timeout',
+                dest='timeout',
+                default='1',
+                help=('Change the timeout, if applicable, for the salt runner; '
+                      'default=1'))
+
         parser.add_option('-d',
                 '--doc',
                 '--documentation',
