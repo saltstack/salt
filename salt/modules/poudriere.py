@@ -8,14 +8,14 @@ import logging
 
 log = logging.getLogger(__name__)
 
-#def __virtual__():
-#    '''
-#    Module load on freebsd only
-#    '''
-#    if __grains__['os'] == 'FreeBSD':
-#        return 'pkg'
-#    else:
-#        return False
+def __virtual__():
+    '''
+    Module load on freebsd only
+    '''
+    if __grains__['os'] == 'FreeBSD':
+        return 'poudriere'
+    else:
+        return False
 
 config_file = "/usr/local/etc/poudriere.conf"
 
