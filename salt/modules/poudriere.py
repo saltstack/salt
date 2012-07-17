@@ -1,18 +1,18 @@
 '''
 Support for poudriere
-
-Requires zfs and mkfile
 '''
 import os
 import logging
+
+import salt.utils
 
 log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Module load on freebsd only
+    Module load on freebsd only and if poudriere installed
     '''
-    if __grains__['os'] == 'FreeBSD':
+    if __grains__['os'] == 'FreeBSD' and salt.utils.which('poudriere'):
         return 'poudriere'
     else:
         return False
@@ -73,6 +73,18 @@ def parse_config(config_file=config_file):
         return ret
     else:
         return 'Could not find {0} on file system'.format(config_file)
+
+
+def version():
+    '''
+    Return poudriere version
+
+    CLI Example::
+
+        salt '*' poudriere.version
+    '''
+    cmd = "poudriere version"
+    return __salt__['cmd.run'](cmd)
 
 
 def list_jails():
@@ -169,8 +181,16 @@ def create_ports_tree():
 
 
 def bulk_build(jail, pkg_file, keep=False):
-    '''bulk build on jail'''
+    '''
+    Run bulk build on poudriere server.
 
+    Return number of pkg builds, failures, and errors, on error dump to cli
+
+    CLI Example::
+
+        salt -N buildbox_group poudriere.bulk_build 90amd64 /root/pkg_list
+
+    '''
     # make sure `pkg file` and jail is on file system
     if not os.path.isfile(pkg_file):
         return 'Could not find file {0} on filesystem'.format(pkg_file)
