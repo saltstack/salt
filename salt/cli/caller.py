@@ -14,6 +14,7 @@ import salt.utils
 import salt.loader
 import salt.minion
 from salt._compat import string_types
+from salt.log import LOG_LEVELS
 
 # Custom exceptions
 from salt.exceptions import (
@@ -56,7 +57,9 @@ class Caller(object):
             ret['return'] = self.minion.functions[fun](*args, **kw)
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
-            if self.opts['log_level'] <= logging.DEBUG:
+            active_level = LOG_LEVELS.get(
+                self.opts['log_level'].lower, logging.ERROR)
+            if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)
