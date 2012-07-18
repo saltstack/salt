@@ -58,7 +58,10 @@ def add(name,
         cmd += '-G {0} '.format(','.join(groups))
     if home:
         if home is not True:
-            cmd += '-d {0} '.format(home)
+            if system:
+                cmd += '-d {0} '.format(home)
+            else:
+                cmd += '-m -d {0} '.format(home)
         else:
             if not system:
                 cmd += '-m '
