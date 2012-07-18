@@ -53,13 +53,18 @@ def _present_test(user, name, enc, comment, options, source, config, env):
                 config,
                 env)
         if keys:
-            comment = ('A number of keys are going to be updated from the '
-                       'keyfile: {0}').format(source)
-        else:
-            result = True
-            comment = (
-                    'All host keys in file {0} are already present'
-                    ).format(source)
+            comment = ''
+            for key, status in keys.items():
+                if status == 'exists':
+                    continue
+                comment += 'Set to {0}: {1}\n'.format(status, key)
+            if comment:
+                return result, comment
+        result = True
+        comment = (
+                'All host keys in file {0} are already present'
+                ).format(source)
+        return result, comment
     check = __salt__['ssh.check_key'](
             user,
             name,
