@@ -12,15 +12,24 @@ rules for allowing these incoming connections to the master.
     **No firewall configuration needs to be done on Salt minions. These changes
     refer to the master only.**
 
-lokkit
+RHEL 6 / CENTOS 6
 ========
 
 The lokkit command packaged with some linux distributions makes opening 
-iptables firewall ports really simple.
+iptables firewall ports really simple via command line. Just be careful 
+to not lock yourself out of your own server by forgetting to open your ssh port.
 
-**RHEL 6 / CentOS 6** ::
+**lokkit example** ::
 
-   lokkit -p 4505:tcp -p 4506:tcp
+   lokkit -p 22:tcp -p 4505:tcp -p 4506:tcp
+
+The system-config-firewall-tui command provides a text-based interface to modifying
+your firewall.
+
+**system-config-firewall-tui** ::
+
+   system-config-firewall-tui
+
 
 iptables
 ========
