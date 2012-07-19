@@ -226,6 +226,7 @@ def running(name, enable=None, sig=None):
            'changes': {},
            'result': True,
            'comment': ''}
+    # See if the service is already running
     if _get_stat(name, sig):
         ret['comment'] = 'The service {0} is already running'.format(name)
         if enable is True:
@@ -235,6 +236,17 @@ def running(name, enable=None, sig=None):
         else:
             return ret
 
+    # Check if the service is available
+    if 'service.get_all' in __salt__:
+        # get_all is available, we can reliable check for the service
+        services = __salt__['service.get_all']
+        if not name in services:
+            ret['result'] = False
+            ret['comment'] = 'The named service {0} is not available'.format(
+                    name)
+            return ret
+
+    # Run the tests
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to start'.format(name)
