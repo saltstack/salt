@@ -12,6 +12,16 @@ rules for allowing these incoming connections to the master.
     **No firewall configuration needs to be done on Salt minions. These changes
     refer to the master only.**
 
+lokkit
+========
+
+The lokkit command packaged with some linux distributions makes opening 
+iptables firewall ports really simple.
+
+**RHEL 6 / CentOS 6** ::
+
+   lokkit -p 4505:tcp -p 4506:tcp
+
 iptables
 ========
 
@@ -19,7 +29,7 @@ Different Linux distributions store their `iptables`_ rules in different places,
 which makes it difficult to standardize firewall documentation. I've included
 some of the more common locations, but your mileage may vary.
 
-**Fedora / Red Hat / CentOS** ::
+**Fedora / RHEL / CentOS** ::
 
     /etc/sysconfig/iptables
 
