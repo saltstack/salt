@@ -13,18 +13,19 @@ rules for allowing these incoming connections to the master.
     refer to the master only.**
 
 RHEL 6 / CENTOS 6
-========
+=================
 
-The lokkit command packaged with some linux distributions makes opening 
-iptables firewall ports really simple via command line. Just be careful 
-to not lock yourself out of your own server by forgetting to open your ssh port.
+The lokkit command packaged with some linux distributions makes opening
+iptables firewall ports very simple via the command line. Just be careful
+to not lock out access to the server by neglecting to open the ssh
+port.
 
 **lokkit example** ::
 
    lokkit -p 22:tcp -p 4505:tcp -p 4506:tcp
 
 The system-config-firewall-tui command provides a text-based interface to modifying
-your firewall.
+the firewall.
 
 **system-config-firewall-tui** ::
 
@@ -35,7 +36,7 @@ iptables
 ========
 
 Different Linux distributions store their `iptables`_ rules in different places,
-which makes it difficult to standardize firewall documentation. I've included
+which makes it difficult to standardize firewall documentation. Included are
 some of the more common locations, but your mileage may vary.
 
 **Fedora / RHEL / CentOS** ::
@@ -81,8 +82,8 @@ master.
     + pass in on $int_if proto tcp from any to $int_if port 4505
     + pass in on $int_if proto tcp from any to $int_if port 4506
 
-Once you've made these additions to your ``pf.conf`` you'll need to reload the
-new rules with the new additions. This can be done using the ``pfctl`` command.
+Once these additions have been made to the ``pf.conf`` the rules will need to
+be reloaded. This can be done using the ``pfctl`` command.
 
 .. code-block:: bash
 
