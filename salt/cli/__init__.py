@@ -157,7 +157,7 @@ class SaltCMD(object):
                 help=('This option is deprecated and will be removed in a '
                       'future release, please use salt-run jobs instead\n'
                       'Execute a salt command query, this can be used to find '
-                      'the results os a previous function call: -Q test.echo'))
+                      'the results of a previous function call: -Q test.echo'))
         parser.add_option('-c',
                 '--config',
                 default='/etc/salt/master',
