@@ -1,10 +1,7 @@
 '''
 Tests for the file state
 '''
-# Import python libs
 import os
-#
-# Import salt libs
 import integration
 
 
@@ -346,14 +343,6 @@ class FileTest(integration.ModuleCase):
         self.assertIsNone(result)
 
 
-if __name__ == "__main__":
-    import sys
-    from saltunittest import TestLoader, TextTestRunner
-    from integration import TestDaemon
-
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(FileTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(FileTest)

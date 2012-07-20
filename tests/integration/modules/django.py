@@ -1,14 +1,10 @@
 '''
 Test the django module
 '''
-# Import python libs
-import sys
-
-# Import Salt libs
-from saltunittest import TestLoader, TextTestRunner, skipIf
+from saltunittest import skipIf
 import integration
-from integration import TestDaemon
 from salt.modules import django
+
 django.__salt__ = {}
 
 try:
@@ -89,9 +85,5 @@ class DjangoModuleTest(integration.ModuleCase):
 
 
 if __name__ == '__main__':
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(DjangoModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+    from integration import run_tests
+    run_tests(DjangoModuleTest)
