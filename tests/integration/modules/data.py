@@ -56,9 +56,9 @@ class DataModuleTest(integration.ModuleCase):
         self.assertEqual(
                 self.run_function(
                     'data.getvals',
-                    ['["spam", "unladen"]']
+                    ['spam', 'unladen']
                     ),
-                ['eggs', 'swallow']
+                ('eggs', 'swallow')
                 )
         self._clear_db()
 
