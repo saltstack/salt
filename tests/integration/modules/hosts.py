@@ -1,15 +1,11 @@
 '''
 Test the hosts module
 '''
-# Import python libs
 import os
-import sys
 import shutil
 
 # Import Salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 HFN = os.path.join(integration.TMP, 'hosts')
 
@@ -177,10 +173,7 @@ class HostsModuleTest(integration.ModuleCase):
             "192.168.1.1\t\thost1.fqdn.com\thost1\thost1-reorder\n",
             ])
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(HostsModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(HostsModuleTest)

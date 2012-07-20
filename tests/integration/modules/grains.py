@@ -1,13 +1,7 @@
 '''
 Test the grains module
 '''
-# Import python libs
-import sys
-
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class TestModulesGrains(integration.ModuleCase):
@@ -63,10 +57,7 @@ class TestModulesGrains(integration.ModuleCase):
         for grain_name in check_for:
             self.assertTrue(grain_name in lsgrains)
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(TestModulesGrains)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestModulesGrains)

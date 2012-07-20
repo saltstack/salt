@@ -4,12 +4,9 @@ Test the ssh module
 # Import python libs
 import os
 import shutil
-import sys
 
 # Import Salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 AUTHORIZED_KEYS = os.path.join('/tmp/subsalttest', 'authorized_keys')
@@ -159,10 +156,7 @@ class SSHModuleTest(integration.ModuleCase):
                                 config=KNOWN_HOSTS)
         self.assertEqual(ret['status'], 'exists')
 
+
 if __name__ == '__main__':
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(SSHModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+    from integration import run_tests
+    run_tests(SSHModuleTest)
