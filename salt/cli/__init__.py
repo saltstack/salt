@@ -789,7 +789,9 @@ class SaltCall(object):
         '''
         import salt.log
         salt.log.setup_console_logger(
-            self.opts['log_level']
+            self.opts['log_level'],
+            log_format=self.opts['log_fmt_console'],
+            date_format=self.opts['log_datefmt'],
         )
         caller = salt.cli.caller.Caller(self.opts)
         caller.run()
