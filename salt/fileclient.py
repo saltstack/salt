@@ -403,17 +403,7 @@ class LocalClient(Client):
         fnd = self._find_file(path, env)
         if not fnd['path']:
             return ''
-        if not dest:
-            with self._cache_loc(path, env) as cache_dest:
-                dest = cache_dest
-        destdir = os.path.dirname(dest)
-        if not os.path.isdir(destdir):
-            if makedirs:
-                os.makedirs(destdir)
-            else:
-                return False
-        shutil.copy(fnd['path'], dest)
-        return dest
+        return fnd['path']
 
     def file_list(self, env='base'):
         '''
