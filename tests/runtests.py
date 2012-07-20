@@ -60,7 +60,7 @@ def run_integration_tests(opts):
     if not any([opts.client, opts.module, opts.runner,
                 opts.shell, opts.state, opts.name]):
         return status
-    with TestDaemon():
+    with TestDaemon(clean=opts.clean):
         if opts.name:
             results = run_suite(opts, '', opts.name)
             status.append(results)
@@ -152,6 +152,17 @@ def parse_opts():
             dest='name',
             default='',
             help='Specific test name to run')
+    parser.add_option('--clean',
+            dest='clean',
+            default=True,
+            action='store_true',
+            help=('Clean up test environment before and after '
+                  'integration testing (default behaviour)'))
+    parser.add_option('--no-clean',
+            dest='clean',
+            action='store_false',
+            help=('Don\'t clean up test environment before and after '
+                  'integration testing (speed up test process)'))
 
     options, _ = parser.parse_args()
     if not any((options.module, options.client,

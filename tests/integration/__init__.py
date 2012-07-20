@@ -3,11 +3,11 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
+import optparse
 import multiprocessing
 import os
 import sys
 import shutil
-import signal
 import subprocess
 try:
     import pwd
@@ -35,10 +35,56 @@ TMP = os.path.join(INTEGRATION_TEST_DIR, 'tmp')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 
 
+def run_tests(TestCase):
+    '''
+    Run integration tests for a chosen test case.
+
+    Function uses optparse to set up test environment
+    '''
+    from saltunittest import TestLoader, TextTestRunner
+    opts = parse_opts()
+    loader = TestLoader()
+    tests = loader.loadTestsFromTestCase(TestCase)
+    print('Setting up Salt daemons to execute tests')
+    with TestDaemon(clean=opts.clean):
+        runner = TextTestRunner(verbosity=opts.verbosity).run(tests)
+        sys.exit(runner.wasSuccessful())
+
+
+def parse_opts():
+    '''
+    Parse command line options for running integration tests
+    '''
+    parser = optparse.OptionParser()
+    parser.add_option('-v',
+            '--verbose',
+            dest='verbosity',
+            default=1,
+            action='count',
+            help='Verbose test runner output')
+    parser.add_option('--clean',
+            dest='clean',
+            default=True,
+            action='store_true',
+            help=('Clean up test environment before and after '
+                  'integration testing (default behaviour)'))
+    parser.add_option('--no-clean',
+            dest='clean',
+            action='store_false',
+            help=('Don\'t clean up test environment before and after '
+                  'integration testing (speed up test process)'))
+    options, _ = parser.parse_args()
+    return options
+
+
 class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
+
+    def __init__(self, clean):
+        self.clean = clean
+
     def __enter__(self):
         '''
         Start a master and minion
@@ -142,6 +188,8 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
+        if not self.clean:
+            return
         if os.path.isdir(self.sub_minion_opts['root_dir']):
             shutil.rmtree(self.sub_minion_opts['root_dir'])
         if os.path.isdir(self.master_opts['root_dir']):

@@ -5,10 +5,8 @@ user present
 user present with custom homedir
 '''
 import os
-
-from saltunittest import TestLoader, TextTestRunner, skipIf
+from saltunittest import skipIf
 import integration
-from integration import TestDaemon
 
 
 class UserTest(integration.ModuleCase):
@@ -21,7 +19,7 @@ class UserTest(integration.ModuleCase):
         self.assertTrue(result)
 
     def test_user_if_present(self):
-        ret = self.run_state('user.present', name='nobody') 
+        ret = self.run_state('user.present', name='nobody')
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
@@ -32,7 +30,7 @@ class UserTest(integration.ModuleCase):
         And then destroys that user.
         Assume that it will break any system you run it on.
         """
-        ret = self.run_state('user.present', name='salt_test') 
+        ret = self.run_state('user.present', name='salt_test')
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
         ret = self.run_state('user.absent', name='salt_test')
@@ -43,9 +41,13 @@ class UserTest(integration.ModuleCase):
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         """
         ret = self.run_state('user.present', name='salt_test',
-                             home='/var/lib/salt_test') 
+                             home='/var/lib/salt_test')
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
         self.assertTrue(os.stat('/var/lib/salt_test'))
         ret = self.run_state('user.absent', name='salt_test')
 
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(UserTest)

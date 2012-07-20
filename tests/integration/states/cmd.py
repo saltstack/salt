@@ -29,3 +29,8 @@ class CMDTest(integration.ModuleCase):
                              cwd=tempfile.gettempdir(), test=True)
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CMDTest)
