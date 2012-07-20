@@ -272,7 +272,7 @@ def _ps(osdata):
     Return the ps grain
     '''
     grains = {}
-    bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'Darwin')
+    bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
     elif osdata['os'] == 'Windows':
