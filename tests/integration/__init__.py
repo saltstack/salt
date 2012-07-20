@@ -39,6 +39,10 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
+
+    def __init__(self, clean):
+        self.clean = clean
+
     def __enter__(self):
         '''
         Start a master and minion
@@ -142,6 +146,8 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
+        if not self.clean:
+            return
         if os.path.isdir(self.sub_minion_opts['root_dir']):
             shutil.rmtree(self.sub_minion_opts['root_dir'])
         if os.path.isdir(self.master_opts['root_dir']):
