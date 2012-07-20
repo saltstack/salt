@@ -14,7 +14,7 @@ class CompileTest(integration.ModuleCase):
         '''
         ret = self.run_function('state.sls', mods='fuzz.multi_state')
         # Verify that the return is a list, aka, an error
-        self.assertIsInstance(ret, list)
+        self.assertIsInstance(ret, tuple)
 
 
 if __name__ == '__main__':
