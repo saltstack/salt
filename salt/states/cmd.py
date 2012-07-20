@@ -113,6 +113,52 @@ def wait(name,
             'comment': ''}
 
 
+def wait_script(name,
+        source=None,
+        template=None,
+        onlyif=None,
+        unless=None,
+        cwd='/root',
+        user=None,
+        group=None,
+        shell=None,
+        env=None,
+        **kwargs):
+    '''
+    Download a script from a remote source and execute it only if a watch
+    statement calls it.
+
+    name
+        The command to execute, remember that the command will execute with the
+        path and permissions of the salt-minion.
+
+    onlyif
+        A command to run as a check, run the named command only if the command
+        passed to the ``onlyif`` option returns true
+
+    unless
+        A command to run as a check, only run the named command if the command
+        passed to the ``unless`` option returns false
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    user
+        The user name to run the command as
+
+    group
+        The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to the shell grain
+    '''
+    return {'name': name,
+            'changes': {},
+            'result': True,
+            'comment': ''}
+
+
 def run(name,
         onlyif=None,
         unless=None,
@@ -120,7 +166,8 @@ def run(name,
         user=None,
         group=None,
         shell=None,
-        env=()):
+        env=(),
+        **kwargs):
     '''
     Run a command if certain circumstances are met
 
@@ -302,4 +349,11 @@ def script(name,
     finally:
         os.setegid(pgid)
 
-mod_watch = run
+def mod_watch(name, **kwargs):
+    '''
+    Execute a cmd function based on a watch call
+    '''
+    if kwargs['fun'] == 'wait':
+        return run(name **kwargs)
+    elif kwargs['fun'] = 'wait_script':
+        return script(name, **kwargs)
