@@ -981,6 +981,7 @@ class State(object):
         elif status == 'change':
             ret = self.call(low)
             if not ret['changes']:
+                low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
                 ret = self.call(low)
             running[tag] = ret
