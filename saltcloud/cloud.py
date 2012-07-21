@@ -52,6 +52,7 @@ class Cloud(object):
         based on what providers are defined in the configs and vms
         '''
         provs = self.get_providers()
+        pmap = {}
         for prov in provs:
             fun = '{0}.list_nodes'.format(prov)
             if not fun in self.clouds:
