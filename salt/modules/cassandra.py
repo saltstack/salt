@@ -42,7 +42,7 @@ def __virtual__():
         log.info('Module failed to load: pycassa is not installed')
         return False
     except KeyError:
-        log.info('Module failed to load: cassandra.* pillar'
+        log.info('Module failed to load: cassandra.* pillar '
             'values are incomplete')
         return False
 
