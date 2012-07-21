@@ -8,6 +8,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Module load on freebsd only and if poudriere installed
@@ -17,10 +18,48 @@ def __virtual__():
     else:
         return False
 
-config_file = "/usr/local/etc/poudriere.conf"
+
+def _config_file():
+    '''
+    Return the config file location to use
+    '''
+    if 'poudriere.config' in __opts__:
+        return __opts__['poudriere.config']
+    elif 'poudriere.config' in __pillar__:
+        return __pillar__['poudriere.config']
+    return '/usr/local/etc/poudriere.conf'
+
+
+def _config_dir():
+    '''
+    Return the configuration directory to use
+    '''
+    if 'poudriere.config' in __opts__:
+        return __opts__['poudriere.config_dir']
+    elif 'poudriere.config' in __pillar__:
+        return __pillar__['poudriere.config_dir']
+    return '/usr/local/etc/poudriere.d'
+
+
+def _check_config_exists(config_file=None):
+    '''
+    Verify the config file is present
+    '''
+    if config_file is None:
+        config_file = _config_file()
+    if not os.path.isfile(config_file):
+        return False
+    return True
+
 
 def is_jail(name):
-    '''Return True if jail exists False if not'''
+    '''
+    Return True if jail exists False if not
+
+    CLI Example::
+
+        salt '*' poudriere.is_jail <jail name>
+    '''
     jails = list_jails()
     for jail in jails:
         if jail.split()[0] == name:
@@ -29,41 +68,51 @@ def is_jail(name):
 
 
 def make_pkgng_aware(jname):
-    '''make jail ``jname`` pkgng aware'''
+    '''
+    Make jail ``jname`` pkgng aware
+
+    CLI Example::
+
+        salt '*' poudriere.make_pkgng_aware <jail name>
+    '''
     ret = {'changes': {}}
-    cdir = '/usr/local/etc/poudriere.d'
+    cdir = _config_dir()
     # ensure cdir is there
     if not os.path.isdir(cdir):
-        __salt__['cmd.run']('mkdir {0}'.format(cdir))
+        os.makedirs(cdir)
         if os.path.isdir(cdir):
             ret['changes'] = 'Created poudriere make file dir {0}'.format(cdir)
         else:
-            return 'Could not create or find required directory \
-        {0}'.format(cdir)
+            return 'Could not create or find required directory {0}'.format(
+                    cdir)
 
     # Added args to file
-    cmd = 'echo "WITH_PKGNG=yes" > \
-      {0}-make.conf'.format(os.path.join(cdir,jname))
+    cmd = 'echo "WITH_PKGNG=yes" > {0}-make.conf'.format(
+            os.path.join(cdir,jname))
 
     __salt__['cmd.run'](cmd)
 
     if os.path.isfile(os.path.join(cdir,jname) + '-make.conf'):
-        ret['changes'] = 'Created {0}'.format(os.path.join(cdir,jname + \
-            '-make.conf'))
+        ret['changes'] = 'Created {0}'.format(
+                os.path.join(cdir, '{0}-make.conf'.format(janme))
+                )
         return ret
     else:
-        return 'Looks like file {0} could not be \
-    created'.format(os.path.join(cdir,jname + '-make.conf'))
+        return 'Looks like file {0} could not be created'.format(
+                os.path.join(cdir,jname + '-make.conf')
+                )
 
 
-def _check_config_exists(config_file=config_file):
-    if not os.path.isfile(config_file):
-        return False
-    return True
+def parse_config(config_file=None):
+    '''
+    Returns a dict of poudriere main configuration defintions
 
+    CLI Example::
 
-def parse_config(config_file=config_file):
-    '''Returns a dict of poudriere main configuration defintions'''
+        salt '*' poudriere.parse_config
+    '''
+    if config_file is None:
+        config_file = _config_file()
     ret = {}
     if _check_config_exists(config_file):
         with open(config_file) as f:
@@ -164,16 +213,24 @@ def delete_jail(name):
         # Could not find jail.
         return 'Looks like jail {0} has not been created'.format(name)
 
-    # clean up pkgng make info in /usr/local/etc/poudriere.d/
-    if os.path.isfile('/usr/local/etc/poudriere.d/{0}-make.conf'.format(name)):
-        cmd = 'rm -f /usr/local/etc/poudriere.d/{0}-make.conf'.format(name)
+    # clean up pkgng make info in config dir
+    make_file = os.path.join(_config_dir(), '{0}-make.conf'.format(name))
+    if os.path.isfile(make_file):
+        try:
+            os.remove(make_file)
+        except (IOError, OSError):
+            return ('Deleted jail "{0}" but was unable to remove jail make '
+                    'file').format(name)
+        cmd = 'rm -f {0}'.format(make_file)
         __salt__['cmd.run'](cmd)
 
     return 'Deleted jail {0}'.format(name)
 
 
 def create_ports_tree():
-    '''not working need to run portfetch non interactive'''
+    '''
+    Not working need to run portfetch non interactive
+    '''
     _check_config_exists()
     cmd =  'poudriere ports -c'
     ret = __salt__['cmd.run'](cmd)
@@ -209,5 +266,6 @@ def bulk_build(jail, pkg_file, keep=False):
     for line in lines:
         if "packages built" in line:
             return line
-    return 'There may have been an issue building packages dumping output: {0}'.format(res)
+    return ('There may have been an issue building packages dumping output: '
+            '{0}').format(res)
 
