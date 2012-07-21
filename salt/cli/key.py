@@ -306,7 +306,7 @@ class Key(object):
             for key in self._keys(dir):
                 del_.add(key)
         msg = 'The following keys are going to be deleted:\n'
-        for key in sorted(s):
+        for key in sorted(del_):
             msg += '{0}\n'.format(key)
         veri = raw_input('{0}[n/Y]'.format(msg))
         if veri.lower().startswith('n'):
