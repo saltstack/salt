@@ -16,6 +16,16 @@ from libcloud.compute.types import NodeState
 import saltcloud.utils
 
 
+def _get_node(conn, name):
+    '''
+    Return a libcloud node for the named vm
+    '''
+    nodes = conn.list_nodes()
+    for node in nodes:
+        if node.name == name:
+            return node
+
+
 def get_conn():
     '''
     Return a conn object for the passed vm data
@@ -146,6 +156,22 @@ def create(vm_):
         ))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
+
+
+def delete(vm_):
+    '''
+    Delete a single vm
+    '''
+    conn = get_conn()
+    node = _get_node(conn, vm_['name'])
+    if node is None:
+        print('Unable to find the VM {0}'.format(vm_['name']))
+    print('Destroying VM: {0}'.format(vm_['name']))
+    ret = conn.destroy_node(node)
+    if ret:
+        print('Destroyed VM: {0}'.format(vm_['name']))
+    else:
+        print('Failed to Destroy VM: {0}'.format(vm_['name']))
 
 
 def list_nodes():
