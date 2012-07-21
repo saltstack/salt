@@ -60,6 +60,12 @@ class SaltCloud(object):
                 default='',
                 help='Specify a cloud map file to use for deployment')
 
+        parser.add_option('-d',
+                '--destroy',
+                dest='destroy',
+                default='',
+                help='Specify a vm to destroy')
+
         parser.add_option('-P',
                 '--parallel',
                 dest='parallel',
@@ -144,6 +150,8 @@ class SaltCloud(object):
             pprint.pprint(mapper.image_list(self.opts['list_images']))
         if self.opts['list_sizes']:
             pprint.pprint(mapper.size_list(self.opts['list_sizes']))
+        elif self.opts.get('names') and self.opts['destroy']:
+            mapper.destroy('names')
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
         elif self.opts['map']:
