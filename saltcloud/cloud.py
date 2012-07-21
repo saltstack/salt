@@ -112,6 +112,21 @@ class Cloud(object):
         for vm_ in self.opts['vm']:
             self.create(vm_)
 
+    def destroy(self, names):
+        '''
+        Destroy the named vms
+        '''
+        pmap = self.map_providers()
+        dels = {}
+        for prov, nodes in pmap.items():
+            dels[prov] = []
+            for node in nodes:
+                if node.name in names:
+                    dels[prov].append(node.name)
+        for prov, name in dels.items():
+            fun = '{0}.destroy'.format(prov)
+            self.clouds[fun](name)
+
     def create(self, vm_):
         '''
         Create a single vm
