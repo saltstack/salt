@@ -158,20 +158,20 @@ def create(vm_):
         print('  {0}: {1}'.format(key, val))
 
 
-def delete(vm_):
+def destroy(name):
     '''
     Delete a single vm
     '''
     conn = get_conn()
-    node = _get_node(conn, vm_['name'])
+    node = _get_node(conn, name)
     if node is None:
-        print('Unable to find the VM {0}'.format(vm_['name']))
-    print('Destroying VM: {0}'.format(vm_['name']))
+        print('Unable to find the VM {0}'.format(name))
+    print('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
     if ret:
-        print('Destroyed VM: {0}'.format(vm_['name']))
+        print('Destroyed VM: {0}'.format(name))
     else:
-        print('Failed to Destroy VM: {0}'.format(vm_['name']))
+        print('Failed to Destroy VM: {0}'.format(name))
 
 
 def list_nodes():
