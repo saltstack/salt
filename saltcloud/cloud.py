@@ -122,11 +122,12 @@ class Cloud(object):
         for prov, nodes in pmap.items():
             dels[prov] = []
             for node in nodes:
-                if node.name in names:
-                    dels[prov].append(node.name)
-        for prov, name in dels.items():
+                if node in names:
+                    dels[prov].append(node)
+        for prov, names_ in dels.items():
             fun = '{0}.destroy'.format(prov)
-            self.clouds[fun](name)
+            for name in names_:
+            	self.clouds[fun](name)
 
     def create(self, vm_):
         '''
