@@ -12,17 +12,21 @@ Databases can be set as either absent or present
 '''
 
 
-def present(name):
+def present(name, owner=None):
     '''
     Ensure that the named database is present with the specified properties
 
     name
         The name of the database to manage
+
+    owner
+        The username of the database owner
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(name)}
+    
     # check if database exists
     if __salt__['postgres.db_exists'](name):
         return ret
@@ -32,7 +36,7 @@ def present(name):
         ret['result'] = None
         ret['comment'] = 'Database {0} is set to be created'.format(name)
         return ret
-    if __salt__['postgres.db_create'](name):
+    if __salt__['postgres.db_create'](name, owner=owner):
         ret['comment'] = 'The database {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:
