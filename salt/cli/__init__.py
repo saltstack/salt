@@ -586,6 +586,14 @@ class SaltKey(object):
                 action='store_true',
                 help='Supress output')
 
+        parser.add_option('-y',
+                '--yes',
+                dest='yes',
+                default=False,
+                action='store_true',
+                help='Answer Yes to all questions presented, defaults to False'
+                )
+
         parser.add_option('--key-logfile',
                 dest='key_logfile',
                 help=('Send all output to a file. '
