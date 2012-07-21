@@ -63,7 +63,8 @@ class SaltCloud(object):
         parser.add_option('-d',
                 '--destroy',
                 dest='destroy',
-                default='',
+                default=False,
+                action='store_true',
                 help='Specify a vm to destroy')
 
         parser.add_option('-P',
@@ -151,7 +152,7 @@ class SaltCloud(object):
         if self.opts['list_sizes']:
             pprint.pprint(mapper.size_list(self.opts['list_sizes']))
         elif self.opts.get('names') and self.opts['destroy']:
-            mapper.destroy('names')
+            mapper.destroy(self.opts.get('names'))
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
         elif self.opts['map']:
