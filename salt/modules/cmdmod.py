@@ -258,7 +258,10 @@ def script(
     '''
     fd_, path = tempfile.mkstemp()
     os.close(fd_)
-    fn_ = __salt__['cp.get_template'](source, path, template, env, **kwargs)
+    if template:
+        fn_ = __salt__['cp.get_template'](source, path, template, env, **kwargs)
+    else:
+        fn_ = __salt__['cp.cache_file'](source, env)
     os.chmod(path, 320)
     ret = _run(
             path,
