@@ -66,9 +66,9 @@ class Logging(LoggingLoggerClass):
         instance = super(Logging, cls).__new__(cls)
 
         try:
-            max_logger_name = max(
+            max_logger_length = len(max(
                 logging.Logger.manager.loggerDict.keys(), key=len
-            )
+            ))
             for handler in logging.getLogger().handlers:
                 if not handler.lock:
                     handler.createLock()
@@ -78,10 +78,10 @@ class Logging(LoggingLoggerClass):
                 fmt = formatter._fmt.replace('%', '%%')
 
                 match = MODNAME_PATTERN.search(fmt)
-                if match and int(match.group('digits')) < len(max_logger_name):
+                if match and int(match.group('digits')) < max_logger_length:
                     fmt = fmt.replace(match.group('name'), '%%(name)-%ds')
                     formatter = logging.Formatter(
-                        fmt % len(max_logger_name),
+                        fmt % max_logger_length,
                         datefmt=formatter.datefmt
                     )
                     handler.setFormatter(formatter)
