@@ -4,7 +4,7 @@ Module for gathering and managing network information
 
 from string import ascii_letters, digits
 from salt.utils.interfaces import *
-from salt.utils.sockets import *
+from salt.utils.socket_util import *
 
 __outputter__ = {
     'dig':     'txt',
@@ -18,7 +18,7 @@ def __virtual__():
     '''
 
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] in ('Windows', 'FreeBSD'):
+    if __grains__['os'] in ('Windows'):
         return False
     return 'network'
 
@@ -28,7 +28,7 @@ def _sanitize_host(host):
     Sanitize host string.
     '''
     return "".join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.')
+        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
     ])
 
 def _cidr_to_ipv4_netmask(cidr_bits):
