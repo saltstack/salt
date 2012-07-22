@@ -39,7 +39,7 @@ SORTED_LEVEL_NAMES.append(SORTED_LEVEL_NAMES.pop(0))
 # Store an instance of the current logging logger class
 LoggingLoggerClass = logging.getLoggerClass()
 
-MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?P<digits>\-(?:[\d]+))?s)')
+MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
 
 __CONSOLE_CONFIGURED = False
 __LOGFILE_CONFIGURED = False
@@ -78,7 +78,7 @@ class Logging(LoggingLoggerClass):
                 fmt = formatter._fmt.replace('%', '%%')
 
                 match = MODNAME_PATTERN.search(fmt)
-                if match:
+                if match and int(match.group('digits')) < len(max_logger_name):
                     fmt = fmt.replace(match.group('name'), '%%(name)-%ds')
                     formatter = logging.Formatter(
                         fmt % len(max_logger_name),
