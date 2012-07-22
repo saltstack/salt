@@ -27,6 +27,15 @@ LOG_LEVELS = {
     'warning': logging.WARNING,
 }
 
+# Make a list of log level names stored by log level
+SORTED_LEVEL_NAMES = [
+    l[0] for l in sorted(LOG_LEVELS.iteritems(), key=lambda x: x[1])
+]
+# Add the "none"(0) log level to the end of the sorted list because although the
+# level is 0, it actually means no output, and the amount of logging output is
+# reduced when moving the level from "left to right" from the sorted list.
+SORTED_LEVEL_NAMES.append(SORTED_LEVEL_NAMES.pop(0))
+
 LoggingLoggerClass = logging.getLoggerClass()
 
 MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?P<digits>\-(?:[\d]+))?s)')

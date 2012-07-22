@@ -62,7 +62,7 @@ class Master(object):
                 choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'warning\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
+                     ', '.join([repr(l) for l in salt.log.SORTED_LEVEL_NAMES]))
 
         options, args = parser.parse_args()
 
@@ -179,7 +179,7 @@ class Minion(object):
                 choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
                      'see the config file. Default: \'warning\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
+                     ', '.join([repr(l) for l in salt.log.SORTED_LEVEL_NAMES]))
 
         options, args = parser.parse_args()
 
