@@ -36,10 +36,10 @@ SORTED_LEVEL_NAMES = [
 # reduced when moving the level from "left to right" from the sorted list.
 SORTED_LEVEL_NAMES.append(SORTED_LEVEL_NAMES.pop(0))
 
+# Store an instance of the current logging logger class
 LoggingLoggerClass = logging.getLoggerClass()
 
 MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?P<digits>\-(?:[\d]+))?s)')
-MAX_LOGGER_MODNAME_LENGTH = 4
 
 __CONSOLE_CONFIGURED = False
 __LOGFILE_CONFIGURED = False
@@ -66,27 +66,26 @@ class Logging(LoggingLoggerClass):
         instance = super(Logging, cls).__new__(cls)
 
         try:
-            max_logger_name = max(logging.Logger.manager.loggerDict.keys())
+            max_logger_name = max(
+                logging.Logger.manager.loggerDict.keys(), key=len
+            )
+            for handler in logging.getLogger().handlers:
+                if not handler.lock:
+                    handler.createLock()
+                handler.acquire()
 
-            if len(max_logger_name) > MAX_LOGGER_MODNAME_LENGTH:
-                MAX_LOGGER_MODNAME_LENGTH = len(max_logger_name)
-                for handler in logging.getLogger().handlers:
-                    if not handler.lock:
-                        handler.createLock()
-                    handler.acquire()
+                formatter = handler.formatter
+                fmt = formatter._fmt.replace('%', '%%')
 
-                    formatter = handler.formatter
-                    fmt = formatter._fmt.replace('%', '%%')
-
-                    match = MODNAME_PATTERN.search(fmt)
-                    if match:
-                        fmt = fmt.replace(match.group('name'), '%%(name)-%ds')
-                        formatter = logging.Formatter(
-                            fmt % MAX_LOGGER_MODNAME_LENGTH,
-                            datefmt=formatter.datefmt
-                        )
-                        handler.setFormatter(formatter)
-                    handler.release()
+                match = MODNAME_PATTERN.search(fmt)
+                if match:
+                    fmt = fmt.replace(match.group('name'), '%%(name)-%ds')
+                    formatter = logging.Formatter(
+                        fmt % len(max_logger_name),
+                        datefmt=formatter.datefmt
+                    )
+                    handler.setFormatter(formatter)
+                handler.release()
         except ValueError:
             # There are no registered loggers yet
             pass
