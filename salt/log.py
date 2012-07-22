@@ -18,11 +18,12 @@ TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
 
 LOG_LEVELS = {
+    'all': logging.NOTSET,
     'debug': logging.DEBUG,
     'error': logging.ERROR,
     'garbage': GARBAGE,
     'info': logging.INFO,
-    'none': logging.NOTSET,
+    'quiet': 1000,
     'trace': TRACE,
     'warning': logging.WARNING,
 }
@@ -31,10 +32,6 @@ LOG_LEVELS = {
 SORTED_LEVEL_NAMES = [
     l[0] for l in sorted(LOG_LEVELS.iteritems(), key=lambda x: x[1])
 ]
-# Add the "none"(0) log level to the end of the sorted list because although the
-# level is 0, it actually means no output, and the amount of logging output is
-# reduced when moving the level from "left to right" from the sorted list.
-SORTED_LEVEL_NAMES.append(SORTED_LEVEL_NAMES.pop(0))
 
 # Store an instance of the current logging logger class
 LoggingLoggerClass = logging.getLoggerClass()
