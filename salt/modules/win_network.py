@@ -2,6 +2,7 @@
 Module for gathering and managing network information
 '''
 
+import sys
 from string import ascii_letters, digits
 from salt.utils.interfaces import *
 from salt.utils.socket_util import *
@@ -17,6 +18,7 @@ def __virtual__():
     Only works on Windows systems
     '''
     if __grains__['os'] == 'Windows':
+        setattr(sys.modules['salt.utils.interfaces'], 'interfaces', interfaces)
         return 'network'
     return False
 

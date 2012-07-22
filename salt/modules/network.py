@@ -2,6 +2,7 @@
 Module for gathering and managing network information
 '''
 
+import sys
 from string import ascii_letters, digits
 from salt.utils.interfaces import *
 from salt.utils.socket_util import *
@@ -18,8 +19,9 @@ def __virtual__():
     '''
 
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] in ('Windows'):
+    if __grains__['os'] in ('Windows',):
         return False
+    setattr(sys.modules['salt.utils.interfaces'], 'interfaces', interfaces)
     return 'network'
 
 
@@ -90,7 +92,7 @@ def _interfaces_ip(out):
             cidr = 32
 
         if type == 'inet':
-            mask = cidr
+            mask = _cidr_to_ipv4_netmask(int(cidr))
             if 'brd' in cols:
                 brd = cols[cols.index('brd')+1]
         elif type == 'inet6':
@@ -196,7 +198,8 @@ def _interfaces_ifconfig(out):
                 mmask = pmask.match(line)
                 if mmask:
                     if mmask.group(1):
-                        mmask = int(mmask.group(1), 16)
+                        mmask = _number_of_set_bits_to_ipv4_netmask(
+                                int(mmask.group(1), 16))
                     else:
                         mmask = mmask.group(2)
                     addr_obj['netmask'] = mmask

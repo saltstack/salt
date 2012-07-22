@@ -1,7 +1,3 @@
-def interfaces():
-    return {}
-
-
 def ipaddr(interface=None):
     '''
     Returns the IP address for a given interface
@@ -48,8 +44,8 @@ def netmask(interface):
     data = interfaces().get(interface)
     if data.get('inet'):
         for addrinfo in data.get('inet'):
-            if addrinfo.get('subnet'):
-                out.append(addrinfo.get('subnet'))
+            if addrinfo.get('netmask'):
+                out.append(addrinfo['netmask'])
     if data.get('inet6'):
         # TODO: This should return the prefix for the address
         pass
