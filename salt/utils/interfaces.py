@@ -45,7 +45,7 @@ def netmask(interface):
     '''
     out = list()
 
-    data = interfaces.get(interface)
+    data = interfaces().get(interface)
     if data.get('inet'):
         for addrinfo in data.get('inet'):
             if addrinfo.get('subnet'):
