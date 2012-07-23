@@ -608,7 +608,19 @@ class AESFuncs(object):
                 load['grains'],
                 load['id'],
                 load['env'])
-        return pillar.compile_pillar()
+        data = pillar.compile_pillar()
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                os.makedirs(cdir)
+            datap = os.path.join(cdir, 'data.p')
+            with open(datap, 'w+') as fp_:
+                fp_.write(
+                        self.serial.dumps(
+                            {'grains': load['grains'],
+                             'pillar': data})
+                            )
+        return data
 
     def _master_state(self, load):
         '''
