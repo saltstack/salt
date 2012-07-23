@@ -19,7 +19,7 @@ class PipModuleTest(integration.ModuleCase):
         pip.freeze
         '''
         ret = self.run_function('pip.freeze')
-        self.assertIsInstance(ret, tuple)
+        self.assertIsInstance(ret, list)
         self.assertGreater(len(ret), 1)
 
 

@@ -52,7 +52,7 @@ class DataModuleTest(integration.ModuleCase):
                     'data.getvals',
                     ['spam', 'unladen']
                     ),
-                ('eggs', 'swallow')
+                ['eggs', 'swallow']
                 )
         self._clear_db()
 
