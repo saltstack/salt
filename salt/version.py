@@ -8,12 +8,14 @@ def versions_report():
         ("Jinja2", "jinja2", "__version__"),
         ("M2Crypto", "M2Crypto", "version"),
         ("msgpack-python", "msgpack", "version"),
+        ("msgpack-pure", "msgpack_pure", "version"),
         ("pycrypto", "Crypto", "__version__"),
         ("PyYAML", "yaml", "__version__"),
         ("PyZMQ", "zmq", "__version__"),
 
     )
-    fmt = "{0:>15}: {1}"
+
+    fmt = "{0:>%d}: {1}" % (len(max([lib[0] for lib in libs], key=len)) + 1)
 
     yield fmt.format("Salt", __version__)
 
@@ -28,7 +30,6 @@ def versions_report():
             yield fmt.format(name, version)
         except ImportError:
             yield fmt.format(name, "not installed")
-
 
 
 if __name__ == '__main__':
