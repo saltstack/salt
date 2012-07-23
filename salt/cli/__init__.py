@@ -3,7 +3,6 @@ The management of salt command line utilities are stored in here
 '''
 
 # Import python libs
-import optparse
 import os
 import sys
 
@@ -16,6 +15,7 @@ import salt.client
 import salt.output
 import salt.runner
 
+from salt.utils import parser as optparse
 from salt.utils.verify import verify_env
 from salt import __version__ as VERSION
 from salt.exceptions import SaltInvocationError, SaltClientError, \
@@ -659,7 +659,7 @@ class SaltKey(object):
         for k, v in options.__dict__.items():
             if k == 'keysize':
                 if v < 2048:
-                    opts[k] = 2048 
+                    opts[k] = 2048
                 else:
                     opts[k] = v
             elif v is not None:
