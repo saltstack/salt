@@ -32,4 +32,4 @@ def versions_report():
 
 
 if __name__ == '__main__':
-    print '\n'.join(versions_report())
+    print(__version__)
