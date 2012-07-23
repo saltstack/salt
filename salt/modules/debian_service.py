@@ -3,15 +3,24 @@ Top level package command wrapper, used to translate the os detected by the
 grains to the correct service manager
 '''
 
+import glob
 import re
+
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on Debian
     '''
     if __grains__['os'] == 'Debian':
         return 'service'
     return False
+
+
+def _get_runlevel():
+    '''
+    returns the current runlevel
+    '''
+    return __salt__['cmd.run']('runlevel').strip().split()[1]
 
 
 def get_enabled():
@@ -22,12 +31,11 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    prefix = '/etc/rc2.d/S'
+    prefix = '/etc/rc{0}.d/S'.format(_get_runlevel())
     ret = set()
-    lines = __salt__['cmd.run']('ls ' + prefix + '*').split('\n')
-    if 'No such file or directory' not in lines[0]:
-        for line in lines:
-            ret.add(re.split(prefix + '\d+', line)[1])
+    lines = glob.glob('{0}*'.format(prefix))
+    for line in lines:
+        ret.add(re.split(prefix + '\d+', line)[1])
     return sorted(ret)
 
 
@@ -39,12 +47,11 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    prefix = '/etc/rc2.d/K'
+    prefix = '/etc/rc{0}.d/K'.format(_get_runlevel())
     ret = set()
-    lines = __salt__['cmd.run']('ls ' + prefix + '*').split('\n')
-    if 'No such file or directory' not in lines[0]:
-        for line in lines:
-            ret.add(re.split(prefix + '\d+', line)[1])
+    lines = glob.glob('{0}*'.format(prefix))
+    for line in lines:
+        ret.add(re.split(prefix + '\d+', line)[1])
     return sorted(ret)
 
 
@@ -67,7 +74,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = '/etc/init.d/{0} start'.format(name)
+    cmd = 'service {0} start'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -79,7 +86,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = '/etc/init.d/{0} stop'.format(name)
+    cmd = 'service {0} stop'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -91,7 +98,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = '/etc/init.d/{0} restart'.format(name)
+    cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -105,9 +112,8 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    sig = name if not sig else sig
-    cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
-            __grains__, sig)
+    sig = sig or name
+    cmd = 'pgrep {0}'.format(sig)
     return __salt__['cmd.run'](cmd).strip()
 
 def enable(name):
@@ -121,6 +127,7 @@ def enable(name):
     cmd = 'update-rc.d {0} enable'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def disable(name):
     '''
     Disable the named service to start at boot
@@ -132,6 +139,7 @@ def disable(name):
     cmd = 'update-rc.d {0} disable'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
+
 def enabled(name):
     '''
     Return True if the named servioce is enabled, false otherwise
@@ -141,6 +149,7 @@ def enabled(name):
         salt '*' service.enabled <service name>
     '''
     return name in get_enabled()
+
 
 def disabled(name):
     '''
