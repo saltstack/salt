@@ -30,6 +30,7 @@ Full list of builtin modules
     cron
     data
     debconfmod
+    debian_service
     disk
     django
     ebuild
