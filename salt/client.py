@@ -240,7 +240,7 @@ class LocalClient(object):
         '''
         Return a list of all minions that have auth'd
         '''
-        minions = os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
 
     def _convert_range_to_list(self, tgt):
         range = seco.range.Range(self.opts['range_server'])
