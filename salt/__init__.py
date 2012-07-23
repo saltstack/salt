@@ -6,12 +6,12 @@ from salt.version import __version__
 # Import python libs
 import os
 import sys
-import optparse
 
 # Import salt libs, the try block bypasses an issue at build time so that c
 # modules don't cause the build to fail
 try:
     import salt.config
+    from salt.utils import parser as optparse
     from salt.utils.process import set_pidfile
     from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as e:
