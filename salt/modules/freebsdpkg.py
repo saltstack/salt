@@ -82,7 +82,7 @@ def refresh_db():
     '''
     if _check_pkgng():
         __salt__['cmd.run']('pkg update')
-    else
+    else:
         __salt__['cmd.run']('portsnap fetch')
         if not os.path.isdir('/usr/ports'):
             __salt__['cmd.run']('portsnap extract')
