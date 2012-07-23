@@ -193,6 +193,50 @@ class LocalClient(object):
                     minions.pop(id_)
         return list(minions)
 
+    def _check_grain_pcre_minions(self, expr):
+        '''
+        Return the minions found by looking via a list
+        '''
+        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                grains = self.serial.load(open(datap)).get('grains')
+                comps = tgt.split(':')
+                if len(comps) < 2:
+                    continue
+                if comps[0] not in grains:
+                    minions.pop(id_)
+                if isinstance(grains[comps[0]], list):
+                    # We are matching a single component to a single list member
+                    found = False
+                    for member in grains[comps[0]]:
+                        if re.match(comps[1].lower(), str(member).lower()):
+                            found = True
+                    if found:
+                        continue
+                    minions.pop(id_)
+                    continue
+                if re.match(
+                    comps[1].lower(),
+                    str(grains[comps[0]]).lower()
+                    ):
+                    continue
+                else:
+                    minions.pop(id_)
+        return list(minions)
+
+    def _all_minions(self, expr=None):
+        '''
+        Return a list of all minions that have auth'd
+        '''
+        minions = os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+
     def _convert_range_to_list(self, tgt):
         range = seco.range.Range(self.opts['range_server'])
         try:
@@ -805,7 +849,7 @@ class LocalClient(object):
                 'grain': self._check_grain_minions,
                 'grain_pcre': self._check_grain_pcre_minions,
                 'exsel': self._all_minions,
-                'pillar': self._check_pillar_minions,
+                'pillar': self._all_minions,
                 'compound': self._all_minions,
                 }[expr_form](expr)
 
