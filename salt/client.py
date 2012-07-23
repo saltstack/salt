@@ -34,6 +34,7 @@ import sys
 import glob
 import time
 import getpass
+import fnmatch
 
 # Import zmq modules
 import zmq
@@ -165,15 +166,17 @@ class LocalClient(object):
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
+                if not id_ in minions:
+                    continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(open(datap)).get('grains')
-                comps = tgt.split(':')
+                comps = expr.split(':')
                 if len(comps) < 2:
                     continue
                 if comps[0] not in grains:
-                    minions.pop(id_)
+                    minions.remove(id_)
                 if isinstance(grains[comps[0]], list):
                     # We are matching a single component to a single list member
                     found = False
@@ -182,7 +185,7 @@ class LocalClient(object):
                             found = True
                     if found:
                         continue
-                    minions.pop(id_)
+                    minions.remove(id_)
                     continue
                 if fnmatch.fnmatch(
                     str(grains[comps[0]]).lower(),
@@ -190,7 +193,7 @@ class LocalClient(object):
                     ):
                     continue
                 else:
-                    minions.pop(id_)
+                    minions.remove(id_)
         return list(minions)
 
     def _check_grain_pcre_minions(self, expr):
@@ -203,15 +206,17 @@ class LocalClient(object):
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
+                if not id_ in minions:
+                    continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
                 grains = self.serial.load(open(datap)).get('grains')
-                comps = tgt.split(':')
+                comps = expr.split(':')
                 if len(comps) < 2:
                     continue
                 if comps[0] not in grains:
-                    minions.pop(id_)
+                    minions.remove(id_)
                 if isinstance(grains[comps[0]], list):
                     # We are matching a single component to a single list member
                     found = False
@@ -220,7 +225,7 @@ class LocalClient(object):
                             found = True
                     if found:
                         continue
-                    minions.pop(id_)
+                    minions.remove(id_)
                     continue
                 if re.match(
                     comps[1].lower(),
@@ -228,7 +233,7 @@ class LocalClient(object):
                     ):
                     continue
                 else:
-                    minions.pop(id_)
+                    minions.remove(id_)
         return list(minions)
 
     def _all_minions(self, expr=None):
