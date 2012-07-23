@@ -12,7 +12,7 @@ class VirtualenvModuleTest(integration.ModuleCase):
         super(VirtualenvModuleTest, self).setUp()
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
-            self.skipTest("virtualenv not installed")
+            self.skipTest('virtualenv not installed')
         self.venv_test_dir = tempfile.mkdtemp()
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
