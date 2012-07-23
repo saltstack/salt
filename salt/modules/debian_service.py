@@ -25,8 +25,9 @@ def get_enabled():
     prefix = '/etc/rc2.d/S'
     ret = set()
     lines = __salt__['cmd.run']('ls ' + prefix + '*').split('\n')
-    for line in lines:
-        ret.add(re.split(prefix + '\d+', line)[1])
+    if 'No such file or directory' not in lines[0]:
+        for line in lines:
+            ret.add(re.split(prefix + '\d+', line)[1])
     return sorted(ret)
 
 
@@ -41,8 +42,9 @@ def get_disabled():
     prefix = '/etc/rc2.d/K'
     ret = set()
     lines = __salt__['cmd.run']('ls ' + prefix + '*').split('\n')
-    for line in lines:
-        ret.add(re.split(prefix + '\d+', line)[1])
+    if 'No such file or directory' not in lines[0]:
+        for line in lines:
+            ret.add(re.split(prefix + '\d+', line)[1])
     return sorted(ret)
 
 
