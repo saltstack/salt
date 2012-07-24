@@ -65,6 +65,13 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
+# Enable permissive access to the salt keys.  This allows you to run the
+# master or minion as root, but have a non-root group be given access to
+# your pki_dir.  To make the access explicit, root must belong to the group 
+# you've given access to.  This is potentially quite insecure.
+#permissive_pki_access: False
+
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded

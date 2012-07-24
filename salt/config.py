@@ -196,6 +196,7 @@ def minion_config(path):
             'acceptance_wait_time': 10,
             'dns_check': True,
             'grains': {},
+            'permissive_pki_access': False,
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
@@ -281,6 +282,7 @@ def master_config(path):
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key.log',
+            'permissive_pki_access': False,
     }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
