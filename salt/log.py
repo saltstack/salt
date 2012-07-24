@@ -28,7 +28,7 @@ LOG_LEVELS = {
     'warning': logging.WARNING,
 }
 
-# Make a list of log level names stored by log level
+# Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
     l[0] for l in sorted(LOG_LEVELS.iteritems(), key=lambda x: x[1])
 ]
