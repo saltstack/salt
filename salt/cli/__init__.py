@@ -789,7 +789,7 @@ class SaltCall(object):
                     os.path.dirname(opts['log_file']),
                     ],
                     opts['user'],
-                    permissive=self.opts['permissive_pki_access'])
+                    permissive=opts['permissive_pki_access'])
 
         return opts
 
