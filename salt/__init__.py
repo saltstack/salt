@@ -98,7 +98,8 @@ class Master(object):
                 os.path.join(self.opts['cachedir'], 'jobs'),
                 os.path.dirname(self.opts['log_file']),
                 self.opts['sock_dir'],
-            ], self.opts['user'])
+            ], self.opts['user'],
+            permissive=self.opts['permissive_pki_access'])
         except OSError, err:
             sys.exit(err.errno)
 
@@ -212,7 +213,8 @@ class Minion(object):
                 self.opts['sock_dir'],
                 self.opts['extension_modules'],
                 os.path.dirname(self.opts['log_file']),
-            ], self.opts['user'])
+            ], self.opts['user'],
+            permissive=self.opts['permissive_pki_access'])
         except OSError, err:
             sys.exit(err.errno)
 
@@ -347,7 +349,8 @@ class Syndic(object):
             verify_env([
                 self.opts['pki_dir'], self.opts['cachedir'],
                 os.path.dirname(self.opts['log_file']),
-            ], self.opts['user'])
+            ], self.opts['user'],
+            permissive=self.opts['permissive_pki_access'])
         except OSError, err:
             sys.exit(err.errno)
         import salt.log

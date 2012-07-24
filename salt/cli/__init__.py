@@ -679,7 +679,8 @@ class SaltKey(object):
             os.path.join(self.opts['pki_dir'], 'minions_rejected'),
             os.path.dirname(self.opts['log_file']),
             ],
-            self.opts['user'])
+            self.opts['user'],
+            permissive=self.opts['permissive_pki_access'])
         import salt.log
         salt.log.setup_logfile_logger(self.opts['key_logfile'],
                                       self.opts['loglevel'])
@@ -787,7 +788,8 @@ class SaltCall(object):
                     opts['cachedir'],
                     os.path.dirname(opts['log_file']),
                     ],
-                    opts['user'])
+                    opts['user'],
+                    permissive=self.opts['permissive_pki_access'])
 
         return opts
 
