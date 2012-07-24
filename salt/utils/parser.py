@@ -16,7 +16,7 @@ class OptionParser(optparse.OptionParser):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("version", version.__version__)
-        kwargs.setdefault('usage', '%%prog')
+        kwargs.setdefault('usage', '%prog')
         optparse.OptionParser.__init__(self, *args, **kwargs)
 
     def parse_args(self, args=None, values=None):
