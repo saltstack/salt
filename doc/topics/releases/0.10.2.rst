@@ -1,0 +1,68 @@
+=========================
+Salt 0.10.2 Release Notes
+=========================
+
+0.10.2 is out! This release comes with enhancements to the pillar interface,
+cleaner ways to access the salt-call capabilities in the API, minion data
+caching and the event system has been added to salt minions.
+
+There have also been updates to the zeromq functions, many more tests
+(thanks to sponsors, the code sprint and many contributors) and a swath
+of bug fixes.
+
+Major Features
+==============
+
+Ext Pillar Modules
+------------------
+
+The ranks of available Salt modules directories sees a new member in 0.10.2.
+With the popularity of pillar a higher demand has arrisen for ``ext_pillar``
+interfaces to be more like regular Salt module additions. Now ext_pillar
+interfaces can be added in the same way as other modules, just drop it into
+the pillar directory in the salt source.
+
+Minion Events
+-------------
+
+In 0.10.0 an event system was added to the Salt master. 0.10.2 adds the event
+system to the minions as well. Now event can be published on a local minion
+as well.
+
+The minions can also send events back up to the master. This means that Salt is
+able to communicate individual events from the minions back up to the Master
+which are not associated with command.
+
+Minion Data Caching
+-------------------
+
+When pillar was introduced the landscape for available data was greatly
+enhanced. The minion's began sending grain data back to the master on a
+regular basis.
+
+The new config option on the master called ``minion_data_cache`` instructs the
+Salt master to maintain a cache of the minion's grains and pillar data in the
+cachedir. This option is turned off by default to avoid hitting the disk more,
+but when enabled the cache is used to make grain matching from the salt command
+more powerful, since the minions that will match can be pre determined.
+
+Test Updates
+============
+
+Consisancy Testing
+------------------
+
+Many Fixes
+==========
+
+To get a good idea for the number of bugfixes this release offers take a look
+at the closed tickets for 0.10.0, this is a very substantial update:
+
+https://github.com/saltstack/salt/issues?milestone=12&state=closed
+
+Master and Minion Stability Fixes
+---------------------------------
+
+As Salt deployments grow new ways to break Salt are discovered. 0.10.2 comes
+with a number of fixes for the minions and master greatly improving Salt
+stability.
