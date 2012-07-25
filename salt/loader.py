@@ -254,10 +254,13 @@ class Loader(object):
             if not os.path.isdir(mod_dir):
                 continue
             fn_ = os.path.join(mod_dir, name)
-            for ext in ('.py', '.pyo', '.pyc', '.so'):
-                full_test = '{0}{1}'.format(fn_, ext)
-                if os.path.isfile(full_test):
-                    full = full_test
+            if os.path.isdir(fn_):
+                full = fn_
+            else:
+                for ext in ('.py', '.pyo', '.pyc', '.so'):
+                    full_test = '{0}{1}'.format(fn_, ext)
+                    if os.path.isfile(full_test):
+                        full = full_test
         if not full:
             return None
         cython_enabled = False
@@ -359,8 +362,14 @@ class Loader(object):
                 if fn_.split('.')[0] in disable:
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
-                    or (cython_enabled and fn_.endswith('.pyx'))):
-                    names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
+                    or (cython_enabled and fn_.endswith('.pyx'))
+                    or os.path.isdir(fn_)):
+                    extpos = fn_.rfind('.')
+                    if extpos > 0:
+                        _name = fn_[:extpos]
+                    else:
+                        _name = fn_
+                    names[_name] = os.path.join(mod_dir, fn_)
         for name in names:
             try:
                 if names[name].endswith('.pyx'):
