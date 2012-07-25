@@ -39,8 +39,9 @@ def present(name,
 
     password_hash
         The password in hashed form. Be sure to quote the password because
-        YAML does't like the *
-        SELECT PASSWORD('mypass') ==> *6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4
+        YAML does't like the ``*``::
+
+            SELECT PASSWORD('mypass') ==> *6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4
     '''
     ret = {'name': name,
            'changes': {},
