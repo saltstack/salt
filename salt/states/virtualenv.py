@@ -36,7 +36,7 @@ def managed(name,
 
     Also accepts any kwargs that the virtualenv module will.
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         /var/www/myvirtualenv.com:
           virtualenv.manage:
