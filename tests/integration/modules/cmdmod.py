@@ -89,6 +89,25 @@ sys.stdout.write('cheese')
                 'cheese'
                 )
 
+    def test_quotes(self):
+        '''
+        cmd.run with quoted command
+        '''
+        cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
+        expected_result = 'SELECT * FROM foo WHERE bar="baz"'
+        result = self.run_function('cmd.run_stdout', [cmd]).strip()
+        self.assertEqual(result, expected_result)
+
+    def test_quotes_runas(self):
+        '''
+        cmd.run with quoted command
+        '''
+        cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
+        expected_result = 'SELECT * FROM foo WHERE bar="baz"'
+        result = self.run_function('cmd.run_stdout', [cmd],
+                                   runas=os.getlogin()).strip()
+        self.assertEqual(result, expected_result)
+
 
 if __name__ == '__main__':
     from integration import run_tests

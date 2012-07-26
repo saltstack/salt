@@ -5,6 +5,7 @@ Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
 '''
 
+import pipes
 import logging
 import os
 import subprocess
@@ -90,7 +91,7 @@ def _run(cmd,
             cmd = 'cd {0} && {1}'.format(cwd, cmd)
 
         cmd_prefix += ' {0} -c'.format(runas)
-        cmd = '{0} "{1}"'.format(cmd_prefix, cmd)
+        cmd = '{0} {1}'.format(cmd_prefix, pipes.quote(cmd))
 
     if not quiet:
         # Put the most common case first
