@@ -312,6 +312,8 @@ class SaltCMD(object):
                 # local will be None when there was an error
                 if local:
                     if self.opts['static']:
+                        if self.opts['verbose']:
+                            args.append(True)
                         full_ret = local.cmd_full_return(*args)
                         ret, out = self._format_ret(full_ret)
                         self._output_ret(ret, out)
