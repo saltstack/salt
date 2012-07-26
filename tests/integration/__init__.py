@@ -33,6 +33,7 @@ PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
 TMP = os.path.join(INTEGRATION_TEST_DIR, 'tmp')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
+MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 
 
 def run_tests(TestCase):
@@ -148,6 +149,8 @@ class TestDaemon(object):
                     self.minion_opts['sock_dir'],
                     ],
                    pwd.getpwuid(os.getuid())[0])
+        # Set up PATH to mockbin
+        self._enter_mockbin()
 
         master = salt.master.Master(self.master_opts)
         self.master_process = multiprocessing.Process(target=master.start)
@@ -182,7 +185,24 @@ class TestDaemon(object):
         self.master_process.terminate()
         self.syndic_process.terminate()
         self.smaster_process.terminate()
+        self._exit_mockbin()
         self._clean()
+
+    def _enter_mockbin(self):
+        path = os.environ.get('PATH', '')
+        path_items = path.split(os.pathsep)
+        if MOCKBIN not in path_items:
+            path_items.insert(0, MOCKBIN)
+        os.environ['PATH'] = os.pathsep.join(path_items)
+
+    def _exit_mockbin(self):
+        path = os.environ.get('PATH', '')
+        path_items = path.split(os.pathsep)
+        try:
+            path_items.remove(MOCKBIN)
+        except ValueError:
+            pass
+        os.environ['PATH'] = os.pathsep.join(path_items)
 
     def _clean(self):
         '''
