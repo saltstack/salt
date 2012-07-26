@@ -10,6 +10,7 @@ import time
 import errno
 import signal
 import shutil
+import stat
 import logging
 import hashlib
 import tempfile
@@ -766,7 +767,7 @@ class AESFuncs(object):
         opts.update(self.opts)
         runner = salt.runner.Runner(opts)
         return runner.run()
-        
+
 
     def minion_publish(self, clear_load):
         '''
@@ -991,6 +992,89 @@ class ClearFuncs(object):
                 master_pem,
                 self.opts['conf_file']]
 
+    def _check_permissions(self, filename):
+        '''
+        check if the specified filename has correct permissions
+        '''
+        if 'os' in os.environ:
+            if os.environ['os'].startswith('Windows'):
+                return True
+
+        import pwd  # after confirming not running Windows
+        import grp
+        try:
+            user = self.opts['user']
+            pwnam = pwd.getpwnam(user)
+            uid = pwnam[2]
+            gid = pwnam[3]
+            groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+        except KeyError:
+            err = ('Failed to determine groups for user '
+            '{0}. The user is not available.\n').format(user)
+            log.error(err)
+            return False
+
+        fmode = os.stat(filename)
+
+        if os.getuid() == 0:
+            if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                if self.opts.get('permissive_pki_access', False) \
+                  and fmode.st_gid in groups:
+                    return True
+        else:
+            if stat.S_IWOTH & fmode.st_mode:
+                # don't allow others to write to the file
+                return False
+
+            # check group flags
+            if self.opts.get('permissive_pki_access', False) \
+              and stat.S_IWGRP & fmode.st_mode:
+                return True
+            elif stat.S_IWGRP & fmode.st_mode:
+                return False
+
+            # check if writable by group or other
+            if not (stat.S_IWGRP & fmode.st_mode or
+              stat.S_IWOTH & fmode.st_mode):
+                return True
+
+        return False
+
+    def _check_autosign(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be signed.
+        '''
+
+        if self.opts['auto_accept']:
+            return True
+
+        autosign_file = self.opts.get("autosign_file", None)
+
+        if not autosign_file or not os.path.exists(autosign_file):
+            return False
+
+        if not self._check_permissions(autosign_file):
+            message = "Wrong permissions for {0}, ignoring content"
+            log.warn(message.format(autosign_file))
+            return False
+
+        with open(autosign_file, 'r') as fp_:
+            for line in fp_:
+                line = line.strip()
+
+                if line.startswith('#'):
+                    continue
+
+                if line == keyid:
+                    return True
+                try:
+                    if re.match(line, keyid):
+                        return True
+                except re.error:
+                    pass
+
+        return False
+
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the aes key
@@ -1045,7 +1129,7 @@ class ClearFuncs(object):
             self.event.fire_event(eload, 'auth')
             return ret
         elif not os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
+                and not self._check_autosign(load['id']):
             # This is a new key, stick it in pre
             log.info('New public key placed in pending for %(id)s', load)
             with open(pubfn_pend, 'w+') as fp_:
@@ -1059,7 +1143,7 @@ class ClearFuncs(object):
             self.event.fire_event(eload, 'auth')
             return ret
         elif os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
+                and not self._check_autosign(load['id']):
             # This key is in pending, if it is the same key ret True, else
             # ret False
             if not open(pubfn_pend, 'r').read() == load['pub']:
@@ -1087,9 +1171,26 @@ class ClearFuncs(object):
                 self.event.fire_event(eload, 'auth')
                 return {'enc': 'clear',
                         'load': {'ret': True}}
+        elif os.path.isfile(pubfn_pend)\
+                and self._check_autosign(load['id']):
+            # This key is in pending, if it is the same key auto accept it
+            if not open(pubfn_pend, 'r').read() == load['pub']:
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys in pending did not match. This may be an attempt to '
+                    'compromise the Salt cluster.', load
+                )
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+            else:
+                pass
         elif not os.path.isfile(pubfn_pend)\
-                and self.opts['auto_accept']:
-            # This is a new key and auto_accept is turned on
+                and self._check_autosign(load['id']):
+            # This is a new key and it should be automatically be accepted
             pass
         else:
             # Something happened that I have not accounted for, FAIL!
