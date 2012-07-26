@@ -99,18 +99,16 @@ def load_config(opts, path, env_var):
         log.debug('Missing configuration file: {0}'.format(path))
 
 
-def include_config(opts, orig_path):
+def include_config(include, opts, orig_path, verbose):
     '''
     Parses extra configuration file(s) specified in an include list in the
     main config file.
     '''
-    include = opts.get('include', [])
 
     # Protect against empty option
     if not include:
-        log.warn("Error parsing configuration file: 'include' option is empty")
         return opts
-    
+
     if isinstance(include, str):
         include = [include]
 
@@ -119,10 +117,10 @@ def include_config(opts, orig_path):
             path = os.path.join(os.path.dirname(orig_path), path)
 
         # Catch situation where user typos path in config; also warns for
-        # empty include dir (which might be by design)        
+        # empty include dir (which might be by design)
         if len(glob.glob(path)) == 0:
             msg = "Warning parsing configuration file: 'include' path/glob '{0}' matches no files"
-            log.warn(msg.format(path))
+            if verbose: log.warn(msg.format(path))
 
         for fn_ in glob.glob(path):
             try:
@@ -197,12 +195,16 @@ def minion_config(path):
             'dns_check': True,
             'grains': {},
             'permissive_pki_access': False,
+            'default_include': 'minion.d/*.conf',
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
 
-    if 'include' in opts:
-        opts = include_config(opts, path)
+    default_include = opts.get('default_include', [])
+    include = opts.get('include', [])
+
+    opts = include_config(default_include, opts, path, verbose=False)
+    opts = include_config(include, opts, path, verbose=True)
 
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
@@ -283,12 +285,16 @@ def master_config(path):
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key.log',
             'permissive_pki_access': False,
+            'default_include': 'master.d/*.conf',
     }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 
-    if 'include' in opts:
-        opts = include_config(opts, path)
+    default_include = opts.get('default_include', [])
+    include = opts.get('include', [])
+
+    opts = include_config(default_include, opts, path, verbose=False)
+    opts = include_config(include, opts, path, verbose=True)
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
