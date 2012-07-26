@@ -457,7 +457,7 @@ class LocalClient(object):
                     timeout,
                     tgt,
                     expr_form,
-                    verbose)
+                    verbose))
 
     def get_cli_returns(
             self,
