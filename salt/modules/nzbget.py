@@ -113,7 +113,7 @@ def list(user=None):
 
 def pause(user=None):
     '''
-    Stop nzbget daemon using -Q option.
+    Pause nzbget daemon using -P option.
     Default user is root.
 
     CLI Example::
@@ -128,7 +128,7 @@ def pause(user=None):
 
 def unpause(user=None):
     '''
-    Stop nzbget daemon using -Q option.
+    Unpause nzbget daemon using -U option.
     Default user is root.
 
     CLI Example::
