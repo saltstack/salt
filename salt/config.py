@@ -136,10 +136,11 @@ def prepend_root_dir(opts, path_options):
     Prepends the options that represent filesystem paths with value of the
     'root_dir' option.
     '''
+    root_dir = os.path.abspath(opts['root_dir'])
     for path_option in path_options:
         if path_option in opts:
             opts[path_option] = os.path.normpath(
-                    os.sep.join([opts['root_dir'], opts[path_option]]))
+                    os.sep.join([root_dir, opts[path_option]]))
 
 
 def minion_config(path):
