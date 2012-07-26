@@ -1,5 +1,11 @@
 ##### Primary configuration settings #####
 ##########################################
+
+# Per default the master will automatically include all config files
+# from master.d/*.conf (master.d is a directory in the same directory
+# as the main master config file)
+#default_include: master.d/*.conf
+
 # The address of the interface to bind to
 #interface: 0.0.0.0
 
@@ -53,6 +59,22 @@
 #
 #serial: msgpack
 
+# The master can include configuration from other files. To enable this,
+# pass a list of paths to this option. The paths can be either relative or
+# absolute; if relative, they are considered to be relative to the directory
+# the main master configuration file lives in (this file). Paths can make use
+# of shell-style globbing. If no files are matched by a path passed to this
+# option then the master will log a warning message.
+#
+#
+# Include a config file from some other path:
+#include: /etc/salt/extra_config
+#
+# Include config from several files and directories:
+#include:
+# - /etc/salt/extra_config
+
+
 #####        Security settings       #####
 ##########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
@@ -67,7 +89,7 @@
 
 # Enable permissive access to the salt keys.  This allows you to run the
 # master or minion as root, but have a non-root group be given access to
-# your pki_dir.  To make the access explicit, root must belong to the group 
+# your pki_dir.  To make the access explicit, root must belong to the group
 # you've given access to.  This is potentially quite insecure.
 #permissive_pki_access: False
 
