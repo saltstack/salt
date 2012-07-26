@@ -182,6 +182,13 @@ class Master(SMaster):
             clean_proc(reqserv.eventpublisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
+            if os.path.isfile(self.opts['pidfile']):
+                try:
+                    os.remove(self.opts['pidfile'])
+                except (IOError, OSError):
+                    log.warn('Failed to remove master pidfile: {0}'.format(
+                        self.opts['pidfile']
+                        ))
             raise MasterExit
 
         signal.signal(signal.SIGTERM, sigterm_clean)
