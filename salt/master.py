@@ -8,6 +8,7 @@ import os
 import re
 import time
 import errno
+import fnmatch
 import signal
 import shutil
 import stat
@@ -1073,6 +1074,8 @@ class ClearFuncs(object):
                     continue
 
                 if line == keyid:
+                    return True
+                if fnmatch.fnmatch(keyid, line):
                     return True
                 try:
                     if re.match(line, keyid):
