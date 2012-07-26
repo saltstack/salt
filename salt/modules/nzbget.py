@@ -118,7 +118,7 @@ def pause(user=None):
 
     CLI Example::
 
-        salt '*' nzbget.stop curly
+        salt '*' nzbget.pause shemp
     '''
     cmd = 'nzbget -P'
     if user:
@@ -133,7 +133,7 @@ def unpause(user=None):
 
     CLI Example::
 
-        salt '*' nzbget.stop curly
+        salt '*' nzbget.unpause shemp
     '''
     cmd = 'nzbget -U'
     if user:
