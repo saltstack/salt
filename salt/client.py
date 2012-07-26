@@ -746,7 +746,7 @@ class LocalClient(object):
             raw = self.event.get_event(timeout, jid)
             if not raw is None:
                 found.add(raw['id'])
-                ret[raw['id']] = {'ret': raw['return']}}
+                ret[raw['id']] = {'ret': raw['return']}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 continue
