@@ -687,3 +687,26 @@ def remove(path):
         except (OSError, IOError):
             raise CommandExecutionError('Could not remove "{0}"'.format(path))
     return False
+
+def directory_exists(path):
+    '''
+    Tests to see if path is a valid directory.  Returns True/False.
+
+    CLI Example::
+
+        salt '*' file.directory_exists /etc
+
+    '''
+    return os.path.isdir(path)
+
+def file_exists(path):
+    '''
+    Tests to see if path is a valid file.  Returns True/False.
+
+    CLI Example::
+
+        salt '*' file.file_exists /etc/passwd
+
+    '''
+    return os.path.isfile(path)
+
