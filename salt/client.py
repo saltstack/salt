@@ -269,7 +269,6 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        verbose=False,
         kwarg=None):
         '''
         Execute a salt command and return.
@@ -429,6 +428,7 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
+        verbose=False,
         kwarg=None):
         '''
         Execute a salt command and return
