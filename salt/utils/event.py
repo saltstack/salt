@@ -70,7 +70,7 @@ class SaltEvent(object):
         self.push.connect(self.pulluri)
         self.cpush = True
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5000, tag='', full=False):
         '''
         Get a single publication
         '''
