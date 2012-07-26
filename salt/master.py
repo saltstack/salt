@@ -1078,7 +1078,9 @@ class ClearFuncs(object):
                     if re.match(line, keyid):
                         return True
                 except re.error:
-                    pass
+                    message = "{0} is not a valid regular expression, ignoring line in {1}"
+                    log.warn(message.format(line, autosign_file))
+                    continue
 
         return False
 
