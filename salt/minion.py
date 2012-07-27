@@ -552,21 +552,25 @@ class Minion(object):
                     log.critical(traceback.format_exc())
         else:
             while True:
-                socks = dict(poller.poll(60))
-                if socket in socks and socks[socket] == zmq.POLLIN:
-                    payload = self.serial.loads(socket.recv())
-                    self._handle_payload(payload)
-                    last = time.time()
-                time.sleep(0.05)
-                multiprocessing.active_children()
-                self.passive_refresh()
-                # Check the event system
-                if epoller.poll(1):
-                    try:
-                        package = epull_sock.recv(zmq.NOBLOCK)
-                        epub_sock.send(package)
-                    except Exception:
-                        pass
+                try:
+                    socks = dict(poller.poll(60))
+                    if socket in socks and socks[socket] == zmq.POLLIN:
+                        payload = self.serial.loads(socket.recv())
+                        self._handle_payload(payload)
+                        last = time.time()
+                    time.sleep(0.05)
+                    multiprocessing.active_children()
+                    self.passive_refresh()
+                    # Check the event system
+                    if epoller.poll(1):
+                        try:
+                            package = epull_sock.recv(zmq.NOBLOCK)
+                            epub_sock.send(package)
+                        except Exception:
+                            pass
+                except Exception as exc:
+                    log.critical(traceback.format_exc())
+                
 
 
 class Syndic(salt.client.LocalClient, Minion):
