@@ -1004,7 +1004,7 @@ def managed(name,
                 salt.utils.copyfile(
                         sfn,
                         name,
-                        backup_mode(backup),
+                        _backup_mode(backup),
                         __opts__['cachedir'])
             except IOError:
                 __clean_tmp(sfn)
@@ -1085,7 +1085,7 @@ def managed(name,
             salt.utils.copyfile(
                     sfn,
                     name,
-                    backup_mode(backup),
+                    _backup_mode(backup),
                     __opts__['cachedir'])
             __clean_tmp(sfn)
 
@@ -1408,7 +1408,7 @@ def recurse(name,
                 salt.utils.copyfile(
                         fn_,
                         dest,
-                        backup_mode(backup),
+                        _backup_mode(backup),
                         __opts__['cachedir'])
                 ret['changes'][dest] = 'updated'
         elif os.path.isdir(dest) and include_empty:
@@ -1431,7 +1431,7 @@ def recurse(name,
                 salt.utils.copyfile(
                         fn_,
                         dest,
-                        backup_mode(backup),
+                        _backup_mode(backup),
                         __opts__['cachedir'])
             ret['changes'][dest] = 'new'
     keep = list(keep)
