@@ -72,6 +72,17 @@ A number of users complained that they had inadvertently deleted the wrong salt
 authentication keys. 0.10.2 now displays what keys are going to be deleted
 and verifies that they are the keys that are intended for deletion.
 
+Key auto-signing
+----------------
+
+If ``autosign_file`` is specified in the configuration file incoming keys
+will be compared to the list of keynames in ``autosign_file``. Regular
+expressions as well as globbing is supported.
+
+The file must only be writable by the user otherwise the file will be
+ignored. To relax the permission and allow group write access set the
+``permissive_pki_access`` option.
+
 Module changes
 --------------
 
