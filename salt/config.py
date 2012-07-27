@@ -284,7 +284,7 @@ def master_config(path):
             'serial': 'msgpack',
             'nodegroups': {},
             'cython_enable': False,
-            'key_logfile': '/var/log/salt/key.log',
+            'key_logfile': '/var/log/salt/key',
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
     }
