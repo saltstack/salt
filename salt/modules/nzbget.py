@@ -6,7 +6,7 @@ import salt.utils
 
 def __virtual__():
     '''
-    Only load the module if nzbget is installed
+    Only load the module if apache is installed
     '''
     cmd = 'nzbget'
     if salt.utils.which(cmd):
