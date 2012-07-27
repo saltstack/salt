@@ -5,6 +5,8 @@ A simple way of setting the output format for data from modules
 # Import Python libs
 import json
 import pprint
+import logging
+import traceback
 
 # Import third party libs
 import yaml
@@ -20,6 +22,8 @@ from salt._compat import string_types
 from salt.exceptions import SaltException
 
 __all__ = ('get_outputter',)
+
+log = logging.getLogger(__name__)
 
 
 def display_output(ret, out, opts):
@@ -196,6 +200,7 @@ class JSONOutputter(Outputter):
                 kwargs.pop('color')
             ret = json.dumps(data, **kwargs)
         except TypeError:
+            log.debug(traceback.format_exc())
             # Return valid json for unserializable objects
             ret = json.dumps({})
         print(ret)
