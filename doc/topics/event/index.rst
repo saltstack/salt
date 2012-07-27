@@ -35,7 +35,7 @@ default all events will be returned, but if only authentication events are
 desired, then pass the tag "auth". Also, the get_event method has a default
 poll time assigned of 5 seconds, to change this time set the "wait" option.
 This example will only listen for auth events and will wait for 10 seconds
-instead of the default 5.
+instead of the default 5. The wait options takes milliseconds as input.
 
 .. code-block:: python
 
@@ -43,7 +43,7 @@ instead of the default 5.
 
     event = salt.utils.event.MasterEvent('/tmp/.salt-unix')
 
-    data = event.get_event(wait=10, tag='auth')
+    data = event.get_event(wait=10000, tag='auth')
 
 Instead of looking for a single event, the iter_event method can be used to
 make a generator which will continually yield salt events. The iter_event
