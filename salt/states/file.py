@@ -87,12 +87,28 @@ import tempfile
 import copy
 
 # Import Salt libs
+import salt.utils
 import salt.utils.templates
 from salt._compat import string_types, urlparse
 
 logger = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
+
+
+def _backup_mode(backup):
+    '''
+    Return the backup mode
+    '''
+    if backup:
+        return backup
+    if 'backup_mode' in __opts__:
+        return __opts__['backup_mode']
+    if 'master.backup_mode' in __pillar__:
+        return __pillar__['master.backup_mode']
+    id_conf = 'master.{0}.backup_mode'.format(__grains__['id'])
+    if id_conf in __pillar__:
+        return __pillar__[id_conf]
 
 
 def __manage_mode(mode):
@@ -817,6 +833,7 @@ def managed(name,
         replace=True,
         defaults=None,
         env=None,
+        backup='',
         **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -873,6 +890,9 @@ def managed(name,
 
     defaults
         Default context passed to the template.
+
+    backup
+        Overrides the default backup mode for this specific file
     '''
     # Initial set up
     mode = __manage_mode(mode)
@@ -981,7 +1001,11 @@ def managed(name,
                                                                     slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
-                shutil.copyfile(sfn, name)
+                salt.utils.copyfile(
+                        sfn,
+                        name,
+                        backup_mode(backup),
+                        __opts__['cachedir'])
             except IOError:
                 __clean_tmp(sfn)
                 return _error(
@@ -1058,7 +1082,11 @@ def managed(name,
 
         # Now copy the file contents if there is a source file
         if sfn:
-            shutil.copyfile(sfn, name)
+            salt.utils.copyfile(
+                    sfn,
+                    name,
+                    backup_mode(backup),
+                    __opts__['cachedir'])
             __clean_tmp(sfn)
 
         # Check and set the permissions if necessary
@@ -1266,6 +1294,7 @@ def recurse(name,
         file_mode=None,
         env=None,
         include_empty=False,
+        backup='',
         **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -1376,7 +1405,11 @@ def recurse(name,
             if srch != dsth:
                 # The downloaded file differes, replace!
                 # FIXME: no metadata (ownership, permissions) available
-                shutil.copyfile(fn_, dest)
+                salt.utils.copyfile(
+                        fn_,
+                        dest,
+                        backup_mode(backup),
+                        __opts__['cachedir'])
                 ret['changes'][dest] = 'updated'
         elif os.path.isdir(dest) and include_empty:
             #check perms
@@ -1395,7 +1428,11 @@ def recurse(name,
             else:
                 # The destination file is not present, make it
                 # FIXME: no metadata (ownership, permissions) available
-                shutil.copyfile(fn_, dest)
+                salt.utils.copyfile(
+                        fn_,
+                        dest,
+                        backup_mode(backup),
+                        __opts__['cachedir'])
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
