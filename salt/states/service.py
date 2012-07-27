@@ -269,6 +269,8 @@ def running(name, enable=None, sig=None):
     elif enable is False:
         return _disable(name, True)
     else:
+        ret['changes'] = changes
+        ret['comment'] = 'Started Service {0}'.format(name)
         return ret
 
 
