@@ -13,6 +13,8 @@ import logging
 import hashlib
 import datetime
 import tempfile
+import shutil
+import time
 from calendar import month_abbr as months
 
 # Import Salt libs
@@ -439,13 +441,13 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     dname = os.path.dirname(os.path.abspath(dest))
     fd_, tgt = tempfile.mkstemp(prefix=bname, dir=dname)
     os.close(fd_)
-    shutil.filecopy(source, tgt)
+    shutil.copyfile(source, tgt)
     bkroot = ''
     if cachedir:
         bkroot = os.path.join(cachedir, 'file_backup')
     if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
         msecs = str(int(time.time() * 1000000))[-6:]
-        stamp = time.astime().replace(' ', '_')
+        stamp = time.asctime().replace(' ', '_')
         stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
         bkpath = os.path.join(
                 bkroot,
