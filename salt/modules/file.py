@@ -710,3 +710,59 @@ def file_exists(path):
     '''
     return os.path.isfile(path)
 
+
+def restorecon(path, recursive=False):
+    '''
+    Reset the SELinux context on a given path
+
+    CLI Example::
+
+         salt '*' selinux.restorecon /home/user/.ssh/authorized_keys
+    '''
+    if recursive:
+        cmd = 'restorecon -FR {0}'.format(path)
+    else:
+        cmd = 'restorecon -F {0}'.format(path)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def get_selinux_context(path):
+    '''
+    Get an SELinux context from a given path
+
+    CLI Example::
+    
+        salt '*' selinux.get_context /etc/hosts
+    '''
+    out = __salt__['cmd.run']('ls -Z {0}'.format(path))
+    return out.split(' ')[4]
+
+
+def set_selinux_context(path, user=None, role=None, type=None, range=None):
+    '''
+    Set a specific SELinux label on a given path
+
+    CLI Example::
+
+        salt '*' selinux.chcon path <role> <type> <range>
+    '''
+    if not user and not role and not type and not range:
+        return False
+
+    cmd = 'chcon '
+    if user:
+        cmd += '-u {0} '.format(user)
+    if role:
+        cmd += '-r {0} '.format(role)
+    if type:
+        cmd += '-t {0} '.format(type)
+    if range:
+        cmd += '-l {0} '.format(range)
+
+    cmd += path
+    ret = not __salt__['cmd.retcode'](cmd)
+    if ret:
+        return get_selinux_context(path)
+    else:
+        return ret
+
