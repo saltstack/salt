@@ -65,6 +65,13 @@ files from ``master.d/*.conf`` respective ``minion.d/*.conf`` where
 ``master.d``/``minion.d`` is a directory in the same directory as the main
 configuration file.
 
+Salt Key Verification
+---------------------
+
+A number of users complained that they had inadvertently deleted the wrong salt
+authentication keys. 0.10.2 now displays what keys are going to be deleted
+and verifies that they are the keys that are intended for deletion.
+
 Module changes
 --------------
 
@@ -135,8 +142,8 @@ Supports scanning as well as pairing/unpairing.
 Test Updates
 ============
 
-Constancy Testing
------------------
+Consistency Testing
+-------------------
 
 Another testing script has been added. A bug was found in pillar when many
 minions generated pillar data at the same time. The new ``consist.py`` script
