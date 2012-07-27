@@ -54,14 +54,83 @@ simply deleted. 0.10.2 adds a new option. By setting the backup option to
 ``minion`` the files are backed up before they are replaced.
 
 The backed up files are located in the cachedir under the file_backup
-directory. On a default system this will be at: 
+directory. On a default system this will be at:
 ``/var/cache/salt/file_backup``
 
-SQL Additions
--------------
+Configuration files
+-------------------
+
+``salt-master`` and ``salt-minion`` automatically load additional configuration
+files from ``master.d/*.conf`` respective ``minion.d/*.conf`` where
+``master.d``/``minion.d`` is a directory in the same directory as the main
+configuration file.
+
+Module changes
+--------------
+
+Improved OpenBSD support
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+New modules for managing services and packages were provided by Joshua
+Elsasser to further improve the support for OpenBSD.
+
+Existing modules like the `disk` module were also improved to support
+OpenBSD.
+
+
+SQL Modules
+^^^^^^^^^^^
 
 The MySQL and Postgres modules have both received a number of additions thanks
 to the work of Avi Marcus and Roman Imankulov.
+
+ZFS Support on FreeBSD
+^^^^^^^^^^^^^^^^^^^^^^
+
+A new ZFS module has been added by Kurtis Velarde for FreeBSD supporting
+various ZFS operations like creating, extending or removing zpools.
+
+
+Augeas
+^^^^^^
+
+A new Augeas module by Ulrich Dangel for editing and verifying config files.
+
+Native Debian Service module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The support for the Debian was further improved with an new service module
+for Debian by Ahmad Khayyat supporting `disable` and `enable`.
+
+
+Cassandra
+^^^^^^^^^
+
+Cassandra support has been added by Adam Garside. Currently only
+status and diagnostic information are supported.
+
+Networking
+^^^^^^^^^^
+
+The networking support for `RHEL` has been improved and supports bonding
+support as well as zeroconf configuration.
+
+
+Monit
+^^^^^
+
+Basic monit support by Kurtis Velarde to control services via monit.
+
+nzbget
+^^^^^^
+
+Basic support for controlling nzbget by Joseph Hall
+
+Bluetooth
+^^^^^^^^^
+
+Baisc ``bluez`` support for managing and controlling Bluetooth devices.
+Supports scanning as well as pairing/unpairing.
 
 Test Updates
 ============
