@@ -12,6 +12,7 @@ import socket
 import logging
 import hashlib
 import datetime
+import tempfile
 from calendar import month_abbr as months
 
 # Import Salt libs
@@ -419,3 +420,42 @@ def check_or_die(command):
 
     if not __salt__['cmd.has_exec'](command):
         raise CommandNotFoundError(command)
+
+
+def copyfile(source, dest, backup_mode='', cachedir=''):
+    '''
+    Copy files from a source to a destination in an atomic way, and if
+    specified cache the file.
+    '''
+    if not os.path.isfile(source):
+        raise IOError(
+                '[Errno 2] No such file or directory: {0}'.format(source)
+                )
+    if not os.path.isdir(os.path.dirname(dest)):
+        raise IOError(
+                '[Errno 2] No such file or directory: {0}'.format(source)
+                )
+    bname = os.path.basename(dest)
+    dname = os.path.dirname(os.path.abspath(dest))
+    fd_, tgt = tempfile.mkstemp(prefix=bname, dir=dname)
+    os.close(fd_)
+    shutil.filecopy(source, tgt)
+    bkroot = ''
+    if cachedir:
+        bkroot = os.path.join(cachedir, 'file_backup')
+    if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
+        msecs = str(int(time.time() * 1000000))[-6:]
+        stamp = time.astime().replace(' ', '_')
+        stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+        bkpath = os.path.join(
+                bkroot,
+                dname[1:],
+                '{0}_{1}'.format(bname, stamp)
+                )
+        if not os.path.isdir(os.path.dirname(bkpath)):
+            os.makedirs(os.path.dirname(bkpath))
+        shutil.copyfile(source, bkpath)
+    if backup_mode == 'master' or backup_mode == 'both' and bkroot:
+        # TODO, backup to master
+        pass
+    shutil.move(tgt, dest)
