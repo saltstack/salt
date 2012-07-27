@@ -1,4 +1,4 @@
-/var/log/salt/minion {
+/var/log/salt/minion /var/log/salt/minion.log {
 	missingok
 	sharedscripts
 	endscript

@@ -212,7 +212,7 @@
 ######         Logging settings       #####
 ###########################################
 # The location of the minion log file
-#log_file: /var/log/salt/minion
+#log_file: /var/log/salt/minion.log
 #
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.

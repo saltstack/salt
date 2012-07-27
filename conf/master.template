@@ -264,7 +264,7 @@
 #####         Logging settings       #####
 ##########################################
 # The location of the master log file
-#log_file: /var/log/salt/master
+#log_file: /var/log/salt/master.log
 #
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
