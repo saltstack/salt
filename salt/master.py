@@ -105,11 +105,34 @@ class SMaster(object):
                 return fp_.read()
         else:
             key = salt.crypt.Crypticle.generate_key_string()
-            cumask = os.umask(191)
+            cumask = None
+
+            mask = None
+            mod = None
+            # Access is permissive, let a group read the key
+            if self.opts.get('permissive_pki_access', True):
+                # equiv of bash umask of 0667 or user and group read
+                mask = 439
+                # Bitwise of u+r and g+r
+                mod = stat.S_IRUSR|stat.S_IRGRP
+            else:
+                # equiv of bash umask of 0677 or user read only
+                mask = 191
+                # u+r
+                mod = stat.S_IRUSR
+
+            cumask = os.umask(mask)
             with open(keyfile, 'w+') as fp_:
                 fp_.write(key)
             os.umask(cumask)
-            os.chmod(keyfile, 256)
+            os.chmod(keyfile, mod)
+
+            # If permissive access is in place, set the group to match
+            # the pki directory
+            if self.opts.get('permissive_pki_access', True):
+                pki_group = os.stat(self.opts['pki_dir']).st_gid
+                os.chown(keyfile, -1, pki_group)
+
             return key
 
 
