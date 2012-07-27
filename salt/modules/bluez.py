@@ -104,3 +104,27 @@ def unpair(address):
     cmd = 'bluez-test-device remove %s' % address
     out = __salt__['cmd.run'](cmd).split('\n')
     return out
+
+
+def start():
+    '''
+    Start the bluetooth service.
+
+    CLI Example::
+
+        salt '*' bluetooth.start
+    '''
+    out = __salt__['service.start']('bluetooth')
+    return out
+
+
+def stop():
+    '''
+    Stop the bluetooth service.
+
+    CLI Example::
+
+        salt '*' bluetooth.stop
+    '''
+    out = __salt__['service.stop']('bluetooth')
+    return out
