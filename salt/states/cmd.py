@@ -354,6 +354,6 @@ def mod_watch(name, **kwargs):
     Execute a cmd function based on a watch call
     '''
     if kwargs['sfun'] == 'wait':
-        return run(name **kwargs)
+        return run(name, **kwargs)
     elif kwargs['sfun'] == 'wait_script':
         return script(name, **kwargs)
