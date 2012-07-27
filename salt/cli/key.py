@@ -26,6 +26,36 @@ class Key(object):
                 not bool(self.opts.get('no_color', False))
                 )
 
+    def _cli_opts(self, **kwargs):
+        '''
+        Set the default cli opts to use when calling salt-key as an api. All
+        options can be passed in a kwargs to override defaults.
+        '''
+        opts = {
+                'list': '',
+                'list_all': False,
+                'accept': '',
+                'accept_all': False,
+                'reject': '',
+                'reject_all': False,
+                'print': '',
+                'print_all': False,
+                'delete': '',
+                'delete_all': False,
+                'quiet': Fasle,
+                'yes': True,
+                'gen_keys': '',
+                'gen_keys_dir': '.',
+                'keysize': 2048,
+                'conf_file': '/etc/salt/master',
+                'raw_out': False,
+                'yaml_out': False,
+                'json_out': False,
+                'no_color': False,
+                }
+        opts.update(kwargs)
+        self.opts.update(opts)
+
     def _keys(self, key_type, full_path=False):
         '''
         Safely return the names of the unaccepted keys, pass True to return
