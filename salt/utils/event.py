@@ -74,6 +74,7 @@ class SaltEvent(object):
         '''
         Get a single publication
         '''
+        wait = wait * 1000
         if not self.cpub:
             self.connect_pub()
         self.sub.setsockopt(zmq.SUBSCRIBE, tag)
