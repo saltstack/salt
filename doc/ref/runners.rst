@@ -23,7 +23,7 @@ contains a function called ``foo`` then the function could be called with:
 
 .. code-block:: bash
 
-    # salt-run '*' test.foo
+    # salt-run test.foo
 
 Examples
 --------
