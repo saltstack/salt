@@ -57,6 +57,15 @@ The backed up files are located in the cachedir under the file_backup
 directory. On a default system this will be at:
 ``/var/cache/salt/file_backup``
 
+Configuration files
+-------------------
+
+``salt-master`` and ``salt-minion`` automatically load additional configuration
+files from ``master.d/*.conf`` respective ``minion.d/*.conf`` where
+``master.d``/``minion.d`` is a directory in the same directory as the main
+configuration file.
+
+
 SQL Additions
 -------------
 
