@@ -599,7 +599,7 @@ class SaltKey(object):
         parser.add_option('--key-logfile',
                 dest='key_logfile',
                 help=('Send all output to a file. '
-                      'Default is /var/log/salt/key.log'))
+                      'Default is /var/log/salt/key'))
 
         parser.add_option('--gen-keys',
                 dest='gen_keys',
