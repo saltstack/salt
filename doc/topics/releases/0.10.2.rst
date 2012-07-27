@@ -81,7 +81,7 @@ expressions as well as globbing is supported.
 
 The file must only be writable by the user otherwise the file will be
 ignored. To relax the permission and allow group write access set the
-``permissive_pki_access` option.
+``permissive_pki_access`` option.
 
 Module changes
 --------------
