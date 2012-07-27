@@ -149,3 +149,18 @@ def list_sebool():
                          'Default': comps[3][:-1],
                          'Description': ' '.join(comps[4:])}
     return ret
+
+
+def restorecon(path, recursive=False):
+    '''
+    Reset the SELinux context on a given path
+
+    CLI Example::
+
+         salt '*' selinux.restorecon /home/user/.ssh/authorized_keys
+    '''
+    if recursive:
+        cmd = 'restorecon -FR {0}'.format(path)
+    else:
+        cmd = 'restorecon -F {0}'.format(path)
+    return not __salt__['cmd.retcode'](cmd)
