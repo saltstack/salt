@@ -17,10 +17,10 @@ To install Salt on Ubuntu, use the following command:
 
 .. admonition:: Installing on Ubuntu 11.04
 
-    There is a conflict with `msgpack-python` on Ubuntu 11.04 and the current 
+    There is a conflict with `msgpack-python` on Ubuntu 11.04 and the current
     saltstack PPA.  You can work around the conflict by installing
     `msgpack-python` from Oneiric:
-    
+
     .. code-block:: bash
 
         sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ oneiric universe'
@@ -33,12 +33,14 @@ To install Salt on Ubuntu, use the following command:
 
 After installation you'll need to make a few changes to the configuration files.
 
+.. _ubuntu-config:
+
 Configuration
 =============
 
-To configure your Salt files we must modify both master and minion 
-configuration files. We need to set where the master binds, by default salt 
-listens on all interfaces. If you have a need to bind to a specific local IP, 
+To configure your Salt files we must modify both master and minion
+configuration files. We need to set where the master binds, by default salt
+listens on all interfaces. If you have a need to bind to a specific local IP,
 make the change as needed. To edit the master type in the following command:
 
 .. code-block:: bash
@@ -65,7 +67,7 @@ Once inside the editor make the following changes:
     - master: salt
     + master: 192.168.0.10
 
-After making the following changes you need to restart both the master and the 
+After making the following changes you need to restart both the master and the
 minion. To do so type in the following commands:
 
 .. code-block:: bash
@@ -83,7 +85,7 @@ pending keys type in the following command:
 
     sudo salt-key -L
 
-From here you will should see a key name underneath the Unaccepted Keys 
+From here you will should see a key name underneath the Unaccepted Keys
 portion. To sign the minion key to the master type in the following command:
 
 .. code-block:: bash
@@ -93,10 +95,10 @@ portion. To sign the minion key to the master type in the following command:
 Where ``$minion`` is the unaccepted key.
 
 
-Now that you have signed the key we need to see if the key was accepted and 
-that we can ping the minion and get a response. To do this you can type in one 
-of the previous commands ``sudo salt-key -L`` and see if the key has been 
-accepted, then also ping the minion to see if it's working by typing in the 
+Now that you have signed the key we need to see if the key was accepted and
+that we can ping the minion and get a response. To do this you can type in one
+of the previous commands ``sudo salt-key -L`` and see if the key has been
+accepted, then also ping the minion to see if it's working by typing in the
 following command:
 
 .. code-block:: bash
@@ -118,27 +120,26 @@ To see if the Salt master is running properly type in the following command:
 
     netstat -natp | grep 450
 
-This should return ``192.168.0.10:4505`` and ``192.168.0.10:4506`` if the master was 
-configured properly. If this does not return those values recheck your master 
+This should return ``192.168.0.10:4505`` and ``192.168.0.10:4506`` if the master was
+configured properly. If this does not return those values recheck your master
 and minion config files for mistakes.
 
-To see if both master and minion are running properly type in the following 
+To see if both master and minion are running properly type in the following
 command:
 
 .. code-block:: bash
 
     ps -efH | grep sal[t]
 
-This should return 8 Salt masters and 1 Salt minion if both are configured 
-properly. If you are still having issues with your Salt configuration please 
+This should return 8 Salt masters and 1 Salt minion if both are configured
+properly. If you are still having issues with your Salt configuration please
 reference the trouble shooting page :doc:`Troubleshooting</topics/troubleshooting/index>`.
 
 What Now?
 =========
 
-Congratulations you have just successfully installed Salt on your Ubuntu machine 
-and configured both the master and the minion. From this point you are now 
-able to send remote commands. Depending on the primary way you want to 
-manage your machines you may either want to visit the section regarding Salt 
+Congratulations you have just successfully installed Salt on your Ubuntu machine
+and configured both the master and the minion. From this point you are now
+able to send remote commands. Depending on the primary way you want to
+manage your machines you may either want to visit the section regarding Salt
 States, or the section on Modules.
-
