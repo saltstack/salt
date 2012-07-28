@@ -750,6 +750,9 @@ class LocalClient(object):
                 ret[raw['id']] = {'ret': raw['return']}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
+                if len(found) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found) >= len(minions):
@@ -808,6 +811,9 @@ class LocalClient(object):
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
+                if len(found) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found) >= len(minions):
