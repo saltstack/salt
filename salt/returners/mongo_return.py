@@ -31,7 +31,7 @@ def _remove_dots(d):
     output = {}
     for k, v in d.iteritems():
         if isinstance(v, dict):
-            v = remove_dots(v)
+            v = _remove_dots(v)
         output[k.replace('.', '-')] = v
     return output
 
