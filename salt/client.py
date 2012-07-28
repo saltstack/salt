@@ -473,8 +473,9 @@ class LocalClient(object):
         a specified jid, it returns all of the information for the jid
         '''
         if verbose:
-            print('Executing job with jid {0}'.format(jid))
-            print('------------------------------------\n')
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
         fret = {}
@@ -725,8 +726,9 @@ class LocalClient(object):
         Get the returns for the command line interface via the event system
         '''
         if verbose:
-            print('Executing job with jid {0}'.format(jid))
-            print('------------------------------------\n')
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
         inc_timeout = timeout
@@ -785,9 +787,16 @@ class LocalClient(object):
         '''
         Get the returns for the command line interface via the event system
         '''
+        if not isinstance(minions, set):
+            if isinstance(minions, basestring):
+                minions = set([minions])
+            elif isinstance(minions, (list, tuple)):
+                minions = set(list(minions))
+
         if verbose:
-            print('Executing job with jid {0}'.format(jid))
-            print('------------------------------------\n')
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
         inc_timeout = timeout
