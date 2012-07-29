@@ -13,7 +13,7 @@ def down():
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
     key = salt.cli.key.Key(__opts__)
-    minions = client.cmd('*', 'test.ping', timeout=1)
+    minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
     keys = key._keys('acc')
 
     ret = sorted(keys - set(minions))
@@ -27,7 +27,7 @@ def up():
     Print a list of all of the minions that are up
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
-    minions = client.cmd('*', 'test.ping', timeout=1)
+    minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
 
     for minion in sorted(minions):
         print(minion)
