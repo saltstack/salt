@@ -70,9 +70,11 @@ def latest(name,
                     ret,
                     ('Repository {0} update is probably required (current '
                     'revision is {1})').format(target, current_rev))
+
+        __salt__['git.pull'](target, user=runas)
+
         if rev:
             __salt__['git.checkout'](target, rev, user=runas)
-        __salt__['git.pull'](target, user=runas)
 
         if submodules:
             __salt__['git.submodule'](target, user=runas)
