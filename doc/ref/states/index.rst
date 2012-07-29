@@ -111,8 +111,7 @@ Here is an example of a Salt State:
     salt:
       pkg:
         - latest
-      service:
-        - running
+      service.running:
         - require:
           - file: /etc/salt/minion
           - pkg: salt
@@ -123,8 +122,7 @@ Here is an example of a Salt State:
           - file: /etc/salt/minion
 
     /etc/salt/minion:
-      file:
-        - managed
+      file.managed:
         - source: salt://salt/minion
         - user: root
         - group: root

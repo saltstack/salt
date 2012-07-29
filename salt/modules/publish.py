@@ -2,23 +2,17 @@
 Publish a command from a minion to a target
 '''
 
-import zmq
+# Import python libs
 import ast
 
+# Import third party libs
+import zmq
+
+# Import salt libs
 import salt.crypt
 import salt.payload
 from salt._compat import string_types
-
-
-def _get_socket():
-    '''
-    Return the ZeroMQ socket to use
-    '''
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect(__opts__['master_uri'])
-    return socket
-
+from salt.exceptions import SaltReqTimeoutError
 
 def _publish(
         tgt,
@@ -60,9 +54,9 @@ def _publish(
         if isinstance(arg, string_types):
             arg = arg.split(',')
 
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
-    payload = {'enc': 'aes'}
     load = {
             'cmd': 'minion_publish',
             'fun': fun,
@@ -74,10 +68,8 @@ def _publish(
             'tmo': timeout,
             'form': form,
             'id': __opts__['id']}
-    payload['load'] = auth.crypticle.dumps(load)
-    socket = _get_socket()
-    socket.send(serial.dumps(payload))
-    return auth.crypticle.loads(serial.loads(socket.recv()))
+    return auth.crypticle.loads(
+            sreq.send('aes', auth.crypticle.dumps(load), 1))
 
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
@@ -133,16 +125,14 @@ def runner(fun, arg=None):
         if isinstance(arg, string_types):
             arg = arg.split(',')
 
+    sreq = salt.payload(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
-    payload = {'enc': 'aes'}
     load = {
             'cmd': 'minion_runner',
             'fun': fun,
             'arg': arg,
             'tok': tok,
             'id': __opts__['id']}
-    payload['load'] = auth.crypticle.dumps(load)
-    socket = _get_socket()
-    socket.send(serial.dumps(payload))
-    return auth.crypticle.loads(serial.loads(socket.recv()))
+    return auth.crypticle.loads(
+            sreq.send('aes', auth.crypticle.dumps(load), 1))

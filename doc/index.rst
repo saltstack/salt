@@ -13,14 +13,21 @@ Get started with Salt
     A list of `presentations and interviews on Salt`_ (including the FLOSS
     Weekly interview).
 
-.. _`presentations and interviews on Salt`: http://saltstack.org/presentations/
+.. _`presentations and interviews on Salt`: http://saltstack.org/learn/
 
-Salt is a **remote execution** and **configuration management** tool.
+Salt is an open source tool to manage your infrastructure. Easy enough to get
+running in minutes and fast enough to manage tens of thousands of servers (and
+still get a response back in *seconds*).
 
-Salt is designed to be secure using **AES encryption** and **public-key
-authentication**; incredibly scalable using an advanced **ZeroMQ** topology;
-fast and efficient using **msgpack**; and extensible using small and simple
-**Python** modules.
+Execute arbitrary shell commands or choose from dozens of pre-built modules of
+common (or complex) commands. Target individual servers or groups of servers
+based on name, defined roles, or a variety of system information such as
+hardware, software, operating system, current version, current environment, and
+many more.
+
+Bring your servers up to a known configured state by writing simple lists of
+items and defining attributes on those lists—no need to learn yet another
+language.
 
 Read the :doc:`Salt overview <topics/index>` for a more thorough description.
 
@@ -77,7 +84,7 @@ Targeting is specifying which minions should execute commands or manage server
 configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
-    Match minions using globbing and regular expresssions.
+    Match minions using globing and regular expressions.
 
 :doc:`Grains </topics/targeting/grains>`
     Match minions using bits of static information about the minion such as
@@ -179,7 +186,10 @@ Salt is many splendid things.
     comes great responsibility.
 
 :doc:`Running Salt without root <topics/nonroot>`
+    The Salt daemons can be run as an unprivileged user.
+
 :doc:`Firewall settings and Salt <topics/tutorials/firewall>`
+    A tutorial covering how to properly firewall a Salt Master server.
 
 :doc:`Network topology <ref/topology>`
     At it's core, Salt is a highly scalable communication layer built on

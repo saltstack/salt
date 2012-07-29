@@ -16,14 +16,13 @@ if sys.version_info[0:2] < (2, 7):
     try:
         from unittest2 import TestLoader, TextTestRunner,\
                               TestCase, expectedFailure, \
-                              TestSuite
+                              TestSuite, skipIf
     except ImportError:
-        print("You need to install unittest2 to run the salt tests")
-        sys.exit(1)
+        raise SystemExit("You need to install unittest2 to run the salt tests")
 else:
     from unittest import TestLoader, TextTestRunner,\
                          TestCase, expectedFailure, \
-                         TestSuite
+                         TestSuite, skipIf
 
 # Set up paths
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))

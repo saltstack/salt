@@ -14,9 +14,14 @@ import salt.utils
 import salt.loader
 import salt.minion
 from salt._compat import string_types
+from salt.log import LOG_LEVELS
 
 # Custom exceptions
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+from salt.exceptions import (
+    SaltClientError,
+    CommandNotFoundError,
+    CommandExecutionError,
+)
 
 
 class Caller(object):
@@ -28,7 +33,13 @@ class Caller(object):
         Pass in the command line options
         '''
         self.opts = opts
-        self.minion = salt.minion.SMinion(opts)
+        # Handle this here so other deeper code which might
+        # be imported as part of the salt api doesn't do  a
+        # nasty sys.exit() and tick off our developer users
+        try:
+            self.minion = salt.minion.SMinion(opts)
+        except SaltClientError as exc:
+            raise SystemExit(str(exc))
 
     def call(self):
         '''
@@ -46,7 +57,9 @@ class Caller(object):
             ret['return'] = self.minion.functions[fun](*args, **kw)
         except (TypeError, CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
-            if self.opts['log_level'] <= logging.DEBUG:
+            active_level = LOG_LEVELS.get(
+                self.opts['log_level'].lower, logging.ERROR)
+            if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
             sys.exit(1)

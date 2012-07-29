@@ -3,8 +3,8 @@
 This script is used to kick off a salt syndic daemon
 '''
 
-from salt.scripts import salt_minion
+from salt.scripts import salt_syndic
 
 
 if __name__ == '__main__':
-    salt_minion()
+    salt_syndic()

@@ -72,10 +72,22 @@ def version(name):
 
 def refresh_db():
     '''
-    Use pkg update to get latest repo.txz
+    Use pkg update to get latest repo.txz when using pkgng, else update the 
+    ports tree with portsnap otherwise. If the ports tree does not exist it 
+    will be downloaded and set up.
+
+    CLI Example::
+
+        salt '*' pkg.refresh_db
     '''
     if _check_pkgng():
         __salt__['cmd.run']('pkg update')
+    else:
+        __salt__['cmd.run']('portsnap fetch')
+        if not os.path.isdir('/usr/ports'):
+            __salt__['cmd.run']('portsnap extract')
+        else:
+            __salt__['cmd.run']('portsnap update')
     return {}
 
 
@@ -100,22 +112,6 @@ def list_pkgs():
         comps = line.split(' ')[0].split('-')
         ret['-'.join(comps[0:-1])] = comps[-1]
     return ret
-
-
-def refresh_db():
-    '''
-    Update the ports tree with portsnap. If the ports tree does not exist it
-    will be downloaded and set up.
-
-    CLI Example::
-
-        salt '*' pkg.refresh_db
-    '''
-    __salt__['cmd.run']('portsnap fetch')
-    if not os.path.isdir('/usr/ports'):
-        __salt__['cmd.run']('portsnap extract')
-    else:
-        __salt__['cmd.run']('portsnap update')
 
 
 def install(name, *args, **kwargs):

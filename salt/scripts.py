@@ -5,7 +5,6 @@ import os
 
 import salt
 import salt.cli
-import salt.log
 
 
 def salt_master():
@@ -64,7 +63,6 @@ def salt_call():
     Directly call a salt command in the modules, does not require a running
     salt minion to run.
     '''
-    salt.log.setup_console_logger()
     try:
         client = salt.cli.SaltCall()
         client.run()

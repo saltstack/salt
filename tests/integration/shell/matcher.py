@@ -67,7 +67,9 @@ class MatchTest(integration.ShellCase):
         '''
         test salt grain matcher
         '''
-        data = self.run_salt('-t 1 --grain-pcre "test_grain:^cheese$" test.ping')
+        data = self.run_salt(
+            '-t 1 --grain-pcre "test_grain:^cheese$" test.ping'
+        )
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
@@ -115,7 +117,7 @@ class MatchTest(integration.ShellCase):
 
 if __name__ == "__main__":
     loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(KeyTest)
+    tests = loader.loadTestsFromTestCase(MatchTest)
     print('Setting up Salt daemons to execute tests')
     with TestDaemon():
         runner = TextTestRunner(verbosity=1).run(tests)

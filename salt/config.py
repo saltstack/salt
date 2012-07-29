@@ -26,6 +26,9 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
+__dflt_log_datefmt = '%H:%M:%S'
+__dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
+__dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 def _validate_file_roots(file_roots):
     '''
@@ -86,26 +89,42 @@ def load_config(opts, path, env_var):
             opts.update(_read_conf_file(path))
             opts['conf_file'] = path
         except Exception as e:
+            import salt.log
             msg = 'Error parsing configuration file: {0} - {1}'
-            log.warn(msg.format(path, e))
+            if salt.log.is_console_configured():
+                log.warn(msg.format(path, e))
+            else:
+                print(msg.format(path, e))
     else:
         log.debug('Missing configuration file: {0}'.format(path))
 
 
-def include_config(opts, orig_path):
+def include_config(include, opts, orig_path, verbose):
     '''
-    Parses an extra configuration file specified in an include list in the
+    Parses extra configuration file(s) specified in an include list in the
     main config file.
     '''
-    include = opts.get('include', [])
+
+    # Protect against empty option
+    if not include:
+        return opts
+
     if isinstance(include, str):
         include = [include]
+
     for path in include:
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(orig_path), path)
+
+        # Catch situation where user typos path in config; also warns for
+        # empty include dir (which might be by design)
+        if len(glob.glob(path)) == 0:
+            msg = "Warning parsing configuration file: 'include' path/glob '{0}' matches no files"
+            if verbose: log.warn(msg.format(path))
+
         for fn_ in glob.glob(path):
             try:
-                opts.update(_read_conf_file(path))
+                opts.update(_read_conf_file(fn_))
             except Exception as e:
                 msg = 'Error parsing configuration file: {0} - {1}'
                 log.warn(msg.format(fn_, e))
@@ -117,10 +136,11 @@ def prepend_root_dir(opts, path_options):
     Prepends the options that represent filesystem paths with value of the
     'root_dir' option.
     '''
+    root_dir = os.path.abspath(opts['root_dir'])
     for path_option in path_options:
         if path_option in opts:
             opts[path_option] = os.path.normpath(
-                    os.sep.join([opts['root_dir'], opts[path_option]]))
+                    os.sep.join([root_dir, opts[path_option]]))
 
 
 def minion_config(path):
@@ -164,6 +184,10 @@ def minion_config(path):
             'sub_timeout': 60,
             'log_file': '/var/log/salt/minion',
             'log_level': 'warning',
+            'log_level_logfile': None,
+            'log_datefmt': __dflt_log_datefmt,
+            'log_fmt_console': __dflt_log_fmt_console,
+            'log_fmt_logfile': __dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
@@ -171,12 +195,17 @@ def minion_config(path):
             'acceptance_wait_time': 10,
             'dns_check': True,
             'grains': {},
+            'permissive_pki_access': False,
+            'default_include': 'minion.d/*.conf',
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
 
-    if 'include' in opts:
-        opts = include_config(opts, path)
+    default_include = opts.get('default_include', [])
+    include = opts.get('include', [])
+
+    opts = include_config(default_include, opts, path, verbose=False)
+    opts = include_config(include, opts, path, verbose=True)
 
     if 'append_domain' in opts:
         opts['id'] = _append_domain(opts)
@@ -240,8 +269,13 @@ def master_config(path):
             'external_nodes': '',
             'order_masters': False,
             'job_cache': True,
+            'minion_data_cache': True,
             'log_file': '/var/log/salt/master',
             'log_level': 'warning',
+            'log_level_logfile': None,
+            'log_datefmt': __dflt_log_datefmt,
+            'log_fmt_console': __dflt_log_fmt_console,
+            'log_fmt_logfile': __dflt_log_fmt_logfile,
             'log_granular_levels': {},
             'pidfile': '/var/run/salt-master.pid',
             'cluster_masters': [],
@@ -250,20 +284,25 @@ def master_config(path):
             'serial': 'msgpack',
             'nodegroups': {},
             'cython_enable': False,
-            'key_logfile': '/var/log/salt/key.log',
+            'key_logfile': '/var/log/salt/key',
+            'permissive_pki_access': False,
+            'default_include': 'master.d/*.conf',
     }
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 
-    if 'include' in opts:
-        opts = include_config(opts, path)
+    default_include = opts.get('default_include', [])
+    include = opts.get('include', [])
+
+    opts = include_config(default_include, opts, path, verbose=False)
+    opts = include_config(include, opts, path, verbose=True)
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
-                            'sock_dir', 'key_logfile', 'extension_modules'])
+                            'sock_dir', 'key_logfile', 'extension_modules', 'autosign_file'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!

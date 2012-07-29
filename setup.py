@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 '''
 The setup script for salt
 '''
@@ -11,24 +11,39 @@ import sys
 from distutils.cmd import Command
 from distutils.sysconfig import get_python_lib, PREFIX
 
-# Use setuptools if available, else fallback to distutils.
-# As an example, setuptools is available in virtualenvs and buildouts through
-# Setuptools or Distribute.
-try:
-    from setuptools import setup
-    with_setuptools = True
-except ImportError:
+# Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
+# This ensures consistent behavior but allows for advanced usage with
+# virtualenv, buildout, and others.
+with_setuptools = False
+if 'USE_SETUPTOOLS' in os.environ:
+    try:
+        from setuptools import setup
+        with_setuptools = True
+    except:
+        with_setuptools = False
+
+if with_setuptools is False:
     from distutils.core import setup
-    with_setuptools = False
 
+salt_version = os.path.join(os.path.abspath(
+    os.path.dirname(__file__)), 'salt', 'version.py')
 
-exec(compile(open("salt/version.py").read(), "salt/version.py", 'exec'))
+salt_reqs = os.path.join(os.path.abspath(
+    os.path.dirname(__file__)), 'requirements.txt')
+
+exec(compile(open(salt_version).read(), salt_version, 'exec'))
+
 
 class TestCommand(Command):
     description = 'Run tests'
     user_options = []
-    def initialize_options(self): pass
-    def finalize_options(self): pass
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
     def run(self):
         from subprocess import Popen
         self.run_command('build')
@@ -60,8 +75,8 @@ else:
 
 libraries = ['ws2_32'] if sys.platform == 'win32' else []
 
-requirements=''
-with open('requirements.txt') as f:
+requirements = ''
+with open(salt_reqs) as f:
     requirements = f.read()
 
 
@@ -81,7 +96,8 @@ setup_kwargs = {'name': NAME,
                                 'Intended Audience :: Developers',
                                 'Intended Audience :: Information Technology',
                                 'Intended Audience :: System Administrators',
-                                'License :: OSI Approved :: Apache Software License',
+                                ('License :: OSI Approved ::'
+                                 ' Apache Software License'),
                                 'Operating System :: POSIX :: Linux',
                                 'Topic :: System :: Clustering',
                                 'Topic :: System :: Distributed Computing',
@@ -91,15 +107,14 @@ setup_kwargs = {'name': NAME,
                              'salt.ext',
                              'salt.grains',
                              'salt.modules',
+                             'salt.pillar',
                              'salt.renderers',
                              'salt.returners',
                              'salt.runners',
                              'salt.states',
                              'salt.utils',
                              ],
-                'package_data': {
-                                 'salt.modules': ['rh_ip/*.jinja'],
-                                 },
+                'package_data': {'salt.modules': ['rh_ip/*.jinja']},
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-master.1',
                                  'doc/man/salt-key.1',
@@ -109,7 +124,7 @@ setup_kwargs = {'name': NAME,
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-run.1',
                                  'doc/man/salt-minion.1',
-                                ]),
+                                 ]),
                                ('share/man/man7', ['doc/man/salt.7']),
                                ],
                 'install_requires': requirements,
@@ -117,8 +132,7 @@ setup_kwargs = {'name': NAME,
 
 if with_setuptools:
     setup_kwargs['entry_points'] = {
-        "console_scripts": [
-                            "salt-master = salt.scripts:salt_master",
+        "console_scripts": ["salt-master = salt.scripts:salt_master",
                             "salt-minion = salt.scripts:salt_minion",
                             "salt-syndic = salt.scripts:salt_syndic",
                             "salt-key = salt.scripts:salt_key",

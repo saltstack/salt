@@ -8,8 +8,10 @@ import os
 import re
 import time
 import errno
+import fnmatch
 import signal
 import shutil
+import stat
 import logging
 import hashlib
 import tempfile
@@ -182,6 +184,13 @@ class Master(SMaster):
             clean_proc(reqserv.eventpublisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
+            if os.path.isfile(self.opts['pidfile']):
+                try:
+                    os.remove(self.opts['pidfile'])
+                except (IOError, OSError):
+                    log.warn('Failed to remove master pidfile: {0}'.format(
+                        self.opts['pidfile']
+                        ))
             raise MasterExit
 
         signal.signal(signal.SIGTERM, sigterm_clean)
@@ -211,7 +220,13 @@ class Publisher(multiprocessing.Process):
         context = zmq.Context(1)
         # Prepare minion publish socket
         pub_sock = context.socket(zmq.PUB)
-        pub_sock.setsockopt(zmq.HWM, 1)
+        # if 2.1 >= zmq < 3.0, we only have one HWM setting
+        try:
+            pub_sock.setsockopt(zmq.HWM, 1)
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            pub_sock.setsockopt(zmq.SNDHWM, 1)
+            pub_sock.setsockopt(zmq.RCVHWM, 1)
         pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
@@ -461,10 +476,20 @@ class AESFuncs(object):
         os.close(fd_)
         with open(tmp_pub, 'w+') as fp_:
             fp_.write(minion_pub)
-        pub = RSA.load_pub_key(tmp_pub)
-        os.remove(tmp_pub)
-        if pub.public_decrypt(token, 5) == 'salt':
-            return True
+
+        pub = None
+        try:
+            pub = RSA.load_pub_key(tmp_pub)
+        except RSA.RSAError, e:
+            log.error('Unable to load temporary public key "{0}": {1}'
+                      .format(tmp_pub, e))
+        try:
+            os.remove(tmp_pub)
+            if pub.public_decrypt(token, 5) == 'salt':
+                return True
+        except RSA.RSAError, e:
+            log.error('Unable to decrypt token: {0}'.format(e))
+
         log.error('Salt minion claiming to be {0} has attempted to'
                   'communicate with the master and could not be verified'
                   .format(id_))
@@ -592,7 +617,19 @@ class AESFuncs(object):
                 load['grains'],
                 load['id'],
                 load['env'])
-        return pillar.compile_pillar()
+        data = pillar.compile_pillar()
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                os.makedirs(cdir)
+            datap = os.path.join(cdir, 'data.p')
+            with open(datap, 'w+') as fp_:
+                fp_.write(
+                        self.serial.dumps(
+                            {'grains': load['grains'],
+                             'pillar': data})
+                            )
+        return data
 
     def _master_state(self, load):
         '''
@@ -606,6 +643,16 @@ class AESFuncs(object):
                 load['grains'],
                 load['opts']['id'],
                 load['opts']['environment'])
+
+    def _minion_event(self, load):
+        '''
+        Receive an event from the minion and fire it on the master event
+        interface
+        '''
+        if 'id' not in load or 'tag' not in load or 'data' not in load:
+            return False
+        tag = '{0}_{1}'.format(load['tag'], load['id'])
+        return self.event.fire_event(load['data'], tag)
 
     def _return(self, load):
         '''
@@ -728,7 +775,7 @@ class AESFuncs(object):
         opts.update(self.opts)
         runner = salt.runner.Runner(opts)
         return runner.run()
-        
+
 
     def minion_publish(self, clear_load):
         '''
@@ -953,6 +1000,93 @@ class ClearFuncs(object):
                 master_pem,
                 self.opts['conf_file']]
 
+    def _check_permissions(self, filename):
+        '''
+        check if the specified filename has correct permissions
+        '''
+        if 'os' in os.environ:
+            if os.environ['os'].startswith('Windows'):
+                return True
+
+        import pwd  # after confirming not running Windows
+        import grp
+        try:
+            user = self.opts['user']
+            pwnam = pwd.getpwnam(user)
+            uid = pwnam[2]
+            gid = pwnam[3]
+            groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+        except KeyError:
+            err = ('Failed to determine groups for user '
+            '{0}. The user is not available.\n').format(user)
+            log.error(err)
+            return False
+
+        fmode = os.stat(filename)
+
+        if os.getuid() == 0:
+            if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                if self.opts.get('permissive_pki_access', False) \
+                  and fmode.st_gid in groups:
+                    return True
+        else:
+            if stat.S_IWOTH & fmode.st_mode:
+                # don't allow others to write to the file
+                return False
+
+            # check group flags
+            if self.opts.get('permissive_pki_access', False) \
+              and stat.S_IWGRP & fmode.st_mode:
+                return True
+            elif stat.S_IWGRP & fmode.st_mode:
+                return False
+
+            # check if writable by group or other
+            if not (stat.S_IWGRP & fmode.st_mode or
+              stat.S_IWOTH & fmode.st_mode):
+                return True
+
+        return False
+
+    def _check_autosign(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be signed.
+        '''
+
+        if self.opts['auto_accept']:
+            return True
+
+        autosign_file = self.opts.get("autosign_file", None)
+
+        if not autosign_file or not os.path.exists(autosign_file):
+            return False
+
+        if not self._check_permissions(autosign_file):
+            message = "Wrong permissions for {0}, ignoring content"
+            log.warn(message.format(autosign_file))
+            return False
+
+        with open(autosign_file, 'r') as fp_:
+            for line in fp_:
+                line = line.strip()
+
+                if line.startswith('#'):
+                    continue
+
+                if line == keyid:
+                    return True
+                if fnmatch.fnmatch(keyid, line):
+                    return True
+                try:
+                    if re.match(line, keyid):
+                        return True
+                except re.error:
+                    message = "{0} is not a valid regular expression, ignoring line in {1}"
+                    log.warn(message.format(line, autosign_file))
+                    continue
+
+        return False
+
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the aes key
@@ -1007,7 +1141,7 @@ class ClearFuncs(object):
             self.event.fire_event(eload, 'auth')
             return ret
         elif not os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
+                and not self._check_autosign(load['id']):
             # This is a new key, stick it in pre
             log.info('New public key placed in pending for %(id)s', load)
             with open(pubfn_pend, 'w+') as fp_:
@@ -1021,7 +1155,7 @@ class ClearFuncs(object):
             self.event.fire_event(eload, 'auth')
             return ret
         elif os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
+                and not self._check_autosign(load['id']):
             # This key is in pending, if it is the same key ret True, else
             # ret False
             if not open(pubfn_pend, 'r').read() == load['pub']:
@@ -1049,9 +1183,26 @@ class ClearFuncs(object):
                 self.event.fire_event(eload, 'auth')
                 return {'enc': 'clear',
                         'load': {'ret': True}}
+        elif os.path.isfile(pubfn_pend)\
+                and self._check_autosign(load['id']):
+            # This key is in pending, if it is the same key auto accept it
+            if not open(pubfn_pend, 'r').read() == load['pub']:
+                log.error(
+                    'Authentication attempt from %(id)s failed, the public '
+                    'keys in pending did not match. This may be an attempt to '
+                    'compromise the Salt cluster.', load
+                )
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+            else:
+                pass
         elif not os.path.isfile(pubfn_pend)\
-                and self.opts['auto_accept']:
-            # This is a new key and auto_accept is turned on
+                and self._check_autosign(load['id']):
+            # This is a new key and it should be automatically be accepted
             pass
         else:
             # Something happened that I have not accounted for, FAIL!
@@ -1066,7 +1217,17 @@ class ClearFuncs(object):
         log.info('Authentication accepted from %(id)s', load)
         with open(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
-        pub = RSA.load_pub_key(pubfn)
+        pub = None
+
+        # The key payload may sometimes be corrupt when using auto-accept
+        # and an empty request comes in
+        try:
+            pub = RSA.load_pub_key(pubfn)
+        except RSA.RSAError, e:
+            log.error('Corrupt public key "{0}": {1}'.format(pubfn, e))
+            return {'enc': 'clear',
+                    'load': {'ret': False}}
+
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
                'token': self.master_key.token,

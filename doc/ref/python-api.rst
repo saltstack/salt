@@ -256,3 +256,22 @@ The return data from the minion will look like this:
     {'cmd.run': '<output from ls -l>',
      'test.ping': True,
      'test.echo': 'foo'}
+
+Salt Caller API
+===============
+
+The Salt minion caller api can be used to simplify the execution and use of
+minion elements. The caller api is useful for accessing the Salt api, direct
+access to the state functions, using the matcher interface on a single minion,
+and as an api for the peer interface. Using the api is fairly straightforward:
+
+.. code-block:: yaml
+
+    # Import the Salt client library
+    import salt.client
+    # Create the caller object
+    caller = salt.client.Caller()
+    # call a function
+    caller.function('test.ping')
+    # Call objects directly:
+    caller.sminion.functions['cmd.run']('ls -l')

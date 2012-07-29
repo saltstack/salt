@@ -12,6 +12,8 @@ import imp
 import salt
 import logging
 import tempfile
+
+# Import Salt libs
 from salt.exceptions import LoaderError
 
 log = logging.getLogger(__name__)
@@ -79,6 +81,16 @@ def returners(opts):
     return load.filter_func('returner')
 
 
+def pillars(opts, functions):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'pillar', 'pillar')
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.filter_func('ext_pillar', pack)
+
+
 def states(opts, functions):
     '''
     Returns the state modules
@@ -117,11 +129,12 @@ def grains(opts):
                 opts['conf_file'],
                 'SALT_MINION_CONFIG'
                 )
-        if 'include' in pre_opts:
-            pre_opts = salt.config.include_config(
-                    pre_opts,
-                    opts['conf_file']
-                    )
+        default_include = pre_opts.get('default_include', [])
+        include = pre_opts.get('include', [])
+        pre_opts = salt.config.include_config(default_include, pre_opts,
+                                              opts['conf_file'], verbose=False)
+        pre_opts = salt.config.include_config(include, pre_opts,
+                                              opts['conf_file'], verbose=True)
         if 'grains' in pre_opts:
             opts['grains'] = pre_opts['grains']
         else:
@@ -242,10 +255,13 @@ class Loader(object):
             if not os.path.isdir(mod_dir):
                 continue
             fn_ = os.path.join(mod_dir, name)
-            for ext in ('.py', '.pyo', '.pyc', '.so'):
-                full_test = '{0}{1}'.format(fn_, ext)
-                if os.path.isfile(full_test):
-                    full = full_test
+            if os.path.isdir(fn_):
+                full = fn_
+            else:
+                for ext in ('.py', '.pyo', '.pyc', '.so'):
+                    full_test = '{0}{1}'.format(fn_, ext)
+                    if os.path.isfile(full_test):
+                        full = full_test
         if not full:
             return None
         cython_enabled = False
@@ -347,8 +363,14 @@ class Loader(object):
                 if fn_.split('.')[0] in disable:
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
-                    or (cython_enabled and fn_.endswith('.pyx'))):
-                    names[fn_[:fn_.rindex('.')]] = os.path.join(mod_dir, fn_)
+                    or (cython_enabled and fn_.endswith('.pyx'))
+                    or os.path.isdir(fn_)):
+                    extpos = fn_.rfind('.')
+                    if extpos > 0:
+                        _name = fn_[:extpos]
+                    else:
+                        _name = fn_
+                    names[_name] = os.path.join(mod_dir, fn_)
         for name in names:
             try:
                 if names[name].endswith('.pyx'):

@@ -3,21 +3,29 @@ import os
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from saltunittest import TestCase, TestLoader, TextTestRunner
-from mock import MagicMock, patch
+from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+try:
+    from mock import MagicMock, patch
+    has_mock = True
+except ImportError:
+    has_mock = False
 
-import salt.modules.rvm as rvm
-rvm.__salt__ = {
-    'cmd.has_exec': MagicMock(return_value=True)}
+if has_mock:
+    import salt.modules.rvm as rvm
+    rvm.__salt__ = {
+        'cmd.has_exec': MagicMock(return_value=True)}
 
 
+@skipIf(has_mock is False, "mock python module is unavailable")
 class TestRvmModule(TestCase):
 
     def test__rvm(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm._rvm("install", "1.9.3")
-            mock.assert_called_once_with("/usr/local/rvm/bin/rvm install 1.9.3", runas=None)
+            mock.assert_called_once_with(
+                "/usr/local/rvm/bin/rvm install 1.9.3", runas=None
+            )
 
     def test__rvm_do(self):
         mock = MagicMock(return_value=None)
@@ -47,7 +55,8 @@ rvm rubies
 #  * - default
 
 '''
-        with patch.object(rvm, '_rvm', return_value=list_output):
+        with patch.object(rvm, '_rvm') as mock_method:
+            mock_method.return_value = list_output
             self.assertEqual(
                 [['jruby', '1.6.5.1', False],
                  ['ree', '1.8.7-2011.03', False],
@@ -66,7 +75,8 @@ gemsets for ree-1.8.7-2012.02 (found in /usr/local/rvm/gems/ree-1.8.7-2012.02)
    foo
 
 '''
-        with patch.object(rvm, '_rvm_do', return_value=output):
+        with patch.object(rvm, '_rvm_do') as mock_method:
+            mock_method.return_value = output
             self.assertEqual(
                 ['global', 'bar', 'foo'],
                 rvm.gemset_list())
@@ -97,7 +107,8 @@ gemsets for ruby-1.9.2-p180 (found in /usr/local/rvm/gems/ruby-1.9.2-p180)
 
 
 '''
-        with patch.object(rvm, '_rvm_do', return_value=output):
+        with patch.object(rvm, '_rvm_do') as mock_method:
+            mock_method.return_value = output
             self.assertEqual(
                 {'jruby-1.6.5.1': ['global', 'jbar', 'jfoo'],
                  'ruby-1.9.2-p180': ['global'],

@@ -1,7 +1,7 @@
 '''
-The module used to execute states in salt. A state is unlike a module execution
-in that instead of just executing a command it ensure that a certain state is
-present on the system.
+The module used to execute states in salt. A state is unlike a module
+execution in that instead of just executing a command it ensure that a
+certain state is present on the system.
 
 The data sent to the state calls is as follows:
     { 'state': '<state module name>',
@@ -32,6 +32,7 @@ import salt.fileclient
 from salt._compat import string_types, callable
 
 from salt.template import compile_template, compile_template_str
+from salt.exceptions import SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
 
@@ -342,8 +343,14 @@ class State(object):
         if 'watch' in data:
             # Check to see if the service has a mod_watch function, if it does
             # not, then just require
+            # to just require extend the require statement with the contents
+            # of watch so that the mod_watch function is not called and the
+            # requisite capability is still used
             if not '{0}.mod_watch'.format(data['state']) in self.states:
-                data['require'] = data.pop('watch')
+                if 'require' in data:
+                    data['require'].extend(data.pop('watch'))
+                else:
+                    data['require'] = data.pop('watch')
                 reqdec = 'require'
             else:
                 reqdec = 'watch'
@@ -443,19 +450,22 @@ class State(object):
 
                                         # Check for global recursive requisites
                                         reqs[name][req_val] = req_key
+                                        # I am going beyond 80 chars on
+                                        # purpose, this is just too much
+                                        # of a pain to deal with otherwise
                                         if req_val in reqs:
                                             if name in reqs[req_val]:
-                                                if reqs[req_val][
-                                                    'state'] == req_key:
-                                                    err = ('A recursive '
-                                                    'requisite was found, SLS '
-                                                    '"{0}" ID "{1}" ID "{2}"'
-                                                    ).format(
-                                                            body['__sls__'],
-                                                            name,
-                                                            req_val
-                                                            )
-                                                    errors.append(err)
+                                                if reqs[req_val][name] == state:
+                                                    if reqs[req_val]['state'] == reqs[name][req_val]:
+                                                        err = ('A recursive '
+                                                        'requisite was found, SLS '
+                                                        '"{0}" ID "{1}" ID "{2}"'
+                                                        ).format(
+                                                                body['__sls__'],
+                                                                name,
+                                                                req_val
+                                                                )
+                                                        errors.append(err)
                                 # Make sure that there is only one key in the
                                 # dict
                                 if len(list(arg)) != 1:
@@ -971,6 +981,7 @@ class State(object):
         elif status == 'change':
             ret = self.call(low)
             if not ret['changes']:
+                low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
                 ret = self.call(low)
             running[tag] = ret
@@ -1010,7 +1021,7 @@ class State(object):
         Enforce the states in a template
         '''
         high = compile_template(
-            template, self.renderers, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high
@@ -1020,7 +1031,7 @@ class State(object):
         Enforce the states in a template, pass the template as a string
         '''
         high = compile_template_str(
-            template, self.renderers, self.opts['renderer'])
+            template, self.rend, self.opts['renderer'])
         if high:
             return self.call_high(high)
         return high
@@ -1576,25 +1587,21 @@ class RemoteHighState(object):
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         self.auth = salt.crypt.SAuth(opts)
-        self.socket = self.__get_socket()
-
-    def __get_socket(self):
-        '''
-        Return the zeromq socket to use
-        '''
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        return socket
+        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
 
     def compile_master(self):
         '''
         Return the state data from the master
         '''
-        payload = {'enc': 'aes'}
         load = {'grains': self.grains,
                 'opts': self.opts,
                 'cmd': '_master_state'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(self.sreq.send(
+                    'aes',
+                    self.auth.crypticle.dumps(load),
+                    3,
+                    72000))
+        except SaltReqTimeoutError:
+            return {}
+

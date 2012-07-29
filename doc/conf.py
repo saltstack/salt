@@ -4,6 +4,9 @@ import sys
 import os
 import types
 
+from sphinx.directives import TocTree
+
+
 class Mock(object):
     '''
     Mock out specified imports
@@ -98,7 +101,6 @@ autosummary_generate = True
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
-.. _`installation`: http://saltstack.org/install/
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. |latest| replace:: https://github.com/downloads/saltstack/salt/salt-%s.tar.gz
 """ % __version__
@@ -162,7 +164,7 @@ latex_logo = '_static/salt-vert.png'
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 authors = [
-    'Thomas S. Hatch <thatch@gmail.com> and many others, please see the Authors file',
+    'Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file',
 ]
 
 man_pages = [
@@ -189,6 +191,7 @@ epub_identifier = 'http://saltstack.org/'
 
 #epub_tocdepth = 3
 
+
 def skip_mod_init_member(app, what, name, obj, skip, options):
     if name.startswith('_'):
         return True
@@ -196,5 +199,23 @@ def skip_mod_init_member(app, what, name, obj, skip, options):
         return True
     return False
 
+
+def _normalize_version(args):
+    _, path = args
+    return '.'.join([x.zfill(4) for x in (path.split('/')[-1].split('.'))])
+
+
+class ReleasesTree(TocTree):
+    option_spec = dict(TocTree.option_spec)
+
+    def run(self):
+        rst = super(ReleasesTree, self).run()
+        entries = rst[0][0]['entries'][:]
+        entries.sort(key=_normalize_version, reverse=True)
+        rst[0][0]['entries'][:] = entries
+        return rst
+
+
 def setup(app):
+    app.add_directive('releasestree', ReleasesTree)
     app.connect('autodoc-skip-member', skip_mod_init_member)

@@ -1,10 +1,4 @@
-# Import python libs
-import sys
-
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class AliasesTest(integration.ModuleCase):
@@ -71,10 +65,7 @@ class AliasesTest(integration.ModuleCase):
         self.assertIsInstance(tgt_ret, dict)
         self.assertNotIn('alias=frank', tgt_ret)
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(AliasesTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(AliasesTest)

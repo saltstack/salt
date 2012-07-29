@@ -80,7 +80,7 @@ def start(name):
 
 def stop(name):
     '''
-    Stop the specifed service with systemd
+    Stop the specified service with systemd
 
     CLI Example::
 
