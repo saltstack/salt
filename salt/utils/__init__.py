@@ -179,10 +179,14 @@ def daemonize():
         log.error(msg.format(exc.errno, exc.strerror))
         sys.exit(1)
 
-    dev_null = open('/dev/null', 'rw')
-    os.dup2(dev_null.fileno(), sys.stdin.fileno())
-    os.dup2(dev_null.fileno(), sys.stdout.fileno())
-    os.dup2(dev_null.fileno(), sys.stderr.fileno())
+    # A normal daemonization redirects the process output to /dev/null.
+    # Unfortunately when a python multiprocess is called the output is
+    # not cleanly redirected and the parent process dies when the
+    # multiprocessing process attemps to access stdout or err.
+    #dev_null = open('/dev/null', 'rw')
+    #os.dup2(dev_null.fileno(), sys.stdin.fileno())
+    #os.dup2(dev_null.fileno(), sys.stdout.fileno())
+    #os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
 def daemonize_if(opts, **kwargs):
