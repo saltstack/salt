@@ -26,6 +26,36 @@ class Key(object):
                 not bool(self.opts.get('no_color', False))
                 )
 
+    def _cli_opts(self, **kwargs):
+        '''
+        Set the default cli opts to use when calling salt-key as an api. All
+        options can be passed in a kwargs to override defaults.
+        '''
+        opts = {
+                'list': '',
+                'list_all': False,
+                'accept': '',
+                'accept_all': False,
+                'reject': '',
+                'reject_all': False,
+                'print': '',
+                'print_all': False,
+                'delete': '',
+                'delete_all': False,
+                'quiet': Fasle,
+                'yes': True,
+                'gen_keys': '',
+                'gen_keys_dir': '.',
+                'keysize': 2048,
+                'conf_file': '/etc/salt/master',
+                'raw_out': False,
+                'yaml_out': False,
+                'json_out': False,
+                'no_color': False,
+                }
+        opts.update(kwargs)
+        self.opts.update(opts)
+
     def _keys(self, key_type, full_path=False):
         '''
         Safely return the names of the unaccepted keys, pass True to return
@@ -242,34 +272,77 @@ class Key(object):
         '''
         Delete a key
         '''
+        # Don't ask for verification if yes is not set
+        yes = self.opts.get('yes', True)
         (minions_accepted,
          minions_pre,
          minions_rejected) = self._check_minions_directories()
         if delete is None:
             delete = self.opts['delete']
+        else:
+            # If a key is explicitly passed then don't ask for verification
+            yes = True
         pre = os.path.join(minions_pre, delete)
         acc = os.path.join(minions_accepted, delete)
         rej = os.path.join(minions_rejected, delete)
         if os.path.exists(pre):
-            os.remove(pre)
-            self._log('Removed pending key {0}'.format(delete),
-                         level='info')
+            rm_ = True
+            if not yes:
+                msg = ('The following pending key is set to be removed: {0}'
+                       '\n[n/Y]').format(delete)
+                veri = raw_input(msg)
+                # Default to Yes
+                if veri.lower().startswith('n'):
+                    rm_ = False
+            if rm_:
+                os.remove(pre)
+                self._log('Removed pending key {0}'.format(delete),
+                             level='info')
         if os.path.exists(acc):
-            os.remove(acc)
-            self._log('Removed accepted key {0}'.format(delete),
-                         level='info')
+            rm_ = True
+            if not yes:
+                msg = ('The following accepted key is set to be removed: {0}'
+                       '\n[n/Y]').format(delete)
+                veri = raw_input(msg)
+                # Default to Yes
+                if veri.lower().startswith('n'):
+                    rm_ = False
+            if rm_:
+                os.remove(acc)
+                self._log('Removed accepted key {0}'.format(delete),
+                             level='info')
         if os.path.exists(rej):
-            os.remove(rej)
-            self._log('Removed rejected key {0}'.format(delete),
-                         level='info')
+            rm_ = True
+            if not yes:
+                msg = ('The following rejected key is set to be removed: {0}'
+                       '\n[n/Y]').format(delete)
+                veri = raw_input(msg)
+                # Default to Yes
+                if veri.lower().startswith('n'):
+                    rm_ = False
+            if rm_:
+                os.remove(rej)
+                self._log('Removed rejected key {0}'.format(delete),
+                             level='info')
 
     def _delete_all(self):
         '''
         Delete all keys
         '''
+        # Don't ask for verification if yes is not set
+        yes = self.opts.get('yes', True)
+        del_ = set()
         for dir in ("acc", "rej", "pre"):
             for key in self._keys(dir):
-                self._delete_key(key)
+                del_.add(key)
+        msg = 'The following keys are going to be deleted:\n'
+        for key in sorted(del_):
+            msg += '{0}\n'.format(key)
+        veri = raw_input('{0}[n/Y]'.format(msg))
+        if veri.lower().startswith('n'):
+            return
+        for key in del_:
+            self._delete_key(key)
 
     def _reject(self, key):
         '''

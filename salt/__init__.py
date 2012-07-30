@@ -6,19 +6,17 @@ from salt.version import __version__
 # Import python libs
 import os
 import sys
-import optparse
 
 # Import salt libs, the try block bypasses an issue at build time so that c
 # modules don't cause the build to fail
 try:
     import salt.config
+    from salt.utils import parser as optparse
     from salt.utils.process import set_pidfile
-    from salt.utils.verify import check_user, verify_env
+    from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
-
-log_format = '%(asctime)s,%(msecs)03.0f [%(name)-15s][%(levelname)-8s] %(message)s'
 
 class Master(object):
     '''
@@ -26,7 +24,6 @@ class Master(object):
     '''
     def __init__(self):
         self.cli = self.__parse_cli()
-        self.opts = salt.config.master_config(self.cli['config'])
         # command line overrides config
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
@@ -62,14 +59,23 @@ class Master(object):
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
-                default='warning',
                 choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
-                     'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
+                     'see the config file. Default: \'warning\'.' %
+                     ', '.join([repr(l) for l in salt.log.SORTED_LEVEL_NAMES]))
 
         options, args = parser.parse_args()
-        salt.log.setup_console_logger(options.log_level, log_format=log_format)
+
+        self.opts = salt.config.master_config(options.config)
+
+        if not options.log_level:
+            options.log_level = self.opts['log_level']
+
+        salt.log.setup_console_logger(
+            options.log_level,
+            log_format=self.opts['log_fmt_console'],
+            date_format=self.opts['log_datefmt']
+        )
 
         cli = {'daemon': options.daemon,
                'config': options.config,
@@ -82,25 +88,42 @@ class Master(object):
         '''
         Run the sequence to start a salt master server
         '''
-        verify_env([self.opts['pki_dir'],
-                    os.path.join(self.opts['pki_dir'], 'minions'),
-                    os.path.join(self.opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.opts['pki_dir'], 'minions_rejected'),
-                    self.opts['cachedir'],
-                    os.path.join(self.opts['cachedir'], 'jobs'),
-                    os.path.dirname(self.opts['log_file']),
-                    self.opts['sock_dir'],
-                    ],
-                    self.opts['user'])
+        try:
+            verify_env([
+                self.opts['pki_dir'],
+                os.path.join(self.opts['pki_dir'], 'minions'),
+                os.path.join(self.opts['pki_dir'], 'minions_pre'),
+                os.path.join(self.opts['pki_dir'], 'minions_rejected'),
+                self.opts['cachedir'],
+                os.path.join(self.opts['cachedir'], 'jobs'),
+                os.path.dirname(self.opts['log_file']),
+                self.opts['sock_dir'],
+            ], self.opts['user'],
+            permissive=self.opts['permissive_pki_access'])
+        except OSError, err:
+            sys.exit(err.errno)
+
         import salt.log
         salt.log.setup_logfile_logger(
-            self.opts['log_file'], self.opts['log_level']
+            self.opts['log_file'],
+            self.opts['log_level_logfile'] or self.opts['log_level'],
+            log_format=self.opts['log_fmt_logfile'],
+            date_format=self.opts['log_datefmt']
         )
         for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
+
         import logging
         log = logging.getLogger(__name__)
         # Late import so logging works correctly
+        if not verify_socket(
+                self.opts['interface'],
+                self.opts['publish_port'],
+                self.opts['ret_port']
+                ):
+            log.critical('The ports are not available to bind')
+            sys.exit(4)
+
         import salt.master
         master = salt.master.Master(self.opts)
         if self.cli['daemon']:
@@ -121,7 +144,6 @@ class Minion(object):
     '''
     def __init__(self):
         self.cli = self.__parse_cli()
-        self.opts = salt.config.minion_config(self.cli['config'])
         # command line overrides config
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
@@ -155,14 +177,23 @@ class Minion(object):
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
-                default='warning',
                 choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
-                     'see the config file. Default: \'%%default\'.' %
-                     ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
+                     'see the config file. Default: \'warning\'.' %
+                     ', '.join([repr(l) for l in salt.log.SORTED_LEVEL_NAMES]))
 
         options, args = parser.parse_args()
-        salt.log.setup_console_logger(options.log_level, log_format=log_format)
+
+        self.opts = salt.config.minion_config(options.config)
+
+        if not options.log_level:
+            options.log_level = self.opts['log_level']
+
+        salt.log.setup_console_logger(
+            options.log_level,
+            log_format=self.opts['log_fmt_console'],
+            date_format=self.opts['log_datefmt']
+        )
 
         cli = {'daemon': options.daemon,
                'config': options.config,
@@ -175,18 +206,28 @@ class Minion(object):
         '''
         Execute this method to start up a minion.
         '''
-        verify_env([self.opts['pki_dir'],
-            self.opts['cachedir'],
-            self.opts['extension_modules'],
-            os.path.dirname(self.opts['log_file']),
-                ],
-                self.opts['user'])
+        try:
+            verify_env([
+                self.opts['pki_dir'],
+                self.opts['cachedir'],
+                self.opts['sock_dir'],
+                self.opts['extension_modules'],
+                os.path.dirname(self.opts['log_file']),
+            ], self.opts['user'],
+            permissive=self.opts['permissive_pki_access'])
+        except OSError, err:
+            sys.exit(err.errno)
+
         import salt.log
         salt.log.setup_logfile_logger(
-            self.opts['log_file'], self.opts['log_level']
+            self.opts['log_file'],
+            self.opts['log_level_logfile'] or self.opts['log_level'],
+            log_format=self.opts['log_fmt_logfile'],
+            date_format=self.opts['log_datefmt']
         )
         for name, level in self.opts['log_granular_levels'].items():
             salt.log.set_logger_level(name, level)
+
         import logging
         # Late import so logging works correctly
         import salt.minion
@@ -195,18 +236,18 @@ class Minion(object):
             # Late import so logging works correctly
             import salt.utils
             # If the minion key has not been accepted, then Salt enters a loop
-            # waiting for it, if we daemonize later then the minion cound halt
+            # waiting for it, if we daemonize later then the minion could halt
             # the boot process waiting for a key to be accepted on the master.
             # This is the latest safe place to daemonize
             salt.utils.daemonize()
-        minion = salt.minion.Minion(self.opts)
-        set_pidfile(self.cli['pidfile'])
-        if check_user(self.opts['user'], log):
-            try:
+        try:
+            minion = salt.minion.Minion(self.opts)
+            set_pidfile(self.cli['pidfile'])
+            if check_user(self.opts['user'], log):
                 minion.tune_in()
-            except KeyboardInterrupt:
-                log.warn('Stopping the Salt Minion')
-                raise SystemExit('\nExiting on Ctrl-c')
+        except KeyboardInterrupt:
+            log.warn('Stopping the Salt Minion')
+            raise SystemExit('\nExiting on Ctrl-c')
 
 
 class Syndic(object):
@@ -215,18 +256,17 @@ class Syndic(object):
     '''
     def __init__(self):
         self.cli = self.__parse_cli()
-        self.opts = self.__prep_opts()
         # command line overrides config
         if self.cli['user']:
             self.opts['user'] = self.cli['user']
 
-    def __prep_opts(self):
+    def __prep_opts(self, cli):
         '''
         Generate the opts used by the syndic
         '''
-        opts = salt.config.master_config(self.cli['master_config'])
+        opts = salt.config.master_config(cli['master_config'])
         opts['_minion_conf_file'] = opts['conf_file']
-        opts.update(salt.config.minion_config(self.cli['minion_config']))
+        opts.update(salt.config.minion_config(cli['minion_config']))
         if 'syndic_master' in opts:
             # Some of the opts need to be changed to match the needed opts
             # in the minion class.
@@ -275,14 +315,12 @@ class Syndic(object):
         parser.add_option('-l',
                 '--log-level',
                 dest='log_level',
-                default='warning',
                 choices=list(salt.log.LOG_LEVELS),
                 help='Console log level. One of %s. For the logfile settings '
-                     'see the config file. Default: \'%%default\'.' %
+                     'see the config file. Default: \'warning\'.' %
                      ', '.join([repr(l) for l in salt.log.LOG_LEVELS]))
 
         options, args = parser.parse_args()
-        salt.log.setup_console_logger(options.log_level, log_format=log_format)
 
         cli = {'daemon': options.daemon,
                'minion_config': options.minion_config,
@@ -290,16 +328,31 @@ class Syndic(object):
                'pidfile': options.pidfile,
                'user': options.user}
 
+        self.opts = self.__prep_opts(cli)
+
+        if not options.log_level:
+            options.log_level = self.opts['log_level']
+
+        salt.log.setup_console_logger(
+            options.log_level,
+            log_format=self.opts['log_fmt_console'],
+            date_format=self.opts['log_datefmt']
+        )
+
         return cli
 
     def start(self):
         '''
         Execute this method to start up a syndic.
         '''
-        verify_env([self.opts['pki_dir'], self.opts['cachedir'],
+        try:
+            verify_env([
+                self.opts['pki_dir'], self.opts['cachedir'],
                 os.path.dirname(self.opts['log_file']),
-                ],
-                self.opts['user'])
+            ], self.opts['user'],
+            permissive=self.opts['permissive_pki_access'])
+        except OSError, err:
+            sys.exit(err.errno)
         import salt.log
         salt.log.setup_logfile_logger(
             self.opts['log_file'], self.opts['log_level']

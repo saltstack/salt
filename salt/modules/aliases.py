@@ -17,6 +17,8 @@ def __get_aliases_filename():
     '''
     if 'aliases.file' in __opts__:
         return __opts__['aliases.file']
+    elif 'aliases.file' in __pillar__:
+        return __pillar__['aliases.file']
     else:
         return '/etc/aliases'
 

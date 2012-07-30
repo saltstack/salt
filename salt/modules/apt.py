@@ -48,6 +48,11 @@ def available_version(name):
     out = __salt__['cmd.run_stdout'](cmd)
 
     version_list = out.split()
+    for comp in version_list:
+        if comp == 'Version:':
+            continue
+        return comp
+
     if len(version_list) >= 2:
         version = version_list[-1]
 
@@ -306,7 +311,7 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'apt-get --just-print upgrade'
+    cmd = 'apt-get --just-print dist-upgrade'
     out = __salt__['cmd.run_stdout'](cmd)
 
     # rexp parses lines that look like the following:
@@ -314,8 +319,8 @@ def _get_upgradable():
     rexp = re.compile('(?m)^Conf '
                       '([^ ]+) ' # Package name
                       '\(([^ ]+) ' # Version
-                      '([^ ]+) ' # Release
-                      '\[([^\]]+)\]\)$') # Arch
+                      '([^ ]+)' # Release
+                      '(?: \[([^\]]+)\])?\)$') # Arch
     keys = ['name', 'version', 'release', 'arch']
     _get = lambda l, k: l[keys.index(k)]
 

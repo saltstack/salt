@@ -73,6 +73,23 @@ A State Module must return a dict containing the following keys/values:
   *False*.
 - **comment:** A string containing a summary of the result.
 
+Test State
+==========
+
+All states should check for and support ``test`` being passed in the options. 
+This will return data about what changes would occur if the state were actually 
+run. An example of such a check could look like this:
+
+.. code-block:: python
+
+    # Return comment of changes if test.
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'State Foo will execute with param {0}'.format(bar)
+        return ret
+
+Make sure to test and return before performing any real actions on the minion.
+
 Watcher Function
 ================
 

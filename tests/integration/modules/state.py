@@ -1,10 +1,5 @@
 # Import python libs
-import sys
-
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class StateModuleTest(integration.ModuleCase):
@@ -49,10 +44,7 @@ class StateModuleTest(integration.ModuleCase):
         sls = self.run_function('state.show_sls', mods='recurse_ok_two')
         self.assertIn('/etc/nagios/nrpe.cfg', sls)
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(StateModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(StateModuleTest)

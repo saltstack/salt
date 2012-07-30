@@ -3,7 +3,10 @@ Manage the shadow file
 '''
 
 import os
-import spwd
+try:
+    import spwd
+except ImportError:
+    pass
 
 def __virtual__():
     '''

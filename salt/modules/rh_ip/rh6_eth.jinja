@@ -1,0 +1,19 @@
+DEVICE="{{name}}"
+{% if addr %}HWADDR="{{addr}}"
+{%endif%}{% if userctl %}USERCTL="{{userctl}}"
+{%endif%}{% if master %}MASTER="{{master}}"
+{%endif%}{% if slave %}SLAVE="{{slave}}"
+{%endif%}{% if vlan %}VLAN="{{vlan}}"
+{%endif%}{% if proto %}BOOTPROTO="{{proto}}"
+{%endif%}{% if onboot %}ONBOOT="{{onboot}}"
+{%endif%}{% if ipaddr %}IPADDR="{{ipaddr}}"
+{%endif%}{% if netmask %}NETMASK="{{netmask}}"
+{%endif%}{% if gateway %}GATEWAY="{{gateway}}"
+{%endif%}{% if srcaddr %}SRCADDR="{{srcaddr}}"
+{%endif%}{% if peerdns %}PEERDNS="{{peerdns}}"
+{%endif%}{%if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
+{%endif%}{% if ethtool %}ETHTOOL_OPTS="{%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}"
+{%endif%}
+{% for server in dns -%}
+DNS{{loop.index}}="{{server}}"
+{% endfor -%}

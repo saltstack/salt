@@ -41,8 +41,9 @@ def present(name, gid=None, system=False):
                 else:
                     if __opts__['test']:
                         ret['result'] = None
-                        ret['comment'] = ('Group {0} exists but the gid will '
-                                          'be changed to {1}').format(name, gid)
+                        ret['comment'] = (
+                            'Group {0} exists but the gid will '
+                            'be changed to {1}').format(name, gid)
                         return ret
                     ret['result'] = __salt__['group.chgid'](name, gid)
                     if ret['result']:

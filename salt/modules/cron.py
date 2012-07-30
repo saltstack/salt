@@ -144,10 +144,10 @@ def set_special(user, special, cmd):
         salt '*' cron.set_special @hourly 'echo foobar'
     '''
     lst = list_tab(user)
-    for spec in lst['special']:
-        if special == cron['special'] and \
-            cmd == cron['cmd']:
-            return 'present'
+    for cron in lst['crons']:
+        for spec in lst['special']:
+            if special == cron['special'] and cmd == cron['cmd']:
+                return 'present'
     spec = {'special': special,
             'cmd': cmd}
     lst['special'].append(spec)

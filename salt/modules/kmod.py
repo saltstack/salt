@@ -97,6 +97,20 @@ def lsmod():
     return ret
 
 
+def mod_list():
+    '''
+    Return a list of the loaded module names
+
+    CLI Example::
+
+        salt '*' kmod.mod_list
+    '''
+    mods = set()
+    for mod in lsmod():
+        mods.add(mod['module'])
+    return sorted(list(mods))
+
+
 def load(mod):
     '''
     Load the specified kernel module

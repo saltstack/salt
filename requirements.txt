@@ -2,6 +2,6 @@
 Jinja2
 M2Crypto
 msgpack-python
-PyCrypto
+pycrypto
 PyYAML
 pyzmq >= 2.1.9

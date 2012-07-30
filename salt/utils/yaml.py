@@ -52,10 +52,13 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
 
     def construct_scalar(self, node):
         '''
-        Verify integers and pass them in correctly is they are declared as octal
+        Verify integers and pass them in correctly is they are declared
+        as octal
         '''
         if node.tag == 'tag:yaml.org,2002:int':
-            if node.value.startswith('0') \
+            if node.value == '0':
+                pass
+            elif node.value.startswith('0') \
                     and not node.value.startswith(('0b', '0x')):
                 node.value = node.value.lstrip('0')
         return yaml.constructor.SafeConstructor.construct_scalar(self, node)

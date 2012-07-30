@@ -19,7 +19,7 @@ def __virtual__():
         return False
     return 'disk'
 
-def usage():
+def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
@@ -29,8 +29,11 @@ def usage():
     '''
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
+    elif __grains__['kernel'] == 'OpenBSD':
+        cmd = 'df -kP'
     else:
         cmd = 'df'
+    cmd = cmd + ' -' + args
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
@@ -52,7 +55,7 @@ def usage():
             ret = {}
     return ret
 
-def inodeusage():
+def inodeusage(args=None):
     '''
     Return inode usage information for volumes mounted on this minion
 
@@ -61,6 +64,7 @@ def inodeusage():
         salt '*' disk.inodeusage
     '''
     cmd = 'df -i'
+    cmd = cmd + ' -' + args
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
@@ -72,14 +76,23 @@ def inodeusage():
             continue
 
         try:
-            ret[comps[5]] = {
-                'inodes': comps[1],
-                'used':   comps[2],
-                'free':   comps[3],
-                'use':    comps[4],
-                'filesystem': comps[0],
-            }
-        except IndexError:
+            if __grains__['kernel'] == 'OpenBSD':
+                ret[comps[8]] = {
+                    'inodes': int(comps[5]) + int(comps[6]),
+                    'used':   comps[5],
+                    'free':   comps[6],
+                    'use':    comps[7],
+                    'filesystem': comps[0],
+                }
+            else:
+                ret[comps[5]] = {
+                    'inodes': comps[1],
+                    'used':   comps[2],
+                    'free':   comps[3],
+                    'use':    comps[4],
+                    'filesystem': comps[0],
+                }
+        except (IndexError, ValueError):
             log.warn("Problem parsing inode usage information")
             ret = {}
     return ret

@@ -1,9 +1,11 @@
 '''
 Manage users with the useradd command
 '''
-
-import grp
-import pwd
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
 from salt._compat import string_types, callable
 
@@ -18,7 +20,7 @@ def __virtual__():
         for attr in dir(mod):
 
             if callable(getattr(mod, attr)):
-                if not attr in ('info', 'list_groups', '__virtual__'):
+                if not attr in ('getent', 'info', 'list_groups', '__virtual__'):
                     delattr(mod, attr)
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
@@ -56,7 +58,10 @@ def add(name,
         cmd += '-G {0} '.format(','.join(groups))
     if home:
         if home is not True:
-            cmd += '-d {0} '.format(home)
+            if system:
+                cmd += '-d {0} '.format(home)
+            else:
+                cmd += '-m -d {0} '.format(home)
         else:
             if not system:
                 cmd += '-m '

@@ -9,16 +9,21 @@ data
 # Import python libs
 import os
 import re
-import grp
-import pwd
 import time
 import hashlib
+import shutil
 import stat
+import sys
 import fnmatch
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.utils.find
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 def __virtual__():
     '''
@@ -194,9 +199,15 @@ def chown(path, user, group):
     gid = group_to_gid(group)
     err = ''
     if uid == '':
-        err += 'User does not exist\n'
+        if user:
+            err += 'User does not exist\n'
+        else:
+            uid = -1
     if gid == '':
-        err += 'Group does not exist\n'
+        if group:
+            err += 'Group does not exist\n'
+        else:
+            gid = -1
     if not os.path.exists(path):
         err += 'File not found'
     if err:
@@ -212,14 +223,6 @@ def chgrp(path, group):
 
         salt '*' file.chgrp /etc/passwd root
     '''
-    gid = group_to_gid(group)
-    err = ''
-    if gid == '':
-        err += 'Group does not exist\n'
-    if not os.path.exists(path):
-        err += 'File not found'
-    if err:
-        return err
     user = get_user(path)
     return chown(path, user, group)
 
@@ -403,6 +406,8 @@ def sed(path, before, after, limit='', backup='.bak', options='-r -e',
     after = str(after)
     before = _sed_esc(before, escape_all)
     after = _sed_esc(after, escape_all)
+    if sys.platform == 'darwin':
+        options = options.replace('-r', '-E')
 
     cmd = r"sed {backup}{options} '{limit}s/{before}/{after}/{flags}' {path}".format(
             backup = '-i{0} '.format(backup) if backup else '-i ',
@@ -665,4 +670,99 @@ def stats(path, hash_type='md5', follow_symlink=False):
         ret['type'] = 'socket'
     ret['target'] = os.path.realpath(path)
     return ret
+
+
+def remove(path):
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    if os.path.exists(path):
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+                return True
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+                return True
+        except (OSError, IOError):
+            raise CommandExecutionError('Could not remove "{0}"'.format(path))
+    return False
+
+def directory_exists(path):
+    '''
+    Tests to see if path is a valid directory.  Returns True/False.
+
+    CLI Example::
+
+        salt '*' file.directory_exists /etc
+
+    '''
+    return os.path.isdir(path)
+
+def file_exists(path):
+    '''
+    Tests to see if path is a valid file.  Returns True/False.
+
+    CLI Example::
+
+        salt '*' file.file_exists /etc/passwd
+
+    '''
+    return os.path.isfile(path)
+
+
+def restorecon(path, recursive=False):
+    '''
+    Reset the SELinux context on a given path
+
+    CLI Example::
+
+         salt '*' selinux.restorecon /home/user/.ssh/authorized_keys
+    '''
+    if recursive:
+        cmd = 'restorecon -FR {0}'.format(path)
+    else:
+        cmd = 'restorecon -F {0}'.format(path)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def get_selinux_context(path):
+    '''
+    Get an SELinux context from a given path
+
+    CLI Example::
+    
+        salt '*' selinux.get_context /etc/hosts
+    '''
+    out = __salt__['cmd.run']('ls -Z {0}'.format(path))
+    return out.split(' ')[4]
+
+
+def set_selinux_context(path, user=None, role=None, type=None, range=None):
+    '''
+    Set a specific SELinux label on a given path
+
+    CLI Example::
+
+        salt '*' selinux.chcon path <role> <type> <range>
+    '''
+    if not user and not role and not type and not range:
+        return False
+
+    cmd = 'chcon '
+    if user:
+        cmd += '-u {0} '.format(user)
+    if role:
+        cmd += '-r {0} '.format(role)
+    if type:
+        cmd += '-t {0} '.format(type)
+    if range:
+        cmd += '-l {0} '.format(range)
+
+    cmd += path
+    ret = not __salt__['cmd.retcode'](cmd)
+    if ret:
+        return get_selinux_context(path)
+    else:
+        return ret
 

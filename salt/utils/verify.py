@@ -6,13 +6,13 @@ import os
 import re
 import sys
 import stat
+import socket
 import getpass
 import logging
 
+from salt.exceptions import SaltClientError
+
 log = logging.getLogger(__name__)
-
-__all__ = ('zmq_version', 'verify_env', 'check_user')
-
 
 def zmq_version():
     '''
@@ -60,7 +60,34 @@ def zmq_version():
     return False
 
 
-def verify_env(dirs, user):
+def verify_socket(interface, pub_port, ret_port):
+    '''
+    Attempt to bind to the sockets to verify that they are available
+    '''
+    result = None
+
+    pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        pubsock.bind((interface, int(pub_port)))
+        pubsock.close()
+        retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        retsock.bind((interface, int(ret_port)))
+        retsock.close()
+        result = True
+    except Exception:
+        log.warn("Unable to bind socket, this might not be a problem."
+                 " Is there another salt-master running?")
+        result = False
+    finally:
+        pubsock.close()
+        retsock.close()
+
+    return result
+
+
+def verify_env(dirs, user, permissive=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -69,10 +96,13 @@ def verify_env(dirs, user):
         if os.environ['os'].startswith('Windows'):
             return True
     import pwd  # after confirming not running Windows
+    import grp
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
         gid = pwnam[3]
+        groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
@@ -88,15 +118,21 @@ def verify_env(dirs, user):
                     os.chown(dir_, uid, gid)
                 os.umask(cumask)
             except OSError as e:
-                sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
+                msg = 'Failed to create directory path "{0}" - {1}\n'
+                sys.stderr.write(msg.format(dir_, e))
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
         if os.getuid() == 0:
             fmode = os.stat(dir_)
             if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                # chown the file for the new user
-                os.chown(dir_, uid, gid)
+                if permissive and fmode.st_gid in groups:
+                    # Allow the directory to be owned by any group root
+                    # belongs to if we say it's ok to be permissive
+                    pass
+                else:
+                    # chown the file for the new user
+                    os.chown(dir_, uid, gid)
             for root, dirs, files in os.walk(dir_):
                 if 'jobs' in root:
                     continue
@@ -107,14 +143,20 @@ def verify_env(dirs, user):
                     except (IOError, OSError):
                         pass
                     if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                        # chown the file for the new user
-                        os.chown(path, uid, gid)
+                        if permissive and fmode.st_gid in groups:
+                            pass
+                        else:
+                          # chown the file for the new user
+                          os.chown(path, uid, gid)
                 for name in dirs:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
                     if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                        # chown the file for the new user
-                        os.chown(path, uid, gid)
+                        if permissive and fmode.st_gid in groups:
+                            pass
+                        else:
+                           # chown the file for the new user
+                           os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
@@ -126,7 +168,8 @@ def verify_env(dirs, user):
             if os.access(dir_, os.W_OK):
                 os.chmod(dir_, 448)
             else:
-                msg = 'Unable to securely set the permissions of "{0}".'.format(dir_)
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
                 log.critical(msg)
     # Run the extra verification checks
     zmq_version()
@@ -156,3 +199,30 @@ def check_user(user, log):
         log.critical(msg)
         return False
     return True
+
+def check_parent_dirs(fname, user='root'):
+    '''
+    Walk from the root up to a directory and verify that the current
+    user has access to read each directory. This is used for  making
+    sure a user can read all parent directories of the minion's  key
+    before trying to go and generate a new key and raising an IOError
+    '''
+    # TODO: Test the below line on Windows
+    dir_comps = fname.split(os.path.sep)[1:-1]
+    # Loop over all parent directories of the minion key
+    # to properly test if salt has read access to  them.
+    for i,dirname in enumerate(dir_comps):
+        # Create the full path to the directory using a list slice
+        d = os.path.join(os.path.sep, *dir_comps[:i + 1])
+        msg ='Could not access directory {0}.'.format(d)
+        current_user = getpass.getuser()
+        # Make the error message more intelligent based on how
+        # the user invokes salt-call or whatever other script.
+        if user != current_user:
+            msg += ' Try running as user {0}.'.format(user)
+        else:
+            msg += ' Please give {0} read permissions.'.format(user, d)
+        if not os.access(d, os.R_OK):
+            # Propagate this exception up so there isn't a sys.exit()
+            # in the middle of code that could be imported elsewhere.
+            raise SaltClientError(msg)

@@ -404,3 +404,32 @@ still wish to have 'salt.modules' at the 'debug' level:
   log_granular_levels:
     'salt': 'warning',
     'salt.modules': 'debug'
+
+.. conf_minion:: include
+
+``include``
+-----------
+
+Default: ``not defined``
+
+The minion can include configuration from other files. To enable this,
+pass a list of paths to this option. The paths can be either relative or
+absolute; if relative, they are considered to be relative to the directory
+the main minion configuration file lives in. Paths can make use of 
+shell-style globbing. If no files are matched by a path passed to this
+option then the minion will log a warning message.
+
+.. code-block:: yaml
+    
+    # Include files from a minion.d directory in the same
+    # directory as the minion config file
+    include: minion.d/*
+
+    # Include a single extra file into the configuration
+    include: /etc/roles/webserver
+
+    # Include several files and the minion.d directory
+    include:
+      - extra_config
+      - minion.d/*
+      - /etc/roles/webserver

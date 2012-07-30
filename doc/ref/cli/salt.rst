@@ -126,6 +126,11 @@ Options
     settings are required to know where the connections are;
     default=/etc/salt/master
 
+.. option:: -v VERBOSE, --verbose
+
+    Turn on verbosity for the salt call, this will cause the salt command to
+    print out extra data like the job id.
+
 .. option::  --raw-out
 
     Print the output from the salt command in raw Python

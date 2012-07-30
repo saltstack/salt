@@ -11,6 +11,16 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 
 .. code-block:: yaml
 
+    system:
+        network.system:
+        - enabled: True
+        - hostname: server1.example.com
+        - gateway: 192.168.0.1
+        - gatewaydev: eth0
+        - nozeroconf: True
+        - nisdomain: example.com
+        - require_reboot: True
+
     eth0:
       network.managed:
         - enabled: True
@@ -108,12 +118,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 import difflib
 
 
-def managed(
-        name,
-        type,
-        enabled=True,
-        **kwargs
-        ):
+def managed(name, type, enabled=True, **kwargs):
     '''
     Ensure that the named interface is configured properly.
 
@@ -130,6 +135,10 @@ def managed(
         The IP parameters for this interface.
 
     '''
+    # For this function we are purposefully overwriting a bif
+    # to enance the user experience. This does not look like
+    # it will cause a problem. Just giving a heads up in case
+    # it does create a problem.
 
     ret = {
         'name': name,
@@ -141,21 +150,23 @@ def managed(
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
-        new = __salt__['ip.build_interface'](name, type, kwargs)
+        new = __salt__['ip.build_interface'](name, type, enabled, kwargs)
         if __opts__['test']:
             if old == new:
                 return ret
             if not old and new:
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be added'.format(name)
+                ret['comment'] = 'Interface {0} is set to be added.'
+                ret['comment'] = ret['comment'].format(name)
                 return ret
             elif old != new:
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be updated'.format(
+                ret['comment'] = 'Interface {0} is set to be updated.'
+                ret['comment'] = ret['comment'].format(
                     name)
                 return ret
         if not old and new:
-            ret['changes']['interface'] = 'Added network interface'
+            ret['changes']['interface'] = 'Added network interface.'
         elif old != new:
             diff = difflib.unified_diff(old, new)
             ret['changes']['interface'] = ''.join(diff)
@@ -170,7 +181,7 @@ def managed(
             old = __salt__['ip.get_bond'](name)
             new = __salt__['ip.build_bond'](name, kwargs)
             if not old and new:
-                ret['changes']['bond'] = 'Added bond'
+                ret['changes']['bond'] = 'Added bond.'
             elif old != new:
                 diff = difflib.unified_diff(old, new)
                 ret['changes']['bond'] = ''.join(diff)
@@ -183,12 +194,72 @@ def managed(
     #Bring up/shutdown interface
     try:
         if enabled:
-            __salt__['ip.up'](name)
+            __salt__['ip.up'](name, type, kwargs)
         else:
-            __salt__['ip.down'](name)
+            __salt__['ip.down'](name, type, kwargs)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message
         return ret
+
+    return ret
+
+
+def system(name, **kwargs):
+    '''
+    Ensure that global network settings are configured properly.
+
+    name
+        Custom name to represent this configuration change.
+
+    kwargs
+        The global parameters for the system.
+
+    '''
+
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': 'Global network settings are up to date.'
+    }
+    apply_net_settings = False
+    # Build global network settings
+    try:
+        old = __salt__['ip.get_network_settings']()
+        new = __salt__['ip.build_network_settings'](kwargs)
+        if __opts__['test']:
+            if old == new:
+                return ret
+            if not old and new:
+                ret['result'] = None
+                ret['comment'] = 'Global network settings are set to be added.'
+                return ret
+            elif old != new:
+                ret['result'] = None
+                ret['comment'] = \
+                    'Global network settings are set to be updated.'
+                return ret
+        if not old and new:
+            apply_net_settings = True
+            ret['changes']['network_settings'] = \
+                'Added global network settings.'
+        elif old != new:
+            diff = difflib.unified_diff(old, new)
+            apply_net_settings = True
+            ret['changes']['network_settings'] = ''.join(diff)
+    except AttributeError as error:
+        ret['result'] = False
+        ret['comment'] = error.message
+        return ret
+
+    # Apply global network settings
+    if apply_net_settings:
+        try:
+            __salt__['ip.apply_network_settings'](kwargs)
+        except AttributeError as error:
+            ret['result'] = False
+            ret['comment'] = error.message
+            return ret
 
     return ret

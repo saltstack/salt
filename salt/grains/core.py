@@ -107,21 +107,28 @@ def _linux_cpudata():
     return grains
 
 
-def _freebsd_cpudata():
+def _bsd_cpudata(osdata):
     '''
-    Return cpu information for FreeBSD systems
+    Return cpu information for BSD-like systems
     '''
-    grains = {}
     sysctl = salt.utils.which('sysctl')
+    arch = salt.utils.which('arch')
+    cmds = {}
 
     if sysctl:
-        machine_cmd = '{0} -n hw.machine'.format(sysctl)
-        ncpu_cmd = '{0} -n hw.ncpu'.format(sysctl)
-        model_cpu = '{0} -n hw.model'.format(sysctl)
-        grains['num_cpus'] = __salt__['cmd.run'](ncpu_cmd).strip()
-        grains['cpu_model'] = __salt__['cmd.run'](model_cpu).strip()
-        grains['cpuarch'] = __salt__['cmd.run'](machine_cmd).strip()
-        grains['cpu_flags'] = []
+        cmds['num_cpus'] = '{0} -n hw.ncpu'.format(sysctl)
+        cmds['cpu_model'] = '{0} -n hw.model'.format(sysctl)
+        cmds['cpuarch'] = '{0} -n hw.machine'.format(sysctl)
+    if arch and osdata['kernel'] == 'OpenBSD':
+        cmds['cpuarch'] = '{0} -s'.format(arch)
+
+    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
+    grains['cpu_flags'] = []
+    try:
+        grains['num_cpus'] = int(grains['num_cpus'])
+    except Exception:
+        grains['num_cpus'] = 0
+
     return grains
 
 
@@ -177,6 +184,8 @@ def _virtual(osdata):
         if 'Vendor: QEMU' in output:
             # FIXME: Make this detect between kvm or qemu
             grains['virtual'] = 'kvm'
+        if 'Vendor: Bochs' in output:
+            grains['virtual'] = 'kvm'
         elif 'VirtualBox' in output:
             grains['virtual'] = 'VirtualBox'
         # Product Name: VMware Virtual Platform
@@ -195,6 +204,8 @@ def _virtual(osdata):
         elif 'virtualbox' in model:
             grains['virtual'] = 'VirtualBox'
         elif 'qemu' in model:
+            grains['virtual'] = 'kvm'
+        elif 'virtio' in model:
             grains['virtual'] = 'kvm'
     choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
     isdir = os.path.isdir
@@ -261,7 +272,7 @@ def _ps(osdata):
     Return the ps grain
     '''
     grains = {}
-    bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'Darwin')
+    bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
     elif osdata['os'] == 'Windows':
@@ -378,6 +389,13 @@ def os_data():
                 if match:
                     # Adds: lsb_distrib_{id,release,codename,description}
                     grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
+        try:
+            import lsb_release
+            release = lsb_release.get_distro_information()
+            for key, value in release.iteritems():
+                grains['lsb_{0}'.format(key.lower())] = value  # override /etc/lsb-release
+        except ImportError:
+            pass
         if os.path.isfile('/etc/arch-release'):
             grains['os'] = 'Arch'
             grains['os_family'] = 'Arch'
@@ -435,6 +453,11 @@ def os_data():
                 grains['os'] = 'Scientific'
             else:
                 grains['os'] = 'RedHat'
+        elif os.path.isfile('/etc/system-release'):
+            grains['os_family'] = 'RedHat'
+            data = open('/etc/system-release', 'r').read()
+            if 'amazon' in data.lower():
+                grains['os'] = 'Amazon'
         elif os.path.isfile('/etc/SuSE-release'):
             grains['os_family'] = 'Suse'
             data = open('/etc/SuSE-release', 'r').read()
@@ -461,15 +484,14 @@ def os_data():
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
         grains['os_family'] = 'MacOS'
-        grains.update(_freebsd_cpudata())
+        grains.update(_bsd_cpudata(grains))
     else:
         grains['os'] = grains['kernel']
         grains['os_family'] = grains['kernel']
     if grains['kernel'] == 'Linux':
         grains.update(_linux_cpudata())
     elif grains['kernel'] in ('FreeBSD', 'OpenBSD'):
-        # _freebsd_cpudata works on OpenBSD as well.
-        grains.update(_freebsd_cpudata())
+        grains.update(_bsd_cpudata(grains))
 
     grains.update(_memdata(grains))
 
@@ -641,6 +663,16 @@ def _hw_data(osdata):
             grains['manufacturer'] = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv)).strip()
             grains['serialnumber'] = __salt__['cmd.run']('{0} smbios.system.serial'.format(kenv)).strip()
             grains['productname'] = __salt__['cmd.run']('{0} smbios.system.product'.format(kenv)).strip()
+    elif osdata['kernel'] == 'OpenBSD':
+        sysctl = salt.utils.which('sysctl')
+        hwdata = {'biosversion': 'hw.version',
+                  'manufacturer': 'hw.vendor',
+                  'productname': 'hw.product',
+                  'serialnumber': 'hw.serialno'}
+        for key, oid in hwdata.items():
+            value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
+            if not value.endswith(' value is not available'):
+                grains[key] = value
     return grains
 
 
