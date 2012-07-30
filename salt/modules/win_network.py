@@ -2,8 +2,10 @@
 Module for gathering and managing network information
 '''
 
+import sys
 from string import ascii_letters, digits
-import socket
+from salt.utils.interfaces import *
+from salt.utils.socket_util import *
 
 __outputter__ = {
     'dig':     'txt',
@@ -16,6 +18,7 @@ def __virtual__():
     Only works on Windows systems
     '''
     if __grains__['os'] == 'Windows':
+        setattr(sys.modules['salt.utils.interfaces'], 'interfaces', interfaces)
         return 'network'
     return False
 
@@ -25,7 +28,7 @@ def _sanitize_host(host):
     Sanitize host string.
     '''
     return "".join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.')
+        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
     ])
 
 
@@ -155,24 +158,6 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
-def isportopen(host, port):
-    '''
-    Return status of a port
-
-    CLI Example::
-
-        salt '*' network.isportopen 127.0.0.1 22
-    '''
-
-    if not (1 <= int(port) <= 65535):
-        return False
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    out = sock.connect_ex((_sanitize_host(host), int(port)))
-
-    return out
-
-
 def _cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask
@@ -190,113 +175,53 @@ def _cidr_to_ipv4_netmask(cidr_bits):
     return netmask
 
 
-def interfaces():
+def _interfaces_ipconfig(out):
     '''
     Returns a dictionary of interfaces with various information about each
     (up/down state, ip address, netmask, and hwaddr)
-
-    CLI Example::
-
-        salt '*' network.interfaces
     '''
-    ret = {}
-    ifaces = []
-    lines = __salt__['cmd.run']('ipconfig /all').split('\r\n')
-    configstart = 0
-    configname = ''
-    for line in lines:
-        if configstart == 3:
-            ifaces.append(config)
-            configstart = 0
-            continue
+    import re
+    ifaces = dict()
+    iface = None
+
+    for line in out.splitlines():
         if not line:
-            configstart = configstart + 1
             continue
-        if line.startswith('  '):
-            comps = line.split(':', 1)
-            config[configname][comps[0].rstrip(' .').strip()] =  comps[1].strip()
+        # TODO what does Windows call Infiniband and 10/40gige adapters
+        if line.startswith('Ethernet'):
+            iface = ifaces[re.search('adapter (\S.+):$').group(1)]
+            iface['up'] = True
+            addr = None
             continue
-        if configstart == 1:
-            configname = line.strip(' :')
-            config = {configname: {}}
-            configstart = configstart + 1
-            continue
-    for iface in ifaces:
-        for key, val in iface.items():
-            item = {}
-            itemdict = {'Physical Address': 'hwaddr',
-                        'IPv4 Address': 'ipaddr',
-                        'Link-local IPv6 Address': 'ipaddr6',
-                        'Subnet Mask': 'netmask',
-                        }
-            item['broadcast'] = None
-            for k, v in itemdict.items():
-                if k in val:
-                    item[v] = val[k].rstrip('(Preferred)')
-            if 'IPv4 Address' in val:
-                item['up'] = True
-            else:
-                item['up'] = False
-            ret[key] = item
-    return ret
+        if iface:
+            k, v = line.split(',', 1)
+            key = k.strip(' .')
+            val = v.strip()
+            if addr and key in ('Subnet Mask'):
+                addr['netmask'] = val
+            elif key in ('IP Address', 'IPv4 Address'):
+                if 'inet' not in iface:
+                    iface['inet'] = list()
+                addr = {'address': val.rstrip('(Preferred)'),
+                        'netmask': None,
+                        'broadcast': None} # TODO find the broadcast
+                iface['inet'].append(addr)
+            elif 'IPv6 Address' in key:
+                if 'inet6' not in iface:
+                    iface['inet'] = list()
+                # XXX What is the prefixlen!?
+                addr = {'address': val.rstrip('(Preferred)'),
+                        'prefixlen': None}
+                iface['inet6'].append(addr)
+            elif key in ('Physical Address'):
+                iface['hwaddr'] = val
+            elif key in ('Media State'):
+                # XXX seen used for tunnel adaptors
+                # might be useful
+                iface['up'] = (v != 'Media disconnected')
 
 
-def up(interface):
-    '''
-    Returns True if interface is up, otherwise returns False
-
-    CLI Example::
-
-        salt '*' network.up 'Wireless LAN adapter Wireless Network Connection'
-    '''
-    data = interfaces().get(interface)
-    if data:
-        return data['up']
-    else:
-        return None
-
-
-def ipaddr(interface):
-    '''
-    Returns the IP address for a given interface
-
-    CLI Example::
-
-        salt '*' network.ipaddr 'Wireless LAN adapter Wireless Network Connection'
-    '''
-    data = interfaces().get(interface)
-    if data:
-        return data['ipaddr']
-    else:
-        return None
-
-
-def netmask(interface):
-    '''
-    Returns the netmask for a given interface
-
-    CLI Example::
-
-        salt '*' network.netmask 'Wireless LAN adapter Wireless Network Connection'
-    '''
-    data = interfaces().get(interface)
-    if data:
-        return data['netmask']
-    else:
-        return None
-
-
-def hwaddr(interface):
-    '''
-    Returns the hwaddr for a given interface
-
-    CLI Example::
-
-        salt '*' network.hwaddr 'Wireless LAN adapter Wireless Network Connection'
-    '''
-    data = interfaces().get(interface)
-    if data:
-        return data['hwaddr']
-    else:
-        return None
-
+def interfaces():
+    cmd = __salt__['cmd.run']('ipconfig /all')
+    ifaces = _ifconfig(cmd)
+    return ifaces
