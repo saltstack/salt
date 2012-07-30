@@ -27,40 +27,6 @@ def get_conn():
             )
 
 
-def avail_images():
-    '''
-    Return a dict of all available vm images on the cloud provider with
-    relevant data
-    '''
-    conn = get_conn()
-    images = conn.list_images()
-    ret = {}
-    for img in images:
-        ret[img.name] = {}
-        for attr in dir(img):
-            if attr.startswith('_'):
-                continue
-            ret[img.name][attr] = getattr(img, attr)
-    return ret
-
-
-def avail_sizes():
-    '''
-    Return a dict of all available vm images on the cloud provider with
-    relevant data
-    '''
-    conn = get_conn()
-    sizes = conn.list_sizes()
-    ret = {}
-    for size in sizes:
-        ret[size.name] = {}
-        for attr in dir(size):
-            if attr.startswith('_'):
-                continue
-            ret[size.name][attr] = getattr(size, attr)
-    return ret
-
-
 def get_location(conn, vm_):
     '''
     Return the node location to use
@@ -91,57 +57,6 @@ def get_password(vm_):
         return __opts__['LINODE.password']
 
 
-def get_image(conn, vm_):
-    '''
-    Return the image object to use
-    '''
-    images = conn.list_images()
-    if not 'image' in vm_:
-        return images[0]
-    if isinstance(vm_['image'], int):
-        return images[vm_['image']]
-    for img in images:
-        if img.id == vm_['image']:
-            return img
-        if img.name == vm_['image']:
-            return img
-
-
-def get_size(conn, vm_):
-    '''
-    Return the vm's size object
-    '''
-    sizes = conn.list_sizes()
-    if not 'size' in vm_:
-        return sizes[0]
-    if isinstance(vm_['size'], int):
-        return sizes[vm_['size']]
-    for size in sizes:
-        if size.id == vm_['size']:
-            return size
-        if size.name == vm_['size']:
-            return size
-
-
-def script(vm_):
-    '''
-    Return the script deployment object
-    '''
-    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
-    return ScriptDeployment(
-            saltcloud.utils.os_script(
-                saltcloud.utils.get_option(
-                    'os',
-                    __opts__,
-                    vm_
-                    ),
-                vm_,
-                __opts__,
-                minion,
-                )
-            )
-
-
 def create(vm_):
     '''
     Create a single vm from a data dict
@@ -161,21 +76,3 @@ def create(vm_):
         ))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
-
-
-def list_nodes():
-    '''
-    Return a list of the vms that are on the provider
-    '''
-    conn = get_conn() 
-    nodes = conn.list_nodes()
-    ret = {}
-    for node in nodes:
-        ret[node.name] = {
-                'id': node.id,
-                'image': node.image,
-                'private_ips': node.private_ips,
-                'public_ips': node.public_ips,
-                'size': node.size,
-                'state': node.state}
-    return ret
