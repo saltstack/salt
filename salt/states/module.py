@@ -18,10 +18,10 @@ def wait(name, **kwargs):
     '''
     Run a single module function only if the watch statement calls it
 
-    name
+    ``name``
         The module function to execute
 
-    **kwargs
+    ``**kwargs``
         Pass any arguments needed to execute the function
     '''
     return {'name': name,
@@ -34,10 +34,10 @@ def run(name, **kwargs):
     '''
     Run a single module function
 
-    name
+    ``name``
         The module function to execute
 
-    **kwargs
+    ``**kwargs``
         Pass any arguments needed to execute the function
     '''
     ret = {'name': name,
