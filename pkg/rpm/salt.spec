@@ -175,11 +175,11 @@ if [ "$1" -ge "1" ] ; then
 fi
 
 %changelog
-* Wed May 9 2012 Mike Chesnut <mikec@talksum.com> - 0.9.9dev-1talkos
-- customizing for TalkOS environment (package names, prereqs, initscripts)
-
 * Sat Jun 16 2012 Clint Savage <herlo1@gmail.com> - 0.10.0-1
 - Moved to upstream release 0.10.0
+
+* Wed May 9 2012 Mike Chesnut <mikec@talksum.com> - 0.9.9dev-1talkos
+- customizing for TalkOS environment (package names, prereqs, initscripts)
 
 * Sat Apr 28 2012 Clint Savage <herlo1@gmail.com> - 0.9.9.1-1
 - Moved to upstream release 0.9.9.1
