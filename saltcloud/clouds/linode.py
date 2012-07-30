@@ -15,6 +15,7 @@ from libcloud.compute.base import NodeAuthPassword
 
 # Import salt libs
 import saltcloud.utils
+from saltcloud.libcloudfuncs import *
 
 
 def get_conn():
