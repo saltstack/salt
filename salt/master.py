@@ -227,7 +227,7 @@ class Publisher(multiprocessing.Process):
         except AttributeError:
             pub_sock.setsockopt(zmq.SNDHWM, 1)
             pub_sock.setsockopt(zmq.RCVHWM, 1)
-        pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
+        pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
         pull_uri = 'ipc://{0}'.format(
@@ -661,7 +661,7 @@ class AESFuncs(object):
         # If the return data is invalid, just ignore it
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
-        log.info('Got return from {0[id]} for job {0[jid]}'.format(load))
+        log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])
         if not self.opts['job_cache']:
             return
@@ -893,8 +893,8 @@ class AESFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
-                  ' "{0[arg]}", target: "{0[tgt]}"').format(load))
+        log.info(('Publishing minion job: #{jid}, func: "{fun}", args:'
+                  ' "{arg}", target: "{tgt}"').format(**load))
         pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method based on the form data sent
         if 'form' in clear_load:
@@ -1285,12 +1285,12 @@ class ClearFuncs(object):
             load['to'] = clear_load['to']
 
         if 'user' in clear_load:
-            log.info(('User {0[user]} Published command {0[fun]} with jid'
-                      ' {0[jid]}').format(clear_load))
+            log.info(('User {user} Published command {fun} with jid'
+                      ' {jid}').format(**clear_load))
             load['user'] = clear_load['user']
         else:
-            log.info(('Published command {0[fun]} with jid'
-                      ' {0[jid]}').format(clear_load))
+            log.info(('Published command {fun} with jid'
+                      ' {jid}').format(**clear_load))
         log.debug('Published command details {0}'.format(load))
 
         payload['load'] = self.crypticle.dumps(load)
