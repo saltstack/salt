@@ -15,22 +15,28 @@ Full list of builtin modules
 
 .. autosummary::
     :toctree:
+    :template: autosummary.rst.tmpl
 
     aliases
     apache
     apt
     archive
+    augeas_cfg
+    bluez
     brew
     butterkvm
+    cassandra
     cluster
     cmdmod
     cp
     cron
     data
     debconfmod
+    debian_service
     disk
     django
     ebuild
+    event
     file
     freebsdjail
     freebsdkmod
@@ -49,16 +55,22 @@ Full list of builtin modules
     launchctl
     linux_sysctl
     mdadm
+    monit
     moosefs
     mount
     mysql
     network
     nginx
+    nzbget
+    openbsdpkg
+    openbsdservice
     osxdesktop
     pacman
     pillar
     pip
+    pkgng
     postgres
+    poudriere
     ps
     publish
     puppet
@@ -93,6 +105,7 @@ Full list of builtin modules
     win_service
     win_shadow
     win_useradd
-    yumpkg
     yumpkg5
+    yumpkg
+    zfs
     zypper

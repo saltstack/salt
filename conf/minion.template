@@ -1,5 +1,11 @@
 ##### Primary configuration settings #####
 ##########################################
+
+# Per default the minion will automatically include all config files
+# from minion.d/*.conf (minion.d is a directory in the same directory
+# as the main minion config file).
+#default_include: minion.d/*.conf
+
 # Set the location of the salt master server, if the master server cannot be
 # resolved, then the minion will fail to start.
 #master: salt
@@ -53,18 +59,15 @@
 # your environment then set this value to False.
 #dns_check: True
 
+
 # The minion can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory
 # the main minion configuration file lives in (this file). Paths can make use
 # of shell-style globbing. If no files are matched by a path passed to this
 # option then the minion will log a warning message.
-# 
-# Examples:
-# Include any config files in minion.d (minion.d is a directory
-# in the same directory as the main minion config file)
-#include: minion.d/*
-# 
+#
+#
 # Include a config file from some other path:
 #include: /etc/salt/extra_config
 #
@@ -72,7 +75,6 @@
 #include:
 # - /etc/salt/extra_config
 # - /etc/roles/webserver
-# - minion.d/*
 
 #####   Minion module management     #####
 ##########################################
@@ -193,6 +195,12 @@
 # the situation where your keys end up in a bad state. If you run in open mode
 # you do so at your own risk!
 #open_mode: False
+
+# Enable permissive access to the salt keys.  This allows you to run the
+# master or minion as root, but have a non-root group be given access to
+# your pki_dir.  To make the access explicit, root must belong to the group
+# you've given access to. This is potentially quite insecure.
+#permissive_pki_access: False
 
 
 ######         Thread settings        #####

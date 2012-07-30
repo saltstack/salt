@@ -8,6 +8,7 @@ Full Table of Contents
 
     topics/index
     topics/installation/index
+    topics/hacking
     topics/configuration
     topics/targeting/index
     topics/tutorials/modules
@@ -15,13 +16,14 @@ Full Table of Contents
     topics/tutorials/states*
     topics/tutorials/firewall
     topics/tutorials/bootstrap_ec2
+    topics/tutorials/preseed_key
+    topics/tutorials/standalone_minion
     topics/pillar/index
     topics/jobs/index
     topics/nonroot
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
     topics/community
-    topics/tutorials/standalone_minion
     topics/projects/index
     topics/event/index
 

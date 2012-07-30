@@ -13,7 +13,11 @@ def __virtual__():
     Only work on OpenBSD
     '''
     if __grains__['os'] == 'OpenBSD' and os.path.exists('/etc/rc.d/rc.subr'):
-        return 'service'
+        v = map(int, __grains__['kernelrelease'].split('.'))
+        # The -f flag, used to force a script to run even if disabled,
+        # was added after the 5.0 release.
+        if v[0] > 5 or (v[0] == 5 and v[1] > 0):
+            return 'service'
     return False
 
 

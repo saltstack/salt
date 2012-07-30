@@ -2,9 +2,10 @@
 Module for gathering and managing network information
 '''
 
+import sys
 from string import ascii_letters, digits
-import socket
-import re
+from salt.utils.interfaces import *
+from salt.utils.socket_util import *
 
 __outputter__ = {
     'dig':     'txt',
@@ -18,8 +19,9 @@ def __virtual__():
     '''
 
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] == 'Windows':
+    if __grains__['os'] in ('Windows',):
         return False
+    setattr(sys.modules['salt.utils.interfaces'], 'interfaces', interfaces)
     return 'network'
 
 
@@ -28,7 +30,7 @@ def _sanitize_host(host):
     Sanitize host string.
     '''
     return "".join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.')
+        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
     ])
 
 def _cidr_to_ipv4_netmask(cidr_bits):
@@ -68,19 +70,40 @@ def _number_of_set_bits(x):
     x += x >> 16
     return x & 0x0000003f
 
-def _interfaces_ip():
+
+def _interfaces_ip(out):
     '''
     Uses ip to return a dictionary of interfaces with various information about
     each (up/down state, ip address, netmask, and hwaddr)
     '''
-    ret = {}
+    import re
+    ret = dict()
 
-    out = __salt__['cmd.run']('ip addr show')
+    def parse_network(value, cols):
+        """
+        Return a tuple of ip, netmask, broadcast
+        based on the current set of cols
+        """
+        brd = None
+        if '/' in value:  # we have a CIDR in this address
+            ip, cidr = value.split('/')
+        else:
+            ip = value
+            cidr = 32
+
+        if type == 'inet':
+            mask = _cidr_to_ipv4_netmask(int(cidr))
+            if 'brd' in cols:
+                brd = cols[cols.index('brd')+1]
+        elif type == 'inet6':
+            mask = cidr
+        return (ip, mask, brd)
+
     groups = re.compile('\r?\n\d').split(out)
-
     for group in groups:
         iface = None
-        data = {}
+        data = dict()
+
         for line in group.split('\n'):
             if not ' ' in line:
                 continue
@@ -89,67 +112,59 @@ def _interfaces_ip():
                 iface,parent,attrs = m.groups()
                 if 'UP' in attrs.split(','):
                     data['up'] = True
+                else:
+                    data['up'] = False
                 if parent:
                     data['parent'] = parent
-            else:
-                cols = line.split()
-                if len(cols) >= 2:
-                    type,value = tuple(cols[0:2])
-                    if type in ('inet', 'inet6'):
-                        def parse_network():
-                            """
-                            Return a tuple of ip, netmask, broadcast
-                            based on the current set of cols
-                            """
-                            brd = None
-                            # A small hack until we can get new code in here
-                            # supporting network device lookup better
-                            if '/' in value:
-                                ip, cidr = value.split('/')
-                            else:
-                                ip = value
-                                cidr = '24'
-                            if type == 'inet':
-                                mask = _cidr_to_ipv4_netmask(int(cidr))
-                                if 'brd' in cols:
-                                    brd = cols[cols.index('brd')+1]
-                            elif type == 'inet6':
-                                mask = cidr
-                            return (ip, mask, brd)
+                continue
 
-                        if 'secondary' not in cols:
-                            ipaddr, netmask, broadcast = parse_network()
-                            if type == 'inet':
-                                data['ipaddr'] = ipaddr
-                                data['netmask'] = netmask
-                                data['broadcast'] = broadcast
-                            elif type == 'inet6':
-                                data['ipaddr6'] = ipaddr
-                                data['netmask6'] = netmask
-                        else:
-                            if 'secondary' not in data:
-                                data['secondary'] = []
-                            ip, mask, brd = parse_network()
-                            data['secondary'].append({
-                                'type': type,
-                                'ipaddr': ip,
-                                'netmask': mask,
-                                'broadcast': brd
-                                })
-                            del ip, mask, brd
-                    elif type.startswith('link'):
-                        data['hwaddr'] = value
+            cols = line.split()
+            if len(cols) >= 2:
+                type,value = tuple(cols[0:2])
+                if type in ('inet', 'inet6'):
+                    if 'secondary' not in cols:
+                        ipaddr, netmask, broadcast = parse_network(value, cols)
+                        if type == 'inet':
+                            if 'inet' not in data:
+                                data['inet'] = list()
+                            addr_obj = dict()
+                            addr_obj['address'] = ipaddr
+                            addr_obj['netmask'] = netmask
+                            addr_obj['broadcast'] = broadcast
+                            data['inet'].append(addr_obj)
+                        elif type == 'inet6':
+                            if 'inet6' not in data:
+                                data['inet6'] = list()
+                            addr_obj = dict()
+                            addr_obj['address'] = ipaddr
+                            addr_obj['prefixlen'] = netmask
+                            data['inet6'].append(addr_obj)
+                    else:
+                        if 'secondary' not in data:
+                            data['secondary'] = list()
+                        ip, mask, brd = parse_network(value, cols)
+                        data['secondary'].append({
+                            'type': type,
+                            'address': ip,
+                            'netmask': mask,
+                            'broadcast': brd
+                            })
+                        del ip, mask, brd
+                elif type.startswith('link'):
+                    data['hwaddr'] = value
         if iface:
             ret[iface] = data
             del iface, data
     return ret
 
-def _interfaces_ifconfig():
+
+def _interfaces_ifconfig(out):
     '''
     Uses ifconfig to return a dictionary of interfaces with various information
     about each (up/down state, ip address, netmask, and hwaddr)
     '''
-    ret = {}
+    import re
+    ret = dict()
 
     piface = re.compile('^(\S+):?')
     pmac = re.compile('.*?(?:HWaddr|ether) ([0-9a-fA-F:]+)')
@@ -160,11 +175,9 @@ def _interfaces_ifconfig():
     pupdown = re.compile('UP')
     pbcast = re.compile('.*?(?:Bcast:|broadcast )([\d\.]+)')
 
-    out = __salt__['cmd.run']('ifconfig -a')
     groups = re.compile('\r?\n(?=\S)').split(out)
-
     for group in groups:
-        data = {}
+        data = dict()
         iface = ''
         updown = False
         for line in group.split('\n'):
@@ -172,57 +185,55 @@ def _interfaces_ifconfig():
             mmac = pmac.match(line)
             mip = pip.match(line)
             mip6 = pip6.match(line)
-            mmask = pmask.match(line)
             mupdown = pupdown.search(line)
-            mbcast = pbcast.match(line)
-            mmask6 = pmask6.match(line)
             if miface:
                 iface = miface.group(1)
             if mmac:
                 data['hwaddr'] = mmac.group(1)
             if mip:
-                data['ipaddr'] = mip.group(1)
-            if mmask:
-                if mmask.group(1):
-                    data['netmask'] =  _number_of_set_bits_to_ipv4_netmask(
-                        int(mmask.group(1), 16))
-                else:
-                    data['netmask'] = mmask.group(2)
+                if 'inet' not in data:
+                    data['inet'] = list()
+                addr_obj = dict()
+                addr_obj['address'] = mip.group(1)
+                mmask = pmask.match(line)
+                if mmask:
+                    if mmask.group(1):
+                        mmask = _number_of_set_bits_to_ipv4_netmask(
+                                int(mmask.group(1), 16))
+                    else:
+                        mmask = mmask.group(2)
+                    addr_obj['netmask'] = mmask
+                mbcast = pbcast.match(line)
+                if mbcast:
+                    addr_obj['broadcast'] = mbcast.group(1)
+                data['inet'].append(addr_obj)
             if mupdown:
                 updown = True
-            if mbcast:
-                data['broadcast'] = mbcast.group(1)
             if mip6:
-                if mip6.group(1):
-                    data['ipaddr6'] = mip6.group(1)
-                else:
-                    data['ipaddr6'] = mip6.group(2)
-            if mmask6:
-                if mmask6.group(1):
-                    data['netmask6'] = mmask6.group(1)
-                else:
-                    data['netmask6'] = mmask6.group(2)
+                if 'inet6' not in data:
+                    data['inet6'] = list()
+                addr_obj = dict()
+                addr_obj['address'] = mip6.group(1) or mip6.group(2)
+                mmask6 = pmask6.match(line)
+                if mmask6:
+                    addr_obj['prefixlen'] = mmask6.group(1) or mmask6.group(2)
+                data['inet6'].append(addr_obj)
         data['up'] = updown
         ret[iface] = data
         del data
     return ret
 
+
 def interfaces():
-    '''
-    Returns a dictionary of interfaces with various information about each
-    (up/down state, ip address, netmask, and hwaddr)
-
-    CLI Example::
-
-        salt '*' network.interfaces
-    '''
-    # find out which utility to use to find interface information
+    ifaces = dict()
     if __salt__['cmd.has_exec']('ip'):
-        return _interfaces_ip()
-    if __salt__['cmd.has_exec']('ifconfig'):
-        return _interfaces_ifconfig()
-    # no usable utility found
-    return {}
+        cmd = __salt__['cmd.run']('ip addr show')
+        ifaces = _interfaces_ip(cmd)
+    elif __salt__['cmd.has_exec']('ifconfig'):
+        cmd = __salt__['cmd.run']('ifconfig -a')
+        ifaces = _interfaces_ifconfig(cmd)
+    return ifaces
+
 
 def ping(host):
     '''
@@ -320,114 +331,3 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
-def isportopen(host, port):
-    '''
-    Return status of a port
-
-    CLI Example::
-
-        salt '*' network.isportopen 127.0.0.1 22
-    '''
-
-    if not (1 <= int(port) <= 65535):
-        return False
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    out = sock.connect_ex((_sanitize_host(host), int(port)))
-
-    return out
-
-def up(interface):
-    '''
-    Returns True if interface is up, otherwise returns False
-
-    CLI Example::
-
-        salt '*' network.up eth0
-    '''
-    data = interfaces().get(interface)
-    if data:
-        return data['up']
-    else:
-        return None
-
-def ipaddr(interface=None):
-    '''
-    Returns the IP address for a given interface
-
-    CLI Example::
-
-        salt '*' network.ipaddr eth0
-    '''
-    interfaces_dict = interfaces()
-
-    if not interface:
-        result_dict = {}
-
-        for interface, data in interfaces_dict.items():
-            if data.get('ipaddr'):
-                result_dict[interface] = data.get('ipaddr')
-
-        return result_dict
-
-    data = interfaces_dict.get(interface)
-    if data:
-        return data['ipaddr']
-    else:
-        return None
-
-def netmask(interface):
-    '''
-    Returns the netmask for a given interface
-
-    CLI Example::
-
-        salt '*' network.netmask eth0
-    '''
-    data = interfaces().get(interface)
-    if data:
-        return data['netmask']
-    else:
-        return None
-
-def hwaddr(interface):
-    '''
-    Returns the hwaddr for a given interface
-
-    CLI Example::
-
-        salt '*' network.hwaddr eth0
-    '''
-    data = interfaces().get(interface)
-    if data and 'hwaddr' in data:
-        return data['hwaddr']
-    else:
-        return None
-
-def host_to_ip(host):
-    '''
-    Returns the IP address of a given hostname
-
-    CLI Example::
-
-        salt '*' network.host_to_ip example.com
-    '''
-    try:
-        ip = socket.gethostbyname(host)
-    except Exception:
-        ip = None
-    return ip
-
-def ip_to_host(ip):
-    '''
-    Returns the hostname of a given IP
-
-    CLI Example::
-
-        salt '*' network.ip_to_host 8.8.8.8
-    '''
-    try:
-        hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception:
-        hostname = None
-    return hostname

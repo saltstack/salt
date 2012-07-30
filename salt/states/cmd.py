@@ -45,6 +45,8 @@ def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):
     '''
     Execute the onlyif logic and return data if the onlyif fails
     '''
+    ret = {}
+
     if group:
         try:
             egid = grp.getgrnam(group).gr_gid
@@ -111,6 +113,52 @@ def wait(name,
             'comment': ''}
 
 
+def wait_script(name,
+        source=None,
+        template=None,
+        onlyif=None,
+        unless=None,
+        cwd='/root',
+        user=None,
+        group=None,
+        shell=None,
+        env=None,
+        **kwargs):
+    '''
+    Download a script from a remote source and execute it only if a watch
+    statement calls it.
+
+    name
+        The command to execute, remember that the command will execute with the
+        path and permissions of the salt-minion.
+
+    onlyif
+        A command to run as a check, run the named command only if the command
+        passed to the ``onlyif`` option returns true
+
+    unless
+        A command to run as a check, only run the named command if the command
+        passed to the ``unless`` option returns false
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    user
+        The user name to run the command as
+
+    group
+        The group context to run the command as
+
+    shell
+        The shell to use for execution, defaults to the shell grain
+    '''
+    return {'name': name,
+            'changes': {},
+            'result': True,
+            'comment': ''}
+
+
 def run(name,
         onlyif=None,
         unless=None,
@@ -118,7 +166,8 @@ def run(name,
         user=None,
         group=None,
         shell=None,
-        env=()):
+        env=(),
+        **kwargs):
     '''
     Run a command if certain circumstances are met
 
@@ -199,6 +248,7 @@ def run(name,
     finally:
         os.setegid(pgid)
 
+
 def script(name,
         source=None,
         template=None,
@@ -247,7 +297,7 @@ def script(name,
     if not os.path.isdir(cwd):
         ret['comment'] = 'Desired working directory is not available'
         return ret
-    
+
     if env is None:
         env = kwargs.get('__env__', 'base')
 
@@ -277,7 +327,8 @@ def script(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Command "{0}" would have been executed'.format(name)
+            ret['comment'] = 'Command "{0}" would have been executed'
+            ret['comment'] = ret['comment'].format(name)
             return ret
 
         # Wow, we passed the test, run this sucker!
@@ -298,4 +349,11 @@ def script(name,
     finally:
         os.setegid(pgid)
 
-mod_watch = run
+def mod_watch(name, **kwargs):
+    '''
+    Execute a cmd function based on a watch call
+    '''
+    if kwargs['sfun'] == 'wait' or kwargs['sfun'] == 'run':
+        return run(name, **kwargs)
+    elif kwargs['sfun'] == 'wait_script' or kwargs['sfun'] == 'script':
+        return script(name, **kwargs)

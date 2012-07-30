@@ -24,40 +24,6 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-def hiera(conf, grains=None):
-    '''
-    Execute hiera and return the data
-    '''
-    if not isinstance(grains, dict):
-        grains = {}
-    cmd = 'hiera {0}'.format(conf)
-    for key, val in grains.items():
-        if isinstance(val, string_types):
-            cmd += ' {0}={1}'.format(key, val)
-    out = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            shell=True
-            ).communicate()[0]
-    return yaml.safe_load(out)
-
-
-def cmd_yaml(command, grains=None):
-    '''
-    Execute a command and read the output as YAML
-    '''
-    out = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            shell=True
-            ).communicate()[0]
-    return yaml.safe_load(out)
-
-
-ext_pillar = {'hiera': hiera,
-              'cmd_yaml': cmd_yaml}
-
-
 def get_pillar(opts, grains, id_, env=None):
     '''
     Return the correct pillar driver based on the file_client option
@@ -81,30 +47,21 @@ class RemotePillar(object):
         self.grains = grains
         self.id_ = id_
         self.serial = salt.payload.Serial(self.opts)
+        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
         self.auth = salt.crypt.SAuth(opts)
-        self.socket = self.__get_socket()
-
-    def __get_socket(self):
-        '''
-        Return the zeromq socket to use
-        '''
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        return socket
 
     def compile_pillar(self):
         '''
         Return the pillar data from the master
         '''
-        payload = {'enc': 'aes'}
         load = {'id': self.id_,
                 'grains': self.grains,
                 'env': self.opts['environment'],
                 'cmd': '_pillar'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        return self.auth.crypticle.loads(
+                self.sreq.send('aes', self.auth.crypticle.dumps(load), 3, 7200)
+                )
+
 
 
 class Pillar(object):
@@ -116,7 +73,9 @@ class Pillar(object):
         self.opts = self.__gen_opts(opts, grains, id_, env)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
-        self.rend = salt.loader.render(self.opts, {})
+        self.functions = salt.loader.minion_mods(self.opts)
+        self.rend = salt.loader.render(self.opts, self.functions)
+        self.ext_pillars = salt.loader.pillars(self.opts, self.functions)
 
     def __gen_opts(self, opts, grains, id_, env=None):
         '''
@@ -153,32 +112,38 @@ class Pillar(object):
         tops = collections.defaultdict(list)
         include = collections.defaultdict(list)
         done = collections.defaultdict(list)
+        errors = []
         # Gather initial top files
-        if self.opts['environment']:
-            tops[self.opts['environment']] = [
-                    compile_template(
-                        self.client.cache_file(
-                            self.opts['state_top'],
-                            self.opts['environment']
-                            ),
-                        self.rend,
-                        self.opts['renderer'],
-                        self.opts['environment']
-                        )
-                    ]
-        else:
-            for env in self._get_envs():
-                tops[env].append(
+        try:
+            if self.opts['environment']:
+                tops[self.opts['environment']] = [
                         compile_template(
                             self.client.cache_file(
                                 self.opts['state_top'],
-                                env
+                                self.opts['environment']
                                 ),
                             self.rend,
                             self.opts['renderer'],
-                            env=env
+                            self.opts['environment']
                             )
-                        )
+                        ]
+            else:
+                for env in self._get_envs():
+                    tops[env].append(
+                            compile_template(
+                                self.client.cache_file(
+                                    self.opts['state_top'],
+                                    env
+                                    ),
+                                self.rend,
+                                self.opts['renderer'],
+                                env=env
+                                )
+                            )
+        except Exception as exc:
+            errors.append(
+                    ('Rendering Primary Top file failed, render error:\n{0}'
+                        .format(exc)))
 
         # Search initial top files for includes
         for env, ctops in tops.items():
@@ -198,23 +163,28 @@ class Pillar(object):
                 for sls in states:
                     if sls in done[env]:
                         continue
-                    tops[env].append(
-                            compile_template(
-                                self.client.get_state(
-                                    sls,
-                                    env
-                                    ),
-                                self.rend,
-                                self.opts['renderer'],
-                                env=env
+                    try:
+                        tops[env].append(
+                                compile_template(
+                                    self.client.get_state(
+                                        sls,
+                                        env
+                                        ),
+                                    self.rend,
+                                    self.opts['renderer'],
+                                    env=env
+                                    )
                                 )
-                            )
+                    except Exception as exc:
+                        errors.append(
+                                ('Rendering Top file {0} failed, render error'
+                                 ':\n{1}').format(sls, exc))
                     done[env].append(sls)
             for env in pops:
                 if env in include:
                     include.pop(env)
 
-        return tops
+        return tops, errors
 
     def merge_tops(self, tops):
         '''
@@ -245,8 +215,8 @@ class Pillar(object):
         '''
         Returns the high data derived from the top file
         '''
-        tops = self.get_tops()
-        return self.merge_tops(tops)
+        tops, errors = self.get_tops()
+        return self.merge_tops(tops), errors
 
     def top_matches(self, top):
         '''
@@ -354,17 +324,19 @@ class Pillar(object):
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
-            if len(run) != 1:
-                log.critical('The "ext_pillar" option is malformed')
-                return {}
             for key, val in run.items():
-                if key not in ext_pillar:
+                if key not in self.ext_pillars:
                     err = ('Specified ext_pillar interface {0} is '
                            'unavailable').format(key)
                     log.critical(err)
-                    return {}
+                    continue
                 try:
-                    ext.update(ext_pillar[key](val, self.opts['grains']))
+                    if isinstance(val, dict):
+                        ext.update(self.ext_pillars[key](**val))
+                    elif isinstance(val, list):
+                        ext.update(self.ext_pillars[key](*val))
+                    else:
+                        ext.update(self.ext_pillars[key](val))
                 except Exception as e:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext
@@ -373,10 +345,13 @@ class Pillar(object):
         '''
         Render the pillar dta and return
         '''
-        top = self.get_top()
+        top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
         pillar.update(self.ext_pillar())
+        errors.extend(terrors)
         if errors:
-            return errors
+            for error in errors:
+                log.critical('Pillar render error: {0}'.format(error))
+            return {}
         return pillar

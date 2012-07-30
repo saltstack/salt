@@ -21,8 +21,11 @@ REQUIREMENT 2:
 
 Required python modules: MySQLdb
 '''
-
+# Import Python libs
+import time
 import logging
+
+# Import third party libs
 try:
     import MySQLdb
     import MySQLdb.cursors
@@ -40,6 +43,9 @@ def __virtual__():
     if any(k.startswith('mysql.') for k in list(__opts__)):
         if has_mysqldb:
             return 'mysql'
+    elif any(k.startswith('mysql.') for k in list(__pillar__)):
+        if has_mysqldb:
+            return 'mysql'
     return False
 
 
@@ -53,6 +59,7 @@ def __check_table(name, table):
     log.debug( results )
     return results
 
+
 def __repair_table(name, table):
     db = connect()
     cur = db.cursor(MySQLdb.cursors.DictCursor)
@@ -62,6 +69,7 @@ def __repair_table(name, table):
     results = cur.fetchall()
     log.debug( results )
     return results
+
 
 def __optimize_table(name, table):
     db = connect()
@@ -73,6 +81,7 @@ def __optimize_table(name, table):
     log.debug( results )
     return results
 
+
 def connect(**kwargs):
     '''
     wrap authentication credentials here
@@ -81,14 +90,17 @@ def connect(**kwargs):
     def _connarg(name, key=None):
         '''
         Add key to connargs, only if name exists in our
-        kwargs or as mysql.<name> in __opts__
+        kwargs or as mysql.<name> in __opts__ or __pillar__
+        Evaluate in said order - kwargs, opts then pillar
         '''
         if key is None:
             key = name
         if name in kwargs:
             connargs[key] = kwargs[name]
-        elif 'mysql.%s' % name in __opts__:
-            connargs[key] = __opts__['mysql.%s' % name]
+        elif 'mysql.{0}'.format(name) in __opts__:
+            connargs[key] = __opts__['mysql.{0}'.format(name)]
+        elif 'mysql.{0}'.format(name) in __pillar__:
+            connargs[key] = __pillar__['mysql.{0}'.format(name)]
 
     _connarg('host')
     _connarg('user')
@@ -100,6 +112,67 @@ def connect(**kwargs):
     db = MySQLdb.connect(**connargs)
     db.autocommit(True)
     return db
+
+
+def query(database, query):
+    '''
+    Run an arbitrary SQL query and return the results or
+    the number of affected rows.
+
+    CLI Examples::
+
+        salt '*' mysql.query mydb "UPDATE mytable set myfield=1 limit 1"
+        returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
+        'rows affected': 1L}
+
+        salt '*' mysql.query mydb "SELECT id,name,cash from users limit 3"
+        returns: {'columns': ('id', 'name', 'cash'),
+            'query time': {'human': '1.0ms', 'raw': '0.001'},
+            'results': ((1L, 'User 1', Decimal('110.000000')),
+                        (2L, 'User 2', Decimal('215.636756')),
+                        (3L, 'User 3', Decimal('0.040000'))),
+            'rows returned': 3L}
+
+        salt '*' mysql.query mydb "INSERT into users values (null,'user 4', 5)"
+        returns: {'query time': {'human': '25.6ms', 'raw': '0.02563'},
+           'rows affected': 1L}
+
+        salt '*' mysql.query mydb "DELETE from users where id = 4 limit 1"
+        returns: {'query time': {'human': '39.0ms', 'raw': '0.03899'},
+            'rows affected': 1L}
+
+    Jinja Example::
+
+        Run a query on "mydb" and use row 0, column 0's data.
+        {{ salt['mysql.query']("mydb","SELECT info from mytable limit 1")['results'][0][0] }}
+
+    '''
+    #Doesn't do anything about sql warnings, e.g. empty values on an insert.
+    #I don't think it handles multiple queries at once, so adding "commit" might not work.
+    ret = {}
+    db = connect(**{'db': database})
+    cur = db.cursor()
+    start = time.time()
+    affected = cur.execute(query)
+    log.debug('Using db: ' + database + ' to run query: ' + query)
+    results = cur.fetchall()
+    elapsed = (time.time() - start)
+    if elapsed < 0.200:
+        elapsed_h = str(round(elapsed * 1000, 1)) + 'ms'
+    else:
+        elapsed_h = str(round(elapsed, 2)) + 's'
+    ret['query time'] = {'human': elapsed_h, 'raw': str(round(elapsed, 5))}
+    if len(results) == 0:
+        ret['rows affected'] = affected
+        return ret
+    else:
+        ret['rows returned'] = affected
+        columns = ()
+        for column in cur.description:
+            columns += (column[0],)
+        ret['columns'] = columns
+        ret['results'] = results
+        return ret
 
 
 def status():
@@ -135,6 +208,7 @@ def version():
     cur.execute('SELECT VERSION()')
     row = cur.fetchone()
     return row
+
 
 def slave_lag():
     '''
@@ -199,9 +273,8 @@ def free_slave():
     else:
         return 'failed'
 
-'''
-Database related actions
-'''
+
+#Database related actions
 def db_list():
     '''
     Return a list of databases of a MySQL server using the output
@@ -221,6 +294,7 @@ def db_list():
 
     log.debug(ret)
     return ret
+
 
 def db_tables(name):
     '''
@@ -246,6 +320,7 @@ def db_tables(name):
         ret.append(table[0])
     log.debug( ret )
     return ret
+
 
 def db_exists(name):
     '''
@@ -287,6 +362,7 @@ def db_create(name):
         return True
     return False
 
+
 def db_remove(name):
     '''
     Removes a databases from the MySQL server.
@@ -318,9 +394,8 @@ def db_remove(name):
     log.info("Database '{0}' has not been removed".format(name,))
     return False
 
-'''
-User related actions
-'''
+
+# User related actions
 def user_list():
     '''
     Return a list of users on a MySQL server
@@ -336,8 +411,8 @@ def user_list():
     log.debug( results )
     return results
 
-def user_exists(user,
-                host='localhost'):
+
+def user_exists(user, host='localhost'):
     '''
     Checks if a user exists on the  MySQL server.
 
@@ -352,8 +427,8 @@ def user_exists(user,
     cur.execute( query )
     return cur.rowcount == 1
 
-def user_info(user,
-              host='localhost'):
+
+def user_info(user, host='localhost'):
     '''
     Get full info on a MySQL user
 
@@ -370,6 +445,7 @@ def user_info(user,
     log.debug( result )
     return result
 
+
 def user_create(user,
                 host='localhost',
                 password=None,
@@ -379,7 +455,7 @@ def user_create(user,
 
     CLI Examples::
 
-        salt '*' mysql.user_create 'username' 'hostname' 'password
+        salt '*' mysql.user_create 'username' 'hostname' 'password'
 
         salt '*' mysql.user_create 'username' 'hostname' password_hash='hash'
     '''
@@ -404,6 +480,7 @@ def user_create(user,
 
     log.info("User '{0}'@'{1}' is not created".format(user,host,))
     return False
+
 
 def user_chpass(user,
                 host='localhost',
@@ -437,6 +514,7 @@ def user_chpass(user,
     log.info("Password for user '{0}'@'{1}' is not changed".format(user,host,))
     return False
 
+
 def user_remove(user,
                 host='localhost'):
     '''
@@ -458,9 +536,8 @@ def user_remove(user,
     log.info("User '{0}'@'{1}' has NOT been removed".format(user,host,))
     return False
 
-'''
-Maintenance
-'''
+
+# Maintenance
 def db_check(name,
               table=None):
     '''
@@ -481,6 +558,7 @@ def db_check(name,
         log.info("Checking table '%s' in db '%s'..".format(name,table,))
         ret = __check_table(name, table)
     return ret
+
 
 def db_repair(name,
               table=None):
@@ -503,6 +581,7 @@ def db_repair(name,
         ret = __repair_table(name, table)
     return ret
 
+
 def db_optimize(name,
               table=None):
     '''
@@ -524,9 +603,8 @@ def db_optimize(name,
         ret = __optimize_table(name, table)
     return ret
 
-'''
-Grants
-'''
+
+# Grants
 def __grant_generate(grant,
                     database,
                     user,
@@ -535,6 +613,11 @@ def __grant_generate(grant,
                     escape=True):
     # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = grant.replace(',', ', ').upper()
+
+    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
+    # grant_exists and grant_add ALL work correctly
+    if grant == 'ALL':
+        grant = 'ALL PRIVILEGES'
 
     db_part = database.rpartition('.')
     db = db_part[0]
@@ -550,6 +633,7 @@ def __grant_generate(grant,
         query += " WITH GRANT OPTION"
     log.debug("Query generated: {0}".format(query,))
     return query
+
 
 def user_grants(user,
                 host='localhost'):
@@ -577,6 +661,7 @@ def user_grants(user,
     log.debug(ret)
     return ret
 
+
 def grant_exists(grant,
                 database,
                 user,
@@ -593,6 +678,7 @@ def grant_exists(grant,
 
     log.debug("Grant does not exist, or is perhaps not ordered properly?")
     return False
+
 
 def grant_add(grant,
               database,
@@ -623,11 +709,13 @@ def grant_add(grant,
     log.info("Grant '{0}' on '{1}' for user '{2}' has NOT been added".format(grant,database,user,))
     return False
 
+
 def grant_revoke(grant,
                  database,
                  user,
                  host='localhost',
-                 grant_option=False):
+                 grant_option=False,
+                 escape=True):
     '''
     Removes a grant from the MySQL server.
 

@@ -38,3 +38,8 @@ class HostTest(integration.ModuleCase):
         with open(HFILE) as fp_:
             output = fp_.read()
             self.assertIn('{0}\t\t{1}'.format(ip, name), output)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(HostTest)

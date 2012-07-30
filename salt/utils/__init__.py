@@ -12,6 +12,9 @@ import socket
 import logging
 import hashlib
 import datetime
+import tempfile
+import shutil
+import time
 from calendar import month_abbr as months
 
 # Import Salt libs
@@ -119,9 +122,15 @@ def daemonize():
                     0,
                     'runas',
                     executablepath,
-                    os.path.join(pypath[0], os.sep, pypath[1], 'Lib\\site-packages\\salt\\utils\\saltminionservice.py'),
+                    os.path.join(
+                        pypath[0],
+                        os.sep,
+                        pypath[1],
+                        'Lib\\site-packages\\salt\\utils\\saltminionservice.py'
+                    ),
                     os.path.join(pypath[0], os.sep, pypath[1]),
-                    0)
+                    0
+                )
                 sys.exit(0)
             else:
                 from . import saltminionservice
@@ -133,7 +142,11 @@ def daemonize():
                     status = win32serviceutil.QueryServiceStatus(servicename)
                 except win32service.error as details:
                     if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
-                        saltminionservice.instart(saltminionservice.MinionService, servicename, 'Salt Minion')
+                        saltminionservice.instart(
+                            saltminionservice.MinionService,
+                            servicename,
+                            'Salt Minion'
+                        )
                         sys.exit(0)
                 if status[1] == win32service.SERVICE_RUNNING:
                     win32serviceutil.StopServiceWithDeps(servicename)
@@ -166,10 +179,14 @@ def daemonize():
         log.error(msg.format(exc.errno, exc.strerror))
         sys.exit(1)
 
-    dev_null = open('/dev/null', 'rw')
-    os.dup2(dev_null.fileno(), sys.stdin.fileno())
-    os.dup2(dev_null.fileno(), sys.stdout.fileno())
-    os.dup2(dev_null.fileno(), sys.stderr.fileno())
+    # A normal daemonization redirects the process output to /dev/null.
+    # Unfortunately when a python multiprocess is called the output is
+    # not cleanly redirected and the parent process dies when the
+    # multiprocessing process attemps to access stdout or err.
+    #dev_null = open('/dev/null', 'rw')
+    #os.dup2(dev_null.fileno(), sys.stdin.fileno())
+    #os.dup2(dev_null.fileno(), sys.stdout.fileno())
+    #os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
 def daemonize_if(opts, **kwargs):
@@ -409,3 +426,42 @@ def check_or_die(command):
 
     if not __salt__['cmd.has_exec'](command):
         raise CommandNotFoundError(command)
+
+
+def copyfile(source, dest, backup_mode='', cachedir=''):
+    '''
+    Copy files from a source to a destination in an atomic way, and if
+    specified cache the file.
+    '''
+    if not os.path.isfile(source):
+        raise IOError(
+                '[Errno 2] No such file or directory: {0}'.format(source)
+                )
+    if not os.path.isdir(os.path.dirname(dest)):
+        raise IOError(
+                '[Errno 2] No such file or directory: {0}'.format(source)
+                )
+    bname = os.path.basename(dest)
+    dname = os.path.dirname(os.path.abspath(dest))
+    fd_, tgt = tempfile.mkstemp(prefix=bname, dir=dname)
+    os.close(fd_)
+    shutil.copyfile(source, tgt)
+    bkroot = ''
+    if cachedir:
+        bkroot = os.path.join(cachedir, 'file_backup')
+    if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
+        msecs = str(int(time.time() * 1000000))[-6:]
+        stamp = time.asctime().replace(' ', '_')
+        stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+        bkpath = os.path.join(
+                bkroot,
+                dname[1:],
+                '{0}_{1}'.format(bname, stamp)
+                )
+        if not os.path.isdir(os.path.dirname(bkpath)):
+            os.makedirs(os.path.dirname(bkpath))
+        shutil.copyfile(source, bkpath)
+    if backup_mode == 'master' or backup_mode == 'both' and bkroot:
+        # TODO, backup to master
+        pass
+    shutil.move(tgt, dest)

@@ -1,11 +1,5 @@
-# Import python libs
 import os
-import sys
-
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class CMDModuleTest(integration.ModuleCase):
@@ -95,10 +89,26 @@ sys.stdout.write('cheese')
                 'cheese'
                 )
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(CMDModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+    def test_quotes(self):
+        '''
+        cmd.run with quoted command
+        '''
+        cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
+        expected_result = 'SELECT * FROM foo WHERE bar="baz"'
+        result = self.run_function('cmd.run_stdout', [cmd]).strip()
+        self.assertEqual(result, expected_result)
+
+    def test_quotes_runas(self):
+        '''
+        cmd.run with quoted command
+        '''
+        cmd = '''echo 'SELECT * FROM foo WHERE bar="baz"' '''
+        expected_result = 'SELECT * FROM foo WHERE bar="baz"'
+        result = self.run_function('cmd.run_stdout', [cmd],
+                                   runas=os.getlogin()).strip()
+        self.assertEqual(result, expected_result)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(CMDModuleTest)

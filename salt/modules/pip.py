@@ -194,19 +194,19 @@ def install(pkgs=None,
     if find_links:
         if not find_links.startswith("http://"):
             raise Exception("'%s' must be a valid url" % find_links)
-        cmd = '{cmd} --find_links={find_links}'.format(
+        cmd = '{cmd} --find-links={find_links}'.format(
             cmd=cmd, find_links=find_links)
 
     if index_url:
         if not index_url.startswith("http://"):
             raise Exception("'%s' must be a valid url" % index_url)
-        cmd = '{cmd} --index_url="{index_url}" '.format(
+        cmd = '{cmd} --index-url="{index_url}" '.format(
             cmd=cmd, index_url=index_url)
 
     if extra_index_url:
         if not extra_index_url.startswith("http://"):
             raise Exception("'%s' must be a valid url" % extra_index_url)
-        cmd = '{cmd} --extra_index_url="{extra_index_url}" '.format(
+        cmd = '{cmd} --extra-index_url="{extra_index_url}" '.format(
             cmd=cmd, extra_index_url=extra_index_url)
 
     if no_index:

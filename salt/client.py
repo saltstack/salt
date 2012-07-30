@@ -34,6 +34,7 @@ import sys
 import glob
 import time
 import getpass
+import fnmatch
 
 # Import zmq modules
 import zmq
@@ -158,6 +159,86 @@ class LocalClient(object):
     def _check_grain_minions(self, expr):
         '''
         Return the minions found by looking via a list
+        '''
+        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if not id_ in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                grains = self.serial.load(open(datap)).get('grains')
+                comps = expr.split(':')
+                if len(comps) < 2:
+                    continue
+                if comps[0] not in grains:
+                    minions.remove(id_)
+                if isinstance(grains[comps[0]], list):
+                    # We are matching a single component to a single list member
+                    found = False
+                    for member in grains[comps[0]]:
+                        if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
+                            found = True
+                    if found:
+                        continue
+                    minions.remove(id_)
+                    continue
+                if fnmatch.fnmatch(
+                    str(grains[comps[0]]).lower(),
+                    comps[1].lower(),
+                    ):
+                    continue
+                else:
+                    minions.remove(id_)
+        return list(minions)
+
+    def _check_grain_pcre_minions(self, expr):
+        '''
+        Return the minions found by looking via a list
+        '''
+        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if not id_ in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    continue
+                grains = self.serial.load(open(datap)).get('grains')
+                comps = expr.split(':')
+                if len(comps) < 2:
+                    continue
+                if comps[0] not in grains:
+                    minions.remove(id_)
+                if isinstance(grains[comps[0]], list):
+                    # We are matching a single component to a single list member
+                    found = False
+                    for member in grains[comps[0]]:
+                        if re.match(comps[1].lower(), str(member).lower()):
+                            found = True
+                    if found:
+                        continue
+                    minions.remove(id_)
+                    continue
+                if re.match(
+                    comps[1].lower(),
+                    str(grains[comps[0]]).lower()
+                    ):
+                    continue
+                else:
+                    minions.remove(id_)
+        return list(minions)
+
+    def _all_minions(self, expr=None):
+        '''
+        Return a list of all minions that have auth'd
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
 
@@ -347,6 +428,7 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
+        verbose=False,
         kwarg=None):
         '''
         Execute a salt command and return
@@ -371,8 +453,12 @@ class LocalClient(object):
             return {}
         elif not pub_data['jid']:
             return {}
-        return (self.get_full_returns(pub_data['jid'],
-                pub_data['minions'], timeout))
+        return (self.get_cli_static_event_returns(pub_data['jid'],
+                    pub_data['minions'],
+                    timeout,
+                    tgt,
+                    expr_form,
+                    verbose))
 
     def get_cli_returns(
             self,
@@ -387,8 +473,9 @@ class LocalClient(object):
         a specified jid, it returns all of the information for the jid
         '''
         if verbose:
-            print('Executing job with jid {0}'.format(jid))
-            print('------------------------------------\n')
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
         fret = {}
@@ -627,7 +714,7 @@ class LocalClient(object):
                 return ret
             time.sleep(0.02)
 
-    def get_cli_event_returns(
+    def get_cli_static_event_returns(
             self,
             jid,
             minions,
@@ -639,8 +726,77 @@ class LocalClient(object):
         Get the returns for the command line interface via the event system
         '''
         if verbose:
-            print('Executing job with jid {0}'.format(jid))
-            print('------------------------------------\n')
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
+        if timeout is None:
+            timeout = self.opts['timeout']
+        inc_timeout = timeout
+        jid_dir = salt.utils.jid_dir(
+                jid,
+                self.opts['cachedir'],
+                self.opts['hash_type']
+                )
+        start = int(time.time())
+        found = set()
+        ret = {}
+        wtag = os.path.join(jid_dir, 'wtag*')
+        # Check to see if the jid is real, if not return the empty dict
+        if not os.path.isdir(jid_dir):
+            return ret_
+        # Wait for the hosts to check in
+        while True:
+            raw = self.event.get_event(timeout, jid)
+            if not raw is None:
+                found.add(raw['id'])
+                ret[raw['id']] = {'ret': raw['return']}
+                if 'out' in raw:
+                    ret[raw['id']]['out'] = raw['out']
+                if len(found) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    break
+                continue
+            # Then event system timeout was reached and nothing was returned
+            if len(found) >= len(minions):
+                # All minions have returned, break out of the loop
+                break
+            if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
+                # The timeout +1 has not been reached and there is still a
+                # write tag for the syndic
+                continue
+            if int(time.time()) > start + timeout:
+                if verbose:
+                    if tgt_type == 'glob' or tgt_type == 'pcre':
+                        if not len(found) >= len(minions):
+                            print('\nThe following minions did not return:')
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                print(minion)
+                break
+            time.sleep(0.01)
+        return ret
+
+    def get_cli_event_returns(
+            self,
+            jid,
+            minions,
+            timeout=None,
+            tgt='*',
+            tgt_type='glob',
+            verbose=False):
+        '''
+        Get the returns for the command line interface via the event system
+        '''
+        if not isinstance(minions, set):
+            if isinstance(minions, basestring):
+                minions = set([minions])
+            elif isinstance(minions, (list, tuple)):
+                minions = set(list(minions))
+
+        if verbose:
+            msg = 'Executing job with jid {0}'.format(jid)
+            print(msg)
+            print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
         inc_timeout = timeout
@@ -664,6 +820,9 @@ class LocalClient(object):
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
+                if len(found) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found) >= len(minions):
@@ -771,10 +930,10 @@ class LocalClient(object):
                 'pcre': self._check_pcre_minions,
                 'list': self._check_list_minions,
                 'grain': self._check_grain_minions,
-                'grain_pcre': self._check_grain_minions,
-                'exsel': self._check_grain_minions,
-                'pillar': self._check_grain_minions,
-                'compound': self._check_grain_minions,
+                'grain_pcre': self._check_grain_pcre_minions,
+                'exsel': self._all_minions,
+                'pillar': self._all_minions,
+                'compound': self._all_minions,
                 }[expr_form](expr)
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
@@ -860,19 +1019,10 @@ class LocalClient(object):
         if self.opts['order_masters']:
             payload_kwargs['to'] = timeout
 
-        package = salt.payload.format_payload('clear', **payload_kwargs)
-
-        # Prep zmq
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.linger = 0
-        socket.connect(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(
-                    self.opts
-                    )
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
-        socket.send(package)
-        payload = self.serial.loads(socket.recv())
+        payload = sreq.send('clear', payload_kwargs)
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 

@@ -86,13 +86,13 @@ def getval(key):
     store = load()
     return store[key]
 
-def getvals(keys):
+def getvals(*keys):
     '''
     Get values from the minion datastore
 
     CLI Example::
 
-        salt '*' data.getvals <key>
+        salt '*' data.getvals <key> [<key> ...]
     '''
     store = load()
     ret = []

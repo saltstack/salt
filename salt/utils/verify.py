@@ -64,20 +64,30 @@ def verify_socket(interface, pub_port, ret_port):
     '''
     Attempt to bind to the sockets to verify that they are available
     '''
-    result = False
+    result = None
+
+    pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        pubsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         pubsock.bind((interface, int(pub_port)))
         pubsock.close()
-        retsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         retsock.bind((interface, int(ret_port)))
         retsock.close()
-        return True
+        result = True
     except Exception:
-        return False
+        log.warn("Unable to bind socket, this might not be a problem."
+                 " Is there another salt-master running?")
+        result = False
+    finally:
+        pubsock.close()
+        retsock.close()
+
+    return result
 
 
-def verify_env(dirs, user):
+def verify_env(dirs, user, permissive=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -86,10 +96,13 @@ def verify_env(dirs, user):
         if os.environ['os'].startswith('Windows'):
             return True
     import pwd  # after confirming not running Windows
+    import grp
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
         gid = pwnam[3]
+        groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
@@ -105,15 +118,21 @@ def verify_env(dirs, user):
                     os.chown(dir_, uid, gid)
                 os.umask(cumask)
             except OSError as e:
-                sys.stderr.write('Failed to create directory path "{0}" - {1}\n'.format(dir_, e))
+                msg = 'Failed to create directory path "{0}" - {1}\n'
+                sys.stderr.write(msg.format(dir_, e))
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
         if os.getuid() == 0:
             fmode = os.stat(dir_)
             if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                # chown the file for the new user
-                os.chown(dir_, uid, gid)
+                if permissive and fmode.st_gid in groups:
+                    # Allow the directory to be owned by any group root
+                    # belongs to if we say it's ok to be permissive
+                    pass
+                else:
+                    # chown the file for the new user
+                    os.chown(dir_, uid, gid)
             for root, dirs, files in os.walk(dir_):
                 if 'jobs' in root:
                     continue
@@ -124,14 +143,20 @@ def verify_env(dirs, user):
                     except (IOError, OSError):
                         pass
                     if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                        # chown the file for the new user
-                        os.chown(path, uid, gid)
+                        if permissive and fmode.st_gid in groups:
+                            pass
+                        else:
+                          # chown the file for the new user
+                          os.chown(path, uid, gid)
                 for name in dirs:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
                     if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                        # chown the file for the new user
-                        os.chown(path, uid, gid)
+                        if permissive and fmode.st_gid in groups:
+                            pass
+                        else:
+                           # chown the file for the new user
+                           os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
@@ -143,7 +168,8 @@ def verify_env(dirs, user):
             if os.access(dir_, os.W_OK):
                 os.chmod(dir_, 448)
             else:
-                msg = 'Unable to securely set the permissions of "{0}".'.format(dir_)
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
                 log.critical(msg)
     # Run the extra verification checks
     zmq_version()

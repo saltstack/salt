@@ -8,6 +8,7 @@ Full list of builtin states
 
 .. autosummary::
     :toctree:
+    :template: autosummary.rst.tmpl
 
     alias
     cmd
@@ -18,14 +19,17 @@ Full list of builtin states
     group
     host
     kmod
+    module
     mount
     mysql_database
     mysql_grants
     mysql_user
     network
     pip
+    pkgng
     pkg
     postgres_database
+    postgres_user
     rvm
     selinux
     service

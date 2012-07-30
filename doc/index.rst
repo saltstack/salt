@@ -13,7 +13,7 @@ Get started with Salt
     A list of `presentations and interviews on Salt`_ (including the FLOSS
     Weekly interview).
 
-.. _`presentations and interviews on Salt`: http://saltstack.org/presentations/
+.. _`presentations and interviews on Salt`: http://saltstack.org/learn/
 
 Salt is an open source tool to manage your infrastructure. Easy enough to get
 running in minutes and fast enough to manage tens of thousands of servers (and
@@ -84,7 +84,7 @@ Targeting is specifying which minions should execute commands or manage server
 configuration.
 
 :doc:`Globbing and regex </topics/targeting/globbing>`
-    Match minions using globbing and regular expresssions.
+    Match minions using globing and regular expressions.
 
 :doc:`Grains </topics/targeting/grains>`
     Match minions using bits of static information about the minion such as
@@ -186,7 +186,10 @@ Salt is many splendid things.
     comes great responsibility.
 
 :doc:`Running Salt without root <topics/nonroot>`
+    The Salt daemons can be run as an unprivileged user.
+
 :doc:`Firewall settings and Salt <topics/tutorials/firewall>`
+    A tutorial covering how to properly firewall a Salt Master server.
 
 :doc:`Network topology <ref/topology>`
     At it's core, Salt is a highly scalable communication layer built on

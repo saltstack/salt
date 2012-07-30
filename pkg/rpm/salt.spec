@@ -8,8 +8,8 @@
 %global python_sitearch /usr/local/lib/python2.7/site-packages
 
 Name: salt
-Version: 0.10.1dev
-Release: 4talkos
+Version: 0.10.2
+Release: 1talkos
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -177,6 +177,9 @@ fi
 %changelog
 * Wed May 9 2012 Mike Chesnut <mikec@talksum.com> - 0.9.9dev-1talkos
 - customizing for TalkOS environment (package names, prereqs, initscripts)
+
+* Sat Jun 16 2012 Clint Savage <herlo1@gmail.com> - 0.10.0-1
+- Moved to upstream release 0.10.0
 
 * Sat Apr 28 2012 Clint Savage <herlo1@gmail.com> - 0.9.9.1-1
 - Moved to upstream release 0.9.9.1

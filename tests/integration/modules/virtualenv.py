@@ -1,12 +1,7 @@
 # Import python libs
-import sys
 import os
 import tempfile
-
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class VirtualenvModuleTest(integration.ModuleCase):
@@ -17,7 +12,7 @@ class VirtualenvModuleTest(integration.ModuleCase):
         super(VirtualenvModuleTest, self).setUp()
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
-            self.skipTest("virtualenv not installed")
+            self.skipTest('virtualenv not installed')
         self.venv_test_dir = tempfile.mkdtemp()
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
@@ -57,10 +52,7 @@ class VirtualenvModuleTest(integration.ModuleCase):
     def tearDown(self):
         self.run_function('file.remove', [self.venv_test_dir])
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(VirtualenvModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(VirtualenvModuleTest)

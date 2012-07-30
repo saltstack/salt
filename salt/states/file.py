@@ -87,12 +87,28 @@ import tempfile
 import copy
 
 # Import Salt libs
+import salt.utils
 import salt.utils.templates
 from salt._compat import string_types, urlparse
 
 logger = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
+
+
+def _backup_mode(backup):
+    '''
+    Return the backup mode
+    '''
+    if backup:
+        return backup
+    if 'backup_mode' in __opts__:
+        return __opts__['backup_mode']
+    if 'master.backup_mode' in __pillar__:
+        return __pillar__['master.backup_mode']
+    id_conf = 'master.{0}.backup_mode'.format(__grains__['id'])
+    if id_conf in __pillar__:
+        return __pillar__[id_conf]
 
 
 def __manage_mode(mode):
@@ -112,7 +128,7 @@ def __clean_tmp(sfn):
     '''
     Clean out a template temp file
     '''
-    if not sfn.startswith(__opts__['cachedir']):
+    if sfn.startswith(tempfile.tempdir):
         # Only clean up files that exist
         if os.path.exists(sfn):
             os.remove(sfn)
@@ -130,7 +146,18 @@ def _makedirs(path, user=None, group=None, mode=None):
         # makedirs=True, make sure that any created dirs
         # are created with the same user  and  group  to
         # follow the principal of least surprise method.
-        _check_perms(directory, None, user, group, mode)
+        nmode = ''
+        if mode:
+            for char in mode:
+                if char == '0':
+                    nmode += char
+                elif int(char) % 2 == 1:
+                    # Is executable, continue
+                    nmode += char
+                else:
+                    # The mode is even, it need an executable bit
+                    nmode += str(int(char) + 1)
+        _check_perms(directory, None, user, group, nmode)
 
 
 def _is_bin(path):
@@ -452,10 +479,12 @@ def _check_recurse(
             tchange = _check_file_meta(
                     dest,
                     fn_,
+                    None,
                     source_sum,
                     user,
                     group,
-                    file_mode)
+                    file_mode,
+                    env)
             if tchange:
                 changes[name] = tchange
             keep.add(dest)
@@ -557,7 +586,7 @@ def _check_managed(
             )
     if comment:
         return False, comment
-    changes = _check_file_meta(name, sfn, source_sum, user, group, mode)
+    changes = _check_file_meta(name, sfn, source, source_sum, user, group, mode, env)
     if changes:
         comment = 'The following values are set to be changed:\n'
         for key, val in changes.items():
@@ -574,7 +603,7 @@ def _check_dir_meta(
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name, source_sum['hash_type'])
+    stats = __salt__['file.stats'](name)
     changes = {}
     if not user is None and user != stats['user']:
         changes['user'] = user
@@ -596,10 +625,12 @@ def _check_dir_meta(
 def _check_file_meta(
         name,
         sfn,
+        source,
         source_sum,
         user,
         group,
-        mode):
+        mode,
+        env):
     '''
     Check for the changes in the file metadata
     '''
@@ -612,6 +643,8 @@ def _check_file_meta(
         return changes
     if 'hsum' in source_sum:
         if source_sum['hsum'] != stats['sum']:
+            if not sfn and source:
+                sfn = __salt__['cp.cache_file'](source, env)
             if sfn:
                 with nested(open(sfn, 'rb'), open(name, 'rb')) as (src, name_):
                     slines = src.readlines()
@@ -620,7 +653,6 @@ def _check_file_meta(
                         ''.join(difflib.unified_diff(nlines, slines))
                         )
             else:
-                # TODO Evaluate diff without downloading file from master
                 changes['sum'] = 'Checksum differs'
     if not user is None and user != stats['user']:
         changes['user'] = user
@@ -801,6 +833,7 @@ def managed(name,
         replace=True,
         defaults=None,
         env=None,
+        backup='',
         **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -857,6 +890,9 @@ def managed(name,
 
     defaults
         Default context passed to the template.
+
+    backup
+        Overrides the default backup mode for this specific file
     '''
     # Initial set up
     mode = __manage_mode(mode)
@@ -965,7 +1001,11 @@ def managed(name,
                                                                     slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
-                shutil.copyfile(sfn, name)
+                salt.utils.copyfile(
+                        sfn,
+                        name,
+                        _backup_mode(backup),
+                        __opts__['cachedir'])
             except IOError:
                 __clean_tmp(sfn)
                 return _error(
@@ -1033,14 +1073,20 @@ def managed(name,
                     ret['changes']['new'] = 'file {0} created'.format(name)
                     ret['comment'] = 'Empty file'
                 else:
-                    return _error(ret, 'Empty file {0} not created'.format(name))
+                    return _error(
+                        ret, 'Empty file {0} not created'.format(name)
+                    )
 
             if mode:
                 os.umask(current_umask)
 
         # Now copy the file contents if there is a source file
         if sfn:
-            shutil.copyfile(sfn, name)
+            salt.utils.copyfile(
+                    sfn,
+                    name,
+                    _backup_mode(backup),
+                    __opts__['cachedir'])
             __clean_tmp(sfn)
 
         # Check and set the permissions if necessary
@@ -1248,6 +1294,7 @@ def recurse(name,
         file_mode=None,
         env=None,
         include_empty=False,
+        backup='',
         **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -1358,7 +1405,11 @@ def recurse(name,
             if srch != dsth:
                 # The downloaded file differes, replace!
                 # FIXME: no metadata (ownership, permissions) available
-                shutil.copyfile(fn_, dest)
+                salt.utils.copyfile(
+                        fn_,
+                        dest,
+                        _backup_mode(backup),
+                        __opts__['cachedir'])
                 ret['changes'][dest] = 'updated'
         elif os.path.isdir(dest) and include_empty:
             #check perms
@@ -1370,11 +1421,18 @@ def recurse(name,
             keep.add(dest)
             if os.path.isdir(fn_) and include_empty:
                 #create empty dir
-                os.mkdir(dest, dir_mode)
+                os.mkdir(dest)
+
+                if dir_mode:
+                    __salt__['file.set_mode'](dest, dir_mode)
             else:
                 # The destination file is not present, make it
                 # FIXME: no metadata (ownership, permissions) available
-                shutil.copyfile(fn_, dest)
+                salt.utils.copyfile(
+                        fn_,
+                        dest,
+                        _backup_mode(backup),
+                        __opts__['cachedir'])
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:

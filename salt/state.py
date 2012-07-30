@@ -1,7 +1,7 @@
 '''
-The module used to execute states in salt. A state is unlike a module execution
-in that instead of just executing a command it ensure that a certain state is
-present on the system.
+The module used to execute states in salt. A state is unlike a module
+execution in that instead of just executing a command it ensure that a
+certain state is present on the system.
 
 The data sent to the state calls is as follows:
     { 'state': '<state module name>',
@@ -32,6 +32,7 @@ import salt.fileclient
 from salt._compat import string_types, callable
 
 from salt.template import compile_template, compile_template_str
+from salt.exceptions import SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
 
@@ -980,6 +981,7 @@ class State(object):
         elif status == 'change':
             ret = self.call(low)
             if not ret['changes']:
+                low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
                 ret = self.call(low)
             running[tag] = ret
@@ -1585,25 +1587,21 @@ class RemoteHighState(object):
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         self.auth = salt.crypt.SAuth(opts)
-        self.socket = self.__get_socket()
-
-    def __get_socket(self):
-        '''
-        Return the zeromq socket to use
-        '''
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(self.opts['master_uri'])
-        return socket
+        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
 
     def compile_master(self):
         '''
         Return the state data from the master
         '''
-        payload = {'enc': 'aes'}
         load = {'grains': self.grains,
                 'opts': self.opts,
                 'cmd': '_master_state'}
-        payload['load'] = self.auth.crypticle.dumps(load)
-        self.socket.send(self.serial.dumps(payload))
-        return self.auth.crypticle.loads(self.serial.loads(self.socket.recv()))
+        try:
+            return self.auth.crypticle.loads(self.sreq.send(
+                    'aes',
+                    self.auth.crypticle.dumps(load),
+                    3,
+                    72000))
+        except SaltReqTimeoutError:
+            return {}
+

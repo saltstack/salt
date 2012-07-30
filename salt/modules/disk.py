@@ -19,7 +19,7 @@ def __virtual__():
         return False
     return 'disk'
 
-def usage():
+def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
@@ -33,6 +33,7 @@ def usage():
         cmd = 'df -kP'
     else:
         cmd = 'df'
+    cmd = cmd + ' -' + args
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:
@@ -54,7 +55,7 @@ def usage():
             ret = {}
     return ret
 
-def inodeusage():
+def inodeusage(args=None):
     '''
     Return inode usage information for volumes mounted on this minion
 
@@ -63,6 +64,7 @@ def inodeusage():
         salt '*' disk.inodeusage
     '''
     cmd = 'df -i'
+    cmd = cmd + ' -' + args
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:

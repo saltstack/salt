@@ -1,10 +1,4 @@
-# Import python libs
-import sys
-
-# Import salt libs
-from saltunittest import TestLoader, TextTestRunner
 import integration
-from integration import TestDaemon
 
 
 class SysModuleTest(integration.ModuleCase):
@@ -27,10 +21,7 @@ class SysModuleTest(integration.ModuleCase):
         self.assertTrue('hosts' in mods)
         self.assertTrue('pkg' in mods)
 
-if __name__ == "__main__":
-    loader = TestLoader()
-    tests = loader.loadTestsFromTestCase(SysModuleTest)
-    print('Setting up Salt daemons to execute tests')
-    with TestDaemon():
-        runner = TextTestRunner(verbosity=1).run(tests)
-        sys.exit(runner.wasSuccessful())
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(SysModuleTest)

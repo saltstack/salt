@@ -65,7 +65,9 @@ interval:
         m: minute
         s: second
 
-print-opts: a comma and/or space separated list of one or more of the following:
+print-opts: a comma and/or space separated list of one or more of
+the following:
+
     group: group name
     md5:   MD5 digest of file contents
     mode:  file permissions (as integer)
@@ -459,7 +461,9 @@ class PrintOption(Option):
             elif arg == 'size':
                 result.append(fstat[stat.ST_SIZE])
             elif arg == 'type':
-                result.append(_FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?'))
+                result.append(
+                    _FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?')
+                )
             elif arg == 'mode':
                 result.append(fstat[stat.ST_MODE])
             elif arg == 'mtime':

@@ -8,8 +8,10 @@ import os
 import re
 import time
 import errno
+import fnmatch
 import signal
 import shutil
+import stat
 import logging
 import hashlib
 import tempfile
@@ -182,6 +184,13 @@ class Master(SMaster):
             clean_proc(reqserv.eventpublisher)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
+            if os.path.isfile(self.opts['pidfile']):
+                try:
+                    os.remove(self.opts['pidfile'])
+                except (IOError, OSError):
+                    log.warn('Failed to remove master pidfile: {0}'.format(
+                        self.opts['pidfile']
+                        ))
             raise MasterExit
 
         signal.signal(signal.SIGTERM, sigterm_clean)
@@ -218,7 +227,7 @@ class Publisher(multiprocessing.Process):
         except AttributeError:
             pub_sock.setsockopt(zmq.SNDHWM, 1)
             pub_sock.setsockopt(zmq.RCVHWM, 1)
-        pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
+        pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
         pull_uri = 'ipc://{0}'.format(
@@ -261,7 +270,7 @@ class ReqServer(object):
         self.master_key = mkey
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
-        self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
+        self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
         self.clients = self.context.socket(zmq.ROUTER)
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
@@ -386,14 +395,14 @@ class MWorker(multiprocessing.Process):
         '''
         Take care of a cleartext command
         '''
-        log.info('Clear payload received with command %(cmd)s', load)
+        log.info('Clear payload received with command {cmd}'.format(**load))
         return getattr(self.clear_funcs, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
         Handle a command sent via a public key pair
         '''
-        log.info('Pubkey payload received with command %(cmd)s', load)
+        log.info('Pubkey payload received with command {cmd}'.format(**load))
 
     def _handle_aes(self, load):
         '''
@@ -608,7 +617,19 @@ class AESFuncs(object):
                 load['grains'],
                 load['id'],
                 load['env'])
-        return pillar.compile_pillar()
+        data = pillar.compile_pillar()
+        if self.opts.get('minion_data_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                os.makedirs(cdir)
+            datap = os.path.join(cdir, 'data.p')
+            with open(datap, 'w+') as fp_:
+                fp_.write(
+                        self.serial.dumps(
+                            {'grains': load['grains'],
+                             'pillar': data})
+                            )
+        return data
 
     def _master_state(self, load):
         '''
@@ -640,7 +661,7 @@ class AESFuncs(object):
         # If the return data is invalid, just ignore it
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
-        log.info('Got return from {0[id]} for job {0[jid]}'.format(load))
+        log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])
         if not self.opts['job_cache']:
             return
@@ -652,7 +673,7 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: %(jid)s', load
+                'that is not present on the master: {jid}'.format(**load)
             )
             return False
         hn_dir = os.path.join(jid_dir, load['id'])
@@ -690,7 +711,7 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: %(jid)s', load
+                'that is not present on the master: {jid}'.format(**load)
             )
             return False
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
@@ -754,7 +775,7 @@ class AESFuncs(object):
         opts.update(self.opts)
         runner = salt.runner.Runner(opts)
         return runner.run()
-        
+
 
     def minion_publish(self, clear_load):
         '''
@@ -872,8 +893,8 @@ class AESFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
-                  ' "{0[arg]}", target: "{0[tgt]}"').format(load))
+        log.info(('Publishing minion job: #{jid}, func: "{fun}", args:'
+                  ' "{arg}", target: "{tgt}"').format(**load))
         pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method based on the form data sent
         if 'form' in clear_load:
@@ -957,7 +978,7 @@ class ClearFuncs(object):
                 0,
                 'list'
                 )
-        log.debug('Cluster distributed: %s', ret)
+        log.debug('Cluster distributed: {0}'.format(ret))
 
     def _cluster_load(self):
         '''
@@ -979,6 +1000,93 @@ class ClearFuncs(object):
                 master_pem,
                 self.opts['conf_file']]
 
+    def _check_permissions(self, filename):
+        '''
+        check if the specified filename has correct permissions
+        '''
+        if 'os' in os.environ:
+            if os.environ['os'].startswith('Windows'):
+                return True
+
+        import pwd  # after confirming not running Windows
+        import grp
+        try:
+            user = self.opts['user']
+            pwnam = pwd.getpwnam(user)
+            uid = pwnam[2]
+            gid = pwnam[3]
+            groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+        except KeyError:
+            err = ('Failed to determine groups for user '
+            '{0}. The user is not available.\n').format(user)
+            log.error(err)
+            return False
+
+        fmode = os.stat(filename)
+
+        if os.getuid() == 0:
+            if not fmode.st_uid == uid or not fmode.st_gid == gid:
+                if self.opts.get('permissive_pki_access', False) \
+                  and fmode.st_gid in groups:
+                    return True
+        else:
+            if stat.S_IWOTH & fmode.st_mode:
+                # don't allow others to write to the file
+                return False
+
+            # check group flags
+            if self.opts.get('permissive_pki_access', False) \
+              and stat.S_IWGRP & fmode.st_mode:
+                return True
+            elif stat.S_IWGRP & fmode.st_mode:
+                return False
+
+            # check if writable by group or other
+            if not (stat.S_IWGRP & fmode.st_mode or
+              stat.S_IWOTH & fmode.st_mode):
+                return True
+
+        return False
+
+    def _check_autosign(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be signed.
+        '''
+
+        if self.opts['auto_accept']:
+            return True
+
+        autosign_file = self.opts.get("autosign_file", None)
+
+        if not autosign_file or not os.path.exists(autosign_file):
+            return False
+
+        if not self._check_permissions(autosign_file):
+            message = "Wrong permissions for {0}, ignoring content"
+            log.warn(message.format(autosign_file))
+            return False
+
+        with open(autosign_file, 'r') as fp_:
+            for line in fp_:
+                line = line.strip()
+
+                if line.startswith('#'):
+                    continue
+
+                if line == keyid:
+                    return True
+                if fnmatch.fnmatch(keyid, line):
+                    return True
+                try:
+                    if re.match(line, keyid):
+                        return True
+                except re.error:
+                    message = "{0} is not a valid regular expression, ignoring line in {1}"
+                    log.warn(message.format(line, autosign_file))
+                    continue
+
+        return False
+
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the aes key
@@ -993,7 +1101,7 @@ class ClearFuncs(object):
         # 3. make an rsa key with the pub key
         # 4. encrypt the aes key as an encrypted salt.payload
         # 5. package the return and return it
-        log.info('Authentication request from %(id)s', load)
+        log.info('Authentication request from {id}'.format(**load))
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['id'])
@@ -1011,9 +1119,9 @@ class ClearFuncs(object):
             # The key has been accepted check it
             if not open(pubfn, 'r').read() == load['pub']:
                 log.error(
-                    'Authentication attempt from %(id)s failed, the public '
+                    'Authentication attempt from {id} failed, the public '
                     'keys did not match. This may be an attempt to compromise '
-                    'the Salt cluster.', load
+                    'the Salt cluster.'.format(**load)
                 )
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
@@ -1024,7 +1132,7 @@ class ClearFuncs(object):
                 return ret
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for %(id)s', load)
+            log.info('Public key rejected for {id}'.format(**load))
             ret = {'enc': 'clear',
                    'load': {'ret': False}}
             eload = {'result': False,
@@ -1033,9 +1141,9 @@ class ClearFuncs(object):
             self.event.fire_event(eload, 'auth')
             return ret
         elif not os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
+                and not self._check_autosign(load['id']):
             # This is a new key, stick it in pre
-            log.info('New public key placed in pending for %(id)s', load)
+            log.info('New public key placed in pending for {id}'.format(**load))
             with open(pubfn_pend, 'w+') as fp_:
                 fp_.write(load['pub'])
             ret = {'enc': 'clear',
@@ -1047,14 +1155,14 @@ class ClearFuncs(object):
             self.event.fire_event(eload, 'auth')
             return ret
         elif os.path.isfile(pubfn_pend)\
-                and not self.opts['auto_accept']:
+                and not self._check_autosign(load['id']):
             # This key is in pending, if it is the same key ret True, else
             # ret False
             if not open(pubfn_pend, 'r').read() == load['pub']:
                 log.error(
-                    'Authentication attempt from %(id)s failed, the public '
+                    'Authentication attempt from {id} failed, the public '
                     'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.', load
+                    'compromise the Salt cluster.'.format(**load)
                 )
                 eload = {'result': False,
                          'id': load['id'],
@@ -1064,9 +1172,8 @@ class ClearFuncs(object):
                         'load': {'ret': False}}
             else:
                 log.info(
-                    'Authentication failed from host %(id)s, the key is in '
-                    'pending and needs to be accepted with salt-key -a %(id)s',
-                    load
+                    'Authentication failed from host {id}, the key is in '
+                    'pending and needs to be accepted with salt-key -a {id}'.format(**load)
                 )
                 eload = {'result': True,
                          'act': 'pend',
@@ -1075,9 +1182,26 @@ class ClearFuncs(object):
                 self.event.fire_event(eload, 'auth')
                 return {'enc': 'clear',
                         'load': {'ret': True}}
+        elif os.path.isfile(pubfn_pend)\
+                and self._check_autosign(load['id']):
+            # This key is in pending, if it is the same key auto accept it
+            if not open(pubfn_pend, 'r').read() == load['pub']:
+                log.error(
+                    'Authentication attempt from {id} failed, the public '
+                    'keys in pending did not match. This may be an attempt to '
+                    'compromise the Salt cluster.'.format(**load)
+                )
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
+                return {'enc': 'clear',
+                        'load': {'ret': False}}
+            else:
+                pass
         elif not os.path.isfile(pubfn_pend)\
-                and self.opts['auto_accept']:
-            # This is a new key and auto_accept is turned on
+                and self._check_autosign(load['id']):
+            # This is a new key and it should be automatically be accepted
             pass
         else:
             # Something happened that I have not accounted for, FAIL!
@@ -1089,7 +1213,7 @@ class ClearFuncs(object):
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
-        log.info('Authentication accepted from %(id)s', load)
+        log.info('Authentication accepted from {id}'.format(**load))
         with open(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
         pub = None
@@ -1161,12 +1285,12 @@ class ClearFuncs(object):
             load['to'] = clear_load['to']
 
         if 'user' in clear_load:
-            log.info(('User {0[user]} Published command {0[fun]} with jid'
-                      ' {0[jid]}').format(clear_load))
+            log.info(('User {user} Published command {fun} with jid'
+                      ' {jid}').format(**clear_load))
             load['user'] = clear_load['user']
         else:
-            log.info(('Published command {0[fun]} with jid'
-                      ' {0[jid]}').format(clear_load))
+            log.info(('Published command {fun} with jid'
+                      ' {jid}').format(**clear_load))
         log.debug('Published command details {0}'.format(load))
 
         payload['load'] = self.crypticle.dumps(load)

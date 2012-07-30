@@ -211,6 +211,18 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
+def reload(name):
+    '''
+    Reload the named service
+
+    CLI Example::
+
+        salt '*' service.reload <service name>
+    '''
+    cmd = 'service {0} reload'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
 def status(name, sig=None):
     '''
     Return the status for a service, returns a bool whether the service is
