@@ -41,9 +41,10 @@ class Cloud(object):
         Return the providers configured within the vm settings
         '''
         provs = set()
-        pmap = {}
-        for vm_ in self.opts['vm']:
-            provs.add(self.provider(vm_))
+        for fun in self.clouds:
+            if not '.' in fun:
+                continue
+            provs.add(fun[:fun.index('.')])
         return provs
 
     def map_providers(self):
