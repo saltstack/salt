@@ -1,20 +1,40 @@
 '''
-The generic libcloud template used to create the connections and deploy the
-cloud virtual machines
+The Rackspace cloud module. This module uses the preferred means to set up a
+libcloud based cloud module and should be used as the general template for
+setting up additional libcloud based modules.
 '''
+
+# The import section is mostly libcloud boilerplate
 
 # Import python libs
 import os
+import types
 
-# Import libcloud
+# Import libcloud 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
-from libcloud.compute.types import NodeState
 
-# Import salt libs
-import saltcloud.utils
+# Import generic libcloud functions
 from saltcloud.libcloudfuncs import *
+
+# Some of the libcloud functions need to be in the same namespace as the
+# functions defined in the module, so we create new function objects inside
+# this module namespace
+avail_images = types.FunctionType(avail_images.__code__, globals())
+avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
+destroy = types.FunctionType(destroy.__code__, globals())
+list_nodes = types.FunctionType(list_nodes.__code__, globals())
+
+
+# Only load in this module is the RACKSPACE configurations are in place
+def __virtual__():
+    '''
+    Set up the libcloud funcstions and check for RACKSPACE configs
+    '''
+    if 'RACKSPACE.user' in __opts__ and 'RACKSPACE.key' in __opts__:
+        return 'rackspace'
+    return False
 
 
 def get_conn():
