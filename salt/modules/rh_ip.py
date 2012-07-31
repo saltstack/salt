@@ -52,7 +52,7 @@ _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
-    'ipsec', 'dialup', 'slave', 'vlan',
+    'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
 ]
 
 
@@ -728,7 +728,7 @@ def build_interface(iface, iface_type, enabled, settings):
     if iface_type == 'vlan':
         settings['vlan'] = 'yes'
 
-    if iface_type in ['eth', 'bond', 'slave', 'vlan']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
         ifcfg = template.render(opts)
