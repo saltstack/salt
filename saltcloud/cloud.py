@@ -207,12 +207,16 @@ class Map(Cloud):
         exist = set()
         defined = set()
         for profile in self.map:
-            if not profile in self.opts['vm']:
+            pdata = {}
+            for pdef in self.opts['vm']:
                 # Tha named profile does not exist
+                if pdef.get('profile', '') == profile:
+                    pdata = pdef
+            if not pdata:
                 continue
             for name in self.map[profile]:
                 defined.add(name)
-                ret['create'][name] = self.opts['vm'][profile]
+                ret['create'][name] = pdata
         for prov in pmap:
             for name in pmap[prov]:
                 exist.add(name)
