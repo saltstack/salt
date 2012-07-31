@@ -43,6 +43,7 @@ import paramiko
 # Init the libcloud functions
 avail_images = types.FunctionType(avail_images.__code__, globals())
 avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
+script = types.FunctionType(script.__code__, globals())
 destroy = types.FunctionType(destroy.__code__, globals())
 list_nodes = types.FunctionType(list_nodes.__code__, globals())
 
