@@ -541,7 +541,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'bridge':
         result['devtype'] = 'Bridge'
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr']:
+    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'bridge', 'delay']:
         if opt in opts:
             result[opt] = opts[opt]
 
