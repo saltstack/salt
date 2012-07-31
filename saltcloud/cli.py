@@ -170,4 +170,4 @@ class SaltCloud(object):
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
         elif self.opts['map']:
-            mapper.run_map(self.opts['hard'])
+            mapper.run_map()
