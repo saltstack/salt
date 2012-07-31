@@ -41,6 +41,13 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - type: slave
         - master: bond0
 
+    eth4:
+      network.managed:
+        - enabled: True
+        - type: eth
+        - proto: dhcp
+        - bridge: br0
+
     bond0:
       network.managed:
         - type: bond
@@ -114,6 +121,18 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
           - network: bond0
         - require:
           - network: bond0
+    br0:
+      network.managed:
+        - enabled: True
+        - type: bridge
+        - proto: dhcp
+        - bridge: br0
+        - delay: 0
+        - bypassfirewall: True
+        - use:
+          - network: eth4
+        - require:
+          - network: eth4
 '''
 import difflib
 
