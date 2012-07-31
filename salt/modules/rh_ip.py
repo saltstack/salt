@@ -52,7 +52,7 @@ _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
-    'ipsec', 'dialup', 'slave', 'vlan',
+    'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
 ]
 
 
@@ -513,10 +513,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'dns' in opts:
         result['dns'] = opts['dns']
         result['peernds'] = 'yes'
-
-    ethtool = _parse_ethtool_opts(opts, iface)
-    if ethtool:
-        result['ethtool'] = ethtool
+    
+    if iface_type not in ['bridge']:
+        ethtool = _parse_ethtool_opts(opts, iface)
+        if ethtool:
+            result['ethtool'] = ethtool
 
     if iface_type == 'slave':
         result['proto'] = 'none'
@@ -526,7 +527,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if bonding:
             result['bonding'] = bonding
 
-    if iface_type not in ['bond', 'vlan']:
+    if iface_type not in ['bond', 'vlan', 'bridge']:
         if 'addr' in opts:
             if _MAC_REGEX.match(opts['addr']):
                 result['addr'] = opts['addr']
@@ -537,7 +538,13 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             if iface in ifaces and 'hwaddr' in ifaces[iface]:
                 result['addr'] = ifaces[iface]['hwaddr']
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr']:
+    if iface_type == 'bridge':
+        result['devtype'] = 'Bridge'
+    else:
+        if 'bridge' in opts:
+            result['bridge'] = opts['bridge']
+
+    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay']:
         if opt in opts:
             result[opt] = opts[opt]
 
@@ -612,13 +619,14 @@ def _parse_network_settings(opts, current):
     else:
         _raise_error_network('hostname', ['server1.example.com'])
 
-    if opts['nozeroconf'] in valid:
-        if opts['nozeroconf'] in _CONFIG_TRUE:
-            result['nozeroconf'] = 'true'
-        elif opts['nozeroconf'] in _CONFIG_FALSE:
-                result['nozeroconf'] = 'false'
-    else:
-        _raise_error_network('nozeroconf', valid)
+    if 'nozeroconf' in opts:
+        if opts['nozeroconf'] in valid:
+            if opts['nozeroconf'] in _CONFIG_TRUE:
+                result['nozeroconf'] = 'true'
+            elif opts['nozeroconf'] in _CONFIG_FALSE:
+                    result['nozeroconf'] = 'false'
+        else:
+            _raise_error_network('nozeroconf', valid)
 
     for opt in opts:
         if opt not in ['networking', 'hostname', 'nozeroconf']:
@@ -715,6 +723,9 @@ def build_interface(iface, iface_type, enabled, settings):
     rh_major = __grains__['osrelease'][:1]
     rh_minor = __grains__['osrelease'][2:]
 
+    iface = iface.lower()
+    iface_type = iface_type.lower()
+
     if iface_type not in _IFACE_TYPES:
         _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
@@ -728,7 +739,12 @@ def build_interface(iface, iface_type, enabled, settings):
     if iface_type == 'vlan':
         settings['vlan'] = 'yes'
 
-    if iface_type in ['eth', 'bond', 'slave', 'vlan']:
+    if iface_type == 'bridge':
+        __salt__['pkg.install']('bridge-utils')
+        msg = 'Add to firewall: -A RH-Firewall-1-INPUT -i {0} -j ACCEPT'.format(iface)
+        log.warning(msg)
+
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
         ifcfg = template.render(opts)
