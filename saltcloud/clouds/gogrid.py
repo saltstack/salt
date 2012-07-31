@@ -57,7 +57,7 @@ def get_conn():
     '''
     Return a conn object for the passed vm data
     '''
-    driver = get_driver(Provider.RACKSPACE)
+    driver = get_driver(Provider.GOGRID)
     return driver(
             __opts__['GOGRID.apikey'],
             __opts__['GOGRID.sharedsecret'],
