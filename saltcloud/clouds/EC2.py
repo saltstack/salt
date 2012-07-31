@@ -1,11 +1,31 @@
 '''
-The generic libcloud template used to create the connections and deploy the
-cloud virtual machines
+The EC2 cloud module
+====================
+
+The EC2 cloud module is used to interact with the amazon Web Services system.
+
+To use the EC2 cloud module the following configuration parameters need to be
+set in the main cloud config:
+
+.. code-block:: yaml
+
+    # The EC2 API authentication id
+    EC2.id: GKTADJGHEIQSXMKKRBJ08H
+    # The EC2 API authentication key
+    EC2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    # The ssh keyname to use
+    EC2.keyname: default
+    # The amazon security group
+    EC2.securitygroup: ssh_open
+    # The location of the private key which corresponds to the keyname
+    EC2.private_key: /root/default.pem
+
 '''
 
 # Import python libs
 import os
 import sys
+import types
 import subprocess
 
 # Import libcloud
@@ -19,6 +39,31 @@ from saltcloud.libcloudfuncs import *
 
 # Import paramiko
 import paramiko
+
+# Init the libcloud functions
+avail_images = types.FunctionType(avail_images.__code__, globals())
+avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
+destroy = types.FunctionType(destroy.__code__, globals())
+list_nodes = types.FunctionType(list_nodes.__code__, globals())
+
+
+# Only load in this module if the EC2 configurations are in place
+def __virtual__():
+    '''
+    Set up the libcloud funcstions and check for RACKSPACE configs
+    '''
+    confs = [
+            'EC2.id',
+            'EC2.key',
+            'EC2.keyname',
+            'EC2.securitygroup',
+            'EC2.private_key',
+            ]
+    for conf in confs:
+        if conf not in __opts__:
+            return False
+    return 'EC2'
+
 
 def get_conn():
     '''
