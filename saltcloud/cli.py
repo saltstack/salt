@@ -61,6 +61,15 @@ class SaltCloud(object):
                 default='',
                 help='Specify a cloud map file to use for deployment')
 
+        parser.add_option('-H',
+                '--hard',
+                dest='hard',
+                default=False,
+                action='store_true',
+                help=('Delete all vms that are not defined in the map file '
+                      'CAUTION!!! This operation can irrevocably destroy vms!')
+                )
+
         parser.add_option('-d',
                 '--destroy',
                 dest='destroy',
@@ -161,4 +170,4 @@ class SaltCloud(object):
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
         elif self.opts['map']:
-            mapper.run_map()
+            mapper.run_map(self.opts['hard'])
