@@ -1,7 +1,21 @@
 '''
+Rackspace Cloud Module
+======================
+
 The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
+
+The rackspace cloud module interfaces with the Rackspace public cloud service
+and requires that two configuration paramaters be set for use:
+
+.. code-block:: yaml
+
+    # The Rackspace login user
+    RACKSPACE.user: fred
+    # The Rackspace user's login key
+    RACKSPACE.key: 901d3f579h23c8v73q9
+
 '''
 
 # The import section is mostly libcloud boilerplate
