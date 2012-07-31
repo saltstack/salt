@@ -18,7 +18,7 @@ import yaml
 
 class Cloud(object):
     '''
-    An object for the creation of new inages
+    An object for the creation of new vms
     '''
     def __init__(self, opts):
         self.opts = opts
