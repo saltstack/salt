@@ -540,6 +540,24 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if iface_type == 'bridge':
         result['devtype'] = 'Bridge'
+        bypassiptables = True
+        valid = _CONFIG_TRUE + _CONFIG_FALSE
+        for opt in ['bypassiptables']:
+            if opt in opts:
+                if opts[opt] in _CONFIG_TRUE:
+                    bypassiptables = True
+                elif opts[opt] in _CONFIG_FALSE:
+                    bypassiptables = False
+                else:
+                    _raise_error_iface(iface, opts[opt], valid)
+        if bypassiptables:
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables = 0')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables = 0')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables = 0')
+        else:
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables = 1')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables = 1')
+            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables = 1')
     else:
         if 'bridge' in opts:
             result['bridge'] = opts['bridge']
@@ -741,8 +759,6 @@ def build_interface(iface, iface_type, enabled, settings):
 
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
-        msg = 'Add to firewall: -A RH-Firewall-1-INPUT -i {0} -j ACCEPT'.format(iface)
-        log.warning(msg)
 
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
