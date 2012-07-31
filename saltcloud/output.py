@@ -16,12 +16,26 @@ def double_layer(data, color=True):
         print('{0}{1}{2}'.format(colors['GREEN'], top_key, colors['ENDC']))
         for sec_key in sorted(data[top_key]):
             print('  {0}{1}{2}'.format(
-                colors['DARK_GRAY'],
+                colors['YELLOW'],
                 sec_key,
                 colors['ENDC']))
-            for fkey in sorted(data[top_key][sec_key]):
-                print('    {0}{1}: {2}{3}'.format(
-                    colors['CYAN'],
-                    fkey,
-                    data[top_key][sec_key][fkey],
-                    colors['ENDC']))
+            tval = data[top_key][sec_key]
+            for fkey in sorted(tval):
+                val = data[top_key][sec_key][fkey]
+                if isinstance(val, str) or isinstance(val, int):
+                    print('    {0}{1}: {2}{3}'.format(
+                        colors['LIGHT_GREEN'],
+                        fkey,
+                        data[top_key][sec_key][fkey],
+                        colors['ENDC']))
+                if isinstance(val, dict):
+                    print('    {0}{1}:{2}'.format(
+                        colors['LIGHT_GREEN'],
+                        fkey,
+                        colors['ENDC']))
+                    for ekey in sorted(val):
+                        print('      {0}{1}: {2}{3}'.format(
+                            colors['LIGHT_GREEN'],
+                            ekey,
+                            val[ekey],
+                            colors['ENDC']))
