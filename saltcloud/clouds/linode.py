@@ -1,10 +1,22 @@
 '''
-The generic libcloud template used to create the connections and deploy the
-cloud virtual machines
+Linode Cloud Module
+===================
+
+The Linode cloud module is used to control access to the Linode VPS system
+
+Use of this module only requires the LINODE.apikey paramater to be set in
+the cloud configuration file
+
+.. code-block:: yaml
+
+    # Linode account api key
+    LINODE.apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
+
 '''
 
 # Import python libs
 import os
+import types
 
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -14,8 +26,23 @@ from libcloud.compute.types import NodeState
 from libcloud.compute.base import NodeAuthPassword
 
 # Import salt libs
-import saltcloud.utils
 from saltcloud.libcloudfuncs import *
+
+# Redirect linode functions to this module namespace
+avail_images = types.FunctionType(avail_images.__code__, globals())
+avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
+destroy = types.FunctionType(destroy.__code__, globals())
+list_nodes = types.FunctionType(list_nodes.__code__, globals())
+
+
+# Only load in this module if the LINODE configurations are in place
+def __virtual__():
+    '''
+    Set up the libcloud funcstions and check for RACKSPACE configs
+    '''
+    if 'LINODE.apikey' in __opts__:
+        return 'linode'
+    return False
 
 
 def get_conn():
