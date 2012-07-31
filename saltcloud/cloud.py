@@ -92,7 +92,7 @@ class Cloud(object):
         Return a mapping of all image data for available providers
         '''
         provs = self.get_providers()
-        images = {}
+        sizes = {}
         for prov in provs:
             # If all providers are not desired, then don't get them
             if not lookup == 'all':
@@ -103,8 +103,8 @@ class Cloud(object):
                 # The capability to gather sizes is not supported by this
                 # cloud module
                 continue
-            images[prov] = self.clouds[fun]()
-        return images
+            sizes[prov] = self.clouds[fun]()
+        return sizes
 
     def create_all(self):
         '''
