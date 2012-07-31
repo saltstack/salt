@@ -221,7 +221,7 @@ class Map(Cloud):
             for name in pmap[prov]:
                 exist.add(name)
                 if name in ret['create']:
-                    ret['create'].delete(name)
+                    ret['create'].pop(name)
         if self.opts['hard']:
             # Look for the items to delete
             ret['destroy'] = exist.difference(defined)
@@ -231,15 +231,27 @@ class Map(Cloud):
         '''
         Execute the contents of the vm map
         '''
-        for profile in self.map:
-            for name in self.map[profile]:
-                for vm_ in self.opts['vm']:
-                    if vm_['profile'] == profile:
-                        tvm = copy.deepcopy(vm_)
-                        tvm['name'] = name
-                        if self.opts['parallel']:
-                            multiprocessing.Process(
-                                    target=lambda: self.create(tvm)
-                                    ).start()
-                        else:
-                            self.create(tvm)
+        dmap = self.map_data()
+        msg = 'The following virtual machines are set to be created:\n'
+        for name in dmap['create']:
+            msg += '  {0}\n'.format(name)
+        if 'destroy' in dmap:
+            msg += 'The following virtual machines are set to be destroyed:\n'
+            for name in dmap['destroy']:
+                msg += '  {0}\n'.format(name)
+        print(msg)
+        res = raw_input('Proceed? [N/y]')
+        if not res.lower().startswith('y'):
+            return
+        # We are good to go, execute!
+        for name, profile in dmap['create'].items():
+            tvm = copy.deepcopy(profile)
+            tvm['name'] = name
+            if self.opts['parallel']:
+                multiprocessing.Process(
+                        target=lambda: self.create(tvm)
+                        ).start()
+            else:
+                self.create(tvm)
+        for name in dmap.get('destroy', set()):
+            self.destroy(name)
