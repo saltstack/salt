@@ -527,7 +527,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if bonding:
             result['bonding'] = bonding
 
-    if iface_type not in ['bond', 'vlan']:
+    if iface_type not in ['bond', 'vlan', 'bridge']:
         if 'addr' in opts:
             if _MAC_REGEX.match(opts['addr']):
                 result['addr'] = opts['addr']
@@ -540,6 +540,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if iface_type == 'bridge':
         result['devtype'] = 'Bridge'
+        result['bridge'] = None
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'bridge', 'delay']:
         if opt in opts:
@@ -616,13 +617,14 @@ def _parse_network_settings(opts, current):
     else:
         _raise_error_network('hostname', ['server1.example.com'])
 
-    if opts['nozeroconf'] in valid:
-        if opts['nozeroconf'] in _CONFIG_TRUE:
-            result['nozeroconf'] = 'true'
-        elif opts['nozeroconf'] in _CONFIG_FALSE:
-                result['nozeroconf'] = 'false'
-    else:
-        _raise_error_network('nozeroconf', valid)
+    if 'nozeroconf' in opts:
+        if opts['nozeroconf'] in valid:
+            if opts['nozeroconf'] in _CONFIG_TRUE:
+                result['nozeroconf'] = 'true'
+            elif opts['nozeroconf'] in _CONFIG_FALSE:
+                    result['nozeroconf'] = 'false'
+        else:
+            _raise_error_network('nozeroconf', valid)
 
     for opt in opts:
         if opt not in ['networking', 'hostname', 'nozeroconf']:
