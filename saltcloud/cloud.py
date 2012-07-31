@@ -197,7 +197,33 @@ class Map(Cloud):
             map_ = salt.config.include_config(map_, self.opts['map'])
         return map_
 
-    def run_map(self, hard=False):
+    def map_data(self):
+        '''
+        Create a data map of what to execute on
+        '''
+        ret = {}
+        pmap = self.map_providers()
+        ret['create'] = {}
+        exist = set()
+        defined = set()
+        for profile in self.map:
+            if not profile in self.opts['vm']:
+                # Tha named profile does not exist
+                continue
+            for name in self.map[profile]:
+                defined.add(name)
+                ret['create'][name] = self.opts['vm'][profile]
+        for prov in pmap:
+            for name in pmap[prov]:
+                exist.add(name)
+                if name in ret['create']:
+                    ret['create'].delete(name)
+        if self.opts['hard']:
+            # Look for the items to delete
+            ret['destroy'] = exist.difference(defined)
+        return ret
+
+    def run_map(self):
         '''
         Execute the contents of the vm map
         '''
