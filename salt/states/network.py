@@ -128,6 +128,7 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - proto: dhcp
         - bridge: br0
         - delay: 0
+        - bypassiptables: True
         - use:
           - network: eth4
         - require:
