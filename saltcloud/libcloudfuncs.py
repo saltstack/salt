@@ -15,7 +15,7 @@ from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, S
 import saltcloud.utils
 
 
-def _get_node(conn, name):
+def get_node(conn, name):
     '''
     Return a libcloud node for the named vm
     '''
@@ -132,7 +132,7 @@ def destroy(name):
     Delete a single vm
     '''
     conn = get_conn()
-    node = _get_node(conn, name)
+    node = get_node(conn, name)
     if node is None:
         print('Unable to find the VM {0}'.format(name))
     print('Destroying VM: {0}'.format(name))
