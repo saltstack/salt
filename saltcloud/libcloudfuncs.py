@@ -81,12 +81,10 @@ def get_image(conn, vm_):
     Return the image object to use
     '''
     images = conn.list_images()
-    if not 'image' in vm_:
-        return images[0]
     if isinstance(vm_['image'], int):
         return images[vm_['image']]
     for img in images:
-        if img.id == vm_['image']:
+        if str(img.id) == str(vm_['image']):
             return img
         if img.name == vm_['image']:
             return img
