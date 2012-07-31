@@ -513,10 +513,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'dns' in opts:
         result['dns'] = opts['dns']
         result['peernds'] = 'yes'
-
-    ethtool = _parse_ethtool_opts(opts, iface)
-    if ethtool:
-        result['ethtool'] = ethtool
+    
+    if iface_type not in ['bridge']:
+        ethtool = _parse_ethtool_opts(opts, iface)
+        if ethtool:
+            result['ethtool'] = ethtool
 
     if iface_type == 'slave':
         result['proto'] = 'none'
@@ -536,6 +537,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             ifaces = __salt__['network.interfaces']()
             if iface in ifaces and 'hwaddr' in ifaces[iface]:
                 result['addr'] = ifaces[iface]['hwaddr']
+
+    if iface_type == 'bridge':
+        result['devtype'] = 'Bridge'
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr']:
         if opt in opts:
@@ -715,6 +719,9 @@ def build_interface(iface, iface_type, enabled, settings):
     rh_major = __grains__['osrelease'][:1]
     rh_minor = __grains__['osrelease'][2:]
 
+    iface = iface.lower()
+    iface_type = iface_type.lower()
+
     if iface_type not in _IFACE_TYPES:
         _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
@@ -727,6 +734,11 @@ def build_interface(iface, iface_type, enabled, settings):
 
     if iface_type == 'vlan':
         settings['vlan'] = 'yes'
+
+    if iface_type == 'bridge':
+        __salt__['pkg.install']('bridge-utils')
+        msg = 'Add to firewall: -A RH-Firewall-1-INPUT -i {0} -j ACCEPT'.format(iface)
+        log.warning(msg)
 
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
