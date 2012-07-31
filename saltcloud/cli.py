@@ -16,6 +16,7 @@ import pprint
 
 # Import salt libs
 import saltcloud.config
+import saltcloud.output
 import salt.config
 
 class SaltCloud(object):
@@ -148,9 +149,13 @@ class SaltCloud(object):
         if self.opts['query']:
             pprint.pprint(mapper.map_providers())
         if self.opts['list_images']:
-            pprint.pprint(mapper.image_list(self.opts['list_images']))
+            saltcloud.output.double_layer(
+                    mapper.image_list(self.opts['list_images'])
+                    )
         if self.opts['list_sizes']:
-            pprint.pprint(mapper.size_list(self.opts['list_sizes']))
+            saltcloud.output.double_layer(
+                    mapper.size_list(self.opts['list_sizes'])
+                    )
         elif self.opts.get('names') and self.opts['destroy']:
             mapper.destroy(self.opts.get('names'))
         elif self.opts.get('names', False) and self.opts['profile']:
