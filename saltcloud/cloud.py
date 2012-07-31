@@ -197,7 +197,7 @@ class Map(Cloud):
             map_ = salt.config.include_config(map_, self.opts['map'])
         return map_
 
-    def run_map(self):
+    def run_map(self, hard=False):
         '''
         Execute the contents of the vm map
         '''
