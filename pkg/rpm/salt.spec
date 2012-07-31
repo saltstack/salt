@@ -9,7 +9,7 @@
 
 Name: salt
 Version: 0.10.2dev
-Release: 2talkos
+Release: 3talkos
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -37,6 +37,7 @@ BuildRequires: python27
 BuildRequires: python27-PyYAML
 BuildRequires: python27-M2Crypto
 BuildRequires: python27-msgpack
+BuildRequires: python27-distribute
 
 Requires: python27-pycrypto
 Requires: python27-pyzmq
