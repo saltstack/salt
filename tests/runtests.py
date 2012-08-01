@@ -18,7 +18,7 @@ except ImportError:
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
-PNUM = 50
+PNUM = 70
 
 
 def run_suite(opts, path, display_name, suffix='[!_]*.py'):
