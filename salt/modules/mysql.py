@@ -693,7 +693,7 @@ def grant_add(grant,
     
     CLI Example::
 
-        salt '*' mysql.grant_add 'SELECT|INSERT|UPDATE|...' 'database.*' 'frank' 'localhost'
+        salt '*' mysql.grant_add 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
     db = connect()

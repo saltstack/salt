@@ -101,6 +101,7 @@ def present(
         name,
         uid=None,
         gid=None,
+        gid_from_name=False,
         groups=None,
         home=True,
         password=None,
@@ -126,6 +127,9 @@ def present(
 
     gid
         The default group id
+    
+    gid_from_name
+        If True, the default group id will be set to the id of the group with the same name as the user.
 
     groups
         A list of groups to assign the user to, pass a list object
@@ -178,6 +182,8 @@ def present(
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
 
+    if gid_from_name:
+        gid = __salt__['file.group_to_gid'](name)
     changes = _changes(
             name,
             uid,
