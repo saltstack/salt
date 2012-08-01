@@ -54,7 +54,7 @@ def get_conn():
     driver = get_driver(
             getattr(
                 Provider,
-                'ELASTICHOSTS_{1}'.format(__opts__['ELASTICHOSTS.location'])
+                'ELASTICHOSTS_{0}'.format(__opts__['ELASTICHOSTS.location'])
                 )
             )
     return driver(
