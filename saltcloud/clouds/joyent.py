@@ -12,6 +12,8 @@ it requires that the username and password to the joyent accound be configured
     JOYENT.user: fred
     # The Joyent user's password
     JOYENT.password: saltybacon
+    # The location of the ssh private key that can log into the new vm
+    JOYENT.private_key: /root/joyent.pem
 
 '''
 
@@ -19,6 +21,7 @@ it requires that the username and password to the joyent accound be configured
 
 # Import python libs
 import os
+import subprocess
 import types
 
 # Import libcloud 
@@ -39,10 +42,10 @@ destroy = types.FunctionType(destroy.__code__, globals())
 list_nodes = types.FunctionType(list_nodes.__code__, globals())
 
 
-# Only load in this module is the RACKSPACE configurations are in place
+# Only load in this module is the JOYENT configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for RACKSPACE configs
+    Set up the libcloud functions and check for JOYENT configs
     '''
     if 'JOYENT.user' in __opts__ and 'JOYENT.password' in __opts__:
         return 'joyent'
@@ -66,12 +69,21 @@ def create(vm_):
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
+    deploy_script = script(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
-    kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
-    data = conn.deploy_node(**kwargs)
+    data = conn.create_node(**kwargs)
+    cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
+           '"{3}"').format(
+                   __opts__['JOYENT.private_key'],
+                   'root',
+                   data.public_ips[0],
+                   deploy_script,
+                   )
+    subprocess.call(cmd, shell=True)
+
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
