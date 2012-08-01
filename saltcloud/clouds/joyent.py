@@ -30,7 +30,9 @@ from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import generic libcloud functions
+import salt.utils
 from saltcloud.libcloudfuncs import *
+
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -56,7 +58,7 @@ def get_conn():
     '''
     Return a conn object for the passed vm data
     '''
-    driver = get_driver(Provider.RACKSPACE)
+    driver = get_driver(Provider.JOYENT)
     return driver(
             __opts__['JOYENT.user'],
             __opts__['JOYENT.password'],
@@ -75,14 +77,17 @@ def create(vm_):
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
     data = conn.create_node(**kwargs)
-    cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
-           '"{3}"').format(
-                   __opts__['JOYENT.private_key'],
-                   'root',
-                   data.public_ips[0],
-                   deploy_script,
-                   )
-    subprocess.call(cmd, shell=True)
+    if salt.utils.wait_for_ssh(data.public_ips[0]):
+        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
+               '"{3}"').format(
+                       __opts__['JOYENT.private_key'],
+                       'root',
+                       data.public_ips[0],
+                       deploy_script.script,
+                       )
+        subprocess.call(cmd, shell=True)
+    else:
+        print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
