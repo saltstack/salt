@@ -28,4 +28,7 @@
 # Linode takes the single api_key
 #LINODE.apikey: <Linode api key>
 #LINODE.password: F00BarBaz
-
+#
+# GoGrid uses a generated apikey and shared secret
+#GOGRID.apikey: wef98rfweirugh
+#GOGRID.sharedsecret: saltybacon
