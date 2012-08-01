@@ -1,3 +1,10 @@
+salt (0.10.2) precise; urgency=low
+
+  * Non-maintainer upload.
+  * New upstream version
+
+ -- Dave Rawks <drawks@mint>  Wed, 01 Aug 2012 13:34:10 -0700
+
 salt (0.9.9) precise; urgency=low
 
   * New upstream version
