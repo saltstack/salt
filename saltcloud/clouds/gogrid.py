@@ -2,7 +2,7 @@
 GoGrid Cloud Module
 ====================
 
-The GoGrid cloud module. Thius module interfaces with the gogrid public cloud
+The GoGrid cloud module. This module interfaces with the gogrid public cloud
 service. To use Salt Cloud with GoGrid log into the GoGrid web interface and
 create an api key. Do this by clicking on "My Account" and then going to the
 API Keys tab.
