@@ -60,3 +60,32 @@ to be set:
 
 The password needs to be 8 characters and contain lowercase, uppercase and
 numbers.
+
+Joyent Cloud
+------------
+
+The Joyent cloud requires three configuration paramaters. The user name and
+password that are used to log into the Joyent system, and the location of
+the private ssh key associated with the Joyent account. The ssh key is needed
+to send the provisioning commands up to the freshly created virtual machine,
+
+.. code-block:: yaml
+
+    JOYENT.user: fred
+    JOYENT.password: saltybacon
+    JOYENT.private_key: /root/joyent.pem
+
+GoGrid
+------
+
+To use Salt Cloud with GoGrid log into the GoGrid web interface and
+create an api key. Do this by clicking on "My Account" and then going to the
+API Keys tab.
+
+The GOGRID.apikey and the GOGRID.sharedsecret configuration paramaters need to
+be set in the config file to enable interfacing with GoGrid:
+
+.. code-block:: yaml
+
+    GOGRID.apikey: asdff7896asdh789
+    GOGRID.sharedsecret: saltybacon
