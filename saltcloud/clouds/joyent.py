@@ -30,7 +30,7 @@ from libcloud.compute.providers import get_driver
 from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment, SSHKeyDeployment
 
 # Import generic libcloud functions
-import salt.utils
+import saltcloud.utils
 from saltcloud.libcloudfuncs import *
 
 
@@ -77,7 +77,7 @@ def create(vm_):
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
     data = conn.create_node(**kwargs)
-    if salt.utils.wait_for_ssh(data.public_ips[0]):
+    if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
         cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
                '"{3}"').format(
                        __opts__['JOYENT.private_key'],
