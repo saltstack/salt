@@ -6,7 +6,9 @@ Utility functions for saltcloud
 import os
 import sys
 import shutil
+import socket
 import tempfile
+import time
 
 # Import salt libs
 import salt.crypt
@@ -94,6 +96,7 @@ def get_option(option, opts, vm_):
     if option in opts:
         return opts[option]
 
+
 def minion_conf_string(opts, vm_):
     '''
     Return a string to be passed into the deployment script for the minion
@@ -103,3 +106,20 @@ def minion_conf_string(opts, vm_):
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
     return yaml.safe_dump(minion)
+
+
+def wait_for_ssh(host, port=22, timeout=900):
+    '''
+    Wait until an ssh connection can be made on a specified host
+    '''
+    start = time.time()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while True:
+        try:
+            sock.connect((host, port))
+            sock.shutdown(2)
+            return True
+        except Exception:
+            if time.time() - start > timeout:
+                return False
+
