@@ -72,7 +72,10 @@ def avail_sizes():
         for attr in dir(size):
             if attr.startswith('_'):
                 continue
-            ret[size.name][attr] = getattr(size, attr)
+            try:
+                ret[size.name][attr] = getattr(size, attr)
+            except Exception:
+                pass
     return ret
 
 
