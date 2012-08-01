@@ -2,8 +2,8 @@
 Install Python packages with pip to either the system or a virtualenv
 '''
 
-# Import python libs
 import os
+from salt.exceptions import CommandExecutionError
 
 def _get_pip_bin(bin_env):
     '''
@@ -11,17 +11,14 @@ def _get_pip_bin(bin_env):
     passed in, or from the global modules options
     '''
     if not bin_env:
-        pips = ['pip2',
-                'pip',
-                'pip-python']
-        return __salt__['cmd.which_bin'](pips)
-    else:
-        # try to get pip bin from env
-        if os.path.exists(os.path.join(bin_env, 'bin', 'pip')):
-            pip_bin = os.path.join(bin_env, 'bin', 'pip')
-        else:
-            pip_bin = bin_env
-    return pip_bin
+        return __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
+
+    # try to get pip bin from env
+    if os.path.isdir(bin_env):
+        pip_bin = os.path.join(bin_env, 'bin', 'pip')
+        if os.path.isfile(pip_bin):
+            return pip_bin
+    return bin_env
 
 
 def install(pkgs=None,
@@ -68,7 +65,7 @@ def install(pkgs=None,
         If installing into a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
     env
-        depreicated, use bin_env now
+        deprecated, use bin_env now
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
@@ -372,8 +369,14 @@ def freeze(bin_env=None,
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
 
-    cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
+    pip_bin = _get_pip_bin(bin_env)
+    activate = os.path.join(os.path.dirname(pip_bin), 'activate')
+    if not os.path.isfile(activate):
+        raise CommandExecutionError(
+            "Could not find the path to the virtualenv's 'activate' binary"
+        )
 
+    cmd = 'source {0}; {1} freeze'.format(activate, pip_bin)
     return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
 
 
