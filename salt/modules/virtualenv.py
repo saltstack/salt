@@ -5,7 +5,9 @@ Create virtualenv environments
 from salt import utils
 
 
-__opts__ = {}
+__opts__ = {
+    'venv_bin': 'virtualenv'
+}
 __pillar__ = {}
 
 
