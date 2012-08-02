@@ -10,6 +10,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import uuid
 import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.grains.extra import shell as shell_grain
@@ -257,13 +258,16 @@ def script(
 
         salt '*' cmd.script salt://scripts/runme.sh
     '''
-    fd_, path = tempfile.mkstemp()
-    os.close(fd_)
+    path = os.path.join(tempfile.gettempdir(), tempfile.gettempprefix() + uuid.uuid4().hex[:8])
+    f = open(path, 'w')
+    f.close()
+
     if template:
         fn_ = __salt__['cp.get_template'](source, path, template, env, **kwargs)
     else:
         fn_ = __salt__['cp.cache_file'](source, env)
-    os.chmod(path, 320)
+    os.chmod(path, 02700)
+    os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
             path,
             cwd=cwd,
