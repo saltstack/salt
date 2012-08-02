@@ -211,13 +211,13 @@ toolkit, consider this SSH example:
 
 Now our State Tree looks like this: ::
 
-    /apache/init.sls
-    /apache/httpd.conf
-    /ssh/init.sls
-    /ssh/server.sls
-    /ssh/banner
-    /ssh/ssh_config
-    /ssh/sshd_config
+    apache/init.sls
+    apache/httpd.conf
+    ssh/init.sls
+    ssh/server.sls
+    ssh/banner
+    ssh/ssh_config
+    ssh/sshd_config
 
 This example now introduces the ``include`` statement. The include statement
 includes another SLS file so that components found in it can be required,
