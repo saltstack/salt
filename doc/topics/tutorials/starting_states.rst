@@ -145,8 +145,8 @@ out as just files. A SLS is just a file and files to download are just files.
 The Apache example would be laid out in the root of the Salt file server like
 this: ::
 
-    /apache/init.sls
-    /apache/httpd.conf
+    apache/init.sls
+    apache/httpd.conf
 
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
@@ -154,7 +154,7 @@ directly.
 But with more than a single SLS file, more components can be added to the
 toolkit, consider this SSH example:
 
-``/ssh/init.sls:``
+``ssh/init.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -236,7 +236,7 @@ needs to be placed.
 
 These examples will add more watchers to apache and change the ssh banner.
 
-``/ssh/custom-server.sls:``
+``ssh/custom-server.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -249,7 +249,7 @@ These examples will add more watchers to apache and change the ssh banner.
         file:
           - source: salt://ssh/custom-banner
 
-``/python/mod_python.sls:``
+``python/mod_python.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -312,7 +312,7 @@ available, ``salt``, ``grains``, and ``pillar``. The ``salt`` object allows for
 any Salt function to be called from within the template, and ``grains`` allows for
 the Grains to be accessed from within the template. A few examples:
 
-``/apache/init.sls:``
+``apache/init.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -355,7 +355,7 @@ Red Hat, then the name of the Apache package and service needs to be httpd.
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
 
-``/moosefs/chunk.sls:``
+``moosefs/chunk.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -427,7 +427,7 @@ but a SLS file set to use another renderer can be easily added to the tree.
 
 This example shows a very basic Python SLS file:
 
-``/python/django.sls:``
+``python/django.sls:``
 
 .. code-block:: python
    :linenos:

@@ -9,8 +9,8 @@
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
 
 Name: salt
-Version: 0.10.1
-Release: 1%{?dist}
+Version: 0.10.2
+Release: 2%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -24,6 +24,7 @@ Source4: %{name}-master.service
 Source5: %{name}-syndic.service
 Source6: %{name}-minion.service
 Source7: README.fedora
+Patch0: 0001-Only-expect-args-if-they-are-actually-passed-in.patch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildArch: noarch
@@ -45,7 +46,6 @@ Requires: python26-zmq
 Requires: python26-jinja2
 Requires: python26-PyYAML
 Requires: python26-m2crypto
-Requires: python26-PyXML
 Requires: python26-msgpack
 
 %else
@@ -62,7 +62,6 @@ Requires: python-zmq
 Requires: python-jinja2
 Requires: PyYAML
 Requires: m2crypto
-Requires: PyXML
 Requires: python-msgpack
 
 %endif
@@ -108,6 +107,7 @@ Salt minion is queried and controlled from the master.
 
 %prep
 %setup -q
+%patch0 -p1
 
 %build
 
@@ -261,8 +261,15 @@ fi
 %endif
 
 %changelog
-* Sat Jun 16 2012 Clint Savage <herlo1@gmail.com> - 0.10.0-1
-- Moved to upstream release 0.10.0
+* Thu Aug 2 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-2
+- Fix upstream bug #1730 per RHBZ#845295
+
+* Sat Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
+- Moved to upstream release 0.10.2
+- Removed PyXML as a dependency
+
+* Sat Jun 16 2012 Clint Savage <herlo1@gmail.com> - 0.10.1-1
+- Moved to upstream release 0.10.1
 
 * Sat Apr 28 2012 Clint Savage <herlo1@gmail.com> - 0.9.9.1-1
 - Moved to upstream release 0.9.9.1
