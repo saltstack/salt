@@ -1,24 +1,24 @@
 '''
-The EC2 cloud module
+The AWS Cloud Module
 ====================
 
-The EC2 cloud module is used to interact with the amazon Web Services system.
+The AWS cloud module is used to interact with the Amazon Web Services system.
 
-To use the EC2 cloud module the following configuration parameters need to be
+To use the AWS cloud module the following configuration parameters need to be
 set in the main cloud config:
 
 .. code-block:: yaml
 
-    # The EC2 API authentication id
-    EC2.id: GKTADJGHEIQSXMKKRBJ08H
-    # The EC2 API authentication key
-    EC2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    # The AWS API authentication id
+    AWS.id: GKTADJGHEIQSXMKKRBJ08H
+    # The AWS API authentication key
+    AWS.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
     # The ssh keyname to use
-    EC2.keyname: default
+    AWS.keyname: default
     # The amazon security group
-    EC2.securitygroup: ssh_open
+    AWS.securitygroup: ssh_open
     # The location of the private key which corresponds to the keyname
-    EC2.private_key: /root/default.pem
+    AWS.private_key: /root/default.pem
 
 '''
 
@@ -48,22 +48,22 @@ destroy = types.FunctionType(destroy.__code__, globals())
 list_nodes = types.FunctionType(list_nodes.__code__, globals())
 
 
-# Only load in this module if the EC2 configurations are in place
+# Only load in this module if the AWS configurations are in place
 def __virtual__():
     '''
     Set up the libcloud funcstions and check for RACKSPACE configs
     '''
     confs = [
-            'EC2.id',
-            'EC2.key',
-            'EC2.keyname',
-            'EC2.securitygroup',
-            'EC2.private_key',
+            'AWS.id',
+            'AWSAWS.key',
+            'AWSAWS.keyname',
+            'AWSAWS.securitygroup',
+            'AWSAWS.private_key',
             ]
     for conf in confs:
         if conf not in __opts__:
             return False
-    return 'EC2'
+    return 'aws'
 
 
 def get_conn():
@@ -75,8 +75,8 @@ def get_conn():
         return None
     driver = get_driver(getattr(Provider, 'EC2'))
     return driver(
-            __opts__['EC2.id'],
-            __opts__['EC2.key'],
+            __opts__['AWS.id'],
+            __opts__['AWS.key'],
             )
 
 
@@ -84,7 +84,7 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return vm_.get('EC2.keyname', __opts__.get('EC2.keyname', ''))
+    return vm_.get('AWS.keyname', __opts__.get('AWS.keyname', ''))
 
 
 def securitygroup(vm_):
@@ -92,8 +92,8 @@ def securitygroup(vm_):
     Return the keyname
     '''
     return vm_.get(
-            'EC2.securitygroup',
-            __opts__.get('EC2.securitygroup', 'default')
+            'AWS.securitygroup',
+            __opts__.get('AWS.securitygroup', 'default')
             )
 
 
@@ -104,7 +104,7 @@ def create(vm_):
     print('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
     kwargs = {'ssh_username': 'ec2-user',
-              'ssh_key': __opts__['EC2.private_key']}
+              'ssh_key': __opts__['AWS.private_key']}
     kwargs['name'] = vm_['name']
     kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
@@ -129,7 +129,7 @@ def create(vm_):
         return False
     cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "sudo '
            '/home/ec2-user/deployment.sh"').format(
-                   __opts__['EC2.private_key'],
+                   __opts__['AWS.private_key'],
                    'ec2-user',
                    data.public_ips[0]
                    )

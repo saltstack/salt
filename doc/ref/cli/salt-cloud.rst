@@ -78,7 +78,7 @@ Options
 .. option:: --list-sizes
 
     Display a list of sizes available in configured cloud providers. Pass the
-    cloud provider that available sizes are desired on, aka "EC2", or pass
+    cloud provider that available sizes are desired on, aka "aws", or pass
     "all" to list sizes for all configured cloud providers
 
 .. option:: -C CLOUD_CONFIG, --cloud-config=CLOUD_CONFIG

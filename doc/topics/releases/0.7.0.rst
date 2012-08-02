@@ -36,7 +36,7 @@ New Cloud Provider Support
 
 The following cloud providers are now supported:
 
-Amazon EC2
+Amazon AWS
   http://aws.amazon.com/ec2/
 
 Rackspace Cloud

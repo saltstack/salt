@@ -18,12 +18,12 @@
 #RACKSPACE.user: foobar
 #RACKSPACE.apikey: 8975234N8U92G25908
 #
-# EC2 Accepts these options:
-#EC2.id: LSKDJGHSDLGKJLSDFKGJ
-#EC2.key: 'sildghsldkghsroegijenovdfnzlkgh'
-#EC2.keyname: default
-#EC2.securitygroup: default
-#EC2.private_key: /root/test.pem
+# Amazon AWS Accepts these options:
+#AWS.id: LSKDJGHSDLGKJLSDFKGJ
+#AWS.key: 'sildghsldkghsroegijenovdfnzlkgh'
+#AWS.keyname: default
+#AWS.securitygroup: default
+#AWS.private_key: /root/test.pem
 #
 # Linode takes the single api_key
 #LINODE.apikey: <Linode api key>

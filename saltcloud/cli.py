@@ -106,7 +106,7 @@ class SaltCloud(object):
                 default=False,
                 help=('Display a list of sizes available in configured '
                       'cloud providers. Pass the cloud provider that '
-                      'available sizes are desired on, aka "EC2", '
+                      'available sizes are desired on, aka "AWS", '
                       'or pass "all" to list sizes for all configured '
                       'cloud providers'))
 

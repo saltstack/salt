@@ -23,9 +23,9 @@ cloud management platform and can be used to manage non Salt centric clouds.
 Getting Started
 ===============
 
-A quick guide covering getting started with Amazon EC2
+A quick guide covering getting started with Amazon AWS
 
-* :doc:`Getting Started With EC2 <topics/ec2>`
+* :doc:`Getting Started With AWS <topics/aws>`
 
 Core Configuration
 ==================

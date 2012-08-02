@@ -37,15 +37,15 @@ Rackspace cloud requires two configuration options:
 Amazon AWS
 ----------
 
-A number of configuration options are required for Amazon EC2:
+A number of configuration options are required for Amazon AWS:
 
 .. code-block:: yaml
 
-    EC2.id: HJGRYCILJLKJYG
-    EC2.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-    EC2.keyname: test
-    EC2.securitygroup: quick-start
-    EC2.private_key: /root/test.pem
+    AWS.id: HJGRYCILJLKJYG
+    AWSAWS.key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+    AWSAWS.keyname: test
+    AWSAWS.securitygroup: quick-start
+    AWSAWS.private_key: /root/test.pem
 
 Linode
 ------

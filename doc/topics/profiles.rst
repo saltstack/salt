@@ -38,8 +38,8 @@ Larger Example
 
 .. code-block:: yaml
 
-    base_ec2:
-      provider: EC2
+    base_aws:
+      provider: aws
       image: ami-e565ba8c
       size: Micro Instance
       os: RHEL6
