@@ -264,6 +264,7 @@ def script(
     else:
         fn_ = __salt__['cp.cache_file'](source, env)
     os.chmod(path, 320)
+    os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
             path,
             cwd=cwd,
