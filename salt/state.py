@@ -300,13 +300,6 @@ class State(object):
             errors.append(err)
         if errors:
             return errors
-        if data['fun'].startswith('mod_'):
-            errors.append(
-                    'State {0} in sls {1} uses an invalid function {2}'.format(
-                        data['state'],
-                        data['__sls__'],
-                        data['fun'])
-                    )
         full = data['state'] + '.' + data['fun']
         if full not in self.states:
             if '__sls__' in data:
@@ -812,7 +805,7 @@ class State(object):
         if errors:
             ret = {
                 'result': False,
-                'name': cdata['args'][0],
+                'name': data['name'],
                 'changes': {},
                 'comment': '',
                 }
