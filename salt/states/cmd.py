@@ -315,12 +315,16 @@ def script(name,
                   'cwd': cwd,
                   'template': template})
 
-    # Changet the source to be the name arg if it is nto specified
+    run_check_cmd_kwargs = {'cwd': cwd,
+                  'runas': user,
+                  'shell': shell or __grains__['shell'], }
+
+    # Change the source to be the name arg if it is not specified
     if source is None:
         source = name
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell)
+        cret = _run_check(run_check_cmd_kwargs, onlyif, unless, cwd, user, group, shell)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
