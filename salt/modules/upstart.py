@@ -132,7 +132,7 @@ def get_enabled():
     '''
     ret = set()
     for line in glob.glob('/etc/init.d/*'):
-        name = line
+        name = os.path.basename(line)
         if _service_is_upstart(name):
             if _upstart_is_enabled(name):
                 ret.add(name)
@@ -153,7 +153,7 @@ def get_disabled():
     '''
     ret = set()
     for line in glob.glob('/etc/init.d/*'):
-        name = line
+        name = os.path.basename(line)
         if _service_is_upstart(name):
             if _upstart_is_disabled(name):
                 ret.add(name)
