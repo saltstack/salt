@@ -13,8 +13,8 @@ and requires that two configuration paramaters be set for use:
 
     # The Rackspace login user
     RACKSPACE.user: fred
-    # The Rackspace user's login key
-    RACKSPACE.key: 901d3f579h23c8v73q9
+    # The Rackspace user's apikey
+    RACKSPACE.apikey: 901d3f579h23c8v73q9
 
 '''
 
@@ -47,7 +47,7 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for RACKSPACE configs
     '''
-    if 'RACKSPACE.user' in __opts__ and 'RACKSPACE.key' in __opts__:
+    if 'RACKSPACE.user' in __opts__ and 'RACKSPACE.apikey' in __opts__:
         return 'rackspace'
     return False
 
@@ -59,7 +59,7 @@ def get_conn():
     driver = get_driver(Provider.RACKSPACE)
     return driver(
             __opts__['RACKSPACE.user'],
-            __opts__['RACKSPACE.key'],
+            __opts__['RACKSPACE.apikey'],
             )
 
 

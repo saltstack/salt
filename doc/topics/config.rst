@@ -32,7 +32,7 @@ Rackspace cloud requires two configuration options:
 .. code-block:: yaml
 
     RACKSPACE.user: example_user
-    RACKSPACE.key: 123984bjjas87034
+    RACKSPACE.apikey: 123984bjjas87034
 
 Amazon AWS
 ----------

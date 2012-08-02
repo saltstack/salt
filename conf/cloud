@@ -16,7 +16,7 @@
 ##########################################
 # Rackspace creds take the following options:
 #RACKSPACE.user: foobar
-#RACKSPACE.key: 8975234N8U92G25908
+#RACKSPACE.apikey: 8975234N8U92G25908
 #
 # EC2 Accepts these options:
 #EC2.id: LSKDJGHSDLGKJLSDFKGJ
