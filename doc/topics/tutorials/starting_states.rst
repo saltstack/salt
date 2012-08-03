@@ -275,7 +275,7 @@ the apache service was extended to also watch the mod_python package.
 
 .. admonition:: Using extend with require or watch
 
-    The ``extend`` statement works differently for ``require`` or ``watch``
+    The ``extend`` statement works differently for ``require`` or ``watch``.
     It appends, rather than replacing.
 
 Understanding the Render System
