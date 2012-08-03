@@ -273,9 +273,10 @@ to configure the banner.
 In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
-There is a bit of a trick here, in the extend statement Requisite Statements
-are extended, so the ``- pkg: mod_python`` is appended to the watch list. But
-all other statements are overwritten.
+.. admonition:: Using extend with require or watch
+
+    The ``extend`` statement works differently for ``require`` or ``watch``
+    It appends, rather than replacing.
 
 Understanding the Render System
 ===============================
