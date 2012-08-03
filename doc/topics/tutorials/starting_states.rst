@@ -276,7 +276,7 @@ the apache service was extended to also watch the mod_python package.
 .. admonition:: Using extend with require or watch
 
     The ``extend`` statement works differently for ``require`` or ``watch``.
-    It appends, rather than replacing.
+    It appends to, rather than replacing the requisite component.
 
 Understanding the Render System
 ===============================
@@ -467,14 +467,14 @@ needed by using a pure Python SLS.
 Running and debugging salt states.
 ----------------------------------
 
-after writing out your top.sls file, to run it you call
-``salt '*' state.highstate``. If you get back just the hostnames with 
-a : after, but no return, then chances are there is a problem with the sls
-files.  To debug these, to see what's going on, and see the errors, use the
-``salt-call`` command like so: ``salt-call state.highstate -l debug``. This
-should help you figure out what's going wrong.  You can also start the minions
-in the foreground in debug mode, as a possible way to help debug as well.
-To start the minion in debug mode call it like this: ``salt-minion -l debug``.
+Once the rules in an SLS are ready, they need to be tested to ensure they
+work properly. To invoke the rules, simply execute ``salt '*' state.highstate``
+on the command line. If you get back just the hostnames with a `:` after,
+but no return, chances are there is a problem with the one or more of the sls
+files. Use the ``salt-call`` command: ``salt-call state.highstate -l debug``
+and examine the output for errors. This should help troubleshoot the issue.
+The minions can also be started in the foreground in debug mode. Start the
+minion in debug mode with: ``salt-minion -l debug``.
 
 
 Now onto the :doc:`States tutorial, part 1</topics/tutorials/states_pt1>`.
