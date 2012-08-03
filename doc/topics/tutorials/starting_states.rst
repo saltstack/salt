@@ -273,10 +273,7 @@ to configure the banner.
 In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
-.. admonition:: Using extend with require or watch
-
-    The ``extend`` statement works differently for ``require`` or ``watch``.
-    It appends to, rather than replacing the requisite component.
+.. include:: extend_with_require_watch.rst
 
 Understanding the Render System
 ===============================
