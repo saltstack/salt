@@ -3,6 +3,7 @@ Module for gathering and managing network information
 '''
 
 import sys
+import logging
 from string import ascii_letters, digits
 from salt.utils.interfaces import *
 from salt.utils.socket_util import *
@@ -12,6 +13,8 @@ __outputter__ = {
     'ping':    'txt',
     'netstat': 'txt',
 }
+
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -32,6 +35,7 @@ def _sanitize_host(host):
     return "".join([
         c for c in host[0:255] if c in (ascii_letters + digits + '.-')
     ])
+
 
 def _cidr_to_ipv4_netmask(cidr_bits):
     '''
@@ -57,6 +61,7 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):
     Ex. 0xffffff00 -> '255.255.255.0'
     '''
     return _cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
+
 
 def _number_of_set_bits(x):
     '''
@@ -233,6 +238,82 @@ def interfaces():
         cmd = __salt__['cmd.run']('ifconfig -a')
         ifaces = _interfaces_ifconfig(cmd)
     return ifaces
+
+
+def _get_net_start(ipaddr,netmask):
+    ipaddr_octets = ipaddr.split('.')
+    netmask_octets = netmask.split('.')
+    net_start_octets = [str(int(ipaddr_octets[x]) & int(netmask_octets[x]))
+                       for x in range(0,4)]
+    return '.'.join(net_start_octets)
+
+
+def _get_net_size(mask):
+    binary_str = ''
+    for octet in mask.split('.'):
+        binary_str += bin(int(octet))[2:].zfill(8)
+    return len(binary_str.rstrip('0'))
+
+
+def _calculate_subnet(ipaddr,netmask):
+    return '{0}/{1}'.format(_get_net_start(ipaddr,netmask),
+                            _get_net_size(netmask))
+
+
+def _ipv4_to_bits(ipaddr):
+    '''
+    Accepts an IPv4 dotted quad and returns a string representing its binary
+    counterpart
+    '''
+    return ''.join([bin(int(x))[2:].rjust(8,'0') for x in ipaddr.split('.')])
+
+
+def subnets():
+    '''
+    Returns a list of subnets to which the host belongs
+    '''
+    ifaces = interfaces()
+    subnets = []
+
+    for ipv4_info in ifaces.values():
+        for ipv4 in ipv4_info.get('inet',[]):
+            if ipv4['address'] == '127.0.0.1': continue
+            network = _calculate_subnet(ipv4['address'],ipv4['netmask'])
+            subnets.append(network)
+    return subnets
+
+
+def in_subnet(cidr):
+    '''
+    Returns True if host is within specified subnet, otherwise False
+    '''
+    try:
+        netstart,netsize = cidr.split('/')
+        netsize = int(netsize)
+    except:
+        log.error('Invalid CIDR \'{0}\''.format(cidr))
+        return False
+
+    ifaces = interfaces()
+
+    netstart_bin = _ipv4_to_bits(netstart)
+
+    if netsize < 32 and len(netstart_bin.rstrip('0')) > netsize:
+        log.error('Invalid network starting IP \'{0}\' in CIDR '
+                  '\'{1}\''.format(netstart,cidr))
+        return False
+
+    netstart_leftbits = netstart_bin[0:netsize]
+    for ipv4_info in ifaces.values():
+        for ipv4 in ipv4_info.get('inet',[]):
+            if ipv4['address'] == '127.0.0.1': continue
+            if netsize == 32:
+                if netstart == ipv4['address']: return True
+            else:
+                ip_leftbits = _ipv4_to_bits(ipv4['address'])[0:netsize]
+                if netstart_leftbits == ip_leftbits: return True
+
+    return False
 
 
 def ping(host):
