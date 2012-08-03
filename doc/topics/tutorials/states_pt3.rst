@@ -2,26 +2,27 @@
 States tutorial, part 3
 =======================
 
-This tutorial builds on the topic covered in :doc:`part 2 <states_pt2>`. It is
-recommended that you begin there.
+.. note::
 
-This tutorial will cover more advanced templating and configuration techniques
-for ``sls`` files.
+  This tutorial builds on the topic covered in :doc:`part1 <states_pt1>` and
+  :doc:`part 2 <states_pt2>`. It is recommended that you begin there.
+
+This part of the tutorial will cover more advanced templating and
+configuration techniques for ``sls`` files.
 
 Templating SLS modules
 ======================
 
-SLS modules may require programming logic or inline executions. This is
+SLS modules may require programming logic or inline execution. This is
 accomplished with module templating. The default module templating system used
 is `Jinja2`_  and may be configured by changing the :conf_master:`renderer`
 value in the master config.
 
 .. _`Jinja2`: http://jinja.pocoo.org/
 
-All states are passed through a templating system when they are initially read,
-so all that is required to make use of the templating system is to add some
-templating code. An example of an sls module with templating may look like
-this:
+All states are passed through a templating system when they are initially read.
+To make use of the templating system, simple add some templating markup.
+An example of an sls module with templating markup may look like this:
 
 .. code-block:: yaml
 
@@ -45,8 +46,8 @@ Using Grains in SLS modules
 ===========================
 
 Often times a state will need to behave differently on different systems.
-:doc:`Salt grains </topics/targeting/grains>` can be used from within sls modules. An object
-called ``grains`` is made available in the template context:
+:doc:`Salt grains </topics/targeting/grains>` objects are made available
+in the template context. The `grains` can be used from within sls modules:
 
 .. code-block:: yaml
 
@@ -83,31 +84,31 @@ The Salt module functions are also made available in the template context as
     {% endfor %}
 
 Below is an example that uses the ``network.hwaddr`` function to retrieve the
-MAC address for eth0:
+MAC address for eth0::
 
     salt['network.hwaddr']('eth0')
 
 Advanced SLS module syntax
 ==========================
 
-Last we will cover some incredibly useful techniques for more complex State
+Lastly, we will cover some incredibly useful techniques for more complex State
 trees.
 
 :term:`Include declaration`
 ---------------------------
 
-You have seen an example of how to spread a Salt tree across several files but
-in order to be able to have :term:`requisite references <requisite reference>`
-span multiple files you must use an :term:`include declaration`. For example:
+A previous example showed how to spread a Salt tree across several files.
+Similarly, :term:`requisite references <requisite references>` span multiple
+files by using an :term:`include declaration`. For example:
 
-``python-libs.sls``:
+``python/python-libs.sls``:
 
 .. code-block:: yaml
 
     python-dateutil:
       pkg.installed
 
-``django.sls``:
+``python/django.sls``:
 
 .. code-block:: yaml
 
@@ -126,14 +127,14 @@ You can modify previous declarations by using an :term:`extend declaration`. For
 example the following modifies the Apache tree to also restart Apache when the
 vhosts file is changed:
 
-``apache.sls``:
+``apache/apache.sls``:
 
 .. code-block:: yaml
 
     apache:
       pkg.installed
 
-``mywebsite.sls``:
+``apache/mywebsite.sls``:
 
 .. code-block:: yaml
 
@@ -148,8 +149,9 @@ vhosts file is changed:
 
     /etc/httpd/extra/httpd-vhosts.conf:
       file.managed:
-        - source: salt://httpd-vhosts.conf
+        - source: salt://apache/httpd-vhosts.conf
 
+.. include:: extend_with_require_watch.rst
 
 :term:`Name declaration`
 ------------------------
@@ -158,10 +160,10 @@ You can override the :term:`ID declaration` by using a :term:`name
 declaration`. For example, the previous example is a bit more maintainable if
 rewritten as follows:
 
-``mywebsite.sls``:
+``apache/mywebsite.sls``:
 
 .. code-block:: yaml
-    :emphasize-lines: 8,10,13
+    :emphasize-lines: 8,10,12
 
     include:
       - apache
@@ -175,7 +177,7 @@ rewritten as follows:
     mywebsite:
       file.managed:
         - name: /etc/httpd/extra/httpd-vhosts.conf
-        - source: salt://httpd-vhosts.conf
+        - source: salt://apache/httpd-vhosts.conf
 
 :term:`Names declaration`
 -------------------------

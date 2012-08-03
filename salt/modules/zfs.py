@@ -55,7 +55,7 @@ def create_file_vdevice(size, *names):
     '''
     creates file based ``virtual devices`` for a zpool
 
-    *names is a list of full paths for mkfile to create
+    ``*names`` is a list of full paths for mkfile to create
 
     CLI Example::
 

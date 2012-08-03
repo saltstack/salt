@@ -250,7 +250,7 @@ def term_job(jid):
 
 def kill_job(jid):
     '''
-    Sends a termination signal (SIGTERM 15) to the named salt job's process
+    Sends a kill signal (SIGKILL 9) to the named salt job's process
 
     CLI Example::
 
