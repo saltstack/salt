@@ -320,7 +320,7 @@ class ShellCase(TestCase):
     '''
     Execute a test for a shell command
     '''
-    def run_script(self, script, arg_str):
+    def run_script(self, script, arg_str, catch_stderr=False):
         '''
         Execute a script with the given argument string
         '''
@@ -329,11 +329,17 @@ class ShellCase(TestCase):
             return False
         ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
-        data = subprocess.Popen(cmd,
-                                shell=True,
-                                stdout=subprocess.PIPE
-                                ).communicate()[0].split('\n')
-        return data
+
+        if catch_stderr:
+            out, err = subprocess.Popen(
+                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            ).communicate()
+            return out.split('\n'), err.split('\n')
+
+        data = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE
+        ).communicate()
+        return data[0].split('\n')
 
     def run_salt(self, arg_str):
         '''
@@ -376,3 +382,33 @@ class ShellCase(TestCase):
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-key', arg_str)
+
+
+class ShellCaseCommonTestsMixIn(object):
+
+    def test_deprecated_config(self):
+        """
+        test for the --config deprecation warning
+
+        Once --config is fully deprecated, this test can be removed
+
+        """
+
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest("'_call_binary_' not defined.")
+
+        cfgfile = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        out, err = self.run_script(
+            self._call_binary_, "--config {0}".format(cfgfile), catch_stderr=True
+        )
+        self.assertIn('Usage: {0}'.format(self._call_binary_), '\n'.join(err))
+        self.assertIn('deprecated', '\n'.join(err))
+
+
+    def test_version_includes_binary_name(self):
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest("'_call_binary_' not defined.")
+
+        out = '\n'.join(self.run_script(self._call_binary_, "--version"))
+        self.assertIn(self._call_binary_, out)
+        self.assertIn(salt.__version__, out)
