@@ -214,69 +214,21 @@ class SaltCall(parsers.SaltCallOptionParser):
         caller.run()
 
 
-class SaltRun(object):
-    '''
-    Used to execute salt convenience functions
-    '''
-    def __init__(self):
-        self.opts = self.__parse()
-
-    def __parse(self):
-        '''
-        Parse the command line arguments
-        '''
-        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
-
-        parser.add_option('-c',
-                '--config',
-                dest='conf_file',
-                default='/etc/salt/master',
-                help=('Change the location of the master configuration; '
-                      'default=/etc/salt/master'))
-
-        parser.add_option('-t',
-                '--timeout',
-                dest='timeout',
-                default='1',
-                help=('Change the timeout, if applicable, for the salt runner; '
-                      'default=1'))
-
-        parser.add_option('-d',
-                '--doc',
-                '--documentation',
-                dest='doc',
-                default=False,
-                action='store_true',
-                help=('Display documentation for runners, pass a module or '
-                      'a runner to see documentation on only that '
-                      'module/runner.'))
-
-        options, args = parser.parse_args()
-
-        opts = {}
-        opts.update(salt.config.master_config(options.conf_file))
-        opts['conf_file'] = options.conf_file
-        opts['doc'] = options.doc
-        if len(args) > 0:
-            opts['fun'] = args[0]
-        else:
-            opts['fun'] = ''
-        if len(args) > 1:
-            opts['arg'] = args[1:]
-        else:
-            opts['arg'] = []
-
-        return opts
+class SaltRun(parsers.SaltRunOptionParser):
 
     def run(self):
         '''
         Execute salt-run
         '''
-        runner = salt.runner.Runner(self.opts)
-        # Run this here so SystemExit isn't raised
-        # anywhere else when someone tries to  use
-        # the runners via the python api
-        try:
-            runner.run()
-        except SaltClientError as exc:
-            raise SystemExit(str(exc))
+        self.parse_args()
+
+        runner = salt.runner.Runner(self.config)
+        if self.options.doc:
+            runner._print_docs()
+        else:
+            # Run this here so SystemExit isn't raised anywhere else when
+            # someone tries to use the runners via the python api
+            try:
+                runner.run()
+            except SaltClientError as exc:
+                raise SystemExit(str(exc))

@@ -888,3 +888,34 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
     def process_module_dirs(self):
         if self.options.module_dirs:
             self.config['module_dirs'] = self.options.module_dirs.split(',')
+
+
+class SaltRunOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn):
+    __metaclass__ = OptionParserMeta
+
+    default_timeout = 1
+
+    usage = "%prog [options]"
+
+    def _mixin_setup(self):
+        self.add_option(
+            '-d', '--doc', '--documentation',
+            dest='doc',
+            default=False,
+            action='store_true',
+            help=('Display documentation for runners, pass a module or a '
+                  'runner to see documentation on only that module/runner.')
+        )
+
+    def _mixin_after_parsed(self):
+        if len(self.args) > 0:
+            self.config['fun'] = self.args[0]
+        else:
+            self.config['fun'] = ''
+        if len(self.args) > 1:
+            self.config['arg'] = self.args[1:]
+        else:
+            self.config['arg'] = []
+
+    def setup_config(self):
+        return config.master_config(self.get_config_file_path('master'))

@@ -237,10 +237,7 @@ class ModuleCase(TestCase):
         Generate the tools to test a module
         '''
         self.client = salt.client.LocalClient(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'master'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
     def run_function(self, function, arg=(), **kwargs):
@@ -248,11 +245,9 @@ class ModuleCase(TestCase):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion',
-                               function,
-                               arg,
-                               timeout=100,
-                               kwarg=kwargs)
+        orig = self.client.cmd(
+            'minion', function, arg, timeout=100, kwarg=kwargs
+        )
         return orig['minion']
 
     def state_result(self, ret):
@@ -273,10 +268,7 @@ class ModuleCase(TestCase):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'minion'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
         )
 
     @property
@@ -285,10 +277,7 @@ class ModuleCase(TestCase):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'master'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
 
@@ -353,7 +342,7 @@ class ShellCase(TestCase):
         '''
         Execute salt-run
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-run', arg_str)
 
@@ -367,10 +356,9 @@ class ShellCase(TestCase):
             '{0} {1} {2}'.format(options, fun, ' '.join(arg))
         )
         opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
-        opts.update({'doc': False,
-                     'fun': fun,
-                     'arg': arg})
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        )
+        opts.update({'doc': False, 'fun': fun, 'arg': arg})
         runner = salt.runner.Runner(opts)
         ret['fun'] = runner.run()
         return ret
