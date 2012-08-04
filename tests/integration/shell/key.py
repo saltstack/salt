@@ -7,10 +7,13 @@ import integration
 from integration import TestDaemon
 
 
-class KeyTest(integration.ShellCase):
+class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test salt-key script
     '''
+
+    _call_binary_ = 'salt-key'
+
     def test_list(self):
         '''
         test salt-key -L

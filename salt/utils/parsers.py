@@ -668,15 +668,172 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
 
     usage = "%prog [options] '<target>' SOURCE DEST"
 
-    def _mixin_after_parsed(self, options, args):
+    def _mixin_after_parsed(self):
         # salt-cp needs arguments
-        if len(args) <= 1:
+        if len(self.args) <= 1:
             self.print_help()
             self.exit(1)
 
-        if options.list:
-            self.config['tgt'] = args[0].split(',')
+        if self.options.list:
+            self.config['tgt'] = self.args[0].split(',')
         else:
-            self.config['tgt'] = args[0]
-        self.config['src'] = args[1:-1]
-        self.config['dest'] = args[-1]
+            self.config['tgt'] = self.args[0]
+        self.config['src'] = self.args[1:-1]
+        self.config['dest'] = self.args[-1]
+
+
+class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
+                          OutputOptionsMixIn):
+
+    __metaclass__ = OptionParserMeta
+    _skip_console_logging_config_ = True
+
+    description = "XXX: Add salt-key description"
+
+    usage = "%prog [options]"
+
+    def _mixin_setup(self):
+
+        actions_group = optparse.OptionGroup(self, "Actions")
+        actions_group.add_option(
+            '-l', '--list',
+            default='',
+            help=('List the public keys. Takes the args: '
+                  '"pre", "un", "unaccepted": Unaccepted/unsigned keys '
+                  '"acc", "accepted": Accepted/signed keys '
+                  '"rej", "rejected": Rejected keys '
+                  '"all": all keys')
+        )
+
+        actions_group.add_option(
+            '-L', '--list-all',
+            default=False,
+            action='store_true',
+            help='List all public keys. Deprecated: use "--list all"'
+        )
+
+        actions_group.add_option(
+            '-a', '--accept',
+            default='',
+            help='Accept the following key'
+        )
+
+        actions_group.add_option(
+            '-A', '--accept-all',
+            default=False,
+            action='store_true',
+            help='Accept all pending keys'
+        )
+
+        actions_group.add_option(
+            '-r', '--reject',
+            default='',
+            help='Reject the specified public key'
+        )
+
+        actions_group.add_option(
+            '-R', '--reject-all',
+            default=False,
+            action='store_true',
+            help='Reject all pending keys'
+        )
+
+        actions_group.add_option(
+            '-p', '--print',
+            default='',
+            help='Print the specified public key'
+        )
+
+        actions_group.add_option(
+            '-P', '--print-all',
+            default=False,
+            action='store_true',
+            help='Print all public keys'
+        )
+
+        actions_group.add_option(
+            '-d', '--delete',
+            default='',
+            help='Delete the named key'
+        )
+
+        actions_group.add_option(
+            '-D', '--delete-all',
+            default=False,
+            action='store_true',
+            help='Delete all keys'
+        )
+        self.add_option_group(actions_group)
+
+
+        self.add_option(
+            '--key-logfile',
+            help=("DEPRECATED: Please use '--log-file' instead.\n"
+                  "Send all output to a file.")
+        )
+
+        self.add_option(
+            '--log-file',
+            default='/var/log/salt/key',
+            help=('Send all output to a file. Default is %default')
+        )
+
+        self.add_option(
+            '-q', '--quiet',
+            default=False,
+            action='store_true',
+            help='Suppress output'
+        )
+
+        self.add_option(
+            '-y', '--yes',
+            default=False,
+            action='store_true',
+            help='Answer Yes to all questions presented, defaults to False'
+        )
+
+        key_options_group = optparse.OptionGroup(self, "Key Generation Options")
+        self.add_option_group(key_options_group)
+        key_options_group.add_option(
+            '--gen-keys',
+            default='',
+            help='Set a name to generate a keypair for use with salt'
+        )
+
+        key_options_group.add_option(
+            '--gen-keys-dir',
+            default='.',
+            help=('Set the directory to save the generated keypair, only '
+                  'works with "gen_keys_dir" option; default=.')
+        )
+
+        key_options_group.add_option(
+            '--keysize',
+            default=2048,
+            type=int,
+            help=('Set the keysize for the generated key, only works with '
+                  'the "--gen-keys" option, the key size must be 2048 or '
+                  'higher, otherwise it will be rounded up to 2048; '
+                  '; default=%default')
+        )
+
+    def setup_config(self):
+        return config.master_config(self.get_config_file_path('master'))
+
+    def process_keysize(self):
+        if self.options.keysize < 2048:
+            self.error("The minimum value for keysize is 2048")
+        elif self.options.keysize > 32768:
+            self.error("The maximum value for keysize is 32768")
+
+    def process_key_logfile(self):
+        if self.options.key_logfile:
+            sys.stderr.write("The '--key-logfile' option is deprecated and "
+                             "will be removed in the future. Please use "
+                             "'--log-file' instead.")
+            self.config["log_file"] = self.options.key_logfile
+
+    def _mixin_after_parsed(self):
+        # It was decided to always set this to info, since it really all is
+        # info or error.
+        self.config['loglevel'] = 'info'

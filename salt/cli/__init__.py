@@ -154,194 +154,30 @@ class SaltCP(parsers.SaltCPOptionParser):
         cp_.run()
 
 
-class SaltKey(object):
+class SaltKey(parsers.SaltKeyOptionParser):
     '''
     Initialize the Salt key manager
     '''
-    def __init__(self):
-        self.opts = self.__parse()
-
-    def __parse(self):
-        '''
-        Parse the command line options for the salt key
-        '''
-        parser = optparse.OptionParser(version="%%prog %s" % VERSION)
-
-        parser.add_option('-l',
-                '--list',
-                dest='list',
-                default='',
-                help=('List the public keys. Takes the args: '
-                      '"pre", "un", "unaccepted": Unaccepted/unsigned keys '
-                      '"acc", "accepted": Accepted/signed keys '
-                      '"rej", "rejected": Rejected keys '
-                      '"all": all keys'))
-
-        parser.add_option('-L',
-                '--list-all',
-                dest='list_all',
-                default=False,
-                action='store_true',
-                help='List all public keys.  Deprecated: use "--list all"')
-
-        parser.add_option('-a',
-                '--accept',
-                dest='accept',
-                default='',
-                help='Accept the following key')
-
-        parser.add_option('-A',
-                '--accept-all',
-                dest='accept_all',
-                default=False,
-                action='store_true',
-                help='Accept all pending keys')
-
-        parser.add_option('-r',
-                '--reject',
-                dest='reject',
-                default='',
-                help='Reject the specified public key')
-
-        parser.add_option('-R',
-                '--reject-all',
-                dest='reject_all',
-                default=False,
-                action='store_true',
-                help='Reject all pending keys')
-
-        parser.add_option('-p',
-                '--print',
-                dest='print',
-                default='',
-                help='Print the specified public key')
-
-        parser.add_option('-P',
-                '--print-all',
-                dest='print_all',
-                default=False,
-                action='store_true',
-                help='Print all public keys')
-
-        parser.add_option('-d',
-                '--delete',
-                dest='delete',
-                default='',
-                help='Delete the named key')
-
-        parser.add_option('-D',
-                '--delete-all',
-                dest='delete_all',
-                default=False,
-                action='store_true',
-                help='Delete all keys')
-
-        parser.add_option('-q',
-                '--quiet',
-                dest='quiet',
-                default=False,
-                action='store_true',
-                help='Supress output')
-
-        parser.add_option('-y',
-                '--yes',
-                dest='yes',
-                default=False,
-                action='store_true',
-                help='Answer Yes to all questions presented, defaults to False'
-                )
-
-        parser.add_option('--key-logfile',
-                dest='key_logfile',
-                help=('Send all output to a file. '
-                      'Default is /var/log/salt/key'))
-
-        parser.add_option('--gen-keys',
-                dest='gen_keys',
-                default='',
-                help='Set a name to generate a keypair for use with salt')
-
-        parser.add_option('--gen-keys-dir',
-                dest='gen_keys_dir',
-                default='.',
-                help=('Set the direcotry to save the generated keypair, '
-                      'only works with "gen_keys_dir" option; default=.'))
-
-        parser.add_option('--keysize',
-                dest='keysize',
-                default=2048,
-                type=int,
-                help=('Set the keysize for the generated key, only works with '
-                      'the "--gen-keys" option, the key size must be 2048 or '
-                      'higher, otherwise it will be rounded up to 2048'
-                      '; default=2048'))
-
-        parser.add_option('-c',
-                '--config',
-                dest='conf_file',
-                default='/etc/salt/master',
-                help='Pass in an alternative configuration file')
-
-        parser.add_option('--raw-out',
-                default=False,
-                action='store_true',
-                dest='raw_out',
-                help=('Print the output from the salt-key command in raw python '
-                      'form, this is suitable for re-reading the output into '
-                      'an executing python script with eval.'))
-
-        parser.add_option('--yaml-out',
-                default=False,
-                action='store_true',
-                dest='yaml_out',
-                help='Print the output from the salt-key command in yaml.')
-
-        parser.add_option('--json-out',
-                default=False,
-                action='store_true',
-                dest='json_out',
-                help='Print the output from the salt-key command in json.')
-
-        parser.add_option('--no-color',
-                default=False,
-                action='store_true',
-                dest='no_color',
-                help='Disable all colored output')
-
-        options, args = parser.parse_args()
-
-        opts = {}
-        opts.update(salt.config.master_config(options.conf_file))
-
-        for k, v in options.__dict__.items():
-            if k == 'keysize':
-                if v < 2048:
-                    opts[k] = 2048
-                else:
-                    opts[k] = v
-            elif v is not None:
-                opts[k] = v
-        # I decided to always set this to info, since it really all is info or
-        # error.
-        opts['loglevel'] = 'info'
-        return opts
 
     def run(self):
         '''
-        Execute saltkey
+        Execute salt-key
         '''
+        self.parse_args()
+
         verify_env([
-            os.path.join(self.opts['pki_dir'], 'minions'),
-            os.path.join(self.opts['pki_dir'], 'minions_pre'),
-            os.path.join(self.opts['pki_dir'], 'minions_rejected'),
-            os.path.dirname(self.opts['log_file']),
+                os.path.join(self.config['pki_dir'], 'minions'),
+                os.path.join(self.config['pki_dir'], 'minions_pre'),
+                os.path.join(self.config['pki_dir'], 'minions_rejected'),
+                os.path.dirname(self.config['log_file']),
             ],
-            self.opts['user'],
-            permissive=self.opts['permissive_pki_access'])
-        import salt.log
-        salt.log.setup_logfile_logger(self.opts['key_logfile'],
-                                      self.opts['loglevel'])
-        key = salt.cli.key.Key(self.opts)
+            self.config['user'],
+            permissive=self.config['permissive_pki_access']
+        )
+
+        self.setup_logfile_logger()
+
+        key = salt.cli.key.Key(self.config)
         key.run()
 
 
