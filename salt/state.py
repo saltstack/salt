@@ -1519,11 +1519,12 @@ class BaseHighState(object):
         # Verify that the high data is structurally sound
         errors += self.state.verify_high(high)
 
+        if errors:
+            return errors
+
         # Compile and verify the raw chunks
         chunks = self.state.compile_high_data(high)
 
-        if errors:
-            return errors
         return chunks
 
 
