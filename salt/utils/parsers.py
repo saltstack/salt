@@ -203,14 +203,6 @@ class DeprecatedSyndicOptionsMixIn(DeprecatedConfigMessage):
             help='DEPRECATED. Please use -c/--config-dir from now on.'
         )
 
-    def process_config_dir(self, options):
-        # XXX: Remove deprecation warning in next release
-        if os.path.isfile(options.config_dir):
-            self.print_config_warning()
-
-        if hasattr(self, 'setup_config'):
-            self.config = self.setup_config()
-
 
 class LogLevelMixIn(object):
     __metaclass__ = MixInMeta
@@ -315,7 +307,7 @@ class MinionOptionParser(MasterOptionParser):
 
     description = "TODO: explain what salt-minion is"
 
-    def setup_config(self, options):
+    def setup_config(self):
         return config.minion_config(self.get_config_file_path('minion'))
 
 
@@ -328,7 +320,7 @@ class SyndicOptionParser(OptionParser, DeprecatedSyndicOptionsMixIn,
     description = ("A seamless master of masters. Scale Salt to thousands of "
                    "hosts or across many different networks.")
 
-    def setup_config(self, options):
+    def setup_config(self):
         opts = config.master_config(self.get_config_file_path('master'))
         opts['_minion_conf_file'] = opts['conf_file']
         opts.update(config.minion_config(self.get_config_file_path('minion')))
