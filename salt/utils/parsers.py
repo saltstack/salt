@@ -505,27 +505,6 @@ class OutputOptionsMixIn(object):
                 ]))
             )
 
-#    def get_printout(self, outputter=None):
-#        # Determine the proper output method and run it
-#        from salt.output import get_printout
-#        return get_outputter(outputter)
-#
-#        if outputter is not None:
-#            return get_outputter(outputter)
-#
-#        if self.options.raw_out:
-#            outputter = 'raw'
-#        elif self.options.json_out:
-#            outputter = 'json'
-#        elif self._include_text_out_ and self.options.text_out:
-#            outputter = 'txt'
-#        elif self.options.yaml_out:
-#            outputter = 'yaml'
-#
-#        if outputter is not None:
-#            return get_outputter(outputter)
-#
-#        return None
 
 class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
     _include_text_out_ = True
@@ -673,3 +652,31 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path('master'))
+
+
+class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
+                         TargetOptionsMixIn):
+    __metaclass__ = OptionParserMeta
+
+    description = (
+        "salt-cp is NOT intended to broadcast large files, it is intended to "
+        "handle text files.\nsalt-cp can be used to distribute configuration "
+        "files."
+    )
+
+    default_timeout = 5
+
+    usage = "%prog [options] '<target>' SOURCE DEST"
+
+    def _mixin_after_parsed(self, options, args):
+        # salt-cp needs arguments
+        if len(args) <= 1:
+            self.print_help()
+            self.exit(1)
+
+        if options.list:
+            self.config['tgt'] = args[0].split(',')
+        else:
+            self.config['tgt'] = args[0]
+        self.config['src'] = args[1:-1]
+        self.config['dest'] = args[-1]

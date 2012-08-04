@@ -140,109 +140,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             print('')
 
 
-class SaltCP(object):
+class SaltCP(parsers.SaltCPOptionParser):
     '''
     Run the salt-cp command line client
     '''
-    def __init__(self):
-        self.opts = self.__parse()
-
-    def __parse(self):
-        '''
-        Parse the command line
-        '''
-        usage = "%prog [options] '<target>' SOURCE DEST"
-        parser = optparse.OptionParser(version="%%prog %s" % VERSION, usage=usage)
-
-        parser.add_option('-t',
-                '--timeout',
-                default=5,
-                type=int,
-                dest='timeout',
-                help=('Set the return timeout for batch jobs; '
-                      'default=5 seconds'))
-        parser.add_option('-E',
-                '--pcre',
-                default=False,
-                dest='pcre',
-                action='store_true',
-                help=('Instead of using shell globs to evaluate the target '
-                      'servers, use pcre regular expressions'))
-        parser.add_option('-L',
-                '--list',
-                default=False,
-                dest='list',
-                action='store_true',
-                help=('Instead of using shell globs to evaluate the target '
-                      'servers, take a comma delimited list of servers.'))
-        parser.add_option('-G',
-                '--grain',
-                default=False,
-                dest='grain',
-                action='store_true',
-                help=('Instead of using shell globs to evaluate the target '
-                      'use a grain value to identify targets, the syntax '
-                      'for the target is the grain key followed by a glob'
-                      'expression:\n"os:Arch*"'))
-        parser.add_option('--grain-pcre',
-                default=False,
-                dest='grain_pcre',
-                action='store_true',
-                help=('Instead of using shell globs to evaluate the target '
-                      'use a grain value to identify targets, the syntax '
-                      'for the target is the grain key followed by a pcre '
-                      'regular expression:\n"os:Arch.*"'))
-        parser.add_option('-N',
-                '--nodegroup',
-                default=False,
-                dest='nodegroup',
-                action='store_true',
-                help=('Instead of using shell globs to evaluate the target '
-                      'use one of the predefined nodegroups to identify a '
-                      'list of targets.'))
-        parser.add_option('-R',
-                '--range',
-                default=False,
-                dest='range',
-                action='store_true',
-                help=('Instead of using shell globs to evaluate the target '
-                      'use a range expressions to identify targets. '
-                      'Range expressions look like %cluster'))
-        parser.add_option('-c',
-                '--config',
-                default='/etc/salt/master',
-                dest='conf_file',
-                help=('The location of the salt master configuration file, '
-                      'the salt master settings are required to know where '
-                      'the connections are; default=/etc/salt/master'))
-
-        options, args = parser.parse_args()
-
-        opts = {}
-
-        for k, v in options.__dict__.items():
-            if v is not None:
-                opts[k] = v
-
-        # salt-cp needs arguments
-        if len(args) <= 1:
-            parser.print_help()
-            parser.exit(1)
-
-        if opts['list']:
-            opts['tgt'] = args[0].split(',')
-        else:
-            opts['tgt'] = args[0]
-        opts['src'] = args[1:-1]
-        opts['dest'] = args[-1]
-
-        return opts
 
     def run(self):
         '''
         Execute salt-cp
         '''
-        cp_ = salt.cli.cp.SaltCP(self.opts)
+        self.parse_args()
+        cp_ = salt.cli.cp.SaltCP(self.config)
         cp_.run()
 
 
