@@ -269,11 +269,13 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
     query = (
         "SELECT true "
         "FROM pg_roles "
-        "WHERE (select rolname where rolname='{user}')"
-    ).format(user=user)
+        "WHERE EXISTS "
+        "(SELECT rolname WHERE rolname='{role}')".format(role=name)
+    )
     cmd = _psql_cmd('-c', query, host=host, user=user, port=port)
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    val = cmdret.splitlines()[2]
+    log.debug(cmdret.splitlines())
+    val = cmdret.splitlines()[1]
     return True if val.strip() == 't' else False
 
 
