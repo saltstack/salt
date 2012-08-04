@@ -345,7 +345,7 @@ class ShellCase(TestCase):
         '''
         Execute salt
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt', arg_str)
 

@@ -21,32 +21,37 @@ import salt.utils
 from salt._compat import string_types
 from salt.exceptions import SaltException
 
-__all__ = ('get_outputter',)
+__all__ = ('get_outputter', 'get_printout')
 
 log = logging.getLogger(__name__)
 
+def get_printout(ret, out, opts):
+    """
+    Return the proper printout
+    """
+    if isinstance(ret, list) or isinstance(ret, dict):
+        if opts['raw_out']:
+            return get_outputter('raw')
+        elif opts['json_out']:
+            return get_outputter('json')
+        elif opts.get('txt_out', False):
+            return get_outputter('txt')
+        elif opts['yaml_out']:
+            return get_outputter('yaml')
+        elif out:
+            return get_outputter(out)
+        else:
+            return get_outputter(None)
+    # Pretty print any salt exceptions
+    elif isinstance(ret, SaltException):
+        return get_outputter("txt")
 
 def display_output(ret, out, opts):
     '''
     Display the output of a command in the terminal
     '''
-    if isinstance(ret, list) or isinstance(ret, dict):
-        if opts['raw_out']:
-            printout = get_outputter('raw')
-        elif opts['json_out']:
-            printout = get_outputter('json')
-        elif opts['txt_out']:
-            printout = get_outputter('txt')
-        elif opts['yaml_out']:
-            printout = get_outputter('yaml')
-        elif out:
-            printout = get_outputter(out)
-        else:
-            printout = get_outputter(None)
-    # Pretty print any salt exceptions
-    elif isinstance(ret, SaltException):
-        printout = get_outputter("txt")
-    printout(ret)
+    printout = get_printout(ret, out, opts)
+    printout(ret, color=not bool(opts['no_color']))
 
 
 class Outputter(object):

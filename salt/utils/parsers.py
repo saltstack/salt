@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    salt.utils.parser
-    ~~~~~~~~~~~~~~~~~
+    salt.utils.parsers
+    ~~~~~~~~~~~~~~~~~~
 
     :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
     :license: Apache 2.0, see LICENSE for more details.
@@ -10,7 +10,9 @@
 import os
 import sys
 import optparse
+from functools import partial
 from salt import config, log, version
+
 
 def _sorted(mixins_or_funcs):
     return sorted(
@@ -106,7 +108,12 @@ class OptionParser(optparse.OptionParser):
                 process_option_funcs.append(process_option_func)
 
         for process_option_func in _sorted(process_option_funcs):
-            process_option_func()
+            try:
+                process_option_func()
+            except Exception, err:
+                self.error("Error while processing {0}: {1}".format(
+                    process_option_func, err
+                ))
 
         # Run the functions on self._mixin_after_parsed_funcs
         for mixin_after_parsed_func in self._mixin_after_parsed_funcs:
@@ -155,6 +162,7 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
         )
 
     def __merge_config_with_cli(self, *args):
+        # Merge parser options
         for option in self.option_list:
             if not option.dest:
                 # --version does not have dest attribute set for example.
@@ -163,8 +171,17 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
                 continue
 
             value = getattr(self.options, option.dest, None)
-            if value:
+            if value is not None:
                 self.config[option.dest] = value
+
+        # Merge parser group options if any
+        for group in self.option_groups:
+            for option in group.option_list:
+                if not option.dest:
+                    continue
+                value = getattr(self.options, option.dest, None)
+                if value is not None:
+                    self.config[option.dest] = value
 
     def process_config_dir(self):
         # XXX: Remove deprecation warning in next release
@@ -289,6 +306,231 @@ class PidfileMixin(object):
         set_pidfile(self.config['pidfile'])
 
 
+class TargetOptionsMixIn(object):
+
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 20
+
+    selected_target_option = None
+
+    def _mixin_setup(self):
+        group = self.target_options_group = optparse.OptionGroup(
+            self, "Target Options", "Target Selection Options"
+        )
+        self.add_option_group(group)
+        group.add_option(
+            '-E', '--pcre',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'servers, use pcre regular expressions')
+        )
+        group.add_option(
+            '-L', '--list',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'servers, take a comma delimited list of servers.')
+        )
+        group.add_option(
+            '-G', '--grain',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'use a grain value to identify targets, the syntax '
+                  'for the target is the grain key followed by a glob'
+                  'expression:\n"os:Arch*"')
+        )
+        group.add_option(
+            '--grain-pcre',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'use a grain value to identify targets, the syntax '
+                  'for the target is the grain key followed by a pcre '
+                  'regular expression:\n"os:Arch.*"')
+        )
+        group.add_option(
+            '-N', '--nodegroup',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'use one of the predefined nodegroups to identify a '
+                  'list of targets.')
+        )
+        group.add_option(
+            '-R', '--range',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'use a range expression to identify targets. '
+                  'Range expressions look like %cluster')
+        )
+
+        self._create_process_functions()
+
+    def _create_process_functions(self):
+        for option in self.target_options_group.option_list:
+            def process(opt):
+                if getattr(self.options, opt.dest):
+                    self.selected_target_option = opt.dest
+
+            funcname = 'process_%s' % option.dest
+            if not hasattr(self, funcname):
+                setattr(self, funcname, partial(process, option))
+
+    def _mixin_after_parsed(self):
+        group_options_selected = filter(
+            lambda option: getattr(self.options, option.dest) is True,
+            self.target_options_group.option_list
+        )
+        if len(group_options_selected) > 1:
+            self.error(
+                "The options {0} are mutually exclusive. Please only choose "
+                "one of them".format('/'.join([
+                    option.get_opt_string() for option in group_options_selected
+                ]))
+            )
+
+
+class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
+    def _mixin_setup(self):
+        TargetOptionsMixIn._mixin_setup(self)
+        group = self.target_options_group
+        group.add_option(
+            '-C', '--compound',
+            default=False,
+            action='store_true',
+            help=('The compound target option allows for multiple target types '
+                  'to be evaluated, allowing for greater granularity in target '
+                  'matching. The compound target is space delimited, targets '
+                  'other than globs are preceded with an identifier matching '
+                  'the specific targets argument type: salt \'G@os:RedHat and '
+                  'webser* or E@database.*\'')
+        )
+        group.add_option(
+            '-X', '--exsel',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs use the return code of '
+                  'a function.')
+        )
+        group.add_option(
+            '-I', '--pillar',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'use a pillar value to identify targets, the syntax '
+                  'for the target is the pillar key followed by a glob'
+                  'expression:\n"role:production*"')
+        )
+
+        self._create_process_functions()
+
+
+class TimeoutMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 10
+
+    def _mixin_setup(self):
+        if not hasattr(self, 'default_timeout'):
+            raise RuntimeError("You need to define the 'default_timeout' "
+                               "attribute on %s" % self.__class__.__name__)
+        self.add_option(
+            '-t', '--timeout',
+            type=int,
+            default=self.default_timeout,
+            help=('Change the timeout, if applicable, for the running command; '
+                  'default=%default')
+        )
+
+
+class OutputOptionsMixIn(object):
+
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 40
+    _include_text_out_ = False
+
+    def _mixin_setup(self):
+        group = self.output_options_group = optparse.OptionGroup(
+            self, "Output Options", "Configure your preferred output format"
+        )
+        self.add_option_group(group)
+        group.add_option(
+            '--raw-out',
+            default=False,
+            action='store_true',
+            help=('Print the output from the salt-key command in raw python '
+                  'form, this is suitable for re-reading the output into an '
+                  'executing python script with eval.')
+        )
+        group.add_option(
+            '--yaml-out',
+            default=False,
+            action='store_true',
+            help='Print the output from the salt-key command in yaml.'
+        )
+        group.add_option(
+            '--json-out',
+            default=False,
+            action='store_true',
+            help='Print the output from the salt-key command in json.'
+        )
+        if self._include_text_out_:
+            group.add_option(
+                '--text-out',
+                default=False,
+                action='store_true',
+                help=('Print the output from the salt command in the same '
+                      'form the shell would.')
+            )
+        group.add_option(
+            '--no-color',
+            default=False,
+            action='store_true',
+            help='Disable all colored output'
+        )
+
+    def _mixin_after_parsed(self):
+        group_options_selected = filter(
+            lambda option: getattr(self.options, option.dest) and
+                           option.dest.endswith('_out'),
+            self.output_options_group.option_list
+        )
+        if len(group_options_selected) > 1:
+            self.error(
+                "The options {0} are mutually exclusive. Please only choose "
+                "one of them".format('/'.join([
+                    option.get_opt_string() for option in group_options_selected
+                ]))
+            )
+
+#    def get_printout(self, outputter=None):
+#        # Determine the proper output method and run it
+#        from salt.output import get_printout
+#        return get_outputter(outputter)
+#
+#        if outputter is not None:
+#            return get_outputter(outputter)
+#
+#        if self.options.raw_out:
+#            outputter = 'raw'
+#        elif self.options.json_out:
+#            outputter = 'json'
+#        elif self._include_text_out_ and self.options.text_out:
+#            outputter = 'txt'
+#        elif self.options.yaml_out:
+#            outputter = 'yaml'
+#
+#        if outputter is not None:
+#            return get_outputter(outputter)
+#
+#        return None
+
+class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
+    _include_text_out_ = True
+
+
 class MasterOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                          DeprecatedMasterMinionMixIn, RunUserMixin,
                          DaemonMixIn, PidfileMixin):
@@ -343,3 +585,91 @@ class SyndicOptionParser(OptionParser, DeprecatedSyndicOptionsMixIn,
         opts['_master_conf_file'] = opts['conf_file']
         opts.pop('conf_file')
         return opts
+
+
+class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
+                          ExtendedTargetOptionsMixIn,
+                          OutputOptionsWithTextMixIn):
+
+    __metaclass__ = OptionParserMeta
+
+    default_timeout = 5
+
+    usage = "%prog [options] '<target>' <function> [arguments]"
+
+    def _mixin_setup(self):
+        self.add_option(
+            '-s', '--static',
+            default=False,
+            action='store_true',
+            help=('Return the data from minions as a group after they '
+                  'all return.')
+        )
+        self.add_option(
+            '-v', '--verbose',
+            default=False,
+            action='store_true',
+            help=('Turn on command verbosity, display jid and active job '
+                  'queries')
+        )
+        self.add_option(
+            '-b', '--batch',
+            '--batch-size',
+            default='',
+            dest='batch',
+            help=('Execute the salt job in batch mode, pass either the number '
+                  'of minions to batch at a time, or the percentage of '
+                  'minions to have running')
+        )
+        self.add_option(
+            '--return',
+            default='',
+            metavar='RETURNER',
+            help=('Set an alternative return method. By default salt will '
+                  'send the return data from the command back to the master, '
+                  'but the return data can be redirected into any number of '
+                  'systems, databases or applications.')
+            )
+        self.add_option(
+            '-Q', '--query',
+            action='store_true',
+            help=('This option is deprecated and will be removed in a future '
+                  'release, please use salt-run jobs instead.\n'
+                  'Execute a salt command query, this can be used to find '
+                  'the results of a previous function call: -Q test.echo')
+        )
+
+    def _mixin_after_parsed(self):
+        if self.options.query:
+            if len(self.args) < 1:
+                self.error(
+                    'Please pass in a command to query the old salt calls for.'
+                )
+            self.config['cmd'] = self.args[0]
+        else:
+            # Catch invalid invocations of salt such as: salt run
+            if len(self.args) <= 1:
+                self.print_help()
+                self.exit(1)
+
+            if self.options.list:
+                self.config['tgt'] = self.args[0].split(',')
+            else:
+                self.config['tgt'] = self.args[0]
+
+            # Detect compound command and set up the data for it
+            if ',' in self.args[1]:
+                self.config['fun'] = self.args[1].split(',')
+                self.config['arg'] = []
+                for comp in ' '.join(self.args[2:]).split(','):
+                    self.config['arg'].append(comp.split())
+                if len(self.config['fun']) != len(self.config['arg']):
+                    self.exit(42, 'Cannot execute compound command without '
+                                  'defining all arguments.')
+            else:
+                self.config['fun'] = self.args[1]
+                self.config['arg'] = self.args[2:]
+
+
+    def setup_config(self):
+        return config.master_config(self.get_config_file_path('master'))
