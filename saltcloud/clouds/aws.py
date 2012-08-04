@@ -51,14 +51,14 @@ list_nodes = types.FunctionType(list_nodes.__code__, globals())
 # Only load in this module if the AWS configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for RACKSPACE configs
+    Set up the libcloud funcstions and check for AWS configs
     '''
     confs = [
             'AWS.id',
-            'AWSAWS.key',
-            'AWSAWS.keyname',
-            'AWSAWS.securitygroup',
-            'AWSAWS.private_key',
+            'AWS.key',
+            'AWS.keyname',
+            'AWS.securitygroup',
+            'AWS.private_key',
             ]
     for conf in confs:
         if conf not in __opts__:
