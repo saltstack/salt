@@ -364,7 +364,8 @@ class Loader(object):
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))
-                    or os.path.isdir(fn_)):
+                    or os.path.isdir( os.path.join(mod_dir,fn_) )):
+
                     extpos = fn_.rfind('.')
                     if extpos > 0:
                         _name = fn_[:extpos]
@@ -388,6 +389,14 @@ class Loader(object):
                             path,
                             desc
                             )
+                    #reload all submodules if necessary
+                    submodules = [getattr(mod,sname) for sname in dir(mod) if type(getattr(mod,sname))==type(mod)]
+                    #reload only custom "sub"modules i.e is a submodule in parent module
+                    #that are still available on disk (i.e. not removed during sync_modules
+                    for submodule in submodules:
+                        if submodule.__name__.startswith('{0}_{1}'.format(name, self.tag)) and \
+                           os.path.isfile( os.path.splitext(submodule.__file__)[0] + ".py" ):
+                            reload(submodule)
             except ImportError as exc:
                 log.debug(('Failed to import module {0}, this is most likely'
                            ' NOT a problem: {1}').format(name, exc))
