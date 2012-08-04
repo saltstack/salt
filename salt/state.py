@@ -1493,9 +1493,12 @@ class BaseHighState(object):
         '''
         Return just the highstate or the errors
         '''
+        err = []
         top = self.get_top()
+        err += self.verify_tops(top)
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
+        err += errors
 
         if errors:
             return errors
