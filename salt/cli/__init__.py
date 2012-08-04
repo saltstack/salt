@@ -15,9 +15,10 @@ import salt.client
 import salt.output
 import salt.runner
 
-from salt.utils import parser as optparse
+#from salt.utils import parsers as optparse
+import optparse
 from salt.utils.verify import verify_env
-from salt import __version__ as VERSION
+from salt.version import __version__ as VERSION
 from salt.exceptions import SaltInvocationError, SaltClientError, \
     SaltException
 
