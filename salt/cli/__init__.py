@@ -43,11 +43,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             ret = local.find_cmd(self.config['cmd'])
             for jid in ret:
                 if isinstance(ret, list) or isinstance(ret, dict):
-                    # Determine the proper output method and run it
-                    printout = self.get_outputter()
-
                     print('Return data for job {0}:'.format(jid))
-                    printout(ret[jid])
+                    salt.output.display_output(ret[jid], None, self.config)
                     print('')
         elif self.options.batch:
             batch = salt.cli.batch.Batch(self.config)
