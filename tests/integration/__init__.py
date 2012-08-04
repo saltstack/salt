@@ -383,6 +383,14 @@ class ShellCase(TestCase):
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-key', arg_str)
 
+    def run_cp(self, arg_str):
+        '''
+        Execute salt-cp
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
+        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-cp', arg_str)
+
 
 class ShellCaseCommonTestsMixIn(object):
 
