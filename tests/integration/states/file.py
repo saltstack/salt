@@ -16,6 +16,7 @@ class FileTest(integration.ModuleCase):
         file.symlink
         '''
         name = os.path.join(integration.TMP, 'symlink')
+        os.symlink(name, '{0}.tgt'.format(name))
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', name=name, target=tgt)
         result = ret[next(iter(ret))]['result']
