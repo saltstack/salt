@@ -240,8 +240,6 @@ def user_list(user=None, host=None, port=None, runas=None):
     (user, host, port) = _connection_defaults(user, host, port)
 
     ret = []
-    # TODO Is it not better to specifically request rolname and avoid having
-    # to split up the lines below?
     cmd = _psql_cmd('-c', 'SELECT * FROM pg_roles',
             host=host, user=user, port=port)
 
