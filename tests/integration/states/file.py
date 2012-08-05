@@ -2,6 +2,7 @@
 Tests for the file state
 '''
 import os
+import shutil
 import integration
 
 
@@ -9,6 +10,7 @@ class FileTest(integration.ModuleCase):
     '''
     Validate the file state
     '''
+
     def test_symlink(self):
         '''
         file.symlink
@@ -57,7 +59,6 @@ class FileTest(integration.ModuleCase):
         file.absent
         '''
         name = os.path.join(integration.TMP, 'link_to_kill')
-        os.symlink(name, '{0}.tgt'.format(name))
         ret = self.run_state('file.absent', name=name)
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
@@ -74,6 +75,7 @@ class FileTest(integration.ModuleCase):
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
         self.assertTrue(os.path.isfile(name))
+        os.remove(name)
 
     def test_managed(self):
         '''
@@ -81,16 +83,11 @@ class FileTest(integration.ModuleCase):
         '''
         name = os.path.join(integration.TMP, 'grail_scene33')
         ret = self.run_state(
-                'file.managed',
-                name=name,
-                source='salt://grail/scene33')
+            'file.managed', name=name, source='salt://grail/scene33'
+        )
         src = os.path.join(
-                integration.FILES,
-                'file',
-                'base',
-                'grail',
-                'scene33'
-                )
+            integration.FILES, 'file', 'base', 'grail', 'scene33'
+        )
         with open(src, 'r') as fp_:
             master_data = fp_.read()
         with open(name, 'r') as fp_:
@@ -105,10 +102,8 @@ class FileTest(integration.ModuleCase):
         '''
         name = os.path.join(integration.TMP, 'grail_not_scene33')
         ret = self.run_state(
-                'file.managed',
-                test=True,
-                name=name,
-                source='salt://grail/scene33')
+            'file.managed', test=True, name=name, source='salt://grail/scene33'
+        )
         self.assertFalse(os.path.isfile(name))
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
@@ -118,10 +113,7 @@ class FileTest(integration.ModuleCase):
         file.directory
         '''
         name = os.path.join(integration.TMP, 'a_new_dir')
-        ret = self.run_state(
-                'file.directory',
-                name=name,
-                )
+        ret = self.run_state('file.directory', name=name)
         self.assertTrue(os.path.isdir(name))
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
@@ -131,11 +123,7 @@ class FileTest(integration.ModuleCase):
         file.directory
         '''
         name = os.path.join(integration.TMP, 'a_not_dir')
-        ret = self.run_state(
-                'file.directory',
-                test=True,
-                name=name,
-                )
+        ret = self.run_state('file.directory', test=True, name=name)
         self.assertFalse(os.path.isdir(name))
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
@@ -145,14 +133,11 @@ class FileTest(integration.ModuleCase):
         file.recurse
         '''
         name = os.path.join(integration.TMP, 'recurse_dir')
-        ret = self.run_state(
-                'file.recurse',
-                name=name,
-                source='salt://grail',
-                )
+        ret = self.run_state('file.recurse', name=name, source='salt://grail')
         self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
+        shutil.rmtree(name, ignore_errors=True)
 
     def test_test_recurse(self):
         '''
@@ -160,14 +145,12 @@ class FileTest(integration.ModuleCase):
         '''
         name = os.path.join(integration.TMP, 'recurse_test_dir')
         ret = self.run_state(
-                'file.recurse',
-                test=True,
-                name=name,
-                source='salt://grail',
-                )
+            'file.recurse', test=True, name=name, source='salt://grail',
+        )
         self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
+        os.removedirs(name)
 
     def test_sed(self):
         '''
@@ -177,15 +160,13 @@ class FileTest(integration.ModuleCase):
         with open(name, 'w+') as fp_:
             fp_.write('change_me')
         ret = self.run_state(
-                'file.sed',
-                name=name,
-                before='change',
-                after='salt'
-                )
+            'file.sed', name=name, before='change', after='salt'
+        )
         with open(name, 'r') as fp_:
             self.assertIn('salt', fp_.read())
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
+        os.remove(name)
 
     def test_test_sed(self):
         '''
@@ -195,16 +176,13 @@ class FileTest(integration.ModuleCase):
         with open(name, 'w+') as fp_:
             fp_.write('change_me')
         ret = self.run_state(
-                'file.sed',
-                test=True,
-                name=name,
-                before='change',
-                after='salt'
-                )
+            'file.sed', test=True, name=name, before='change', after='salt'
+        )
         with open(name, 'r') as fp_:
             self.assertIn('change', fp_.read())
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
+        os.remove(name)
 
     def test_comment(self):
         '''
@@ -230,6 +208,7 @@ class FileTest(integration.ModuleCase):
         # result is still positive
         ret = list(_ret.values())[0]
         self.assertTrue(ret['result'], ret)
+        os.remove(name)
 
     def test_test_comment(self):
         '''
@@ -239,15 +218,13 @@ class FileTest(integration.ModuleCase):
         with open(name, 'w+') as fp_:
             fp_.write('comment_me')
         ret = self.run_state(
-                'file.comment',
-                test=True,
-                name=name,
-                regex='.*comment.*',
-                )
+            'file.comment', test=True, name=name, regex='.*comment.*',
+        )
         with open(name, 'r') as fp_:
             self.assertNotIn('#comment', fp_.read())
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
+        os.remove(name)
 
     def test_uncomment(self):
         '''
@@ -261,6 +238,7 @@ class FileTest(integration.ModuleCase):
             self.assertNotIn('#comment', fp_.read())
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
+        os.remove(name)
 
     def test_test_uncomment(self):
         '''
@@ -270,15 +248,13 @@ class FileTest(integration.ModuleCase):
         with open(name, 'w+') as fp_:
             fp_.write('#comment_me')
         ret = self.run_state(
-                'file.uncomment',
-                test=True,
-                name=name,
-                regex='^comment.*',
-                )
+            'file.uncomment', test=True, name=name, regex='^comment.*'
+        )
         with open(name, 'r') as fp_:
             self.assertIn('#comment', fp_.read())
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
+        os.remove(name)
 
     def test_append(self):
         '''
@@ -287,15 +263,12 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'append_test')
         with open(name, 'w+') as fp_:
             fp_.write('#salty!')
-        ret = self.run_state(
-                'file.append',
-                name=name,
-                text='cheese',
-                )
+        ret = self.run_state('file.append', name=name, text='cheese')
         with open(name, 'r') as fp_:
             self.assertIn('cheese', fp_.read())
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
+        os.remove(name)
 
     def test_test_append(self):
         '''
@@ -304,43 +277,50 @@ class FileTest(integration.ModuleCase):
         name = os.path.join(integration.TMP, 'append_test_test')
         with open(name, 'w+') as fp_:
             fp_.write('#salty!')
-        ret = self.run_state(
-                'file.append',
-                test=True,
-                name=name,
-                text='cheese',
-                )
+        ret = self.run_state('file.append', test=True, name=name, text='cheese')
         with open(name, 'r') as fp_:
             self.assertNotIn('cheese', fp_.read())
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
+        os.remove(name)
 
     def test_touch(self):
         '''
         file.touch
         '''
         name = os.path.join(integration.TMP, 'touch_test')
-        ret = self.run_state(
-                'file.touch',
-                name=name,
-                )
+        ret = self.run_state('file.touch', name=name)
         self.assertTrue(os.path.isfile(name))
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
+        os.remove(name)
 
     def test_test_touch(self):
         '''
         file.touch test interface
         '''
         name = os.path.join(integration.TMP, 'touch_test')
-        ret = self.run_state(
-                'file.touch',
-                test=True,
-                name=name,
-                )
+        ret = self.run_state('file.touch', test=True, name=name)
         self.assertFalse(os.path.isfile(name))
         result = ret[next(iter(ret))]['result']
         self.assertIsNone(result)
+
+    def test_touch_directory(self):
+        '''
+        file.touch a directory
+        '''
+        name = os.path.join(integration.TMP, 'touch_test_dir')
+        try:
+            os.makedirs(name)
+        except OSError:
+            self.skipTest("Failed to create directory {0}".formar(name))
+
+        self.assertTrue(os.path.isdir(name))
+        ret = self.run_state('file.touch', name=name)
+        result = ret[next(iter(ret))]['result']
+        self.assertTrue(result)
+        self.assertTrue(os.path.isdir(name))
+        os.removedirs(name)
 
 
 if __name__ == '__main__':
