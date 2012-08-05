@@ -608,21 +608,23 @@ def touch(name, atime=None, mtime=None):
     if mtime and mtime.isdigit():
         mtime = int(mtime)
     try:
-        with open(name, 'a'):
-            if not atime and not mtime:
-                times = None
-            elif not mtime and atime:
-                times = (atime, time.time())
-            elif not atime and mtime:
-                times = (time.time(), mtime)
-            else:
-                times = (atime, mtime)
-            os.utime(name, times)
+        if not os.path.exists(name):
+            open(name, 'a')
+
+        if not atime and not mtime:
+            times = None
+        elif not mtime and atime:
+            times = (atime, time.time())
+        elif not atime and mtime:
+            times = (time.time(), mtime)
+        else:
+            times = (atime, mtime)
+        os.utime(name, times)
+
     except TypeError as exc:
-        msg = 'atime and mtime must be integers'
-        raise SaltInvocationError(msg)
+        raise SaltInvocationError('atime and mtime must be integers')
     except (IOError, OSError) as exc:
-        return False
+        raise CommandExecutionError(exc.strerror)
 
     return os.path.exists(name)
 
@@ -731,7 +733,7 @@ def get_selinux_context(path):
     Get an SELinux context from a given path
 
     CLI Example::
-    
+
         salt '*' selinux.get_context /etc/hosts
     '''
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))
