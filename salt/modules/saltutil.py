@@ -28,37 +28,67 @@ def _sync(form, env):
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         os.makedirs(mod_dir)
-    cache = []
     for sub_env in env:
+        cache = []
         cache.extend(__salt__['cp.cache_dir'](source, sub_env))
-    for fn_ in cache:
-        remote.add(os.path.basename(fn_))
-        dest = os.path.join(mod_dir,
-                os.path.basename(fn_)
-                )
-        if os.path.isfile(dest):
-            # The file is present, if the sum differes replace it
-            srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
-            dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
-            if srch != dsth:
-                # The downloaded file differes, replace!
+        local_cache_dir=os.path.join(__opts__['cachedir'], 'files',sub_env,'_{0}'.format(form))
+        for fn_ in cache:
+            relpath=os.path.relpath(fn_, local_cache_dir)
+            relname=os.path.splitext(relpath)[0].replace('/','.')
+            remote.add(relpath)
+            dest = os.path.join(mod_dir, relpath)
+            if os.path.isfile(dest):
+                # The file is present, if the sum differes replace it
+                srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
+                dsth = hashlib.md5(open(dest, 'r').read()).hexdigest()
+                if srch != dsth:
+                    # The downloaded file differes, replace!
+                    shutil.copyfile(fn_, dest)
+                    ret.append('{0}.{1}'.format(form, relname))
+            else:
+                dest_dir = os.path.dirname(dest)
+                if not os.path.isdir(dest_dir):
+                    os.makedirs(dest_dir)
                 shutil.copyfile(fn_, dest)
-                ret.append('{0}.{1}'.format(form, os.path.basename(fn_)))
-        else:
-            shutil.copyfile(fn_, dest)
-            ret.append('{0}.{1}'.format(form, os.path.basename(fn_)))
-    if ret:
-        mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with open(mod_file, 'a+') as f:
-            f.write('')
+                ret.append('{0}.{1}'.format(form, relname))
+
+    touched = bool(ret)
     if __opts__.get('clean_dynamic_modules', True):
-        current = set(os.listdir(mod_dir))
+        current = set(_listdir_recursively(mod_dir))
         for fn_ in current - remote:
             full = os.path.join(mod_dir, fn_)
             if os.path.isfile(full):
+                touched = True
                 os.remove(full)
+        #cleanup empty dirs
+        while True:
+            emptydirs = _list_emptydirs(mod_dir)
+            if not emptydirs:
+                break
+            for emptydir in emptydirs:
+                touched = True
+                os.rmdir(emptydir)
+    #dest mod_dir is touched? trigger reload if requested
+    if touched:
+        mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
+        with open(mod_file, 'a+') as f:
+            f.write('')
     return ret
 
+def _listdir_recursively(rootdir):
+    fileList = []
+    for root, subFolders, files in os.walk(rootdir):
+        for file in files:
+            relpath=os.path.relpath(root,rootdir).strip('.')
+            fileList.append(os.path.join(relpath,file))
+    return fileList
+
+def _list_emptydirs(rootdir):
+    emptydirs = []
+    for root, subFolders, files in os.walk(rootdir):
+        if not files and not subFolders:
+            emptydirs.append(root)
+    return emptydirs
 
 def sync_modules(env='base'):
     '''
