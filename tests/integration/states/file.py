@@ -16,7 +16,6 @@ class FileTest(integration.ModuleCase):
         file.symlink
         '''
         name = os.path.join(integration.TMP, 'symlink')
-        os.symlink(name, '{0}.tgt'.format(name))
         tgt = os.path.join(integration.TMP, 'target')
         ret = self.run_state('file.symlink', name=name, target=tgt)
         result = ret[next(iter(ret))]['result']
@@ -60,6 +59,7 @@ class FileTest(integration.ModuleCase):
         file.absent
         '''
         name = os.path.join(integration.TMP, 'link_to_kill')
+        os.symlink(name, '{0}.tgt'.format(name))
         ret = self.run_state('file.absent', name=name)
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
