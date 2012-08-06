@@ -671,7 +671,7 @@ def _check_touch(name, atime, mtime):
     Check to see if a file needs to be updated or created
     '''
     if not os.path.exists(name):
-        return None, 'File {0} is set to be created'
+        return None, 'File {0} is set to be created'.format(name)
     stats = __salt__['file.stats'](name)
     if not atime is None:
         if str(atime) != str(stats['atime']):
@@ -1693,7 +1693,8 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     }
     if not os.path.isabs(name):
         return _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name))
+            ret, 'Specified file {0} is not an absolute path'.format(name)
+        )
 
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_touch(name, atime, mtime)
@@ -1703,7 +1704,8 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         _makedirs(name)
     if not os.path.isdir(os.path.dirname(name)):
         return _error(
-            ret, 'Directory not present to touch file {0}'.format(name))
+            ret, 'Directory not present to touch file {0}'.format(name)
+        )
     exists = os.path.exists(name)
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
 
@@ -1711,7 +1713,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
     elif exists and ret['result']:
-        ret['comment'] = 'Updated times on file {0}'.format(name)
+        ret['comment'] = 'Updated times on {0} {1}'.format(
+            'directory' if os.path.isdir(name) else 'file', name
+        )
 
     return ret
 
