@@ -26,6 +26,8 @@ set in the main cloud config:
 import os
 import sys
 import types
+import time
+import tempfile
 import subprocess
 
 # Import libcloud
@@ -106,7 +108,7 @@ def create(vm_):
     kwargs = {'ssh_username': 'ec2-user',
               'ssh_key': __opts__['AWS.private_key']}
     kwargs['name'] = vm_['name']
-    kwargs['deploy'] = script(vm_)
+    deploy_script = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
     ex_keyname = keyname(vm_)
@@ -127,15 +129,29 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
+    while not data.public_ips:
+        time.sleep(0.5)
+        data = get_node(conn, vm_['name'])
     if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
-        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
-               '"{3}"').format(
-                       __opts__['JOYENT.private_key'],
+        fd_, path = tempfile.mkstemp()
+        os.close(fd_)
+        with open(path, 'w+') as fp_:
+            fp_.write(deploy_script.script)
+        cmd = ('scp -oStrictHostKeyChecking=no -i {0} {3} {1}@{2}:/tmp/deploy.sh ').format(
+                       __opts__['AWS.private_key'],
                        'ec2-user',
                        data.public_ips[0],
-                       deploy_script.script,
+                       path,
                        )
         subprocess.call(cmd, shell=True)
+        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
+               '"sudo bash /tmp/deploy.sh"').format(
+                       __opts__['AWS.private_key'],
+                       'ec2-user',
+                       data.public_ips[0],
+                       )
+        subprocess.call(cmd, shell=True)
+        os.remove(path)
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
