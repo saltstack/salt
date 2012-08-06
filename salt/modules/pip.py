@@ -167,7 +167,7 @@ def install(pkgs=None,
             os.path.exists(log)
         except IOError:
             raise IOError("'%s' is not writeable" % log)
-        cmd = '{cmd} --{log} '.format(
+        cmd = '{cmd} --log {log} '.format(
             cmd=cmd, log=log)
 
     if proxy:
