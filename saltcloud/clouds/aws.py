@@ -116,7 +116,7 @@ def create(vm_):
     if ex_securitygroup:
         kwargs['ex_securitygroup'] = ex_securitygroup
     try:
-        data = conn.deploy_node(**kwargs)
+        data = conn.create_node(**kwargs)
     except Exception as exc:
         err = ('The following exception was thrown by libcloud when trying to '
                'run the initial deployment: \n{0}\n\nThe vm {1} has been '
@@ -127,13 +127,15 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
-    cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "sudo '
-           '/home/ec2-user/deployment.sh"').format(
-                   __opts__['AWS.private_key'],
-                   'ec2-user',
-                   data.public_ips[0]
-                   )
-    subprocess.call(cmd, shell=True)
+    if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
+        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
+               '"{3}"').format(
+                       __opts__['JOYENT.private_key'],
+                       'ec2-user',
+                       data.public_ips[0],
+                       deploy_script.script,
+                       )
+        subprocess.call(cmd, shell=True)
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
