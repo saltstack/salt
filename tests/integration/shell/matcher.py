@@ -7,10 +7,12 @@ import integration
 from integration import TestDaemon
 
 
-class MatchTest(integration.ShellCase):
+class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test salt matchers
     '''
+    _call_binary_ = 'salt'
+
     def test_list(self):
         '''
         test salt -L matcher
