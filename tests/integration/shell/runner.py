@@ -10,10 +10,13 @@ import integration
 from integration import TestDaemon
 
 
-class RunTest(integration.ShellCase):
+class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test the salt-run command
     '''
+
+    _call_binary_ = 'salt-run'
+
     def test_in_docs(self):
         '''
         test the salt-run docs system

@@ -237,10 +237,7 @@ class ModuleCase(TestCase):
         Generate the tools to test a module
         '''
         self.client = salt.client.LocalClient(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'master'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
     def run_function(self, function, arg=(), **kwargs):
@@ -248,11 +245,9 @@ class ModuleCase(TestCase):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion',
-                               function,
-                               arg,
-                               timeout=100,
-                               kwarg=kwargs)
+        orig = self.client.cmd(
+            'minion', function, arg, timeout=100, kwarg=kwargs
+        )
         return orig['minion']
 
     def state_result(self, ret):
@@ -273,10 +268,7 @@ class ModuleCase(TestCase):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'minion'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
         )
 
     @property
@@ -285,10 +277,7 @@ class ModuleCase(TestCase):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'master'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
 
@@ -320,7 +309,7 @@ class ShellCase(TestCase):
     '''
     Execute a test for a shell command
     '''
-    def run_script(self, script, arg_str):
+    def run_script(self, script, arg_str, catch_stderr=False):
         '''
         Execute a script with the given argument string
         '''
@@ -329,17 +318,23 @@ class ShellCase(TestCase):
             return False
         ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
-        data = subprocess.Popen(cmd,
-                                shell=True,
-                                stdout=subprocess.PIPE
-                                ).communicate()[0].split('\n')
-        return data
+
+        if catch_stderr:
+            out, err = subprocess.Popen(
+                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            ).communicate()
+            return out.split('\n'), err.split('\n')
+
+        data = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE
+        ).communicate()
+        return data[0].split('\n')
 
     def run_salt(self, arg_str):
         '''
         Execute salt
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt', arg_str)
 
@@ -347,7 +342,7 @@ class ShellCase(TestCase):
         '''
         Execute salt-run
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-run', arg_str)
 
@@ -361,10 +356,9 @@ class ShellCase(TestCase):
             '{0} {1} {2}'.format(options, fun, ' '.join(arg))
         )
         opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
-        opts.update({'doc': False,
-                     'fun': fun,
-                     'arg': arg})
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        )
+        opts.update({'doc': False, 'fun': fun, 'arg': arg})
         runner = salt.runner.Runner(opts)
         ret['fun'] = runner.run()
         return ret
@@ -373,6 +367,44 @@ class ShellCase(TestCase):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-key', arg_str)
+
+    def run_cp(self, arg_str):
+        '''
+        Execute salt-cp
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
+        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-cp', arg_str)
+
+
+class ShellCaseCommonTestsMixIn(object):
+
+    def test_deprecated_config(self):
+        """
+        test for the --config deprecation warning
+
+        Once --config is fully deprecated, this test can be removed
+
+        """
+
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest("'_call_binary_' not defined.")
+
+        cfgfile = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        out, err = self.run_script(
+            self._call_binary_, "--config {0}".format(cfgfile), catch_stderr=True
+        )
+        self.assertIn('Usage: {0}'.format(self._call_binary_), '\n'.join(err))
+        self.assertIn('deprecated', '\n'.join(err))
+
+
+    def test_version_includes_binary_name(self):
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest("'_call_binary_' not defined.")
+
+        out = '\n'.join(self.run_script(self._call_binary_, "--version"))
+        self.assertIn(self._call_binary_, out)
+        self.assertIn(salt.__version__, out)
