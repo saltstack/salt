@@ -77,7 +77,7 @@ def latest(name,
             __salt__['git.checkout'](target, rev, user=runas)
 
         if submodules:
-            __salt__['git.submodule'](target, user=runas)
+            __salt__['git.submodule'](target, user=runas, opts='--recursive')
 
         new_rev = __salt__['git.revision'](cwd=target, user=runas)
         if current_rev != new_rev:
