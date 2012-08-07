@@ -83,7 +83,7 @@ class Caller(object):
                 if func.__doc__:
                     docs[name] = func.__doc__
         for name in sorted(docs):
-            if name.startswith(self.opts['fun']):
+            if name.startswith(self.opts.get('fun', '')):
                 print('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
