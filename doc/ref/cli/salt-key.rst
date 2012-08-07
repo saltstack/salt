@@ -51,9 +51,9 @@ Options
 
     Delete the named minion key for command execution.
 
-.. option:: -D DELETE_ALL, --delete-all=DELETE_ALL
+.. option:: -D, --delete-all
 
-    Deleta all keys
+    Delete all keys
 
 .. option:: -c CONFIG, --config=CONFIG
 

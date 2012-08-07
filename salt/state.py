@@ -300,13 +300,6 @@ class State(object):
             errors.append(err)
         if errors:
             return errors
-        if data['fun'].startswith('mod_'):
-            errors.append(
-                    'State {0} in sls {1} uses an invalid function {2}'.format(
-                        data['state'],
-                        data['__sls__'],
-                        data['fun'])
-                    )
         full = data['state'] + '.' + data['fun']
         if full not in self.states:
             if '__sls__' in data:
@@ -807,6 +800,22 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
+        self.module_refresh(data)
+        errors = self.verify_data(data)
+        if errors:
+            ret = {
+                'result': False,
+                'name': data['name'],
+                'changes': {},
+                'comment': '',
+                }
+            for err in errors:
+                ret['comment'] += '{0}\n'.format(err)
+            ret['__run_num__'] = self.__run_num
+            self.__run_num += 1
+            format_log(ret)
+            return ret
+            
         log.info(
                 'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
                     data
@@ -1008,7 +1017,6 @@ class State(object):
             return errors
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high)
-        errors += self.verify_chunks(chunks)
         # If there are extensions in the highstate, process them and update
         # the low data chunks
         if errors:
@@ -1485,9 +1493,12 @@ class BaseHighState(object):
         '''
         Return just the highstate or the errors
         '''
+        err = []
         top = self.get_top()
+        err += self.verify_tops(top)
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
+        err += errors
 
         if errors:
             return errors
@@ -1511,12 +1522,12 @@ class BaseHighState(object):
         # Verify that the high data is structurally sound
         errors += self.state.verify_high(high)
 
-        # Compile and verify the raw chunks
-        chunks = self.state.compile_high_data(high)
-        errors += self.state.verify_chunks(chunks)
-
         if errors:
             return errors
+
+        # Compile and verify the raw chunks
+        chunks = self.state.compile_high_data(high)
+
         return chunks
 
 

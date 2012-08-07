@@ -421,6 +421,9 @@ def check_or_die(command):
     Lazily import salt.modules.cmdmod to avoid any
     sort of circular dependencies.
     '''
+    if command is None:
+        raise CommandNotFoundError("'None' is not a valid command.")
+
     import salt.modules.cmdmod
     __salt__ = {'cmd.has_exec': salt.modules.cmdmod.has_exec}
 

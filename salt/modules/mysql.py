@@ -24,6 +24,7 @@ Required python modules: MySQLdb
 # Import Python libs
 import time
 import logging
+import re
 
 # Import third party libs
 try:
@@ -612,8 +613,8 @@ def __grant_generate(grant,
                     grant_option=False,
                     escape=True):
     # todo: Re-order the grant so it is according to the SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
-    grant = grant.replace(',', ', ').upper()
-
+    grant = re.sub(r'\s*,\s*', ', ', grant).upper()
+    
     # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
     # grant_exists and grant_add ALL work correctly
     if grant == 'ALL':
@@ -693,7 +694,7 @@ def grant_add(grant,
     
     CLI Example::
 
-        salt '*' mysql.grant_add 'SELECT|INSERT|UPDATE|...' 'database.*' 'frank' 'localhost'
+        salt '*' mysql.grant_add 'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
     # todo: validate grant
     db = connect()
