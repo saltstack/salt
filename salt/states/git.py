@@ -5,6 +5,9 @@ Interaction with Git repositories.
 NOTE: This modules is under heavy development and the API is subject to change.
 It may be replaced with a generic VCS module if this proves viable.
 
+Important, before using git over ssh, make sure your remote host fingerprint
+exists in "~/.ssh/known_hosts" file.
+
 .. code-block:: yaml
 
     https://github.com/saltstack/salt.git:
@@ -77,7 +80,7 @@ def latest(name,
             __salt__['git.checkout'](target, rev, user=runas)
 
         if submodules:
-            __salt__['git.submodule'](target, user=runas)
+            __salt__['git.submodule'](target, user=runas, opts='--recursive')
 
         new_rev = __salt__['git.revision'](cwd=target, user=runas)
         if current_rev != new_rev:
