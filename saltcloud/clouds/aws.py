@@ -143,9 +143,24 @@ def create(vm_):
                        data.public_ips[0],
                        path,
                        )
-        subprocess.call(cmd, shell=True)
-        cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
-               '"sudo bash /tmp/deploy.sh"').format(
+        if subprocess.call(cmd, shell=True) != 0:
+            time.sleep(15)
+            cmd = ('scp -oStrictHostKeyChecking=no -i {0} {3} {1}@{2}:/tmp/deploy.sh ').format(
+                       __opts__['AWS.private_key'],
+                       'root',
+                       data.public_ips[0],
+                       path,
+                       )
+            subprocess.call(cmd, shell=True)
+            cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
+                   '"sudo bash /tmp/deploy.sh"').format(
+                       __opts__['AWS.private_key'],
+                       'root',
+                       data.public_ips[0],
+                       )
+        else:
+            cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
+                   '"sudo bash /tmp/deploy.sh"').format(
                        __opts__['AWS.private_key'],
                        'ec2-user',
                        data.public_ips[0],
