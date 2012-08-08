@@ -335,7 +335,6 @@ class ShellCase(TestCase):
         )
         data = process.communicate()
         process.stdout.close()
-        process.stderr.close()
         return data[0].split('\n')
 
     def run_salt(self, arg_str):
