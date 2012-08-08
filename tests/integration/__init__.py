@@ -320,14 +320,21 @@ class ShellCase(TestCase):
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
 
         if catch_stderr:
-            out, err = subprocess.Popen(
+            process = subprocess.Popen(
                 cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            ).communicate()
+            )
+            out, err = process.communicate()
+            # Let's see if travis stops failing on 2.6 with
+            # "filedescriptor out of range in select()"
+            process.stdout.close()
+            process.stderr.close()
             return out.split('\n'), err.split('\n')
 
-        data = subprocess.Popen(
+        process = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE
-        ).communicate()
+        )
+        data = process.communicate()
+        process.stdout.close()
         return data[0].split('\n')
 
     def run_salt(self, arg_str):
