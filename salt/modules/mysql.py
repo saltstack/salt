@@ -672,7 +672,8 @@ def grant_exists(grant,
     # perhaps should be replaced/reworked with a better/cleaner solution.
     target = __grant_generate(grant, database, user, host, grant_option, escape)
 
-    if target in user_grants(user, host):
+    grants = user_grants(user, host)
+    if grants is not False and target in grants:
         log.debug("Grant exists.")
         return True
 
