@@ -87,7 +87,7 @@ class Key(object):
         if hasattr(log, level):
             log_msg = getattr(log, level)
             log_msg(message)
-        if not self.opts['quiet']:
+        if not self.opts.get('quiet', False):
             print(message)
 
     def _list_pre(self, header=True, printer=None):

@@ -166,7 +166,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
                 os.path.join(self.config['pki_dir'], 'minions'),
                 os.path.join(self.config['pki_dir'], 'minions_pre'),
                 os.path.join(self.config['pki_dir'], 'minions_rejected'),
-                os.path.dirname(self.config['log_file']),
+                os.path.dirname(self.config['key_logfile']),
             ],
             self.config['user'],
             permissive=self.config['permissive_pki_access']
