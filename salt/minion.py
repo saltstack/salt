@@ -109,7 +109,7 @@ class SMinion(object):
                 self.opts['environment'],
                 ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts)
-        self.returners = salt.loader.returners(self.opts)
+        self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
@@ -161,7 +161,7 @@ class Minion(object):
         '''
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
-        returners = salt.loader.returners(self.opts)
+        returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
     def _handle_payload(self, payload):

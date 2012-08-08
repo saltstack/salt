@@ -73,12 +73,14 @@ def raw_mod(opts, name, functions):
     return load.gen_module(name, functions)
 
 
-def returners(opts):
+def returners(opts, functions):
     '''
     Returns the returner modules
     '''
     load = _create_loader(opts, 'returners', 'returner')
-    return load.filter_func('returner')
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.filter_func('returner', pack)
 
 
 def pillars(opts, functions):
