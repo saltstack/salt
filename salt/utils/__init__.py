@@ -15,6 +15,7 @@ import datetime
 import tempfile
 import shutil
 import time
+import platform
 from calendar import month_abbr as months
 
 # Import Salt libs
@@ -468,3 +469,28 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         # TODO, backup to master
         pass
     shutil.move(tgt, dest)
+
+
+def path_join(*parts):
+    """
+    This functions tries to solve some issues when joining multiple absolute
+    paths on both *nix and windows platforms.
+
+    See tests/unit/utils/path_join_test.py for some examples on what's being
+    talked about here.
+    """
+    # Normalize path converting any os.sep as needed
+    parts = [os.path.normpath(p) for p in parts]
+
+    root = parts.pop(0)
+    if not parts:
+        return root
+
+    if platform.system().lower() == 'windows':
+        if len(root) == 1:
+            root += ':'
+        root = root.rstrip(os.sep) + os.sep
+
+    return os.path.normpath(os.path.join(
+        root, *[p.lstrip(os.sep) for p in parts]
+    ))
