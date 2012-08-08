@@ -320,14 +320,37 @@ class ShellCase(TestCase):
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
 
         if catch_stderr:
-            out, err = subprocess.Popen(
+            process = subprocess.Popen(
                 cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            ).communicate()
+            )
+            if sys.version_info[0:2] < (2, 7):
+                # On python 2.6, the subprocess'es communicate() method uses
+                # select which, is limited by the OS to 1024 file descriptors
+                # We need more available descriptors to run the tests which
+                # need the stderr output.
+                # So instead of .communicate() we wait for the process to
+                # finish, but, as the python docs state "This will deadlock
+                # when using stdout=PIPE and/or stderr=PIPE and the child
+                # process generates enough output to a pipe such that it
+                # blocks waiting for the OS pipe buffer to accept more data.
+                # Use communicate() to avoid that." <- a catch, catch situation
+                #
+                # Use this work around were it's needed only, python 2.6
+                process.wait()
+                out = process.stdout.read()
+                err = process.stderr.read()
+            else:
+                out, err = process.communicate()
+            # Force closing stderr/stdout to release file descriptors
+            process.stdout.close()
+            process.stderr.close()
             return out.split('\n'), err.split('\n')
 
-        data = subprocess.Popen(
+        process = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE
-        ).communicate()
+        )
+        data = process.communicate()
+        process.stdout.close()
         return data[0].split('\n')
 
     def run_salt(self, arg_str):
