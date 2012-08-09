@@ -148,9 +148,11 @@ class Key(object):
         '''
         List keys
         '''
-        printout = self._get_outputter()
-        if 'json_out' in self.opts and self.opts['json_out']:
-            printout.indent = 2
+        selected_output = self.opts.get('selected_output_option', None)
+        printout = salt.output.get_printout(
+            {}, selected_output, self.opts, indent=2
+        )
+
         if name in ('pre', 'un', 'unaccept', 'unaccepted'):
             self._list_pre(header=False, printer=printout)
         elif name in ('acc', 'accept', 'accepted'):
@@ -173,18 +175,6 @@ class Key(object):
             err = ('Unrecognized key type "{0}".  Run with -h for options.'
                     ).format(name)
             self._log(err, level='error')
-
-    def _get_outputter(self):
-        get_outputter = salt.output.get_outputter
-        if self.opts['raw_out']:
-            printout = get_outputter('raw')
-        elif self.opts['json_out']:
-            printout = get_outputter('json')
-        elif self.opts['yaml_out']:
-            printout = get_outputter('yaml')
-        else:
-            printout = None # use default color output
-        return printout
 
     def _print_key(self, name):
         '''
