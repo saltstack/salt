@@ -171,7 +171,12 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
                 continue
 
             value = getattr(self.options, option.dest, None)
-            if value is not None:
+            default = self.defaults.get(option.dest)
+            if value is not None and default is not None and (value != default):
+                # Only override if there's a cli value, and if the cli value
+                # is not the defined default(we need to be able to make changes
+                # on the config file be respected, IF there's no value, other
+                # than the default one from cli)
                 self.config[option.dest] = value
 
         # Merge parser group options if any
@@ -250,8 +255,9 @@ class LogLevelMixIn(object):
         )
 
     def setup_logfile_logger(self):
+        lfkey = 'key_logfile' if 'key' in self.get_prog_name() else 'log_file'
         log.setup_logfile_logger(
-            self.config['log_file'],
+            self.config[lfkey],
             self.config['log_level_logfile'] or self.config['log_level'],
             log_format=self.config['log_fmt_logfile'],
             date_format=self.config['log_datefmt']
@@ -768,12 +774,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
 
         self.add_option(
             '--key-logfile',
-            help=("DEPRECATED: Please use '--log-file' instead.\n"
-                  "Send all output to a file.")
-        )
-
-        self.add_option(
-            '--log-file',
             default='/var/log/salt/key',
             help=('Send all output to a file. Default is %default')
         )
@@ -825,13 +825,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             self.error("The minimum value for keysize is 2048")
         elif self.options.keysize > 32768:
             self.error("The maximum value for keysize is 32768")
-
-    def process_key_logfile(self):
-        if self.options.key_logfile:
-            sys.stderr.write("The '--key-logfile' option is deprecated and "
-                             "will be removed in the future. Please use "
-                             "'--log-file' instead.")
-            self.config["log_file"] = self.options.key_logfile
 
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is

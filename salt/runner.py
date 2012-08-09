@@ -43,7 +43,7 @@ class Runner(object):
         '''
         Execute the runner sequence
         '''
-        if self.opts['doc']:
+        if self.opts.get('doc', False):
             self._print_docs()
         else:
             self._verify_fun()

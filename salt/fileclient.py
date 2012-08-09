@@ -21,6 +21,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils
 import salt.utils.templates
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
@@ -156,7 +157,7 @@ class Client(object):
                 prefix = separated[0]
             for fn_ in self.file_list_emptydirs(env):
                 if fn_.startswith(path):
-                    dest = os.path.join(
+                    dest = salt.utils.path_join(
                         self.opts['cachedir'],
                         'files',
                         env
@@ -296,7 +297,7 @@ class Client(object):
                 else:
                     return ''
         else:
-            dest = os.path.join(
+            dest = salt.utils.path_join(
                 self.opts['cachedir'],
                 'extrn_files',
                 env,
@@ -354,7 +355,7 @@ class Client(object):
             return ''
         if not dest:
             # No destination passed, set the dest as an extrn_files cache
-            dest = os.path.join(
+            dest = salt.utils.path_join(
                 self.opts['cachedir'],
                 'extrn_files',
                 env,

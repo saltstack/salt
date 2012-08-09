@@ -109,6 +109,8 @@ def verify_env(dirs, user, permissive=False):
         sys.stderr.write(err)
         sys.exit(2)
     for dir_ in dirs:
+        if not dir_:
+            continue
         if not os.path.isdir(dir_):
             try:
                 cumask = os.umask(63)  # 077
@@ -146,8 +148,8 @@ def verify_env(dirs, user, permissive=False):
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:
-                          # chown the file for the new user
-                          os.chown(path, uid, gid)
+                            # chown the file for the new user
+                            os.chown(path, uid, gid)
                 for name in dirs:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
@@ -155,8 +157,8 @@ def verify_env(dirs, user, permissive=False):
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:
-                           # chown the file for the new user
-                           os.chown(path, uid, gid)
+                            # chown the file for the new user
+                            os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)

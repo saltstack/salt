@@ -275,10 +275,12 @@ class Minion(object):
 
         function_name = data['fun']
         if function_name in self.functions:
+            ret['success'] = False
             try:
                 func = self.functions[data['fun']]
                 args, kw = detect_kwargs(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
+                ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
                 log.debug(msg.format(function_name, str(exc)))
@@ -334,10 +336,12 @@ class Minion(object):
                 except Exception:
                     pass
 
+            ret['success'][data['fun'][ind]] = False
             try:
                 func = self.functions[data['fun'][ind]]
                 args, kw = detect_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kw)
+                ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(
