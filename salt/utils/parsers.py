@@ -210,13 +210,15 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
                         self.config[option.dest] = value
 
     def process_config_dir(self):
-        # XXX: Remove deprecation warning in next release
+        # Make sure we have an absolute path
+        self.options.config_dir = os.path.abspath(self.options.config_dir)
         if os.path.isfile(self.options.config_dir):
+            # XXX: Remove deprecation warning in next release
             self.print_config_warning()
 
         if hasattr(self, 'setup_config'):
             self.config = self.setup_config()
-            # Add an additional function that will merge the cli options with
+            # Add an additional function that will merge the shell options with
             # the config options and if needed override them
             self._mixin_after_parsed_funcs.append(self.__merge_config_with_cli)
 
