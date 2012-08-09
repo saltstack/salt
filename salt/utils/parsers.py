@@ -170,13 +170,19 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
                 # will have the dest attribute set
                 continue
 
-            value = getattr(self.options, option.dest, None)
+
+            # Get the passed value from shell. If empty get the default one
             default = self.defaults.get(option.dest)
-            if value is not None and default is not None and (value != default):
-                # Only override if there's a cli value, and if the cli value
-                # is not the defined default(we need to be able to make changes
-                # on the config file be respected, IF there's no value, other
-                # than the default one from cli)
+            value = getattr(self.options, option.dest, default)
+            if option.dest not in self.config:
+                # There's no value in the configuration file
+                if value:
+                    # There's an actual value, add it to the config
+                    self.config[option.dest] = value
+            elif value and value != default:
+                # Only set the value in the config file IF it's not the default
+                # value, this allows to tweak settings on the configuration
+                # files bypassing the shell option flags
                 self.config[option.dest] = value
 
         # Merge parser group options if any
@@ -188,14 +194,31 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
                 if value is not None:
                     self.config[option.dest] = value
 
+                # Get the passed value from shell. If empty get the default one
+                default = self.defaults.get(option.dest)
+                value = getattr(self.options, option.dest, default)
+                if option.dest not in self.config:
+                    # There's no value in the configuration file
+                    if value:
+                        # There's an actual value, add it to the config
+                        self.config[option.dest] = value
+                else:
+                    if value and value != default:
+                        # Only set the value in the config file IF it's not the
+                        # default value, this allows to tweak settings on the
+                        # configuration files bypassing the shell option flags
+                        self.config[option.dest] = value
+
     def process_config_dir(self):
-        # XXX: Remove deprecation warning in next release
+        # Make sure we have an absolute path
+        self.options.config_dir = os.path.abspath(self.options.config_dir)
         if os.path.isfile(self.options.config_dir):
+            # XXX: Remove deprecation warning in next release
             self.print_config_warning()
 
         if hasattr(self, 'setup_config'):
             self.config = self.setup_config()
-            # Add an additional function that will merge the cli options with
+            # Add an additional function that will merge the shell options with
             # the config options and if needed override them
             self._mixin_after_parsed_funcs.append(self.__merge_config_with_cli)
 
