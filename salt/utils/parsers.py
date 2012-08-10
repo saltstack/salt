@@ -164,22 +164,22 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
     def __merge_config_with_cli(self, *args):
         # Merge parser options
         for option in self.option_list:
-            if not option.dest:
+            if option.dest is None:
                 # --version does not have dest attribute set for example.
                 # All options defined by us, even if not explicitly(by kwarg),
                 # will have the dest attribute set
                 continue
 
-
             # Get the passed value from shell. If empty get the default one
             default = self.defaults.get(option.dest)
             value = getattr(self.options, option.dest, default)
+
             if option.dest not in self.config:
                 # There's no value in the configuration file
-                if value:
+                if value is not None:
                     # There's an actual value, add it to the config
                     self.config[option.dest] = value
-            elif value and value != default:
+            elif value is not None and value != default:
                 # Only set the value in the config file IF it's not the default
                 # value, this allows to tweak settings on the configuration
                 # files bypassing the shell option flags
@@ -188,33 +188,30 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
         # Merge parser group options if any
         for group in self.option_groups:
             for option in group.option_list:
-                if not option.dest:
+                if option.dest is None:
                     continue
-                value = getattr(self.options, option.dest, None)
-                if value is not None:
-                    self.config[option.dest] = value
-
                 # Get the passed value from shell. If empty get the default one
                 default = self.defaults.get(option.dest)
                 value = getattr(self.options, option.dest, default)
                 if option.dest not in self.config:
                     # There's no value in the configuration file
-                    if value:
+                    if value is not None:
                         # There's an actual value, add it to the config
                         self.config[option.dest] = value
                 else:
-                    if value and value != default:
+                    if value is not None and value != default:
                         # Only set the value in the config file IF it's not the
                         # default value, this allows to tweak settings on the
                         # configuration files bypassing the shell option flags
                         self.config[option.dest] = value
 
     def process_config_dir(self):
-        # Make sure we have an absolute path
-        self.options.config_dir = os.path.abspath(self.options.config_dir)
         if os.path.isfile(self.options.config_dir):
             # XXX: Remove deprecation warning in next release
             self.print_config_warning()
+
+        # Make sure we have an absolute path
+        self.options.config_dir = os.path.abspath(self.options.config_dir)
 
         if hasattr(self, 'setup_config'):
             self.config = self.setup_config()
@@ -420,6 +417,7 @@ class TargetOptionsMixIn(object):
                     option.get_opt_string() for option in group_options_selected
                 ]))
             )
+        self.config['selected_target_option'] = self.selected_target_option
 
 
 class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
@@ -480,6 +478,8 @@ class OutputOptionsMixIn(object):
     _mixin_prio_ = 40
     _include_text_out_ = False
 
+    selected_output_option = None
+
     def _mixin_setup(self):
         group = self.output_options_group = optparse.OptionGroup(
             self, "Output Options", "Configure your preferred output format"
@@ -520,6 +520,16 @@ class OutputOptionsMixIn(object):
             help='Disable all colored output'
         )
 
+
+        for option in group.option_list:
+            def process(opt):
+                if getattr(self.options, opt.dest):
+                    self.selected_output_option = opt.dest
+
+            funcname = 'process_%s' % option.dest
+            if not hasattr(self, funcname):
+                setattr(self, funcname, partial(process, option))
+
     def _mixin_after_parsed(self):
         group_options_selected = filter(
             lambda option: getattr(self.options, option.dest) and
@@ -533,6 +543,7 @@ class OutputOptionsMixIn(object):
                     option.get_opt_string() for option in group_options_selected
                 ]))
             )
+        self.config['selected_output_option'] = self.selected_output_option
 
 
 class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
