@@ -10,6 +10,7 @@ import socket
 import getpass
 import logging
 
+from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
@@ -26,8 +27,11 @@ def zmq_version():
 
     # Fallthrough and hope for the best
     if not match:
-        msg = 'Using untested zmq python bindings version: \'{0}\''
-        log.warn(msg.format(ver))
+        msg = "Using untested zmq python bindings version: '{0}'".format(ver)
+        if is_console_configured():
+            log.warn(msg)
+        else:
+            sys.stderr.write("WARNING {0}\n".format(msg))
         return True
 
     major, minor, point = match.groups()
@@ -44,7 +48,11 @@ def zmq_version():
     if major == 2 and minor == 1:
         # zmq 2.1dev could be built against a newer libzmq
         if "dev" in ver and not point:
-            log.warn('Using dev zmq module, please report unexpected results')
+            msg = 'Using dev zmq module, please report unexpected results'
+            if is_console_configured():
+                log.warn(msg)
+            else:
+                sys.stderr.write("WARNING: {0}\n".format(msg))
             return True
         elif point and point >= 9:
             return True
@@ -54,9 +62,13 @@ def zmq_version():
     # If all else fails, gracefully croak and warn the user
     log.critical('ZeroMQ python bindings >= 2.1.9 are required')
     if 'salt-master' in sys.argv[0]:
-        log.critical('The Salt Master is unstable using a ZeroMQ version '
-            'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
-            'org/pipermail/zeromq-dev/2011-June/012094.html')
+        msg = ('The Salt Master is unstable using a ZeroMQ version '
+               'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
+               'org/pipermail/zeromq-dev/2011-June/012094.html')
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            sys.stderr.write("CRITICAL {0}\n".format(msg))
     return False
 
 
@@ -77,8 +89,12 @@ def verify_socket(interface, pub_port, ret_port):
         retsock.close()
         result = True
     except Exception:
-        log.warn("Unable to bind socket, this might not be a problem."
-                 " Is there another salt-master running?")
+        msg = ("Unable to bind socket, this might not be a problem."
+               " Is there another salt-master running?")
+        if is_console_configured():
+            log.warn(msg)
+        else:
+            sys.stderr.write("WARNING: {0}\n".format(msg))
         result = False
     finally:
         pubsock.close()
@@ -172,12 +188,15 @@ def verify_env(dirs, user, permissive=False):
             else:
                 msg = 'Unable to securely set the permissions of "{0}".'
                 msg = msg.format(dir_)
-                log.critical(msg)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
     # Run the extra verification checks
     zmq_version()
 
 
-def check_user(user, log):
+def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
@@ -194,11 +213,18 @@ def check_user(user, log):
             os.setuid(p.pw_uid)
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
-            log.critical(msg.format(user))
+            msg = msg.format(user)
+            if is_console_configured():
+                log.critical(msg)
+            else:
+                sys.stderr.write("CRITICAL: {0}\n".format(msg))
             return False
     except KeyError:
         msg = 'User not found: "{0}"'.format(user)
-        log.critical(msg)
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            sys.stderr.write("CRITICAL: {0}\n".format(msg))
         return False
     return True
 
