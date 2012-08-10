@@ -8,6 +8,11 @@ import os
 import optparse
 
 # Import salt libs
+# Setup minimal logging and disable it so "no handler for..." errors
+# are not thrown anymore while running tests
+from salt.log import setup_console_logger
+setup_console_logger('quiet')
+# Import remaining salt libs
 import saltunittest
 from integration import TestDaemon
 
