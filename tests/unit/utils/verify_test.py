@@ -1,5 +1,4 @@
 import getpass
-import logging
 import os
 import sys
 import stat
@@ -17,9 +16,6 @@ from salt.utils.verify import (
 
 class TestVerify(TestCase):
 
-    def setUp(self):
-        self.logger = logging.getLogger(__name__)
-
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
 
@@ -29,10 +25,10 @@ class TestVerify(TestCase):
         self.assertFalse(zmq_version())
 
     def test_user(self):
-        self.assertTrue(check_user(getpass.getuser(), self.logger))
+        self.assertTrue(check_user(getpass.getuser()))
 
     def test_no_user(self):
-        self.assertFalse(check_user('nouser', self.logger))
+        self.assertFalse(check_user('nouser'))
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
