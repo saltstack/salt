@@ -5,6 +5,7 @@ Make me some salt!
 # Import python libs
 import os
 import sys
+import logging
 
 # Import salt libs, the try block bypasses an issue at build time so that c
 # modules don't cause the build to fail
@@ -46,8 +47,6 @@ class Master(parsers.MasterOptionParser):
 
         self.setup_logfile_logger()
 
-        import logging
-        log = logging.getLogger(__name__)
         # Late import so logging works correctly
         if not verify_socket(self.config['interface'],
                              self.config['publish_port'],
@@ -58,7 +57,7 @@ class Master(parsers.MasterOptionParser):
         master = salt.master.Master(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
-        if check_user(self.config['user'], log):
+        if check_user(self.config['user']):
             try:
                 master.start()
             except salt.master.MasterExit:
@@ -90,10 +89,8 @@ class Minion(parsers.MinionOptionParser):
 
         self.setup_logfile_logger()
 
-        import logging
         # Late import so logging works correctly
         import salt.minion
-        log = logging.getLogger(__name__)
         # If the minion key has not been accepted, then Salt enters a loop
         # waiting for it, if we daemonize later then the minion could halt
         # the boot process waiting for a key to be accepted on the master.
@@ -102,10 +99,10 @@ class Minion(parsers.MinionOptionParser):
         try:
             minion = salt.minion.Minion(self.config)
             self.set_pidfile()
-            if check_user(self.config['user'], log):
+            if check_user(self.config['user']):
                 minion.tune_in()
         except KeyboardInterrupt:
-            log.warn('Stopping the Salt Minion')
+            logging.getLogger(__name__).warn('Stopping the Salt Minion')
             raise SystemExit('\nExiting on Ctrl-c')
 
 
@@ -133,19 +130,17 @@ class Syndic(parsers.SyndicOptionParser):
 
         self.setup_logfile_logger()
 
-        import logging
-
         # Late import so logging works correctly
         import salt.minion
-        log = logging.getLogger(__name__)
-
         self.daemonize_if_required()
         self.set_pidfile()
 
-        if check_user(self.config['user'], log):
+        if check_user(self.config['user']):
             try:
                 syndic = salt.minion.Syndic(self.config)
                 syndic.tune_in()
             except KeyboardInterrupt:
-                log.warn('Stopping the Salt Syndic Minion')
+                logging.getLogger(__name__).warn(
+                    'Stopping the Salt Syndic Minion'
+                )
                 raise SystemExit('\nExiting on Ctrl-c')
