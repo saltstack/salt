@@ -25,7 +25,7 @@ __all__ = ('get_outputter', 'get_printout')
 
 log = logging.getLogger(__name__)
 
-def get_printout(ret, out, opts):
+def get_printout(ret, out, opts, indent=None):
     """
     Return the proper printout
     """
@@ -33,15 +33,17 @@ def get_printout(ret, out, opts):
         if opts['raw_out']:
             return get_outputter('raw')
         elif opts['json_out']:
-            return get_outputter('json')
+            printout = get_outputter('json')
+            if printout and indent is not None:
+                printout.indent = indent
+            return printout
         elif opts.get('txt_out', False):
             return get_outputter('txt')
         elif opts['yaml_out']:
             return get_outputter('yaml')
-        elif out:
+        elif out is not None:
             return get_outputter(out)
-        else:
-            return get_outputter(None)
+        return None
     # Pretty print any salt exceptions
     elif isinstance(ret, SaltException):
         return get_outputter("txt")
