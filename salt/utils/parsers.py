@@ -205,7 +205,6 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
                         # configuration files bypassing the shell option flags
                         self.config[option.dest] = value
 
-
     def process_config_dir(self):
         if os.path.isfile(self.options.config_dir):
             # XXX: Remove deprecation warning in next release

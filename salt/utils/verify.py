@@ -122,6 +122,7 @@ def verify_env(dirs, user, permissive=False):
             except OSError as e:
                 msg = 'Failed to create directory path "{0}" - {1}\n'
                 sys.stderr.write(msg.format(dir_, e))
+                sys.exit(e.errno)
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
