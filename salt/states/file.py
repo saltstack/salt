@@ -436,6 +436,35 @@ def _check_perms(name, ret, user, group, mode):
     return ret, perms
 
 
+def _get_recurse_dest(prefix, fn_, source, env):
+    '''
+    Return the destination path to copy the file path, fn_(as returned by
+    a call to __salt__['cp.cache_dir']), to.
+    '''
+    local_roots = []
+    if __opts__['file_client'] == 'local':
+        local_roots = __opts__['file_roots'][env]
+        local_roots.sort(key=lambda p: len(p), reverse=True)
+
+    srcpath = source[7:] # the path after "salt://"
+    pathsep = os.path.sep
+
+    # in solo mode(ie, file_client=='local'), fn_ is a path below
+    # a file root; in remote mode, fn_ is a path below the cache_dir.
+    for root in local_roots:
+        n = len(root)
+        # if root is the longest prefix path of fn_
+        if root == fn_[:n] and fn_[n] == pathsep:
+            cachedir = os.path.join(root, srcpath)
+            break
+    else:
+        cachedir = os.path.join(
+                        __opts__['cachedir'], 'files', env, srcpath)
+
+    return os.path.join(prefix, os.path.relpath(fn_, cachedir))
+
+
+
 def _check_recurse(
         name,
         source,
@@ -456,17 +485,7 @@ def _check_recurse(
     for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
-        dest = os.path.join(name,
-                os.path.relpath(
-                    fn_,
-                    os.path.join(
-                        __opts__['cachedir'],
-                        'files',
-                        env,
-                        source[7:]
-                        )
-                    )
-                )
+        dest = _get_recurse_dest(name, fn_, source, env)
         dirname = os.path.dirname(dest)
         if not dirname in vdir:
             # verify the directory perms if they are set
@@ -1370,17 +1389,7 @@ def recurse(name,
     for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
-        dest = os.path.join(name,
-                os.path.relpath(
-                    fn_,
-                    os.path.join(
-                        __opts__['cachedir'],
-                        'files',
-                        env,
-                        source[7:]
-                        )
-                    )
-                )
+        dest = _get_recurse_dest(name, fn_, source, env)
         dirname = os.path.dirname(dest)
         if not os.path.isdir(dirname):
             _makedirs(dest, user=user, group=group)
