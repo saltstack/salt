@@ -209,6 +209,8 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
         if os.path.isfile(self.options.config_dir):
             # XXX: Remove deprecation warning in next release
             self.print_config_warning()
+        elif not os.path.isdir(self.options.config_dir):
+            self.error("{0} is not a directory".format(self.options.config_dir))
 
         # Make sure we have an absolute path
         self.options.config_dir = os.path.abspath(self.options.config_dir)
