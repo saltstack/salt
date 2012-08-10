@@ -9,6 +9,7 @@
 
 import os
 import sys
+import logging
 import optparse
 from functools import partial
 from salt import config, log, version
@@ -119,6 +120,10 @@ class OptionParser(optparse.OptionParser):
         for mixin_after_parsed_func in self._mixin_after_parsed_funcs:
             mixin_after_parsed_func(self)
 
+        if self.config.get('conf_file', None) is not None:
+            logging.getLogger(__name__).info(
+                "Loaded configuration file: %s", self.config['conf_file']
+            )
         # Retain the standard behaviour of optparse to return options and args
         return options, args
 
@@ -210,7 +215,12 @@ class ConfigDirMixIn(DeprecatedConfigMessage):
             # XXX: Remove deprecation warning in next release
             self.print_config_warning()
         elif not os.path.isdir(self.options.config_dir):
-            self.error("{0} is not a directory".format(self.options.config_dir))
+            # No logging is configured yet
+            sys.stderr.write(
+                "WARNING: \"{0}\" directory does not exist.\n".format(
+                    self.options.config_dir
+                )
+            )
 
         # Make sure we have an absolute path
         self.options.config_dir = os.path.abspath(self.options.config_dir)
@@ -690,7 +700,6 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             else:
                 self.config['fun'] = self.args[1]
                 self.config['arg'] = self.args[2:]
-
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path('master'))
