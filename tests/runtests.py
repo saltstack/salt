@@ -9,9 +9,7 @@ import logging
 import optparse
 # Setup minimal logging and disable it so "no handler for..." errors
 # are not thrown anymore while running tests
-rootLogger = logging.getLogger()
-handler = logging.NullHandler()
-rootLogger.addHandler(handler)
+logging.basicConfig(stream=open(os.devnull, 'w'))
 
 # Import salt libs
 import saltunittest
