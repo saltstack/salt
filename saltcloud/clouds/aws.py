@@ -86,17 +86,17 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return vm_.get('AWS.keyname', __opts__.get('AWS.keyname', ''))
+    return str(vm_.get('AWS.keyname', __opts__.get('AWS.keyname', '')))
 
 
 def securitygroup(vm_):
     '''
     Return the keyname
     '''
-    return vm_.get(
+    return str(vm_.get(
             'AWS.securitygroup',
             __opts__.get('AWS.securitygroup', 'default')
-            )
+            ))
 
 
 def create(vm_):
