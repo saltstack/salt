@@ -28,7 +28,24 @@ class TestVerify(TestCase):
         self.assertTrue(check_user(getpass.getuser()))
 
     def test_no_user(self):
+        # Catch sys.stderr here since no logging is configured and
+        # check_user WILL write to sys.stderr
+        class FakeWriter(object):
+            def __init__(self):
+                self.output = ""
+
+            def write(self, data):
+                self.output += data
+        stderr = sys.stderr
+        writer = FakeWriter()
+        sys.stderr = writer
+        # Now run the test
         self.assertFalse(check_user('nouser'))
+        # Restore sys.stderr
+        sys.stderr = stderr
+        if writer.output != 'CRITICAL: User not found: "nouser"\n':
+            # If there's a different error catch, write it to sys.stderr
+            sys.stderr.write(writer.output)
 
     @skipIf(sys.platform.startswith('win'), 'No verify_env Windows')
     def test_verify_env(self):
