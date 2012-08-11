@@ -84,12 +84,10 @@ def get_image(conn, vm_):
     Return the image object to use
     '''
     images = conn.list_images()
-    if isinstance(vm_['image'], int):
-        return images[vm_['image']]
     for img in images:
         if str(img.id) == str(vm_['image']):
             return img
-        if img.name == vm_['image']:
+        if img.name == str(vm_['image']):
             return img
 
 
@@ -100,12 +98,10 @@ def get_size(conn, vm_):
     sizes = conn.list_sizes()
     if not 'size' in vm_:
         return sizes[0]
-    if isinstance(vm_['size'], int):
-        return sizes[vm_['size']]
     for size in sizes:
-        if size.id == vm_['size']:
+        if str(size.id) == str(vm_['size']):
             return size
-        if size.name == vm_['size']:
+        if str(size.name) == str(vm_['size']):
             return size
 
 
