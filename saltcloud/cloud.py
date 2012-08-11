@@ -157,10 +157,12 @@ class Cloud(object):
         handle them
         '''
         pmap = self.map_providers()
+        found = False
         for name in self.opts['names']:
             for vm_ in self.opts['vm']:
                 if vm_['profile'] == self.opts['profile']:
                     # It all checks out, make the vm
+                    found = True
                     if name in pmap[self.provider(vm_)]:
                         # The specified vm already exists, don't make it anew
                         continue
@@ -171,6 +173,8 @@ class Cloud(object):
                                 ).start()
                     else:
                         self.create(vm_)
+        if not found:
+            print('Profile {0} is not defined'.format(self.opts['profile']))
 
 
 class Map(Cloud):
