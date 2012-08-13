@@ -74,7 +74,11 @@ def create(vm_):
     kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
-    data = conn.deploy_node(**kwargs)
+    try:
+        data = conn.deploy_node(**kwargs)
+    except DeploymentError as exc:
+        print('Libcloud failed to connect to the new vm: {0}'.format(exc))
+        return
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
