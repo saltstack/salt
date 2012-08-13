@@ -749,6 +749,9 @@ def build_interface(iface, iface_type, enabled, settings):
         template = env.get_template('rh{0}_eth.jinja'.format(rh_major))
         ifcfg = template.render(opts)
 
+    if settings['test']:
+        return ifcfg
+
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}')
     path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
     return _read_file(path)
@@ -849,6 +852,9 @@ def build_network_settings(settings):
     opts = _parse_network_settings(settings,current_network_settings)
     template = env.get_template('network.jinja')
     network = template.render(opts)
+    
+    if settings['test']:
+        return network
 
     # Wirte settings
     _write_file_network(network, _RH_NETWORK_FILE)

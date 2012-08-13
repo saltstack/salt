@@ -167,6 +167,7 @@ def managed(name, type, enabled=True, **kwargs):
 
     # Build interface
     try:
+        kwargs['test'] = __opts__['test']
         old = __salt__['ip.get_interface'](name)
         new = __salt__['ip.build_interface'](name, type, enabled, kwargs)
         if __opts__['test']:
@@ -244,6 +245,7 @@ def system(name, **kwargs):
     apply_net_settings = False
     # Build global network settings
     try:
+        kwargs['test'] = __opts__['test']
         old = __salt__['ip.get_network_settings']()
         new = __salt__['ip.build_network_settings'](kwargs)
         if __opts__['test']:
