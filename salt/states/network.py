@@ -179,9 +179,11 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['comment'] = ret['comment'].format(name)
                 return ret
             elif old != new:
+                diff = difflib.unified_diff(old, new)
                 ret['result'] = None
                 ret['comment'] = 'Interface {0} is set to be updated.'
                 ret['comment'] = ret['comment'].format(
+                ret['changes']['interface'] = ''.join(diff)
                     name)
                 return ret
         if not old and new:
@@ -256,9 +258,10 @@ def system(name, **kwargs):
                 ret['comment'] = 'Global network settings are set to be added.'
                 return ret
             elif old != new:
+                diff = difflib.unified_diff(old, new)
                 ret['result'] = None
-                ret['comment'] = \
-                    'Global network settings are set to be updated.'
+                ret['comment'] = 'Global network settings are set to be updated.'
+                ret['changes']['interface'] = ''.join(diff)
                 return ret
         if not old and new:
             apply_net_settings = True
