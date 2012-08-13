@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "July 13, 2012" "0.6.0" "salt-cloud"
+.TH "SALT-CLOUD" "7" "August 13, 2012" "0.7.0" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -67,11 +67,58 @@ Some paramaters can be specified in the main Salt cloud config file and then
 are applied to all cloud profiles. For instance if only a single cloud provider
 is being used then the provider option can be declared in the Salt cloud config
 file.
+.SS Larger Example
+.sp
+.nf
+.ft C
+base_aws:
+  provider: aws
+  image: ami\-e565ba8c
+  size: Micro Instance
+  os: RHEL6
+  minion:
+      cheese: edam
+
+ubuntu_rackspace:
+  provider: rackspace
+  image: Ubuntu 12.04 LTS
+  size: 256 server
+  os: Ubuntu
+  minion:
+      cheese: edam
+
+fedora_rackspace:
+  provider: rackspace
+  image: Fedora 17
+  size: 256 server
+  os: Fedora
+  minion:
+      cheese: edam
+
+cent_linode:
+  provider: linode
+  image: CentOS 6.2 64bit
+  size: Linode 512
+  os: RHEL6
+
+cent_gogrid:
+  provider: gogrid
+  image: 12834
+  size: 512MB
+  os: RHEL6
+
+cent_joyent:
+  provider: joyent
+  image: centos\-6
+  os: RHEL6
+  size: Small 1GB
+.ft P
+.fi
 .SH CLOUD MAP FILE
 .sp
 A number of options exist when creating virtual machines. They can be managed
 directly from profiles and the command line execution, or a more complex map
-file can be created. The map file allows for a number fo virtual machines to
+file can be created. The map file allows for a number of virtual machines to
 be created and associated with specific profiles.
 .sp
 Map files have a simple format, specify a profile and then a list of virtual
@@ -79,7 +126,7 @@ machines to make from said profile:
 .sp
 .nf
 .ft C
-fedora_smal:
+fedora_small:
   \- web1
   \- web2
   \- web3
@@ -92,10 +139,10 @@ fedora_high:
   \- redis3
 cent_high:
   \- riak1
-  \- riak1
-  \- riak1
-  \- riak1
-  \- riak1
+  \- riak2
+  \- riak3
+  \- riak4
+  \- riak5
 .ft P
 .fi
 .sp
@@ -114,6 +161,16 @@ to create the virtual machines in parallel:
 .nf
 .ft C
 $ salt\-cloud \-m /path/to/mapfile \-P
+.ft P
+.fi
+.sp
+A map file can also be enforced to represent the total state of a cloud
+deployment by using the \fB\-\-hard\fP option. When using the hard option any vms
+that exist but are not specified in the map file will be destroyed:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-P \-H
 .ft P
 .fi
 .SH WRITING CLOUD PROVIDER MODULES
@@ -143,16 +200,16 @@ soon as they become available. The script that is executed is referenced in
 the cloud profile as the \fBos\fP.
 .sp
 The scipt should eb written in bash and is a Jinja template. Deploy scripts
-need to execute a number of functions to do a complate salt setup. These
+need to execute a number of functions to do a complete salt setup. These
 functions include:
 .INDENT 0.0
 .IP 1. 3
-Install the salt minion, if this can be done via system packages this method
+Install the salt minion. If this can be done via system packages this method
 is HIGHLY preferred.
 .IP 2. 3
 Add the salt minion keys before the minion is started for the first time.
 The minion keys are available as strings that can be copied into place in
-the Jinja template under the dict named "vm"
+the Jinja template under the dict named "vm".
 .IP 3. 3
 Start the salt\-minion daemon and enable it at startup time.
 .IP 4. 3
@@ -164,6 +221,114 @@ A good, well commented, example of this process is the Fedora deployment
 script:
 .sp
 \fI\%https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh\fP
+.sp
+.nf
+.ft C
+#!/bin/bash
+
+# Install the salt\-minion package from yum. This is easy for Fedora because
+# Salt packages are in the Fedora package repos
+yum install \-y salt\-minion
+# Save in the minion public and private RSA keys before the minion is started
+mkdir \-p /etc/salt/pki
+echo \(aq{{ vm[\(aqpriv_key\(aq] }}\(aq > /etc/salt/pki/minion.pem
+echo \(aq{{ vm[\(aqpub_key\(aq] }}\(aq > /etc/salt/pki/minion.pub
+# Copy the minion configuration file into place before starting the minion
+echo \(aq{{ minion }}\(aq > /etc/salt/minion
+# Set the minion to start on reboot
+systemctl enable salt\-minion.service
+# Start the minion!
+systemctl start salt\-minion.service
+.ft P
+.fi
+.SH CORE CONFIGURATION
+.sp
+A number of core configuration options and some options that are global to
+the vm profiles can be set in the cloud config file. By default this file is
+located at \fB/etc/salt/cloud\fP.
+.SS Minion Configuration
+.sp
+The default minion configuration is set up in this file. This is where the
+minions that are created derive their configuration.
+.sp
+.nf
+.ft C
+minion:
+  master: saltmaster.example.com
+.ft P
+.fi
+.sp
+This is the location in particular to specify the location of the salt master.
+.SS Cloud Configurations
+.sp
+The data specific to interacting with public clouds is set up here.
+.SS Rackspace
+.sp
+Rackspace cloud requires two configuration options:
+.sp
+.nf
+.ft C
+RACKSPACE.user: example_user
+RACKSPACE.apikey: 123984bjjas87034
+.ft P
+.fi
+.SS Amazon AWS
+.sp
+A number of configuration options are required for Amazon AWS:
+.sp
+.nf
+.ft C
+AWS.id: HJGRYCILJLKJYG
+AWSAWS.key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
+AWSAWS.keyname: test
+AWSAWS.securitygroup: quick\-start
+AWSAWS.private_key: /root/test.pem
+.ft P
+.fi
+.SS Linode
+.sp
+Linode requires a single api key, but the default root password also needs
+to be set:
+.sp
+.nf
+.ft C
+LINODE.apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+LINODE.password: F00barbaz
+.ft P
+.fi
+.sp
+The password needs to be 8 characters and contain lowercase, uppercase and
+numbers.
+.SS Joyent Cloud
+.sp
+The Joyent cloud requires three configuration paramaters. The user name and
+password that are used to log into the Joyent system, and the location of
+the private ssh key associated with the Joyent account. The ssh key is needed
+to send the provisioning commands up to the freshly created virtual machine,
+.sp
+.nf
+.ft C
+JOYENT.user: fred
+JOYENT.password: saltybacon
+JOYENT.private_key: /root/joyent.pem
+.ft P
+.fi
+.SS GoGrid
+.sp
+To use Salt Cloud with GoGrid log into the GoGrid web interface and
+create an api key. Do this by clicking on "My Account" and then going to the
+API Keys tab.
+.sp
+The GOGRID.apikey and the GOGRID.sharedsecret configuration paramaters need to
+be set in the config file to enable interfacing with GoGrid:
+.sp
+.nf
+.ft C
+GOGRID.apikey: asdff7896asdh789
+GOGRID.sharedsecret: saltybacon
+.ft P
+.fi
+.SH RELEASE NOTES AND UPGRADE INSTRUCTIONS
 .SH AUTHOR
 Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
 .SH COPYRIGHT

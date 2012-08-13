@@ -1,10 +1,22 @@
 '''
-The generic libcloud template used to create the connections and deploy the
-cloud virtual machines
+Linode Cloud Module
+===================
+
+The Linode cloud module is used to control access to the Linode VPS system
+
+Use of this module only requires the LINODE.apikey paramater to be set in
+the cloud configuration file
+
+.. code-block:: yaml
+
+    # Linode account api key
+    LINODE.apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
+
 '''
 
 # Import python libs
 import os
+import types
 
 # Import libcloud
 from libcloud.compute.types import Provider
@@ -14,7 +26,24 @@ from libcloud.compute.types import NodeState
 from libcloud.compute.base import NodeAuthPassword
 
 # Import salt libs
-import saltcloud.utils
+from saltcloud.libcloudfuncs import *
+
+# Redirect linode functions to this module namespace
+avail_images = types.FunctionType(avail_images.__code__, globals())
+avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
+script = types.FunctionType(script.__code__, globals())
+destroy = types.FunctionType(destroy.__code__, globals())
+list_nodes = types.FunctionType(list_nodes.__code__, globals())
+
+
+# Only load in this module if the LINODE configurations are in place
+def __virtual__():
+    '''
+    Set up the libcloud funcstions and check for RACKSPACE configs
+    '''
+    if 'LINODE.apikey' in __opts__:
+        return 'linode'
+    return False
 
 
 def get_conn():
@@ -57,57 +86,6 @@ def get_password(vm_):
         return __opts__['LINODE.password']
 
 
-def get_image(conn, vm_):
-    '''
-    Return the image object to use
-    '''
-    images = conn.list_images()
-    if not 'image' in vm_:
-        return images[0]
-    if isinstance(vm_['image'], int):
-        return images[vm_['image']]
-    for img in images:
-        if img.id == vm_['image']:
-            return img
-        if img.name == vm_['image']:
-            return img
-
-
-def get_size(conn, vm_):
-    '''
-    Return the vm's size object
-    '''
-    sizes = conn.list_sizes()
-    if not 'size' in vm_:
-        return sizes[0]
-    if isinstance(vm_['size'], int):
-        return sizes[vm_['size']]
-    for size in sizes:
-        if size.id == vm_['size']:
-            return size
-        if size.name == vm_['size']:
-            return size
-
-
-def script(vm_):
-    '''
-    Return the script deployment object
-    '''
-    minion = saltcloud.utils.minion_conf_string(__opts__, vm_)
-    return ScriptDeployment(
-            saltcloud.utils.os_script(
-                saltcloud.utils.get_option(
-                    'os',
-                    __opts__,
-                    vm_
-                    ),
-                vm_,
-                __opts__,
-                minion,
-                )
-            )
-
-
 def create(vm_):
     '''
     Create a single vm from a data dict
@@ -127,21 +105,3 @@ def create(vm_):
         ))
     for key, val in data.__dict__.items():
         print('  {0}: {1}'.format(key, val))
-
-
-def list_nodes():
-    '''
-    Return a list of the vms that are on the provider
-    '''
-    conn = get_conn() 
-    nodes = conn.list_nodes()
-    ret = {}
-    for node in nodes:
-        ret[node.name] = {
-                'id': node.id,
-                'image': node.image,
-                'private_ips': node.private_ips,
-                'public_ips': node.public_ips,
-                'size': node.size,
-                'state': node.state}
-    return ret

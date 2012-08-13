@@ -16,6 +16,7 @@ import pprint
 
 # Import salt libs
 import saltcloud.config
+import saltcloud.output
 import salt.config
 
 class SaltCloud(object):
@@ -60,6 +61,22 @@ class SaltCloud(object):
                 default='',
                 help='Specify a cloud map file to use for deployment')
 
+        parser.add_option('-H',
+                '--hard',
+                dest='hard',
+                default=False,
+                action='store_true',
+                help=('Delete all vms that are not defined in the map file '
+                      'CAUTION!!! This operation can irrevocably destroy vms!')
+                )
+
+        parser.add_option('-d',
+                '--destroy',
+                dest='destroy',
+                default=False,
+                action='store_true',
+                help='Specify a vm to destroy')
+
         parser.add_option('-P',
                 '--parallel',
                 dest='parallel',
@@ -74,6 +91,24 @@ class SaltCloud(object):
                 action='store_true',
                 help=('Execute a query and return information about the nodes '
                       'running on configured cloud providers'))
+
+        parser.add_option('--list-images',
+                dest='list_images',
+                default=False,
+                help=('Display a list of images available in configured '
+                      'cloud providers. Pass the cloud provider that '
+                      'available images are desired on, aka "linode", '
+                      'or pass "all" to list images for all configured '
+                      'cloud providers'))
+
+        parser.add_option('--list-sizes',
+                dest='list_sizes',
+                default=False,
+                help=('Display a list of sizes available in configured '
+                      'cloud providers. Pass the cloud provider that '
+                      'available sizes are desired on, aka "AWS", '
+                      'or pass "all" to list sizes for all configured '
+                      'cloud providers'))
 
         parser.add_option('-C',
                 '--cloud-config',
@@ -122,6 +157,16 @@ class SaltCloud(object):
         mapper = saltcloud.cloud.Map(self.opts)
         if self.opts['query']:
             pprint.pprint(mapper.map_providers())
+        if self.opts['list_images']:
+            saltcloud.output.double_layer(
+                    mapper.image_list(self.opts['list_images'])
+                    )
+        if self.opts['list_sizes']:
+            saltcloud.output.double_layer(
+                    mapper.size_list(self.opts['list_sizes'])
+                    )
+        elif self.opts.get('names') and self.opts['destroy']:
+            mapper.destroy(self.opts.get('names'))
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
         elif self.opts['map']:

@@ -1,20 +1,21 @@
 '''
-Rackspace Cloud Module
-======================
+GoGrid Cloud Module
+====================
 
-The Rackspace cloud module. This module uses the preferred means to set up a
-libcloud based cloud module and should be used as the general template for
-setting up additional libcloud based modules.
+The GoGrid cloud module. This module interfaces with the gogrid public cloud
+service. To use Salt Cloud with GoGrid log into the GoGrid web interface and
+create an api key. Do this by clicking on "My Account" and then going to the
+API Keys tab.
 
-The rackspace cloud module interfaces with the Rackspace public cloud service
-and requires that two configuration paramaters be set for use:
+The GOGRID.apikey and the GOGRID.sharedsecret configuration paramaters need to
+be set in the config file to enable interfacing with GoGrid
 
 .. code-block:: yaml
 
-    # The Rackspace login user
-    RACKSPACE.user: fred
-    # The Rackspace user's apikey
-    RACKSPACE.apikey: 901d3f579h23c8v73q9
+    # The generated api key to use
+    GOGRID.apikey: asdff7896asdh789
+    # The apikey's shared secret
+    GOGRID.sharedsecret: saltybacon
 
 '''
 
@@ -42,13 +43,13 @@ destroy = types.FunctionType(destroy.__code__, globals())
 list_nodes = types.FunctionType(list_nodes.__code__, globals())
 
 
-# Only load in this module is the RACKSPACE configurations are in place
+# Only load in this module is the GOGRID configurations are in place
 def __virtual__():
     '''
     Set up the libcloud funcstions and check for RACKSPACE configs
     '''
-    if 'RACKSPACE.user' in __opts__ and 'RACKSPACE.apikey' in __opts__:
-        return 'rackspace'
+    if 'GOGRID.apikey' in __opts__ and 'GOGRID.sharedsecret' in __opts__:
+        return 'gogrid'
     return False
 
 
@@ -56,10 +57,10 @@ def get_conn():
     '''
     Return a conn object for the passed vm data
     '''
-    driver = get_driver(Provider.RACKSPACE)
+    driver = get_driver(Provider.GOGRID)
     return driver(
-            __opts__['RACKSPACE.user'],
-            __opts__['RACKSPACE.apikey'],
+            __opts__['GOGRID.apikey'],
+            __opts__['GOGRID.sharedsecret'],
             )
 
 
@@ -74,11 +75,7 @@ def create(vm_):
     kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
-    try:
-        data = conn.deploy_node(**kwargs)
-    except DeploymentError as exc:
-        print('Libcloud failed to connect to the new vm: {0}'.format(exc))
-        return
+    data = conn.deploy_node(**kwargs)
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
