@@ -182,9 +182,8 @@ def managed(name, type, enabled=True, **kwargs):
                 diff = difflib.unified_diff(old, new)
                 ret['result'] = None
                 ret['comment'] = 'Interface {0} is set to be updated.'
-                ret['comment'] = ret['comment'].format(
+                ret['comment'] = ret['comment'].format(name)
                 ret['changes']['interface'] = ''.join(diff)
-                    name)
                 return ret
         if not old and new:
             ret['changes']['interface'] = 'Added network interface.'
