@@ -402,6 +402,11 @@ class ShellCase(TestCase):
         arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-cp', arg_str)
 
+    def run_call(self, arg_str):
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
+        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-call', arg_str)
+
 
 class ShellCaseCommonTestsMixIn(object):
 
