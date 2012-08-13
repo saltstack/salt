@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "1" "July 13, 2012" "0.6.0" "salt-cloud"
+.TH "SALT-CLOUD" "1" "August 13, 2012" "0.7.0" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Command
 .
@@ -51,19 +51,36 @@ clouds via a cleanly controlled profile and mapping system.
 .INDENT 0.0
 .TP
 .B \-h, \-\-help
-Print a usage message briefly summarizing these command\-line options
+Print a usage message briefly summarizing these command\-line options.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-p PROFILE, \-\-profile=PROFILE
 Select a single profile to build the named cloud vms from. The profile
-must be defined in the specified profiles file
+must be defined in the specified profiles file.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-m MAP, \-\-map=MAP
 Specify a map file to use. This option will ensure that all of the mapped
-vms are created. If the named vm already exists then it will be skipped
+vms are created. If the named vm already exists then it will be skipped.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-H, \-\-hard
+When specifying a map file, the default behavior is to ensure that all of
+the vms specified in the map file are created. If the \-\-hard option is
+set, then any vms that exist on configured cloud providers that are
+not specified in the map file will be destroyed. Be advised that this can
+be a destructive operation and should be used with care.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-destroy
+Pass in the name(s) of vms to destroy, salt\-cloud will search the
+configured cloud providers for the specified names and destroy the
+vms. Be advised that this is a destructive operation and should be used
+with care.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -79,27 +96,58 @@ cloud provider carefully.
 .INDENT 0.0
 .TP
 .B \-Q, \-\-query
-Execute a query and print out the information about all cloud vms
+Execute a query and print out the information about all cloud vms.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-list\-images
+Display a list of images available in configured cloud providers.
+Pass the cloud provider that available images are desired on, aka
+"linode", or pass "all" to list images for all configured cloud providers.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-list\-sizes
+Display a list of sizes available in configured cloud providers. Pass the
+cloud provider that available sizes are desired on, aka "aws", or pass
+"all" to list sizes for all configured cloud providers
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-C CLOUD_CONFIG, \-\-cloud\-config=CLOUD_CONFIG
 Specify an alternative location for the salt cloud configuration file.
-Default location is /etc/salt/cloud
+Default location is /etc/salt/cloud.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-M MASTER_CONFIG, \-\-master\-config=MASTER_CONFIG
 Specify an alternative location for the salt master configuration file.
 The salt master configuration file is used to determine how to handle the
-minion RSA keys. Default location is /etc/salt/master
+minion RSA keys. Default location is /etc/salt/master.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-V VM_CONFIG, \-\-profiles=VM_CONFIG, \-\-vm_config=VM_CONFIG
 Specify an alternative location for the salt cloud profiles file.
-Default location is /etc/salt/cloud.profiles
+Default location is /etc/salt/cloud.profiles.
 .UNINDENT
+.SH EXAMPLES
+.sp
+To create 4 vms named web1, web2, db1 and db2 from specified profiles:
+.sp
+# salt\-cloud \-p fedora_rackspace web1 web2 db1 db2
+.sp
+To read in a map file and create all vms specified therein:
+.sp
+# salt\-cloud \-m /path/to/cloud.map
+.sp
+To read in a map file and create all vms specified therein in parallel:
+.sp
+# salt\-cloud \-m /path/to/cloud.map \-P
+.sp
+To delete any vms not specified in the maf file:
+.sp
+# salt\-cloud \-m /path/to/cloud.map \-H \-P
 .SH SEE ALSO
 .sp
 \fIsalt\-cloud(7)\fP
