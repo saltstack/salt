@@ -37,7 +37,7 @@ def get_printout(ret, out, opts, indent=None):
             if printout and indent is not None:
                 printout.indent = indent
             return printout
-        elif opts.get('txt_out', False):
+        elif opts.get('text_out', False):
             return get_outputter('txt')
         elif opts['yaml_out']:
             return get_outputter('yaml')

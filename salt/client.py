@@ -177,6 +177,7 @@ class LocalClient(object):
                     continue
                 if comps[0] not in grains:
                     minions.remove(id_)
+                    continue
                 if isinstance(grains[comps[0]], list):
                     # We are matching a single component to a single list member
                     found = False

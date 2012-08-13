@@ -19,6 +19,16 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-call'
 
+    def test_default_output(self):
+        out = self.run_call('test.fib 3')
+        self.assertEqual(
+            "local: !!python/tuple\n- [0, 1, 1, 2]", '\n'.join(out[:-3])
+        )
+
+    def test_text_output(self):
+        out = self.run_call('--text-out test.fib 3')
+        self.assertEqual("local: ([0, 1, 1, 2]", ''.join(out).rsplit(",", 1)[0])
+
 if __name__ == "__main__":
     loader = TestLoader()
     tests = loader.loadTestsFromTestCase(CallTest)
