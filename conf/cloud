@@ -32,3 +32,9 @@
 # GoGrid uses a generated apikey and shared secret
 #GOGRID.apikey: wef98rfweirugh
 #GOGRID.sharedsecret: saltybacon
+#
+# Joyent config
+#JOYENT.user: foobar
+#JOYENT.password: zaphod77
+#JOYENT.private_key: /root/joyent.pem
+#
