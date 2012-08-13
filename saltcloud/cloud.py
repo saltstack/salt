@@ -30,8 +30,7 @@ class Cloud(object):
         set
         '''
         if 'provider' in vm_:
-            if '{0}.create'.format(vm_['provider']) in self.clouds:
-                return vm_['provider']
+            return vm_['provider']
         if 'provider' in self.opts:
             if '{0}.create'.format(self.opts['provider']) in self.clouds:
                 return self.opts['provider']
@@ -139,6 +138,7 @@ class Cloud(object):
             print('Public cloud provider {0} is not available'.format(
                 self.provider(vm_))
                 )
+            return
         priv, pub = saltcloud.utils.gen_keys(
                 saltcloud.utils.get_option('keysize', self.opts, vm_)
                 )
@@ -163,7 +163,7 @@ class Cloud(object):
                 if vm_['profile'] == self.opts['profile']:
                     # It all checks out, make the vm
                     found = True
-                    if name in pmap[self.provider(vm_)]:
+                    if name in pmap.get(self.provider(vm_), []):
                         # The specified vm already exists, don't make it anew
                         continue
                     vm_['name'] = name
