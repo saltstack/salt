@@ -1,6 +1,6 @@
 import sys
 
-__version_info__ = (0, 10, 1)
+__version_info__ = (0, 10, 2)
 __version__ = '.'.join(map(str, __version_info__))
 
 def versions_report():

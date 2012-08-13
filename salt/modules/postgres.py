@@ -240,11 +240,16 @@ def user_list(user=None, host=None, port=None, runas=None):
     (user, host, port) = _connection_defaults(user, host, port)
 
     ret = []
-    cmd = _psql_cmd('-c', 'SELECT * FROM pg_roles',
+    query = (
+        '''SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
+        rolcatupdate, rolcanlogin, rolconnlimit, rolvaliduntil, rolconfig, oid
+        FROM pg_roles'''
+    )
+    cmd = _psql_cmd('-c', query,
             host=host, user=user, port=port)
 
     cmdret = __salt__['cmd.run'](cmd, runas=runas)
-    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 13]
+    lines = [x for x in cmdret.splitlines() if len(x.split("|")) == 11]
     log.debug(lines)
     header = [x.strip() for x in lines[0].split("|")]
     for line in lines[1:]:
@@ -264,12 +269,18 @@ def user_exists(name, user=None, host=None, port=None, runas=None):
     '''
     (user, host, port) = _connection_defaults(user, host, port)
 
-    users = user_list(user=user, host=host, port=port, runas=runas)
-    for user in users:
-        if name == dict(user).get('rolname'):
-            return True
+    query = (
+        "SELECT true "
+        "FROM pg_roles "
+        "WHERE EXISTS "
+        "(SELECT rolname WHERE rolname='{role}')".format(role=name)
+    )
+    cmd = _psql_cmd('-c', query, host=host, user=user, port=port)
+    cmdret = __salt__['cmd.run'](cmd, runas=runas)
+    log.debug(cmdret.splitlines())
+    val = cmdret.splitlines()[1]
+    return True if val.strip() == 't' else False
 
-    return False
 
 def user_create(username,
                 user=None,

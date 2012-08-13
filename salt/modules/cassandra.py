@@ -39,11 +39,11 @@ def __virtual__():
         thrift_port = str(__pillar__['cassandra.thrift_port'])
         from pycassa.system_manager import SystemManager
     except ImportError:
-        log.info('Module failed to load: pycassa is not installed')
+        #log.info('Module failed to load: pycassa is not installed')
         return False
     except KeyError:
-        log.info('Module failed to load: cassandra.* pillar '
-            'values are incomplete')
+        #log.info('Module failed to load: cassandra.* pillar '
+        #    'values are incomplete')
         return False
 
     return 'cassandra'

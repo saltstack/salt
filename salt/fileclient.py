@@ -21,6 +21,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils
 import salt.utils.templates
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
@@ -156,11 +157,11 @@ class Client(object):
                 prefix = separated[0]
             for fn_ in self.file_list_emptydirs(env):
                 if fn_.startswith(path):
-                    dest = os.path.normpath(
-                      os.sep.join([
-                      self.opts['cachedir'],
-                      'files',
-                      env])) 
+                    dest = salt.utils.path_join(
+                        self.opts['cachedir'],
+                        'files',
+                        env
+                    )
                     minion_dir = '%s/%s' % (dest,fn_)
                     if not os.path.isdir(minion_dir):
                         os.makedirs(minion_dir)
@@ -296,13 +297,13 @@ class Client(object):
                 else:
                     return ''
         else:
-            dest = os.path.normpath(
-                os.sep.join([
-                    self.opts['cachedir'],
-                    'extrn_files',
-                    env,
-                    url_data.netloc,
-                    url_data.path]))
+            dest = salt.utils.path_join(
+                self.opts['cachedir'],
+                'extrn_files',
+                env,
+                url_data.netloc,
+                url_data.path
+            )
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
@@ -354,13 +355,13 @@ class Client(object):
             return ''
         if not dest:
             # No destination passed, set the dest as an extrn_files cache
-            dest = os.path.normpath(
-                os.sep.join([
-                    self.opts['cachedir'],
-                    'extrn_files',
-                    env,
-                    url_data.netloc,
-                    url_data.path]))
+            dest = salt.utils.path_join(
+                self.opts['cachedir'],
+                'extrn_files',
+                env,
+                url_data.netloc,
+                url_data.path
+            )
         destdir = os.path.dirname(dest)
         if not os.path.isdir(destdir):
             if makedirs:

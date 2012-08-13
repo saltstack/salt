@@ -27,6 +27,13 @@ def __virtual__():
         return False
     return 'mongo_return'
 
+def _remove_dots(d):
+    output = {}
+    for k, v in d.iteritems():
+        if isinstance(v, dict):
+            v = _remove_dots(v)
+        output[k.replace('.', '-')] = v
+    return output
 
 def returner(ret):
     '''
@@ -46,8 +53,7 @@ def returner(ret):
     back = {}
 
     if isinstance(ret['return'], dict):
-        for key in ret['return']:
-            back[key.replace('.', '-')] = ret['return'][key]
+        back = _remove_dots(ret['return'])
     else:
         back = ret['return']
 

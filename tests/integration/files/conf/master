@@ -12,3 +12,5 @@ syndic_master: localhost
 peer:
   '.*':
     - 'test.*'
+log_file: master
+key_logfile: key

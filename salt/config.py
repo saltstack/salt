@@ -139,8 +139,7 @@ def prepend_root_dir(opts, path_options):
     root_dir = os.path.abspath(opts['root_dir'])
     for path_option in path_options:
         if path_option in opts:
-            opts[path_option] = os.path.normpath(
-                    os.sep.join([root_dir, opts[path_option]]))
+            opts[path_option] = salt.utils.path_join(root_dir, opts[path_option])
 
 
 def minion_config(path):
@@ -194,6 +193,7 @@ def minion_config(path):
             'state_verbose': False,
             'acceptance_wait_time': 10,
             'dns_check': True,
+            'verify_env': True,
             'grains': {},
             'permissive_pki_access': False,
             'default_include': 'minion.d/*.conf',
@@ -285,6 +285,7 @@ def master_config(path):
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key',
+            'verify_env': True,
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
     }

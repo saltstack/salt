@@ -5,7 +5,11 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 import sys
 import os
+import logging
 import optparse
+# Setup minimal logging and disable it so "no handler for..." errors
+# are not thrown anymore while running tests
+logging.basicConfig(stream=open(os.devnull, 'w'))
 
 # Import salt libs
 import saltunittest
@@ -18,7 +22,7 @@ except ImportError:
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
-PNUM = 50
+PNUM = 70
 
 
 def run_suite(opts, path, display_name, suffix='[!_]*.py'):

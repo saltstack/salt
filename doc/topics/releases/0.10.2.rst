@@ -148,7 +148,7 @@ Bluetooth
 ^^^^^^^^^
 
 Baisc ``bluez`` support for managing and controlling Bluetooth devices.
-Supports scanning as well as pairing/unpairing.
+Supports scanning as well as pairing/unpairing by Joseph Hall.
 
 Test Updates
 ============

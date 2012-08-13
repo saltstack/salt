@@ -15,6 +15,7 @@ import datetime
 import tempfile
 import shutil
 import time
+import platform
 from calendar import month_abbr as months
 
 # Import Salt libs
@@ -179,10 +180,14 @@ def daemonize():
         log.error(msg.format(exc.errno, exc.strerror))
         sys.exit(1)
 
-    dev_null = open('/dev/null', 'rw')
-    os.dup2(dev_null.fileno(), sys.stdin.fileno())
-    os.dup2(dev_null.fileno(), sys.stdout.fileno())
-    os.dup2(dev_null.fileno(), sys.stderr.fileno())
+    # A normal daemonization redirects the process output to /dev/null.
+    # Unfortunately when a python multiprocess is called the output is
+    # not cleanly redirected and the parent process dies when the
+    # multiprocessing process attemps to access stdout or err.
+    #dev_null = open('/dev/null', 'rw')
+    #os.dup2(dev_null.fileno(), sys.stdin.fileno())
+    #os.dup2(dev_null.fileno(), sys.stdout.fileno())
+    #os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
 def daemonize_if(opts, **kwargs):
@@ -417,6 +422,9 @@ def check_or_die(command):
     Lazily import salt.modules.cmdmod to avoid any
     sort of circular dependencies.
     '''
+    if command is None:
+        raise CommandNotFoundError("'None' is not a valid command.")
+
     import salt.modules.cmdmod
     __salt__ = {'cmd.has_exec': salt.modules.cmdmod.has_exec}
 
@@ -461,3 +469,28 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         # TODO, backup to master
         pass
     shutil.move(tgt, dest)
+
+
+def path_join(*parts):
+    """
+    This functions tries to solve some issues when joining multiple absolute
+    paths on both *nix and windows platforms.
+
+    See tests/unit/utils/path_join_test.py for some examples on what's being
+    talked about here.
+    """
+    # Normalize path converting any os.sep as needed
+    parts = [os.path.normpath(p) for p in parts]
+
+    root = parts.pop(0)
+    if not parts:
+        return root
+
+    if platform.system().lower() == 'windows':
+        if len(root) == 1:
+            root += ':'
+        root = root.rstrip(os.sep) + os.sep
+
+    return os.path.normpath(os.path.join(
+        root, *[p.lstrip(os.sep) for p in parts]
+    ))
