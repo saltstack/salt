@@ -393,10 +393,10 @@ def _check_perms(name, ret, user, group, mode):
 
     # Mode changes if needed
     if mode:
-        if mode != perms['lmode']:
+        if str(mode) != perms['lmode']:
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
-            if mode != __salt__['file.get_mode'](name).lstrip('0'):
+            if str(mode) != __salt__['file.get_mode'](name).lstrip('0'):
                 ret['result'] = False
                 ret['comment'] += 'Failed to change mode to {0} '.format(mode)
             else:
@@ -422,7 +422,7 @@ def _check_perms(name, ret, user, group, mode):
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
-            ret['comment'] = 'Failed to change user to {0} '.format(user)
+            ret['comment'] += 'Failed to change user to {0} '.format(user)
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
@@ -1385,26 +1385,32 @@ def recurse(name,
                 env,
                 include_empty)
         return ret
+
+    def update_changes_by_perms(path, mode, changetype='updated'): 
+        _ret, perms = _check_perms(path, {}, user, group, mode)
+        if _ret['changes']:
+            ret['changes'][path] = changetype
+
+
     vdir = set()
     for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
+        # fn_ here is the absolute source path of the file to copy from;
+        # it is either a normal file or an empty dir(if include_empthy==true).
+
         dest = _get_recurse_dest(name, fn_, source, env)
         dirname = os.path.dirname(dest)
+        keep.add(dest)
         if not os.path.isdir(dirname):
             _makedirs(dest, user=user, group=group)
         if not dirname in vdir:
             # verify the directory perms if they are set
             # _check_perms(name, ret, user, group, mode)
-            _ret, perms = _check_perms(dirname, {}, user, group, dir_mode)
-            if _ret['changes']:
-                ret['changes'][dirname] = 'updated'
+            update_changes_by_perms(dirname, dir_mode)
             vdir.add(dirname)
         if os.path.isfile(dest):
-            _ret, perms = _check_perms(dest, {}, user, group, file_mode)
-            if _ret['changes']:
-                ret['changes'][dest] = 'updated'
-            keep.add(dest)
+            update_changes_by_perms(dest, file_mode)
             srch = ''
             dsth = ''
             # The file is present, if the sum differes replace it
@@ -1413,35 +1419,29 @@ def recurse(name,
                 dsth = hashlib.md5(dst_.read()).hexdigest()
             if srch != dsth:
                 # The downloaded file differes, replace!
-                # FIXME: no metadata (ownership, permissions) available
                 salt.utils.copyfile(
                         fn_,
                         dest,
                         _backup_mode(backup),
                         __opts__['cachedir'])
+                _check_perms(dest, {}, user, group, file_mode)
                 ret['changes'][dest] = 'updated'
         elif os.path.isdir(dest) and include_empty:
             #check perms
-            _ret, perms = _check_perms(dest, {}, user, group, dir_mode)
-            if _ret['changes']:
-                ret['changes'][dest] = 'updated'
-            keep.add(dest)
+            update_changes_by_perms(dest, dir_mode)
         else:
-            keep.add(dest)
             if os.path.isdir(fn_) and include_empty:
                 #create empty dir
                 os.mkdir(dest)
-
-                if dir_mode:
-                    __salt__['file.set_mode'](dest, dir_mode)
+                _check_perms(dest, {}, user, group, dir_mode)
             else:
                 # The destination file is not present, make it
-                # FIXME: no metadata (ownership, permissions) available
                 salt.utils.copyfile(
                         fn_,
                         dest,
                         _backup_mode(backup),
                         __opts__['cachedir'])
+                _check_perms(dest, {}, user, group, file_mode)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
@@ -1449,7 +1449,7 @@ def recurse(name,
         removed = _clean_dir(name, list(keep))
         if removed:
             ret['changes']['removed'] = removed
-            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
+            ret['comment'] += 'Files cleaned from directory {0}'.format(name)
     return ret
 
 
