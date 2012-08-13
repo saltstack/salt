@@ -242,12 +242,6 @@ class Pillar(object):
                     for item in data:
                         if isinstance(item, string_types):
                             matches[env].append(item)
-        ext_matches = self.client.ext_nodes()
-        for env in ext_matches:
-            if env in matches:
-                matches[env] = list(set(ext_matches[env]).union(matches[env]))
-            else:
-                matches[env] = ext_matches[env]
         return matches
 
     def render_pstate(self, sls, env, mods):
