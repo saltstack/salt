@@ -800,7 +800,6 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        self.module_refresh(data)
         errors = self.verify_data(data)
         if errors:
             ret = {
@@ -814,6 +813,7 @@ class State(object):
             ret['__run_num__'] = self.__run_num
             self.__run_num += 1
             format_log(ret)
+            self.module_refresh(data)
             return ret
             
         log.info(
@@ -844,6 +844,7 @@ class State(object):
         format_log(ret)
         if 'provider' in data:
             self.load_modules()
+        self.module_refresh(data)
         return ret
 
     def call_chunks(self, chunks):
