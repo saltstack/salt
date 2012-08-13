@@ -162,15 +162,16 @@ class SaltKey(parsers.SaltKeyOptionParser):
         '''
         self.parse_args()
 
-        verify_env([
-                os.path.join(self.config['pki_dir'], 'minions'),
-                os.path.join(self.config['pki_dir'], 'minions_pre'),
-                os.path.join(self.config['pki_dir'], 'minions_rejected'),
-                os.path.dirname(self.config['key_logfile']),
-            ],
-            self.config['user'],
-            permissive=self.config['permissive_pki_access']
-        )
+        if self.config['verify_env']:
+            verify_env([
+                    os.path.join(self.config['pki_dir'], 'minions'),
+                    os.path.join(self.config['pki_dir'], 'minions_pre'),
+                    os.path.join(self.config['pki_dir'], 'minions_rejected'),
+                    os.path.dirname(self.config['key_logfile']),
+                ],
+                self.config['user'],
+                permissive=self.config['permissive_pki_access']
+            )
 
         self.setup_logfile_logger()
 
@@ -189,14 +190,15 @@ class SaltCall(parsers.SaltCallOptionParser):
         '''
         self.parse_args()
 
-        verify_env([
-                self.config['pki_dir'],
-                self.config['cachedir'],
-                os.path.dirname(self.config['log_file'])
-            ],
-            self.config['user'],
-            permissive=self.config['permissive_pki_access']
-        )
+        if self.config['verify_env']:
+            verify_env([
+                    self.config['pki_dir'],
+                    self.config['cachedir'],
+                    os.path.dirname(self.config['log_file'])
+                ],
+                self.config['user'],
+                permissive=self.config['permissive_pki_access']
+            )
 
         caller = salt.cli.caller.Caller(self.config)
 

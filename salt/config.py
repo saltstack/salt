@@ -193,6 +193,7 @@ def minion_config(path):
             'state_verbose': False,
             'acceptance_wait_time': 10,
             'dns_check': True,
+            'verify_env': True,
             'grains': {},
             'permissive_pki_access': False,
             'default_include': 'minion.d/*.conf',
@@ -284,6 +285,7 @@ def master_config(path):
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key',
+            'verify_env': True,
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
     }

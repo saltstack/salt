@@ -31,17 +31,18 @@ class Master(parsers.MasterOptionParser):
         self.parse_args()
 
         try:
-            verify_env([
-                self.config['pki_dir'],
-                os.path.join(self.config['pki_dir'], 'minions'),
-                os.path.join(self.config['pki_dir'], 'minions_pre'),
-                os.path.join(self.config['pki_dir'], 'minions_rejected'),
-                self.config['cachedir'],
-                os.path.join(self.config['cachedir'], 'jobs'),
-                os.path.dirname(self.config['log_file']),
-                self.config['sock_dir'],
-            ], self.config['user'],
-            permissive=self.config['permissive_pki_access'])
+            if self.config['verify_env']:
+                verify_env([
+                    self.config['pki_dir'],
+                    os.path.join(self.config['pki_dir'], 'minions'),
+                    os.path.join(self.config['pki_dir'], 'minions_pre'),
+                    os.path.join(self.config['pki_dir'], 'minions_rejected'),
+                    self.config['cachedir'],
+                    os.path.join(self.config['cachedir'], 'jobs'),
+                    os.path.dirname(self.config['log_file']),
+                    self.config['sock_dir'],
+                ], self.config['user'],
+                permissive=self.config['permissive_pki_access'])
         except OSError, err:
             sys.exit(err.errno)
 
@@ -76,14 +77,15 @@ class Minion(parsers.MinionOptionParser):
         self.parse_args()
 
         try:
-            verify_env([
-                self.config['pki_dir'],
-                self.config['cachedir'],
-                self.config['sock_dir'],
-                self.config['extension_modules'],
-                os.path.dirname(self.config['log_file']),
-            ], self.config['user'],
-            permissive=self.config['permissive_pki_access'])
+            if self.config['verify_env']:
+                verify_env([
+                    self.config['pki_dir'],
+                    self.config['cachedir'],
+                    self.config['sock_dir'],
+                    self.config['extension_modules'],
+                    os.path.dirname(self.config['log_file']),
+                ], self.config['user'],
+                permissive=self.config['permissive_pki_access'])
         except OSError, err:
             sys.exit(err.errno)
 
@@ -117,13 +119,14 @@ class Syndic(parsers.SyndicOptionParser):
         '''
         self.parse_args()
         try:
-            verify_env([
-                    self.config['pki_dir'], self.config['cachedir'],
-                    os.path.dirname(self.config['log_file']),
-                ],
-                self.config['user'],
-                permissive=self.config['permissive_pki_access']
-            )
+            if self.config['verify_env']:
+                verify_env([
+                        self.config['pki_dir'], self.config['cachedir'],
+                        os.path.dirname(self.config['log_file']),
+                    ],
+                    self.config['user'],
+                    permissive=self.config['permissive_pki_access']
+                )
         except OSError, err:
             sys.exit(err.errno)
 
