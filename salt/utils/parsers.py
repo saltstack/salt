@@ -32,7 +32,7 @@ class MixInMeta(type):
         instance = super(MixInMeta, cls).__new__(cls, name, bases, attrs)
         if not hasattr(instance, '_mixin_setup'):
             raise RuntimeError(
-                'Don't subclass {0} in {1} if you're not going to use it as a '
+                'Don\'t subclass {0} in {1} if you\'re not going to use it as a '
                 'salt parser mix-in.'.format(cls.__name__, name)
             )
         return instance
