@@ -433,7 +433,9 @@ class Minion(object):
         in, signing in can occur as often as needed to keep up with the
         revolving master aes key.
         '''
-        log.debug('Attempting to authenticate with the Salt Master')
+        log.debug('Attempting to authenticate with the Salt Master at {0}'.format(
+            self.opts['master_ip']
+        ))
         auth = salt.crypt.Auth(self.opts)
         while True:
             creds = auth.sign_in()
@@ -574,7 +576,7 @@ class Minion(object):
                             pass
                 except Exception as exc:
                     log.critical(traceback.format_exc())
-                
+
 
 
 class Syndic(salt.client.LocalClient, Minion):
