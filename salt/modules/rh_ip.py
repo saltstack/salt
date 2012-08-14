@@ -689,7 +689,7 @@ def _write_file_network(data, filename):
 def _read_temp(data):
     tout = StringIO.StringIO()
     tout.write(data)
-    output = tout.getvalue()
+    output = tout.readlines()
     tout.close()
     return output
 
