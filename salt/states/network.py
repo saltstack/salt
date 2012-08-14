@@ -202,11 +202,11 @@ def managed(name, type, enabled=True, **kwargs):
                     pass
                 if not old and new:
                     ret['result'] = None
-                    ret['comment'] = 'Bond {0} is set to be added.'.format(name)
+                    ret['comment'] = 'Bond interface {0} is set to be added.'.format(name)
                 elif old != new:
                     diff = difflib.unified_diff(old, new)
                     ret['result'] = None
-                    ret['comment'] = 'Bond {0} is set to be updated.'.format(name)
+                    ret['comment'] = 'Bond interface {0} is set to be updated.'.format(name)
                     ret['changes']['bond'] = ''.join(diff)
             else:
                 if not old and new:
