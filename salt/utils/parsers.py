@@ -272,7 +272,7 @@ class LogLevelMixIn(object):
             '-l', '--log-level',
             choices=list(log.LOG_LEVELS),
             help=('Logging log level. One of {0}. For the logfile settings see '
-                  'the configuration file. Default: \'%default\'.').format(
+                  'the configuration file. Default: \'{1}\'.').format(
                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
                     getattr(self, '_default_logging_level_', 'warning')
             )
