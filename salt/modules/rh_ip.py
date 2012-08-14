@@ -5,6 +5,7 @@ The networking module for RHEL/Fedora based distros
 import logging
 import re
 from os.path import exists, join
+import StringIO
 
 # import third party libs
 import jinja2
@@ -685,6 +686,13 @@ def _write_file_network(data, filename):
     fout.write(data)
     fout.close()
 
+def _read_temp(data):
+    tout = StringIO.StringIO()
+    tout.write(data)
+    output = tout.getvalue()
+    tout.close()
+    return output
+
 
 def build_bond(iface, settings):
     '''
@@ -708,6 +716,9 @@ def build_bond(iface, settings):
         __salt__['cmd.run']('sed -i -e "/^options\s{0}.*/d" /etc/modprobe.conf'.format(iface))
         __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
     __salt__['kmod.load']('bonding')
+
+    if settings['test']:
+        return _read_temp(data)
 
     return _read_file(path)
 
@@ -750,10 +761,11 @@ def build_interface(iface, iface_type, enabled, settings):
         ifcfg = template.render(opts)
 
     if settings['test']:
-        return ifcfg
+        return _read_temp(ifcfg)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}')
     path = join(_RH_NETWORK_SCRIPT_DIR, 'ifcfg-{0}'.format(iface))
+
     return _read_file(path)
 
 
@@ -854,7 +866,7 @@ def build_network_settings(settings):
     network = template.render(opts)
     
     if settings['test']:
-        return network
+        return _read_temp(network)
 
     # Wirte settings
     _write_file_network(network, _RH_NETWORK_FILE)
