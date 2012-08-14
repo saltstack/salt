@@ -261,6 +261,7 @@ class DeprecatedSyndicOptionsMixIn(DeprecatedConfigMessage):
 class LogLevelMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = 10
+    _default_logging_level_ = "warning"
     _skip_console_logging_config_ = False
 
     def _mixin_setup(self):
@@ -271,20 +272,21 @@ class LogLevelMixIn(object):
             '-l', '--log-level',
             choices=list(log.LOG_LEVELS),
             help=('Logging log level. One of {0}. For the logfile settings see '
-                  'the configuration file. Default: \'warning\'.').format(
-                    ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES])
+                  'the configuration file. Default: \'{1}\'.').format(
+                    ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                    getattr(self, '_default_logging_level_', 'warning')
             )
         )
 
     def process_log_level(self):
         if not self.options.log_level:
-            self.options.log_level = self.config['log_level']
+            if self.config['log_level'] is not None:
+                self.options.log_level = self.config['log_level']
+            else:
+                self.options.log_level = getattr(self, '_default_logging_level_')
 
-        log.setup_console_logger(
-            self.options.log_level,
-            log_format=self.config['log_fmt_console'],
-            date_format=self.config['log_datefmt']
-        )
+        # Setup the console as the last _mixin_after_parsed_func to run
+        self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
     def setup_logfile_logger(self):
         lfkey = 'key_logfile' if 'key' in self.get_prog_name() else 'log_file'
@@ -297,6 +299,12 @@ class LogLevelMixIn(object):
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
 
+    def __setup_console_logger(self, *args):
+        log.setup_console_logger(
+            self.config['log_level'],
+            log_format=self.config['log_fmt_console'],
+            date_format=self.config['log_datefmt']
+        )
 
 class RunUserMixin(object):
     __metaclass__ = MixInMeta
@@ -880,6 +888,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
 class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                            OutputOptionsWithTextMixIn):
     __metaclass__ = OptionParserMeta
+
+    _default_logging_level_ = "info"
 
     description = "XXX: Add salt-call description"
 
