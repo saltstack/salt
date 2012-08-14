@@ -748,6 +748,11 @@ class State(object):
                                             continue
                                         if next(iter(arg)) in ignore_args:
                                             continue
+                                        # Don't use name or names
+                                        if arg.keys()[0] == 'name':
+                                            continue
+                                        if arg.keys()[0] == 'names':
+                                            continue
                                         extend[ext_id][_state].append(arg)
                                     continue
                                 if key == 'use':
@@ -768,6 +773,11 @@ class State(object):
                                         if len(arg) != 1:
                                             continue
                                         if next(iter(arg)) in ignore_args:
+                                            continue
+                                        # Don't use name or names
+                                        if arg.keys()[0] == 'name':
+                                            continue
+                                        if arg.keys()[0] == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue

@@ -25,6 +25,20 @@ class Key(object):
         self.colors = salt.utils.get_colors(
                 not bool(self.opts.get('no_color', False))
                 )
+        self._check_master()
+
+    def _check_master(self):
+        '''
+        Log if the master is not running
+        '''
+        if not os.path.exists(
+                os.path.join(
+                    self.opts['sock_dir'],
+                    'publish_pull.ipc'
+                    )
+                ):
+            self._log('Master is not running', level='error')
+
 
     def _cli_opts(self, **kwargs):
         '''
