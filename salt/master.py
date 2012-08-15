@@ -1276,6 +1276,11 @@ class ClearFuncs(object):
                             good = True
                     if not good:
                         return ''
+        if not clear_load['jid']:
+            clear_load['jid'] = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
         jid_dir = salt.utils.jid_dir(
                 clear_load['jid'],
                 self.opts['cachedir'],

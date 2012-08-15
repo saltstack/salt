@@ -281,10 +281,13 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
         pub_data = self.pub(
             tgt,
             fun,
@@ -317,10 +320,13 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
         pub_data = self.pub(
             tgt,
             fun,
