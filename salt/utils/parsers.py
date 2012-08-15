@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+'''
     salt.utils.parsers
     ~~~~~~~~~~~~~~~~~~
 
     :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
     :license: Apache 2.0, see LICENSE for more details.
-"""
+'''
 
 import os
 import sys
@@ -32,8 +32,8 @@ class MixInMeta(type):
         instance = super(MixInMeta, cls).__new__(cls, name, bases, attrs)
         if not hasattr(instance, '_mixin_setup'):
             raise RuntimeError(
-                "Don't subclass {0} in {1} if you're not going to use it as a "
-                "salt parser mix-in.".format(cls.__name__, name)
+                'Don\'t subclass {0} in {1} if you\'re not going to use it as a '
+                'salt parser mix-in.'.format(cls.__name__, name)
             )
         return instance
 
@@ -71,18 +71,18 @@ class OptionParserMeta(MixInMeta):
 
 
 class OptionParser(optparse.OptionParser):
-    usage = "%prog"
+    usage = '%prog'
 
-    epilog = ("You can find additional help about %prog issuing 'man %prog' "
-              "or on http://docs.saltstack.org/en/latest/index.html")
+    epilog = ('You can find additional help about %prog issuing "man %prog" '
+              'or on http://docs.saltstack.org/en/latest/index.html')
     description = None
 
     # Private attributes
     _mixin_prio_ = 100
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault("version", "%prog {0}".format(version.__version__))
-        kwargs.setdefault("usage", self.usage)
+        kwargs.setdefault('version', '%prog {0}'.format(version.__version__))
+        kwargs.setdefault('usage', self.usage)
         if self.description:
             kwargs.setdefault('description', self.description)
 
@@ -91,8 +91,8 @@ class OptionParser(optparse.OptionParser):
 
         optparse.OptionParser.__init__(self, *args, **kwargs)
 
-        if "%prog" in self.epilog:
-            self.epilog = self.epilog.replace("%prog", self.get_prog_name())
+        if '%prog' in self.epilog:
+            self.epilog = self.epilog.replace('%prog', self.get_prog_name())
 
     def parse_args(self, args=None, values=None):
         options, args = optparse.OptionParser.parse_args(self, args, values)
@@ -104,7 +104,7 @@ class OptionParser(optparse.OptionParser):
         # Gather and run the process_<option> functions in the proper order
         process_option_funcs = []
         for option_key in options.__dict__.keys():
-            process_option_func = getattr(self, "process_%s" % option_key, None)
+            process_option_func = getattr(self, 'process_%s' % option_key, None)
             if process_option_func is not None:
                 process_option_funcs.append(process_option_func)
 
@@ -112,7 +112,7 @@ class OptionParser(optparse.OptionParser):
             try:
                 process_option_func()
             except Exception, err:
-                self.error("Error while processing {0}: {1}".format(
+                self.error('Error while processing {0}: {1}'.format(
                     process_option_func, err
                 ))
 
@@ -122,7 +122,7 @@ class OptionParser(optparse.OptionParser):
 
         if self.config.get('conf_file', None) is not None:
             logging.getLogger(__name__).info(
-                "Loaded configuration file: %s", self.config['conf_file']
+                'Loaded configuration file: %s', self.config['conf_file']
             )
         # Retain the standard behaviour of optparse to return options and args
         return options, args
@@ -138,7 +138,7 @@ class OptionParser(optparse.OptionParser):
         optparse.OptionParser._add_version_option(self)
         self.add_option(
             '--versions-report', action='store_true',
-            help="show program's dependencies version number and exit"
+            help='show program\'s dependencies version number and exit'
         )
 
     def print_versions_report(self, file=sys.stdout):
@@ -151,9 +151,9 @@ class DeprecatedConfigMessage(object):
 
     def print_config_warning(self, *args, **kwargs):
         self.error(
-            "The '-c/--config' option is deprecated. You should now use "
-            "-c/--config-dir to point to a directory which holds all of "
-            "salt's configuration files.\n"
+            'The "-c/--config" option is deprecated. You should now use '
+            '-c/--config-dir to point to a directory which holds all of '
+            'salt\'s configuration files.\n'
         )
 
 class ConfigDirMixIn(DeprecatedConfigMessage):
@@ -261,6 +261,7 @@ class DeprecatedSyndicOptionsMixIn(DeprecatedConfigMessage):
 class LogLevelMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = 10
+    _default_logging_level_ = "warning"
     _skip_console_logging_config_ = False
 
     def _mixin_setup(self):
@@ -271,20 +272,21 @@ class LogLevelMixIn(object):
             '-l', '--log-level',
             choices=list(log.LOG_LEVELS),
             help=('Logging log level. One of {0}. For the logfile settings see '
-                  'the configuration file. Default: \'warning\'.').format(
-                    ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES])
+                  'the configuration file. Default: \'{1}\'.').format(
+                    ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                    getattr(self, '_default_logging_level_', 'warning')
             )
         )
 
     def process_log_level(self):
         if not self.options.log_level:
-            self.options.log_level = self.config['log_level']
+            if self.config['log_level'] is not None:
+                self.options.log_level = self.config['log_level']
+            else:
+                self.options.log_level = getattr(self, '_default_logging_level_')
 
-        log.setup_console_logger(
-            self.options.log_level,
-            log_format=self.config['log_fmt_console'],
-            date_format=self.config['log_datefmt']
-        )
+        # Setup the console as the last _mixin_after_parsed_func to run
+        self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
     def setup_logfile_logger(self):
         lfkey = 'key_logfile' if 'key' in self.get_prog_name() else 'log_file'
@@ -297,6 +299,12 @@ class LogLevelMixIn(object):
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
 
+    def __setup_console_logger(self, *args):
+        log.setup_console_logger(
+            self.config['log_level'],
+            log_format=self.config['log_fmt_console'],
+            date_format=self.config['log_datefmt']
+        )
 
 class RunUserMixin(object):
     __metaclass__ = MixInMeta
@@ -880,6 +888,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
 class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                            OutputOptionsWithTextMixIn):
     __metaclass__ = OptionParserMeta
+
+    _default_logging_level_ = "info"
 
     description = "XXX: Add salt-call description"
 

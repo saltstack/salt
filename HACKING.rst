@@ -113,11 +113,11 @@ Edit the minion config file:
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
 
-    salt-master -c ./etc/salt/master -d
-    salt-minion -c ./etc/salt/minion -d
+    salt-master -c ./etc/salt -d
+    salt-minion -c ./etc/salt -d
     salt-key -c ./etc/salt/master -L
     salt-key -c ./etc/salt/master -A
-    salt -c ./etc/salt/master '*' test.ping
+    salt -c ./etc/salt '*' test.ping
 
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
@@ -144,3 +144,7 @@ If you are on Python < 2.7 then you will also need unittest2::
 Finally you use setup.py to run the tests with the following command::
 
     ./setup.py test
+
+For greater control while running the tests, please try::
+
+	./tests/runtests.py -h

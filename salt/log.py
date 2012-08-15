@@ -122,6 +122,10 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
         return
 
     init()
+
+    if log_level is None:
+        log_level = 'warning'
+
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
     rootLogger = logging.getLogger()
@@ -155,6 +159,10 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
         return
 
     init()
+
+    if log_level is None:
+        log_level = 'warning'
+
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
     try:
