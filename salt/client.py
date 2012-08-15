@@ -75,18 +75,22 @@ class LocalClient(object):
     def __init__(self, c_path='/etc/salt/master'):
         self.opts = salt.config.master_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.key = self.__read_master_key()
         self.salt_user = self.__get_user()
+        self.key = self.__read_master_key()
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
     def __read_master_key(self):
         '''
         Read in the rotating master authentication key
         '''
-        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
+        key_user = self.salt_user
+        if key_user.startswith('sudo_'):
+            key_user = 'root'
+        keyfile = os.path.join(
+                self.opts['cachedir'], '.{0}_key'.format(key_user)
+                )
         # Make sure all key parent directories are accessible
-        user = self.opts.get('user', 'root')
-        salt.utils.verify.check_parent_dirs(keyfile, user)
+        salt.utils.verify.check_parent_dirs(keyfile, key_user)
 
         try:
             with open(keyfile, 'r') as KEY:
