@@ -107,7 +107,7 @@ class LocalClient(object):
             env_vars = ['SUDO_USER', 'USER', 'USERNAME']
             for evar in env_vars:
                 if evar in os.environ:
-                    return os.environ[evar]
+                    return 'sudo_{0}'.format(os.environ[evar])
             return None
         # If the running user is just the specified user in the
         # conf file, don't pass the user as it's implied.
