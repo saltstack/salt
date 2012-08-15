@@ -119,6 +119,13 @@ def ssh_username(vm_):
     return vm_.get('ssh_username', __opts__.get('AWS.ssh_username', 'ec2-user'))
 
 
+def ssh_interface(vm_):
+    '''
+    Return the ssh_interface type to connect to. Either 'public_ips' (default) or 'private_ips'.
+    '''
+    return vm_.get('ssh_interface', __opts__.get('AWS.ssh_interface', 'public_ips'))
+
+
 def get_location(vm_):
     '''
     Return the AWS region to use
@@ -180,7 +187,11 @@ def create(vm_):
     while not data.public_ips:
         time.sleep(0.5)
         data = get_node(conn, vm_['name'])
-    if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
+    if ssh_interface(vm_) == "private_ips":
+        ip_address = data.private_ips[0]
+    else:
+        ip_address = data.public_ips[0]
+    if saltcloud.utils.wait_for_ssh(ip_address):
         fd_, path = tempfile.mkstemp()
         os.close(fd_)
         with open(path, 'w+') as fp_:
@@ -188,7 +199,7 @@ def create(vm_):
         cmd = ('scp -oStrictHostKeyChecking=no -i {0} {3} {1}@{2}:/tmp/deploy.sh ').format(
                        __opts__['AWS.private_key'],
                        kwargs['ssh_username'],
-                       data.public_ips[0],
+                       ip_address,
                        path,
                        )
         if subprocess.call(cmd, shell=True) != 0:
@@ -196,7 +207,7 @@ def create(vm_):
             cmd = ('scp -oStrictHostKeyChecking=no -i {0} {3} {1}@{2}:/tmp/deploy.sh ').format(
                        __opts__['AWS.private_key'],
                        'root',
-                       data.public_ips[0],
+                       ip_address,
                        path,
                        )
             subprocess.call(cmd, shell=True)
@@ -204,14 +215,14 @@ def create(vm_):
                    '"sudo bash /tmp/deploy.sh"').format(
                        __opts__['AWS.private_key'],
                        'root',
-                       data.public_ips[0],
+                       ip_address,
                        )
         else:
             cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
                    '"sudo bash /tmp/deploy.sh"').format(
                        __opts__['AWS.private_key'],
                        kwargs['ssh_username'],
-                       data.public_ips[0],
+                       ip_address,
                        )
         subprocess.call(cmd, shell=True)
         os.remove(path)
