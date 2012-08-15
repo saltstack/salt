@@ -44,7 +44,7 @@ class Master(parsers.MasterOptionParser):
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
-                self.config['pki_dir'],
+                pki_dir=self.config['pki_dir'],
                 )
         except OSError, err:
             sys.exit(err.errno)
@@ -90,7 +90,7 @@ class Minion(parsers.MinionOptionParser):
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
-                self.config['pki_dir'],
+                pki_dir=self.config['pki_dir'],
                 )
         except OSError, err:
             sys.exit(err.errno)
@@ -132,7 +132,7 @@ class Syndic(parsers.SyndicOptionParser):
                     ],
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
-                    self.config['pki_dir'],
+                    pki_dir=self.config['pki_dir'],
                 )
         except OSError, err:
             sys.exit(err.errno)
