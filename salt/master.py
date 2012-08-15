@@ -123,7 +123,7 @@ class SMaster(object):
                 fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
-            os.chown(user, -1)
+            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
             keys[user] = key
         return keys
 
