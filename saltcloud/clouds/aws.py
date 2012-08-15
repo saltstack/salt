@@ -112,6 +112,13 @@ def securitygroup(vm_):
     return str(vm_.get('AWS.securitygroup', __opts__.get('AWS.securitygroup', 'default')))
 
 
+def ssh_username(vm_):
+    '''
+    Return the ssh_username. Defaults to 'ec2-user'.
+    '''
+    return vm_.get('ssh_username', __opts__.get('AWS.ssh_username', 'ec2-user'))
+
+
 def get_location(vm_):
     '''
     Return the AWS region to use
@@ -145,7 +152,7 @@ def create(vm_):
     location = get_location(vm_)
     print('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
     conn = get_conn(location=location)
-    kwargs = {'ssh_username': 'ec2-user',
+    kwargs = {'ssh_username': ssh_username(vm_),
               'ssh_key': __opts__['AWS.private_key']}
     kwargs['name'] = vm_['name']
     deploy_script = script(vm_)
@@ -180,7 +187,7 @@ def create(vm_):
             fp_.write(deploy_script.script)
         cmd = ('scp -oStrictHostKeyChecking=no -i {0} {3} {1}@{2}:/tmp/deploy.sh ').format(
                        __opts__['AWS.private_key'],
-                       'ec2-user',
+                       kwargs['ssh_username'],
                        data.public_ips[0],
                        path,
                        )
@@ -203,7 +210,7 @@ def create(vm_):
             cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
                    '"sudo bash /tmp/deploy.sh"').format(
                        __opts__['AWS.private_key'],
-                       'ec2-user',
+                       kwargs['ssh_username'],
                        data.public_ips[0],
                        )
         subprocess.call(cmd, shell=True)
