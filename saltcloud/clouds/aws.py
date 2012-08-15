@@ -121,6 +121,25 @@ def get_location(vm_):
     return vm_.get('location', __opts__.get('AWS.location', DEFAULT_LOCATION))
 
 
+def get_availability_zone(conn, vm_):
+    '''
+    Return the availability zone to use
+    '''
+    locations = conn.list_locations()
+    az = None
+    if 'availability_zone' in vm_:
+        az = vm_['availability_zone']
+    elif 'EC2.availability_zone' in __opts__:
+        az = __opts__['EC2.availability_zone']
+
+    if az is None:
+        # Default to first zone
+        return locations[0]
+    for loc in locations:
+        if loc.availability_zone.name == az:
+            return loc
+
+
 def create(vm_):
     '''
     Create a single vm from a data dict
@@ -134,6 +153,7 @@ def create(vm_):
     deploy_script = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
+    kwargs['location'] = get_availability_zone(conn, vm_)
     ex_keyname = keyname(vm_)
     if ex_keyname:
         kwargs['ex_keyname'] = ex_keyname
