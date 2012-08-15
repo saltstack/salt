@@ -443,7 +443,8 @@ def _check_perms(name, ret, user, group, mode):
             ret['changes']['group'] = group
 
     if isinstance(orig_comment, basestring):
-        ret['comment'].insert(0, orig_comment)
+        if orig_comment:
+            ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
     return ret, perms
 
@@ -1403,7 +1404,7 @@ def recurse(name,
         _ret = {'name': name,
                 'changes': {},
                 'result': True,
-                'comment': [] 
+                'comment': []
                }
         _check_perms(path, _ret, user, group, mode)
         ret['result'] &= _ret['result'] # ie, once false, stay false.
