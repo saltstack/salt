@@ -120,6 +120,7 @@ def wait_for_ssh(host, port=22, timeout=900):
             sock.shutdown(2)
             return True
         except Exception:
+            time.sleep(1)
             if time.time() - start > timeout:
                 return False
 
