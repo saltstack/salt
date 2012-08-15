@@ -107,12 +107,10 @@ def keyname(vm_):
 
 def securitygroup(vm_):
     '''
-    Return the keyname
+    Return the security group
     '''
-    return str(vm_.get(
-            'AWS.securitygroup',
-            __opts__.get('AWS.securitygroup', 'default')
-            ))
+    return str(vm_.get('AWS.securitygroup', __opts__.get('AWS.securitygroup', 'default')))
+
 
 def get_location(vm_):
     '''
