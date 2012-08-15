@@ -41,8 +41,11 @@ class Master(parsers.MasterOptionParser):
                     os.path.join(self.config['cachedir'], 'jobs'),
                     os.path.dirname(self.config['log_file']),
                     self.config['sock_dir'],
-                ], self.config['user'],
-                permissive=self.config['permissive_pki_access'])
+                ],
+                self.config['user'],
+                permissive=self.config['permissive_pki_access'],
+                self.config['pki_dir'],
+                )
         except OSError, err:
             sys.exit(err.errno)
 
@@ -84,8 +87,11 @@ class Minion(parsers.MinionOptionParser):
                     self.config['sock_dir'],
                     self.config['extension_modules'],
                     os.path.dirname(self.config['log_file']),
-                ], self.config['user'],
-                permissive=self.config['permissive_pki_access'])
+                ],
+                self.config['user'],
+                permissive=self.config['permissive_pki_access'],
+                self.config['pki_dir'],
+                )
         except OSError, err:
             sys.exit(err.errno)
 
@@ -125,7 +131,8 @@ class Syndic(parsers.SyndicOptionParser):
                         os.path.dirname(self.config['log_file']),
                     ],
                     self.config['user'],
-                    permissive=self.config['permissive_pki_access']
+                    permissive=self.config['permissive_pki_access'],
+                    self.config['pki_dir'],
                 )
         except OSError, err:
             sys.exit(err.errno)

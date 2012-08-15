@@ -103,7 +103,7 @@ def verify_socket(interface, pub_port, ret_port):
     return result
 
 
-def verify_env(dirs, user, permissive=False):
+def verify_env(dirs, user, permissive=False, pki_dir=''):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -182,17 +182,18 @@ def verify_env(dirs, user, permissive=False):
         # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
-        smode = stat.S_IMODE(mode.st_mode)
-        if not smode == 448 and not smode == 488:
-            if os.access(dir_, os.W_OK):
-                os.chmod(dir_, 448)
-            else:
-                msg = 'Unable to securely set the permissions of "{0}".'
-                msg = msg.format(dir_)
-                if is_console_configured():
-                    log.critical(msg)
+        if dir_ == pki_dir:
+            smode = stat.S_IMODE(mode.st_mode)
+            if not smode == 448 and not smode == 488:
+                if os.access(dir_, os.W_OK):
+                    os.chmod(dir_, 448)
                 else:
-                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+                    msg = 'Unable to securely set the permissions of "{0}".'
+                    msg = msg.format(dir_)
+                    if is_console_configured():
+                        log.critical(msg)
+                    else:
+                        sys.stderr.write("CRITICAL: {0}\n".format(msg))
     # Run the extra verification checks
     zmq_version()
 
