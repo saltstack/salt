@@ -383,8 +383,13 @@ def _check_perms(name, ret, user, group, mode):
     if not ret:
         ret = {'name': name,
                'changes': {},
-               'comment': '',
-               'result': False}
+               'comment': [],
+               'result': True}
+        orig_comment = ''
+    else:
+        orig_comment = ret['comment']
+        ret['comment'] = []
+
     # Check permissions
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
@@ -398,7 +403,7 @@ def _check_perms(name, ret, user, group, mode):
                 __salt__['file.set_mode'](name, mode)
             if str(mode) != __salt__['file.get_mode'](name).lstrip('0'):
                 ret['result'] = False
-                ret['comment'] += 'Failed to change mode to {0} '.format(mode)
+                ret['comment'].append('Failed to change mode to {0}'.format(mode))
             else:
                 ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
@@ -414,25 +419,32 @@ def _check_perms(name, ret, user, group, mode):
                 user = perms['luser']
             if group is None:
                 group = perms['lgroup']
-            __salt__['file.chown'](
-                    name,
-                    user,
-                    group
-                    )
+            try:
+                __salt__['file.chown'](
+                        name,
+                        user,
+                        group
+                        )
+            except OSError, e:
+                ret['result'] = False
+                
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
-            ret['comment'] += 'Failed to change user to {0} '.format(user)
+            ret['comment'].append('Failed to change user to {0}'.format(user))
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
         if group != __salt__['file.get_group'](name):
             ret['result'] = False
-            ret['comment'] += ('Failed to change group to {0} '
+            ret['comment'].append('Failed to change group to {0}'
                                .format(group))
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
+    if isinstance(orig_comment, basestring):
+        ret['comment'].insert(0, orig_comment)
+        ret['comment'] = '; '.join(ret['comment'])
     return ret, perms
 
 
@@ -1357,7 +1369,8 @@ def recurse(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': ''}
+           'comment': {}  # { path: [comment, ...] }
+           }
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -1387,10 +1400,18 @@ def recurse(name,
         return ret
 
     def update_changes_by_perms(path, mode, changetype='updated'): 
-        _ret, perms = _check_perms(path, {}, user, group, mode)
-        if _ret['changes']:
+        _ret = {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': [] 
+               }
+        _check_perms(path, _ret, user, group, mode)
+        ret['result'] &= _ret['result'] # ie, once false, stay false.
+        if _ret['comment']:
+            comments = ret['comment'].setdefault(path, [])
+            comments.extend(_ret['comment'])
+        if _ret['changes']: 
             ret['changes'][path] = changetype
-
 
     vdir = set()
     for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
@@ -1406,7 +1427,6 @@ def recurse(name,
             _makedirs(dest, user=user, group=group)
         if not dirname in vdir:
             # verify the directory perms if they are set
-            # _check_perms(name, ret, user, group, mode)
             update_changes_by_perms(dirname, dir_mode)
             vdir.add(dirname)
         if os.path.isfile(dest):
@@ -1424,8 +1444,7 @@ def recurse(name,
                         dest,
                         _backup_mode(backup),
                         __opts__['cachedir'])
-                _check_perms(dest, {}, user, group, file_mode)
-                ret['changes'][dest] = 'updated'
+                update_changes_by_perms(dest, file_mode)
         elif os.path.isdir(dest) and include_empty:
             #check perms
             update_changes_by_perms(dest, dir_mode)
@@ -1433,7 +1452,7 @@ def recurse(name,
             if os.path.isdir(fn_) and include_empty:
                 #create empty dir
                 os.mkdir(dest)
-                _check_perms(dest, {}, user, group, dir_mode)
+                update_changes_by_perms(dest, dir_mode)
             else:
                 # The destination file is not present, make it
                 salt.utils.copyfile(
@@ -1441,7 +1460,7 @@ def recurse(name,
                         dest,
                         _backup_mode(backup),
                         __opts__['cachedir'])
-                _check_perms(dest, {}, user, group, file_mode)
+                update_changes_by_perms(dest, file_mode)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
