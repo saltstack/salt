@@ -68,14 +68,30 @@ def __virtual__():
     return 'aws'
 
 
-def get_conn():
+EC2_LOCATIONS = {
+    'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
+    'ap-southeast-1': Provider.EC2_AP_SOUTHEAST,
+    'eu-west-1': Provider.EC2_EU_WEST,
+    'sa-east-1': Provider.EC2_SA_EAST,
+    'us-east-1': Provider.EC2_US_EAST,
+    'us-west-1': Provider.EC2_US_WEST,
+    'us-west-2': Provider.EC2_US_WEST_OREGON
+}
+DEFAULT_LOCATION = 'ec2'
+
+
+def get_conn(**kwargs):
     '''
     Return a conn object for the passed vm data
     '''
-    prov = 'EC2'
-    if not hasattr(Provider, prov):
-        return None
-    driver = get_driver(getattr(Provider, 'EC2'))
+    if 'location' in kwargs:
+        location = kwargs['location']
+        if location not in EC2_LOCATIONS:
+            return None     #TODO raise exception
+    else:
+        location = DEFAULT_LOCATION
+
+    driver = get_driver(EC2_LOCATIONS[location])
     return driver(
             __opts__['AWS.id'],
             __opts__['AWS.key'],
@@ -98,13 +114,20 @@ def securitygroup(vm_):
             __opts__.get('AWS.securitygroup', 'default')
             ))
 
+def get_location(vm_):
+    '''
+    Return the AWS region to use
+    '''
+    return vm_.get('location', __opts__.get('AWS.location', DEFAULT_LOCATION))
+
 
 def create(vm_):
     '''
     Create a single vm from a data dict
     '''
-    print('Creating Cloud VM {0}'.format(vm_['name']))
-    conn = get_conn()
+    location = get_location(vm_)
+    print('Creating Cloud VM {0} in {1}'.format(vm_['name'], location))
+    conn = get_conn(location=location)
     kwargs = {'ssh_username': 'ec2-user',
               'ssh_key': __opts__['AWS.private_key']}
     kwargs['name'] = vm_['name']
