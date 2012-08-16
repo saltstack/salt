@@ -78,6 +78,7 @@ something like this:
 # Import Python libs
 from contextlib import nested  # For < 2.7 compat
 import os
+import errno
 import shutil
 import difflib
 import hashlib
@@ -141,23 +142,39 @@ def _makedirs(path, user=None, group=None, mode=None):
     directory = os.path.dirname(path)
 
     if not os.path.isdir(directory):
-        os.makedirs(directory)
+        # turn on the executable bits for user, group and others.
+        # Note: the special bits are set to 0.
+        nmode = int(mode[-3:], 8) | 0111
+
+        _makedirs_perms(directory, user, group, nmode)
         # If a caller such as managed() is invoked  with
         # makedirs=True, make sure that any created dirs
         # are created with the same user  and  group  to
         # follow the principal of least surprise method.
-        nmode = ''
-        if mode:
-            for char in mode:
-                if char == '0':
-                    nmode += char
-                elif int(char) % 2 == 1:
-                    # Is executable, continue
-                    nmode += char
-                else:
-                    # The mode is even, it need an executable bit
-                    nmode += str(int(char) + 1)
-        _check_perms(directory, None, user, group, nmode)
+
+
+
+def _makedirs_perms(name, user=None, group=None, mode=0777):
+    '''
+    Taken and modified from os.makedirs to set user, group and mode for each
+    directory created.
+    '''
+    path = os.path
+    mkdir = os.mkdir
+    head, tail = path.split(name)
+    if not tail:
+        head, tail = path.split(head)
+    if head and tail and not path.exists(head):
+        try:
+            _makedirs_perms(head, user, group, mode)
+        except OSError, e:
+            # be happy if someone already created the path
+            if e.errno != errno.EEXIST:
+                raise
+        if tail == os.curdir:           # xxx/newdir/. exists if xxx/newdir exists
+            return
+    mkdir(name, mode) # Note: mkdir's mode is affected by umask
+    _check_perms(name, None, user, group, int("%o" % mode))
 
 
 def _is_bin(path):
@@ -379,6 +396,15 @@ def _get_managed(
 def _check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
+
+    Note: 'mode' here is expected to be either a string or an integer,
+          in which case it will be converted into a base-10 string.
+
+          What this means is that in your YAML salt file, you can specify
+          mode as an integer(eg, 644) or as a string(eg, '644'). But, to
+          specify mode 0777, for example, it must be specified as the string,
+          '0777' otherwise, 0777 will be parsed as an octal and you'd get 511
+          instead.
     '''
     if not ret:
         ret = {'name': name,
@@ -1385,7 +1411,8 @@ def recurse(name,
             # it is not a dir, but it exists - fail out
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
-        os.makedirs(name)
+        _makedirs_perms(name, user, group, int(str(dir_mode), 8))
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_recurse(
                 name,
