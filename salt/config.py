@@ -258,6 +258,7 @@ def master_config(path):
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },
+            'client_acl': {},
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,

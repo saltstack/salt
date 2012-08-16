@@ -16,6 +16,7 @@ import logging
 import hashlib
 import tempfile
 import datetime
+import pwd
 import subprocess
 import multiprocessing
 
@@ -98,19 +99,33 @@ class SMaster(object):
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
-        log.info('Preparing the root key for local communication')
-        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-        if os.path.isfile(keyfile):
-            with open(keyfile, 'r') as fp_:
-                return fp_.read()
-        else:
-            key = salt.crypt.Crypticle.generate_key_string()
+        users = []
+        keys = {}
+        acl_users = self.opts['client_acl'].keys()
+        acl_users.append('root')
+        for user in pwd.getpwall():
+            users.append(user.pw_name)
+        for user in acl_users:
+            log.info(
+                    'Preparing the {0} key for local communication'.format(
+                        user
+                        )
+                    )
             cumask = os.umask(191)
+            if not user in users:
+                log.error('ACL user {0} is not available'.format(user))
+                continue
+            keyfile = os.path.join(
+                    self.opts['cachedir'], '.{0}_key'.format(user)
+                    )
+            key = salt.crypt.Crypticle.generate_key_string()
             with open(keyfile, 'w+') as fp_:
                 fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
-            return key
+            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            keys[user] = key
+        return keys
 
 
 class Master(SMaster):
@@ -1246,8 +1261,26 @@ class ClearFuncs(object):
         by the LocalClient.
         '''
         # Verify that the caller has root on master
-        if not clear_load.pop('key') == self.key:
-            return ''
+        if 'user' in clear_load:
+            if clear_load['user'].startswith('sudo_'):
+                if not clear_load.pop('key') == self.key['root']:
+                    return ''
+            else:
+                if clear_load['user'] in self.key:
+                    # User is authorised, check key and check perms
+                    if not clear_load.pop('key') == self.key[clear_load['user']]:
+                        return ''
+                    good = False
+                    for fun_auth in self.opts['client_acl']:
+                        if re.match(fun_auth, clear_load['fun']):
+                            good = True
+                    if not good:
+                        return ''
+        if not clear_load['jid']:
+            clear_load['jid'] = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
         jid_dir = salt.utils.jid_dir(
                 clear_load['jid'],
                 self.opts['cachedir'],

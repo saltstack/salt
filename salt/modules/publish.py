@@ -11,7 +11,7 @@ import zmq
 # Import salt libs
 import salt.crypt
 import salt.payload
-from salt._compat import string_types
+from salt._compat import string_types, integer_types
 from salt.exceptions import SaltReqTimeoutError
 
 def _publish(
@@ -43,16 +43,7 @@ def _publish(
     if fun == 'publish.publish':
         # Need to log something here
         return {}
-
-    if not arg:
-        arg = []
-
-    try:
-        if isinstance(ast.literal_eval(arg), dict):
-            arg = [arg,]
-    except Exception:
-        if isinstance(arg, string_types):
-            arg = arg.split(',')
+    arg = normalize_arg(arg)
 
     sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
@@ -71,6 +62,19 @@ def _publish(
     return auth.crypticle.loads(
             sreq.send('aes', auth.crypticle.dumps(load), 1))
 
+def normalize_arg(arg):
+    if not arg:
+        arg = []
+
+    try:
+        # Numeric checks here because of all numeric strings, like JIDs
+        if isinstance(ast.literal_eval(arg), (dict,integer_types,long)):
+            arg = [arg,]
+    except Exception:
+        if isinstance(arg, string_types):
+            arg = arg.split(',')
+
+    return arg
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     '''
@@ -115,15 +119,7 @@ def runner(fun, arg=None):
         salt publish.runner manage.down
     '''
     serial = salt.payload.Serial(__opts__)
-    if not arg:
-        arg = []
-
-    try:
-        if isinstance(ast.literal_eval(arg), dict):
-            arg = [arg,]
-    except Exception:
-        if isinstance(arg, string_types):
-            arg = arg.split(',')
+    arg = normalize_arg(arg)
 
     sreq = salt.payload(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)

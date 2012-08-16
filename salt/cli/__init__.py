@@ -170,7 +170,8 @@ class SaltKey(parsers.SaltKeyOptionParser):
                     os.path.dirname(self.config['key_logfile']),
                 ],
                 self.config['user'],
-                permissive=self.config['permissive_pki_access']
+                permissive=self.config['permissive_pki_access'],
+                pki_dir=self.config['pki_dir'],
             )
 
         self.setup_logfile_logger()
@@ -197,7 +198,8 @@ class SaltCall(parsers.SaltCallOptionParser):
                     os.path.dirname(self.config['log_file'])
                 ],
                 self.config['user'],
-                permissive=self.config['permissive_pki_access']
+                permissive=self.config['permissive_pki_access'],
+                pki_dir=self.config['pki_dir'],
             )
 
         caller = salt.cli.caller.Caller(self.config)
