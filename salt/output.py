@@ -26,9 +26,9 @@ __all__ = ('get_outputter', 'get_printout')
 log = logging.getLogger(__name__)
 
 def get_printout(ret, out, opts, indent=None):
-    """
+    '''
     Return the proper printout
-    """
+    '''
     if isinstance(ret, list) or isinstance(ret, dict):
         if opts['raw_out']:
             return get_outputter('raw')
@@ -46,7 +46,7 @@ def get_printout(ret, out, opts, indent=None):
         return None
     # Pretty print any salt exceptions
     elif isinstance(ret, SaltException):
-        return get_outputter("txt")
+        return get_outputter('txt')
 
 def display_output(ret, out, opts):
     '''
