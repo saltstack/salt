@@ -256,6 +256,24 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
         return mount(name, device, mkmnt, fstype, opts)
 
 
+def umount(name):
+    '''
+    Attempt to unmount a device by specifying the directory it is mounted on
+
+    CLI Example::
+
+        salt '*' mount.umount /mnt/foo
+    '''
+    mnts = active()
+    if name not in mnts:
+        return "{0} does not have anything mounted".format(name)
+
+    cmd = 'umount {0}'.format(name)
+    out = __salt__['cmd.run_all'](cmd)
+    if out['retcode']:
+        return out['stderr']
+    return True
+
 def is_fuse_exec(cmd):
     '''
     Returns true if the command passed is a fuse mountable application.
