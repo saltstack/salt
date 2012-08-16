@@ -110,7 +110,7 @@ class HighStateOutputter(Outputter):
             if isinstance(data[host], dict):
                 # Strip out the result: True, without changes returns if
                 # state_verbose is False
-                if not self.opts.get('state_verbose', False):
+                if not kwargs.get('verbose', False):
                     data[host] = strip_clean(data[host])
                 # Verify that the needed data is present
                 for tname, info in data[host].items():
