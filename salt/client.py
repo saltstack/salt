@@ -75,18 +75,22 @@ class LocalClient(object):
     def __init__(self, c_path='/etc/salt/master'):
         self.opts = salt.config.master_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.key = self.__read_master_key()
         self.salt_user = self.__get_user()
+        self.key = self.__read_master_key()
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
     def __read_master_key(self):
         '''
         Read in the rotating master authentication key
         '''
-        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
+        key_user = self.salt_user
+        if key_user.startswith('sudo_'):
+            key_user = 'root'
+        keyfile = os.path.join(
+                self.opts['cachedir'], '.{0}_key'.format(key_user)
+                )
         # Make sure all key parent directories are accessible
-        user = self.opts.get('user', 'root')
-        salt.utils.verify.check_parent_dirs(keyfile, user)
+        salt.utils.verify.check_parent_dirs(keyfile, key_user)
 
         try:
             with open(keyfile, 'r') as KEY:
@@ -107,7 +111,7 @@ class LocalClient(object):
             env_vars = ['SUDO_USER', 'USER', 'USERNAME']
             for evar in env_vars:
                 if evar in os.environ:
-                    return os.environ[evar]
+                    return 'sudo_{0}'.format(os.environ[evar])
             return None
         # If the running user is just the specified user in the
         # conf file, don't pass the user as it's implied.
@@ -177,6 +181,7 @@ class LocalClient(object):
                     continue
                 if comps[0] not in grains:
                     minions.remove(id_)
+                    continue
                 if isinstance(grains[comps[0]], list):
                     # We are matching a single component to a single list member
                     found = False
@@ -276,10 +281,13 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
         pub_data = self.pub(
             tgt,
             fun,
@@ -312,10 +320,13 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
         pub_data = self.pub(
             tgt,
             fun,

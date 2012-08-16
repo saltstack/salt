@@ -109,7 +109,7 @@ class SMinion(object):
                 self.opts['environment'],
                 ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts)
-        self.returners = salt.loader.returners(self.opts)
+        self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
@@ -161,7 +161,7 @@ class Minion(object):
         '''
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
-        returners = salt.loader.returners(self.opts)
+        returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
     def _handle_payload(self, payload):
@@ -275,10 +275,12 @@ class Minion(object):
 
         function_name = data['fun']
         if function_name in self.functions:
+            ret['success'] = False
             try:
                 func = self.functions[data['fun']]
                 args, kw = detect_kwargs(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
+                ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
                 log.debug(msg.format(function_name, str(exc)))
@@ -334,10 +336,12 @@ class Minion(object):
                 except Exception:
                     pass
 
+            ret['success'][data['fun'][ind]] = False
             try:
                 func = self.functions[data['fun'][ind]]
                 args, kw = detect_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kw)
+                ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(
@@ -429,7 +433,9 @@ class Minion(object):
         in, signing in can occur as often as needed to keep up with the
         revolving master aes key.
         '''
-        log.debug('Attempting to authenticate with the Salt Master')
+        log.debug('Attempting to authenticate with the Salt Master at {0}'.format(
+            self.opts['master_ip']
+        ))
         auth = salt.crypt.Auth(self.opts)
         while True:
             creds = auth.sign_in()
@@ -570,7 +576,7 @@ class Minion(object):
                             pass
                 except Exception as exc:
                     log.critical(traceback.format_exc())
-                
+
 
 
 class Syndic(salt.client.LocalClient, Minion):

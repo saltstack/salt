@@ -10,6 +10,7 @@ import socket
 import getpass
 import logging
 
+from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
@@ -26,8 +27,11 @@ def zmq_version():
 
     # Fallthrough and hope for the best
     if not match:
-        msg = 'Using untested zmq python bindings version: \'{0}\''
-        log.warn(msg.format(ver))
+        msg = "Using untested zmq python bindings version: '{0}'".format(ver)
+        if is_console_configured():
+            log.warn(msg)
+        else:
+            sys.stderr.write("WARNING {0}\n".format(msg))
         return True
 
     major, minor, point = match.groups()
@@ -44,7 +48,11 @@ def zmq_version():
     if major == 2 and minor == 1:
         # zmq 2.1dev could be built against a newer libzmq
         if "dev" in ver and not point:
-            log.warn('Using dev zmq module, please report unexpected results')
+            msg = 'Using dev zmq module, please report unexpected results'
+            if is_console_configured():
+                log.warn(msg)
+            else:
+                sys.stderr.write("WARNING: {0}\n".format(msg))
             return True
         elif point and point >= 9:
             return True
@@ -54,9 +62,13 @@ def zmq_version():
     # If all else fails, gracefully croak and warn the user
     log.critical('ZeroMQ python bindings >= 2.1.9 are required')
     if 'salt-master' in sys.argv[0]:
-        log.critical('The Salt Master is unstable using a ZeroMQ version '
-            'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
-            'org/pipermail/zeromq-dev/2011-June/012094.html')
+        msg = ('The Salt Master is unstable using a ZeroMQ version '
+               'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
+               'org/pipermail/zeromq-dev/2011-June/012094.html')
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            sys.stderr.write("CRITICAL {0}\n".format(msg))
     return False
 
 
@@ -77,8 +89,12 @@ def verify_socket(interface, pub_port, ret_port):
         retsock.close()
         result = True
     except Exception:
-        log.warn("Unable to bind socket, this might not be a problem."
-                 " Is there another salt-master running?")
+        msg = ("Unable to bind socket, this might not be a problem."
+               " Is there another salt-master running?")
+        if is_console_configured():
+            log.warn(msg)
+        else:
+            sys.stderr.write("WARNING: {0}\n".format(msg))
         result = False
     finally:
         pubsock.close()
@@ -87,7 +103,7 @@ def verify_socket(interface, pub_port, ret_port):
     return result
 
 
-def verify_env(dirs, user, permissive=False):
+def verify_env(dirs, user, permissive=False, pki_dir=''):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -109,6 +125,8 @@ def verify_env(dirs, user, permissive=False):
         sys.stderr.write(err)
         sys.exit(2)
     for dir_ in dirs:
+        if not dir_:
+            continue
         if not os.path.isdir(dir_):
             try:
                 cumask = os.umask(63)  # 077
@@ -120,6 +138,7 @@ def verify_env(dirs, user, permissive=False):
             except OSError as e:
                 msg = 'Failed to create directory path "{0}" - {1}\n'
                 sys.stderr.write(msg.format(dir_, e))
+                sys.exit(e.errno)
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
@@ -146,8 +165,8 @@ def verify_env(dirs, user, permissive=False):
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:
-                          # chown the file for the new user
-                          os.chown(path, uid, gid)
+                            # chown the file for the new user
+                            os.chown(path, uid, gid)
                 for name in dirs:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
@@ -155,27 +174,31 @@ def verify_env(dirs, user, permissive=False):
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:
-                           # chown the file for the new user
-                           os.chown(path, uid, gid)
+                            # chown the file for the new user
+                            os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
         # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
-        smode = stat.S_IMODE(mode.st_mode)
-        if not smode == 448 and not smode == 488:
-            if os.access(dir_, os.W_OK):
-                os.chmod(dir_, 448)
-            else:
-                msg = 'Unable to securely set the permissions of "{0}".'
-                msg = msg.format(dir_)
-                log.critical(msg)
+        if dir_ == pki_dir:
+            smode = stat.S_IMODE(mode.st_mode)
+            if not smode == 448 and not smode == 488:
+                if os.access(dir_, os.W_OK):
+                    os.chmod(dir_, 448)
+                else:
+                    msg = 'Unable to securely set the permissions of "{0}".'
+                    msg = msg.format(dir_)
+                    if is_console_configured():
+                        log.critical(msg)
+                    else:
+                        sys.stderr.write("CRITICAL: {0}\n".format(msg))
     # Run the extra verification checks
     zmq_version()
 
 
-def check_user(user, log):
+def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
@@ -192,11 +215,18 @@ def check_user(user, log):
             os.setuid(p.pw_uid)
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
-            log.critical(msg.format(user))
+            msg = msg.format(user)
+            if is_console_configured():
+                log.critical(msg)
+            else:
+                sys.stderr.write("CRITICAL: {0}\n".format(msg))
             return False
     except KeyError:
         msg = 'User not found: "{0}"'.format(user)
-        log.critical(msg)
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            sys.stderr.write("CRITICAL: {0}\n".format(msg))
         return False
     return True
 

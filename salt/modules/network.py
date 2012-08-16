@@ -28,15 +28,6 @@ def __virtual__():
     return 'network'
 
 
-def _sanitize_host(host):
-    '''
-    Sanitize host string.
-    '''
-    return "".join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
-    ])
-
-
 def _cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask
@@ -85,10 +76,10 @@ def _interfaces_ip(out):
     ret = dict()
 
     def parse_network(value, cols):
-        """
+        '''
         Return a tuple of ip, netmask, broadcast
         based on the current set of cols
-        """
+        '''
         brd = None
         if '/' in value:  # we have a CIDR in this address
             ip, cidr = value.split('/')

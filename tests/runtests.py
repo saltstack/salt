@@ -5,7 +5,11 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 import sys
 import os
+import logging
 import optparse
+# Setup minimal logging and disable it so "no handler for..." errors
+# are not thrown anymore while running tests
+logging.basicConfig(stream=open(os.devnull, 'w'))
 
 # Import salt libs
 import saltunittest

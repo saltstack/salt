@@ -21,32 +21,52 @@ import salt.utils
 from salt._compat import string_types
 from salt.exceptions import SaltException
 
-__all__ = ('get_outputter',)
+__all__ = ('get_outputter', 'get_printout')
 
 log = logging.getLogger(__name__)
 
+def strip_clean(returns):
+    '''
+    Check for the state_verbose option and strip out the result=True
+    and changes={} members of the state return list.
+    '''
+    rm_tags = []
+    for tag in returns:
+        if returns[tag]['result'] and not returns[tag]['changes']:
+            rm_tags.append(tag)
+    for tag in rm_tags:
+        returns.pop(tag)
+    return returns
+
+def get_printout(ret, out, opts, indent=None):
+    '''
+    Return the proper printout
+    '''
+    if isinstance(ret, list) or isinstance(ret, dict):
+        if opts['raw_out']:
+            return get_outputter('raw')
+        elif opts['json_out']:
+            printout = get_outputter('json')
+            if printout and indent is not None:
+                printout.indent = indent
+            return printout
+        elif opts.get('text_out', False):
+            return get_outputter('txt')
+        elif opts['yaml_out']:
+            return get_outputter('yaml')
+        elif out is not None:
+            return get_outputter(out)
+        return None
+    # Pretty print any salt exceptions
+    elif isinstance(ret, SaltException):
+        return get_outputter('txt')
 
 def display_output(ret, out, opts):
     '''
     Display the output of a command in the terminal
     '''
-    if isinstance(ret, list) or isinstance(ret, dict):
-        if opts['raw_out']:
-            printout = get_outputter('raw')
-        elif opts['json_out']:
-            printout = get_outputter('json')
-        elif opts['txt_out']:
-            printout = get_outputter('txt')
-        elif opts['yaml_out']:
-            printout = get_outputter('yaml')
-        elif out:
-            printout = get_outputter(out)
-        else:
-            printout = get_outputter(None)
-    # Pretty print any salt exceptions
-    elif isinstance(ret, SaltException):
-        printout = get_outputter("txt")
-    printout(ret)
+    printout = get_printout(ret, out, opts)
+    printout(ret, color=not bool(opts['no_color']))
 
 
 class Outputter(object):
@@ -88,6 +108,10 @@ class HighStateOutputter(Outputter):
                     hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
+                # Strip out the result: True, without changes returns if
+                # state_verbose is False
+                if not self.opts.get('state_verbose', False):
+                    data[host] = strip_clean(data[host])
                 # Verify that the needed data is present
                 for tname, info in data[host].items():
                     if not '__run_num__' in info:

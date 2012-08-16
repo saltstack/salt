@@ -267,21 +267,6 @@ class State(object):
         elif data['state'] == 'pkg':
             _refresh()
 
-    def format_verbosity(self, returns):
-        '''
-        Check for the state_verbose option and strip out the result=True
-        and changes={} members of the state return list.
-        '''
-        if self.opts['state_verbose']:
-            return returns
-        rm_tags = []
-        for tag in returns:
-            if returns[tag]['result'] and not returns[tag]['changes']:
-                rm_tags.append(tag)
-        for tag in rm_tags:
-            returns.pop(tag)
-        return returns
-
     def verify_data(self, data):
         '''
         Verify the data, return an error statement if something is wrong
@@ -748,6 +733,11 @@ class State(object):
                                             continue
                                         if next(iter(arg)) in ignore_args:
                                             continue
+                                        # Don't use name or names
+                                        if arg.keys()[0] == 'name':
+                                            continue
+                                        if arg.keys()[0] == 'names':
+                                            continue
                                         extend[ext_id][_state].append(arg)
                                     continue
                                 if key == 'use':
@@ -768,6 +758,11 @@ class State(object):
                                         if len(arg) != 1:
                                             continue
                                         if next(iter(arg)) in ignore_args:
+                                            continue
+                                        # Don't use name or names
+                                        if arg.keys()[0] == 'name':
+                                            continue
+                                        if arg.keys()[0] == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -800,7 +795,6 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        self.module_refresh(data)
         errors = self.verify_data(data)
         if errors:
             ret = {
@@ -814,6 +808,7 @@ class State(object):
             ret['__run_num__'] = self.__run_num
             self.__run_num += 1
             format_log(ret)
+            self.module_refresh(data)
             return ret
             
         log.info(
@@ -844,6 +839,7 @@ class State(object):
         format_log(ret)
         if 'provider' in data:
             self.load_modules()
+        self.module_refresh(data)
         return ret
 
     def call_chunks(self, chunks):
@@ -1021,7 +1017,7 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        ret = self.format_verbosity(self.call_chunks(chunks))
+        ret = self.call_chunks(chunks)
         return ret
 
     def call_template(self, template):
@@ -1493,9 +1489,12 @@ class BaseHighState(object):
         '''
         Return just the highstate or the errors
         '''
+        err = []
         top = self.get_top()
+        err += self.verify_tops(top)
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)
+        err += errors
 
         if errors:
             return errors
@@ -1519,11 +1518,12 @@ class BaseHighState(object):
         # Verify that the high data is structurally sound
         errors += self.state.verify_high(high)
 
+        if errors:
+            return errors
+
         # Compile and verify the raw chunks
         chunks = self.state.compile_high_data(high)
 
-        if errors:
-            return errors
         return chunks
 
 

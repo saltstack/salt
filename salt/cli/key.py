@@ -25,6 +25,20 @@ class Key(object):
         self.colors = salt.utils.get_colors(
                 not bool(self.opts.get('no_color', False))
                 )
+        self._check_master()
+
+    def _check_master(self):
+        '''
+        Log if the master is not running
+        '''
+        if not os.path.exists(
+                os.path.join(
+                    self.opts['sock_dir'],
+                    'publish_pull.ipc'
+                    )
+                ):
+            self._log('Master is not running', level='error')
+
 
     def _cli_opts(self, **kwargs):
         '''
@@ -87,7 +101,7 @@ class Key(object):
         if hasattr(log, level):
             log_msg = getattr(log, level)
             log_msg(message)
-        if not self.opts['quiet']:
+        if not self.opts.get('quiet', False):
             print(message)
 
     def _list_pre(self, header=True, printer=None):
@@ -148,9 +162,11 @@ class Key(object):
         '''
         List keys
         '''
-        printout = self._get_outputter()
-        if 'json_out' in self.opts and self.opts['json_out']:
-            printout.indent = 2
+        selected_output = self.opts.get('selected_output_option', None)
+        printout = salt.output.get_printout(
+            {}, selected_output, self.opts, indent=2
+        )
+
         if name in ('pre', 'un', 'unaccept', 'unaccepted'):
             self._list_pre(header=False, printer=printout)
         elif name in ('acc', 'accept', 'accepted'):
@@ -173,18 +189,6 @@ class Key(object):
             err = ('Unrecognized key type "{0}".  Run with -h for options.'
                     ).format(name)
             self._log(err, level='error')
-
-    def _get_outputter(self):
-        get_outputter = salt.output.get_outputter
-        if self.opts['raw_out']:
-            printout = get_outputter('raw')
-        elif self.opts['json_out']:
-            printout = get_outputter('json')
-        elif self.opts['yaml_out']:
-            printout = get_outputter('yaml')
-        else:
-            printout = None # use default color output
-        return printout
 
     def _print_key(self, name):
         '''
