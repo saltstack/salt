@@ -144,9 +144,10 @@ def _makedirs(path, user=None, group=None, mode=None):
     if not os.path.isdir(directory):
         # turn on the executable bits for user, group and others.
         # Note: the special bits are set to 0.
-        nmode = int(mode[-3:], 8) | 0111
+        if mode:
+            mode = int(mode[-3:], 8) | 0111
 
-        _makedirs_perms(directory, user, group, nmode)
+        _makedirs_perms(directory, user, group, mode)
         # If a caller such as managed() is invoked  with
         # makedirs=True, make sure that any created dirs
         # are created with the same user  and  group  to
@@ -154,7 +155,7 @@ def _makedirs(path, user=None, group=None, mode=None):
 
 
 
-def _makedirs_perms(name, user=None, group=None, mode=0777):
+def _makedirs_perms(name, user=None, group=None, mode=0755):
     '''
     Taken and modified from os.makedirs to set user, group and mode for each
     directory created.
@@ -171,10 +172,10 @@ def _makedirs_perms(name, user=None, group=None, mode=0777):
             # be happy if someone already created the path
             if e.errno != errno.EEXIST:
                 raise
-        if tail == os.curdir:           # xxx/newdir/. exists if xxx/newdir exists
+        if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
             return
-    mkdir(name, mode) # Note: mkdir's mode is affected by umask
-    _check_perms(name, None, user, group, int("%o" % mode))
+    mkdir(name)
+    _check_perms(name, None, user, group, int("%o" % mode) if mode else None)
 
 
 def _is_bin(path):
@@ -1411,7 +1412,8 @@ def recurse(name,
             # it is not a dir, but it exists - fail out
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
-        _makedirs_perms(name, user, group, int(str(dir_mode), 8))
+        _makedirs_perms(name, user, group,
+                        int(str(dir_mode), 8) if dir_mode else None)
 
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_recurse(
