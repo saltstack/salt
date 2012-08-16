@@ -1017,7 +1017,7 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        #ret = self.format_verbosity(self.call_chunks(chunks))
+        ret = self.call_chunks(chunks)
         return ret
 
     def call_template(self, template):
