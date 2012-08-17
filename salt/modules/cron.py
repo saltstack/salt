@@ -151,7 +151,7 @@ def set_special(user, special, cmd):
             'cmd': cmd}
     lst['special'].append(spec)
     comdat = _write_cron(user, _render_tab(lst))
-    if not comdat['retcode']:
+    if comdat['retcode']:
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'
