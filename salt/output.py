@@ -138,7 +138,7 @@ class HighStateOutputter(Outputter):
                     if kwargs.get('state_output', 'full').lower() == 'terse':
                         # Print this chunk in a terse way and continue in the
                         # loop
-                        msg = ('{0}Name: {1} - Function: {2} - Result: {3}{4}'
+                        msg = (' {0}Name: {1} - Function: {2} - Result: {3}{4}'
                                 ).format(
                                         tcolor,
                                         comps[2],
