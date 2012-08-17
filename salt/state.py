@@ -267,21 +267,6 @@ class State(object):
         elif data['state'] == 'pkg':
             _refresh()
 
-    def format_verbosity(self, returns):
-        '''
-        Check for the state_verbose option and strip out the result=True
-        and changes={} members of the state return list.
-        '''
-        if self.opts['state_verbose']:
-            return returns
-        rm_tags = []
-        for tag in returns:
-            if returns[tag]['result'] and not returns[tag]['changes']:
-                rm_tags.append(tag)
-        for tag in rm_tags:
-            returns.pop(tag)
-        return returns
-
     def verify_data(self, data):
         '''
         Verify the data, return an error statement if something is wrong
@@ -1032,7 +1017,7 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        ret = self.format_verbosity(self.call_chunks(chunks))
+        ret = self.call_chunks(chunks)
         return ret
 
     def call_template(self, template):
