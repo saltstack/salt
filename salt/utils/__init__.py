@@ -472,13 +472,13 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
 
 
 def path_join(*parts):
-    """
+    '''
     This functions tries to solve some issues when joining multiple absolute
     paths on both *nix and windows platforms.
 
     See tests/unit/utils/path_join_test.py for some examples on what's being
     talked about here.
-    """
+    '''
     # Normalize path converting any os.sep as needed
     parts = [os.path.normpath(p) for p in parts]
 
