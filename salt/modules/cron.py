@@ -148,7 +148,7 @@ def set_special(user, special, cmd):
         for spec in lst['special']:
             if special == cron['special'] and cmd == cron['cmd']:
                 return 'present'
-    spec = {'special': special,
+    spec = {'spec': special,
             'cmd': cmd}
     lst['special'].append(spec)
     comdat = _write_cron(user, _render_tab(lst))
