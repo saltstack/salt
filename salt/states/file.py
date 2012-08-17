@@ -78,6 +78,7 @@ something like this:
 # Import Python libs
 from contextlib import nested  # For < 2.7 compat
 import os
+import errno
 import shutil
 import difflib
 import hashlib
@@ -141,23 +142,40 @@ def _makedirs(path, user=None, group=None, mode=None):
     directory = os.path.dirname(path)
 
     if not os.path.isdir(directory):
-        os.makedirs(directory)
+        # turn on the executable bits for user, group and others.
+        # Note: the special bits are set to 0.
+        if mode:
+            mode = int(mode[-3:], 8) | 0111
+
+        _makedirs_perms(directory, user, group, mode)
         # If a caller such as managed() is invoked  with
         # makedirs=True, make sure that any created dirs
         # are created with the same user  and  group  to
         # follow the principal of least surprise method.
-        nmode = ''
-        if mode:
-            for char in mode:
-                if char == '0':
-                    nmode += char
-                elif int(char) % 2 == 1:
-                    # Is executable, continue
-                    nmode += char
-                else:
-                    # The mode is even, it need an executable bit
-                    nmode += str(int(char) + 1)
-        _check_perms(directory, None, user, group, nmode)
+
+
+
+def _makedirs_perms(name, user=None, group=None, mode=0755):
+    '''
+    Taken and modified from os.makedirs to set user, group and mode for each
+    directory created.
+    '''
+    path = os.path
+    mkdir = os.mkdir
+    head, tail = path.split(name)
+    if not tail:
+        head, tail = path.split(head)
+    if head and tail and not path.exists(head):
+        try:
+            _makedirs_perms(head, user, group, mode)
+        except OSError, e:
+            # be happy if someone already created the path
+            if e.errno != errno.EEXIST:
+                raise
+        if tail == os.curdir:  # xxx/newdir/. exists if xxx/newdir exists
+            return
+    mkdir(name)
+    _check_perms(name, None, user, group, int("%o" % mode) if mode else None)
 
 
 def _is_bin(path):
@@ -379,12 +397,26 @@ def _get_managed(
 def _check_perms(name, ret, user, group, mode):
     '''
     Check the permissions on files and chown if needed
+
+    Note: 'mode' here is expected to be either a string or an integer,
+          in which case it will be converted into a base-10 string.
+
+          What this means is that in your YAML salt file, you can specify
+          mode as an integer(eg, 644) or as a string(eg, '644'). But, to
+          specify mode 0777, for example, it must be specified as the string,
+          '0777' otherwise, 0777 will be parsed as an octal and you'd get 511
+          instead.
     '''
     if not ret:
         ret = {'name': name,
                'changes': {},
-               'comment': '',
-               'result': False}
+               'comment': [],
+               'result': True}
+        orig_comment = ''
+    else:
+        orig_comment = ret['comment']
+        ret['comment'] = []
+
     # Check permissions
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
@@ -393,12 +425,12 @@ def _check_perms(name, ret, user, group, mode):
 
     # Mode changes if needed
     if mode:
-        if mode != perms['lmode']:
+        if str(mode) != perms['lmode']:
             if not __opts__['test']:
                 __salt__['file.set_mode'](name, mode)
-            if mode != __salt__['file.get_mode'](name).lstrip('0'):
+            if str(mode) != __salt__['file.get_mode'](name).lstrip('0'):
                 ret['result'] = False
-                ret['comment'] += 'Failed to change mode to {0} '.format(mode)
+                ret['comment'].append('Failed to change mode to {0}'.format(mode))
             else:
                 ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
@@ -414,25 +446,33 @@ def _check_perms(name, ret, user, group, mode):
                 user = perms['luser']
             if group is None:
                 group = perms['lgroup']
-            __salt__['file.chown'](
-                    name,
-                    user,
-                    group
-                    )
+            try:
+                __salt__['file.chown'](
+                        name,
+                        user,
+                        group
+                        )
+            except OSError, e:
+                ret['result'] = False
+                
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
-            ret['comment'] = 'Failed to change user to {0} '.format(user)
+            ret['comment'].append('Failed to change user to {0}'.format(user))
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
         if group != __salt__['file.get_group'](name):
             ret['result'] = False
-            ret['comment'] += ('Failed to change group to {0} '
+            ret['comment'].append('Failed to change group to {0}'
                                .format(group))
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
+    if isinstance(orig_comment, basestring):
+        if orig_comment:
+            ret['comment'].insert(0, orig_comment)
+        ret['comment'] = '; '.join(ret['comment'])
     return ret, perms
 
 
@@ -1357,7 +1397,8 @@ def recurse(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': ''}
+           'comment': {}  # { path: [comment, ...] }
+           }
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -1371,7 +1412,9 @@ def recurse(name,
             # it is not a dir, but it exists - fail out
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
-        os.makedirs(name)
+        _makedirs_perms(name, user, group,
+                        int(str(dir_mode), 8) if dir_mode else None)
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_recurse(
                 name,
@@ -1385,26 +1428,39 @@ def recurse(name,
                 env,
                 include_empty)
         return ret
+
+    def update_changes_by_perms(path, mode, changetype='updated'): 
+        _ret = {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': []
+               }
+        _check_perms(path, _ret, user, group, mode)
+        ret['result'] &= _ret['result'] # ie, once false, stay false.
+        if _ret['comment']:
+            comments = ret['comment'].setdefault(path, [])
+            comments.extend(_ret['comment'])
+        if _ret['changes']: 
+            ret['changes'][path] = changetype
+
     vdir = set()
     for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
+        # fn_ here is the absolute source path of the file to copy from;
+        # it is either a normal file or an empty dir(if include_empthy==true).
+
         dest = _get_recurse_dest(name, fn_, source, env)
         dirname = os.path.dirname(dest)
+        keep.add(dest)
         if not os.path.isdir(dirname):
             _makedirs(dest, user=user, group=group)
         if not dirname in vdir:
             # verify the directory perms if they are set
-            # _check_perms(name, ret, user, group, mode)
-            _ret, perms = _check_perms(dirname, {}, user, group, dir_mode)
-            if _ret['changes']:
-                ret['changes'][dirname] = 'updated'
+            update_changes_by_perms(dirname, dir_mode)
             vdir.add(dirname)
         if os.path.isfile(dest):
-            _ret, perms = _check_perms(dest, {}, user, group, file_mode)
-            if _ret['changes']:
-                ret['changes'][dest] = 'updated'
-            keep.add(dest)
+            update_changes_by_perms(dest, file_mode)
             srch = ''
             dsth = ''
             # The file is present, if the sum differes replace it
@@ -1413,35 +1469,28 @@ def recurse(name,
                 dsth = hashlib.md5(dst_.read()).hexdigest()
             if srch != dsth:
                 # The downloaded file differes, replace!
-                # FIXME: no metadata (ownership, permissions) available
                 salt.utils.copyfile(
                         fn_,
                         dest,
                         _backup_mode(backup),
                         __opts__['cachedir'])
-                ret['changes'][dest] = 'updated'
+                update_changes_by_perms(dest, file_mode)
         elif os.path.isdir(dest) and include_empty:
             #check perms
-            _ret, perms = _check_perms(dest, {}, user, group, dir_mode)
-            if _ret['changes']:
-                ret['changes'][dest] = 'updated'
-            keep.add(dest)
+            update_changes_by_perms(dest, dir_mode)
         else:
-            keep.add(dest)
             if os.path.isdir(fn_) and include_empty:
                 #create empty dir
                 os.mkdir(dest)
-
-                if dir_mode:
-                    __salt__['file.set_mode'](dest, dir_mode)
+                update_changes_by_perms(dest, dir_mode)
             else:
                 # The destination file is not present, make it
-                # FIXME: no metadata (ownership, permissions) available
                 salt.utils.copyfile(
                         fn_,
                         dest,
                         _backup_mode(backup),
                         __opts__['cachedir'])
+                update_changes_by_perms(dest, file_mode)
             ret['changes'][dest] = 'new'
     keep = list(keep)
     if clean:
@@ -1449,7 +1498,7 @@ def recurse(name,
         removed = _clean_dir(name, list(keep))
         if removed:
             ret['changes']['removed'] = removed
-            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
+            ret['comment'] += 'Files cleaned from directory {0}'.format(name)
     return ret
 
 
