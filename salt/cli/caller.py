@@ -103,4 +103,7 @@ class Caller(object):
         )
         if printout is None:
             printout = salt.output.get_outputter(None)
-        printout({'local': ret['return']}, color=not bool(self.opts['no_color']))
+        printout(
+                {'local': ret['return']},
+                color=not bool(self.opts['no_color']),
+                **self.opts)
