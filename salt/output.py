@@ -135,6 +135,19 @@ class HighStateOutputter(Outputter):
                         hcolor = colors['YELLOW']
                         tcolor = colors['YELLOW']
                     comps = tname.split('_|-')
+                    if kwargs.get('state_output', 'full').lower() == 'terse':
+                        # Print this chunk in a terse way and continue in the
+                        # loop
+                        msg = ('{0}Name: {1} - Function: {2} - Result: {3}'
+                                ).format(
+                                        tcolor,
+                                        comps[2],
+                                        comps[-1],
+                                        str(ret['result'])
+                                        )
+                        hstrs.append(msg)
+                        continue
+
                     hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                                   .format(tcolor, comps[0], colors)))
                     hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
