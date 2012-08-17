@@ -494,3 +494,23 @@ def path_join(*parts):
     return os.path.normpath(os.path.join(
         root, *[p.lstrip(os.sep) for p in parts]
     ))
+
+
+def pem_finger(path, sum_type='md5'):
+    '''
+    Pass in the location of a pem file and the type of cryptographic hash to
+    use. The default is md5.
+    '''
+    if not os.path.isfile(path):
+        return ''
+    with open(path, 'rb') as fp_:
+        key = ''.join(fp_.readlines()[1:-1])
+    pre = getattr(hashlib, sum_type)(key).hexdigest()
+    finger = ''
+    for ind in range(len(pre)):
+        if ind % 2:
+            # Is odd
+            finger += '{0}:'.format(pre[ind])
+        else:
+            finger += pre[ind]
+    return finger.rstrip(':')
