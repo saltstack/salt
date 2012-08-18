@@ -92,6 +92,7 @@ class LocalClient(object):
         # Make sure all key parent directories are accessible
         salt.utils.verify.check_parent_dirs(keyfile, key_user)
 
+        print keyfile
         try:
             with open(keyfile, 'r') as KEY:
                 return KEY.read()

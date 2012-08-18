@@ -102,11 +102,10 @@ class SMaster(object):
         '''
         users = []
         keys = {}
-        acl_users = self.opts['client_acl'].keys()
+        acl_users = set(self.opts['client_acl'].keys())
         if self.opts.get('user'):
-            acl_users.append(self.opts['user'])
-        else:
-            acl_users.append(getpass.getuser())
+            acl_users.add(self.opts['user'])
+        acl_users.add(getpass.getuser())
         for user in pwd.getpwall():
             users.append(user.pw_name)
         for user in acl_users:
