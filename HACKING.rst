@@ -54,6 +54,7 @@ Then::
 
 Installing Salt for development
 -------------------------------
+You need both ``swig`` and ``libssl-dev`` installed for Salt development.
 
 Clone the repository using::
 
