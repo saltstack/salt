@@ -1272,7 +1272,7 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         if 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
-                if not clear_load.pop('key') == self.key['root']:
+                if not clear_load.pop('key') == self.key.get(getpass.getuser(), ''):
                     return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
                 if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
