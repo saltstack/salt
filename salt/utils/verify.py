@@ -186,18 +186,17 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         # is still secure because the private keys are still only readbale
         # by the user running the master
         if dir_ == pki_dir:
-            if not self.opts.get('client_acl'):
-                smode = stat.S_IMODE(mode.st_mode)
-                if not smode == 448 and not smode == 488:
-                    if os.access(dir_, os.W_OK):
-                        os.chmod(dir_, 448)
+            smode = stat.S_IMODE(mode.st_mode)
+            if not smode == 448 and not smode == 488:
+                if os.access(dir_, os.W_OK):
+                    os.chmod(dir_, 448)
+                else:
+                    msg = 'Unable to securely set the permissions of "{0}".'
+                    msg = msg.format(dir_)
+                    if is_console_configured():
+                        log.critical(msg)
                     else:
-                        msg = 'Unable to securely set the permissions of "{0}".'
-                        msg = msg.format(dir_)
-                        if is_console_configured():
-                            log.critical(msg)
-                        else:
-                            sys.stderr.write("CRITICAL: {0}\n".format(msg))
+                        sys.stderr.write("CRITICAL: {0}\n".format(msg))
     # Run the extra verification checks
     zmq_version()
 
