@@ -296,6 +296,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             return {}
@@ -335,6 +340,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, is the Salt Master running?')
             yield {}
@@ -380,6 +390,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
@@ -420,6 +435,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
@@ -459,6 +479,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             return {}
