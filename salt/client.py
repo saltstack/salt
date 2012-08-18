@@ -1034,7 +1034,6 @@ class LocalClient(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         payload = sreq.send('clear', payload_kwargs)
-        print payload
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 
