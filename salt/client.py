@@ -112,11 +112,11 @@ class LocalClient(object):
             for evar in env_vars:
                 if evar in os.environ:
                     return 'sudo_{0}'.format(os.environ[evar])
-            return None
+            return user
         # If the running user is just the specified user in the
         # conf file, don't pass the user as it's implied.
         elif user == self.opts['user']:
-            return None
+            return user
         return user
 
     def _check_glob_minions(self, expr):
