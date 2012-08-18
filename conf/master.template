@@ -100,6 +100,16 @@
 # If an autosign_file is specified permissive access will allow group access
 # to that specific file.
 #permissive_pki_access: False
+#
+# Allow users on the master access to execute specific commands on minions.
+# This setting should be treated with care since it opens up execution
+# capabilities to non root users. By default this capability is completely
+# disabled.
+#
+# client_acl:
+#   larry:
+#     - test.ping
+#     - network.*
 
 
 #####    Master Module Management    #####
