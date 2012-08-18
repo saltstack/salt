@@ -124,13 +124,7 @@ class LocalClient(object):
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        try:
-            os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        except OSError:
-            err = ('The Salt Master has not been set up on this system, '
-                   'a salt-master needs to be running to use the salt command')
-            sys.stderr.write(err)
-            sys.exit(2)
+        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
         ret = set(glob.glob(expr))
         os.chdir(cwd)
         return ret
@@ -962,15 +956,19 @@ class LocalClient(object):
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         '''
-        return {'glob': self._check_glob_minions,
-                'pcre': self._check_pcre_minions,
-                'list': self._check_list_minions,
-                'grain': self._check_grain_minions,
-                'grain_pcre': self._check_grain_pcre_minions,
-                'exsel': self._all_minions,
-                'pillar': self._all_minions,
-                'compound': self._all_minions,
-                }[expr_form](expr)
+        try:
+            minions = {'glob': self._check_glob_minions,
+                    'pcre': self._check_pcre_minions,
+                    'list': self._check_list_minions,
+                    'grain': self._check_grain_minions,
+                    'grain_pcre': self._check_grain_pcre_minions,
+                    'exsel': self._all_minions,
+                    'pillar': self._all_minions,
+                    'compound': self._all_minions,
+                    }[expr_form](expr)
+        except Exception:
+            minions = tgt
+        return minions
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
             ret='', jid='', timeout=5):
