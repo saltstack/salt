@@ -1283,11 +1283,16 @@ class ClearFuncs(object):
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
                         return ''
                     good = False
-                    for fun_auth in self.opts['client_acl']:
-                        if re.match(fun_auth, clear_load['fun']):
-                            good = True
+                    for user in self.opts['client_acl']:
+                        if clear_load['user'] != user:
+                            continue
+                        for regex in self.opts['client_acl'][user]:
+                            if re.match(regex, clear_load['fun']):
+                                good = True
                     if not good:
                         return ''
+                else:
+                    return ''
         else:
             if not clear_load.pop('key') == self.key[getpass.getuser()]:
                 return ''
