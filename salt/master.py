@@ -17,6 +17,7 @@ import hashlib
 import tempfile
 import datetime
 import pwd
+import getpass
 import subprocess
 import multiprocessing
 
@@ -102,7 +103,7 @@ class SMaster(object):
         users = []
         keys = {}
         acl_users = self.opts['client_acl'].keys()
-        acl_users.append('root')
+        acl_users.append(getpass.getuser())
         for user in pwd.getpwall():
             users.append(user.pw_name)
         for user in acl_users:
