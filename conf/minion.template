@@ -202,6 +202,16 @@
 # you've given access to. This is potentially quite insecure.
 #permissive_pki_access: False
 
+# The state_verbose and state_output settings can be used to change the way
+# state system data is printed to the display. By default all data is printed.
+# The state_verbose setting can be set to True or False, when set to False
+# all data that has a result of True and no changes will be suppressed.
+#state_verbose: True
+# 
+# The state_output setting changes if the output is the full multi line
+# output for each changed state if set to 'full', but if set to 'terse'
+# the output will be shortened to a single line.
+#state_output: full
 
 ######         Thread settings        #####
 ###########################################
