@@ -1274,6 +1274,9 @@ class ClearFuncs(object):
             if clear_load['user'].startswith('sudo_'):
                 if not clear_load.pop('key') == self.key['root']:
                     return ''
+            elif clear_load['user'] == self.opts.get('user', 'root'):
+                if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
+                    return ''
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
@@ -1285,6 +1288,9 @@ class ClearFuncs(object):
                             good = True
                     if not good:
                         return ''
+        else:
+            if not clear_load.pop('key') == self.key[getpass.getuser()]:
+                return ''
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
