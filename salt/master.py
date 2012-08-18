@@ -123,7 +123,12 @@ class SMaster(object):
                 fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
-            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            try:
+                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            except OSError:
+                # The master is not being run as root and can therefore not
+                # chown the key file
+                pass
             keys[user] = key
         return keys
 
