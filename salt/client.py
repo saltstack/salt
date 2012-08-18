@@ -298,7 +298,7 @@ class LocalClient(object):
             timeout=timeout)
         if not pub_data:
             err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?')
+                   'commands?\n')
             sys.stderr.write(err)
             sys.exit(4)
         if pub_data['jid'] == '0':
@@ -342,7 +342,7 @@ class LocalClient(object):
             timeout=timeout)
         if not pub_data:
             err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?')
+                   'commands?\n')
             sys.stderr.write(err)
             sys.exit(4)
         if pub_data['jid'] == '0':
@@ -392,7 +392,7 @@ class LocalClient(object):
             timeout=timeout)
         if not pub_data:
             err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?')
+                   'commands?\n')
             sys.stderr.write(err)
             sys.exit(4)
         if pub_data['jid'] == '0':
@@ -437,7 +437,7 @@ class LocalClient(object):
             timeout=timeout)
         if not pub_data:
             err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?')
+                   'commands?\n')
             sys.stderr.write(err)
             sys.exit(4)
         if pub_data['jid'] == '0':
@@ -481,7 +481,7 @@ class LocalClient(object):
             timeout=timeout)
         if not pub_data:
             err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?')
+                   'commands?\n')
             sys.stderr.write(err)
             sys.exit(4)
         if pub_data['jid'] == '0':
