@@ -490,7 +490,7 @@ def create_xml_str(xml):
         salt '*' virt.create_xml_str <xml in string format>
     '''
     conn = __get_conn()
-    return conn.createXML(xml, 0)
+    return conn.createXML(xml, 0) is not None
 
 
 def create_xml_path(path):
