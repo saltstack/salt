@@ -2,7 +2,7 @@
 
 apt-get update
 apt-get install -y python-software-properties
-add-apt-repository -y ppa:saltstack/salt
+echo | add-apt-repository  ppa:saltstack/salt
 apt-get update
 apt-get install -y salt-minion
 mkdir -p /etc/salt/pki
