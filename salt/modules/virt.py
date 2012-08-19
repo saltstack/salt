@@ -447,7 +447,10 @@ def reboot(vm_):
         salt '*' virt.reboot <vm name>
     '''
     dom = _get_dom(vm_)
-    return dom.reboot() == 0
+
+    # reboot has a few modes of operation, passing 0 in means the
+    # hypervisor will pick the best method for rebooting
+    return dom.reboot(0) == 0
 
 
 def reset(vm_):
@@ -459,7 +462,11 @@ def reset(vm_):
         salt '*' virt.reset <vm name>
     '''
     dom = _get_dom(vm_)
-    return dom.reset() == 0
+
+    # reset takes a flag, like reboot, but it is not yet used
+    # so we just pass in 0
+    # see: http://libvirt.org/html/libvirt-libvirt.html#virDomainReset
+    return dom.reset(0) == 0
 
 
 def ctrl_alt_del(vm_):
@@ -471,7 +478,7 @@ def ctrl_alt_del(vm_):
         salt '*' virt.ctrl_alt_del <vm name>
     '''
     dom = _get_dom(vm_)
-    return dom.sendKey(0, 0, [29, 56, 111], 3, 0)
+    return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
 
 
 def create_xml_str(xml):
