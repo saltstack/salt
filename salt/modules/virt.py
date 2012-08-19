@@ -438,6 +438,42 @@ def start(vm_):
     return create(vm_)
 
 
+def reboot(vm_):
+    '''
+    Reboot a domain via ACPI request
+
+    CLI Example::
+    
+        salt '*' virt.reboot <vm name>
+    '''
+    dom = _get_dom(vm_)
+    return dom.reboot() == 0
+
+
+def reset(vm_):
+    '''
+    Reset a VM by emulating the reset button on a physical machine
+
+    CLI Example::
+
+        salt '*' virt.reset <vm name>
+    '''
+    dom = _get_dom(vm_)
+    return dom.reset() == 0
+
+
+def ctrl_alt_del(vm_):
+    '''
+    Sends CTRL+ALT+DEL to a VM
+
+    CLI Example::
+    
+        salt '*' virt.ctrl_alt_del <vm name>
+    '''
+    dom = _get_dom(vm_)
+    return dom.sendKey(0, 0, [29, 56, 111], 3, 0)
+
+
 def create_xml_str(xml):
     '''
     Start a domain based on the xml passed to the function
