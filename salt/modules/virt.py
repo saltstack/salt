@@ -604,7 +604,8 @@ def purge(vm_, dirs=False):
         salt '*' virt.purge <vm name>
     '''
     disks = get_disks(vm_)
-    destroy(vm_)
+    if not destroy(vm_):
+        return False
     directories = set()
     for disk in disks:
         os.remove(disks[disk]['file'])
