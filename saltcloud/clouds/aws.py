@@ -77,7 +77,7 @@ EC2_LOCATIONS = {
     'us-west-1': Provider.EC2_US_WEST,
     'us-west-2': Provider.EC2_US_WEST_OREGON
 }
-DEFAULT_LOCATION = 'ec2'
+DEFAULT_LOCATION = 'us-east-1'
 
 
 def get_conn(**kwargs):
