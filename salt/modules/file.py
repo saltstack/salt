@@ -14,6 +14,7 @@ import hashlib
 import shutil
 import stat
 import sys
+import getpass
 import fnmatch
 try:
     import grp
@@ -118,6 +119,8 @@ def user_to_uid(user):
 
         salt '*' file.user_to_uid root
     '''
+    if not user:
+        user = getpass.getuser()
     try:
         return pwd.getpwnam(user).pw_uid
     except KeyError:
