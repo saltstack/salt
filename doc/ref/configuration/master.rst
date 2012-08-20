@@ -194,6 +194,23 @@ public keys from the minions
 
     auto_accept: False
 
+.. conf_master:: client_acl
+
+``client_acl``
+--------------
+
+Default: {}
+
+Enable user accounts on the master to execute specific modules. These modules
+can be expressed as regular expressions
+
+.. code-block:: yaml
+
+    client_acl:
+      fred:
+        - test.ping
+        - pkg.*
+
 
 Master Module Management
 ------------------------

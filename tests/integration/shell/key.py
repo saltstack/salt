@@ -33,16 +33,9 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --json-out')
         expect = [
-            '{',
-            '  "unaccepted": [], ',
-            '  "accepted": [',
-            '    "minion", ',
-            '    "sub_minion"',
-            '  ], ',
-            '  "rejected": []',
-            '}',
+            '{"unaccepted": [], "accepted": ["minion", "sub_minion"], "rejected": []}',
             ''
-        ]
+            ]
         self.assertEqual(data, expect)
 
     def test_list_yaml_out(self):

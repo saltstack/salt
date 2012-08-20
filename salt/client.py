@@ -112,11 +112,11 @@ class LocalClient(object):
             for evar in env_vars:
                 if evar in os.environ:
                     return 'sudo_{0}'.format(os.environ[evar])
-            return None
+            return user
         # If the running user is just the specified user in the
         # conf file, don't pass the user as it's implied.
         elif user == self.opts['user']:
-            return None
+            return user
         return user
 
     def _check_glob_minions(self, expr):
@@ -124,13 +124,7 @@ class LocalClient(object):
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        try:
-            os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        except OSError:
-            err = ('The Salt Master has not been set up on this system, '
-                   'a salt-master needs to be running to use the salt command')
-            sys.stderr.write(err)
-            sys.exit(2)
+        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
         ret = set(glob.glob(expr))
         os.chdir(cwd)
         return ret
@@ -188,6 +182,7 @@ class LocalClient(object):
                     for member in grains[comps[0]]:
                         if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                             found = True
+                            break
                     if found:
                         continue
                     minions.remove(id_)
@@ -296,6 +291,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             return {}
@@ -335,6 +335,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, is the Salt Master running?')
             yield {}
@@ -380,6 +385,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
@@ -420,6 +430,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
@@ -459,6 +474,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             return {}
@@ -937,15 +957,19 @@ class LocalClient(object):
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         '''
-        return {'glob': self._check_glob_minions,
-                'pcre': self._check_pcre_minions,
-                'list': self._check_list_minions,
-                'grain': self._check_grain_minions,
-                'grain_pcre': self._check_grain_pcre_minions,
-                'exsel': self._all_minions,
-                'pillar': self._all_minions,
-                'compound': self._all_minions,
-                }[expr_form](expr)
+        try:
+            minions = {'glob': self._check_glob_minions,
+                    'pcre': self._check_pcre_minions,
+                    'list': self._check_list_minions,
+                    'grain': self._check_grain_minions,
+                    'grain_pcre': self._check_grain_pcre_minions,
+                    'exsel': self._all_minions,
+                    'pillar': self._all_minions,
+                    'compound': self._all_minions,
+                    }[expr_form](expr)
+        except Exception:
+            minions = tgt
+        return minions
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
             ret='', jid='', timeout=5):
@@ -1034,6 +1058,8 @@ class LocalClient(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         payload = sreq.send('clear', payload_kwargs)
+        if not payload:
+            return payload
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 

@@ -182,6 +182,9 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
+        # If acls are enabled, the pki_dir needs to remain readable, this
+        # is still secure because the private keys are still only readbale
+        # by the user running the master
         if dir_ == pki_dir:
             smode = stat.S_IMODE(mode.st_mode)
             if not smode == 448 and not smode == 488:
