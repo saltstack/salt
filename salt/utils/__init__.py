@@ -246,7 +246,11 @@ def which(exe=None):
         (path, name) = os.path.split(exe)
         if os.access(exe, os.X_OK):
             return exe
-        for path in os.environ.get('PATH').split(os.pathsep):
+
+        # default path based on busybox's default
+        default_path = "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
+
+        for path in os.environ.get('PATH', default_path).split(os.pathsep):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
