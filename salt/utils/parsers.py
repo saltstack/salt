@@ -879,10 +879,19 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
         elif self.options.keysize > 32768:
             self.error("The maximum value for keysize is 32768")
 
+    def process_gen_keys_dir(self):
+        # Schedule __create_keys_dir() to run if there's a value for
+        # --create-keys-dir
+        self._mixin_after_parsed_funcs.append(self.__create_keys_dir)
+
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is
         # info or error.
         self.config['loglevel'] = 'info'
+
+    def __create_keys_dir(self, *args):
+        if not os.path.isdir(self.config['gen_keys_dir']):
+            os.makedirs(self.config['gen_keys_dir'])
 
 
 class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
