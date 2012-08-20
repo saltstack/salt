@@ -300,6 +300,9 @@ class LogLevelMixIn(object):
             log.set_logger_level(name, level)
 
     def __setup_console_logger(self, *args):
+        # If daemon is set force console logger to quiet
+        if self.options.daemon:
+            self.config['log_level'] = 'quiet'
         log.setup_console_logger(
             self.config['log_level'],
             log_format=self.config['log_fmt_console'],
