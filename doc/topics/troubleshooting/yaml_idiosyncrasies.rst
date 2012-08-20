@@ -99,7 +99,7 @@ This is best explained when setting the mode for a file:
 
 Salt manages this well, since the mode is passed as 644, but if the mode is
 zero padded as 0644, then it is read by YAML as an integer and evaluated as
-a hexadecimal value, 0644 becomes 420. Therefore, if the file mode is
+an octal value, 0644 becomes 420. Therefore, if the file mode is
 preceded by a 0 then it needs to be passed as a string:
 
 .. code-block:: yaml
