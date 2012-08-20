@@ -17,6 +17,7 @@ import hashlib
 import tempfile
 import datetime
 import pwd
+import getpass
 import subprocess
 import multiprocessing
 
@@ -101,8 +102,10 @@ class SMaster(object):
         '''
         users = []
         keys = {}
-        acl_users = self.opts['client_acl'].keys()
-        acl_users.append('root')
+        acl_users = set(self.opts['client_acl'].keys())
+        if self.opts.get('user'):
+            acl_users.add(self.opts['user'])
+        acl_users.add(getpass.getuser())
         for user in pwd.getpwall():
             users.append(user.pw_name)
         for user in acl_users:
@@ -118,12 +121,22 @@ class SMaster(object):
             keyfile = os.path.join(
                     self.opts['cachedir'], '.{0}_key'.format(user)
                     )
+
+            if os.path.exists(keyfile):
+                log.debug('Removing stale keyfile: {0}'.format(keyfile))
+                os.unlink(keyfile)
+
             key = salt.crypt.Crypticle.generate_key_string()
             with open(keyfile, 'w+') as fp_:
                 fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
-            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            try:
+                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            except OSError:
+                # The master is not being run as root and can therefore not
+                # chown the key file
+                pass
             keys[user] = key
         return keys
 
@@ -1263,7 +1276,13 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         if 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
-                if not clear_load.pop('key') == self.key['root']:
+                if not clear_load.pop('key') == self.key.get(getpass.getuser(), ''):
+                    return ''
+            elif clear_load['user'] == self.opts.get('user', 'root'):
+                if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
+                    return ''
+            elif clear_load['user'] == getpass.getuser():
+                if not clear_load.pop('key') == self.key.get(getpass.getuser()):
                     return ''
             else:
                 if clear_load['user'] in self.key:
@@ -1271,11 +1290,19 @@ class ClearFuncs(object):
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
                         return ''
                     good = False
-                    for fun_auth in self.opts['client_acl']:
-                        if re.match(fun_auth, clear_load['fun']):
-                            good = True
+                    for user in self.opts['client_acl']:
+                        if clear_load['user'] != user:
+                            continue
+                        for regex in self.opts['client_acl'][user]:
+                            if re.match(regex, clear_load['fun']):
+                                good = True
                     if not good:
                         return ''
+                else:
+                    return ''
+        else:
+            if not clear_load.pop('key') == self.key[getpass.getuser()]:
+                return ''
         if not clear_load['jid']:
             clear_load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],

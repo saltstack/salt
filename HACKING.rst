@@ -63,6 +63,11 @@ Create a new `virtualenv`_::
 
     virtualenv /path/to/your/virtualenv
 
+.. note:: site packages
+
+    If you wish to use installed packages rather than have pip download and
+    compile new ones into this environment, add "--system-site-packages".
+
 .. _`virtualenv`: http://pypi.python.org/pypi/virtualenv
 
 Activate the virtualenv::
@@ -75,7 +80,8 @@ Install Salt (and dependencies) into the virtualenv::
 
 .. note:: Installing M2Crypto
 
-    If you and encounter the error ``command 'swig' failed with exit status 1``
+    You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you 
+    encounter the error ``command 'swig' failed with exit status 1``
     while installing M2Crypto, try installing it with the following command::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto

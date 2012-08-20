@@ -66,7 +66,7 @@ def display_output(ret, out, opts):
     Display the output of a command in the terminal
     '''
     printout = get_printout(ret, out, opts)
-    printout(ret, color=not bool(opts['no_color']))
+    printout(ret, color=not bool(opts['no_color']), **opts)
 
 
 class Outputter(object):
@@ -110,7 +110,7 @@ class HighStateOutputter(Outputter):
             if isinstance(data[host], dict):
                 # Strip out the result: True, without changes returns if
                 # state_verbose is False
-                if not kwargs.get('verbose', False):
+                if not kwargs.get('state_verbose', False):
                     data[host] = strip_clean(data[host])
                 # Verify that the needed data is present
                 for tname, info in data[host].items():
@@ -135,6 +135,20 @@ class HighStateOutputter(Outputter):
                         hcolor = colors['YELLOW']
                         tcolor = colors['YELLOW']
                     comps = tname.split('_|-')
+                    if kwargs.get('state_output', 'full').lower() == 'terse':
+                        # Print this chunk in a terse way and continue in the
+                        # loop
+                        msg = (' {0}Name: {1} - Function: {2} - Result: {3}{4}'
+                                ).format(
+                                        tcolor,
+                                        comps[2],
+                                        comps[-1],
+                                        str(ret['result']),
+                                        colors['ENDC']
+                                        )
+                        hstrs.append(msg)
+                        continue
+
                     hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                                   .format(tcolor, comps[0], colors)))
                     hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
@@ -222,7 +236,7 @@ class JSONOutputter(Outputter):
             # A good kwarg might be: indent=4
             if 'color' in kwargs:
                 kwargs.pop('color')
-            ret = json.dumps(data, **kwargs)
+            ret = json.dumps(data)
         except TypeError:
             log.debug(traceback.format_exc())
             # Return valid json for unserializable objects
@@ -239,7 +253,7 @@ class YamlOutputter(Outputter):
     def __call__(self, data, **kwargs):
         if 'color' in kwargs:
             kwargs.pop('color')
-        print(yaml.dump(data, **kwargs))
+        print(yaml.dump(data))
 
 
 def get_outputter(name=None):

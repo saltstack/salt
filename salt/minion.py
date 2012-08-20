@@ -479,11 +479,24 @@ class Minion(object):
         # Prepare the minion event system
         #
         # Start with the publish socket
+        epub_sock_path = os.path.join(
+                self.opts['sock_dir'],
+                'minion_event_{0}_pub.ipc'.format(self.opts['id'])
+                )
+        if os.path.exists(epub_sock_path):
+            err = 'Minion with the same id has been detected on this system'
+            log.critical(err)
+            sys.exit(4)
         epub_sock = context.socket(zmq.PUB)
         epub_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'minion_event_pub.ipc')
+                os.path.join(
+                    self.opts['sock_dir'], 'minion_event_pub.ipc')
                 )
         # Create the pull socket
+        epull_sock_path = os.path.join(
+                self.opts['sock_dir'],
+                'minion_event_{0}_pull.ipc'.format(self.opts['id'])
+                )
         epull_sock = context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'minion_event_pull.ipc')

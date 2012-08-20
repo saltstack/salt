@@ -388,8 +388,7 @@ def shutdown(vm_):
         salt '*' virt.shutdown <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.shutdown()
-    return True
+    return dom.shutdown() == 0
 
 
 def pause(vm_):
@@ -401,8 +400,7 @@ def pause(vm_):
         salt '*' virt.pause <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.suspend()
-    return True
+    return dom.suspend() == 0
 
 
 def resume(vm_):
@@ -414,8 +412,7 @@ def resume(vm_):
         salt '*' virt.resume <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.resume()
-    return True
+    return dom.resume() == 0
 
 
 def create(vm_):
@@ -427,8 +424,7 @@ def create(vm_):
         salt '*' virt.create <vm name>
     '''
     dom = _get_dom(vm_)
-    dom.create()
-    return True
+    return dom.create() == 0
 
 
 def start(vm_):
@@ -442,6 +438,49 @@ def start(vm_):
     return create(vm_)
 
 
+def reboot(vm_):
+    '''
+    Reboot a domain via ACPI request
+
+    CLI Example::
+    
+        salt '*' virt.reboot <vm name>
+    '''
+    dom = _get_dom(vm_)
+
+    # reboot has a few modes of operation, passing 0 in means the
+    # hypervisor will pick the best method for rebooting
+    return dom.reboot(0) == 0
+
+
+def reset(vm_):
+    '''
+    Reset a VM by emulating the reset button on a physical machine
+
+    CLI Example::
+
+        salt '*' virt.reset <vm name>
+    '''
+    dom = _get_dom(vm_)
+
+    # reset takes a flag, like reboot, but it is not yet used
+    # so we just pass in 0
+    # see: http://libvirt.org/html/libvirt-libvirt.html#virDomainReset
+    return dom.reset(0) == 0
+
+
+def ctrl_alt_del(vm_):
+    '''
+    Sends CTRL+ALT+DEL to a VM
+
+    CLI Example::
+    
+        salt '*' virt.ctrl_alt_del <vm name>
+    '''
+    dom = _get_dom(vm_)
+    return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
+
+
 def create_xml_str(xml):
     '''
     Start a domain based on the xml passed to the function
@@ -451,8 +490,7 @@ def create_xml_str(xml):
         salt '*' virt.create_xml_str <xml in string format>
     '''
     conn = __get_conn()
-    conn.createXML(xml, 0)
-    return True
+    return conn.createXML(xml, 0) is not None
 
 
 def create_xml_path(path):
@@ -581,12 +619,8 @@ def destroy(vm_):
 
         salt '*' virt.destroy <vm name>
     '''
-    try:
-        dom = _get_dom(vm_)
-        dom.destroy()
-    except Exception:
-        return False
-    return True
+    dom = _get_dom(vm_)
+    return dom.destroy() == 0
 
 
 def undefine(vm_):
@@ -598,12 +632,8 @@ def undefine(vm_):
 
         salt '*' virt.undefine <vm name>
     '''
-    try:
-        dom = _get_dom(vm_)
-        dom.undefine()
-    except Exception:
-        return False
-    return True
+    dom = _get_dom(vm_)
+    return dom.undefine() == 0
 
 
 def purge(vm_, dirs=False):
@@ -617,7 +647,8 @@ def purge(vm_, dirs=False):
         salt '*' virt.purge <vm name>
     '''
     disks = get_disks(vm_)
-    destroy(vm_)
+    if not destroy(vm_):
+        return False
     directories = set()
     for disk in disks:
         os.remove(disks[disk]['file'])
