@@ -78,7 +78,7 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
 Integers are Parsed as Integers
 ===============================
 
-NOTE: This has been fixed in salt 0.9.10, as of this release passing an
+NOTE: This has been fixed in salt 0.10.0, as of this release passing an
 integer that is preceded by a 0 will be correctly parsed
 
 When passing `integers`_ into an SLS file, they are passed as integers. This means
