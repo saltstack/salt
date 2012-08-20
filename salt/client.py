@@ -182,6 +182,7 @@ class LocalClient(object):
                     for member in grains[comps[0]]:
                         if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                             found = True
+                            break
                     if found:
                         continue
                     minions.remove(id_)
