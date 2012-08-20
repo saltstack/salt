@@ -121,6 +121,11 @@ class SMaster(object):
             keyfile = os.path.join(
                     self.opts['cachedir'], '.{0}_key'.format(user)
                     )
+
+            if os.path.exists(keyfile):
+                log.debug('Removing stale keyfile: {0}'.format(keyfile))
+                os.unlink(keyfile)
+
             key = salt.crypt.Crypticle.generate_key_string()
             with open(keyfile, 'w+') as fp_:
                 fp_.write(key)
