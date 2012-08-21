@@ -190,7 +190,7 @@ def show_masterstate():
     return st_.compile_master()
 
 
-def single(fun=None, test=None, **kwargs):
+def single(fun, name, test=None, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
@@ -199,14 +199,9 @@ def single(fun=None, test=None, **kwargs):
 
         salt '*' state.single pkg.installed name=vim
     '''
-    if not 'name' in kwargs:
-        return False
-    if fun:
-        comps = fun.split('.')
-        if len(comps) < 2:
-            return False
-    else:
-        return False
+    comps = fun.split('.')
+    if len(comps) < 2:
+        return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
                    '__id__': kwargs['name']})
