@@ -56,7 +56,7 @@ def _get_ec2_hostinfo():
     """
 
     grains = {}
-    #Read the output, and convert it to a dict
+    #Read the buffert, and convert it to a dict
     data = _call_aws("/latest/dynamic/instance-identity/document")
     #null isn't None so translate on the fly
     grains = ast.literal_eval(data.replace('null', 'None'))
@@ -79,14 +79,22 @@ def ec2_info():
         #First do a quick check if AWS magic URL work. If so we guessing that
         # we are running in AWS and will try to get more data.
         _call_aws('/')
-    except socket.timeout:
+    except (socket.timeout, socket.error, IOError):
         return {}
 
     try:
         grains = _get_ec2_hostinfo()
         return grains
     except socket.timeout, serr:
-        LOG.info("Could not read EC2 data: %s" % (serr))
+        LOG.info("Could not read EC2 data (timeout): %s" % (serr))
+        return {}
+        
+    except socket.error, serr:
+        LOG.info("Could not read EC2 data (error): %s" % (serr))
+        return {}
+        
+    except IOError, serr:
+        LOG.info("Could not read EC2 data (IOError): %s" % (serr))
         return {}
 
 if __name__ == "__main__":
