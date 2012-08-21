@@ -70,7 +70,7 @@ class Client(object):
 
         filelist = []
 
-        for root, dirs, files in os.walk(destdir):
+        for root, dirs, files in os.walk(destdir, followlinks=True):
             for name in files:
                 path = os.path.join(root, name)
                 filelist.append(path)
@@ -414,7 +414,7 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 for fn in files:
                     ret.append(
                         os.path.relpath(
@@ -435,7 +435,7 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 if len(dirs) == 0 and len(files) == 0:
                     ret.append(os.path.relpath(root, path))
         return ret
