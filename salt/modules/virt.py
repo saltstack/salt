@@ -315,6 +315,65 @@ def get_disks(vm_):
     return disks
 
 
+def setmem(vm_, memory, config=False):
+    '''
+    Changes the amount of memory allocated to VM. The VM must be shutdown
+    for this to work.
+
+    memory is to be specified in MB
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setmem myvm 768
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # libvirt has a funny bitwise system for the flags in that the flag
+    # to affect the "current" setting is 0, which means that to set the
+    # current setting we have to call it a second time with just 0 set
+    flags = libvirt.VIR_DOMAIN_MEM_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setMemoryFlags(memory * 1024, flags)
+    ret2 = dom.setMemoryFlags(memory * 1024, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    # return True if both calls succeeded
+    return ret1 == ret2 == 0
+
+
+def setvcpus(vm_, vcpus, config=False):
+    '''
+    Changes the amount of vcpus allocated to VM. The VM must be shutdown
+    for this to work.
+
+    vcpus is an int representing the number to be assigned
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setvcpus myvm 2
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # see notes in setmem
+    flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setVcpusFlags(vcpus, flags)
+    ret2 = dom.setVcpusFlags(vcpus, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    return ret1 == ret2 == 0
+
+
 def freemem():
     '''
     Return an int representing the amount of memory that has not been given
