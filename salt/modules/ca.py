@@ -2,7 +2,7 @@
 A salt interface for running a Certificate Authority (CA)
 which provides signed/unsigned SSL certificates
 
-REQUIREMENT 1?:
+REQUIREMENT 1:
 
 Required python modules: PyOpenSSL
 
@@ -286,6 +286,10 @@ def create_csr(ca_name, bits=2048, CN='localhost', C="US", ST="Utah", L="Centerv
 
 
 def create_self_signed_cert(bits=2048):
+    '''
+    Create a Self-Signed Certificate (CERT) -- Not yet implemented
+    '''
+
     pass
 
 def create_ca_signed_cert(ca_name, CN, days=365):
