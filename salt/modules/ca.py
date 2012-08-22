@@ -8,7 +8,7 @@ Required python modules: PyOpenSSL
 
 REQUIREMENT 2:
 
-Add the following values in /etc/salt/minion for the 
+Add the following values in /etc/salt/minion for the
 CA module to function properly::
 
 ca.cert_base_path: '/etc/pki/koji'
@@ -205,5 +205,83 @@ def create_ca(ca_name, bits=2048, days=365, CN='localhost', C="US", ST="Utah", L
     _write_cert_to_database(ca_name, ca)
 
     return "Created CA '{0}', certificate is located at '{1}/{2}/{3}_ca_cert.crt'".format(ca_name, _cert_base_path(), ca_name, ca_name)
+
+
+def create_csr(ca_name, bits=2048, CN='localhost', C="US", ST="Utah", L="Centerville", O="Salt Stack", OU=None, emailAddress='xyz@pdq.net'):
+
+    '''
+    Create a Certificate Signing Request (CSR) for a
+    particular Certificate Authority (CA)
+
+    ca_name
+        name of the CA
+    bits
+        number of RSA key bits, default is 2048
+    CN
+        common name in the request, default is "localhost"
+    C
+        country, default is "US"
+    ST
+        state, default is "Utah"
+    L
+        locality, default is "Centerville", the city where SaltStack originated
+    O
+        organization, default is "Salt Stack"
+        NOTE: Must the same as CA certificate or an error will be raised
+    OU
+        organizational unit, default is None
+    emailAddress
+        email address for the request, default is 'xyz@pdq.net'
+
+    Writes out a Certificate Signing Request (CSR) If the file already
+    exists, the function just returns assuming the CSR already exists.
+
+    If the following values were set:
+
+    ca.cert_base_path='/etc/pki/koji'
+    ca_name='koji'
+    CN='test.egavas.org'
+
+    the resulting CSR, and corresponding key, would be written in the following location:
+
+    /etc/pki/koji/certs/test.egavas.org.csr
+    /etc/pki/koji/certs/test.egavas.org.key
+    '''
+
+    if not _ca_exists(ca_name):
+        return "Certificate for CA named '{0}' does not exist, please create it first.".format(ca_name)
+
+    if not os.path.exists("{0}/{1}/certs/".format(_cert_base_path(), ca_name)):
+        os.makedirs("{0}/{1}/certs/".format(_cert_base_path(), ca_name))
+
+    if os.path.exists("{0}/{1}/certs/{2}.csr".format(_cert_base_path(), ca_name, CN)):
+        return "Certificate Request '{0}' already exists".format(ca_name)
+
+    key = OpenSSL.crypto.PKey()
+    key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
+
+    req = OpenSSL.crypto.X509Req()
+
+    req.get_subject().C = C
+    req.get_subject().ST = ST
+    req.get_subject().L = L
+    req.get_subject().O = O
+    if OU:
+        req.get_subject().OU = OU
+    req.get_subject().CN = CN
+    req.get_subject().emailAddress = emailAddress
+    req.set_pubkey(key)
+    req.sign(key, "sha1")
+
+    # Write private key and request
+    priv_key = open("{0}/{1}/certs/{2}.key".format(_cert_base_path(), ca_name, CN), 'w')
+    priv_key.write(OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key))
+    priv_key.close()
+
+    csr = open("{0}/{1}/certs/{2}.csr".format(_cert_base_path(), ca_name, CN), 'w')
+    csr.write(OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, req))
+    csr.close()
+
+    return "Created CSR for '{0}', request is located at '{1}/{2}/certs/{3}.csr".format(ca_name, _cert_base_path(), ca_name, CN)
 
 
