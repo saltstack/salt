@@ -339,3 +339,47 @@ def create_ca_signed_cert(ca_name, CN, days=365):
 
     return "Created Certificate for '{0}', located at '{1}/{2}/certs/{3}.crt".format(ca_name, _cert_base_path(), ca_name, CN)
 
+def create_pkcs12(ca_name, CN, passphrase=''):
+
+    '''
+    Create a PKCS#12 browser certificate for a particular Certificate (CN)
+
+    ca_name
+        name of the CA
+    CN
+        common name matching the the certificate signing request
+    passphrase
+        used to unlock the PKCS#12 certificate when loaded into the browser
+    '''
+
+    if os.path.exists("{0}/{1}/certs/{2}.p12".format(_cert_base_path(), ca_name, CN)):
+        return "Certificate '{0}' already exists".format(CN)
+
+    try:
+        ca_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open("{0}/{1}/{2}_ca_cert.crt".format(_cert_base_path(), ca_name, ca_name)).read())
+    except IOError as e:
+        return "There is no CA named '{0}".format(ca_name)
+
+    try:
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open("{0}/{1}/certs/{2}.crt".format(_cert_base_path(), ca_name, CN)).read())
+        key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, open("{0}/{1}/certs/{2}.key".format(_cert_base_path(), ca_name, CN)).read())
+    except IOError as e:
+        return "There is no certificate that matches the CN '{0}".format(CN)
+
+    pkcs12 = OpenSSL.crypto.PKCS12()
+
+    pkcs12.set_certificate(cert)
+    pkcs12.set_ca_certificates([ca_cert])
+    pkcs12.set_privatekey(key)
+
+    with open("{0}/{1}/certs/{2}.p12".format(_cert_base_path(), ca_name, CN), 'w') as f:
+        f.write(pkcs12.export(passphrase=passphrase))
+
+    return "Created PKCS#12 Certificate for '{0}', located at '{1}/{2}/certs/{3}.p12".format(CN, _cert_base_path(), ca_name, CN)
+
+if __name__ == '__main__':
+    create_ca('koji', days=365, CN='localhost', C="US", ST="Utah", L="Centerville", O="Salt Stack", emailAddress='salt@saltstack.org')
+    create_csr('koji', CN='test_system', C="US", ST="Utah", L="Centerville", O="Salt Stack", OU=None, emailAddress='test_system@saltstac.org')
+    create_ca_signed_cert('koji', 'test_system')
+    create_pkcs12('koji', 'test_system', passphrase='test')
+
