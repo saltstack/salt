@@ -826,6 +826,12 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             action='store_true',
             help='Delete all keys'
         )
+
+        actions_group.add_option(
+            '-F', '--finger',
+            default='',
+            help='Print the named key\'s fingerprint'
+        )
         self.add_option_group(actions_group)
 
 
