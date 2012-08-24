@@ -587,9 +587,14 @@ def _check_directory(
         if not 'group' in recurse:
             group = None
         for root, dirs, files in os.walk(name):
-            for name in files:
-                path = os.path.join(root, name)
-                fchange = _check_dir_meta(path, user, group, None)
+            for fname in files:
+                fchange = {}
+                path = os.path.join(root, fname)
+                stats = __salt__['file.stats'](path, 'md5')
+                if not user is None and user != stats['user']:
+                    fchange['user'] = user
+                if not group is None and group != stats['group']:
+                    fchange['group'] = group
                 if fchange:
                     changes[path] = fchange
             for name in dirs:
@@ -597,16 +602,13 @@ def _check_directory(
                 fchange = _check_dir_meta(path, user, group, None)
                 if fchange:
                     changes[path] = fchange
-    else:
-        if not os.path.isdir(name):
-            changes[name] = 'new'
-            return None, 'A new directory is set to be made at {0}'.format(
-                    name)
+    if not os.path.isdir(name):
+        changes[name] = {'directory': 'new'}
     if changes:
         comment = 'The following files will be changed:\n'
         for fn_ in changes:
             for key, val in changes[fn_].items():
-                comment += '{0}: {1} - {2}'.format(fn_, key, val)
+                comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
         return None, comment
     return True, 'The directory {0} is in the correct state'.format(name)
 
