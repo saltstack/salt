@@ -194,6 +194,17 @@ public keys from the minions
 
     auto_accept: False
 
+.. conf_master:: autosign_file
+
+``autosign_file``
+-----------------
+
+Default ``not defined``
+
+If the autosign_file is specified incoming keys specified in
+the autosign_file will be automatically accepted. Regular expressions as
+well as globbing can be used. This is insecure!
+
 .. conf_master:: client_acl
 
 ``client_acl``
