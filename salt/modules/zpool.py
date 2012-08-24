@@ -11,7 +11,8 @@ def __virtual__():
     '''
     FreeBSD only for now
     '''
-    return 'zfs' if __grains__['os'] == 'FreeBSD' else False
+    enabled = ['FreeBSD', 'Solaris']
+    return 'zpool' if __grains__['os'] in enabled else False
 
 def list_installed():
     '''
