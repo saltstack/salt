@@ -407,6 +407,16 @@ still wish to have 'salt.modules' at the 'debug' level:
 
 .. conf_minion:: include
 
+``default_include``
+-------------------
+
+Default: ``minion.d/*.conf``
+
+The minion can include configuration from other files. Per default the
+minion will automatically include all config files from `minion.d/*.conf`
+where minion.d is relative to the directory of the minion configuration
+file.
+
 ``include``
 -----------
 
@@ -415,12 +425,12 @@ Default: ``not defined``
 The minion can include configuration from other files. To enable this,
 pass a list of paths to this option. The paths can be either relative or
 absolute; if relative, they are considered to be relative to the directory
-the main minion configuration file lives in. Paths can make use of 
+the main minion configuration file lives in. Paths can make use of
 shell-style globbing. If no files are matched by a path passed to this
 option then the minion will log a warning message.
 
 .. code-block:: yaml
-    
+
     # Include files from a minion.d directory in the same
     # directory as the minion config file
     include: minion.d/*
