@@ -232,6 +232,8 @@ def _clean_dir(root, keep):
     real_keep.add(root)
     if isinstance(keep, list):
         for fn_ in keep:
+            if not os.path.isabs(fn_):
+                continue
             real_keep.add(fn_)
             while True:
                 fn_ = os.path.dirname(fn_)
