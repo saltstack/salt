@@ -398,18 +398,23 @@ class Key(object):
         '''
         fkey = self.opts.get('finger', 'master')
         dirs = list(self._check_minions_directories())
-        dirs += self.opts['pki_dir']
+        dirs.append(self.opts['pki_dir'])
         sigs = {}
         for dir_ in dirs:
             pub = os.path.join(dir_, '{0}.pub'.format(fkey))
             fin = salt.utils.pem_finger(pub)
             if fin:
-                self._log('Signature for {0} public key:'.format(fkey))
+                self._log('Signature for {0} public key: {1}'.format(fkey, fin))
+                sigs['{0}.pub'.format(fkey)] = fin
+            pub = os.path.join(dir_, '{0}'.format(fkey))
+            fin = salt.utils.pem_finger(pub)
+            if fin:
+                self._log('Signature for {0} public key: {1}'.format(fkey, fin))
                 sigs['{0}.pub'.format(fkey)] = fin
             pri = os.path.join(dir_, '{0}.pub'.format(fkey))
             fin = salt.utils.pem_finger(pri)
             if fin:
-                self._log('Signature for {0} public key:'.format(fkey))
+                self._log('Signature for {0} private key: {1}'.format(fkey, fin))
                 sigs['{0}.pem'.format(fkey)] = fin
         return sigs
 
