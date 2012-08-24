@@ -263,6 +263,7 @@ def master_config(path):
             'file_buffer_size': 1048576,
             'hash_type': 'md5',
             'conf_file': path,
+            'pub_refresh': True,
             'open_mode': False,
             'auto_accept': False,
             'renderer': 'yaml_jinja',
