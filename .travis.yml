@@ -18,6 +18,6 @@ script: python setup.py test
 
 notifications:
   irc:
-    channels: "irc.freenode.org#salt"
+    channels: "irc.freenode.org#salt-devel"
     on_success: change
     on_failure: change
