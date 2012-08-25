@@ -810,7 +810,7 @@ class State(object):
             format_log(ret)
             self.module_refresh(data)
             return ret
-            
+
         log.info(
                 'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
                     data
@@ -1370,7 +1370,7 @@ class BaseHighState(object):
                             .format(name, sls)))
                         continue
                     skeys = set()
-                    for key in state[name]:
+                    for key in sorted(state[name]):
                         if key.startswith('_'):
                             continue
                         if not isinstance(state[name][key], list):
