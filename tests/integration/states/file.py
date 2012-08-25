@@ -315,7 +315,9 @@ class FileTest(integration.ModuleCase):
         '''
         name = os.path.join(integration.TMP, 'touch_test_dir')
         try:
-            os.makedirs(name)
+            if not os.path.isdir(name):
+                # left behind... Don't fail because of this!
+                os.makedirs(name)
         except OSError:
             self.skipTest("Failed to create directory {0}".format(name))
 
