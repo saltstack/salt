@@ -8,5 +8,5 @@ apt-get install -y salt-minion
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
-echo '{{ minion }}' > /etc/salt/minion
+echo "{{ minion }}" > /etc/salt/minion
 service salt-minion start
