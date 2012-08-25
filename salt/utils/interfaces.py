@@ -10,24 +10,21 @@ def ipaddr(interface=None):
     out = None
 
     if interface:
-        data = iflist.get(interface)
+        data = iflist.get(interface) or dict()
         if data.get('inet'):
-            if not out:
-                out = list()
-            out += data.get('inet')
+            return data.get('inet')[0]['address']
         if data.get('inet6'):
-            if not out:
-                out = list()
-            out += data.get('inet6')
+            return data.get('inet6')[0]['address']
         return out
 
+    out = dict()
     for iface, data in iflist.items():
         if data.get('inet'):
-            if not out[iface]: out[iface] = list()
-            out[iface] += data.get('inet')
+            out[iface] = data.get('inet')[0]['address']
+            continue
         if data.get('inet6'):
-            if not out[iface]: out[iface] = list()
-            out[iface] += data.get('inet6')
+            out[iface] = data.get('inet6')[0]['address']
+            continue
     return out
 
 
