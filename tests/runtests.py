@@ -7,9 +7,6 @@ import sys
 import os
 import logging
 import optparse
-# Setup minimal logging and disable it so "no handler for..." errors
-# are not thrown anymore while running tests
-logging.basicConfig(stream=open(os.devnull, 'w'))
 
 # Import salt libs
 import saltunittest
@@ -169,6 +166,21 @@ def parse_opts():
                   'integration testing (speed up test process)'))
 
     options, _ = parser.parse_args()
+
+    # Setup minimal logging to stop errors and use if greater verbosity is used
+    if options.verbosity > 2:
+        # -vv
+        level = logging.INFO
+        if options.verbosity > 3:
+            # -vvv
+            level = logging.DEBUG
+        logging.basicConfig(
+            stream=sys.stderr, level=level,
+            format="[%(levelname)-8s][%(name)-10s:%(lineno)-4d] %(message)s"
+        )
+    else:
+        logging.basicConfig(stream=open(os.devnull, 'w'))
+
     if not any((options.module, options.client,
                 options.shell, options.unit,
                 options.state, options.runner,
