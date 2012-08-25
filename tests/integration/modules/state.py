@@ -1,4 +1,5 @@
 # Import python libs
+import os
 import integration
 
 
@@ -63,6 +64,26 @@ class StateModuleTest(integration.ModuleCase):
             'Name "/tmp/salttest/issue-1876" in sls "issue-1876" contains '
             'multiple state decs of the same type', sls
         )
+
+    def test_issue_1879_too_simple_contains_check(self):
+        # Create the file
+        self.run_function('state.sls', mods='issue-1879')
+        # The first append
+        self.run_function('state.sls', mods='issue-1879.step-1')
+        # The seccond append
+        self.run_function('state.sls', mods='issue-1879.step-2')
+        # Does it match?
+        self.assertMultiLineEqual("""\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+# enable bash completion in interactive shells
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    . /etc/bash_completion
+fi""", open("/tmp/salttest/issue-1879", "r").read())
+        os.unlink('/tmp/salttest/issue-1879')
+
 
 
 if __name__ == '__main__':
