@@ -48,7 +48,9 @@ class FileTest(integration.ModuleCase):
         file.absent
         '''
         name = os.path.join(integration.TMP, 'dir_to_kill')
-        os.makedirs(name)
+        if not os.path.isdir(name):
+            # left behind... Don't fail because of this!
+            os.makedirs(name)
         ret = self.run_state('file.absent', name=name)
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
