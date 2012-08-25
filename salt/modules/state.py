@@ -204,7 +204,8 @@ def single(fun, name, test=None, **kwargs):
         return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
-                   '__id__': kwargs['name']})
+                   '__id__': name,
+                   'name': name})
     opts = copy.copy(__opts__)
     if not test is None:
         opts['test'] = test
