@@ -223,7 +223,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes:
+                    for key in v_node.attributes.keys():
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -231,7 +231,7 @@ def get_nics(vm_):
                 if v_node.tagName == "virtualport":
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes:
+                    for key in v_node.attributes.keys():
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -275,7 +275,7 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName("domain"):
         g_nodes = node.getElementsByTagName("graphics")
         for g_node in g_nodes:
-            for key in g_node.attributes:
+            for key in g_node.attributes.keys():
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -301,7 +301,7 @@ def get_disks(vm_):
             target = targets[0]
         else:
             continue
-        if 'dev' in list(target.attributes) and 'file' in list(source.attributes):
+        if target.attributes.has_key('dev') and source.attributes.has_key('file'):
             disks[target.getAttribute('dev')] = {
                 'file': source.getAttribute('file')}
     for dev in disks:
@@ -313,6 +313,65 @@ def get_disks(vm_):
         except TypeError:
             disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
+
+
+def setmem(vm_, memory, config=False):
+    '''
+    Changes the amount of memory allocated to VM. The VM must be shutdown
+    for this to work.
+
+    memory is to be specified in MB
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setmem myvm 768
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # libvirt has a funny bitwise system for the flags in that the flag
+    # to affect the "current" setting is 0, which means that to set the
+    # current setting we have to call it a second time with just 0 set
+    flags = libvirt.VIR_DOMAIN_MEM_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setMemoryFlags(memory * 1024, flags)
+    ret2 = dom.setMemoryFlags(memory * 1024, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    # return True if both calls succeeded
+    return ret1 == ret2 == 0
+
+
+def setvcpus(vm_, vcpus, config=False):
+    '''
+    Changes the amount of vcpus allocated to VM. The VM must be shutdown
+    for this to work.
+
+    vcpus is an int representing the number to be assigned
+    If config is True then we ask libvirt to modify the config as well
+
+    CLI Example::
+
+        salt '*' virt.setvcpus myvm 2
+    '''
+    if vm_state(vm_) != 'shutdown':
+        return False
+
+    dom = _get_dom(vm_)
+
+    # see notes in setmem
+    flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
+    if config:
+        flags = flags | libvirt.VIR_DOMAIN_AFFECT_CONFIG
+
+    ret1 = dom.setVcpusFlags(vcpus, flags)
+    ret2 = dom.setVcpusFlags(vcpus, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+    return ret1 == ret2 == 0
 
 
 def freemem():

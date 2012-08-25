@@ -5,7 +5,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 from os import path
 
 # Import third-party libs
-from jinja2 import Template, BaseLoader, Environment
+from jinja2 import Template, BaseLoader, Environment, StrictUndefined
 from jinja2.loaders import split_template_path
 from jinja2.exceptions import TemplateNotFound
 
@@ -17,7 +17,7 @@ import salt.fileclient
 def get_template(filename, opts, env):
     loader = SaltCacheLoader(opts, env)
     if filename.startswith(loader.searchpath):
-        jinja = Environment(loader=loader)
+        jinja = Environment(loader=loader, undefined=StrictUndefined)
         relpath = path.relpath(filename, loader.searchpath)
         # the template was already fetched
         loader.cached.append(relpath)

@@ -349,8 +349,7 @@ def set_auth_key(
 
     CLI Example::
 
-        salt '*' ssh.set_auth_key <user> key='<key>' enc='dsa'\
-                comment='my key' options='[]' config='.ssh/authorized_keys'
+        salt '*' ssh.set_auth_key <user> '<key>' enc='dsa'
     '''
     if len(key.split()) > 1:
         return 'invalid'

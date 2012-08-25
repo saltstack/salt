@@ -121,8 +121,8 @@ installation is working::
 
     salt-master -c ./etc/salt -d
     salt-minion -c ./etc/salt -d
-    salt-key -c ./etc/salt/master -L
-    salt-key -c ./etc/salt/master -A
+    salt-key -c ./etc/salt -L
+    salt-key -c ./etc/salt -A
     salt -c ./etc/salt '*' test.ping
 
 File descriptor limit
