@@ -36,7 +36,7 @@ work correctly with some experimentation.
 .. code-block:: yaml
 
   ext_pillar:
-    - mongo: {collection: vm, id_: name, re_pattern: \.example\.com, field: pillar}
+    - mongo: {collection: vm, id_field: name, re_pattern: \.example\.com, field: pillar}
 
 In the example above, we've decided to use the ``vm`` collection in the
 database to store the data. Minion ids are stored in the ``name`` field on
@@ -77,15 +77,15 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(collection='pillar', id_='_id', re_pattern=None,
-               re_replace='', field=None):
+def ext_pillar(collection='pillar', id_field='_id', re_pattern=None,
+               re_replace='', fields=None):
     """
     Connect to a mongo database and read per-node pillar information.
 
     Parameters:
         * `collection`: The mongodb collection to read data from. Defaults to
           ``'pillar'``.
-        * `id_`: The field in the collection that represents an individual
+        * `id_field`: The field in the collection that represents an individual
           minon id. Defaults to ``'_id'``.
         * `re_pattern`: If your naming convention in the collection is shorter
           than the minion id, you can use this to trim the name.
@@ -96,7 +96,7 @@ def ext_pillar(collection='pillar', id_='_id', re_pattern=None,
           minion id. Defaults to ``None``.
         * `re_replace`: Use as the replacement value in node ids matched with
           `re_pattern`. Defaults to ''.
-        * `field`: The specific field in the document to use for the pillar
+        * `fields`: The specific fields in the document to use for the pillar
           data. If ``None``, will use the entire document. If using the
           entire document, the ``_id`` field will be converted to string. Be
           careful with other fields in the document as they must be string
@@ -117,29 +117,22 @@ def ext_pillar(collection='pillar', id_='_id', re_pattern=None,
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info("ext_pillar.mongo: looking up pillar def for {'%s': '%s'} "
-             "in mongo" % (id_, minion_id))
+             "in mongo" % (id_field, minion_id))
 
-    # Convert the request for a single field to a list of that single field.
-    # We'll use this in a few lines to limit the size of returned documents.
-    fields = None
-    if field:
-        fields = [field]
 
-    pillar = db[collection].find_one({id_: minion_id}, fields=fields)
+    pillar = db[collection].find_one({id_field: minion_id}, fields=fields)
     if pillar:
-        if field:
-            # If the configuration dictates that we're just returning a single
-            # field, return just that.
-            log.debug("ext_pillar.mongo: found document, returning field '%s'"
-                      % field)
-            return pillar.get(field, {})
+        if fields:
+            log.debug("ext_pillar.mongo: found document, returning fields '%s'"
+                      % fields)
         else:
-            # Otherwise, return the whole document. Converting _id to a string
+            log.debug("ext_pillar.mongo: found document, returning whole doc")
+        if '_id' in pillar:
+            # Converting _id to a string
             # will avoid the most common serialization error cases, but DBRefs
             # and whatnot will still cause problems.
-            log.debug("ext_pillar.mongo: found document, returning whole doc")
             pillar['_id'] = str(pillar['_id'])
-            return pillar
+        return pillar
     else:
         # If we can't find the minion the database it's not necessarily an
         # error.
