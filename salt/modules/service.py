@@ -2,8 +2,11 @@
 The default service module, if not otherwise specified salt will fall back
 to this basic module
 '''
-
+# Import Python libs
 import os
+# Import Salt libs
+import salt.utils
+
 
 grainmap = {
            'Arch': '/etc/rc.d',
@@ -74,6 +77,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = os.path.join(grainmap[__grains__['os']],
             name + ' restart')
     return not __salt__['cmd.retcode'](cmd)
