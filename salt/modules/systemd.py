@@ -1,8 +1,10 @@
 '''
 Provide the service module for systemd
 '''
-
+# Import Python libs
 import os
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -98,6 +100,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = 'systemctl restart {0}.service'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
