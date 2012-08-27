@@ -312,7 +312,7 @@ class Loader(object):
         if hasattr(mod, '__init__'):
             if callable(mod.__init__):
                 try:
-                    mod.__init__()
+                    mod.__init__(self.opts)
                 except TypeError:
                     pass
         funcs = {}
@@ -435,7 +435,7 @@ class Loader(object):
             if hasattr(mod, '__init__'):
                 if callable(mod.__init__):
                     try:
-                        mod.__init__()
+                        mod.__init__(self.opts)
                     except TypeError:
                         pass
 
