@@ -37,6 +37,8 @@ Full Table of Contents
     ref/states/all/index
     ref/renderers/*
     ref/renderers/all/index
+    ref/pillar/*
+    ref/pillar/all/index
     ref/runners
     ref/peer
     ref/syndic
