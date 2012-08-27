@@ -488,19 +488,30 @@ class Minion(object):
             log.critical(err)
             sys.exit(4)
         epub_sock = context.socket(zmq.PUB)
-        epub_uri = 'ipc://{0}'.format(
-                os.path.join(
-                    self.opts['sock_dir'], 'minion_event_pub.ipc')
-                )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            epub_uri = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts['tcp_pub_port']
+                    )
+            epull_uri = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts['tcp_pull_port']
+                    )
+        else:
+            epub_uri = 'ipc://{0}'.format(
+                    os.path.join(
+                        self.opts['sock_dir'], 'minion_event_pub.ipc')
+                    )
+            epull_uri = 'ipc://{0}'.format(
+                    os.path.join(
+                        self.opts['sock_dir'],
+                        'minion_event_pull.ipc'
+                        )
+                    )
         # Create the pull socket
         epull_sock_path = os.path.join(
                 self.opts['sock_dir'],
                 'minion_event_{0}_pull.ipc'.format(self.opts['id'])
                 )
         epull_sock = context.socket(zmq.PULL)
-        epull_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'minion_event_pull.ipc')
-                )
         # Bind the event sockets
         epub_sock.bind(epub_uri)
         epull_sock.bind(epull_uri)
