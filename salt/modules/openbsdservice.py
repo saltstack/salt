@@ -1,8 +1,9 @@
 '''
 The service module for OpenBSD
 '''
-
+# Import Python libs
 import os
+# Import Salt libs
 
 
 # XXX enable/disable support would be nice
@@ -53,6 +54,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = '/etc/rc.d/{0} -f restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 

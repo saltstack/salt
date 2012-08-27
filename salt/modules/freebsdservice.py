@@ -1,8 +1,10 @@
 '''
 The service module for FreeBSD
 '''
-
+# Import Python libs
 import os
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -104,6 +106,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} onerestart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
