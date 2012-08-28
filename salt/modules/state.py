@@ -162,7 +162,7 @@ def show_sls(mods, env='base', test=None, **kwargs):
 
     CLI Example::
 
-        salt '*' state.sls core,edit.vim dev
+        salt '*' state.show_sls core,edit.vim dev
     '''
     opts = copy.copy(__opts__)
     if not test is None:
