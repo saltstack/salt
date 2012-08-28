@@ -7,6 +7,7 @@ Routines to set up a minion
 import logging
 import multiprocessing
 
+import fnmatch
 import os
 import re
 import sys
@@ -22,6 +23,7 @@ from salt.exceptions import (
     AuthenticationError,
     CommandExecutionError,
     CommandNotFoundError,
+    SaltClientError,
     SaltInvocationError,
     SaltReqTimeoutError
 )
