@@ -10,7 +10,6 @@ data
 import os
 import re
 import time
-import hashlib
 import shutil
 import stat
 import sys

@@ -456,7 +456,7 @@ def _check_perms(name, ret, user, group, mode):
                         )
             except OSError, e:
                 ret['result'] = False
-                
+
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
@@ -1433,7 +1433,7 @@ def recurse(name,
                 include_empty)
         return ret
 
-    def update_changes_by_perms(path, mode, changetype='updated'): 
+    def update_changes_by_perms(path, mode, changetype='updated'):
         _ret = {'name': name,
                 'changes': {},
                 'result': True,
@@ -1444,7 +1444,7 @@ def recurse(name,
         if _ret['comment']:
             comments = ret['comment'].setdefault(path, [])
             comments.extend(_ret['comment'])
-        if _ret['changes']: 
+        if _ret['changes']:
             ret['changes'][path] = changetype
 
     vdir = set()
@@ -1674,7 +1674,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     return ret
 
 
-def append(name, text):
+def append(name, text, makedirs=False):
     '''
     Ensure that some text appears at the end of a file
 
@@ -1701,6 +1701,19 @@ def append(name, text):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if makedirs:
+        dirname = os.path.dirname(name)
+        if not __salt__['file.directory_exists'](dirname):
+            _makedirs(name)
+            check_res, check_msg = _check_directory(
+                dirname, None, None, False, None, False, False
+            )
+            if not check_res:
+                return _error(ret, check_msg)
+
+        # Make sure that we have a file
+        __salt__['file.touch'](name)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
