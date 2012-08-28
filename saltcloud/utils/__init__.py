@@ -105,7 +105,7 @@ def minion_conf_string(opts, vm_):
     minion = {'id': vm_['name']}
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
-    return yaml.safe_dump(minion)
+    return yaml.load(yaml.safe_dump(minion))
 
 
 def wait_for_ssh(host, port=22, timeout=900):
