@@ -7,9 +7,9 @@ Routines to set up a minion
 import logging
 import multiprocessing
 
-import fnmatch
 import os
 import re
+import sys
 import threading
 import time
 import traceback
@@ -18,10 +18,13 @@ import traceback
 import zmq
 
 # Import salt libs
-from salt.exceptions import AuthenticationError, \
-    CommandExecutionError, CommandNotFoundError, SaltInvocationError, \
-    SaltClientError, SaltReqTimeoutError
-import salt.client
+from salt.exceptions import (
+    AuthenticationError,
+    CommandExecutionError,
+    CommandNotFoundError,
+    SaltInvocationError,
+    SaltReqTimeoutError
+)
 import salt.crypt
 import salt.loader
 import salt.utils
@@ -487,7 +490,15 @@ class Minion(object):
             err = 'Minion with the same id has been detected on this system'
             log.critical(err)
             sys.exit(4)
-        epub_sock = context.socket(zmq.PUB)
+
+        epub_uri_path = os.path.join(
+            self.opts['sock_dir'], 'minion_event_pub.ipc'
+        )
+
+        epull_uri_path = os.path.join(
+            self.opts['sock_dir'], 'minion_event_pull.ipc'
+        )
+
         if self.opts.get('ipc_mode', '') == 'tcp':
             epub_uri = 'tcp://127.0.0.1:{0}'.format(
                     self.opts['tcp_pub_port']
@@ -496,36 +507,25 @@ class Minion(object):
                     self.opts['tcp_pull_port']
                     )
         else:
-            epub_uri = 'ipc://{0}'.format(
-                    os.path.join(
-                        self.opts['sock_dir'], 'minion_event_pub.ipc')
-                    )
-            epull_uri = 'ipc://{0}'.format(
-                    os.path.join(
-                        self.opts['sock_dir'],
-                        'minion_event_pull.ipc'
-                        )
-                    )
-        # Create the pull socket
-        epull_sock_path = os.path.join(
-                self.opts['sock_dir'],
-                'minion_event_{0}_pull.ipc'.format(self.opts['id'])
-                )
-        epull_sock = context.socket(zmq.PULL)
+            epub_uri = 'ipc://{0}'.format(epub_uri_path)
+            epull_uri = 'ipc://{0}'.format(epull_uri_path)
+
+        # Create the pub socket
+        epub_sock = context.socket(zmq.PUB)
         # Bind the event sockets
         epub_sock.bind(epub_uri)
+        log.debug('Minion publish socket: {0}'.format(epub_uri))
+
+        # Create the pull socket
+        epull_sock = context.socket(zmq.PULL)
+        # Bind the pull socket
         epull_sock.bind(epull_uri)
-        # Restrict access to the sockets
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'minion_event_pub.ipc'),
-                448
-                )
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'minion_event_pull.ipc'),
-                448
-                )
+        log.debug('Minion pull socket: {0}'.format(epull_uri))
+
+        if self.opts.get('ipc_mode', '') != 'tcp':
+            # Restrict access to the sockets
+            os.chmod(epub_sock_path, 448)
+            os.chmod(epull_uri_path, 448)
 
         poller = zmq.Poller()
         epoller = zmq.Poller()
