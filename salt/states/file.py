@@ -1374,7 +1374,7 @@ def recurse(name,
 
     clean
         Make sure that only files that are set up by salt and required by this
-        Gfunction are kept. If this option is set then everything in this
+        function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
 
     require
