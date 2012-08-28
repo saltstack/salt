@@ -66,7 +66,7 @@ takes a few arguments:
 Recursive directory management can also be set via the ``recurse``
 function. Recursive directory management allows for a directory on the salt
 master to be recursively copied down to the minion. This is a great tool for
-deploying large code and configuration systems. A recuse state would look
+deploying large code and configuration systems. A recurse state would look
 something like this:
 
 .. code-block:: yaml
