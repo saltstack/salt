@@ -456,7 +456,7 @@ def _check_perms(name, ret, user, group, mode):
                         )
             except OSError, e:
                 ret['result'] = False
-                
+
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
@@ -1374,7 +1374,7 @@ def recurse(name,
 
     clean
         Make sure that only files that are set up by salt and required by this
-        function are kept. If this option is set then everything in this
+        Gfunction are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
 
     require
@@ -1433,7 +1433,7 @@ def recurse(name,
                 include_empty)
         return ret
 
-    def update_changes_by_perms(path, mode, changetype='updated'): 
+    def update_changes_by_perms(path, mode, changetype='updated'):
         _ret = {'name': name,
                 'changes': {},
                 'result': True,
@@ -1444,7 +1444,7 @@ def recurse(name,
         if _ret['comment']:
             comments = ret['comment'].setdefault(path, [])
             comments.extend(_ret['comment'])
-        if _ret['changes']: 
+        if _ret['changes']:
             ret['changes'][path] = changetype
 
     vdir = set()
@@ -1580,6 +1580,27 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
 def comment(name, regex, char='#', backup='.bak'):
     '''
+    Comment out specified lines in a file.
+
+    path
+        The full path to the file to be edited
+    regex
+        A regular expression used to find the lines that are to be commented;
+        this pattern will be wrapped in parenthesis and will move any
+        preceding/trailing ``^`` or ``$`` characters outside the parenthesis
+        (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)
+    char : ``#``
+        The character to be inserted at the beginning of a line in order to
+        comment it out
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension
+
+        .. warning::
+
+            This backup will be overwritten each time ``sed`` / ``comment`` /
+            ``uncomment`` is called. Meaning the backup will only be useful
+            after the first invocation.
+
     Usage::
 
         /etc/fstab:
@@ -1627,6 +1648,23 @@ def comment(name, regex, char='#', backup='.bak'):
 
 def uncomment(name, regex, char='#', backup='.bak'):
     '''
+    Uncomment specified commented lines in a file
+
+    path
+        The full path to the file to be edited
+    regex
+        A regular expression used to find the lines that are to be uncommented.
+        This regex should not include the comment character. A leading ``^``
+        character will be stripped for convenience (for easily switching
+        between comment() and uncomment()).
+    char : ``#``
+        The character to remove in order to uncomment a line; if a single
+        whitespace character follows the comment it will also be removed
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension;
+        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
+        overwrite this backup
+
     Usage::
 
         /etc/adduser.conf:
