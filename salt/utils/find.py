@@ -94,6 +94,7 @@ except ImportError:
 
 
 from salt._compat import MAX_SIZE
+from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -415,9 +416,9 @@ class GrepOption(Option):
     def match(self, dirname, filename, fstat):
         if not stat.S_ISREG(fstat[stat.ST_MODE]):
             return None
-        with open(os.path.join(dirname, filename), 'rb') as f:
-            for line in f:
-                if self.re.search(line):
+        with BufferedReader(os.path.join(dirname, filename), mode='rb') as br:
+            for chunk in br:
+                if self.re.search(chunk):
                     return os.path.join(dirname, filename)
         return None
 
