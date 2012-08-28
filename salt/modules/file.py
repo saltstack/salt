@@ -10,7 +10,6 @@ data
 import os
 import re
 import time
-import hashlib
 import shutil
 import stat
 import sys
@@ -24,6 +23,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.find
+from salt.utils.filebuffer import BufferedReader
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 def __virtual__():
@@ -515,9 +515,9 @@ def contains(path, text):
         return False
 
     try:
-        with open(path, 'r') as fp_:
-            for line in fp_:
-                if text.strip() == line.strip():
+        with BufferedReader(path) as br:
+            for chunk in br:
+                if text.strip() == chunk.strip():
                     return True
         return False
     except (IOError, OSError):
@@ -537,9 +537,11 @@ def contains_regex(path, regex, lchar=''):
         return False
 
     try:
-        with open(path, 'r') as fp_:
-            for line in  fp_:
-                if re.search(regex, line.lstrip(lchar)):
+        with BufferedReader(path) as br:
+            for chunk in br:
+                if lchar:
+                    chunk = chunk.lstrip(lchar)
+                if re.search(regex, chunk):
                     return True
             return False
     except (IOError, OSError):
@@ -558,12 +560,11 @@ def contains_glob(path, glob):
         return False
 
     try:
-        with open(path, 'r') as fp_:
-            data = fp_.read()
-            if fnmatch.fnmatch(data, glob):
-                return True
-            else:
-                return False
+        with BufferedReader(path) as br:
+            for chunk in br:
+                if fnmatch.fnmatch(chunk, glob):
+                    return True
+            return False
     except (IOError, OSError):
         return False
 

@@ -456,7 +456,7 @@ def _check_perms(name, ret, user, group, mode):
                         )
             except OSError, e:
                 ret['result'] = False
-                
+
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
@@ -1433,7 +1433,7 @@ def recurse(name,
                 include_empty)
         return ret
 
-    def update_changes_by_perms(path, mode, changetype='updated'): 
+    def update_changes_by_perms(path, mode, changetype='updated'):
         _ret = {'name': name,
                 'changes': {},
                 'result': True,
@@ -1444,7 +1444,7 @@ def recurse(name,
         if _ret['comment']:
             comments = ret['comment'].setdefault(path, [])
             comments.extend(_ret['comment'])
-        if _ret['changes']: 
+        if _ret['changes']:
             ret['changes'][path] = changetype
 
     vdir = set()
@@ -1710,6 +1710,11 @@ def append(name, text):
         text = (text,)
 
     for chunk in text:
+
+        if __salt__['file.contains_regex'](
+                        name, salt.utils.build_whitepace_splited_regex(chunk)):
+            continue
+
         try:
             lines = chunk.split('\n')
         except AttributeError:
@@ -1718,17 +1723,13 @@ def append(name, text):
             return _error(ret, 'Given text is not a string')
 
         for line in lines:
-            if __salt__['file.contains'](name, line):
-                continue
-            else:
-                if __opts__['test']:
-                    ret['comment'] = 'File {0} is set to be updated'.format(
-                            name)
-                    ret['result'] = None
-                    return ret
-                __salt__['file.append'](name, line)
-                cgs = ret['changes'].setdefault('new', [])
-                cgs.append(line)
+            if __opts__['test']:
+                ret['comment'] = 'File {0} is set to be updated'.format(name)
+                ret['result'] = None
+                return ret
+            __salt__['file.append'](name, line)
+            cgs = ret['changes'].setdefault('new', [])
+            cgs.append(line)
 
     count = len(ret['changes'].get('new', []))
 

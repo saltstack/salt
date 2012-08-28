@@ -65,7 +65,21 @@ class StateModuleTest(integration.ModuleCase):
             'multiple state decs of the same type', sls
         )
 
+    maxDiff = None
+
     def test_issue_1879_too_simple_contains_check(self):
+        contents = """\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# enable bash completion in interactive shells
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    . /etc/bash_completion
+fi
+
+"""
         # Create the file
         self.run_function('state.sls', mods='issue-1879')
         # The first append
@@ -73,16 +87,22 @@ class StateModuleTest(integration.ModuleCase):
         # The seccond append
         self.run_function('state.sls', mods='issue-1879.step-2')
         # Does it match?
-        self.assertMultiLineEqual("""\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-# enable bash completion in interactive shells
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi""", open("/tmp/salttest/issue-1879", "r").read())
-        os.unlink('/tmp/salttest/issue-1879')
+        try:
+            self.assertMultiLineEqual(
+                contents, open("/tmp/salttest/issue-1879", "r").read()
+            )
+            # Make sure we don't re-append existing text
+            self.run_function('state.sls', mods='issue-1879.step-1')
+            self.run_function('state.sls', mods='issue-1879.step-2')
+            self.assertMultiLineEqual(
+                contents, open("/tmp/salttest/issue-1879", "r").read()
+            )
+        except Exception:
+            import shutil
+            shutil.copy('/tmp/salttest/issue-1879', '/tmp/salttest/issue-1879.bak')
+            raise
+        finally:
+            os.unlink('/tmp/salttest/issue-1879')
 
 
 

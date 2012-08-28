@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import os
+import re
 import imp
 import random
 import sys
@@ -13,6 +14,7 @@ import logging
 import hashlib
 import datetime
 import tempfile
+import shlex
 import shutil
 import time
 import platform
@@ -518,3 +520,49 @@ def pem_finger(path, sum_type='md5'):
         else:
             finger += pre[ind]
     return finger.rstrip(':')
+
+
+def build_whitepace_splited_regex(text):
+    '''
+    Create a regular expression at runtime which should match ignoring the
+    addition or deletion of white space or line breaks, unless between commas
+
+    Example::
+
+    >>> import re
+    >>> from salt.utils import *
+    >>> regex = build_whitepace_splited_regex(
+    ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
+    ... )
+
+    >>> regex
+    '(?:[\\s]+)?if(?:[\\s]+)?\\[(?:[\\s]+)?\\-z(?:[\\s]+)?\\"\\$debian'
+    '\\_chroot\\"(?:[\\s]+)?\\](?:[\\s]+)?\\&\\&(?:[\\s]+)?\\[(?:[\\s]+)?'
+    '\\-r(?:[\\s]+)?\\/etc\\/debian\\_chroot(?:[\\s]+)?\\]\\;(?:[\\s]+)?'
+    'then(?:[\\s]+)?'
+    >>> re.search(
+    ...     regex,
+    ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
+    ... )
+
+    <_sre.SRE_Match object at 0xb70639c0>
+    >>>
+
+    '''
+
+    def __build_parts(text):
+        lexer = shlex.shlex(text)
+        lexer.whitespace_split = True
+        lexer.commenters = ''
+        if '"' in text:
+            lexer.quotes = '"'
+        elif '\'' in text:
+            lexer.quotes = '\''
+        return list(lexer)
+
+
+    regex = r''
+    for line in text.splitlines():
+        parts = [re.escape(s) for s in __build_parts(line)]
+        regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
+    return regex
