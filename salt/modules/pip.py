@@ -158,6 +158,10 @@ def install(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     if requirements:
+        if requirements.startswith('salt://'):
+            requirements = __salt__['cp.cache_file'](requirements)
+            __salt__['cmd.run']('cp -f {file} /tmp/requirements.txt'.format(file=requirements))
+            requirements = '/tmp/requirements.txt'
         cmd = '{cmd} --requirement "{requirements}" '.format(
             cmd=cmd, requirements=requirements)
 
@@ -257,7 +261,11 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
+    result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
+
+    __salt__['cmd.run']('rm -f /tmp/requirements.txt')
+
+    return result
 
 
 def uninstall(pkgs=None,
@@ -319,6 +327,10 @@ def uninstall(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     if requirements:
+        if requirements.startswith('salt://'):
+            requirements = __salt__['cp.cache_file'](requirements)
+            __salt__['cmd.run']('cp -f {file} /tmp/requirements.txt'.format(file=requirements))
+            requirements = '/tmp/requirements.txt'
         cmd = '{cmd} --requirements "{requirements}" '.format(
             cmd=cmd, requirements=requirements)
 
@@ -343,7 +355,11 @@ def uninstall(pkgs=None,
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
-    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+    result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+
+    __salt__['cmd.run']('rm -f /tmp/requirements.txt')
+
+    return result
 
 
 def freeze(bin_env=None,

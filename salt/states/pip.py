@@ -128,10 +128,9 @@ def removed(name,
     """
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name not in __salt__["pip.list"](packages=name, bin_env=bin_env,
-                                        runas=user, cwd=cwd):
+    if name not in __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd):
         ret["result"] = True
-        ret["comment"] = "Pacakge is not installed."
+        ret["comment"] = "Package is not installed."
         return ret
 
     if __opts__['test']:
@@ -139,7 +138,7 @@ def removed(name,
         ret['comment'] = 'Package {0} is set to be removed'.format(name)
         return ret
 
-    if __salt__["pip.uninstall"](packages=name,
+    if __salt__["pip.uninstall"](pkgs=name,
                                  requirements=requirements,
                                  bin_env=bin_env,
                                  log=log,

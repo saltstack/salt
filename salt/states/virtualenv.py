@@ -104,8 +104,6 @@ def managed(name,
 
     # Populate the venv via a requirements file
     if requirements:
-        if requirements.startswith('salt://'):
-            requirements = __salt__['cp.cache_file'](requirements, __env__)
         before = set(__salt__['pip.freeze'](bin_env=name))
         __salt__['pip.install'](
             requirements=requirements, bin_env=name, runas=runas, cwd=cwd
