@@ -59,12 +59,11 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = set()
-    sdir = '/lib/systemd/system'
-    if not os.path.isdir('/lib/systemd/system'):
-        return []
-    for fn_ in os.listdir(sdir):
-        if fn_.endswith('.service'):
-            ret.add(fn_[:fn_.rindex('.')])
+    for sdir in ('/lib/systemd/system', '/etc/systemd/system'):
+        if os.path.isdir(sdir):
+            for fn_ in os.listdir(sdir):
+                if fn_.endswith('.service'):
+                    ret.add(fn_[:fn_.rindex('.')])
     return sorted(list(ret))
 
 
