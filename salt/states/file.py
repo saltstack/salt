@@ -1674,7 +1674,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     return ret
 
 
-def append(name, text):
+def append(name, text, makedirs=False):
     '''
     Ensure that some text appears at the end of a file
 
@@ -1701,6 +1701,19 @@ def append(name, text):
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if makedirs:
+        dirname = os.path.dirname(name)
+        if not __salt__['file.directory_exists'](dirname):
+            _makedirs(name)
+            check_res, check_msg = _check_directory(
+                dirname, None, None, False, None, False, False
+            )
+            if not check_res:
+                return _error(ret, check_msg)
+
+        # Make sure that we have a file
+        __salt__['file.touch'](name)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
