@@ -246,7 +246,7 @@ class State(object):
         Check to see if the modules for this state instance need to be
         updated, only update if the state is a file. If the function is
         managed check to see if the file is a possible module type, e.g. a
-        python, pyx, or .so. Always refresh if the function is recuse,
+        python, pyx, or .so. Always refresh if the function is recurse,
         since that can lay down anything.
         '''
         def _refresh():
