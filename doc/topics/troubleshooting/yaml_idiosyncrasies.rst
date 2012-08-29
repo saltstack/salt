@@ -173,3 +173,33 @@ WORKS:
         - name: AAAAB3NzaC...
         - enc: dsa
 
+YAML support only plain ASCII
+=============================
+
+Do not even try using UTF8 or other encoding.
+According to YAML specification, you can use only ASCII characters.
+
+Within double-quotes, special characters may be represented with C-style
+escape sequences starting with a backslash ( \ ).
+
+Examples:
+
+.. code-bloc:: yaml
+    - micro: "\u00b5"
+    - copyright: "\u00A9"
+    - A: "\x41"
+    - alpha: "\u0251"
+    - Alef: "\u05d0"
+
+.. _`List of Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
+
+You can help figuring out the number also by using python expression:
+
+.. code-bloc:: python
+    repr(u"Text with wrong characters i need to figure out")
+
+This shell command can help you find wrong characters in your SLS files:
+
+.. code-block: shell
+    find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
+
