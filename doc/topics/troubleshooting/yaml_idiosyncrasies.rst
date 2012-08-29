@@ -176,8 +176,7 @@ WORKS:
 YAML support only plain ASCII
 =============================
 
-Do not even try using UTF8 or other encoding.
-According to YAML specification, you can use only ASCII characters.
+According to YAML specification, only ASCII characters can be used.
 
 Within double-quotes, special characters may be represented with C-style
 escape sequences starting with a backslash ( \ ).
@@ -191,14 +190,16 @@ Examples:
     - alpha: "\u0251"
     - Alef: "\u05d0"
 
+A list of available Unicode characters can be found here:
+
 .. _`List of Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
 
-You can help figuring out the number also by using python expression:
+Python can also be used to discover the Unicode number for a character:
 
 .. code-bloc:: python
     repr(u"Text with wrong characters i need to figure out")
 
-This shell command can help you find wrong characters in your SLS files:
+This shell command can find wrong characters in your SLS files:
 
 .. code-block: shell
     find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
