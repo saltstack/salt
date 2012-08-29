@@ -3,9 +3,12 @@ Provide the service module for systemd
 '''
 # Import Python libs
 import os
+import re
 # Import Salt libs
 import salt.utils
 
+VALID_UNIT_TYPES = ['service','socket', 'device', 'mount', 'automount',
+                    'swap', 'target', 'path', 'timer']
 
 def __virtual__():
     '''
@@ -19,12 +22,32 @@ def __virtual__():
 
 
 def _systemctl_cmd(action, name):
-    valid_suffixes = ['service','socket', 'device', 'mount', 'automount',
-                      'swap', 'target', 'path', 'timer']
-
-    if not any(name.endswith(valid_suffix) for valid_suffix in valid_suffixes):
+    '''
+    Build a systemctl command line. Treat unit names without one
+    of the valid suffixes as a service.
+    '''
+    if not any(name.endswith(suffix) for suffix in VALID_UNIT_TYPES):
         name += '.service'
     return 'systemctl {0} {1}'.format(action, name)
+
+def _get_all_unit_files():
+    '''
+    Get all unit files and their state. Unit files ending in .service
+    are normalized so that they can be referenced without a type suffix.
+    '''
+    rexp = re.compile('(?m)^(?P<name>.+)\.(?P<type>' +
+                      '|'.join(VALID_UNIT_TYPES) +
+                      ')\s+(?P<state>.+)$')
+
+    out = __salt__['cmd.run_stdout']('systemctl list-unit-files')
+
+    ret = {}
+    for match in rexp.finditer(out):
+        name = match.group('name')
+        if match.group('type') != 'service':
+            name += '.' + match.group('type')
+        ret[name] = match.group('state')
+    return ret
 
 
 def get_enabled():
@@ -36,9 +59,9 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = []
-    for serv in get_all():
-        if not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', serv)):
-            ret.append(serv)
+    for name, state in enumerate(_get_all_unit_files()):
+        if state == 'enabled':
+            ret.append(name)
     return sorted(ret)
 
 
@@ -51,9 +74,9 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = []
-    for serv in get_all():
-        if __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', serv)):
-            ret.append(serv)
+    for name, state in enumerate(_get_all_unit_files()):
+        if state == 'disabled':
+            ret.append(name)
     return sorted(ret)
 
 
@@ -65,13 +88,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    ret = set()
-    for sdir in ('/lib/systemd/system', '/etc/systemd/system'):
-        if os.path.isdir(sdir):
-            for fn_ in os.listdir(sdir):
-                if fn_.endswith('.service'):
-                    ret.add(fn_[:fn_.rindex('.')])
-    return sorted(list(ret))
+    return sorted(_get_all_unit_files().keys())
 
 
 def start(name):
