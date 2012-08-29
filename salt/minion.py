@@ -484,10 +484,6 @@ class Minion(object):
                 self.opts['sock_dir'],
                 'minion_event_{0}_pub.ipc'.format(self.opts['id'])
                 )
-        if os.path.exists(epub_sock_path):
-            err = 'Minion with the same id has been detected on this system'
-            log.critical(err)
-            sys.exit(4)
         epull_sock_path = os.path.join(
                 self.opts['sock_dir'],
                 'minion_event_{0}_pull.ipc'.format(self.opts['id'])
@@ -593,7 +589,6 @@ class Minion(object):
                             pass
                 except Exception as exc:
                     log.critical(traceback.format_exc())
-
 
 
 class Syndic(salt.client.LocalClient, Minion):
