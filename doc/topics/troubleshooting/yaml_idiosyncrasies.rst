@@ -179,24 +179,29 @@ YAML support only plain ASCII
 According to YAML specification, only ASCII characters can be used.
 
 Within double-quotes, special characters may be represented with C-style
-escape sequences starting with a backslash ( \ ).
+escape sequences starting with a backslash ( \\ ).
 
 Examples:
 
-.. code-bloc:: yaml
+.. code-block:: yaml
+
     - micro: "\u00b5"
     - copyright: "\u00A9"
     - A: "\x41"
     - alpha: "\u0251"
     - Alef: "\u05d0"
 
-A list of available Unicode characters can be found here:
 
-.. _`List of Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
+    
+List of useable `Unicode characters`_  will help you to identify correct numbers.
+
+.. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
+
 
 Python can also be used to discover the Unicode number for a character:
 
-.. code-bloc:: python
+.. code-block:: python
+
     repr(u"Text with wrong characters i need to figure out")
 
 This shell command can find wrong characters in your SLS files:
