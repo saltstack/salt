@@ -63,7 +63,7 @@ def mode(name):
            'result': False,
            'comment': '',
            'changes': {}}
-    tmode = _refine_mode(mode)
+    tmode = _refine_mode(name)
     if tmode == 'unknown':
         ret['comment'] = '{0} is not an accepted mode'.format(name)
         return ret
