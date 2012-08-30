@@ -22,7 +22,6 @@ def active():
     perspective
     '''
     ret = {}
-    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
     client = salt.client.LocalClient(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     for minion, data in active_.items():
