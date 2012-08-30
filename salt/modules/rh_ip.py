@@ -231,7 +231,6 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     valid = ['list of ips (up to 16)']
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
-            target_length = len(opts['arp_ip_target'])
             if 1 <= len(opts['arp_ip_target']) <= 16:
                 bond.update({'arp_ip_target': []})
                 for ip in opts['arp_ip_target']:
@@ -723,7 +722,6 @@ def build_bond(iface, settings):
         salt '*' ip.build_bond bond0 mode=balance-alb
     '''
     rh_major = __grains__['osrelease'][:1]
-    rh_minor = __grains__['osrelease'][2:]
 
     opts = _parse_settings_bond(settings, iface)
     template = env.get_template('conf.jinja')
@@ -751,7 +749,6 @@ def build_interface(iface, iface_type, enabled, settings):
         salt '*' ip.build_interface eth0 eth <settings>
     '''
     rh_major = __grains__['osrelease'][:1]
-    rh_minor = __grains__['osrelease'][2:]
 
     iface = iface.lower()
     iface_type = iface_type.lower()

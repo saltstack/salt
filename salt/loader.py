@@ -555,7 +555,7 @@ class Loader(object):
                 continue
             try:
                 ret = fun()
-            except Exception as exc:
+            except Exception:
                 trb = traceback.format_exc()
                 log.critical(('Failed to load grains defined in grain file '
                               '{0} in function {1}, error:\n{2}').format(

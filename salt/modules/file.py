@@ -14,6 +14,7 @@ import shutil
 import stat
 import sys
 import getpass
+import hashlib
 import fnmatch
 try:
     import grp

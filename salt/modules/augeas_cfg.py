@@ -7,6 +7,7 @@ try:
     from augeas import Augeas
     load = True
 except ImportError:
+    pass
 
 
 def __virtual__():

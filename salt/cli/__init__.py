@@ -4,7 +4,6 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 import os
-import sys
 
 # Import salt components
 import salt.cli.caller
@@ -15,11 +14,9 @@ import salt.client
 import salt.output
 import salt.runner
 
-import optparse
 from salt.utils import parsers
 from salt.utils.verify import verify_env
-from salt.version import __version__ as VERSION
-from salt.exceptions import SaltInvocationError, SaltClientError, SaltException
+from salt.exceptions import SaltInvocationError, SaltClientError
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):

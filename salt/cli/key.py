@@ -57,7 +57,7 @@ class Key(object):
                 'delete': '',
                 'delete_all': False,
                 'finger': '',
-                'quiet': Fasle,
+                'quiet': False,
                 'yes': True,
                 'gen_keys': '',
                 'gen_keys_dir': '.',
@@ -335,7 +335,6 @@ class Key(object):
         Delete all keys
         '''
         # Don't ask for verification if yes is not set
-        yes = self.opts.get('yes', True)
         del_ = set()
         for dir in ("acc", "rej", "pre"):
             for key in self._keys(dir):

@@ -188,7 +188,6 @@ def auth_keys(user, config='.ssh/authorized_keys'):
 
         salt '*' ssh.auth_keys root
     '''
-    ret = {}
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
     if not os.path.isfile(full):
@@ -277,12 +276,6 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # Not a valid line
                 lines.append(line)
                 continue
-
-            if opts:
-                # It has options, grab them
-                options = opts.split(',')
-            else:
-                options = []
 
             pkey = comps[1]
 

@@ -1,10 +1,11 @@
 '''
 Module for gathering and managing network information
 '''
-
+# Import Python libs
 import sys
 import logging
-from string import ascii_letters, digits
+
+# Import Salt libs
 from salt.utils.interfaces import *
 from salt.utils.socket_util import *
 
@@ -16,11 +17,11 @@ __outputter__ = {
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only work on posix-like systems
     '''
-
     # Disable on Windows, a specific file module exists:
     if __grains__['os'] in ('Windows',):
         return False

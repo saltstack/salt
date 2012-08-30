@@ -7,7 +7,6 @@ import os
 import copy
 import collections
 import logging
-import subprocess
 
 # Import Salt libs
 import salt.loader
@@ -16,10 +15,6 @@ import salt.minion
 import salt.crypt
 from salt._compat import string_types
 from salt.template import compile_template
-
-# Import third party libs
-import zmq
-import yaml
 
 log = logging.getLogger(__name__)
 
@@ -331,7 +326,7 @@ class Pillar(object):
                         ext.update(self.ext_pillars[key](*val))
                     else:
                         ext.update(self.ext_pillars[key](val))
-                except Exception as e:
+                except Exception:
                     log.critical('Failed to load ext_pillar {0}'.format(key))
         return ext
 

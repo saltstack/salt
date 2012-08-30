@@ -85,7 +85,7 @@ def _run(cmd,
         # Save the original command before munging it
         orig_cmd = cmd
         try:
-            p = pwd.getpwnam(runas)
+            pwd.getpwnam(runas)
         except KeyError:
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
@@ -267,9 +267,10 @@ def script(
     fd_, path = tempfile.mkstemp()
     os.close(fd_)
     if template:
-        fn_ = __salt__['cp.get_template'](source, path, template, env, **kwargs)
+        __salt__['cp.get_template'](source, path, template, env, **kwargs)
     else:
         fn_ = __salt__['cp.cache_file'](source, env)
+        shutil.copyfile(fn_, path)
     os.chmod(path, 320)
     os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(

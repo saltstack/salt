@@ -454,7 +454,7 @@ def _check_perms(name, ret, user, group, mode):
                         user,
                         group
                         )
-            except OSError, e:
+            except OSError:
                 ret['result'] = False
 
     if user:
@@ -1678,8 +1678,6 @@ def uncomment(name, regex, char='#', backup='.bak'):
     check_res, check_msg = _check_file(name)
     if not check_res:
         return _error(ret, check_msg)
-
-    unanchor_regex = regex.lstrip('^')
 
     # Make sure the pattern appears in the file
     if __salt__['file.contains_regex'](name, regex):

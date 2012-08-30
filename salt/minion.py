@@ -10,7 +10,6 @@ import multiprocessing
 import fnmatch
 import os
 import re
-import sys
 import threading
 import time
 import traceback
@@ -587,7 +586,7 @@ class Minion(object):
                             epub_sock.send(package)
                         except Exception:
                             pass
-                except Exception as exc:
+                except Exception:
                     log.critical(traceback.format_exc())
 
 
