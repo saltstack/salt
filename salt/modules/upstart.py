@@ -130,11 +130,11 @@ def _iter_service_names():
         name = os.path.basename(line)
         found.add(name)
         yield name
-        for line in glob.glob('/etc/init/*.conf'):
-            name = os.path.basename(line)[:-5]
-            if name in found:
-                continue
-            yield name
+    for line in glob.glob('/etc/init/*.conf'):
+        name = os.path.basename(line)[:-5]
+        if name in found:
+            continue
+        yield name
 
 
 def get_enabled():
