@@ -31,5 +31,5 @@ def render(template_file, env='', sls=''):
             sls=sls)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
-            'Unknown render error in yaml_mako renderer'))
+            'Unknown render error in json_mako renderer'))
     return json.loads(tmp_data['data'])
