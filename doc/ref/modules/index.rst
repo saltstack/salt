@@ -159,7 +159,7 @@ Documentation
 =============
 
 Salt modules are self documenting, the :func:`sys.doc` function will return the
-documentation for all available Facter modules:
+documentation for all available modules:
 
 .. code-block:: bash
 
