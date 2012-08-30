@@ -111,7 +111,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     stopcmd = 'sc stop "{0}"'.format(name)
-    stopped = __salt__['cmd.run'](stopcmd)
+    __salt__['cmd.run'](stopcmd)
     servicestate = status(name)
     while True:
         servicestate = status(name)
