@@ -29,7 +29,7 @@ about this, at least.
   start on ((((filesystem and runlevel [!06]) and started dbus) and (drm-device-added card0 PRIMARY_DEVICE_FOR_DISPLAY=1 or stopped udev-fallback-graphics)) or runlevel PREVLEVEL=S)
   stop on runlevel [016]
 
-DO NOT use this module on red hat systems, as red hat systems should use the
+DO NOT use this module on Red Hat systems, as Red Hat systems should use the
 rh_service module, since red hat systems support chkconfig
 '''
 # Import Python libs
@@ -100,9 +100,7 @@ def _service_is_sysv(name):
     executable, like README or skeleton.
     '''
     script = '/etc/init.d/{0}'.format(name)
-    if not _is_symlink(script):
-        return os.access(script, os.X_OK)
-    return False
+    return not _service_is_upstart(name) and os.access(script, os.X_OK)
 
 
 def _sysv_is_disabled(name):
@@ -122,6 +120,23 @@ def _sysv_is_enabled(name):
     return not _sysv_is_disabled(name)
 
 
+def _iter_service_names():
+    '''
+    Detect all of the service names available to upstart via init configuration
+    files and via classic sysv init scripts
+    '''
+    found = set()
+    for line in glob.glob('/etc/init.d/*'):
+        name = os.path.basename(line)
+        found.add(name)
+        yield name
+        for line in glob.glob('/etc/init/*.conf'):
+            name = os.path.basename(line)[:-5]
+            if name in found:
+                continue
+            yield name
+
+
 def get_enabled():
     '''
     Return the enabled services
@@ -131,8 +146,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = set()
-    for line in glob.glob('/etc/init.d/*'):
-        name = os.path.basename(line)
+    for name in _iter_service_names():
         if _service_is_upstart(name):
             if _upstart_is_enabled(name):
                 ret.add(name)
@@ -152,8 +166,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = set()
-    for line in glob.glob('/etc/init.d/*'):
-        name = os.path.basename(line)
+    for name in _iter_service_names():
         if _service_is_upstart(name):
             if _upstart_is_disabled(name):
                 ret.add(name)
