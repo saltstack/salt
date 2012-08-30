@@ -159,11 +159,12 @@ def install(pkgs=None,
 
     if requirements:
         if requirements.startswith('salt://'):
-            requirements = __salt__['cp.cache_file'](requirements)
-            __salt__['cmd.run']('cp -f {file} /tmp/requirements.txt'.format(file=requirements))
-            requirements = '/tmp/requirements.txt'
+            req = __salt__['cp.cache_file'](requirements)
+            fd_, treq = tempfile.mkstemp()
+            os.close(fd_)
+            shutil.copyfile(req, treq)
         cmd = '{cmd} --requirement "{requirements}" '.format(
-            cmd=cmd, requirements=requirements)
+            cmd=cmd, requirements=treq)
 
     if log:
         try:
@@ -263,7 +264,11 @@ def install(pkgs=None,
 
     result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
 
-    __salt__['cmd.run']('rm -f /tmp/requirements.txt')
+    if requirements:
+        try:
+            os.remove(treq)
+        except Exception:
+            pass
 
     return result
 
@@ -328,11 +333,12 @@ def uninstall(pkgs=None,
 
     if requirements:
         if requirements.startswith('salt://'):
-            requirements = __salt__['cp.cache_file'](requirements)
-            __salt__['cmd.run']('cp -f {file} /tmp/requirements.txt'.format(file=requirements))
-            requirements = '/tmp/requirements.txt'
+            req = __salt__['cp.cache_file'](requirements)
+            fd_, treq = tempfile.mkstemp()
+            os.close(fd_)
+            shutil.copyfile(req, treq)
         cmd = '{cmd} --requirements "{requirements}" '.format(
-            cmd=cmd, requirements=requirements)
+            cmd=cmd, requirements=treq)
 
     if log:
         try:
@@ -357,7 +363,11 @@ def uninstall(pkgs=None,
 
     result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
 
-    __salt__['cmd.run']('rm -f /tmp/requirements.txt')
+    if requirements:
+        try:
+            os.remove(treq)
+        except Exception:
+            pass
 
     return result
 
