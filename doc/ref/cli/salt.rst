@@ -108,7 +108,7 @@ Options
 .. option:: --return
 
     Chose an alternative returner to call on the minion, if an alternative
-    returner is used then the return will not come back tot he command line
+    returner is used then the return will not come back to the command line
     but will be sent to the specified return system.
 
 .. option:: -Q, --query
