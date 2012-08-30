@@ -12,18 +12,16 @@ Add the following values in /etc/salt/minion for the
 CA module to function properly::
 
 ca.cert_base_path: '/etc/pki/koji'
-
-
 '''
 
+# Import Python libs
 import os
-import sys
 import time
 import logging
 import hashlib
 import OpenSSL
 
-import salt.utils
+# Import Salt libs
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -32,27 +30,39 @@ def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-
     return 'ca'
 
+
 def _cert_base_path():
+    '''
+    Return the base path for certs
+    '''
     if 'ca.cert_base_path' in __opts__:
         return __opts__['ca.cert_base_path']
-    raise CommandExecutionError("Please set the 'ca.cert_base_path' in the minion configuration")
+    raise CommandExecutionError(
+            "Please set the 'ca.cert_base_path' in the minion configuration"
+            )
 
 
 def _new_serial(ca_name, CN):
-
     '''
-    Return a serial number in hex using md5sum, based upon the the ca_name and CN values
+    Return a serial number in hex using md5sum, based upon the the ca_name and
+    CN values
 
     ca_name
         name of the CA
     CN
         common name in the request
     '''
-
-    hashnum = int(hashlib.md5('{0}_{1}_{2}'.format(ca_name, CN, int(time.time()))).hexdigest(), 16)
+    hashnum = int(
+            hashlib.md5(
+                '{0}_{1}_{2}'.format(
+                    ca_name,
+                    CN,
+                    int(time.time()))
+                ).hexdigest(),
+            16
+            )
     log.debug("Hashnum: {0}".format(hashnum))
 
     # record the hash somewhere
@@ -70,7 +80,6 @@ def _new_serial(ca_name, CN):
     return hashnum
 
 def _write_cert_to_database(ca_name, cert):
-
     '''
     write out the index.txt database file in the appropriate directory to
     track certificates
@@ -80,7 +89,6 @@ def _write_cert_to_database(ca_name, cert):
     cert
         certificate to be recorded
     '''
-
     index_file = "{0}/{1}/index.txt".format(_cert_base_path(), ca_name)
 
     expire_date = cert.get_notAfter()
@@ -93,7 +101,11 @@ def _write_cert_to_database(ca_name, cert):
     subject += '/'.join(['{0}={1}'.format(x,y) for x,y in cert.get_subject().get_components()])
     subject += '\n'
 
-    index_data = "V\t{0}\t\t{1}\tunknown\t{2}".format(expire_date, serial_number, subject)
+    index_data = "V\t{0}\t\t{1}\tunknown\t{2}".format(
+            expire_date,
+            serial_number,
+            subject
+            )
 
     with open(index_file, 'a+') as f:
         f.write(index_data)
@@ -112,8 +124,17 @@ def _ca_exists(ca_name):
         return True
     return False
 
-def create_ca(ca_name, bits=2048, days=365, CN='localhost', C="US", ST="Utah", L="Centerville", O="Salt Stack", OU=None, emailAddress='xyz@pdq.net'):
-
+def create_ca(
+        ca_name,
+        bits=2048,
+        days=365,
+        CN='localhost',
+        C="US",
+        ST="Utah",
+        L="Centerville",
+        O="Salt Stack",
+        OU=None,
+        emailAddress='xyz@pdq.net'):
     '''
     Create a Certificate Authority (CA)
 
@@ -151,12 +172,11 @@ def create_ca(ca_name, bits=2048, days=365, CN='localhost', C="US", ST="Utah", L
 
     /etc/pki/koji/koji_ca_cert.crt
     '''
-
     if _ca_exists(ca_name):
-        return "Certificate for CA named '{0}' already exists".format(ca_name)
+        return 'Certificate for CA named "{0}" already exists'.format(ca_name)
 
-    if not os.path.exists("{0}/{1}".format(_cert_base_path(), ca_name)):
-        os.makedirs("{0}/{1}".format(_cert_base_path(), ca_name))
+    if not os.path.exists('{0}/{1}'.format(_cert_base_path(), ca_name)):
+        os.makedirs('{0}/{1}'.format(_cert_base_path(), ca_name))
 
     key = OpenSSL.crypto.PKey()
     key.generate_key(OpenSSL.crypto.TYPE_RSA, 2048)
@@ -179,36 +199,57 @@ def create_ca(ca_name, bits=2048, days=365, CN='localhost', C="US", ST="Utah", L
     ca.set_pubkey(key)
 
     ca.add_extensions([
-      OpenSSL.crypto.X509Extension("basicConstraints", True,
-                                   "CA:TRUE, pathlen:0"),
-      OpenSSL.crypto.X509Extension("keyUsage", True,
-                                   "keyCertSign, cRLSign"),
-      OpenSSL.crypto.X509Extension("subjectKeyIdentifier", False, "hash",
+      OpenSSL.crypto.X509Extension('basicConstraints', True,
+                                   'CA:TRUE, pathlen:0'),
+      OpenSSL.crypto.X509Extension('keyUsage', True,
+                                   'keyCertSign, cRLSign'),
+      OpenSSL.crypto.X509Extension('subjectKeyIdentifier', False, 'hash',
                                    subject=ca)
       ])
 
     ca.add_extensions([
-      OpenSSL.crypto.X509Extension('authorityKeyIdentifier', False, 'issuer:always,keyid:always',
-                                   issuer=ca)
+      OpenSSL.crypto.X509Extension(
+          'authorityKeyIdentifier',
+          False,
+          'issuer:always,keyid:always',
+          issuer=ca
+          )
       ])
-    ca.sign(key, "sha1")
+    ca.sign(key, 'sha1')
 
 
-    ca_key = open("{0}/{1}/{2}_ca_cert.key".format(_cert_base_path(), ca_name, ca_name), 'w')
+    ca_key = open(
+            '{0}/{1}/{2}_ca_cert.key'.format(
+                _cert_base_path(),
+                ca_name,
+                ca_name
+                ),
+            'w'
+            )
     ca_key.write(OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key))
     ca_key.close()
 
-    ca_crt = open("{0}/{1}/{2}_ca_cert.crt" % (_cert_base_path(), ca_name, ca_name), 'w')
+    ca_crt = open('{0}/{1}/{2}_ca_cert.crt' % (_cert_base_path(), ca_name, ca_name), 'w')
     ca_crt.write(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca))
     ca_crt.close()
 
     _write_cert_to_database(ca_name, ca)
 
-    return "Created CA '{0}', certificate is located at '{1}/{2}/{3}_ca_cert.crt'".format(ca_name, _cert_base_path(), ca_name, ca_name)
+    return 'Created CA "{0}", certificate is located at "{1}/{2}/{3}_ca_cert.crt"'.format(
+            ca_name, _cert_base_path(), ca_name, ca_name
+            )
 
 
-def create_csr(ca_name, bits=2048, CN='localhost', C="US", ST="Utah", L="Centerville", O="Salt Stack", OU=None, emailAddress='xyz@pdq.net'):
-
+def create_csr(
+        ca_name,
+        bits=2048,
+        CN='localhost',
+        C="US",
+        ST="Utah",
+        L="Centerville",
+        O="Salt Stack",
+        OU=None,
+        emailAddress='xyz@pdq.net'):
     '''
     Create a Certificate Signing Request (CSR) for a
     particular Certificate Authority (CA)
