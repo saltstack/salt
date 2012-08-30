@@ -278,7 +278,7 @@ class Loader(object):
                 log.info('Cython is enabled in the options but not present '
                          'in the system path. Skipping Cython modules.')
         try:
-            if full.endswith('.pyx'):
+            if full.endswith('.pyx') and cython_enabled:
                 # If there's a name which ends in .pyx it means the above
                 # cython_enabled is True. Continue...
                 mod = pyximport.load_module(name, full, tempfile.gettempdir())
