@@ -456,6 +456,9 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     fd_, tgt = tempfile.mkstemp(prefix=bname, dir=dname)
     os.close(fd_)
     shutil.copyfile(source, tgt)
+    mask = os.umask(0)
+    os.umask(mask)
+    os.chmod(tgt, 0666 - mask)
     bkroot = ''
     if cachedir:
         bkroot = os.path.join(cachedir, 'file_backup')
