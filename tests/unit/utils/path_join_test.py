@@ -17,7 +17,7 @@ import tempfile
 if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from saltunittest import TestCase, TestLoader, TextTestRunner
+from saltunittest import TestCase, TextTestRunner
 from salt.utils import path_join
 
 class PathJoinTestCase(TestCase):
