@@ -1,7 +1,7 @@
 '''
 Support for Tomcat
 '''
-
+# Import Python Libs
 import os
 
 
@@ -25,7 +25,6 @@ def version():
     '''
     cmd = __catalina_home() + '/bin/catalina.sh version'
     out = __salt__['cmd.run'](cmd).split('\n')
-    ret = out[0].split(': ')
     for line in out:
         if not line:
             continue
@@ -71,4 +70,4 @@ def signal(signal=None):
         return
 
     cmd = __catalina_home() + '/bin/catalina.sh %s' % valid_signals[signal]
-    out = __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd)
