@@ -5,8 +5,9 @@ Install Python packages with pip to either the system or a virtualenv
 import os
 import tempfile
 import shutil
-
+# Import Salt libs
 from salt.exceptions import CommandExecutionError
+
 
 def _get_pip_bin(bin_env):
     '''
