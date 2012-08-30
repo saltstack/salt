@@ -2,7 +2,6 @@
 Provide the service module for systemd
 '''
 # Import Python libs
-import os
 import re
 # Import Salt libs
 import salt.utils

@@ -336,7 +336,7 @@ def db_exists(name):
     query = "SHOW DATABASES LIKE '%s'" % name
     log.debug("Doing query: {0}".format(query,))
     cur.execute( query )
-    result_set = cur.fetchall()
+    cur.fetchall()
     return cur.rowcount == 1
 
 

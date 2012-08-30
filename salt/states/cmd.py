@@ -38,7 +38,6 @@ import copy
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils.templates
 
 
 def _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell):

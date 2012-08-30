@@ -37,7 +37,7 @@ def clean_proc(proc, wait_for_kill=10):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
                 os.kill(signal.SIGKILL, proc.pid)
-    except (AssertionError, AttributeError) as e:
+    except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
