@@ -8,7 +8,7 @@
 """
 
 import re
-from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
+from saltunittest import TestCase, TestLoader, TextTestRunner
 
 from salt.utils import build_whitepace_splited_regex
 
