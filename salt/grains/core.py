@@ -154,6 +154,11 @@ def _memdata(osdata):
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
+    elif osdata['kernel'] == 'SunOS':
+        for line in __salt__['cmd.run']('/usr/sbin/prtconf 2>/dev/null').split('\n'):
+            comps = line.split(' ')	
+            if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
+                grains['mem_total'] = int(comps[2].strip()) 
     elif osdata['kernel'] == 'Windows':
         for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
             comps = line.split(':')
@@ -275,6 +280,8 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
+    if osdata['os'] == 'SunOS':
+        grains['ps'] = '/usr/ucb/ps auxwww'
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
