@@ -56,7 +56,11 @@ def _runlevel():
     things will likely happen when 'salt' is run in single-user mode.
     '''
     out = __salt__['cmd.run']('runlevel').strip()
-    return out.split()[1]
+    try:
+        return out.split()[1]
+    except IndexError:
+        # The runlevel is unknown, return 3 for a default
+        return '3'
 
 
 def _is_symlink(name):
