@@ -236,7 +236,7 @@ def remove(pkg):
     '''
     old = list_pkgs()
     cmd = 'yum -q -y remove ' + pkg
-    retcode = __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
 

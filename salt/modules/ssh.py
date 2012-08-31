@@ -269,7 +269,6 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # not an auth ssh key, perhaps a blank line
                 continue
 
-            opts = ln.group(1)
             comps = ln.group(2).split()
 
             if len(comps) < 2:
