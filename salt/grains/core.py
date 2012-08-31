@@ -132,6 +132,24 @@ def _bsd_cpudata(osdata):
     return grains
 
 
+def _sunos_cpudata(osdata):
+    '''
+    Return the cpu information for Solaris-like systems
+    '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    grains = {'num_cpus': 0}
+
+    grains['cpuarch'] = __salt__['cmd.run']('uname -p').strip()
+    for line in __salt__['cmd.run']('/usr/sbin/psrinfo 2>/dev/null').split('\n'):
+        grains['num_cpus'] += 1
+    grains['cpu_model'] = __salt__['cmd.run']('kstat -p cpu_info:0:cpu_info0:implementation').split()[1].strip()
+    
+    return grains
+
+
 def _memdata(osdata):
     '''
     Gather information about the system memory
@@ -477,9 +495,10 @@ def os_data():
         if not 'os' in grains:
             grains['os'] = 'Unknown {0}'.format(grains['kernel'])
             grains['os_family'] = 'Unknown'
-    elif grains['kernel'] == 'sunos':
+    elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
         grains['os_family'] = 'Solaris'
+        grains.update(_sunos_cpudata(grains))
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
         grains['os_family'] = 'VMWare'
