@@ -60,7 +60,7 @@ def _runlevel():
         return out.split()[1]
     except IndexError:
         # The runlevel is unknown, return 3 for a default
-        return '3'
+        return '2'
 
 
 def _is_symlink(name):
