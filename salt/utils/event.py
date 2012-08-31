@@ -39,7 +39,7 @@ class SaltEvent(object):
     def __load_uri(self, sock_dir, node, **kwargs):
         '''
         Return the string uri for the location of the pull and pub sockets to
-        use for firing ind listening to events
+        use for firing and listening to events
         '''
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
@@ -61,11 +61,11 @@ class SaltEvent(object):
         else:
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
-                    'minion_event_{0}_pub.ipc'.format(kwargs.get('id'), '')
+                    'minion_event_{0}_pub.ipc'.format(kwargs.get('id', ''))
                     ))
             pulluri = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
-                    'minion_event_{0}_pull.ipc'.format(kwargs.get('id'), '')
+                    'minion_event_{0}_pull.ipc'.format(kwargs.get('id', ''))
                     ))
         return puburi, pulluri
 
@@ -143,8 +143,8 @@ class MinionEvent(SaltEvent):
     '''
     Create a master event management object
     '''
-    def __init__(self, sock_dir):
-        super(MinionEvent, self).__init__(sock_dir, 'minion')
+    def __init__(self, sock_dir, **kwargs):
+        super(MinionEvent, self).__init__(sock_dir, 'minion', **kwargs)
 
 
 class EventPublisher(multiprocessing.Process):
