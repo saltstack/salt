@@ -30,7 +30,7 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, sock_dir, node, **kwargs):
+    def __init__(self, node, sock_dir=None, **kwargs):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
@@ -142,7 +142,7 @@ class MasterEvent(SaltEvent):
     Create a master event management object
     '''
     def __init__(self, sock_dir):
-        super(MasterEvent, self).__init__(sock_dir, 'master')
+        super(MasterEvent, self).__init__('master', sock_dir)
         self.connect_pub()
 
 
@@ -150,8 +150,8 @@ class MinionEvent(SaltEvent):
     '''
     Create a master event management object
     '''
-    def __init__(self, sock_dir, **kwargs):
-        super(MinionEvent, self).__init__(sock_dir, 'minion', **kwargs)
+    def __init__(self, **kwargs):
+        super(MinionEvent, self).__init__('minion', **kwargs)
 
 
 class EventPublisher(multiprocessing.Process):
