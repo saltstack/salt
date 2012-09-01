@@ -52,23 +52,23 @@ class SaltEvent(object):
                     sock_dir,
                     'master_event_pull.ipc'
                     ))
-            return puburi, pulluri
-        if kwargs.get('ipc_mode', '') == 'tcp':
-            puburi = 'tcp://127.0.0.1:{0}'.format(
-                    kwargs.get('tcp_pub_port', 4510)
-                    )
-            pulluri = 'tcp://127.0.0.1:{0}'.format(
-                    kwargs.get('tcp_pull_port', 4511)
-                    )
         else:
-            puburi = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'minion_event_{0}_pub.ipc'.format(kwargs.get('id', ''))
-                    ))
-            pulluri = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'minion_event_{0}_pull.ipc'.format(kwargs.get('id', ''))
-                    ))
+            if kwargs.get('ipc_mode', '') == 'tcp':
+                puburi = 'tcp://127.0.0.1:{0}'.format(
+                        kwargs.get('tcp_pub_port', 4510)
+                        )
+                pulluri = 'tcp://127.0.0.1:{0}'.format(
+                        kwargs.get('tcp_pull_port', 4511)
+                        )
+            else:
+                puburi = 'ipc://{0}'.format(os.path.join(
+                        sock_dir,
+                        'minion_event_{0}_pub.ipc'.format(kwargs.get('id', ''))
+                        ))
+                pulluri = 'ipc://{0}'.format(os.path.join(
+                        sock_dir,
+                        'minion_event_{0}_pull.ipc'.format(kwargs.get('id', ''))
+                        ))
         log.debug(
             '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
         )
