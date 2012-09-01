@@ -21,7 +21,7 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.event = salt.utils.event.SaltEvent(opts['sock_dir'], 'master')
+        self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
         self.colors = salt.utils.get_colors(
                 not bool(self.opts.get('no_color', False))
                 )
