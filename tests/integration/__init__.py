@@ -245,9 +245,15 @@ class ModuleCase(TestCase):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
+        know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
             'minion', function, arg, timeout=100, kwarg=kwargs
         )
+        if orig['minion'] is None and function not in know_to_return_none:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
+                'the minion'.format(function)
+            )
         return orig['minion']
 
     def state_result(self, ret):
