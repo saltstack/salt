@@ -33,8 +33,8 @@ class TestSaltEvent(TestCase):
         )
 
     def test_minion_event(self):
-        opts = dict(id='foo')
-        me = event.MinionEvent(SOCK_DIR, **opts)
+        opts = dict(id='foo', sock_dir=SOCK_DIR)
+        me = event.MinionEvent(**opts)
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(
@@ -50,12 +50,12 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_tcp_ipc_mode(self):
         opts = dict(id='foo', ipc_mode='tcp')
-        me = event.MinionEvent(SOCK_DIR, **opts)
+        me = event.MinionEvent(**opts)
         self.assertEqual(me.puburi, 'tcp://127.0.0.1:4510')
         self.assertEqual(me.pulluri, 'tcp://127.0.0.1:4511')
 
     def test_minion_event_no_id(self):
-        me = event.MinionEvent(SOCK_DIR)
+        me = event.MinionEvent(sock_dir=SOCK_DIR)
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(
