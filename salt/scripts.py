@@ -22,6 +22,8 @@ def salt_minion():
     '''
     Kick off a salt minion daemon.
     '''
+    if '' in sys.path:
+        sys.path.remove('')
     minion = salt.Minion()
     minion.start()
 
@@ -66,7 +68,8 @@ def salt_call():
     Directly call a salt command in the modules, does not require a running
     salt minion to run.
     '''
-    sys.path.remove('')
+    if '' in sys.path:
+        sys.path.remove('')
     try:
         client = salt.cli.SaltCall()
         client.run()
@@ -78,7 +81,8 @@ def salt_run():
     '''
     Execute a salt convenience routine.
     '''
-    sys.path.remove('')
+    if '' in sys.path:
+        sys.path.remove('')
     try:
         client = salt.cli.SaltRun()
         client.run()
@@ -91,7 +95,8 @@ def salt_main():
     Publish commands to the salt system from the command line on the
     master.
     '''
-    sys.path.remove('')
+    if '' in sys.path:
+        sys.path.remove('')
     try:
         client = salt.cli.SaltCMD()
         client.run()
