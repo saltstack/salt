@@ -70,6 +70,7 @@ A few examples of salt states from the community:
 * https://github.com/uggedal/states
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
 * https://github.com/rentalita/ubuntu-setup/
+* https://github.com/brutasse/states
 
 Follow on ohloh
 ===============
