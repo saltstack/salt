@@ -132,9 +132,11 @@ Check your file descriptor limit with::
 
     ulimit -n
 
-If it is less than 1024, you should increase it with::
+If it is less than 2047, you should increase it with::
 
-    ulimit -n 1024
+    ulimit -n 2047
+    (or "limit descriptors 2047" for c-shell)
+
 
 Running the tests
 ~~~~~~~~~~~~~~~~~
