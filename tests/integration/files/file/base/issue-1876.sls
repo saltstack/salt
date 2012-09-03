@@ -6,3 +6,4 @@
     
   file.append:
     - text: foo
+
