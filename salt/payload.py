@@ -120,12 +120,13 @@ class SREQ(object):
     '''
     Create a generic interface to wrap salt zeromq req calls. 
     '''
-    def __init__(self, master, serial='msgpack', linger=0):
+    def __init__(self, master, id_, serial='msgpack', linger=0):
         self.master = master
         self.serial = Serial(serial)
         context = zmq.Context()
         self.socket = context.socket(zmq.REQ)
         self.socket.linger = linger
+        self.socket.setsockopt(zmq.IDENTITY, id_)
         self.socket.connect(master)
 
     def send(self, enc, load, tries=1, timeout=60):
