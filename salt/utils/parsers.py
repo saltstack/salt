@@ -22,7 +22,6 @@ def _sorted(mixins_or_funcs):
 
 
 class MixInMeta(type):
-
     # This attribute here won't actually do anything. But, if you need to
     # specify an order or a dependency within the mix-ins, please define the
     # attribute on your own MixIn
@@ -48,7 +47,7 @@ class OptionParserMeta(MixInMeta):
         if not hasattr(instance, '_mixin_after_parsed_funcs'):
             instance._mixin_after_parsed_funcs = []
 
-        for base in _sorted(bases+(instance,)):
+        for base in _sorted(bases + (instance,)):
             func = getattr(base, '_mixin_setup', None)
             if func is not None and func not in instance._mixin_setup_funcs:
                 instance._mixin_setup_funcs.append(func)
@@ -155,6 +154,7 @@ class DeprecatedConfigMessage(object):
             '-c/--config-dir to point to a directory which holds all of '
             'salt\'s configuration files.\n'
         )
+
 
 class ConfigDirMixIn(DeprecatedConfigMessage):
     __metaclass__ = MixInMeta
@@ -273,8 +273,8 @@ class LogLevelMixIn(object):
             choices=list(log.LOG_LEVELS),
             help=('Logging log level. One of {0}. For the logfile settings see '
                   'the configuration file. Default: \'{1}\'.').format(
-                    ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
-                    getattr(self, '_default_logging_level_', 'warning')
+                      ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                      getattr(self, '_default_logging_level_', 'warning')
             )
         )
 
@@ -309,6 +309,7 @@ class LogLevelMixIn(object):
             log_format=self.config['log_fmt_console'],
             date_format=self.config['log_datefmt']
         )
+
 
 class RunUserMixin(object):
     __metaclass__ = MixInMeta
@@ -544,7 +545,6 @@ class OutputOptionsMixIn(object):
             help='Disable all colored output'
         )
 
-
         for option in group.option_list:
             def process(opt):
                 if getattr(self.options, opt.dest):
@@ -672,7 +672,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'send the return data from the command back to the master, '
                   'but the return data can be redirected into any number of '
                   'systems, databases or applications.')
-            )
+        )
         self.add_option(
             '-Q', '--query',
             action='store_true',
@@ -836,7 +836,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             help='Print the named key\'s fingerprint'
         )
         self.add_option_group(actions_group)
-
 
         self.add_option(
             '--key-logfile',
