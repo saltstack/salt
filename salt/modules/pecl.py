@@ -34,7 +34,7 @@ def uninstall(pecls):
     '''
     Uninstall one or several pecl extensions.
 
-    gems
+    pecls
         The pecl extensions to uninstall.
     '''
     return _pecl('uninstall {0}'.format(pecls))
@@ -44,7 +44,7 @@ def update(pecls):
     '''
     Update one or several pecl exntesions.
 
-    gems
+    pecls
         The pecl extensions to update.
     '''
     return _pecl('install -U {0}'.format(pecls))
