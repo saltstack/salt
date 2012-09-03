@@ -744,6 +744,9 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
         self.config['src'] = self.args[1:-1]
         self.config['dest'] = self.args[-1]
 
+    def setup_config(self):
+        return config.master_config(self.get_config_file_path('master'))
+
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                           OutputOptionsMixIn):
