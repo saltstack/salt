@@ -93,6 +93,7 @@ class Swarm(object):
                 'cachedir': os.path.join(dpath, 'cache'),
                 'master': self.opts['master'],
                }
+        path = os.path.join(dpath, 'minion')
         if self.opts['keep']:
             ignore = set()
             keep = self.opts['keep'].split(',')
@@ -104,7 +105,7 @@ class Swarm(object):
             data['disable_modules'] = list(ignore)
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
-        self.confs.add(path)
+        self.confs.add(dpath)
 
     def start_minions(self):
         '''
