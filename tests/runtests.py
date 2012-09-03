@@ -7,6 +7,7 @@ import sys
 import os
 import logging
 import optparse
+import resource
 
 # Import salt libs
 import saltunittest
@@ -20,6 +21,7 @@ except ImportError:
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 
 PNUM = 70
+REQUIRED_OPEN_FILES = 2048
 
 
 def run_suite(opts, path, display_name, suffix='[!_]*.py'):
@@ -54,6 +56,24 @@ def run_integration_tests(opts):
     '''
     Execute the integration tests suite
     '''
+    smax_open_files, hmax_open_files = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if smax_open_files < REQUIRED_OPEN_FILES:
+        print('~' * PNUM)
+        print('Max open files setting is too low({0}) for running the tests'.format(smax_open_files))
+        print('Trying to raise the limit to {0}'.format(REQUIRED_OPEN_FILES))
+        try:
+            resource.setrlimit(
+                resource.RLIMIT_NOFILE,
+                (REQUIRED_OPEN_FILES, 2*REQUIRED_OPEN_FILES)
+            )
+        except Exception, err:
+            print('ERROR: Failed to raise the max open files setting -> {0}'.format(err)))
+            print('Please issue the following command on your console:')
+            print('  ulimit -n {0}'.format(REQUIRED_OPEN_FILES))
+            sys.exit(1)
+        finally:
+            print('~' * PNUM)
+
     print('~' * PNUM)
     print('Setting up Salt daemons to execute tests')
     print('~' * PNUM)
