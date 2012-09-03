@@ -11,7 +11,6 @@
 import os
 import sys
 import yaml
-import time
 
 # Import salt libs
 from saltunittest import TestLoader, TextTestRunner
