@@ -61,13 +61,15 @@ def run_integration_tests(opts):
         print('~' * PNUM)
         print('Max open files setting is too low({0}) for running the tests'.format(smax_open_files))
         print('Trying to raise the limit to {0}'.format(REQUIRED_OPEN_FILES))
+        if hmax_open_files < 4096:
+            hmax_open_files = 4096  # Decent default?
         try:
             resource.setrlimit(
                 resource.RLIMIT_NOFILE,
-                (REQUIRED_OPEN_FILES, 2*REQUIRED_OPEN_FILES)
+                (REQUIRED_OPEN_FILES, hmax_open_files)
             )
         except Exception, err:
-            print('ERROR: Failed to raise the max open files setting -> {0}'.format(err)))
+            print('ERROR: Failed to raise the max open files setting -> {0}'.format(err))
             print('Please issue the following command on your console:')
             print('  ulimit -n {0}'.format(REQUIRED_OPEN_FILES))
             sys.exit(1)
