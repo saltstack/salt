@@ -230,6 +230,20 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
+def full_restart(name):
+    '''
+    Do a full restart (stop/start) of the named service
+
+    CLI Example::
+
+        salt '*' service.full_restart <service name>
+    '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
+    cmd = 'service {0} --full-restart'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
 def reload(name):
     '''
     Reload the named service

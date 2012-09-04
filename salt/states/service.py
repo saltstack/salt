@@ -363,7 +363,7 @@ def disabled(name):
     return _disable(name, None)
 
 
-def mod_watch(name, sig=None, reload=False):
+def mod_watch(name, sig=None, reload=False, full_restart=False):
     '''
     The service watcher, called to invoke the watch command.
 
@@ -376,6 +376,8 @@ def mod_watch(name, sig=None, reload=False):
     if __salt__['service.status'](name, sig):
         if 'service.reload' in __salt__ and reload:
             changes = {name: __salt__['service.reload'](name)}
+        elif 'service.full_restart' in __salt__ and full_restart:
+            changes = {name: __salt__['service.full_restart'](name)}
         else:
             changes = {name: __salt__['service.restart'](name)}
         return {'name': name,
