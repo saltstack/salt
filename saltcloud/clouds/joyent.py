@@ -2,7 +2,7 @@
 Joyent Cloud Module
 ===================
 
-The Joyent Cloud module is used to intereact with the Joyend cloud system
+The Joyent Cloud module is used to intereact with the Joyent cloud system
 
 it requires that the username and password to the joyent accound be configured
 
