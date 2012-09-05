@@ -25,7 +25,10 @@ class Key(object):
         self.colors = salt.utils.get_colors(
                 not bool(self.opts.get('no_color', False))
                 )
-        self._check_master()
+        if not opts.get('gen_keys', None):
+            # Only check for a master running IF we need it.
+            # While generating keys we don't
+            self._check_master()
 
     def _check_master(self):
         '''
@@ -426,6 +429,7 @@ class Key(object):
                     self.opts['gen_keys_dir'],
                     self.opts['gen_keys'],
                     self.opts['keysize'])
+            self._log('Keys generation complete', level='info')
             return
         if self.opts['list']:
             self._list(self.opts['list'])
