@@ -11,7 +11,7 @@ def set_pidfile(pidfile):
     Save the pidfile
     '''
     pdir = os.path.dirname(pidfile)
-    if not os.path.isdir(pdir):
+    if not os.path.isdir(pdir) and pdir:
         os.makedirs(pdir)
     try:
         with open(pidfile, 'w+') as f:

@@ -7,6 +7,9 @@ class StateModuleTest(integration.ModuleCase):
     '''
     Validate the test module
     '''
+
+    maxDiff = None
+
     def test_show_highstate(self):
         '''
         state.show_highstate
@@ -45,6 +48,42 @@ class StateModuleTest(integration.ModuleCase):
         sls = self.run_function('state.show_sls', mods='recurse_ok_two')
         self.assertIn('/etc/nagios/nrpe.cfg', sls)
 
+    def test_issue_1896_file_append_source(self):
+        '''
+        Verify that we can append a file's contents
+        '''
+        self.run_function('state.sls', mods='testappend')
+        self.run_function('state.sls', mods='testappend.step-1')
+        self.run_function('state.sls', mods='testappend.step-2')
+        self.assertMultiLineEqual("""\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# enable bash completion in interactive shells
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    . /etc/bash_completion
+fi
+
+""", open("/tmp/salttest/test.append", "r").read())
+
+        # Re-append switching order
+        self.run_function('state.sls', mods='testappend.step-2')
+        self.run_function('state.sls', mods='testappend.step-1')
+        self.assertMultiLineEqual("""\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# enable bash completion in interactive shells
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    . /etc/bash_completion
+fi
+
+""", open("/tmp/salttest/test.append", "r").read())
+
     def test_issue_1876_syntax_error(self):
         '''
         verify that we catch the following syntax error::
@@ -64,8 +103,6 @@ class StateModuleTest(integration.ModuleCase):
             'Name "/tmp/salttest/issue-1876" in sls "issue-1876" contains '
             'multiple state decs of the same type', sls
         )
-
-    maxDiff = None
 
     def test_issue_1879_too_simple_contains_check(self):
         contents = """\

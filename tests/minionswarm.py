@@ -6,6 +6,9 @@ on a single system to test scale capabilities
 
 # Import Python Libs
 import os
+import pwd
+import time
+import signal
 import optparse
 import subprocess
 import tempfile
@@ -47,6 +50,11 @@ def parse():
             action='store_true',
             help=('Run the minions with debug output of the swarm going to '
                   'the terminal'))
+    parser.add_option('--no-clean',
+            action='store_true',
+            default=False,
+            help='Don\'t cleanup temporary files/directories'
+    )
 
     options, args = parser.parse_args()
 
@@ -71,28 +79,29 @@ class Swarm(object):
         '''
         Create the shared pki directory
         '''
-        path = tempfile.mkdtemp()
-        cmd = 'salt-key --gen-keys minion --gen-keys-dir {0}'.format(path)
-        print('Creating shared pki keys for the swarm')
-        subprocess.call(cmd, shell=True)
+        path = tempfile.mkdtemp(prefix='mswarm-pki-')
+        cmd = 'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} --key-logfile {1}'
+        print('Creating shared pki keys for the swarm on: {0}'.format(path))
+        subprocess.call(cmd.format(path, os.path.join(path, 'keys.log')), shell=True)
+        print('Keys generated')
         return path
 
     def mkconf(self):
         '''
         Create a config file for a single minion
         '''
-        fd_, path = tempfile.mkstemp()
-        path = '{0}{1}'.format(
-                path,
-                hashlib.md5(str(random.randint(0, 999999))).hexdigest())
-        os.close(fd_)
-        dpath = '{0}.d'.format(path)
-        os.makedirs(dpath)
-        data = {'id': os.path.basename(path),
+        minion_id = hashlib.md5(str(random.randint(0, 999999))).hexdigest()
+        dpath = tempfile.mkdtemp(
+            prefix='mswarm-{0}'.format(minion_id), suffix='.d'
+        )
+        data = {'id': minion_id,
+                'user': pwd.getpwuid(os.getuid()).pw_name,
                 'pki_dir': self.pki,
                 'cachedir': os.path.join(dpath, 'cache'),
                 'master': self.opts['master'],
+                'log_file': os.path.join(dpath, 'minion.log')
                }
+        path = os.path.join(dpath, 'minion')
         if self.opts['keep']:
             ignore = set()
             keep = self.opts['keep'].split(',')
@@ -104,7 +113,7 @@ class Swarm(object):
             data['disable_modules'] = list(ignore)
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
-        self.confs.add(path)
+        self.confs.add(dpath)
 
     def start_minions(self):
         '''
@@ -133,10 +142,18 @@ class Swarm(object):
         Clean up the config files
         '''
         for path in self.confs:
+            pidfile = '{0}.pid'.format(path)
             try:
-                os.remove(path)
-                os.remove('{0}.pid'.format(path))
-                shutil.rmtree('{0}.d'.format(path))
+                try:
+                    pid = int(open(pidfile).read().strip())
+                    os.kill(pid, signal.SIGTERM)
+                except ValueError:
+                    pass
+                #os.remove(path)
+                if os.path.exists(pidfile):
+                    os.remove(pidfile)
+                if not self.opts['no_clean']:
+                    shutil.rmtree(path)
             except (OSError, IOError):
                 pass
 
@@ -144,9 +161,33 @@ class Swarm(object):
         '''
         Start the minions!!
         '''
+        print('Starting minions...')
         self.prep_configs()
         self.start_minions()
+        print('All {0} minions have started.'.format(self.opts['minions']))
+        print('Waiting for CTRL-C to properly shutdown minions...')
+        while True:
+            try:
+                time.sleep(5)
+            except KeyboardInterrupt:
+                print('\nShutting down minions')
+                self.clean_configs()
+                break
+
+    def shutdown(self):
+        print('Killing any remaining running minions')
+        subprocess.call(
+            "kill -KILL $(ps aux | grep python | grep \"salt-minion\" | awk '{print $2}')",
+            shell=True
+        )
+        if not self.opts['no_clean']:
+            print('Remove ALL related temp files/directories')
+            subprocess.call('rm -rf /tmp/mswarm*', shell=True)
+        print('Done')
 
 if __name__ == '__main__':
     swarm = Swarm(parse())
-    swarm.start()
+    try:
+        swarm.start()
+    finally:
+        swarm.shutdown()

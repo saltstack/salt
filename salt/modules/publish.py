@@ -115,7 +115,7 @@ def runner(fun, arg=None):
     '''
     arg = normalize_arg(arg)
 
-    sreq = salt.payload(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {

@@ -502,6 +502,17 @@ class Minion(object):
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
 
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(
+                self.__class__.__name__, epub_uri
+            )
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(
+                self.__class__.__name__, epull_uri
+            )
+        )
+
         # Create the pull socket
         epull_sock = context.socket(zmq.PULL)
         # Bind the event sockets

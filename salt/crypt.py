@@ -244,7 +244,10 @@ class Auth(object):
                     )
         except SaltClientError:
             return 'retry'
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.payload.SREQ(
+                self.opts['master_uri'],
+                self.opts.get('id', '')
+                )
         try:
             payload = sreq.send_auto(self.minion_sign_in_payload())
         except SaltReqTimeoutError:

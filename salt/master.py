@@ -299,7 +299,7 @@ class Publisher(multiprocessing.Process):
                             con = True
                         except zmq.ZMQError:
                             pass
-                
+
         except KeyboardInterrupt:
             pub_sock.close()
             pull_sock.close()
@@ -484,10 +484,7 @@ class AESFuncs(object):
     #
     def __init__(self, opts, crypticle):
         self.opts = opts
-        self.event = salt.utils.event.SaltEvent(
-                self.opts['sock_dir'],
-                'master'
-                )
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         # Make a client
@@ -1005,10 +1002,7 @@ class ClearFuncs(object):
         self.master_key = master_key
         self.crypticle = crypticle
         # Create the event manager
-        self.event = salt.utils.event.SaltEvent(
-                self.opts['sock_dir'],
-                'master'
-                )
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
@@ -1070,10 +1064,11 @@ class ClearFuncs(object):
         fmode = os.stat(filename)
 
         if os.getuid() == 0:
-            if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                if self.opts.get('permissive_pki_access', False) \
-                  and fmode.st_gid in groups:
-                    return True
+            if fmode.st_uid == uid or not fmode.st_gid == gid:
+                return True
+            elif self.opts.get('permissive_pki_access', False) \
+                    and fmode.st_gid in groups:
+                return True
         else:
             if stat.S_IWOTH & fmode.st_mode:
                 # don't allow others to write to the file

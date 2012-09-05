@@ -15,6 +15,7 @@ Manage events
 # Import Python libs
 import os
 import errno
+import logging
 import multiprocessing
 
 # Import Third Party libs
@@ -23,12 +24,13 @@ import zmq
 # Import Salt libs
 import salt.payload
 
+log = logging.getLogger(__name__)
 
 class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, sock_dir, node, **kwargs):
+    def __init__(self, node, sock_dir=None, **kwargs):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
@@ -50,23 +52,29 @@ class SaltEvent(object):
                     sock_dir,
                     'master_event_pull.ipc'
                     ))
-            return puburi, pulluri
-        if kwargs.get('ipc_mode', '') == 'tcp':
-            puburi = 'tcp://127.0.0.1:{0}'.format(
-                    kwargs.get('tcp_pub_port', 4510)
-                    )
-            pulluri = 'tcp://127.0.0.1:{0}'.format(
-                    kwargs.get('tcp_pull_port', 4511)
-                    )
         else:
-            puburi = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'minion_event_{0}_pub.ipc'.format(kwargs.get('id', ''))
-                    ))
-            pulluri = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'minion_event_{0}_pull.ipc'.format(kwargs.get('id', ''))
-                    ))
+            if kwargs.get('ipc_mode', '') == 'tcp':
+                puburi = 'tcp://127.0.0.1:{0}'.format(
+                        kwargs.get('tcp_pub_port', 4510)
+                        )
+                pulluri = 'tcp://127.0.0.1:{0}'.format(
+                        kwargs.get('tcp_pull_port', 4511)
+                        )
+            else:
+                puburi = 'ipc://{0}'.format(os.path.join(
+                        sock_dir,
+                        'minion_event_{0}_pub.ipc'.format(kwargs.get('id', ''))
+                        ))
+                pulluri = 'ipc://{0}'.format(os.path.join(
+                        sock_dir,
+                        'minion_event_{0}_pull.ipc'.format(kwargs.get('id', ''))
+                        ))
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(self.__class__.__name__, pulluri)
+        )
         return puburi, pulluri
 
     def connect_pub(self):
@@ -123,8 +131,7 @@ class SaltEvent(object):
         '''
         if not self.cpush:
             self.connect_pull()
-        tag += 20 * '|'
-        tag = tag[:20]
+        tag = '{0:|<20}'.format(tag)
         event = '{0}{1}'.format(tag, self.serial.dumps(data))
         self.push.send(event)
         return True
@@ -135,7 +142,7 @@ class MasterEvent(SaltEvent):
     Create a master event management object
     '''
     def __init__(self, sock_dir):
-        super(MasterEvent, self).__init__(sock_dir, 'master')
+        super(MasterEvent, self).__init__('master', sock_dir)
         self.connect_pub()
 
 
@@ -143,8 +150,8 @@ class MinionEvent(SaltEvent):
     '''
     Create a master event management object
     '''
-    def __init__(self, sock_dir, **kwargs):
-        super(MinionEvent, self).__init__(sock_dir, 'minion', **kwargs)
+    def __init__(self, **kwargs):
+        super(MinionEvent, self).__init__('minion', **kwargs)
 
 
 class EventPublisher(multiprocessing.Process):

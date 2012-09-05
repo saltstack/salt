@@ -230,7 +230,7 @@ def _virtual(osdata):
             grains['virtual'] = 'kvm'
         elif 'virtio' in model:
             grains['virtual'] = 'kvm'
-    choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
+    choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
@@ -268,8 +268,6 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
-        elif isdir('/.SUNWnative'):
-            grains['virtual'] = 'zone'
         if os.path.isfile('/proc/cpuinfo'):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
@@ -287,6 +285,16 @@ def _virtual(osdata):
                 grains['virtual_subtype'] = 'jail'
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
+    elif osdata['kernel'] == 'SunOS':
+        # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
+        zonename = salt.utils.which('zonename')
+        if zonename:
+            zone = __salt__['cmd.run']('{0}'.format(zonename)).strip() 
+            if zone != "global":
+                grains['virtual'] = 'zone'
+        # Check if it's a branded zone (i.e. Solaris 8/9 zone)
+        if isdir('/.SUNWnative'):
+            grains['virtual'] = 'zone'
     return grains
 
 
@@ -298,7 +306,7 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
-    if osdata['os'] == 'SunOS':
+    if osdata['os'] == 'Solaris':
         grains['ps'] = '/usr/ucb/ps auxwww'
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
