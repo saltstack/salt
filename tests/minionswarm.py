@@ -50,6 +50,11 @@ def parse():
             action='store_true',
             help=('Run the minions with debug output of the swarm going to '
                   'the terminal'))
+    parser.add_option('--no-clean',
+            action='store_true',
+            default=False,
+            help='Don\'t cleanup temporary files/directories'
+    )
 
     options, args = parser.parse_args()
 
@@ -147,7 +152,8 @@ class Swarm(object):
                 #os.remove(path)
                 if os.path.exists(pidfile):
                     os.remove(pidfile)
-                shutil.rmtree(path)
+                if not self.opts['no_clean']:
+                    shutil.rmtree(path)
             except (OSError, IOError):
                 pass
 
@@ -174,8 +180,9 @@ class Swarm(object):
             "kill -KILL $(ps aux | grep python | grep \"salt-minion\" | awk '{print $2}')",
             shell=True
         )
-        print('Remove ALL related temp files/directories')
-        subprocess.call('rm -rf /tmp/mswarm*', shell=True)
+        if not self.opts['no_clean']:
+            print('Remove ALL related temp files/directories')
+            subprocess.call('rm -rf /tmp/mswarm*', shell=True)
         print('Done')
 
 if __name__ == '__main__':
