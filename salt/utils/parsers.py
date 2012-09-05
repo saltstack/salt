@@ -882,8 +882,28 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                   '; default=%default')
         )
 
+    def process_config_dir(self):
+        if self.options.gen_keys:
+            # We're generating keys, override the default behaviour of this
+            # function if we don't have any access to the configuration
+            # directory.
+            if not os.access(self.options.config_dir, os.R_OK):
+                if not os.path.isdir(self.options.gen_keys_dir):
+                    # This would be done at a latter stage, but we need it now
+                    # so no errors are thrown
+                    os.makedirs(self.options.gen_keys_dir)
+                self.options.config_dir = self.options.gen_keys_dir
+        super(SaltKeyOptionParser, self).process_config_dir()
+
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        keys_config = config.master_config(self.get_config_file_path('master'))
+        if self.options.gen_keys:
+            # Since we're generating the keys, some defaults can be assumed
+            # or tweaked
+            keys_config['key_logfile'] = os.devnull
+            keys_config['pki_dir'] = self.options.gen_keys_dir
+
+        return keys_config
 
     def process_keysize(self):
         if self.options.keysize < 2048:

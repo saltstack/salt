@@ -402,13 +402,13 @@ class ShellCase(TestCase):
         ret['fun'] = runner.run()
         return ret
 
-    def run_key(self, arg_str):
+    def run_key(self, arg_str, catch_stderr=False):
         '''
         Execute salt-key
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-key', arg_str)
+        return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
 
     def run_cp(self, arg_str):
         '''
