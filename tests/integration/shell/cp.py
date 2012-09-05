@@ -47,7 +47,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             minion_testfile = os.path.join(
                 integration.TMP, "{0}_testfile".format(minion)
             )
-            self.run_cp('{} {} {}'.format(minion, testfile, minion_testfile))
+            self.run_cp('{0} {1} {2}'.format(minion, testfile, minion_testfile))
             self.assertTrue(os.path.isfile(minion_testfile))
             self.assertTrue(open(minion_testfile, 'r').read() == testfile_contents)
             os.unlink(minion_testfile)
