@@ -25,6 +25,7 @@ Full list of builtin modules
     bluez
     brew
     butterkvm
+    ca
     cassandra
     cluster
     cmdmod

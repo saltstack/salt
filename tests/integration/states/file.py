@@ -48,7 +48,9 @@ class FileTest(integration.ModuleCase):
         file.absent
         '''
         name = os.path.join(integration.TMP, 'dir_to_kill')
-        os.makedirs(name)
+        if not os.path.isdir(name):
+            # left behind... Don't fail because of this!
+            os.makedirs(name)
         ret = self.run_state('file.absent', name=name)
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
@@ -59,11 +61,14 @@ class FileTest(integration.ModuleCase):
         file.absent
         '''
         name = os.path.join(integration.TMP, 'link_to_kill')
-        os.symlink(name, '{0}.tgt'.format(name))
+        if not os.path.islink('{0}.tgt'.format(name)):
+            os.symlink(name, '{0}.tgt'.format(name))
         ret = self.run_state('file.absent', name=name)
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
         self.assertFalse(os.path.islink(name))
+        if os.path.islink('{0}.tgt'.format(name)):
+            os.unlink('{0}.tgt'.format(name))
 
     def test_test_absent(self):
         '''
@@ -312,7 +317,9 @@ class FileTest(integration.ModuleCase):
         '''
         name = os.path.join(integration.TMP, 'touch_test_dir')
         try:
-            os.makedirs(name)
+            if not os.path.isdir(name):
+                # left behind... Don't fail because of this!
+                os.makedirs(name)
         except OSError:
             self.skipTest("Failed to create directory {0}".format(name))
 

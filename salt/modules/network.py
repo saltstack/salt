@@ -28,15 +28,6 @@ def __virtual__():
     return 'network'
 
 
-def _sanitize_host(host):
-    '''
-    Sanitize host string.
-    '''
-    return ''.join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
-    ])
-
-
 def _cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask

@@ -3,6 +3,8 @@ Service support for classic Red Hat type systems. This interface uses the
 service command (so it is compatible with upstart systems) and the chkconfig
 command.
 '''
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -14,6 +16,7 @@ def __virtual__():
                'RedHat',
                'CentOS',
                'Scientific',
+               'Amazon',
                'Fedora',
               ]
     if __grains__['os'] in enable:
@@ -120,6 +123,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = '/sbin/service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 

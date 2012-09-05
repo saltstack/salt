@@ -194,6 +194,34 @@ public keys from the minions
 
     auto_accept: False
 
+.. conf_master:: autosign_file
+
+``autosign_file``
+-----------------
+
+Default ``not defined``
+
+If the autosign_file is specified incoming keys specified in
+the autosign_file will be automatically accepted. Regular expressions as
+well as globbing can be used. This is insecure!
+
+.. conf_master:: client_acl
+
+``client_acl``
+--------------
+
+Default: {}
+
+Enable user accounts on the master to execute specific modules. These modules
+can be expressed as regular expressions
+
+.. code-block:: yaml
+
+    client_acl:
+      fred:
+        - test.ping
+        - pkg.*
+
 
 Master Module Management
 ------------------------
@@ -568,3 +596,13 @@ still wish to have 'salt.modules' at the 'debug' level:
   log_granular_levels:
     'salt': 'warning',
     'salt.modules': 'debug'
+
+``default_include``
+-------------------
+
+Default: ``master.d/*.conf``
+
+The minion can include configuration from other files. Per default the
+minion will automatically include all config files from `master.d/*.conf`
+where minion.d is relative to the directory of the minion configuration
+file.

@@ -32,11 +32,11 @@ about this, at least.
 DO NOT use this module on red hat systems, as red hat systems should use the
 rh_service module, since red hat systems support chkconfig
 '''
-
+# Import Python libs
 import glob
 import os
-
-from salt import utils
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -207,6 +207,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
@@ -244,7 +246,7 @@ def _get_service_exec():
     http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.3.3
     '''
     executable = 'update-rc.d'
-    utils.check_or_die(executable)
+    salt.utils.check_or_die(executable)
     return executable
 
 

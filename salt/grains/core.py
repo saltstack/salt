@@ -247,7 +247,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'xen'
         elif isdir('/.SUNWnative'):
             grains['virtual'] = 'zone'
-        elif os.path.isfile('/proc/cpuinfo'):
+        if os.path.isfile('/proc/cpuinfo'):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
@@ -451,6 +451,8 @@ def os_data():
                 grains['os'] = 'CentOS'
             elif 'scientific' in data.lower():
                 grains['os'] = 'Scientific'
+            elif 'goose' in data.lower():
+                grains['os'] = 'GoOSe'
             else:
                 grains['os'] = 'RedHat'
         elif os.path.isfile('/etc/system-release'):

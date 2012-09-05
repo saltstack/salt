@@ -21,6 +21,7 @@ import salt.crypt
 import salt.loader
 import salt.utils
 import salt.payload
+import salt.utils
 import salt.utils.templates
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, url_open)
@@ -69,7 +70,7 @@ class Client(object):
 
         filelist = []
 
-        for root, dirs, files in os.walk(destdir):
+        for root, dirs, files in os.walk(destdir, followlinks=True):
             for name in files:
                 path = os.path.join(root, name)
                 filelist.append(path)
@@ -156,7 +157,7 @@ class Client(object):
                 prefix = separated[0]
             for fn_ in self.file_list_emptydirs(env):
                 if fn_.startswith(path):
-                    dest = os.path.join(
+                    dest = salt.utils.path_join(
                         self.opts['cachedir'],
                         'files',
                         env
@@ -296,7 +297,7 @@ class Client(object):
                 else:
                     return ''
         else:
-            dest = os.path.join(
+            dest = salt.utils.path_join(
                 self.opts['cachedir'],
                 'extrn_files',
                 env,
@@ -354,7 +355,7 @@ class Client(object):
             return ''
         if not dest:
             # No destination passed, set the dest as an extrn_files cache
-            dest = os.path.join(
+            dest = salt.utils.path_join(
                 self.opts['cachedir'],
                 'extrn_files',
                 env,
@@ -413,7 +414,7 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 for fn in files:
                     ret.append(
                         os.path.relpath(
@@ -434,7 +435,7 @@ class LocalClient(Client):
         if env not in self.opts['file_roots']:
             return ret
         for path in self.opts['file_roots'][env]:
-            for root, dirs, files in os.walk(path):
+            for root, dirs, files in os.walk(path, followlinks=True):
                 if len(dirs) == 0 and len(files) == 0:
                     ret.append(os.path.relpath(root, path))
         return ret

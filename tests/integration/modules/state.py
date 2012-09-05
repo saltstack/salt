@@ -44,6 +44,26 @@ class StateModuleTest(integration.ModuleCase):
         sls = self.run_function('state.show_sls', mods='recurse_ok_two')
         self.assertIn('/etc/nagios/nrpe.cfg', sls)
 
+    def test_issue_1876_syntax_error(self):
+        '''
+        verify that we catch the following syntax error::
+
+            /tmp/salttest/issue-1876:
+
+              file:
+                - managed
+                - source: salt://testfile
+
+              file.append:
+                - text: foo
+
+        '''
+        sls = self.run_function('state.sls', mods='issue-1876')
+        self.assertIn(
+            'Name "/tmp/salttest/issue-1876" in sls "issue-1876" contains '
+            'multiple state decs of the same type', sls
+        )
+
 
 if __name__ == '__main__':
     from integration import run_tests

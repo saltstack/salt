@@ -21,7 +21,9 @@ class FileModuleTest(integration.ModuleCase):
         with open(self.myfile, 'w+') as fp:
             fp.write("Hello\n")
         self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
-        os.makedirs(self.mydir)
+        if not os.path.isdir(self.mydir):
+            # left behind... Don't fail because of this!
+            os.makedirs(self.mydir)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):

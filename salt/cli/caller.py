@@ -9,10 +9,9 @@ import logging
 import traceback
 
 # Import salt libs
-import salt
-import salt.utils
 import salt.loader
 import salt.minion
+import salt.output
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
 
@@ -91,44 +90,20 @@ class Caller(object):
         Print out the grains
         '''
         grains = salt.loader.grains(self.opts)
-        printout = self._get_outputter(out='yaml')
-        # If --json-out is specified, pretty print it
-        if 'json_out' in self.opts and self.opts['json_out']:
-            printout.indent = 2
-        printout(grains)
-
-    def _get_outputter(self, out=None):
-        get_outputter = salt.output.get_outputter
-        if self.opts['raw_out']:
-            printout = get_outputter('raw')
-        elif self.opts['json_out']:
-            printout = get_outputter('json')
-        elif self.opts['txt_out']:
-            printout = get_outputter('txt')
-        elif self.opts['yaml_out']:
-            printout = get_outputter('yaml')
-        elif out:
-            printout = get_outputter(out)
-        else:
-            printout = get_outputter(None)
-        return printout
+        printout = salt.output.get_printout(grains, 'yaml', self.opts, indent=2)
+        printout(grains, color=not bool(self.opts['no_color']))
 
     def run(self):
         '''
         Execute the salt call logic
         '''
-        if self.opts['doc']:
-            self.print_docs()
-        elif self.opts['grains_run']:
-            self.print_grains()
-        else:
-            ret = self.call()
-            # Determine the proper output method and run it
-            if 'out' in ret:
-                printout = self._get_outputter(ret['out'])
-            else:
-                printout = self._get_outputter()
-            if 'json_out' in self.opts and self.opts['json_out']:
-                printout.indent = 2
-            color = not bool(self.opts['no_color'])
-            printout({'local': ret['return']}, color=color)
+        ret = self.call()
+        printout = salt.output.get_printout(
+            ret, ret.get('out', None), self.opts, indent=2
+        )
+        if printout is None:
+            printout = salt.output.get_outputter(None)
+        printout(
+                {'local': ret['return']},
+                color=not bool(self.opts['no_color']),
+                **self.opts)

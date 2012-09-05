@@ -496,7 +496,7 @@ def user_chpass(user,
 
         salt '*' mysql.user_chpass frank localhost password_hash='hash'
     '''
-    if password is None or password_hash is None:
+    if password is None and password_hash is None:
         log.error('No password provided')
         return False
     elif password is not None:
@@ -505,14 +505,15 @@ def user_chpass(user,
         password_sql = "\"%s\"" % password_hash
 
     db = connect()
-    cur = db.cursor ()
-    query = "UPDATE mysql.user SET password=%s WHERE User='%s' AND Host = '%s';" % (password_sql,user,host,)
+    cur = db.cursor()
+    query = "UPDATE mysql.user SET password=%s WHERE User='%s' AND Host = '%s';" % (password_sql, user, host,)
     log.debug("Query: {0}".format(query,))
-    if cur.execute( query ):
-        log.info("Password for user '{0}'@'{1}' has been changed".format(user,host,))
+    if cur.execute(query):
+        cur.execute('FLUSH PRIVILEGES;')
+        log.info("Password for user '{0}'@'{1}' has been changed".format(user, host,))
         return True
 
-    log.info("Password for user '{0}'@'{1}' is not changed".format(user,host,))
+    log.info("Password for user '{0}'@'{1}' is not changed".format(user, host,))
     return False
 
 
@@ -673,7 +674,8 @@ def grant_exists(grant,
     # perhaps should be replaced/reworked with a better/cleaner solution.
     target = __grant_generate(grant, database, user, host, grant_option, escape)
 
-    if target in user_grants(user, host):
+    grants = user_grants(user, host)
+    if grants is not False and target in grants:
         log.debug("Grant exists.")
         return True
 

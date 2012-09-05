@@ -105,6 +105,16 @@ this:
 
 .. _`dict`: http://docs.python.org/library/stdtypes.html#mapping-types-dict
 
+Viewing Minion Pillar
+=====================
+
+Once the pillar is set up the data can be viewed on the minion via the
+``pillar.data`` module:
+
+.. code-block:: bash
+
+    # salt '*' pillar.data
+
 Footnotes
 ---------
 

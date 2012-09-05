@@ -25,33 +25,48 @@ __all__ = ('get_outputter', 'get_printout')
 
 log = logging.getLogger(__name__)
 
-def get_printout(ret, out, opts):
-    """
+def strip_clean(returns):
+    '''
+    Check for the state_verbose option and strip out the result=True
+    and changes={} members of the state return list.
+    '''
+    rm_tags = []
+    for tag in returns:
+        if returns[tag]['result'] and not returns[tag]['changes']:
+            rm_tags.append(tag)
+    for tag in rm_tags:
+        returns.pop(tag)
+    return returns
+
+def get_printout(ret, out, opts, indent=None):
+    '''
     Return the proper printout
-    """
+    '''
     if isinstance(ret, list) or isinstance(ret, dict):
         if opts['raw_out']:
             return get_outputter('raw')
         elif opts['json_out']:
-            return get_outputter('json')
-        elif opts.get('txt_out', False):
+            printout = get_outputter('json')
+            if printout and indent is not None:
+                printout.indent = indent
+            return printout
+        elif opts.get('text_out', False):
             return get_outputter('txt')
         elif opts['yaml_out']:
             return get_outputter('yaml')
-        elif out:
+        elif out is not None:
             return get_outputter(out)
-        else:
-            return get_outputter(None)
+        return None
     # Pretty print any salt exceptions
     elif isinstance(ret, SaltException):
-        return get_outputter("txt")
+        return get_outputter('txt')
 
 def display_output(ret, out, opts):
     '''
     Display the output of a command in the terminal
     '''
     printout = get_printout(ret, out, opts)
-    printout(ret, color=not bool(opts['no_color']))
+    printout(ret, color=not bool(opts['no_color']), **opts)
 
 
 class Outputter(object):
@@ -93,6 +108,10 @@ class HighStateOutputter(Outputter):
                     hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                                   .format(hcolor, err, colors)))
             if isinstance(data[host], dict):
+                # Strip out the result: True, without changes returns if
+                # state_verbose is False
+                if not kwargs.get('state_verbose', False):
+                    data[host] = strip_clean(data[host])
                 # Verify that the needed data is present
                 for tname, info in data[host].items():
                     if not '__run_num__' in info:
@@ -116,6 +135,20 @@ class HighStateOutputter(Outputter):
                         hcolor = colors['YELLOW']
                         tcolor = colors['YELLOW']
                     comps = tname.split('_|-')
+                    if kwargs.get('state_output', 'full').lower() == 'terse':
+                        # Print this chunk in a terse way and continue in the
+                        # loop
+                        msg = (' {0}Name: {1} - Function: {2} - Result: {3}{4}'
+                                ).format(
+                                        tcolor,
+                                        comps[2],
+                                        comps[-1],
+                                        str(ret['result']),
+                                        colors['ENDC']
+                                        )
+                        hstrs.append(msg)
+                        continue
+
                     hstrs.append(('{0}----------\n    State: - {1}{2[ENDC]}'
                                   .format(tcolor, comps[0], colors)))
                     hstrs.append('    {0}Name:      {1}{2[ENDC]}'.format(
@@ -203,7 +236,7 @@ class JSONOutputter(Outputter):
             # A good kwarg might be: indent=4
             if 'color' in kwargs:
                 kwargs.pop('color')
-            ret = json.dumps(data, **kwargs)
+            ret = json.dumps(data)
         except TypeError:
             log.debug(traceback.format_exc())
             # Return valid json for unserializable objects
@@ -220,7 +253,7 @@ class YamlOutputter(Outputter):
     def __call__(self, data, **kwargs):
         if 'color' in kwargs:
             kwargs.pop('color')
-        print(yaml.dump(data, **kwargs))
+        print(yaml.dump(data))
 
 
 def get_outputter(name=None):

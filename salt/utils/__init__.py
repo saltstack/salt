@@ -15,6 +15,7 @@ import datetime
 import tempfile
 import shutil
 import time
+import platform
 from calendar import month_abbr as months
 
 # Import Salt libs
@@ -245,7 +246,11 @@ def which(exe=None):
         (path, name) = os.path.split(exe)
         if os.access(exe, os.X_OK):
             return exe
-        for path in os.environ.get('PATH').split(os.pathsep):
+
+        # default path based on busybox's default
+        default_path = "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
+
+        for path in os.environ.get('PATH', default_path).split(os.pathsep):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
@@ -468,3 +473,48 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         # TODO, backup to master
         pass
     shutil.move(tgt, dest)
+
+
+def path_join(*parts):
+    '''
+    This functions tries to solve some issues when joining multiple absolute
+    paths on both *nix and windows platforms.
+
+    See tests/unit/utils/path_join_test.py for some examples on what's being
+    talked about here.
+    '''
+    # Normalize path converting any os.sep as needed
+    parts = [os.path.normpath(p) for p in parts]
+
+    root = parts.pop(0)
+    if not parts:
+        return root
+
+    if platform.system().lower() == 'windows':
+        if len(root) == 1:
+            root += ':'
+        root = root.rstrip(os.sep) + os.sep
+
+    return os.path.normpath(os.path.join(
+        root, *[p.lstrip(os.sep) for p in parts]
+    ))
+
+
+def pem_finger(path, sum_type='md5'):
+    '''
+    Pass in the location of a pem file and the type of cryptographic hash to
+    use. The default is md5.
+    '''
+    if not os.path.isfile(path):
+        return ''
+    with open(path, 'rb') as fp_:
+        key = ''.join(fp_.readlines()[1:-1])
+    pre = getattr(hashlib, sum_type)(key).hexdigest()
+    finger = ''
+    for ind in range(len(pre)):
+        if ind % 2:
+            # Is odd
+            finger += '{0}:'.format(pre[ind])
+        else:
+            finger += pre[ind]
+    return finger.rstrip(':')

@@ -160,10 +160,13 @@ class EventPublisher(multiprocessing.Process):
         epub_sock.bind(epub_uri)
         epull_sock.bind(epull_uri)
         # Restrict access to the sockets
+        pub_mode = 448
+        if self.opts.get('client_acl'):
+            pub_mode = 511
         os.chmod(
                 os.path.join(self.opts['sock_dir'],
                     'master_event_pub.ipc'),
-                448
+                pub_mode
                 )
         os.chmod(
                 os.path.join(self.opts['sock_dir'],

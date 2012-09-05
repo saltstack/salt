@@ -301,6 +301,17 @@ def dead(name, enable=None, sig=None):
             return _disable(name, None)
         else:
             return ret
+
+    # Check if the service is available
+    if 'service.get_all' in __salt__:
+        # get_all is available, we can reliable check for the service
+        services = __salt__['service.get_all']()
+        if not name in services:
+            ret['result'] = False
+            ret['comment'] = 'The named service {0} is not available'.format(
+                    name)
+            return ret
+
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
