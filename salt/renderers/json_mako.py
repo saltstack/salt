@@ -36,7 +36,7 @@ def render(template_file, env='', sls=''):
     # Ensure that we're not passing lines with a shebang in the JSON.
     to_return = []
     for line in tmp_data['data'].split('\n'):
-        if line and line[0] != '#!':
+        if line and "#!" not in line:
             to_return.append(line)
     to_return = '\n'.join(to_return)
 
