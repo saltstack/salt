@@ -167,6 +167,8 @@ def install(pkgs=None,
             fd_, treq = tempfile.mkstemp()
             os.close(fd_)
             shutil.copyfile(req, treq)
+        else:
+            treq = requirements
         cmd = '{cmd} --requirement "{requirements}" '.format(
             cmd=cmd, requirements=treq)
 
