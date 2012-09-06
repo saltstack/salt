@@ -315,6 +315,7 @@
 # can be seen here:
 #	http://docs.python.org/library/time.html#time.strftime
 #log_datefmt: '%H:%M:%S'
+#log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen here:
