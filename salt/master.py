@@ -196,9 +196,9 @@ class Master(SMaster):
         if mof_c > mof_h:
             # The configured value is higher than what's allowed
             log.warning(
-                'The value for \'max_open_files\' setting, {0}, is higher '
-                'than what the user running salt is allowed to raise, {1}. '
-                'Defaulting to {0}'.format(mof_c, mof_h)
+                'The value for the \'max_open_files\' setting, {0}, is higher '
+                'than what the user running salt is allowed to raise to, {1}. '
+                'Defaulting to {1}.'.format(mof_c, mof_h)
             )
             mof_c = mof_h
 
