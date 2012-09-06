@@ -72,4 +72,4 @@ def create(path,
                 ' --prompt {0}'.format(prompt) if prompt else '']),
             path=path)
 
-    return __salt__['cmd.run'](cmd, runas=runas)
+    return __salt__['cmd.run_all'](cmd, runas=runas)
