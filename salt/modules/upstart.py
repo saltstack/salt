@@ -49,18 +49,68 @@ def __virtual__():
     return False
 
 
+def _find_utmp():
+    '''
+    Figure out which utmp file to use when determining runlevel.
+    Sometimes /var/run/utmp doesn't exist, /run/utmp is the new hotness.
+    '''
+    result = {}
+    # These are the likely locations for the file on Ubuntu
+    for utmp in ('/var/run/utmp', '/run/utmp'):
+        try:
+            result[os.stat(utmp).st_mtime] = utmp
+        except:
+            pass
+    return result[sorted(result.keys()).pop()]
+
+
+def _default_runlevel():
+    '''
+    Try to figure out the default runlevel.  It is kept in
+    /etc/init/rc-sysinit.conf, but can be overridden with entries
+    in /etc/inittab, or via the kernel command-line at boot
+    '''
+    # Try to get the "main" default.  If this fails, throw up our
+    # hands and just guess "2", because things are horribly broken
+    try:
+        for line in open('/etc/init/rc-sysinit.conf'):
+            if line.startswith('env DEFAULT_RUNLEVEL'):
+                runlevel = line.split('=')[-1].strip()
+    except:
+        return '2'
+
+    # Look for an optional "legacy" override in /etc/inittab
+    try:
+        for line in open('/etc/inittab'):
+            if not line.startswith('#') and 'initdefault' in line:
+                runlevel = line.split(':')[1]
+    except:
+        pass
+
+    # The default runlevel can also be set via the kernel command-line.
+    # Kinky.
+    try:
+        valid_strings = set(('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
+        for line in open('/proc/cmdline'):
+            for arg in split(line.strip()):
+                if arg in valid_strings:
+                    runlevel = arg
+                    break
+    except:
+        pass
+
+    return runlevel
+
 def _runlevel():
     '''
     Return the current runlevel
-    TODO: Should this return the "default" runlevel? For example, bad
-    things will likely happen when 'salt' is run in single-user mode.
     '''
-    out = __salt__['cmd.run']('runlevel').strip()
+    out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp())).strip()
     try:
         return out.split()[1]
     except IndexError:
-        # The runlevel is unknown, return 3 for a default
-        return '2'
+        # The runlevel is unknown, return the default
+        return _default_runlevel()
 
 
 def _is_symlink(name):
