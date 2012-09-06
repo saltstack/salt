@@ -50,3 +50,4 @@ Platform-specific installation instructions
     freebsd
     gentoo
     windows
+    solaris
