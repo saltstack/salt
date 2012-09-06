@@ -18,6 +18,7 @@ import tempfile
 import datetime
 import pwd
 import getpass
+import resource
 import subprocess
 import multiprocessing
 
@@ -180,6 +181,37 @@ class Master(SMaster):
             except KeyboardInterrupt:
                 break
 
+    def __set_max_open_files(self):
+        # Let's check to see how our max open files(ulimit -n) setting is
+        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+        log.info(
+            'Current values for max open files soft/hard setting: '
+            '{0}/{1}'.format(
+                mof_s, mof_h
+            )
+        )
+        # Let's grab, from the configuration file, the value to raise max open
+        # files to
+        mof_c = self.opts['max_open_files']
+        if mof_c > mof_h:
+            # The configured value is higher than what's allowed
+            log.warning(
+                'The value for \'max_open_files\' setting, {0}, is higher '
+                'than what the user running salt is allowed to raise, {1}. '
+                'Defaulting to {0}'.format(mof_c, mof_h)
+            )
+            mof_c = mof_h
+
+        if mof_s < mof_c:
+            # There's room to raise the value. Raise it!
+            log.warning('Raising max open files value to {0}'.format(mof_c))
+            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_c, mof_h))
+            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+            log.warning(
+                'New values for max open files soft/hard values: '
+                '{0}/{1}'.format(mof_s, mof_h)
+            )
+
     def start(self):
         '''
         Turn on the master server components
@@ -187,6 +219,7 @@ class Master(SMaster):
         enable_sigusr1_handler()
 
         log.warn('Starting the Salt Master')
+        self.__set_max_open_files()
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
