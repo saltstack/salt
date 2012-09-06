@@ -74,7 +74,7 @@ def managed(name,
 
     # Create (or clear) the virtualenv
     if __opts__['test']:
-        ret['result'] = False 
+        ret['result'] = None
         ret['comment'] = 'Virtualenv {0} is set to be created or cleared'
         return ret
 
