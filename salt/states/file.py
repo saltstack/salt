@@ -1563,15 +1563,23 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
+    with open(name, 'rb') as fp_:
+        slines = fp_.readlines()
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
+    with open(name, 'rb') as fp_:
+        nlines = fp_.readlines()
 
     # check the result
     ret['result'] = __salt__['file.contains_regex'](name, after)
+    if slines != nlines:
+        # Changes happened, add them
+        ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(nlines, slines))
+                )
 
     if ret['result']:
         ret['comment'] = 'File successfully edited'
-        ret['changes'].update({'old': before, 'new': after})
     else:
         ret['comment'] = 'Expected edit does not appear in file'
 
