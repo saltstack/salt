@@ -1,9 +1,13 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
-
+# Import Python libs
 import os
+import tempfile
+import shutil
+# Import Salt libs
 from salt.exceptions import CommandExecutionError
+
 
 def _get_pip_bin(bin_env):
     '''
@@ -158,8 +162,13 @@ def install(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     if requirements:
+        if requirements.startswith('salt://'):
+            req = __salt__['cp.cache_file'](requirements)
+            fd_, treq = tempfile.mkstemp()
+            os.close(fd_)
+            shutil.copyfile(req, treq)
         cmd = '{cmd} --requirement "{requirements}" '.format(
-            cmd=cmd, requirements=requirements)
+            cmd=cmd, requirements=treq)
 
     if log:
         try:
@@ -257,7 +266,15 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
+    result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
+
+    if requirements:
+        try:
+            os.remove(treq)
+        except Exception:
+            pass
+
+    return result
 
 
 def uninstall(pkgs=None,
@@ -319,8 +336,13 @@ def uninstall(pkgs=None,
             cmd=cmd, pkg=pkg)
 
     if requirements:
+        if requirements.startswith('salt://'):
+            req = __salt__['cp.cache_file'](requirements)
+            fd_, treq = tempfile.mkstemp()
+            os.close(fd_)
+            shutil.copyfile(req, treq)
         cmd = '{cmd} --requirements "{requirements}" '.format(
-            cmd=cmd, requirements=requirements)
+            cmd=cmd, requirements=treq)
 
     if log:
         try:
@@ -343,7 +365,15 @@ def uninstall(pkgs=None,
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
-    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+    result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+
+    if requirements:
+        try:
+            os.remove(treq)
+        except Exception:
+            pass
+
+    return result
 
 
 def freeze(bin_env=None,

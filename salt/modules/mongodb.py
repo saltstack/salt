@@ -53,7 +53,7 @@ def _connect(user=None, password=None, host=None, port=None, database="admin"):
         db = pymongo.database.Database(conn, database)
         if user and password:
             db.authenticate(user, password)
-    except pymongo.errors.PyMongoError as e:
+    except pymongo.errors.PyMongoError:
         log.error("Error connecting to database {0}".format(database.message))
         return False
 

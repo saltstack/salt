@@ -6,8 +6,6 @@ import shutil
 import sys
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError
-
 from saltunittest import skipIf
 import integration
 

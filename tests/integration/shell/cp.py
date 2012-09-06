@@ -9,10 +9,8 @@
 
 # Import python libs
 import os
-import re
 import sys
-import string
-import random
+import yaml
 
 # Import salt libs
 from saltunittest import TestLoader, TextTestRunner
@@ -24,30 +22,35 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-cp'
 
-    def setUp(self):
-        self.testfile = os.path.join(integration.TMP, 'testfile')
-        self.testcontents = ''.join(
-            random.choice(string.ascii_uppercase) for x in range(128)
-        )
-        open(self.testfile, 'w').write(self.testcontents)
-
-    def tearDown(self):
-        os.unlink(self.testfile)
-
     def test_cp_testfile(self):
         '''
         test salt-cp
         '''
-        data = ''.join(self.run_salt('"*" test.ping'))
-        for minion in re.findall(r"{['|\"]([^:]+)['|\"]: True}", data):
+        minions = []
+        for line in self.run_salt('--yaml-out "*" test.ping'):
+            if not line:
+                continue
+            data = yaml.load(line)
+            minions.extend(data.keys())
+
+        self.assertNotEqual(minions, [])
+
+        testfile = os.path.abspath(
+            os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                'files', 'file', 'base', 'testfile'
+            )
+        )
+        testfile_contents = open(testfile, 'r').read()
+
+        for minion in minions:
             minion_testfile = os.path.join(
                 integration.TMP, "{0}_testfile".format(minion)
             )
-            self.run_cp("minion {0} {1}".format(self.testfile, minion_testfile))
+            self.run_cp('{0} {1} {2}'.format(minion, testfile, minion_testfile))
             self.assertTrue(os.path.isfile(minion_testfile))
-            self.assertTrue(open(minion_testfile, 'r').read()==self.testcontents)
+            self.assertTrue(open(minion_testfile, 'r').read() == testfile_contents)
             os.unlink(minion_testfile)
-
 
 if __name__ == "__main__":
     loader = TestLoader()

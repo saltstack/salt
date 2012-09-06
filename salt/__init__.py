@@ -7,7 +7,7 @@ import os
 import sys
 import logging
 
-# Import salt libs, the try block bypasses an issue at build time so that c
+# Import salt libs, the try block bypasses an issue at build time so that
 # modules don't cause the build to fail
 from salt.version import __version__
 

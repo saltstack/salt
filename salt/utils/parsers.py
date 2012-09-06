@@ -22,7 +22,6 @@ def _sorted(mixins_or_funcs):
 
 
 class MixInMeta(type):
-
     # This attribute here won't actually do anything. But, if you need to
     # specify an order or a dependency within the mix-ins, please define the
     # attribute on your own MixIn
@@ -48,7 +47,7 @@ class OptionParserMeta(MixInMeta):
         if not hasattr(instance, '_mixin_after_parsed_funcs'):
             instance._mixin_after_parsed_funcs = []
 
-        for base in _sorted(bases+(instance,)):
+        for base in _sorted(bases + (instance,)):
             func = getattr(base, '_mixin_setup', None)
             if func is not None and func not in instance._mixin_setup_funcs:
                 instance._mixin_setup_funcs.append(func)
@@ -155,6 +154,7 @@ class DeprecatedConfigMessage(object):
             '-c/--config-dir to point to a directory which holds all of '
             'salt\'s configuration files.\n'
         )
+
 
 class ConfigDirMixIn(DeprecatedConfigMessage):
     __metaclass__ = MixInMeta
@@ -273,8 +273,8 @@ class LogLevelMixIn(object):
             choices=list(log.LOG_LEVELS),
             help=('Logging log level. One of {0}. For the logfile settings see '
                   'the configuration file. Default: \'{1}\'.').format(
-                    ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
-                    getattr(self, '_default_logging_level_', 'warning')
+                      ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                      getattr(self, '_default_logging_level_', 'warning')
             )
         )
 
@@ -309,6 +309,7 @@ class LogLevelMixIn(object):
             log_format=self.config['log_fmt_console'],
             date_format=self.config['log_datefmt']
         )
+
 
 class RunUserMixin(object):
     __metaclass__ = MixInMeta
@@ -544,7 +545,6 @@ class OutputOptionsMixIn(object):
             help='Disable all colored output'
         )
 
-
         for option in group.option_list:
             def process(opt):
                 if getattr(self.options, opt.dest):
@@ -672,7 +672,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'send the return data from the command back to the master, '
                   'but the return data can be redirected into any number of '
                   'systems, databases or applications.')
-            )
+        )
         self.add_option(
             '-Q', '--query',
             action='store_true',
@@ -743,6 +743,9 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             self.config['tgt'] = self.args[0]
         self.config['src'] = self.args[1:-1]
         self.config['dest'] = self.args[-1]
+
+    def setup_config(self):
+        return config.master_config(self.get_config_file_path('master'))
 
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
@@ -834,7 +837,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
         )
         self.add_option_group(actions_group)
 
-
         self.add_option(
             '--key-logfile',
             default='/var/log/salt/key',
@@ -880,8 +882,28 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                   '; default=%default')
         )
 
+    def process_config_dir(self):
+        if self.options.gen_keys:
+            # We're generating keys, override the default behaviour of this
+            # function if we don't have any access to the configuration
+            # directory.
+            if not os.access(self.options.config_dir, os.R_OK):
+                if not os.path.isdir(self.options.gen_keys_dir):
+                    # This would be done at a latter stage, but we need it now
+                    # so no errors are thrown
+                    os.makedirs(self.options.gen_keys_dir)
+                self.options.config_dir = self.options.gen_keys_dir
+        super(SaltKeyOptionParser, self).process_config_dir()
+
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        keys_config = config.master_config(self.get_config_file_path('master'))
+        if self.options.gen_keys:
+            # Since we're generating the keys, some defaults can be assumed
+            # or tweaked
+            keys_config['key_logfile'] = os.devnull
+            keys_config['pki_dir'] = self.options.gen_keys_dir
+
+        return keys_config
 
     def process_keysize(self):
         if self.options.keysize < 2048:

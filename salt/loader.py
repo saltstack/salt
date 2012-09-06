@@ -13,6 +13,7 @@ import sys
 import salt
 import logging
 import tempfile
+import traceback
 
 # Import Salt libs
 from salt.exceptions import LoaderError
@@ -277,7 +278,7 @@ class Loader(object):
                 log.info('Cython is enabled in the options but not present '
                          'in the system path. Skipping Cython modules.')
         try:
-            if full.endswith('.pyx'):
+            if full.endswith('.pyx') and cython_enabled:
                 # If there's a name which ends in .pyx it means the above
                 # cython_enabled is True. Continue...
                 mod = pyximport.load_module(name, full, tempfile.gettempdir())
@@ -291,8 +292,9 @@ class Loader(object):
             log.debug(('Failed to import module {0}: {1}').format(name, exc))
             return mod
         except Exception as exc:
+            trb = traceback.format_exc()
             log.warning(('Failed to import module {0}, this is due most'
-                ' likely to a syntax error: {1}').format(name, exc))
+                ' likely to a syntax error: {1}').format(name, trb))
             return mod
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -410,8 +412,9 @@ class Loader(object):
                            ' NOT a problem: {1}').format(name, exc))
                 continue
             except Exception as exc:
+                trb = traceback.format_exc()
                 log.warning(('Failed to import module {0}, this is due most'
-                    ' likely to a syntax error: {1}').format(name, exc))
+                    ' likely to a syntax error: {1}').format(name, trb))
                 continue
             modules.append(mod)
         for mod in modules:
@@ -552,10 +555,11 @@ class Loader(object):
                 continue
             try:
                 ret = fun()
-            except Exception as exc:
+            except Exception:
+                trb = traceback.format_exc()
                 log.critical(('Failed to load grains defined in grain file '
-                              '{0} in function {1}, error: {2}').format(
-                                  key, fun, exc))
+                              '{0} in function {1}, error:\n{2}').format(
+                                  key, fun, trb))
                 continue
             if not isinstance(ret, dict):
                 continue

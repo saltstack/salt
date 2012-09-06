@@ -132,9 +132,11 @@ class Minion(object):
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
         if hasattr(self, '_syndic') and self._syndic:
-            log.warn('Starting the Salt Syndic Minion')
+            log.warn(
+                'Starting the Salt Syndic Minion "{0}"'.format(self.opts['id'])
+            )
         else:
-            log.warn('Starting the Salt Minion')
+            log.warn('Starting the Salt Minion "{0}"'.format(self.opts['id']))
         self.authenticate()
         opts['pillar'] = salt.pillar.get_pillar(
             opts,
@@ -474,6 +476,7 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
+        log.debug('Minion "{0}" trying to  tune in'.format(self.opts['id']))
         context = zmq.Context()
 
         # Prepare the minion event system
@@ -483,10 +486,10 @@ class Minion(object):
                 self.opts['sock_dir'],
                 'minion_event_{0}_pub.ipc'.format(self.opts['id'])
                 )
-        if os.path.exists(epub_sock_path):
-            err = 'Minion with the same id has been detected on this system'
-            log.critical(err)
-            sys.exit(4)
+        epull_sock_path = os.path.join(
+                self.opts['sock_dir'],
+                'minion_event_{0}_pull.ipc'.format(self.opts['id'])
+                )
         epub_sock = context.socket(zmq.PUB)
         if self.opts.get('ipc_mode', '') == 'tcp':
             epub_uri = 'tcp://127.0.0.1:{0}'.format(
@@ -496,36 +499,35 @@ class Minion(object):
                     self.opts['tcp_pull_port']
                     )
         else:
-            epub_uri = 'ipc://{0}'.format(
-                    os.path.join(
-                        self.opts['sock_dir'], 'minion_event_pub.ipc')
-                    )
-            epull_uri = 'ipc://{0}'.format(
-                    os.path.join(
-                        self.opts['sock_dir'],
-                        'minion_event_pull.ipc'
-                        )
-                    )
+            epub_uri = 'ipc://{0}'.format(epub_sock_path)
+            epull_uri = 'ipc://{0}'.format(epull_sock_path)
+
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(
+                self.__class__.__name__, epub_uri
+            )
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(
+                self.__class__.__name__, epull_uri
+            )
+        )
+
         # Create the pull socket
-        epull_sock_path = os.path.join(
-                self.opts['sock_dir'],
-                'minion_event_{0}_pull.ipc'.format(self.opts['id'])
-                )
         epull_sock = context.socket(zmq.PULL)
         # Bind the event sockets
         epub_sock.bind(epub_uri)
         epull_sock.bind(epull_uri)
         # Restrict access to the sockets
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'minion_event_pub.ipc'),
-                448
-                )
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'minion_event_pull.ipc'),
-                448
-                )
+        if not self.opts.get('ipc_mode', '') == 'tcp':
+            os.chmod(
+                    epub_sock_path,
+                    448
+                    )
+            os.chmod(
+                    epull_sock_path,
+                    448
+                    )
 
         poller = zmq.Poller()
         epoller = zmq.Poller()
@@ -598,9 +600,8 @@ class Minion(object):
                             epub_sock.send(package)
                         except Exception:
                             pass
-                except Exception as exc:
+                except Exception:
                     log.critical(traceback.format_exc())
-
 
 
 class Syndic(salt.client.LocalClient, Minion):

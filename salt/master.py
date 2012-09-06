@@ -62,7 +62,7 @@ def clean_proc(proc, wait_for_kill=10):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
                 os.kill(signal.SIGKILL, proc.pid)
-    except (AssertionError, AttributeError) as e:
+    except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
@@ -204,7 +204,6 @@ class Master(SMaster):
             SIGTERM is encountered.  This is required when running a salt
             master under a process minder like daemontools
             '''
-            mypid = os.getpid()
             log.warn(('Caught signal {0}, stopping the Salt Master'
                 .format(signum)))
             clean_proc(clear_old_jobs_proc)
@@ -300,7 +299,7 @@ class Publisher(multiprocessing.Process):
                             con = True
                         except zmq.ZMQError:
                             pass
-                
+
         except KeyboardInterrupt:
             pub_sock.close()
             pull_sock.close()
@@ -485,10 +484,7 @@ class AESFuncs(object):
     #
     def __init__(self, opts, crypticle):
         self.opts = opts
-        self.event = salt.utils.event.SaltEvent(
-                self.opts['sock_dir'],
-                'master'
-                )
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         # Make a client
@@ -1006,10 +1002,7 @@ class ClearFuncs(object):
         self.master_key = master_key
         self.crypticle = crypticle
         # Create the event manager
-        self.event = salt.utils.event.SaltEvent(
-                self.opts['sock_dir'],
-                'master'
-                )
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
@@ -1071,10 +1064,11 @@ class ClearFuncs(object):
         fmode = os.stat(filename)
 
         if os.getuid() == 0:
-            if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                if self.opts.get('permissive_pki_access', False) \
-                  and fmode.st_gid in groups:
-                    return True
+            if fmode.st_uid == uid or not fmode.st_gid == gid:
+                return True
+            elif self.opts.get('permissive_pki_access', False) \
+                    and fmode.st_gid in groups:
+                return True
         else:
             if stat.S_IWOTH & fmode.st_mode:
                 # don't allow others to write to the file

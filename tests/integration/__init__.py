@@ -240,15 +240,22 @@ class ModuleCase(TestCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
-    def run_function(self, function, arg=(), **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
+        know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            'minion', function, arg, timeout=100, kwarg=kwargs
+            minion_tgt, function, arg, timeout=100, kwarg=kwargs
         )
-        return orig['minion']
+
+        if orig[minion_tgt] is None and function not in know_to_return_none:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
+                'the minion \'{1}\''.format(function, minion_tgt)
+            )
+        return orig[minion_tgt]
 
     def state_result(self, ret):
         '''
@@ -272,11 +279,20 @@ class ModuleCase(TestCase):
         )
 
     @property
-    def master_opts(self):
+    def sub_minion_opts(self):
         '''
         Return the options used for the minion
         '''
         return salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
+        )
+
+    @property
+    def master_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
@@ -386,13 +402,13 @@ class ShellCase(TestCase):
         ret['fun'] = runner.run()
         return ret
 
-    def run_key(self, arg_str):
+    def run_key(self, arg_str, catch_stderr=False):
         '''
         Execute salt-key
         '''
         mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-key', arg_str)
+        return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
 
     def run_cp(self, arg_str):
         '''

@@ -4,7 +4,6 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 import os
-import sys
 
 # Import salt components
 import salt.cli.caller
@@ -15,11 +14,9 @@ import salt.client
 import salt.output
 import salt.runner
 
-import optparse
 from salt.utils import parsers
 from salt.utils.verify import verify_env
-from salt.version import __version__ as VERSION
-from salt.exceptions import SaltInvocationError, SaltClientError, SaltException
+from salt.exceptions import SaltInvocationError, SaltClientError
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -163,12 +160,17 @@ class SaltKey(parsers.SaltKeyOptionParser):
         self.parse_args()
 
         if self.config['verify_env']:
-            verify_env([
+            verify_env_dirs = []
+            if not self.config['gen_keys']:
+                verify_env_dirs.extend([
                     os.path.join(self.config['pki_dir'], 'minions'),
                     os.path.join(self.config['pki_dir'], 'minions_pre'),
                     os.path.join(self.config['pki_dir'], 'minions_rejected'),
-                    os.path.dirname(self.config['key_logfile']),
-                ],
+                    os.path.dirname(self.config['key_logfile'])
+                ])
+
+            verify_env(
+                verify_env_dirs,
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
                 pki_dir=self.config['pki_dir'],

@@ -66,7 +66,7 @@ takes a few arguments:
 Recursive directory management can also be set via the ``recurse``
 function. Recursive directory management allows for a directory on the salt
 master to be recursively copied down to the minion. This is a great tool for
-deploying large code and configuration systems. A recuse state would look
+deploying large code and configuration systems. A recurse state would look
 something like this:
 
 .. code-block:: yaml
@@ -454,9 +454,9 @@ def _check_perms(name, ret, user, group, mode):
                         user,
                         group
                         )
-            except OSError, e:
+            except OSError:
                 ret['result'] = False
-                
+
     if user:
         if user != __salt__['file.get_user'](name):
             ret['result'] = False
@@ -1433,7 +1433,7 @@ def recurse(name,
                 include_empty)
         return ret
 
-    def update_changes_by_perms(path, mode, changetype='updated'): 
+    def update_changes_by_perms(path, mode, changetype='updated'):
         _ret = {'name': name,
                 'changes': {},
                 'result': True,
@@ -1444,7 +1444,7 @@ def recurse(name,
         if _ret['comment']:
             comments = ret['comment'].setdefault(path, [])
             comments.extend(_ret['comment'])
-        if _ret['changes']: 
+        if _ret['changes']:
             ret['changes'][path] = changetype
 
     vdir = set()
@@ -1580,6 +1580,27 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
 
 def comment(name, regex, char='#', backup='.bak'):
     '''
+    Comment out specified lines in a file.
+
+    path
+        The full path to the file to be edited
+    regex
+        A regular expression used to find the lines that are to be commented;
+        this pattern will be wrapped in parenthesis and will move any
+        preceding/trailing ``^`` or ``$`` characters outside the parenthesis
+        (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)
+    char : ``#``
+        The character to be inserted at the beginning of a line in order to
+        comment it out
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension
+
+        .. warning::
+
+            This backup will be overwritten each time ``sed`` / ``comment`` /
+            ``uncomment`` is called. Meaning the backup will only be useful
+            after the first invocation.
+
     Usage::
 
         /etc/fstab:
@@ -1627,6 +1648,23 @@ def comment(name, regex, char='#', backup='.bak'):
 
 def uncomment(name, regex, char='#', backup='.bak'):
     '''
+    Uncomment specified commented lines in a file
+
+    path
+        The full path to the file to be edited
+    regex
+        A regular expression used to find the lines that are to be uncommented.
+        This regex should not include the comment character. A leading ``^``
+        character will be stripped for convenience (for easily switching
+        between comment() and uncomment()).
+    char : ``#``
+        The character to remove in order to uncomment a line; if a single
+        whitespace character follows the comment it will also be removed
+    backup : ``.bak``
+        The file will be backed up before edit with this file extension;
+        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
+        overwrite this backup
+
     Usage::
 
         /etc/adduser.conf:
@@ -1640,8 +1678,6 @@ def uncomment(name, regex, char='#', backup='.bak'):
     check_res, check_msg = _check_file(name)
     if not check_res:
         return _error(ret, check_msg)
-
-    unanchor_regex = regex.lstrip('^')
 
     # Make sure the pattern appears in the file
     if __salt__['file.contains_regex'](name, regex):
@@ -1674,7 +1710,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     return ret
 
 
-def append(name, text):
+def append(name, text=None, makedirs=False, source=None, source_hash=None):
     '''
     Ensure that some text appears at the end of a file
 
@@ -1702,14 +1738,50 @@ def append(name, text):
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if makedirs:
+        dirname = os.path.dirname(name)
+        if not __salt__['file.directory_exists'](dirname):
+            _makedirs(name)
+            check_res, check_msg = _check_directory(
+                dirname, None, None, False, None, False, False
+            )
+            if not check_res:
+                return _error(ret, check_msg)
+
+        # Make sure that we have a file
+        __salt__['file.touch'](name)
+
     check_res, check_msg = _check_file(name)
     if not check_res:
         return _error(ret, check_msg)
+
+    if source:
+        # get cached file or copy it to cache
+        cached_source_path = __salt__['cp.cache_file'](source)
+        logger.debug(
+            "state file.append cached source {0} -> {1}".format(
+                source, cached_source_path
+            )
+        )
+        cached_source = managed(
+            cached_source_path, source=source, source_hash=source_hash
+        )
+        if cached_source['result'] is True:
+            logger.debug(
+                "state file.append is loading text contents from cached source "
+                "{0}({1})".format(source, cached_source_path)
+            )
+            text = open(cached_source_path, 'r').read()
 
     if isinstance(text, string_types):
         text = (text,)
 
     for chunk in text:
+
+        if __salt__['file.contains_regex'](
+                        name, salt.utils.build_whitepace_splited_regex(chunk)):
+            continue
+
         try:
             lines = chunk.split('\n')
         except AttributeError:
@@ -1718,17 +1790,13 @@ def append(name, text):
             return _error(ret, 'Given text is not a string')
 
         for line in lines:
-            if __salt__['file.contains'](name, line):
-                continue
-            else:
-                if __opts__['test']:
-                    ret['comment'] = 'File {0} is set to be updated'.format(
-                            name)
-                    ret['result'] = None
-                    return ret
-                __salt__['file.append'](name, line)
-                cgs = ret['changes'].setdefault('new', [])
-                cgs.append(line)
+            if __opts__['test']:
+                ret['comment'] = 'File {0} is set to be updated'.format(name)
+                ret['result'] = None
+                return ret
+            __salt__['file.append'](name, line)
+            cgs = ret['changes'].setdefault('new', [])
+            cgs.append(line)
 
     count = len(ret['changes'].get('new', []))
 

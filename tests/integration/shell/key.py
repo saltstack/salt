@@ -1,5 +1,7 @@
 # Import python libs
 import sys
+import shutil
+import tempfile
 
 # Import salt libs
 from saltunittest import TestLoader, TextTestRunner
@@ -87,6 +89,46 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 data,
                 ['']
                 )
+
+    def test_keys_generation(self):
+        tempdir = tempfile.mkdtemp()
+        arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
+        data = self.run_key(arg_str)
+        try:
+            self.assertIn('Keys generation complete', data)
+        finally:
+            shutil.rmtree(tempdir)
+
+
+    def test_keys_generation_no_configdir(self):
+        tempdir = tempfile.mkdtemp()
+        arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
+        data = self.run_script('salt-key', arg_str)
+        try:
+            self.assertIn('Keys generation complete', data)
+        finally:
+            shutil.rmtree(tempdir)
+
+    def test_keys_generation_keysize_minmax(self):
+        tempdir = tempfile.mkdtemp()
+        arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
+        try:
+            data, error = self.run_key(
+                arg_str + ' --keysize=1024', catch_stderr=True
+            )
+            self.assertIn(
+                'salt-key: error: The minimum value for keysize is 2048', error
+            )
+
+            data, error = self.run_key(
+                arg_str + ' --keysize=32769', catch_stderr=True
+            )
+            self.assertIn(
+                'salt-key: error: The maximum value for keysize is 32768', error
+            )
+        finally:
+            shutil.rmtree(tempdir)
+
 
 if __name__ == "__main__":
     loader = TestLoader()

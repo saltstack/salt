@@ -3,7 +3,6 @@ import sys
 import shutil
 import tempfile
 import stat
-import platform
 from saltunittest import TestCase, TestLoader, TextTestRunner, skipIf
 
 import salt.utils.find

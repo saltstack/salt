@@ -228,7 +228,6 @@ def getent():
         salt '*' user.getent
     '''
     ret = []
-    items = {}
     users = []
     startusers = False
     cmd = 'net user'

@@ -1,3 +1,9 @@
+'''
+Define some default interface functions to be imported in multiple network
+interface modules.
+'''
+
+
 def ipaddr(interface=None):
     '''
     Returns the IP address for a given interface

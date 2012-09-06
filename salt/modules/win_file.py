@@ -544,10 +544,10 @@ def touch(name, atime=None, mtime=None):
             else:
                 times = (atime, mtime)
             os.utime(name, times)
-    except TypeError as exc:
+    except TypeError:
         msg = "atime and mtime must be integers"
         raise SaltInvocationError(msg)
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         return False
 
     return os.path.exists(name)

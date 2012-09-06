@@ -21,11 +21,14 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.event = salt.utils.event.SaltEvent(opts['sock_dir'], 'master')
+        self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
         self.colors = salt.utils.get_colors(
                 not bool(self.opts.get('no_color', False))
                 )
-        self._check_master()
+        if not opts.get('gen_keys', None):
+            # Only check for a master running IF we need it.
+            # While generating keys we don't
+            self._check_master()
 
     def _check_master(self):
         '''
@@ -57,7 +60,7 @@ class Key(object):
                 'delete': '',
                 'delete_all': False,
                 'finger': '',
-                'quiet': Fasle,
+                'quiet': False,
                 'yes': True,
                 'gen_keys': '',
                 'gen_keys_dir': '.',
@@ -335,7 +338,6 @@ class Key(object):
         Delete all keys
         '''
         # Don't ask for verification if yes is not set
-        yes = self.opts.get('yes', True)
         del_ = set()
         for dir in ("acc", "rej", "pre"):
             for key in self._keys(dir):
@@ -427,6 +429,7 @@ class Key(object):
                     self.opts['gen_keys_dir'],
                     self.opts['gen_keys'],
                     self.opts['keysize'])
+            self._log('Keys generation complete', level='info')
             return
         if self.opts['list']:
             self._list(self.opts['list'])

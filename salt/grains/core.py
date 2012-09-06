@@ -132,6 +132,24 @@ def _bsd_cpudata(osdata):
     return grains
 
 
+def _sunos_cpudata(osdata):
+    '''
+    Return the cpu information for Solaris-like systems
+    '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    grains = {'num_cpus': 0}
+
+    grains['cpuarch'] = __salt__['cmd.run']('uname -p').strip()
+    for line in __salt__['cmd.run']('/usr/sbin/psrinfo 2>/dev/null').split('\n'):
+        grains['num_cpus'] += 1
+    grains['cpu_model'] = __salt__['cmd.run']('kstat -p cpu_info:0:cpu_info0:implementation').split()[1].strip()
+    
+    return grains
+
+
 def _memdata(osdata):
     '''
     Gather information about the system memory
@@ -154,6 +172,11 @@ def _memdata(osdata):
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
+    elif osdata['kernel'] == 'SunOS':
+        for line in __salt__['cmd.run']('/usr/sbin/prtconf 2>/dev/null').split('\n'):
+            comps = line.split(' ')	
+            if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
+                grains['mem_total'] = int(comps[2].strip()) 
     elif osdata['kernel'] == 'Windows':
         for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
             comps = line.split(':')
@@ -207,7 +230,7 @@ def _virtual(osdata):
             grains['virtual'] = 'kvm'
         elif 'virtio' in model:
             grains['virtual'] = 'kvm'
-    choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
+    choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
@@ -245,8 +268,6 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
-        elif isdir('/.SUNWnative'):
-            grains['virtual'] = 'zone'
         if os.path.isfile('/proc/cpuinfo'):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
@@ -264,6 +285,16 @@ def _virtual(osdata):
                 grains['virtual_subtype'] = 'jail'
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
+    elif osdata['kernel'] == 'SunOS':
+        # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
+        zonename = salt.utils.which('zonename')
+        if zonename:
+            zone = __salt__['cmd.run']('{0}'.format(zonename)).strip() 
+            if zone != "global":
+                grains['virtual'] = 'zone'
+        # Check if it's a branded zone (i.e. Solaris 8/9 zone)
+        if isdir('/.SUNWnative'):
+            grains['virtual'] = 'zone'
     return grains
 
 
@@ -275,6 +306,8 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
+    if osdata['os'] == 'Solaris':
+        grains['ps'] = '/usr/ucb/ps auxwww'
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
@@ -477,9 +510,10 @@ def os_data():
         if not 'os' in grains:
             grains['os'] = 'Unknown {0}'.format(grains['kernel'])
             grains['os_family'] = 'Unknown'
-    elif grains['kernel'] == 'sunos':
+    elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
         grains['os_family'] = 'Solaris'
+        grains.update(_sunos_cpudata(grains))
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
         grains['os_family'] = 'VMWare'

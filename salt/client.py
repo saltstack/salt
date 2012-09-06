@@ -36,9 +36,6 @@ import time
 import getpass
 import fnmatch
 
-# Import zmq modules
-import zmq
-
 # Import salt modules
 import salt.config
 import salt.payload
@@ -762,7 +759,6 @@ class LocalClient(object):
             print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
-        inc_timeout = timeout
         jid_dir = salt.utils.jid_dir(
                 jid,
                 self.opts['cachedir'],
@@ -774,7 +770,7 @@ class LocalClient(object):
         wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
-            return ret_
+            return ret
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, jid)
@@ -898,8 +894,6 @@ class LocalClient(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        start = 999999999999
-        gstart = int(time.time())
         found = set()
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
@@ -968,7 +962,7 @@ class LocalClient(object):
                     'compound': self._all_minions,
                     }[expr_form](expr)
         except Exception:
-            minions = tgt
+            minions = expr
         return minions
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',

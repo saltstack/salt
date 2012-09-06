@@ -5,14 +5,10 @@ Publish a command from a minion to a target
 # Import python libs
 import ast
 
-# Import third party libs
-import zmq
-
 # Import salt libs
 import salt.crypt
 import salt.payload
 from salt._compat import string_types, integer_types
-from salt.exceptions import SaltReqTimeoutError
 
 def _publish(
         tgt,
@@ -39,7 +35,6 @@ def _publish(
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
-    serial = salt.payload.Serial(__opts__)
     if fun == 'publish.publish':
         # Need to log something here
         return {}
@@ -118,10 +113,9 @@ def runner(fun, arg=None):
 
         salt publish.runner manage.down
     '''
-    serial = salt.payload.Serial(__opts__)
     arg = normalize_arg(arg)
 
-    sreq = salt.payload(__opts__['master_uri'])
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {

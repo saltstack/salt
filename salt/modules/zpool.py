@@ -78,7 +78,7 @@ def create_file_vdevice(size, *names):
 
     devs = ' '.join(l)
     cmd = 'mkfile {0} {1}'.format(size, devs)
-    res = __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd)
 
     # Makesure the files are there
     for name in names:
@@ -149,7 +149,7 @@ def zpool_destory(pool_name):
     ret = {}
     if pool_exists(pool_name):
         cmd = 'zpool destroy {0}'.format(pool_name)
-        res = __salt__['cmd.run'](cmd)
+        __salt__['cmd.run'](cmd)
         if not pool_exists(pool_name):
             ret[pool_name] = "Deleted"
             return ret

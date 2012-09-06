@@ -20,9 +20,6 @@ import logging
 import collections
 import traceback
 
-# Import Third Party libs
-import zmq
-
 # Import Salt libs
 import salt.utils
 import salt.loader
@@ -246,7 +243,7 @@ class State(object):
         Check to see if the modules for this state instance need to be
         updated, only update if the state is a file. If the function is
         managed check to see if the file is a possible module type, e.g. a
-        python, pyx, or .so. Always refresh if the function is recuse,
+        python, pyx, or .so. Always refresh if the function is recurse,
         since that can lay down anything.
         '''
         def _refresh():
@@ -881,7 +878,6 @@ class State(object):
         if not present:
             return 'met'
         reqs = {'require': [], 'watch': []}
-        status = 'unmet'
         for r_state in reqs:
             if r_state in low:
                 for req in low[r_state]:
@@ -998,7 +994,6 @@ class State(object):
         '''
         Process a high data call and ensure the defined states.
         '''
-        err = []
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
@@ -1506,7 +1501,6 @@ class BaseHighState(object):
         Compile the highstate but don't run it, return the low chunks to
         see exactly what the highstate will execute
         '''
-        err = []
         top = self.get_top()
         matches = self.top_matches(top)
         high, errors = self.render_highstate(matches)

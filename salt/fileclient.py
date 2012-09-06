@@ -12,7 +12,6 @@ import subprocess
 
 # Import third-party libs
 import yaml
-import zmq
 
 # Import salt libs
 from salt.exceptions import MinionError, SaltReqTimeoutError
@@ -149,12 +148,12 @@ class Client(object):
         if include_empty:
             # Break up the path into a list containing the bottom-level directory
             # (the one being recursively copied) and the directories preceding it
-            separated = string.rsplit(path,'/',1)
-            if len(separated) != 2:
-                # No slashes in path. (This means all files in env will be copied)
-                prefix = ''
-            else:
-                prefix = separated[0]
+            #separated = string.rsplit(path, '/', 1)
+            #if len(separated) != 2:
+            #    # No slashes in path. (This means all files in env will be copied)
+            #    prefix = ''
+            #else:
+            #    prefix = separated[0]
             for fn_ in self.file_list_emptydirs(env):
                 if fn_.startswith(path):
                     dest = salt.utils.path_join(
