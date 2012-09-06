@@ -296,9 +296,7 @@ class LogLevelMixIn(object):
         logfmt = self.config.get(
             'log_fmt_logfile', self.config['log_fmt_console']
         )
-        datefmt = self.config.get(
-            'log_datefmt_logfile', self.config['log_datefmt']
-        )
+        datefmt = self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
         log.setup_logfile_logger(
             self.config[lfkey],
             loglevel,
