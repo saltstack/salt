@@ -27,8 +27,7 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-__dflt_log_datefmt = '%H:%M:%S'
-__dflt_log_datefmt_logfile = '%Y-%m-%d %H:%M:%S'
+__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
 __dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
 __dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
@@ -191,7 +190,6 @@ def minion_config(path):
             'log_level': None,
             'log_level_logfile': None,
             'log_datefmt': __dflt_log_datefmt,
-            'log_datefmt_logfile': __dflt_log_datefmt_logfile,
             'log_fmt_console': __dflt_log_fmt_console,
             'log_fmt_logfile': __dflt_log_fmt_logfile,
             'log_granular_levels': {},
@@ -285,7 +283,6 @@ def master_config(path):
             'log_level': None,
             'log_level_logfile': None,
             'log_datefmt': __dflt_log_datefmt,
-            'log_datefmt_logfile': __dflt_log_datefmt_logfile,
             'log_fmt_console': __dflt_log_fmt_console,
             'log_fmt_logfile': __dflt_log_fmt_logfile,
             'log_granular_levels': {},
