@@ -67,7 +67,6 @@ def _enable(name, started):
     if __salt__['service.enabled'](name):
         # Service is enabled
         if started is True:
-            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
                 ' and is running').format(name)
             return ret
