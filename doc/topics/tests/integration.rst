@@ -167,7 +167,7 @@ the ``run_state`` methods are the workhorse here:
 
 The above example also demonstrates using the integration files and the
 integration state tree. The variable `integration.FILES` will point to the
-directory used to store files that can be used or added to to help enabe tests
+directory used to store files that can be used or added to to help enable tests
 that require files. The location `integration.TMP` can also be used to store
 temporary files that the test system will clean up when the execution finishes.
 
