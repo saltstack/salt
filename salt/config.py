@@ -7,7 +7,6 @@ import glob
 import os
 import socket
 import logging
-import resource
 import tempfile
 
 # import third party libs
@@ -266,7 +265,7 @@ def master_config(path):
                 },
             'client_acl': {},
             'file_buffer_size': 1048576,
-            'max_open_files': resource.getrlimit(resource.RLIMIT_NOFILE)[1],
+            'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
             'pub_refresh': True,
