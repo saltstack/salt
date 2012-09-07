@@ -449,11 +449,12 @@ class ShellCaseCommonTestsMixIn(object):
 
         cfgfile = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         out, err = self.run_script(
-            self._call_binary_, "--config {0}".format(cfgfile), catch_stderr=True
+            self._call_binary_,
+            '--config {0}'.format(cfgfile),
+            catch_stderr=True
         )
         self.assertIn('Usage: {0}'.format(self._call_binary_), '\n'.join(err))
         self.assertIn('deprecated', '\n'.join(err))
-
 
     def test_version_includes_binary_name(self):
         if getattr(self, '_call_binary_', None) is None:
