@@ -250,7 +250,12 @@ class ModuleCase(TestCase):
             minion_tgt, function, arg, timeout=100, kwarg=kwargs
         )
 
-        if orig[minion_tgt] is None and function not in know_to_return_none:
+        if minion_tgt not in orig:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
+                'from the minion \'{0}\''.format(minion_tgt)
+            )
+        elif orig[minion_tgt] is None and function not in know_to_return_none:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
                 'the minion \'{1}\''.format(function, minion_tgt)
