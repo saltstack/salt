@@ -73,17 +73,19 @@ def _default_runlevel():
     # Try to get the "main" default.  If this fails, throw up our
     # hands and just guess "2", because things are horribly broken
     try:
-        for line in open('/etc/init/rc-sysinit.conf'):
-            if line.startswith('env DEFAULT_RUNLEVEL'):
-                runlevel = line.split('=')[-1].strip()
+        with open('/etc/init/rc-sysinit.conf') as fp_:
+            for line in fp_:
+                if line.startswith('env DEFAULT_RUNLEVEL'):
+                    runlevel = line.split('=')[-1].strip()
     except:
         return '2'
 
     # Look for an optional "legacy" override in /etc/inittab
     try:
-        for line in open('/etc/inittab'):
-            if not line.startswith('#') and 'initdefault' in line:
-                runlevel = line.split(':')[1]
+        with open('/etc/inittab') as fp_:
+            for line in fp_:
+                if not line.startswith('#') and 'initdefault' in line:
+                    runlevel = line.split(':')[1]
     except:
         pass
 
@@ -91,11 +93,12 @@ def _default_runlevel():
     # Kinky.
     try:
         valid_strings = set(('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
-        for line in open('/proc/cmdline'):
-            for arg in split(line.strip()):
-                if arg in valid_strings:
-                    runlevel = arg
-                    break
+        with open('/proc/cmdline') as fp_:
+            for line in fp_:
+                for arg in split(line.strip()):
+                    if arg in valid_strings:
+                        runlevel = arg
+                        break
     except:
         pass
 
