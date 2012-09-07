@@ -688,6 +688,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'Execute a salt command query, this can be used to find '
                   'the results of a previous function call: -Q test.echo')
         )
+        self.add_option(
+            '-d', '--doc', '--documentation',
+            dest='doc',
+            default=False,
+            action='store_true',
+            help=('Return the documentation for the specified module or for '
+                  'all modules if none are specified.')
+        )
+
 
     def _mixin_after_parsed(self):
         if self.options.query:
@@ -698,9 +707,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             self.config['cmd'] = self.args[0]
         else:
             # Catch invalid invocations of salt such as: salt run
-            if len(self.args) <= 1:
+            if len(self.args) <= 1 and not self.options.doc:
                 self.print_help()
                 self.exit(1)
+
+            if self.options.doc:
+                # Include the target
+                self.args.insert(0, '*')
+                # Include the function
+                self.args.insert(1, 'sys.doc')
 
             if self.options.list:
                 self.config['tgt'] = self.args[0].split(',')
