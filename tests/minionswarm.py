@@ -13,8 +13,6 @@ import optparse
 import subprocess
 import tempfile
 import shutil
-import random
-import hashlib
 
 # Import salt libs
 import salt
@@ -53,8 +51,7 @@ def parse():
     parser.add_option('--no-clean',
             action='store_true',
             default=False,
-            help='Don\'t cleanup temporary files/directories'
-    )
+            help='Don\'t cleanup temporary files/directories')
 
     options, args = parser.parse_args()
 
@@ -72,36 +69,49 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.swarm_root = tempfile.mkdtemp(prefix='mswarm-root', suffix='.d')
         self.pki = self._pki_dir()
+        self.__zfill = len(str(self.opts['minions']))
+
         self.confs = set()
 
     def _pki_dir(self):
         '''
         Create the shared pki directory
         '''
-        path = tempfile.mkdtemp(prefix='mswarm-pki-')
-        cmd = 'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} --key-logfile {1}'
+        path = os.path.join(self.swarm_root, 'pki')
+        os.makedirs(path)
+
         print('Creating shared pki keys for the swarm on: {0}'.format(path))
-        subprocess.call(cmd.format(path, os.path.join(path, 'keys.log')), shell=True)
+        subprocess.call(
+            'salt-key -c {0} --gen-keys minion --gen-keys-dir {0} '
+            '--key-logfile {1}'.format(
+                path, os.path.join(path, 'keys.log')
+            ), shell=True
+        )
         print('Keys generated')
         return path
 
-    def mkconf(self):
+    def mkconf(self, idx):
         '''
         Create a config file for a single minion
         '''
-        minion_id = hashlib.md5(str(random.randint(0, 999999))).hexdigest()
-        dpath = tempfile.mkdtemp(
-            prefix='mswarm-{0}'.format(minion_id), suffix='.d'
-        )
-        data = {'id': minion_id,
-                'user': pwd.getpwuid(os.getuid()).pw_name,
-                'pki_dir': self.pki,
-                'cachedir': os.path.join(dpath, 'cache'),
-                'master': self.opts['master'],
-                'log_file': os.path.join(dpath, 'minion.log')
-               }
+        minion_id = 'ms-{0}'.format(str(idx).zfill(self.__zfill))
+
+        dpath = os.path.join(self.swarm_root, minion_id)
+        os.makedirs(dpath)
+
+        data = {
+            'id': minion_id,
+            'user': pwd.getpwuid(os.getuid()).pw_name,
+            'pki_dir': self.pki,
+            'cachedir': os.path.join(dpath, 'cache'),
+            'master': self.opts['master'],
+            'log_file': os.path.join(dpath, 'minion.log')
+        }
+
         path = os.path.join(dpath, 'minion')
+
         if self.opts['keep']:
             ignore = set()
             keep = self.opts['keep'].split(',')
@@ -111,6 +121,7 @@ class Swarm(object):
                     continue
                 ignore.add(fn_.split('.')[0])
             data['disable_modules'] = list(ignore)
+
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
         self.confs.add(dpath)
@@ -134,8 +145,8 @@ class Swarm(object):
         '''
         Prepare the confs set
         '''
-        for ind in range(self.opts['minions']):
-            self.mkconf()
+        for idx in range(self.opts['minions']):
+            self.mkconf(idx)
 
     def clean_configs(self):
         '''
@@ -149,7 +160,6 @@ class Swarm(object):
                     os.kill(pid, signal.SIGTERM)
                 except ValueError:
                     pass
-                #os.remove(path)
                 if os.path.exists(pidfile):
                     os.remove(pidfile)
                 if not self.opts['no_clean']:
@@ -177,12 +187,13 @@ class Swarm(object):
     def shutdown(self):
         print('Killing any remaining running minions')
         subprocess.call(
-            "kill -KILL $(ps aux | grep python | grep \"salt-minion\" | awk '{print $2}')",
+            'kill -KILL $(ps aux | grep python | grep "salt-minion" '
+            '| awk \'{print $2}\')',
             shell=True
         )
         if not self.opts['no_clean']:
             print('Remove ALL related temp files/directories')
-            subprocess.call('rm -rf /tmp/mswarm*', shell=True)
+            shutil.rmtree(self.swarm_root)
         print('Done')
 
 if __name__ == '__main__':
