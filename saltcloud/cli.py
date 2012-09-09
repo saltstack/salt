@@ -19,6 +19,8 @@ import saltcloud.config
 import saltcloud.output
 import salt.config
 
+from saltcloud.version import __version__ as VERSION
+
 class SaltCloud(object):
     '''
     Create a cli SaltCloud object
@@ -48,6 +50,13 @@ class SaltCloud(object):
         Parse the cli and return a dict of the options
         '''
         parser = optparse.OptionParser()
+
+        parser.add_option(
+                '--version',
+                dest='version',
+                default='',
+                action='store_true',
+                help='show program version number and exit')
 
         parser.add_option('-p',
                 '--profile',
@@ -157,6 +166,8 @@ class SaltCloud(object):
         mapper = saltcloud.cloud.Map(self.opts)
         if self.opts['query']:
             pprint.pprint(mapper.map_providers())
+        if self.opts['version']:
+            print VERSION
         if self.opts['list_images']:
             saltcloud.output.double_layer(
                     mapper.image_list(self.opts['list_images'])
