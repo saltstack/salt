@@ -67,7 +67,7 @@ def is_empty(filename):
     try:
         return os.stat(filename).st_size == 0
     except OSError:
-        # Non-existant file or permission denied to the parent dir
+        # Non-existent file or permission denied to the parent dir
         return False
 
 
@@ -185,7 +185,7 @@ def daemonize():
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
     # not cleanly redirected and the parent process dies when the
-    # multiprocessing process attemps to access stdout or err.
+    # multiprocessing process attempts to access stdout or err.
     #dev_null = open('/dev/null', 'rw')
     #os.dup2(dev_null.fileno(), sys.stdin.fileno())
     #os.dup2(dev_null.fileno(), sys.stdout.fileno())
@@ -421,12 +421,11 @@ def jid_dir(jid, cachedir, sum_type):
 
 def check_or_die(command):
     '''
-    Simple convienence function for modules to  use
-    for gracefully blowing up if a required tool is
-    not available in the system path.
+    Simple convenience function for modules to use for gracefully blowing up
+    if a required tool is not available in the system path.
 
-    Lazily import salt.modules.cmdmod to avoid any
-    sort of circular dependencies.
+    Lazily import `salt.modules.cmdmod` to avoid any sort of circular
+    dependencies.
     '''
     if command is None:
         raise CommandNotFoundError("'None' is not a valid command.")
