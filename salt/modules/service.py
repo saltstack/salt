@@ -97,7 +97,7 @@ def status(name, sig=None):
     sig = name if not sig else sig
     cmd = "{0[ps]} | grep {1} | grep -v grep | awk '{{print $2}}'".format(
             __grains__, sig)
-    return __salt__['cmd.run'](cmd).strip()
+    return (__salt__['cmd.run_stdout'](cmd) or '').strip()
 
 
 def reload(name):
