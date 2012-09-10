@@ -18,6 +18,7 @@ import pprint
 import saltcloud.config
 import saltcloud.output
 import salt.config
+import salt.output
 
 from saltcloud.version import __version__ as VERSION
 
@@ -138,6 +139,39 @@ class SaltCloud(object):
                 default='/etc/salt/cloud.profiles',
                 help='The location of the saltcloud vm config file')
 
+        parser.add_option('--raw-out',
+                default=False,
+                action='store_true',
+                dest='raw_out',
+                help=('Print the output from the salt command in raw python '
+                      'form, this is suitable for re-reading the output into '
+                      'an executing python script with eval.'))
+
+        parser.add_option('--text-out',
+                default=False,
+                action='store_true',
+                dest='txt_out',
+                help=('Print the output from the salt command in the same '
+                      'form the shell would.'))
+
+        parser.add_option('--yaml-out',
+                default=False,
+                action='store_true',
+                dest='yaml_out',
+                help='Print the output from the salt command in yaml.')
+
+        parser.add_option('--json-out',
+                default=False,
+                action='store_true',
+                dest='json_out',
+                help='Print the output from the salt command in json.')
+
+        parser.add_option('--no-color',
+                default=False,
+                action='store_true',
+                dest='no_color',
+                help='Disable all colored output')
+
         options, args = parser.parse_args()
 
         cli = {}
@@ -164,8 +198,23 @@ class SaltCloud(object):
         # If statement here for when cloud query is added
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.opts)
+
         if self.opts['query']:
-            pprint.pprint(mapper.map_providers())
+            get_outputter = salt.output.get_outputter
+            if self.opts['raw_out']:
+                printout = get_outputter('raw')
+            elif self.opts['json_out']:
+                printout = get_outputter('json')
+            elif self.opts['txt_out']:
+                printout = get_outputter('txt')
+            elif self.opts['yaml_out']:
+                printout = get_outputter('yaml')
+            else:
+                printout = get_outputter(None)
+
+            color = not bool(self.opts['no_color'])
+            printout(mapper.map_providers(), color=color)
+
         if self.opts['version']:
             print VERSION
         if self.opts['list_images']:
