@@ -5,7 +5,6 @@ Routines to set up a minion
 # This module still needs package support, so that the functions dict
 # returned can send back functions like: foo.bar.baz
 
-
 # Import python libs
 import os
 import imp
@@ -21,6 +20,7 @@ from salt.exceptions import LoaderError
 log = logging.getLogger(__name__)
 salt_base_path = os.path.dirname(salt.__file__)
 loaded_base_name = 'salt.loaded'
+
 
 def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
     '''
@@ -42,7 +42,10 @@ def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
             ext_type_types.extend(opts[ext_type_dirs])
 
     module_dirs = ext_type_types + [ext_types, sys_types]
-    generate_module('{0}.{1}'.format(loaded_base_name, tag))
+    _generate_module('{0}.int'.format(loaded_base_name))
+    _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
+    _generate_module('{0}.ext'.format(loaded_base_name))
+    _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
     return Loader(module_dirs, opts, tag)
 
 
@@ -105,7 +108,9 @@ def render(opts, functions):
     '''
     Returns the render modules
     '''
-    load = _create_loader(opts, 'renderers', 'render', ext_type_dirs='render_dirs')
+    load = _create_loader(
+        opts, 'renderers', 'render', ext_type_dirs='render_dirs'
+    )
     pack = {'name': '__salt__',
             'value': functions}
     rend = load.filter_func('render', pack)
@@ -166,14 +171,22 @@ def runner(opts):
     )
     return load.gen_functions()
 
-def generate_module(name):
+
+def _generate_module(name):
     if name in sys.modules:
         return
 
-    code = """'''Salt loaded {0} parent module'''""".format(name.split('.')[-1])
+    code = "'''Salt loaded {0} parent module'''".format(name.split('.')[-1])
     module = imp.new_module(name)
     exec code in module.__dict__
     sys.modules[name] = module
+
+
+def _mod_type(module_path):
+    if module_path.startswith(salt_base_path):
+        return 'int'
+    return 'ext'
+
 
 class Loader(object):
     '''
@@ -242,9 +255,9 @@ class Loader(object):
                                 return getattr(
                                     mod, fun[fun.rindex('.') + 1:])(*arg)
                 except ImportError:
-                    log.info("Cython is enabled in options though it's not "
-                             "present in the system path. Skipping Cython "
-                             "modules.")
+                    log.info('Cython is enabled in options though it\'s not '
+                             'present in the system path. Skipping Cython '
+                             'modules.')
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
     def gen_module(self, name, functions, pack=None):
@@ -268,6 +281,7 @@ class Loader(object):
                         full = full_test
         if not full:
             return None
+
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
@@ -285,16 +299,17 @@ class Loader(object):
             else:
                 fn_, path, desc = imp.find_module(name, self.module_dirs)
                 mod = imp.load_module(
-                    '{0}.{1}.{2}'.format(loaded_base_name, self.tag, name),
-                    fn_, path, desc
+                    '{0}.{1}.{2}.{3}'.format(
+                        loaded_base_name, _mod_type(path), self.tag, name
+                    ), fn_, path, desc
                 )
         except ImportError as exc:
-            log.debug(('Failed to import module {0}: {1}').format(name, exc))
+            log.debug('Failed to import module {0}: {1}'.format(name, exc))
             return mod
         except Exception as exc:
             trb = traceback.format_exc()
-            log.warning(('Failed to import module {0}, this is due most'
-                ' likely to a syntax error: {1}').format(name, trb))
+            log.warning('Failed to import module {0}, this is due most likely '
+                        'to a syntax error: {1}'.format(name, trb))
             return mod
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -368,7 +383,7 @@ class Loader(object):
                     continue
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                     or (cython_enabled and fn_.endswith('.pyx'))
-                    or os.path.isdir( os.path.join(mod_dir,fn_) )):
+                    or os.path.isdir(os.path.join(mod_dir, fn_))):
 
                     extpos = fn_.rfind('.')
                     if extpos > 0:
@@ -382,19 +397,24 @@ class Loader(object):
                     # If there's a name which ends in .pyx it means the above
                     # cython_enabled is True. Continue...
                     mod = pyximport.load_module(
-                        '{0}.{1}.{2}'.format(loaded_base_name, self.tag, name),
-                        names[name], tempfile.gettempdir()
+                        '{0}.{1}.{2}.{3}'.format(
+                            loaded_base_name,
+                            _mod_type(names[name]),
+                            self.tag,
+                            name
+                        ), names[name], tempfile.gettempdir()
                     )
                 else:
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
-                        '{0}.{1}.{2}'.format(loaded_base_name, self.tag, name),
-                        fn_, path, desc
+                        '{0}.{1}.{2}.{3}'.format(
+                            loaded_base_name, _mod_type(path), self.tag, name
+                        ), fn_, path, desc
                     )
                     # reload all submodules if necessary
                     submodules = [
-                        getattr(mod,sname) for sname in dir(mod) if
-                        type(getattr(mod,sname))==type(mod)
+                        getattr(mod, sname) for sname in dir(mod) if
+                        type(getattr(mod, sname))==type(mod)
                     ]
                     # reload only custom "sub"modules i.e is a submodule in
                     # parent module that are still available on disk (i.e. not
@@ -408,13 +428,13 @@ class Loader(object):
                         except AttributeError:
                             continue
             except ImportError as exc:
-                log.debug(('Failed to import module {0}, this is most likely'
-                           ' NOT a problem: {1}').format(name, exc))
+                log.debug('Failed to import module {0}, this is most likely '
+                          'NOT a problem: {1}'.format(name, exc))
                 continue
             except Exception as exc:
                 trb = traceback.format_exc()
-                log.warning(('Failed to import module {0}, this is due most'
-                    ' likely to a syntax error: {1}').format(name, trb))
+                log.warning('Failed to import module {0}, this is due most '
+                            'likely to a syntax error: {1}'.format(name, trb))
                 continue
             modules.append(mod)
         for mod in modules:
