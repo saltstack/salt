@@ -156,6 +156,8 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                 if 'jobs' in root:
                     continue
                 for name in files:
+                    if name.startswith('.'):
+                        continue
                     path = os.path.join(root, name)
                     try:
                         fmode = os.stat(path)
