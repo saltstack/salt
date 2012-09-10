@@ -173,7 +173,7 @@ class LocalClient(object):
                 if comps[0] not in grains:
                     minions.remove(id_)
                     continue
-                if isinstance(grains[comps[0]], list):
+                if isinstance(grains.get(comps[0]), list):
                     # We are matching a single component to a single list member
                     found = False
                     for member in grains[comps[0]]:
@@ -185,7 +185,7 @@ class LocalClient(object):
                     minions.remove(id_)
                     continue
                 if fnmatch.fnmatch(
-                    str(grains[comps[0]]).lower(),
+                    str(grains.get(comps[0], '').lower(),
                     comps[1].lower(),
                     ):
                     continue
