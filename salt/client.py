@@ -185,7 +185,7 @@ class LocalClient(object):
                     minions.remove(id_)
                     continue
                 if fnmatch.fnmatch(
-                    str(grains.get(comps[0], '').lower(),
+                    str(grains.get(comps[0], '').lower()),
                     comps[1].lower(),
                     ):
                     continue
