@@ -5,7 +5,6 @@ Routines to set up a minion
 # This module still needs package support, so that the functions dict
 # returned can send back functions like: foo.bar.baz
 
-
 # Import python libs
 import os
 import imp
@@ -256,9 +255,9 @@ class Loader(object):
                                 return getattr(
                                     mod, fun[fun.rindex('.') + 1:])(*arg)
                 except ImportError:
-                    log.info("Cython is enabled in options though it's not "
-                             "present in the system path. Skipping Cython "
-                             "modules.")
+                    log.info('Cython is enabled in options though it\'s not '
+                             'present in the system path. Skipping Cython '
+                             'modules.')
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
     def gen_module(self, name, functions, pack=None):
@@ -305,12 +304,12 @@ class Loader(object):
                     ), fn_, path, desc
                 )
         except ImportError as exc:
-            log.debug(('Failed to import module {0}: {1}').format(name, exc))
+            log.debug('Failed to import module {0}: {1}'.format(name, exc))
             return mod
         except Exception as exc:
             trb = traceback.format_exc()
-            log.warning(('Failed to import module {0}, this is due most'
-                ' likely to a syntax error: {1}').format(name, trb))
+            log.warning('Failed to import module {0}, this is due most likely '
+                        'to a syntax error: {1}'.format(name, trb))
             return mod
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -429,13 +428,13 @@ class Loader(object):
                         except AttributeError:
                             continue
             except ImportError as exc:
-                log.debug(('Failed to import module {0}, this is most likely'
-                           ' NOT a problem: {1}').format(name, exc))
+                log.debug('Failed to import module {0}, this is most likely '
+                          'NOT a problem: {1}'.format(name, exc))
                 continue
             except Exception as exc:
                 trb = traceback.format_exc()
-                log.warning(('Failed to import module {0}, this is due most'
-                    ' likely to a syntax error: {1}').format(name, trb))
+                log.warning('Failed to import module {0}, this is due most '
+                            'likely to a syntax error: {1}'.format(name, trb))
                 continue
             modules.append(mod)
         for mod in modules:
