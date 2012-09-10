@@ -552,7 +552,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(fret) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if int(time.time()) > start + timeout:
@@ -570,7 +570,7 @@ class LocalClient(object):
                     continue
                 if verbose:
                     if tgt_type == 'glob' or tgt_type == 'pcre':
-                        if not len(fret) >= len(minions):
+                        if len(found.intersection(minions)) >= len(minions):
                             print('\nThe following minions did not return:')
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -624,7 +624,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 break
             if int(time.time()) > start + timeout:
                 break
@@ -677,7 +677,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 # All Minions have returned
                 return ret
             if int(time.time()) > start + timeout:
@@ -732,7 +732,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 return ret
             if int(time.time()) > start + timeout:
                 return ret
@@ -779,12 +779,12 @@ class LocalClient(object):
                 ret[raw['id']] = {'ret': raw['return']}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
-                if len(found) >= len(minions):
+                if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
-            if len(found) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
@@ -847,12 +847,12 @@ class LocalClient(object):
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
-                if len(found) >= len(minions):
+                if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
-            if len(found) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
@@ -1020,13 +1020,7 @@ class LocalClient(object):
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
 
-        if self.opts['order_masters']:
-            # If we're a master of masters, ignore the check_minion and
-            # set the minions to the target.  This speeds up wait time
-            # for lists and ranges and makes regex and other expression
-            # forms possible
-            minions = tgt
-        elif not minions:
+        if not minions:
             return {'jid': None,
                     'minions': minions}
 
