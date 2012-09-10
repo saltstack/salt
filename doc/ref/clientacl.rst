@@ -33,3 +33,5 @@ to be manually modified if upgrading from an earlier version.
     chmod 755 /var/cache/salt
     chmod 755 /var/cache/salt/jobs
     chmod 755 /tmp/.salt-unix
+    rm /var/cache/salt/.*keys
+    service salt-master restart
