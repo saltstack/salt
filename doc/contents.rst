@@ -38,6 +38,7 @@ Full Table of Contents
     ref/renderers/all/index
     ref/runners
     ref/peer
+    ref/clientacl
     ref/syndic
     ref/python-api
     ref/file_server/index
