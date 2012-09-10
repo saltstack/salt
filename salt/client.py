@@ -677,7 +677,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(found.intersection(minions)) >= len(minions):
+            if len(set(ret.keys()).intersection(minions)) >= len(minions):
                 # All Minions have returned
                 return ret
             if int(time.time()) > start + timeout:
