@@ -55,9 +55,9 @@ class SaltCloud(object):
         parser.add_option(
                 '--version',
                 dest='version',
-                default='',
+                default=False,
                 action='store_true',
-                help='show program version number and exit')
+                help='Show program version number and exit')
 
         parser.add_option('-p',
                 '--profile',
