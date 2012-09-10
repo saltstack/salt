@@ -9,4 +9,4 @@ mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
 echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
 echo "{{ minion }}" > /etc/salt/minion
-service salt-minion start
+service salt-minion restart
