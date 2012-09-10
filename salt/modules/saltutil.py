@@ -9,11 +9,19 @@ import hashlib
 import shutil
 import signal
 import logging
+import sys
 
 # Import Salt libs
 import salt.payload
 import salt.state
 from salt._compat import string_types
+
+# Import esky for update functionality
+try:
+    import esky
+    has_esky = True
+except ImportError:
+    has_esky = False
 
 log = logging.getLogger(__name__)
 
@@ -103,6 +111,45 @@ def _list_emptydirs(rootdir):
         if not files and not subFolders:
             emptydirs.append(root)
     return emptydirs
+
+def update(version=None):
+    '''
+    Update the salt minion from the url defined in opts['update_url']
+
+
+    This feature requires the minion to be running a bdist_esky build.
+
+    The version number is optional and will default to the most recent version
+    available at opts['update_url'].
+
+    Returns details about the transaction upon completion.
+
+    CLI Example::
+
+        salt '*' saltutil.update 0.10.3
+    '''
+    if not has_esky:
+        return "Esky not available as import"
+    if not getattr(sys, "frozen", False):
+        return "Instance is not a frozen instance"
+    if not __opts__['update_url']:
+        return "'update_url' not configured on this minion"
+    app = esky.Esky(sys.executable, __opts__['update_url'])
+    try:
+        if not version:
+            version = app.find_update()
+        if not version:
+            return "No updates available"
+        app.fetch_version(version)
+        app.install_version(version)
+        app.cleanup()
+    except Exception as e:
+        return e
+    restarted = []
+    for service in __opts__['update_restart_services']:
+        restarted.append(__salt__['service.restart'](service))
+    return {'comment': "Updated from %s to %s" % (__version__, version),
+            'restarted': restarted}
 
 def sync_modules(env=None):
     '''
