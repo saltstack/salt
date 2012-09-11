@@ -76,7 +76,11 @@ def create(vm_):
     kwargs['name'] = vm_['name']
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
-    data = conn.create_node(**kwargs)
+    try:
+        data = conn.create_node(**kwargs)
+    except Exception as exc:
+        print('JoyEnt returned the following error: {0}'.format(exc.message))
+        return
     if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
         cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
                '"{3}"').format(
