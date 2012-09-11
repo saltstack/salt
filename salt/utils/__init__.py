@@ -476,7 +476,16 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
-    shutil.move(tgt, dest)
+    try:
+        shutil.move(tgt, dest)
+    except Exception:
+        pass
+    if os.path.isfile(tgt):
+        # The temp file failed to move
+        try:
+            os.remove(tgt)
+        except Exception:
+            pass
 
 
 def path_join(*parts):
