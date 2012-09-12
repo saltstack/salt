@@ -204,6 +204,8 @@ def minion_config(path):
             'grains': {},
             'permissive_pki_access': False,
             'default_include': 'minion.d/*.conf',
+            'update_url': False,
+            'update_restart_services': [],
             }
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
