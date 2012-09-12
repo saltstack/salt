@@ -1,5 +1,5 @@
 '''
-A conveniance system to manage jobs, both active and already run
+A convenience system to manage jobs, both active and already run
 '''
 
 # Import Python Modules
@@ -56,7 +56,7 @@ def active():
 
 def lookup_jid(jid):
     '''
-    Return the printout from a previousely executed job
+    Return the printout from a previously executed job
     '''
     def _format_ret(full_ret):
         '''
@@ -78,7 +78,9 @@ def lookup_jid(jid):
         ret = formatted[0]
         out = formatted[1]
     else:
-        ret = SaltException('Job {0} hasn\'t finished. No data yet :('.format(jid))
+        ret = SaltException(
+            'Job {0} hasn\'t finished. No data yet :('.format(jid)
+        )
         out = ''
 
     # Determine the proper output method and run it
