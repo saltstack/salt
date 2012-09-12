@@ -18,3 +18,16 @@ interface can be invoked on any of the major state run functions:
 The test run is mandated by adding the ``test=True`` option to the states. The
 return information will show states that will be applied in yellow and the
 result is reported as `None`.
+
+Default Test
+============
+
+If the value `test` is set to True in the minion configuration file then states
+will default to being executed in test mode. If this value is set then states
+can still be run by calling test=False:
+
+.. code-block:: bash
+
+    # salt \* state.highstate test=False
+    # salt \* state.sls test=False
+    # salt \* state.single test=False
