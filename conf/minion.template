@@ -265,3 +265,16 @@
 #
 # A dict for the test module:
 #test.baz: {spam: sausage, cheese: bread}
+
+
+######      Update settings          ######
+###########################################
+# Using the features in Esky, a salt minion can both run as a frozen app and
+# be updated on the fly. These options control how the update process
+# (saltutil.update()) behaves.
+#
+# The url for finding and downloading updates. Disabled by default.
+#update_url: False
+#
+# The list of services to restart after a successful update. Empty by default.
+#update_restart_services: []
