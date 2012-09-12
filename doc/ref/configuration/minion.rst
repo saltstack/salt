@@ -473,9 +473,9 @@ good starting point for most setups.
 
 Default: ``[]`` (service restarting on update is disabled)
 
-A list of services to restart when the minion software is updated. Typically
-this would be `salt-minion`, but one may have other services that need to go
-with it. Still others may choose to name the service something else.
+A list of services to restart when the minion software is updated. This would
+typically just be a list containing the minion's service name, but you may
+have other services that need to go with it.
 
 .. code-block:: yaml
 
