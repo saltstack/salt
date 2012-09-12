@@ -15,6 +15,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# These options should be overridden in the minion config file
 __opts__ = {'mongo.db': 'salt',
             'mongo.host': 'salt',
             'mongo.password': '',
