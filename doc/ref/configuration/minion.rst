@@ -443,3 +443,40 @@ option then the minion will log a warning message.
       - extra_config
       - minion.d/*
       - /etc/roles/webserver
+
+
+Frozen Build Update Settings
+----------------------------
+
+These options control how :py:func:`salt.modules.saltutil.update` works with esky
+frozen apps. For more information look at `<https://github.com/cloudmatrix/esky/>`_.
+
+.. conf_minion:: update_url
+
+``update_url``
+--------------
+
+Default: ``False`` (Update feature is disabled)
+
+The url to use when looking for application updates. Esky depends on directory
+listings to search for new versions. A webserver running on your Master is a
+good starting point for most setups.
+
+.. code-block:: yaml
+
+    update_url: 'http://salt.example.com/minion-updates'
+
+.. conf_minion:: update_restart_services
+
+``update_restart_services``
+---------------------------
+
+Default: ``[]`` (service restarting on update is disabled)
+
+A list of services to restart when the minion software is updated. Typically
+this would be `salt-minion`, but one may have other services that need to go
+with it. Still others may choose to name the service something else.
+
+.. code-block:: yaml
+
+    update_restart_services: ['salt-minion']
