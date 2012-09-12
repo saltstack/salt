@@ -218,6 +218,9 @@ def _virtual(osdata):
         # Product Name: Virtual Machine
         elif 'Manufacturer: Microsoft' in output and 'Virtual Machine' in output:
             grains['virtual'] = 'VirtualPC'
+        # Manufacturer: Parallels Software International Inc.
+        elif 'Parallels Software' in output:
+            grains['virtual'] = 'Parallels'
     # Fall back to lspci if dmidecode isn't available
     elif lspci:
         model = __salt__['cmd.run']('lspci').lower()
