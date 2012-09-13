@@ -293,7 +293,7 @@ def _source_list(source, source_hash, env):
                         source_hash = single_hash
                         break
             elif isinstance(single, string_types):
-                if single in mfiles:
+                if single[7:] in mfiles:
                     source = single
                     break
     return source, source_hash
