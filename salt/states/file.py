@@ -423,7 +423,7 @@ def _check_perms(name, ret, user, group, mode):
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
     perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name).lstrip('0')
+    perms['lmode'] = str(__salt__['file.get_mode'](name)).lstrip('0')
 
     # Mode changes if needed
     if mode:
