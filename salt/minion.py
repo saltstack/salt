@@ -13,6 +13,7 @@ import re
 import threading
 import time
 import traceback
+import sys
 
 # Import third party libs
 import zmq
@@ -232,36 +233,39 @@ class Minion(object):
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
-
-        if self.opts['multiprocessing']:
-            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-                multiprocessing.Process(
-                    target=lambda: self._thread_multi_return(data)
-                ).start()
-            else:
-                multiprocessing.Process(
-                    target=lambda: self._thread_return(data)
-                ).start()
+        if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
+            target = Minion._thread_multi_return
         else:
-            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-                threading.Thread(
-                    target=lambda: self._thread_multi_return(data)
-                ).start()
-            else:
-                threading.Thread(
-                    target=lambda: self._thread_return(data)
-                ).start()
+            target = Minion._thread_return
+        # We stash an instance references to allow for the socket
+        # communication in Windows. You can't pickle functions, and thus
+        # python needs to be able to reconstruct the reference on the other
+        # side.
+        instance = self
+        if self.opts['multiprocessing']:
+            if sys.platform.startswith('win'):
+                # let python reconstruct the minion on the other side if we're
+                # running on windows
+                instance = None
+            multiprocessing.Process(target=target, args=(instance, self.opts, data)).start()
+        else:
+            threading.Thread(target=target, args=(instance, self.opts, data)).start()
 
-    def _thread_return(self, data):
+    @classmethod
+    def _thread_return(class_, minion_instance, opts, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, data['jid'])
+        # this seems awkward at first, but it's a workaround for Windows
+        # multiprocessing communication.
+        if not minion_instance:
+            minion_instance = class_(opts)
+        if opts['multiprocessing']:
+            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             sdata = {'pid': os.getpid()}
             sdata.update(data)
-            open(fn_, 'w+').write(self.serial.dumps(sdata))
+            open(fn_, 'w+').write(minion_instance.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -276,10 +280,10 @@ class Minion(object):
                 pass
 
         function_name = data['fun']
-        if function_name in self.functions:
+        if function_name in minion_instance.functions:
             ret['success'] = False
             try:
-                func = self.functions[data['fun']]
+                func = minion_instance.functions[data['fun']]
                 args, kw = detect_kwargs(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
                 ret['success'] = True
@@ -305,12 +309,12 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
-        self._return_pub(ret)
+        minion_instance._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
-                ret['id'] = self.opts['id']
+                ret['id'] = opts['id']
                 try:
-                    self.returners[returner](ret)
+                    minion_instance.returners[returner](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(
@@ -319,11 +323,16 @@ class Minion(object):
                                 )
                             )
 
-    def _thread_multi_return(self, data):
+    @classmethod
+    def _thread_multi_return(class_, minion_instance, opts, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
+        # this seems awkward at first, but it's a workaround for Windows
+        # multiprocessing communication.
+        if not minion_instance:
+            minion_instance = class_(opts)
         ret = {'return': {}}
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
@@ -340,7 +349,7 @@ class Minion(object):
 
             ret['success'][data['fun'][ind]] = False
             try:
-                func = self.functions[data['fun'][ind]]
+                func = minion_instance.functions[data['fun'][ind]]
                 args, kw = detect_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kw)
                 ret['success'][data['fun'][ind]] = True
@@ -353,12 +362,12 @@ class Minion(object):
                         )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
-        self._return_pub(ret)
+        minion_instance._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
-                ret['id'] = self.opts['id']
+                ret['id'] = opts['id']
                 try:
-                    self.returners[returner](ret)
+                    minion_instance.returners[returner](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(
