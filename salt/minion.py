@@ -476,7 +476,7 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        log.debug('Minion "{0}" trying to  tune in'.format(self.opts['id']))
+        log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         context = zmq.Context()
 
         # Prepare the minion event system
