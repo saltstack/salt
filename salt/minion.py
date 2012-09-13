@@ -132,12 +132,6 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        if hasattr(self, '_syndic') and self._syndic:
-            log.warn(
-                'Starting the Salt Syndic Minion "{0}"'.format(self.opts['id'])
-            )
-        else:
-            log.warn('Starting the Salt Minion "{0}"'.format(self.opts['id']))
         self.authenticate()
         opts['pillar'] = salt.pillar.get_pillar(
             opts,
