@@ -99,7 +99,11 @@ def create(vm_):
     kwargs['size'] = get_size(conn, vm_)
     kwargs['location'] = get_location(conn, vm_)
     kwargs['auth'] = NodeAuthPassword(get_password(vm_))
-    data = conn.deploy_node(**kwargs)
+    try:
+        data = conn.deploy_node(**kwargs)
+    except Exception as exc:
+        print('Linode returned the following error: {0}'.format(exc.message))
+        return
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
