@@ -208,6 +208,9 @@ def minion_config(path):
             'update_restart_services': [],
             }
 
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
+
     load_config(opts, path, 'SALT_MINION_CONFIG')
 
     default_include = opts.get('default_include', [])
