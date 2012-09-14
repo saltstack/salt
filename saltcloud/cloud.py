@@ -167,6 +167,7 @@ class Cloud(object):
                     found = True
                     if name in pmap.get(self.provider(vm_), []):
                         # The specified vm already exists, don't make it anew
+                        print("{0} already exists on {1}".format(name, self.provider(vm_)))
                         continue
                     vm_['name'] = name
                     if self.opts['parallel']:
