@@ -75,7 +75,12 @@ def create(vm_):
     kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
-    data = conn.deploy_node(**kwargs)
+    try:
+        data = conn.deploy_node(**kwargs)
+    except Exception as exc:
+        message = str(exc)
+        print('The following error was returned: {0}'.format(message))
+        return
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
