@@ -79,8 +79,13 @@ def create(vm_):
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
-        print('JoyEnt returned the following error: {0}'.format(exc.message))
-        return
+        err = ('Error creating {0} on JOYENT\n\n'
+               'The following exception was thrown by libcloud when trying to '
+               'run the initial deployment: \n{1}').format(
+                       vm_['name'], exc.message
+                       )
+        sys.stderr.write(err)
+        return False
     if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
         cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} '
                '"{3}"').format(

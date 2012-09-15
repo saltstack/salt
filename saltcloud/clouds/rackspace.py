@@ -77,8 +77,13 @@ def create(vm_):
     try:
         data = conn.deploy_node(**kwargs)
     except DeploymentError as exc:
-        print('Libcloud failed to connect to the new vm: {0}'.format(exc))
-        return
+        err = ('Error creating {0} on RACKSPACE\n\n'
+               'The following exception was thrown by libcloud when trying to '
+               'run the initial deployment: \n{1}').format(
+                       vm_['name'], exc
+                       )
+        sys.stderr.write(err)
+        return False
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
