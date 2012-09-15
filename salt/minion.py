@@ -546,7 +546,7 @@ class Minion(object):
             last = time.time()
             while True:
                 try:
-                    socks = dict(poller.poll(self.opts['sub_timeout']))
+                    socks = dict(poller.poll(self.opts['sub_timeout'] * 1000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)
@@ -585,7 +585,7 @@ class Minion(object):
         else:
             while True:
                 try:
-                    socks = dict(poller.poll(60))
+                    socks = dict(poller.poll(60000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)
