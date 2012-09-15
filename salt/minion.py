@@ -548,6 +548,7 @@ class Minion(object):
                 try:
                     socks = dict(poller.poll(self.opts['sub_timeout'] * 1000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
+                        self.passive_refresh()
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)
                         last = time.time()
@@ -572,7 +573,6 @@ class Minion(object):
                         last = time.time()
                     time.sleep(0.05)
                     multiprocessing.active_children()
-                    self.passive_refresh()
                     # Check the event system
                     if epoller.poll(1):
                         try:
