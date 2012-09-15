@@ -88,6 +88,9 @@ class TestsLoggingHandler(object):
             return []
         return self.handler.messages
 
+    def clear(self):
+        self.handler.messages = []
+
     def __enter__(self):
         self.activate()
         return self
