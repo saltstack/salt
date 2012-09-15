@@ -19,7 +19,7 @@ def __virtual__():
 
 def _ctl_cmd(cmd, name):
     return 'supervisorctl {cmd} {name}'.format(
-        cmd=cmd, name=name)
+        cmd=cmd, name=(name or ''))
 
 
 def start(name='all'):
@@ -32,11 +32,25 @@ def start(name='all'):
     return __salt__['cmd.run_all'](_ctl_cmd('start', name))
 
 
-def restart(name):
+def restart(name='all'):
     '''
     Restart the named service.
 
     CLI Example::
         salt '*' supervisord.restart <service>
     '''
-    return not __salt__['cmd.retcode'](_ctl_cmd('restart', name))
+    return __salt__['cmd.run_all'](_ctl_cmd('restart', name))
+
+
+def stop(name='all'):
+    '''
+    Stop the named service.
+    
+    CLI Example::
+        salt '*' supervisord.stop <service>
+    '''
+    return __salt__['cmd.run_all'](_ctl_cmd('stop', name))
+
+
+def status(name=None):
+    return __salt__['cmd.run_all'](_ctl_cmd('status', name))
