@@ -175,12 +175,10 @@ def create(vm_):
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
-        err = ('The following exception was thrown by libcloud when trying to '
-               'run the initial deployment: \n{0}\n\nThe vm {1} has been '
-               'created but Salt could not be intsalled. Please verify that '
-               'your ssh keys are in order and that the security group is '
-               'accepting inbound connections from port 22.\n').format(
-                       exc, vm_['name']
+        err = ('Error creating {0} on AWS\n\n'
+               'The following exception was thrown by libcloud when trying to '
+               'run the initial deployment: \n{1}').format(
+                       vm_['name'], exc
                        )
         sys.stderr.write(err)
         return False

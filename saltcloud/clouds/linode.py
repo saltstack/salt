@@ -102,8 +102,13 @@ def create(vm_):
     try:
         data = conn.deploy_node(**kwargs)
     except Exception as exc:
-        print('Linode returned the following error: {0}'.format(exc.message))
-        return
+        err = ('Error creating {0} on LINODE\n\n'
+               'The following exception was thrown by libcloud when trying to '
+               'run the initial deployment: \n{1}').format(
+                       vm_['name'], exc.message
+                       )
+        sys.stderr.write(err)
+        return False
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
