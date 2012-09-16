@@ -96,10 +96,36 @@ class TestVerify(TestCase):
             mof_test = 256
 
             resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
-            prev = 0
-            for newmax, level in (
+
+            try:
+                prev = 0
+                for newmax, level in (
                             (66, 'INFO'), (127, 'WARNING'), (196, 'CRITICAL')):
 
+                    for n in range(prev, newmax):
+                        with open(os.path.join(keys_dir, str(n)), 'w') as fp_:
+                            fp_.write(str(n))
+
+                    opts = {
+                        'max_open_files': newmax,
+                        'pki_dir': tempdir
+                    }
+
+                    check_max_open_files(opts)
+                    self.assertIn(logmsg_dbg.format(newmax), handler.messages)
+                    self.assertIn(
+                        logmsg_chk.format(
+                            level,
+                            newmax,
+                            mof_test,
+                            mof_h - newmax,
+                        ),
+                        handler.messages
+                    )
+                    handler.clear()
+                    prev = newmax
+
+                newmax = mof_test
                 for n in range(prev, newmax):
                     with open(os.path.join(keys_dir, str(n)), 'w') as fp_:
                         fp_.write(str(n))
@@ -112,8 +138,8 @@ class TestVerify(TestCase):
                 check_max_open_files(opts)
                 self.assertIn(logmsg_dbg.format(newmax), handler.messages)
                 self.assertIn(
-                    logmsg_chk.format(
-                        level,
+                    logmsg_crash.format(
+                        'CRITICAL',
                         newmax,
                         mof_test,
                         mof_h - newmax,
@@ -121,30 +147,11 @@ class TestVerify(TestCase):
                     handler.messages
                 )
                 handler.clear()
-                prev = newmax
-
-            newmax = mof_test
-            for n in range(prev, newmax):
-                with open(os.path.join(keys_dir, str(n)), 'w') as fp_:
-                    fp_.write(str(n))
-
-            opts = {
-                'max_open_files': newmax,
-                'pki_dir': tempdir
-            }
-
-            check_max_open_files(opts)
-            self.assertIn(logmsg_dbg.format(newmax), handler.messages)
-            self.assertIn(
-                logmsg_crash.format(
-                    'CRITICAL',
-                    newmax,
-                    mof_test,
-                    mof_h - newmax,
-                ),
-                handler.messages
-            )
-            handler.clear()
-
-            shutil.rmtree(tempdir)
-            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+            except IOError, err:
+                if err.errno == 24:
+                    # Too many open files
+                    self.skipTest('We\'ve hit the max open files setting')
+                raise
+            finally:
+                shutil.rmtree(tempdir)
+                resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
