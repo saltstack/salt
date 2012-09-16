@@ -66,7 +66,7 @@ class TestVerify(TestCase):
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
 
-    @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None)!=None,
+    @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None,
             'Travis environment does not like too many open files')
     def test_max_open_files(self):
 
@@ -101,8 +101,8 @@ class TestVerify(TestCase):
 
             try:
                 prev = 0
-                for newmax, level in (
-                            (66, 'INFO'), (127, 'WARNING'), (196, 'CRITICAL')):
+                for newmax, level in ((24, None), (66, 'INFO'),
+                                      (127, 'WARNING'), (196, 'CRITICAL')):
 
                     for n in range(prev, newmax):
                         with open(os.path.join(keys_dir, str(n)), 'w') as fp_:
@@ -115,15 +115,23 @@ class TestVerify(TestCase):
 
                     check_max_open_files(opts)
                     self.assertIn(logmsg_dbg.format(newmax), handler.messages)
-                    self.assertIn(
-                        logmsg_chk.format(
-                            level,
-                            newmax,
-                            mof_test,
-                            mof_h - newmax,
-                        ),
-                        handler.messages
-                    )
+                    if level is None:
+                        # No log message is triggered, only the DEBUG one which
+                        # tells us how many minion keys were accepted.
+                        self.assertEqual(
+                            [logmsg_dbg.format(newmax)],
+                            handler.messages
+                        )
+                    else:
+                        self.assertIn(
+                            logmsg_chk.format(
+                                level,
+                                newmax,
+                                mof_test,
+                                mof_h - newmax,
+                            ),
+                            handler.messages
+                        )
                     handler.clear()
                     prev = newmax
 
