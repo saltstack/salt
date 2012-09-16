@@ -66,6 +66,8 @@ class TestVerify(TestCase):
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
 
+    @skipIf(os.environ.get('TRAVIS_PYTHON_VERSION', None)!=None,
+            'Travis environment does not like too many open files')
     def test_max_open_files(self):
 
         with TestsLoggingHandler() as handler:
