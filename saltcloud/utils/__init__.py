@@ -105,8 +105,10 @@ def minion_conf_string(opts, vm_):
     minion = {'id': vm_['name']}
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
-    minion.update(opts.get('grains', {}))
-    minion.update(vm_.get('grains', {}))
+    minion.update(opts.get('map_minion', {}))
+    minion.update(vm_.get('map_minion', {}))
+    minion['grains'].update(opts.get('map_grains', {}))
+    minion['grains'].update(vm_.get('map_grains', {}))
     return yaml.safe_dump(minion)
 
 

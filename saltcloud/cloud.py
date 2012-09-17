@@ -192,8 +192,7 @@ class Map(Cloud):
         Read in the specified map file and return the map structure
         '''
         if not self.opts['map']:
-            sys.stderr.write('A map file was not specified\n')
-            sys.exit(1)
+            return {}
         if not os.path.isfile(self.opts['map']):
             sys.stderr.write('The specified map file does not exist: {0}\n'.format(self.opts['map']))
             sys.exit(1)
@@ -261,7 +260,8 @@ class Map(Cloud):
             tvm['name'] = name
             for miniondict in self.map[tvm['profile']]:
                 if name in miniondict:
-                    tvm['grains'] = miniondict[name]
+                    tvm['map_grains'] = miniondict[name]['grains']
+                    tvm['map_minion'] = miniondict[name]['minion']
             if self.opts['parallel']:
                 multiprocessing.Process(
                         target=lambda: self.create(tvm)
