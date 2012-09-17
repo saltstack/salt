@@ -116,6 +116,13 @@ Edit the minion config file:
     "saltdev". This isn't strictly necessary but it will serve as a reminder of
     which Salt installation you are working with.
 
+.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+
+    If you plan to run `salt-call` with this self-contained development
+    environment in a masterless setup, you should invoke `salt-call` with
+    ``-c /path/to/your/virtualenv/etc/salt`` so that salt can find the minion
+    config file. Without the ``-c`` option, Salt finds its config files in `/etc/salt`.
+
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
 

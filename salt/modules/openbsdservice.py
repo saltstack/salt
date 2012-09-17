@@ -60,7 +60,7 @@ def restart(name):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def status(name):
+def status(name, sig=None):
     '''
     Return the status for a service, returns a bool whether the service is
     running.
@@ -69,5 +69,7 @@ def status(name):
 
         salt '*' service.status <service name>
     '''
+    if sig:
+        return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} -f check'.format(name)
     return not __salt__['cmd.retcode'](cmd)
