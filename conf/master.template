@@ -15,6 +15,24 @@
 # The user to run salt
 #user: root
 
+# Max open files
+# Each minion connecting to the master uses AT LEAST one file descriptor, the
+# master subscription connection. If enough minions connect you might start
+# seeing on the console(and then salt-master crashes):
+#   Too many open files (tcp_listener.cpp:335)
+#   Aborted (core dumped)
+#
+# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+# max open files.
+#
+# If you wish to set a different value than the default one, uncomment and
+# configure this setting. Remember that this value CANNOT be higher that the
+# hard limit. Raising the hard limit depends on your OS and/or distribution,
+# so go to your preferred search engine and search for(for example):
+#   raise max open files hard limit debian
+#
+#max_open_files: 100000
+
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
 # running slowly, increase the number of threads
@@ -286,6 +304,7 @@
 ##########################################
 # The location of the master log file
 #log_file: /var/log/salt/master
+#key_logfile: /var/log/salt/key
 #
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
@@ -296,7 +315,7 @@
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen here:
 #	http://docs.python.org/library/time.html#time.strftime
-#log_datefmt: '%H:%M:%S'
+#log_datefmt: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen here:

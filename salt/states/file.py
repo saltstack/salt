@@ -293,7 +293,7 @@ def _source_list(source, source_hash, env):
                         source_hash = single_hash
                         break
             elif isinstance(single, string_types):
-                if single in mfiles:
+                if single[7:] in mfiles:
                     source = single
                     break
     return source, source_hash
@@ -423,7 +423,7 @@ def _check_perms(name, ret, user, group, mode):
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
     perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name).lstrip('0')
+    perms['lmode'] = str(__salt__['file.get_mode'](name)).lstrip('0')
 
     # Mode changes if needed
     if mode:
@@ -496,7 +496,7 @@ def _get_recurse_dest(prefix, fn_, source, env):
     for root in local_roots:
         n = len(root)
         # if root is the longest prefix path of fn_
-        if root == fn_[:n] and fn_[n] == pathsep:
+        if root == fn_[:n]:
             cachedir = os.path.join(root, srcpath)
             break
     else:
@@ -1563,15 +1563,23 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
+    with open(name, 'rb') as fp_:
+        slines = fp_.readlines()
     # should be ok now; perform the edit
     __salt__['file.sed'](name, before, after, limit, backup, options, flags)
+    with open(name, 'rb') as fp_:
+        nlines = fp_.readlines()
 
     # check the result
     ret['result'] = __salt__['file.contains_regex'](name, after)
+    if slines != nlines:
+        # Changes happened, add them
+        ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(nlines, slines))
+                )
 
     if ret['result']:
         ret['comment'] = 'File successfully edited'
-        ret['changes'].update({'old': before, 'new': after})
     else:
         ret['comment'] = 'Expected edit does not appear in file'
 
@@ -1630,16 +1638,25 @@ def comment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
+    with open(name, 'rb') as fp_:
+        slines = fp_.readlines()
     # Perform the edit
     __salt__['file.comment'](name, regex, char, backup)
+
+    with open(name, 'rb') as fp_:
+        nlines = fp_.readlines()
 
     # Check the result
     ret['result'] = __salt__['file.contains_regex'](name, unanchor_regex)
 
+    if slines != nlines:
+        # Changes happened, add them
+        ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(nlines, slines))
+                )
+
     if ret['result']:
         ret['comment'] = 'Commented lines successfully'
-        ret['changes'] = {'old': '',
-                'new': 'Commented lines matching: {0}'.format(regex)}
     else:
         ret['comment'] = 'Expected commented lines not found'
 
@@ -1694,16 +1711,27 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
+    
+    with open(name, 'rb') as fp_:
+        slines = fp_.readlines()
+
     # Perform the edit
     __salt__['file.uncomment'](name, regex, char, backup)
+
+    with open(name, 'rb') as fp_:
+        nlines = fp_.readlines()
 
     # Check the result
     ret['result'] = __salt__['file.contains_regex'](name, regex)
 
+    if slines != nlines:
+        # Changes happened, add them
+        ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(nlines, slines))
+                )
+
     if ret['result']:
         ret['comment'] = 'Uncommented lines successfully'
-        ret['changes'] = {'old': '',
-                'new': 'Uncommented lines matching: {0}'.format(regex)}
     else:
         ret['comment'] = 'Expected uncommented lines not found'
 
@@ -1776,6 +1804,11 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
     if isinstance(text, string_types):
         text = (text,)
 
+    with open(name, 'rb') as fp_:
+        slines = fp_.readlines()
+
+    count = 0
+
     for chunk in text:
 
         if __salt__['file.contains_regex'](
@@ -1795,10 +1828,16 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
                 ret['result'] = None
                 return ret
             __salt__['file.append'](name, line)
-            cgs = ret['changes'].setdefault('new', [])
-            cgs.append(line)
+            count += 1
 
-    count = len(ret['changes'].get('new', []))
+    with open(name, 'rb') as fp_:
+        nlines = fp_.readlines()
+
+    if slines != nlines:
+        # Changes happened, add them
+        ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(nlines, slines))
+                )
 
     ret['comment'] = 'Appended {0} lines'.format(count)
     ret['result'] = True

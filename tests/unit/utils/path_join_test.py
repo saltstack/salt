@@ -15,10 +15,13 @@ import platform
 import tempfile
 
 if __name__ == "__main__":
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    sys.path.insert(
+        0, os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    )
 
 from saltunittest import TestCase, TextTestRunner
 from salt.utils import path_join
+
 
 class PathJoinTestCase(TestCase):
 
@@ -27,7 +30,9 @@ class PathJoinTestCase(TestCase):
 
     NIX_PATHS = (
         (('/', 'key'), '/key'),
+        (('/etc/salt', '/etc/salt/pki'), '/etc/salt/etc/salt/pki'),
         (('/usr/local', '/etc/salt/pki'), '/usr/local/etc/salt/pki')
+
     )
 
     WIN_PATHS = (
@@ -55,7 +60,8 @@ class PathJoinTestCase(TestCase):
     def test_windows_paths(self):
         if platform.system().lower() != "windows":
             self.skipTest(
-                "Non windows platform found. not running non patched os.path path_join tests"
+                'Non windows platform found. not running non patched os.path '
+                'path_join tests'
             )
 
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
@@ -68,7 +74,8 @@ class PathJoinTestCase(TestCase):
     def test_windows_paths_patched_path_module(self):
         if platform.system().lower() == "windows":
             self.skipTest(
-                "Windows platform found. not running patched os.path path_join tests"
+                'Windows platform found. not running patched os.path '
+                'path_join tests'
             )
 
         self.__patch_path()

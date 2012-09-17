@@ -247,6 +247,7 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
 
 def script(
         source,
+        args=None,
         cwd=None,
         runas=None,
         shell=DEFAULT_SHELL,
@@ -262,10 +263,12 @@ def script(
     programming language.
 
     The script can also be formated as a template, the default is jinja.
+    Arguments for the script can be specified as well.
 
     CLI Example::
 
         salt '*' cmd.script salt://scripts/runme.sh
+        salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
     '''
     fd_, path = tempfile.mkstemp()
     os.close(fd_)
@@ -277,7 +280,7 @@ def script(
     os.chmod(path, 320)
     os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
-            path,
+            path +' '+ args if args else path,
             cwd=cwd,
             quiet=kwargs.get('quiet', False),
             runas=runas,

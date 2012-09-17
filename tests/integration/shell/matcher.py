@@ -116,6 +116,14 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('minion', data)
 
+    def test_salt_documentation(self):
+        '''
+        Test to see if we're supporting --doc
+        '''
+        data = self.run_salt('-d user.add')
+        self.assertIn('user.add:', data)
+
+
 
 if __name__ == "__main__":
     loader = TestLoader()

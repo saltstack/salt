@@ -26,9 +26,10 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-__dflt_log_datefmt = '%H:%M:%S'
+__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
 __dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
 __dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+
 
 def _validate_file_roots(file_roots):
     '''
@@ -139,6 +140,8 @@ def prepend_root_dir(opts, path_options):
     root_dir = os.path.abspath(opts['root_dir'])
     for path_option in path_options:
         if path_option in opts:
+            if opts[path_option].startswith(opts['root_dir']):
+                opts[path_option] = opts[path_option][len(opts['root_dir']):]
             opts[path_option] = salt.utils.path_join(root_dir, opts[path_option])
 
 
@@ -201,7 +204,12 @@ def minion_config(path):
             'grains': {},
             'permissive_pki_access': False,
             'default_include': 'minion.d/*.conf',
+            'update_url': False,
+            'update_restart_services': [],
             }
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
 
@@ -264,6 +272,7 @@ def master_config(path):
                 },
             'client_acl': {},
             'file_buffer_size': 1048576,
+            'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
             'pub_refresh': True,

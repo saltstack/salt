@@ -275,7 +275,7 @@ class LogLevelMixIn(object):
                   'the configuration file. Default: \'{1}\'.').format(
                       ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
                       getattr(self, '_default_logging_level_', 'warning')
-            )
+                  )
         )
 
     def process_log_level(self):
@@ -290,11 +290,18 @@ class LogLevelMixIn(object):
 
     def setup_logfile_logger(self):
         lfkey = 'key_logfile' if 'key' in self.get_prog_name() else 'log_file'
+        loglevel = self.config.get(
+            'log_level_logfile', self.config['log_level']
+        )
+        logfmt = self.config.get(
+            'log_fmt_logfile', self.config['log_fmt_console']
+        )
+        datefmt = self.config.get('log_datefmt', '%Y-%m-%d %H:%M:%S')
         log.setup_logfile_logger(
             self.config[lfkey],
-            self.config['log_level_logfile'] or self.config['log_level'],
-            log_format=self.config['log_fmt_logfile'],
-            date_format=self.config['log_datefmt']
+            loglevel,
+            log_format=logfmt,
+            date_format=datefmt
         )
         for name, level in self.config['log_granular_levels'].items():
             log.set_logger_level(name, level)
@@ -681,6 +688,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'Execute a salt command query, this can be used to find '
                   'the results of a previous function call: -Q test.echo')
         )
+        self.add_option(
+            '-d', '--doc', '--documentation',
+            dest='doc',
+            default=False,
+            action='store_true',
+            help=('Return the documentation for the specified module or for '
+                  'all modules if none are specified.')
+        )
+
 
     def _mixin_after_parsed(self):
         if self.options.query:
@@ -691,9 +707,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             self.config['cmd'] = self.args[0]
         else:
             # Catch invalid invocations of salt such as: salt run
-            if len(self.args) <= 1:
+            if len(self.args) <= 1 and not self.options.doc:
                 self.print_help()
                 self.exit(1)
+
+            if self.options.doc:
+                # Include the target
+                self.args.insert(0, '*')
+                # Include the function
+                self.args.insert(1, 'sys.doc')
 
             if self.options.list:
                 self.config['tgt'] = self.args[0].split(',')

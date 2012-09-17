@@ -18,6 +18,7 @@ import tempfile
 import datetime
 import pwd
 import getpass
+import resource
 import subprocess
 import multiprocessing
 
@@ -39,6 +40,7 @@ import salt.pillar
 import salt.state
 import salt.runner
 import salt.utils.event
+import salt.utils.verify
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -180,6 +182,37 @@ class Master(SMaster):
             except KeyboardInterrupt:
                 break
 
+    def __set_max_open_files(self):
+        # Let's check to see how our max open files(ulimit -n) setting is
+        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+        log.info(
+            'Current values for max open files soft/hard setting: '
+            '{0}/{1}'.format(
+                mof_s, mof_h
+            )
+        )
+        # Let's grab, from the configuration file, the value to raise max open
+        # files to
+        mof_c = self.opts['max_open_files']
+        if mof_c > mof_h:
+            # The configured value is higher than what's allowed
+            log.warning(
+                'The value for the \'max_open_files\' setting, {0}, is higher '
+                'than what the user running salt is allowed to raise to, {1}. '
+                'Defaulting to {1}.'.format(mof_c, mof_h)
+            )
+            mof_c = mof_h
+
+        if mof_s < mof_c:
+            # There's room to raise the value. Raise it!
+            log.warning('Raising max open files value to {0}'.format(mof_c))
+            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_c, mof_h))
+            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+            log.warning(
+                'New values for max open files soft/hard values: '
+                '{0}/{1}'.format(mof_s, mof_h)
+            )
+
     def start(self):
         '''
         Turn on the master server components
@@ -187,6 +220,7 @@ class Master(SMaster):
         enable_sigusr1_handler()
 
         log.warn('Starting the Salt Master')
+        self.__set_max_open_files()
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
@@ -769,6 +803,7 @@ class AESFuncs(object):
             return False
 
         # Format individual return loads
+        self.event.fire_event({'syndic': load['return'].keys()}, load['jid'])
         for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
@@ -1132,15 +1167,19 @@ class ClearFuncs(object):
         Authenticate the client, use the sent public key to encrypt the aes key
         which was generated at start up.
 
-        This method fires an event over the master event manager. The evnt is
+        This method fires an event over the master event manager. The event is
         tagged "auth" and returns a dict with information about the auth
         event
         '''
+        # 0. Check for max open files
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
         # 3. make an rsa key with the pub key
         # 4. encrypt the aes key as an encrypted salt.payload
         # 5. package the return and return it
+
+        salt.utils.verify.check_max_open_files(self.opts)
+
         log.info('Authentication request from {id}'.format(**load))
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',

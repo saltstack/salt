@@ -476,7 +476,7 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        log.debug('Minion "{0}" trying to  tune in'.format(self.opts['id']))
+        log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         context = zmq.Context()
 
         # Prepare the minion event system
@@ -546,8 +546,9 @@ class Minion(object):
             last = time.time()
             while True:
                 try:
-                    socks = dict(poller.poll(self.opts['sub_timeout']))
+                    socks = dict(poller.poll(self.opts['sub_timeout'] * 1000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
+                        self.passive_refresh()
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)
                         last = time.time()
@@ -572,7 +573,6 @@ class Minion(object):
                         last = time.time()
                     time.sleep(0.05)
                     multiprocessing.active_children()
-                    self.passive_refresh()
                     # Check the event system
                     if epoller.poll(1):
                         try:
@@ -585,7 +585,7 @@ class Minion(object):
         else:
             while True:
                 try:
-                    socks = dict(poller.poll(60))
+                    socks = dict(poller.poll(60000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)

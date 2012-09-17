@@ -9,11 +9,13 @@ import stat
 import socket
 import getpass
 import logging
+import resource
 
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
+
 
 def zmq_version():
     '''
@@ -156,6 +158,8 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                 if 'jobs' in root:
                     continue
                 for name in files:
+                    if name.startswith('.'):
+                        continue
                     path = os.path.join(root, name)
                     try:
                         fmode = os.stat(path)
@@ -233,6 +237,7 @@ def check_user(user):
         return False
     return True
 
+
 def check_parent_dirs(fname, user='root'):
     '''
     Walk from the root up to a directory and verify that the current
@@ -244,10 +249,10 @@ def check_parent_dirs(fname, user='root'):
     dir_comps = fname.split(os.path.sep)[1:-1]
     # Loop over all parent directories of the minion key
     # to properly test if salt has read access to  them.
-    for i,dirname in enumerate(dir_comps):
+    for i, dirname in enumerate(dir_comps):
         # Create the full path to the directory using a list slice
         d = os.path.join(os.path.sep, *dir_comps[:i + 1])
-        msg ='Could not access directory {0}.'.format(d)
+        msg = 'Could not access directory {0}.'.format(d)
         current_user = getpass.getuser()
         # Make the error message more intelligent based on how
         # the user invokes salt-call or whatever other script.
@@ -259,3 +264,57 @@ def check_parent_dirs(fname, user='root'):
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)
+
+
+def check_max_open_files(opts):
+    mof_c = opts.get('max_open_files', 100000)
+    mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+    accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
+    accepted_count = len([
+        key for key in os.listdir(accepted_keys_dir) if
+        os.path.isfile(os.path.join(accepted_keys_dir, key))
+    ])
+
+    log.debug(
+        'This salt-master instance has accepted {0} minion keys.'.format(
+            accepted_count
+        )
+    )
+
+    level = logging.INFO
+
+    if (accepted_count * 4) <= mof_s:
+        # We check for the soft value of max open files here because that's the
+        # value the user chose to raise to.
+        #
+        # The number of accepted keys multiplied by four(4) is lower than the
+        # soft value, everything should be OK
+        return
+
+    msg = (
+        'The number of accepted minion keys({0}) should be lower than 1/4 '
+        'of the max open files soft setting({1}). '.format(
+            accepted_count, mof_s
+        )
+    )
+
+    if accepted_count >= mof_s:
+        # This should never occur, it might have already crashed
+        msg += 'salt-master will crash pretty soon! '
+        level = logging.CRITICAL
+    elif (accepted_count * 2) >= mof_s:
+        # This is way too low, CRITICAL
+        level = logging.CRITICAL
+    elif (accepted_count * 3) >= mof_s:
+        level = logging.WARNING
+        # The accepted count is more than 3 time, WARN
+    elif (accepted_count * 4) >= mof_s:
+        level = logging.INFO
+
+    if mof_c < mof_h:
+        msg += ('According to the system\'s hard limit, there\'s still a '
+                'margin of {0} to raise the salt\'s max_open_files '
+                'setting. ').format(mof_h - mof_c)
+
+    msg += 'Please consider raising this value.'
+    log.log(level=level, msg=msg)

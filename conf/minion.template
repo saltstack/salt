@@ -52,7 +52,7 @@
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the time, in
 # seconds, between those reconnection attempts.
-#acceptance_wait_time = 10
+#acceptance_wait_time: 10
 
 # When healing a dns_check is run, this is to make sure that the originally
 # resolved dns has not changed, if this is something that does not happen in
@@ -207,7 +207,7 @@
 # The state_verbose setting can be set to True or False, when set to False
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
-# 
+#
 # The state_output setting changes if the output is the full multi line
 # output for each changed state if set to 'full', but if set to 'terse'
 # the output will be shortened to a single line.
@@ -232,7 +232,7 @@
 #
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen on http://docs.python.org/library/time.html#time.strftime
-#log_datefmt: '%H:%M:%S'
+#log_datefmt: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen on http://docs.python.org/library/logging.html#logrecord-attributes
@@ -257,6 +257,9 @@
 # the module name is followed by a . and then the value. Also, all top level
 # data must be applied via the yaml dict construct, some examples:
 #
+# You can specify that all modules should run in test mode:
+#test: True
+#
 # A simple value for the test module:
 #test.foo: foo
 #
@@ -265,3 +268,16 @@
 #
 # A dict for the test module:
 #test.baz: {spam: sausage, cheese: bread}
+
+
+######      Update settings          ######
+###########################################
+# Using the features in Esky, a salt minion can both run as a frozen app and
+# be updated on the fly. These options control how the update process
+# (saltutil.update()) behaves.
+#
+# The url for finding and downloading updates. Disabled by default.
+#update_url: False
+#
+# The list of services to restart after a successful update. Empty by default.
+#update_restart_services: []

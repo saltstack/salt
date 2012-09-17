@@ -161,6 +161,7 @@ def install(pkgs=None,
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
+    treq = None
     if requirements:
         if requirements.startswith('salt://'):
             req = __salt__['cp.cache_file'](requirements)
@@ -170,7 +171,7 @@ def install(pkgs=None,
         else:
             treq = requirements
         cmd = '{cmd} --requirement "{requirements}" '.format(
-            cmd=cmd, requirements=treq)
+            cmd=cmd, requirements=treq or requirements)
 
     if log:
         try:
@@ -268,9 +269,9 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
+    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
 
-    if requirements:
+    if treq:
         try:
             os.remove(treq)
         except Exception:
@@ -337,6 +338,7 @@ def uninstall(pkgs=None,
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
+    treq = None
     if requirements:
         if requirements.startswith('salt://'):
             req = __salt__['cp.cache_file'](requirements)
@@ -344,7 +346,7 @@ def uninstall(pkgs=None,
             os.close(fd_)
             shutil.copyfile(req, treq)
         cmd = '{cmd} --requirements "{requirements}" '.format(
-            cmd=cmd, requirements=treq)
+            cmd=cmd, requirements=treq or requirements)
 
     if log:
         try:
@@ -369,7 +371,7 @@ def uninstall(pkgs=None,
 
     result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
 
-    if requirements:
+    if treq:
         try:
             os.remove(treq)
         except Exception:

@@ -11,7 +11,7 @@ booleans can be set.
         selinux.mode
 
     samba_create_home_dirs:
-        selinx.boolean:
+        selinux.boolean:
           - value: True
           - persist: True
 
