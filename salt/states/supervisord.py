@@ -25,6 +25,17 @@ def __virtual__():
     return False
 
 
+def _check_error(result, success_message):
+    ret = {}
+
+    if 'ERROR' in result:
+        ret['comment'] = result
+        ret['result'] = False
+    else:
+        ret['comment'] = success_message
+
+    return ret
+
 def running(name,
             restart=False,
             runas=None,
@@ -39,16 +50,20 @@ def running(name,
     runas
         Name of the user to run the supervisorctl command
     '''
-    ret = {'name': name, 'result': True, 'comment': ''}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': ''}
     if restart:
-        log.debug('Restarting service: {service}'.format(service=name))
+        comment = 'Restarting service: {0}'.format(name)
+        log.debug(comment)
         result = __salt__['supervisord.restart'](name, user=runas)
-        ret['comment'] = 'Restarted {service}'.format(service=name)
+
+        ret.update(_check_error(result, comment))
 
     else:
-        log.debug('Starting service: {service}'.format(service=name))
+        comment = 'Starting service: {0}'.format(name)
+        log.debug(comment)
         result = __salt__['supervisord.start'](name, user=runas)
-        ret['comment'] = 'Started {service}'.format(service=name)
+
+        ret.update(_check_error(result, comment))
 
     log.debug(unicode(result))
     return ret
