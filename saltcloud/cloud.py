@@ -224,8 +224,11 @@ class Map(Cloud):
             if not pdata:
                 continue
             for name in self.map[profile]:
-                defined.add(name)
-                ret['create'][name] = pdata
+                nodename = name
+                if isinstance(name, dict):
+                    nodename = (name.keys()[0])
+                defined.add(nodename)
+                ret['create'][nodename] = pdata
         for prov in pmap:
             for name in pmap[prov]:
                 exist.add(name)
@@ -256,6 +259,9 @@ class Map(Cloud):
         for name, profile in dmap['create'].items():
             tvm = copy.deepcopy(profile)
             tvm['name'] = name
+            for miniondict in self.map[tvm['profile']]:
+                if name in miniondict:
+                    tvm['grains'] = miniondict[name]
             if self.opts['parallel']:
                 multiprocessing.Process(
                         target=lambda: self.create(tvm)
