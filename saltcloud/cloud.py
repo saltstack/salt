@@ -3,6 +3,7 @@ The top level interface used to translate configuration data back to the
 correct cloud modules
 '''
 # Import python libs
+import sys
 import os
 import copy
 import multiprocessing
@@ -193,9 +194,11 @@ class Map(Cloud):
         Read in the specified map file and return the map structure
         '''
         if not self.opts['map']:
-            return {}
+            sys.stderr.write('A map file was not specified\n')
+            sys.exit(1)
         if not os.path.isfile(self.opts['map']):
-            return {}
+            sys.stderr.write('The specified map file does not exist: {0}\n'.format(self.opts['map']))
+            sys.exit(1)
         try:
             with open(self.opts['map'], 'rb') as fp_:
                 map_ = yaml.load(fp_.read())
@@ -217,7 +220,7 @@ class Map(Cloud):
         for profile in self.map:
             pdata = {}
             for pdef in self.opts['vm']:
-                # Tha named profile does not exist
+                # The named profile does not exist
                 if pdef.get('profile', '') == profile:
                     pdata = pdef
             if not pdata:
