@@ -120,7 +120,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     Setup the console logger
     '''
     if is_console_configured():
-        logging.getLogger(__name__).warning("Console logging already configured")
+        logging.getLogger(__name__).warn('Console logging already configured')
         return
 
     init()
@@ -157,7 +157,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     '''
 
     if is_logfile_configured():
-        logging.getLogger(__name__).warning("Logfile logging already configured")
+        logging.getLogger(__name__).warn('Logfile logging already configured')
         return
 
     init()

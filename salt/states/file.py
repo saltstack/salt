@@ -293,7 +293,7 @@ def _source_list(source, source_hash, env):
                         source_hash = single_hash
                         break
             elif isinstance(single, string_types):
-                if single in mfiles:
+                if single[7:] in mfiles:
                     source = single
                     break
     return source, source_hash
@@ -423,7 +423,7 @@ def _check_perms(name, ret, user, group, mode):
     perms = {}
     perms['luser'] = __salt__['file.get_user'](name)
     perms['lgroup'] = __salt__['file.get_group'](name)
-    perms['lmode'] = __salt__['file.get_mode'](name).lstrip('0')
+    perms['lmode'] = str(__salt__['file.get_mode'](name)).lstrip('0')
 
     # Mode changes if needed
     if mode:
@@ -496,7 +496,7 @@ def _get_recurse_dest(prefix, fn_, source, env):
     for root in local_roots:
         n = len(root)
         # if root is the longest prefix path of fn_
-        if root == fn_[:n] and fn_[n] == pathsep:
+        if root == fn_[:n]:
             cachedir = os.path.join(root, srcpath)
             break
     else:
