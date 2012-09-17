@@ -361,7 +361,7 @@ class State(object):
                 errors.append(err)
             if not isinstance(body, dict):
                 err = ('The type {0} in {1} is not formated as a dictionary'
-                       .format(name, body['__sls__']))
+                       .format(name, body))
                 errors.append(err)
                 continue
             for state in body:
