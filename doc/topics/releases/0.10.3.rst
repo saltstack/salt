@@ -32,6 +32,29 @@ and is configured like so:
 Where `fred` is allowed access to functions in the test module and to the
 ``pkg.list_pkgs`` function.
 
+Master Finger Option
+--------------------
+
+The `master_finger` option has been added to improve the security of minion
+provisioning. The `master_finger` option allows for the fingerprint of the
+master public key to be set in the configuration file to double verify that the
+master is valid. This option was added in response to a motivation to pre
+authenticate the master when provisioning new minions to help prevent
+man in the middle attacks in some situations.
+
+Salt Key Fingerprint Generation
+-------------------------------
+
+The ability to generate fingerprints of keys used by Salt has been added to
+``salt-key``. The new option `finger` accepts the name of the key to generate
+and display a fingerprint for.
+
+.. code-block:: base
+
+    salt-key -F master
+
+Will display the fingerprints for the master public and private keys.
+
 Parsing System
 --------------
 
@@ -127,4 +150,9 @@ specifying the text.
     file.append:
         - source: salt://testfile
 
+Security Fix
+============
 
+A timing vulnerability was uncovered in the code which decrypts the AES
+messages sent over the network. This has been fixed and upgrading is
+strongly recommended.
