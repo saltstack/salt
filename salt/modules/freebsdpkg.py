@@ -127,7 +127,7 @@ def install(name, *args, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    if _check_pkgng:
+    if _check_pkgng():
         pkg_command = 'pkg install -y'
     else:
         pkg_command = 'pkg_add -r'
