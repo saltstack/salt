@@ -86,6 +86,12 @@ Install Salt (and dependencies) into the virtualenv::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
 
+    Debian and Ubuntu systems have modified openssl libraries and mandate that
+    a patched version of M2Crypto be installed. This means that M2Crypto
+    needs to be installed via apt:
+
+        apt-get install python-m2crypto
+
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
