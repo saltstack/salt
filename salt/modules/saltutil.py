@@ -135,6 +135,7 @@ def update(version=None):
     if not __opts__['update_url']:
         return "'update_url' not configured on this minion"
     app = esky.Esky(sys.executable, __opts__['update_url'])
+    oldversion = __grains__['saltversion']
     try:
         if not version:
             version = app.find_update()
@@ -142,13 +143,14 @@ def update(version=None):
             return "No updates available"
         app.fetch_version(version)
         app.install_version(version)
+        app.uninstall_version(oldversion)
         app.cleanup()
     except Exception as e:
         return e
     restarted = []
     for service in __opts__['update_restart_services']:
         restarted.append(__salt__['service.restart'](service))
-    return {'comment': "Updated from %s to %s" % (__version__, version),
+    return {'comment': "Updated from %s to %s" % (oldversion, version),
             'restarted': restarted}
 
 def sync_modules(env=None):
