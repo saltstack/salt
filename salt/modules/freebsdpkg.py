@@ -127,12 +127,17 @@ def install(name, *args, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
+    env = ()
     if _check_pkgng():
         pkg_command = 'pkg install -y'
+        if 'repo' in kwargs:
+            env = (('PACKAGESITE', kwargs['repo']),)
     else:
         pkg_command = 'pkg_add -r'
+        if 'repo' in kwargs:
+            env = (('PACKAGEROOT', kwargs['repo']),)
     old = list_pkgs()
-    __salt__['cmd.retcode']('%s {0}'.format(name) % pkg_command)
+    __salt__['cmd.retcode']('%s {0}'.format(name) % pkg_command, env=env)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
