@@ -103,6 +103,7 @@ def minion_conf_string(opts, vm_):
     configuration file
     '''
     minion = {'id': vm_['name']}
+    minion['master_finger'] = vm_['master_finger']
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
     minion.update(opts.get('map_minion', {}))

@@ -12,6 +12,7 @@ import multiprocessing
 import saltcloud.utils
 import saltcloud.loader
 import salt.client
+import salt.utils
 
 # Import third party libs
 import yaml
@@ -258,9 +259,16 @@ class Map(Cloud):
         if not res.lower().startswith('y'):
             return
         # We are good to go, execute!
+        # Generate the fingerprint of the master pubkey in
+        #     order to mitigate man-in-the-middle attacks
+        master_pub = self.opts['pki_dir'] + '/master.pub'
+        master_finger = ''
+        if os.path.isfile(master_pub):
+            master_finger = salt.utils.pem_finger(master_pub)
         for name, profile in dmap['create'].items():
             tvm = copy.deepcopy(profile)
             tvm['name'] = name
+            tvm['master_finger'] = master_finger
             for miniondict in self.map[tvm['profile']]:
                 if name in miniondict:
                     tvm['map_grains'] = miniondict[name]['grains']
