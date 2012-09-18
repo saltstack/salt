@@ -728,7 +728,7 @@ class AESFuncs(object):
         if 'id' not in load or 'tag' not in load or 'data' not in load:
             return False
         tag = '{0}_{1}'.format(load['tag'], load['id'])
-        return self.event.fire_event(load['data'], tag)
+        return self.event.fire_event(load, tag)
 
     def _return(self, load):
         '''
