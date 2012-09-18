@@ -102,14 +102,14 @@ def keyname(vm_):
     '''
     Return the keyname
     '''
-    return str(vm_.get('AWS.keyname', __opts__.get('AWS.keyname', '')))
+    return str(vm_.get('keyname', __opts__.get('AWS.keyname', '')))
 
 
 def securitygroup(vm_):
     '''
     Return the security group
     '''
-    return str(vm_.get('AWS.securitygroup', __opts__.get('AWS.securitygroup', 'default')))
+    return vm_.get('securitygroup', __opts__.get('AWS.securitygroup', 'default'))
 
 
 def ssh_username(vm_):
