@@ -6,7 +6,7 @@ The latest taste of Salt has come, this release has many fixes and feature
 additions. Modifications have been made to make ZeroMQ connections more
 reliable, the begining of the ACL system is in place, a new command line
 parsing system has been added, dynamic module distribution has become more
-environment aware, the new `master_fingerprint` option and many more!
+environment aware, the new `master_finger` option and many more!
 
 Major Features
 ==============
