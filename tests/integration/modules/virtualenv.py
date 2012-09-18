@@ -43,6 +43,35 @@ class VirtualenvModuleTest(integration.ModuleCase):
         packages = self.run_function('pip.list', prefix='pep8', bin_env=pip_bin)
         self.assertFalse('pep8' in packages)
 
+    def test_issue_2028_pip_installed(self):
+        #self.run_function('virtualenv.create', [self.venv_dir])
+        self.run_function('virtualenv.create', ['/tmp/issue-2028-virtualenv'])
+
+        #bin_dir = os.path.join(self.venv_dir, 'bin')
+        bin_dir = '/tmp/issue-2028-virtualenv/bin'
+        pip_bin = os.path.join(bin_dir, 'pip')
+        template = '''
+supervisord-pip:
+    pip.installed:
+      - name: supervisor
+      - bin_env: {0}
+      - require:
+        - pkg: python-dev
+
+python-dev:
+  pkg.installed
+'''
+        ret = self.run_function(
+            'state.template_str', [template.format(pip_bin)]
+        )
+
+        #print 666, self.run_state('pkg.installed', name='bash')
+        #print 777, self.run_state('pip.installed', name='supervisor', bin_env=pip_bin)
+
+        self.assertTrue(
+            os.path.isfile(os.path.join(bin_dir, 'supervisord'))
+        )
+
     def tearDown(self):
         self.run_function('file.remove', [self.venv_test_dir])
 
