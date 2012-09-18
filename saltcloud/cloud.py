@@ -232,7 +232,8 @@ class Map(Cloud):
             for name in pmap[prov]:
                 exist.add(name)
                 if name in ret['create']:
-                    ret['create'].pop(name)
+                    if prov != 'aws' or pmap['aws'][name]['state'] != 2:
+                      ret['create'].pop(name)
         if self.opts['hard']:
             # Look for the items to delete
             ret['destroy'] = exist.difference(defined)
