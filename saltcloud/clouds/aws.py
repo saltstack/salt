@@ -87,6 +87,8 @@ def get_conn(**kwargs):
     if 'location' in kwargs:
         location = kwargs['location']
         if location not in EC2_LOCATIONS:
+            sys.stderr.write('The specified location does not seem to be valid: {0}\n'.format(location))
+            sys.exit(1)
             return None     #TODO raise exception
     else:
         location = DEFAULT_LOCATION
