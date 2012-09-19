@@ -23,6 +23,7 @@ and requires that two configuration paramaters be set for use:
 # Import python libs
 import os
 import types
+import paramiko
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -69,13 +70,13 @@ def create(vm_):
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
+    deploy_script = script(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
-    kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
     try:
-        data = conn.deploy_node(**kwargs)
+        data = conn.create_node(**kwargs)
     except DeploymentError as exc:
         err = ('Error creating {0} on RACKSPACE\n\n'
                'The following exception was thrown by libcloud when trying to '
@@ -84,6 +85,14 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
+    if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(data.public_ips[0], username='root', password=data.extra['password'])
+        stdin, stdout, stderr = ssh.exec_command(deploy_script.script)
+    else:
+        print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
