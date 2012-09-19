@@ -148,13 +148,12 @@ def update(version=None):
             return "No updates available"
         app.fetch_version(version)
         app.install_version(version)
-        app.uninstall_version(oldversion)
         app.cleanup()
     except Exception as e:
         return e
-    restarted = []
+    restarted = {}
     for service in __opts__['update_restart_services']:
-        restarted.append(__salt__['service.restart'](service))
+        restarted[service] = __salt__['service.restart'](service)
     return {'comment': "Updated from %s to %s" % (oldversion, version),
             'restarted': restarted}
 
