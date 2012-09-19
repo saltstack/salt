@@ -136,7 +136,7 @@ def update(version=None):
     if not has_esky:
         return "Esky not available as import"
     if not getattr(sys, "frozen", False):
-        return "Instance is not a frozen instance"
+        return "Minion is not running an Esky build"
     if not __opts__['update_url']:
         return "'update_url' not configured on this minion"
     app = esky.Esky(sys.executable, __opts__['update_url'])
