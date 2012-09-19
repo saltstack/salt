@@ -35,7 +35,7 @@ class EventModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
 
         eventfired = events.get(block=True, timeout=1)
-        self.assertIn('event.fire_master: just test it!!!!', eventfired)
+        self.assertIn('event.fire_master: just test it!!!!', eventfired['data'])
 
         ret = self.run_function(
             'event.fire_master',
