@@ -138,6 +138,7 @@ class Client(object):
         '''
         ret = []
         path = self._check_proto(path)
+        log.info("Caching directory '%s' for environment '%s'" % (path, env))
         for fn_ in self.file_list(env):
             if fn_.startswith(path):
                 local = self.cache_file('salt://{0}'.format(fn_), env)
@@ -224,9 +225,9 @@ class Client(object):
             if path.endswith('.sls'):
                 # is an sls module!
                 if path.endswith('{0}init.sls'.format(os.sep)):
-                    states.append(path.replace(os.sep, '.')[:-9])
+                    states.append(path.replace('/', '.')[:-9])
                 else:
-                    states.append(path.replace(os.sep, '.')[:-4])
+                    states.append(path.replace('/', '.')[:-4])
         return states
 
     def get_state(self, sls, env):
@@ -532,6 +533,7 @@ class RemoteClient(Client):
         dest is ommited, then the downloaded file will be placed in the minion
         cache
         '''
+        log.info("Fetching file '%s'" % path)
         path = self._check_proto(path)
         load = {'path': path,
                 'env': env,
