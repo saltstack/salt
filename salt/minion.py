@@ -9,6 +9,7 @@ import multiprocessing
 
 import fnmatch
 import os
+import hashlib
 import re
 import threading
 import time
@@ -482,13 +483,14 @@ class Minion(object):
         # Prepare the minion event system
         #
         # Start with the publish socket
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
         epub_sock_path = os.path.join(
                 self.opts['sock_dir'],
-                'minion_event_{0}_pub.ipc'.format(self.opts['id'])
+                'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
         epull_sock_path = os.path.join(
                 self.opts['sock_dir'],
-                'minion_event_{0}_pull.ipc'.format(self.opts['id'])
+                'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
         epub_sock = context.socket(zmq.PUB)
         if self.opts.get('ipc_mode', '') == 'tcp':
