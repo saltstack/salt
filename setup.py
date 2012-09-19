@@ -149,6 +149,7 @@ freezer_includes = [
 if sys.platform.startswith('win'):
     freezer_includes.extend([
         'win32api',
+        'win32file',
         'win32con',
         'win32security',
         'ntsecuritycon',
