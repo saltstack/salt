@@ -9,6 +9,7 @@
 
 import os
 import integration
+import hashlib
 from saltunittest import TestCase, TestLoader, TextTestRunner
 
 from salt.utils import event
@@ -34,17 +35,18 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=SOCK_DIR)
+        id_hash = hashlib.md5(opts['id']).hexdigest()
         me = event.MinionEvent(**opts)
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(
-                os.path.join(SOCK_DIR, 'minion_event_foo_pub.ipc')
+                os.path.join(SOCK_DIR, 'minion_event_{0}_pub.ipc'.format(id_hash))
             )
         )
         self.assertEqual(
             me.pulluri,
             'ipc://{0}'.format(
-                os.path.join(SOCK_DIR, 'minion_event_foo_pull.ipc')
+                os.path.join(SOCK_DIR, 'minion_event_{0}_pull.ipc'.format(id_hash))
             )
         )
 
