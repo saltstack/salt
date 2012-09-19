@@ -103,13 +103,18 @@ def minion_conf_string(opts, vm_):
     configuration file
     '''
     minion = {'id': vm_['name']}
-    minion['master_finger'] = vm_['master_finger']
+    if 'master_finger' in vm_:
+        minion['master_finger'] = vm_['master_finger']
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
     minion.update(opts.get('map_minion', {}))
     minion.update(vm_.get('map_minion', {}))
-    minion['grains'].update(opts.get('map_grains', {}))
-    minion['grains'].update(vm_.get('map_grains', {}))
+    optsgrains = opts.get('map_grains', {})
+    if optsgrains:
+        minion['grains'].update(optsgrains)
+    vmgrains = vm_.get('map_grains', {})
+    if vmgrains:
+        minion['grains'].update(vmgrains)
     return yaml.safe_dump(minion)
 
 
