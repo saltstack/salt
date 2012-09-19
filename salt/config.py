@@ -151,6 +151,7 @@ def minion_config(path):
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'master_finger': '',
             'user': 'root',
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
@@ -207,6 +208,9 @@ def minion_config(path):
             'update_url': False,
             'update_restart_services': [],
             }
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
 
@@ -303,6 +307,9 @@ def master_config(path):
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
     }
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 

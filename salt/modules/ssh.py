@@ -337,7 +337,10 @@ def set_auth_key(
         options=[],
         config='.ssh/authorized_keys'):
     '''
-    Add a key to the authorized_keys file
+    Add a key to the authorized_keys file. The "key" parameter must only be the
+    string of text that is the encoded key. If the key begins with "ssh-rsa"
+    or ends with user@host, remove those from the key before passing it to this
+    function.
 
     CLI Example::
 

@@ -9,6 +9,7 @@ import multiprocessing
 
 import fnmatch
 import os
+import hashlib
 import re
 import threading
 import time
@@ -479,19 +480,20 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
-        log.debug('Minion "{0}" trying to  tune in'.format(self.opts['id']))
+        log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         context = zmq.Context()
 
         # Prepare the minion event system
         #
         # Start with the publish socket
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
         epub_sock_path = os.path.join(
                 self.opts['sock_dir'],
-                'minion_event_{0}_pub.ipc'.format(self.opts['id'])
+                'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
         epull_sock_path = os.path.join(
                 self.opts['sock_dir'],
-                'minion_event_{0}_pull.ipc'.format(self.opts['id'])
+                'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
         epub_sock = context.socket(zmq.PUB)
         if self.opts.get('ipc_mode', '') == 'tcp':
@@ -549,8 +551,9 @@ class Minion(object):
             last = time.time()
             while True:
                 try:
-                    socks = dict(poller.poll(self.opts['sub_timeout']))
+                    socks = dict(poller.poll(self.opts['sub_timeout'] * 1000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
+                        self.passive_refresh()
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)
                         last = time.time()
@@ -575,7 +578,6 @@ class Minion(object):
                         last = time.time()
                     time.sleep(0.05)
                     multiprocessing.active_children()
-                    self.passive_refresh()
                     # Check the event system
                     if epoller.poll(1):
                         try:
@@ -588,7 +590,7 @@ class Minion(object):
         else:
             while True:
                 try:
-                    socks = dict(poller.poll(60))
+                    socks = dict(poller.poll(60000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)

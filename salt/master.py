@@ -40,6 +40,7 @@ import salt.pillar
 import salt.state
 import salt.runner
 import salt.utils.event
+import salt.utils.verify
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -726,7 +727,7 @@ class AESFuncs(object):
         if 'id' not in load or 'tag' not in load or 'data' not in load:
             return False
         tag = '{0}_{1}'.format(load['tag'], load['id'])
-        return self.event.fire_event(load['data'], tag)
+        return self.event.fire_event(load, tag)
 
     def _return(self, load):
         '''
@@ -1165,15 +1166,19 @@ class ClearFuncs(object):
         Authenticate the client, use the sent public key to encrypt the aes key
         which was generated at start up.
 
-        This method fires an event over the master event manager. The evnt is
+        This method fires an event over the master event manager. The event is
         tagged "auth" and returns a dict with information about the auth
         event
         '''
+        # 0. Check for max open files
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
         # 3. make an rsa key with the pub key
         # 4. encrypt the aes key as an encrypted salt.payload
         # 5. package the return and return it
+
+        salt.utils.verify.check_max_open_files(self.opts)
+
         log.info('Authentication request from {id}'.format(**load))
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',

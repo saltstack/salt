@@ -20,7 +20,10 @@ log = logging.getLogger(__name__)
 def get_template(filename, opts, env):
     loader = SaltCacheLoader(opts, env)
     if filename.startswith(loader.searchpath):
-        jinja = Environment(loader=loader, undefined=StrictUndefined)
+        if opts.get('allow_undefined', False):
+            jinja = Environment(loader=loader)
+        else:
+            jinja = Environment(loader=loader, undefined=StrictUndefined)
         relpath = path.relpath(filename, loader.searchpath)
         # the template was already fetched
         loader.cached.append(relpath)
