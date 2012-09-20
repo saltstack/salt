@@ -138,17 +138,40 @@ def wait_for_ssh(host, port=22, timeout=900):
 
 def wait_for_passwd(host, port=22, timeout=900, username='root', password=None):
     '''
-    Wait until an ssh connection can be made on a specified host
+    Wait until ssh connection can be accessed via password
     '''
     start = time.time()
     while True:
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname=host, port=22, username=username, password=password, timeout=20)
+            ssh.connect(hostname=host, port=22, username=username, password=password, timeout=15)
             return True
         except Exception:
-            time.sleep(10)
+            time.sleep(1)
             if time.time() - start > timeout:
                 return False
 
+def deploy_script(host, port=22, timeout=900, username='root', password=None, script=None):
+    '''
+    Copy a deploy script to a remote server, execute it, and remove it
+    '''
+    if wait_for_ssh(host=host, port=port, timeout=timeout):
+        if wait_for_passwd(host, port=port, username=username, password=password, timeout=timeout):
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(host, port=port, username=username, password=password)
+            tmpfh, tmppath = tempfile.mkstemp()
+            tmpfile = open(tmppath, 'w')
+            tmpfile.write(script)
+            tmpfile.close()
+            sftp = ssh.get_transport()
+            sftp.open_session()
+            sftp = paramiko.SFTPClient.from_transport(sftp)
+            sftp.put(tmppath, '/tmp/deploy.sh')
+            os.remove(tmppath)
+            ssh.exec_command('chmod +x /tmp/deploy.sh')
+            ssh.exec_command('/tmp/deploy.sh')
+            ssh.exec_command('rm /tmp/deploy.sh')
+            return True
+    return False
