@@ -88,11 +88,13 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
-    if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(data.public_ips[0], username='root', password=data.extra['password'])
-        stdin, stdout, stderr = ssh.exec_command(deploy_script.script)
+    deployed = saltcloud.utils.deploy_script(
+        host=data.public_ips[0],
+        username='root',
+        password=data.extra['password'],
+        script=deploy_script.script)
+    if deployed:
+        print('Salt installed on {0}'.format(vm_['name']))
     else:
         print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
 
