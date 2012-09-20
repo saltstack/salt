@@ -9,7 +9,10 @@ import stat
 import socket
 import getpass
 import logging
-import resource
+if sys.platform.startswith('win'):
+    import win32file
+else:
+    import resource
 
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
@@ -268,7 +271,14 @@ def check_parent_dirs(fname, user='root'):
 
 def check_max_open_files(opts):
     mof_c = opts.get('max_open_files', 100000)
-    mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if sys.platform.startswith('win'):
+        # Check the windows api for more detail on this
+        # http://msdn.microsoft.com/en-us/library/xt874334(v=vs.71).aspx
+        # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
+        mof_s = mof_h = win32file._getmaxstdio()
+    else:
+        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+
     accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
     accepted_count = len([
         key for key in os.listdir(accepted_keys_dir) if
