@@ -201,7 +201,7 @@ def parse_opts():
             format="[%(levelname)-8s][%(name)-10s:%(lineno)-4d] %(message)s"
         )
     else:
-        logging.basicConfig(stream=open(os.devnull, 'w'))
+        logging.basicConfig(stream=open(os.devnull, 'w'), level=0)
 
     if not any((options.module, options.client,
                 options.shell, options.unit,

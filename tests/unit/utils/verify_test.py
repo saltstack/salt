@@ -114,15 +114,17 @@ class TestVerify(TestCase):
                     }
 
                     check_max_open_files(opts)
-                    self.assertIn(logmsg_dbg.format(newmax), handler.messages)
+
                     if level is None:
                         # No log message is triggered, only the DEBUG one which
                         # tells us how many minion keys were accepted.
                         self.assertEqual(
-                            [logmsg_dbg.format(newmax)],
-                            handler.messages
+                            [logmsg_dbg.format(newmax)], handler.messages
                         )
                     else:
+                        self.assertIn(
+                            logmsg_dbg.format(newmax), handler.messages
+                        )
                         self.assertIn(
                             logmsg_chk.format(
                                 level,
