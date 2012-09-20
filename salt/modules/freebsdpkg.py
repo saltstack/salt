@@ -19,7 +19,7 @@ def search(pkg_name):
 
     CLI Example::
 
-        salt '*' pkg.pkgng_search 'mysql-server'
+        salt '*' pkg.search 'mysql-server'
     '''
     if _check_pkgng():
         res = __salt__['cmd.run']('pkg search {0}'.format(pkg_name))
@@ -114,7 +114,7 @@ def list_pkgs():
     return ret
 
 
-def install(name, *args, **kwargs):
+def install(name, refresh=False, repo='', **kwargs):
     '''
     Install the passed package
 
@@ -130,12 +130,14 @@ def install(name, *args, **kwargs):
     env = ()
     if _check_pkgng():
         pkg_command = 'pkg install -y'
-        if 'repo' in kwargs:
-            env = (('PACKAGESITE', kwargs['repo']),)
+        if not refresh:
+            pkg_command += ' -L'
+        if repo:
+            env = (('PACKAGESITE', repo),)
     else:
         pkg_command = 'pkg_add -r'
-        if 'repo' in kwargs:
-            env = (('PACKAGEROOT', kwargs['repo']),)
+        if repo:
+            env = (('PACKAGEROOT', repo),)
     old = list_pkgs()
     __salt__['cmd.retcode']('%s {0}'.format(name) % pkg_command, env=env)
     new = list_pkgs()
@@ -159,7 +161,7 @@ def install(name, *args, **kwargs):
 
 def upgrade():
     '''
-    Run a full system upgrade, a ``freebsd-update fetch install``
+    Run pkg upgrade, if pkgng used. Otherwise do nothing
 
     Return a dict containing the new package names and versions::
 
@@ -170,8 +172,13 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+
+    if not _check_pkgng():
+        # There is not easy way to upgrade packages with old package system
+        return {}
+
     old = list_pkgs()
-    __salt__['cmd.retcode']('freebsd-update fetch install')
+    __salt__['cmd.retcode']('pkg upgrade -y')
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
