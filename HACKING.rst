@@ -86,6 +86,12 @@ Install Salt (and dependencies) into the virtualenv::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
 
+    Debian and Ubuntu systems have modified openssl libraries and mandate that
+    a patched version of M2Crypto be installed. This means that M2Crypto
+    needs to be installed via apt:
+
+        apt-get install python-m2crypto
+
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -115,6 +121,13 @@ Edit the minion config file:
 3.  Uncomment and change the ``id:`` value to something descriptive like
     "saltdev". This isn't strictly necessary but it will serve as a reminder of
     which Salt installation you are working with.
+
+.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+
+    If you plan to run `salt-call` with this self-contained development
+    environment in a masterless setup, you should invoke `salt-call` with
+    ``-c /path/to/your/virtualenv/etc/salt`` so that salt can find the minion
+    config file. Without the ``-c`` option, Salt finds its config files in `/etc/salt`.
 
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
