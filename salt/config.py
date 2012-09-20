@@ -165,6 +165,9 @@ def minion_config(path):
             'autoload_dynamic_modules': True,
             'environment': None,
             'state_top': 'top.sls',
+            'startup_states': '',
+            'sls_list': [],
+            'top_file': '',
             'file_client': 'remote',
             'file_roots': {
                 'base': ['/srv/salt'],
