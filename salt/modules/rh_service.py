@@ -138,6 +138,8 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
+    if sig:
+        return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 

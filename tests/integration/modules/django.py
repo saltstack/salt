@@ -3,7 +3,7 @@ Test the django module
 '''
 from saltunittest import skipIf
 import integration
-from salt.modules import django
+from salt.modules import djangomod as django
 
 django.__salt__ = {}
 

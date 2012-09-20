@@ -9,6 +9,7 @@ import multiprocessing
 
 import fnmatch
 import os
+import hashlib
 import re
 import threading
 import time
@@ -423,6 +424,23 @@ class Minion(object):
             open(fn_, 'w+').write(self.serial.dumps(ret))
         return ret_val
 
+    def _state_run(self):
+        '''
+        Execute a state run based on information set in the minion config file
+        '''
+        if self.opts['startup_states']:
+            data = {'jid': 'req', 'ret': ''}
+            if self.opts['startup_states'] == 'sls':
+                data['fun'] = 'state.sls'
+                data['arg'] = [self.opts['sls_list']]
+            elif self.opts['startup_states'] == 'top':
+                data['fun'] = 'state.top'
+                data['arg'] = [self.opts['top_file']]
+            else:
+                data['fun'] = 'state.highstate'
+                data['arg'] = []
+            self._handle_decoded_payload(data)
+
     @property
     def master_pub(self):
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
@@ -482,13 +500,14 @@ class Minion(object):
         # Prepare the minion event system
         #
         # Start with the publish socket
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
         epub_sock_path = os.path.join(
                 self.opts['sock_dir'],
-                'minion_event_{0}_pub.ipc'.format(self.opts['id'])
+                'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
         epull_sock_path = os.path.join(
                 self.opts['sock_dir'],
-                'minion_event_{0}_pull.ipc'.format(self.opts['id'])
+                'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
         epub_sock = context.socket(zmq.PUB)
         if self.opts.get('ipc_mode', '') == 'tcp':
@@ -541,6 +560,9 @@ class Minion(object):
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
+
+        # On first startup execute a state run if configured to do so
+        self._state_run()
 
         if self.opts['sub_timeout']:
             last = time.time()

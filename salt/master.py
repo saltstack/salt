@@ -728,7 +728,7 @@ class AESFuncs(object):
         if 'id' not in load or 'tag' not in load or 'data' not in load:
             return False
         tag = '{0}_{1}'.format(load['tag'], load['id'])
-        return self.event.fire_event(load['data'], tag)
+        return self.event.fire_event(load, tag)
 
     def _return(self, load):
         '''
@@ -737,6 +737,11 @@ class AESFuncs(object):
         # If the return data is invalid, just ignore it
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
+        if load['jid'] == 'req':
+	    # The minion is returning a standalone job, request a jobid
+            load['jid'] = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type'])
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])
         if not self.opts['job_cache']:
