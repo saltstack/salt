@@ -145,7 +145,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root', password=None):
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(data.public_ips[0], username=username, password=password)
+            ssh.connect(hostname=host, port=22, username=username, password=password, timeout=20)
             return True
         except Exception:
             time.sleep(10)
