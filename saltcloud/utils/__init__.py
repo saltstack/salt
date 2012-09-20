@@ -9,6 +9,7 @@ import shutil
 import socket
 import tempfile
 import time
+import paramiko
 
 # Import salt libs
 import salt.crypt
@@ -131,6 +132,23 @@ def wait_for_ssh(host, port=22, timeout=900):
             return True
         except Exception:
             time.sleep(1)
+            if time.time() - start > timeout:
+                return False
+
+
+def wait_for_passwd(host, port=22, timeout=900, username='root', password=None):
+    '''
+    Wait until an ssh connection can be made on a specified host
+    '''
+    start = time.time()
+    while True:
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(hostname=host, port=22, username=username, password=password, timeout=20)
+            return True
+        except Exception:
+            time.sleep(10)
             if time.time() - start > timeout:
                 return False
 

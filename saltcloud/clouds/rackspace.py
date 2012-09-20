@@ -23,6 +23,8 @@ and requires that two configuration paramaters be set for use:
 # Import python libs
 import os
 import types
+import paramiko
+import tempfile
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -69,13 +71,13 @@ def create(vm_):
     '''
     print('Creating Cloud VM {0}'.format(vm_['name']))
     conn = get_conn()
+    deploy_script = script(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
-    kwargs['deploy'] = script(vm_)
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
     try:
-        data = conn.deploy_node(**kwargs)
+        data = conn.create_node(**kwargs)
     except DeploymentError as exc:
         err = ('Error creating {0} on RACKSPACE\n\n'
                'The following exception was thrown by libcloud when trying to '
@@ -84,6 +86,26 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
+    if saltcloud.utils.wait_for_ssh(data.public_ips[0]):
+        if saltcloud.utils.wait_for_passwd(data.public_ips[0], username='root', password=data.extra['password']):
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(data.public_ips[0], 22, username='root', password=data.extra['password'])
+            tmpfh, tmppath = tempfile.mkstemp()
+            tmpfile = open(tmppath, 'w')
+            tmpfile.write(deploy_script.script)
+            tmpfile.close()
+            sftp = ssh.get_transport()
+            sftp.open_session()
+            sftp = paramiko.SFTPClient.from_transport(sftp)
+            sftp.put(tmppath, '/tmp/deploy.sh')
+            os.remove(tmppath)
+            ssh.exec_command('chmod +x /tmp/deploy.sh')
+            ssh.exec_command('/tmp/deploy.sh')
+            ssh.exec_command('rm /tmp/deploy.sh')
+    else:
+        print('Failed to start Salt on Cloud VM {0}'.format(vm_['name']))
+
     print('Created Cloud VM {0} with the following values:'.format(
         vm_['name']
         ))
