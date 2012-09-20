@@ -219,7 +219,6 @@ class Master(SMaster):
         '''
         enable_sigusr1_handler()
 
-        log.warn('Starting the Salt Master')
         self.__set_max_open_files()
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)

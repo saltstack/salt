@@ -44,9 +44,12 @@ def _sync(form, env=None):
     source = os.path.join('salt://_{0}'.format(form))
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
+        log.info("Creating module dir '%s'" % mod_dir)
         os.makedirs(mod_dir)
     for sub_env in env:
+        log.info("Syncing %s for environment '%s'" % (form, sub_env))
         cache = []
+        log.info('Loading cache from %s,for %s)' % (source, sub_env))
         cache.extend(__salt__['cp.cache_dir'](source, sub_env))
         local_cache_dir=os.path.join(
                 __opts__['cachedir'],
@@ -54,11 +57,13 @@ def _sync(form, env=None):
                 sub_env,
                 '_{0}'.format(form)
                 )
+        log.debug("Local cache dir: '%s'" % local_cache_dir)
         for fn_ in cache:
-            relpath=os.path.relpath(fn_, local_cache_dir)
-            relname=os.path.splitext(relpath)[0].replace('/','.')
+            relpath = os.path.relpath(fn_, local_cache_dir)
+            relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
             remote.add(relpath)
             dest = os.path.join(mod_dir, relpath)
+            log.info("Copying '%s' to '%s'" % (fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
                 srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
@@ -131,10 +136,11 @@ def update(version=None):
     if not has_esky:
         return "Esky not available as import"
     if not getattr(sys, "frozen", False):
-        return "Instance is not a frozen instance"
+        return "Minion is not running an Esky build"
     if not __opts__['update_url']:
         return "'update_url' not configured on this minion"
     app = esky.Esky(sys.executable, __opts__['update_url'])
+    oldversion = __grains__['saltversion']
     try:
         if not version:
             version = app.find_update()
@@ -145,10 +151,10 @@ def update(version=None):
         app.cleanup()
     except Exception as e:
         return e
-    restarted = []
+    restarted = {}
     for service in __opts__['update_restart_services']:
-        restarted.append(__salt__['service.restart'](service))
-    return {'comment': "Updated from %s to %s" % (__version__, version),
+        restarted[service] = __salt__['service.restart'](service)
+    return {'comment': "Updated from %s to %s" % (oldversion, version),
             'restarted': restarted}
 
 def sync_modules(env=None):
@@ -230,6 +236,7 @@ def sync_all(env=None):
 
         salt '*' saltutil.sync_all
     '''
+    logging.debug("Syncing all")
     ret = []
     ret.append(sync_modules(env))
     ret.append(sync_states(env))
