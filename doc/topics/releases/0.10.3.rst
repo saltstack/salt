@@ -71,6 +71,15 @@ You're no longer required to have salt configured and it's common directories
 created just to generate keys. This might prove useful if you're batch creating 
 keys to pre-load on minions.
 
+Startup States
+--------------
+
+A few configuration options have been added which allow for states to be run
+when the minion daemon starts. This can be a great advantage when deploying
+with Salt because the minion can apply states right when it first runs. To
+use startup states set the ``startup_states`` configuration option on the
+minion to `highstate`.
+
 Max Open Files
 --------------
 
