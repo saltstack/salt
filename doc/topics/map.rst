@@ -51,3 +51,22 @@ that exist but are not specified in the map file will be destroyed:
 .. code-block:: bash
 
     $ salt-cloud -m /path/to/mapfile -P -H
+
+A map file can include grains:
+
+.. code-block:: yaml
+
+    fedora_small:
+      - web1
+        minion:
+          log_level: debug
+        grains:
+          cheese: tasty
+          omelet: du fromage
+      - web2
+        minion:
+          log_level: warn
+        grains:
+          cheese: more tasty
+          omelet: with peppers
+
