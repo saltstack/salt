@@ -15,4 +15,5 @@ Salt Cloud Table of Contents
     ref/cli/man/salt-cloud
 
     topics/releases/index
-    topicstopics/releases/0.6.0
+    topics/releases/0.6.0
+    topics/releases/0.7.0
