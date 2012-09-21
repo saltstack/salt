@@ -263,7 +263,7 @@ class Map(Cloud):
         #     order to mitigate man-in-the-middle attacks
         master_pub = self.opts['pki_dir'] + '/master.pub'
         master_finger = ''
-        if os.path.isfile(master_pub):
+        if os.path.isfile(master_pub) and hasattr(salt.utils, 'pem_finger'):
             master_finger = salt.utils.pem_finger(master_pub)
         for name, profile in dmap['create'].items():
             tvm = copy.deepcopy(profile)
