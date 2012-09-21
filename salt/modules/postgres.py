@@ -46,7 +46,7 @@ def version():
     version_line =  __salt__['cmd.run']('psql --version').split("\n")[0]
     name = version_line.split(" ")[1]
     ver = version_line.split(" ")[2]
-    return "%s %s" % (name, ver)
+    return '{0} {1}'.format(name, ver)
 
 def _connection_defaults(user=None, host=None, port=None):
     '''
