@@ -44,12 +44,12 @@ def _sync(form, env=None):
     source = os.path.join('salt://_{0}'.format(form))
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
-        log.info("Creating module dir '%s'" % mod_dir)
+        log.info('Creating module dir \'{0}\''.format(mod_dir))
         os.makedirs(mod_dir)
     for sub_env in env:
-        log.info("Syncing %s for environment '%s'" % (form, sub_env))
+        log.info('Syncing {0} for environment \'{1}\''.format(form, sub_env))
         cache = []
-        log.info('Loading cache from %s,for %s)' % (source, sub_env))
+        log.info('Loading cache from {0},for {1})'.format(source, sub_env))
         cache.extend(__salt__['cp.cache_dir'](source, sub_env))
         local_cache_dir=os.path.join(
                 __opts__['cachedir'],
@@ -57,13 +57,13 @@ def _sync(form, env=None):
                 sub_env,
                 '_{0}'.format(form)
                 )
-        log.debug("Local cache dir: '%s'" % local_cache_dir)
+        log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
         for fn_ in cache:
             relpath = os.path.relpath(fn_, local_cache_dir)
             relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
             remote.add(relpath)
             dest = os.path.join(mod_dir, relpath)
-            log.info("Copying '%s' to '%s'" % (fn_, dest))
+            log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
                 srch = hashlib.md5(open(fn_, 'r').read()).hexdigest()
@@ -154,7 +154,7 @@ def update(version=None):
     restarted = {}
     for service in __opts__['update_restart_services']:
         restarted[service] = __salt__['service.restart'](service)
-    return {'comment': "Updated from %s to %s" % (oldversion, version),
+    return {'comment': 'Updated from {0} to {1}'.format(oldversion, version),
             'restarted': restarted}
 
 def sync_modules(env=None):

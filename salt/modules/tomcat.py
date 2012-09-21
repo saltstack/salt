@@ -69,5 +69,7 @@ def signal(signal=None):
     if not valid_signals[signal]:
         return
 
-    cmd = __catalina_home() + '/bin/catalina.sh %s' % valid_signals[signal]
+    cmd = '{0}/bin/catalina.sh {1}'.format(
+        __catalina_home, valid_signals[signal]
+    )
     __salt__['cmd.run'](cmd)
