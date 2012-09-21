@@ -266,9 +266,10 @@ class Auth(object):
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
-                        'node, this salt minion will wait for %s seconds '
-                        'before attempting to re-authenticate',
-                        self.opts['acceptance_wait_time']
+                        'node, this salt minion will wait for {0} seconds '
+                        'before attempting to re-authenticate'.format(
+                            self.opts['acceptance_wait_time']
+                        )
                     )
                     return 'retry'
         if not self.verify_master(payload['pub_key'], payload['token']):
@@ -276,8 +277,8 @@ class Auth(object):
                 'The Salt Master server\'s public key did not authenticate!\n'
                 'If you are confident that you are connecting to a valid Salt '
                 'Master, then remove the master public key and restart the '
-                'Salt Minion.\nThe master public key can be found at:\n%s',
-                m_pub_fn
+                'Salt Minion.\nThe master public key can be found '
+                'at:\n{0}'.format(m_pub_fn)
             )
             sys.exit(42)
         if self.opts.get('master_finger', False):

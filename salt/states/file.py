@@ -1711,7 +1711,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
-    
+
     with open(name, 'rb') as fp_:
         slines = fp_.readlines()
 
@@ -1818,8 +1818,11 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
         try:
             lines = chunk.split('\n')
         except AttributeError:
-            logger.debug('Error appending text to %s; given object is: %s',
-                    name, type(chunk))
+            logger.debug(
+                'Error appending text to {0}; given object is: {1}'.format(
+                    name, type(chunk)
+                )
+            )
             return _error(ret, 'Given text is not a string')
 
         for line in lines:

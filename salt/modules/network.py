@@ -41,7 +41,7 @@ def _cidr_to_ipv4_netmask(cidr_bits):
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '%d' % (256-(2**(8-cidr_bits)))
+            netmask += '{0:d}'.format(256-(2**(8-cidr_bits)))
             cidr_bits = 0
     return netmask
 
@@ -106,7 +106,7 @@ def _interfaces_ip(out):
                 continue
             m = re.match('^\d*:\s+([\w.]+)(?:@)?(\w+)?:\s+<(.+)>', line)
             if m:
-                iface,parent,attrs = m.groups()
+                iface, parent, attrs = m.groups()
                 if 'UP' in attrs.split(','):
                     data['up'] = True
                 else:
@@ -117,7 +117,7 @@ def _interfaces_ip(out):
 
             cols = line.split()
             if len(cols) >= 2:
-                type,value = tuple(cols[0:2])
+                type, value = tuple(cols[0:2])
                 if type in ('inet', 'inet6'):
                     if 'secondary' not in cols:
                         ipaddr, netmask, broadcast = parse_network(value, cols)
@@ -232,11 +232,11 @@ def interfaces():
     return ifaces
 
 
-def _get_net_start(ipaddr,netmask):
+def _get_net_start(ipaddr, netmask):
     ipaddr_octets = ipaddr.split('.')
     netmask_octets = netmask.split('.')
     net_start_octets = [str(int(ipaddr_octets[x]) & int(netmask_octets[x]))
-                       for x in range(0,4)]
+                       for x in range(0, 4)]
     return '.'.join(net_start_octets)
 
 
@@ -247,8 +247,8 @@ def _get_net_size(mask):
     return len(binary_str.rstrip('0'))
 
 
-def _calculate_subnet(ipaddr,netmask):
-    return '{0}/{1}'.format(_get_net_start(ipaddr,netmask),
+def _calculate_subnet(ipaddr, netmask):
+    return '{0}/{1}'.format(_get_net_start(ipaddr, netmask),
                             _get_net_size(netmask))
 
 
@@ -257,7 +257,7 @@ def _ipv4_to_bits(ipaddr):
     Accepts an IPv4 dotted quad and returns a string representing its binary
     counterpart
     '''
-    return ''.join([bin(int(x))[2:].rjust(8,'0') for x in ipaddr.split('.')])
+    return ''.join([bin(int(x))[2:].rjust(8, '0') for x in ipaddr.split('.')])
 
 
 def subnets():
@@ -268,9 +268,9 @@ def subnets():
     subnets = []
 
     for ipv4_info in ifaces.values():
-        for ipv4 in ipv4_info.get('inet',[]):
+        for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1': continue
-            network = _calculate_subnet(ipv4['address'],ipv4['netmask'])
+            network = _calculate_subnet(ipv4['address'], ipv4['netmask'])
             subnets.append(network)
     return subnets
 
@@ -280,7 +280,7 @@ def in_subnet(cidr):
     Returns True if host is within specified subnet, otherwise False
     '''
     try:
-        netstart,netsize = cidr.split('/')
+        netstart, netsize = cidr.split('/')
         netsize = int(netsize)
     except:
         log.error('Invalid CIDR \'{0}\''.format(cidr))
@@ -292,12 +292,12 @@ def in_subnet(cidr):
 
     if netsize < 32 and len(netstart_bin.rstrip('0')) > netsize:
         log.error('Invalid network starting IP \'{0}\' in CIDR '
-                  '\'{1}\''.format(netstart,cidr))
+                  '\'{1}\''.format(netstart, cidr))
         return False
 
     netstart_leftbits = netstart_bin[0:netsize]
     for ipv4_info in ifaces.values():
-        for ipv4 in ipv4_info.get('inet',[]):
+        for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1': continue
             if netsize == 32:
                 if netstart == ipv4['address']: return True
@@ -316,7 +316,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -c 4 %s' % _sanitize_host(host)
+    cmd = 'ping -c 4 {0}'.format(_sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -369,7 +369,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'traceroute %s' % _sanitize_host(host)
+    cmd = 'traceroute {0}'.format(_sanitize_host(host))
     out = __salt__['cmd.run'](cmd)
 
     for line in out:
@@ -400,7 +400,5 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig %s' % _sanitize_host(host)
+    cmd = 'dig {0}'.format(_sanitize_host(host))
     return __salt__['cmd.run'](cmd)
-
-

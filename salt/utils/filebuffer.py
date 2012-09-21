@@ -63,7 +63,7 @@ class BufferedReader(object):
             multiplier = 1
             self.__buffered = self.__buffered[self.__chunk_size:]
 
-        data = self.__file.read(self.__chunk_size*multiplier)
+        data = self.__file.read(self.__chunk_size * multiplier)
 
         if not data:
             self.__file.close()
@@ -71,7 +71,6 @@ class BufferedReader(object):
 
         self.__buffered += data
         return self.__buffered
-
 
     # Support with statements
     def __enter__(self):
@@ -90,11 +89,11 @@ if __name__ == '__main__':
         return
 
     def sizeof_fmt(num):
-        for x in ['bytes','KB','MB','GB']:
+        for x in ['bytes', 'KB', 'MB', 'GB']:
             if num < 1024.0:
-                return "%3.1f%s" % (num, x)
+                return '{0:3.1f}{1}'.format(num, x)
             num /= 1024.0
-        return "%3.1f%s" % (num, 'TB')
+        return '{0:3.1f}{1}'.format(num, 'TB')
 
     import os, timeit
     fpath = os.path.normpath(os.path.join(
@@ -114,13 +113,22 @@ if __name__ == '__main__':
 
         TNUMBER = 1000
 
-        print "Running tests against a file with the size of %s" % sizeof_fmt(os.stat(tpath).st_size)
+        print('Running tests against a file with the size of {0}'.format(
+            sizeof_fmt(os.stat(tpath).st_size))
+        )
 
         for idx, multiplier in enumerate([4, 8, 16, 32, 64, 128, 256]):
             chunk_size = multiplier * 1024
             max_size = chunk_size * 5
-            t = timeit.Timer("timeit_string('%s', %d, %d)" % (tpath, max_size, chunk_size), "from __main__ import timeit_string")
-            print "timeit_string ({0: >7} chunks; max: {1: >7}):".format(sizeof_fmt(chunk_size), sizeof_fmt(max_size)),
-            print u"{0: >6} \u00B5sec/pass".format(u"%.2f" % (TNUMBER * t.timeit(number=TNUMBER)/TNUMBER))
+            t = timeit.Timer(
+                "timeit_string('{0}', {1:d}, {2:d})".format(
+                    tpath, max_size, chunk_size
+                ), "from __main__ import timeit_string"
+            )
+            print("timeit_string ({0: >7} chunks; max: {1: >7}):".format(
+                sizeof_fmt(chunk_size), sizeof_fmt(max_size))),
+            print(u"{0: >6} \u00B5sec/pass".format(u"{0:0.2f}".format(
+                TNUMBER * t.timeit(number=TNUMBER) / TNUMBER
+            )))
 
         print
