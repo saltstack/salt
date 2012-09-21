@@ -23,6 +23,16 @@ Set up the cloud config at ``/etc/salt/cloud``:
     # Set up an optional default cloud provider
     provider: AWS
 
+    # Optionally configure default region
+    AWS.location: ap-southeast-1
+    AWS.availability_zone: ap-southeast-1b
+
+    # Specify whether to use public or private IP for deploy script
+    AWS.ssh_interface
+
+    # Configure which user to use to run the deploy script
+    AWS.ssh_username
+
 Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
