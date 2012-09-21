@@ -33,6 +33,7 @@ Additional options have been added to salt-cloud -Q, to support the same kinds
 of formatting already available in Salt:
 
 ::
+
   --raw-out
   --text-out
   --yaml-out
@@ -54,6 +55,7 @@ node names that would be associated with it. Now you can also specify grains
 that will be laid down in each individual node:
 
 .. code-block:: yaml
+
   vm_profile:
     - mynodename:
       minion:
@@ -65,15 +67,16 @@ These grains can also be specified in the profile itself. When this happens,
 the grains in map files will override grains in the profile. For example:
 
 .. code-block:: yaml
+
   vm_profile:
-      provider: gogrid
-      size: 512MB
-      image: CentOS 6.2 (64-bit) w/ None
-      os: RHEL6
-      minion:
-          master: salt.mycompany.com
-          grains:
-              french: fries
+    provider: gogrid
+    size: 512MB
+    image: CentOS 6.2 (64-bit) w/ None
+    os: RHEL6
+    minion:
+      master: salt.mycompany.com
+    grains:
+      french: fries
 
 In this example, mynodename will include grains for both fromage and french,
 but the master will be salt-master, not salt-mycompany.com.
