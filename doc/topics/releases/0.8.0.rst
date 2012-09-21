@@ -32,11 +32,12 @@ Increased Formatting Options
 Additional options have been added to salt-cloud -Q, to support the same kinds
 of formatting already available in Salt:
 
---raw-out
---text-out
---yaml-out
---json-out
---no-color
+::
+  --raw-out
+  --text-out
+  --yaml-out
+  --json-out
+  --no-color
 
 More Helpful Error Messages
 ===========================
@@ -52,25 +53,27 @@ Previously, map files only had the ability to specify a profile name, and the
 node names that would be associated with it. Now you can also specify grains
 that will be laid down in each individual node:
 
-vm_profile:
-  - mynodename:
-    minion:
-      master: salt-master
-    grains:
-      fromage: tasty
+.. code-block:: yaml
+  vm_profile:
+    - mynodename:
+      minion:
+        master: salt-master
+      grains:
+        fromage: tasty
 
 These grains can also be specified in the profile itself. When this happens,
 the grains in map files will override grains in the profile. For example:
 
-vm_profile:
-    provider: gogrid
-    size: 512MB
-    image: CentOS 6.2 (64-bit) w/ None
-    os: RHEL6
-    minion:
-        master: salt.mycompany.com
-        grains:
-            french: fries
+.. code-block:: yaml
+  vm_profile:
+      provider: gogrid
+      size: 512MB
+      image: CentOS 6.2 (64-bit) w/ None
+      os: RHEL6
+      minion:
+          master: salt.mycompany.com
+          grains:
+              french: fries
 
 In this example, mynodename will include grains for both fromage and french,
 but the master will be salt-master, not salt-mycompany.com.
@@ -92,8 +95,7 @@ AWS.ssh_interface:
   salt-cloud will use the public IP to login. In situations where the
   salt-master is also located within AWS, the private IP can be used instead.
 
-AWS.location:
-AWS.availability_zone:
+AWS.location and AWS.availability_zone:
   These options allow you to specify from within salt-cloud, which AWS
   locations your machines spin up in.
 
