@@ -171,7 +171,7 @@ def _cidr_to_ipv4_netmask(cidr_bits):
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '%d' % (256-(2**(8-cidr_bits)))
+            netmask += '{0:d}'.format(256-(2**(8-cidr_bits)))
             cidr_bits = 0
     return netmask
 
