@@ -178,6 +178,22 @@ def _makedirs_perms(name, user=None, group=None, mode=0755):
     _check_perms(name, None, user, group, int("%o" % mode) if mode else None)
 
 
+def _check_user(user, group):
+    '''
+    Checks if the named user and group are present on the minion
+    '''
+    err = ''
+    if user:
+        uid = __salt__['file.user_to_uid'](user)
+        if not uid:
+            err += 'User {0} is not available '.format(user)
+    if group:
+        gid = __salt__['file.group_to_gid'](group)
+        if not gid:
+            err += 'Group {0} is not available'.format(group)
+    return err
+
+
 def _is_bin(path):
     '''
     Return True if a file is a bin, just checks for NULL char, this should be
@@ -963,6 +979,10 @@ def managed(name,
            'comment': '',
            'name': name,
            'result': True}
+    u_check = _check_user(user, group)
+    if u_check:
+        # The specified user or group do not exist
+        return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
             ret, ('Specified file {0} is not an absolute'
@@ -1214,6 +1234,10 @@ def directory(name,
            'changes': {},
            'result': True,
            'comment': ''}
+    u_check = _check_user(user, group)
+    if u_check:
+        # The specified user or group do not exist
+        return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -1403,6 +1427,10 @@ def recurse(name,
            'result': True,
            'comment': {}  # { path: [comment, ...] }
            }
+    u_check = _check_user(user, group)
+    if u_check:
+        # The specified user or group do not exist
+        return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
