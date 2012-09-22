@@ -270,9 +270,14 @@ class Map(Cloud):
             tvm['name'] = name
             tvm['master_finger'] = master_finger
             for miniondict in self.map[tvm['profile']]:
-                if name in miniondict:
-                    tvm['map_grains'] = miniondict[name]['grains']
-                    tvm['map_minion'] = miniondict[name]['minion']
+                if isinstance(miniondict, dict):
+                    if name in miniondict:
+                        import pprint
+                        pprint.pprint(miniondict)
+                        if 'grains' in miniondict[name]:
+                            tvm['map_grains'] = miniondict[name]['grains']
+                        if 'minion' in miniondict[name]:
+                            tvm['map_minion'] = miniondict[name]['minion']
             if self.opts['parallel']:
                 multiprocessing.Process(
                         target=lambda: self.create(tvm)
