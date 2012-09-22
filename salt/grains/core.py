@@ -489,6 +489,8 @@ def os_data():
                 grains['os'] = 'Scientific'
             elif 'goose' in data.lower():
                 grains['os'] = 'GoOSe'
+            elif 'cloudlinux' in data.lower():
+                grains['os'] = 'CloudLinux'
             else:
                 grains['os'] = 'RedHat'
         elif os.path.isfile('/etc/system-release'):
