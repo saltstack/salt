@@ -108,7 +108,7 @@ def sls(mods, env='base', test=None, **kwargs):
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
-    high, errors = st_.render_highstate({env: mods})
+    high, errors = st_.render_highstate({env: mods}, [])
     if errors:
         return errors
     ret = st_.state.call_high(high)
@@ -171,7 +171,7 @@ def show_sls(mods, env='base', test=None, **kwargs):
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
-    high, errors = st_.render_highstate({env: mods})
+    high, errors = st_.render_highstate({env: mods}, [])
     errors += st_.state.verify_high(high)
     if errors:
         return errors
