@@ -117,7 +117,7 @@ def minion_conf_string(opts, vm_):
     vmgrains = vm_.get('map_grains', {})
     if vmgrains:
         minion['grains'].update(vmgrains)
-    return yaml.safe_dump(minion)
+    return yaml.safe_dump(minion, default_flow_style=False)
 
 
 def wait_for_ssh(host, port=22, timeout=900):
