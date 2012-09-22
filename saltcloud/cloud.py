@@ -272,8 +272,6 @@ class Map(Cloud):
             for miniondict in self.map[tvm['profile']]:
                 if isinstance(miniondict, dict):
                     if name in miniondict:
-                        import pprint
-                        pprint.pprint(miniondict)
                         if 'grains' in miniondict[name]:
                             tvm['map_grains'] = miniondict[name]['grains']
                         if 'minion' in miniondict[name]:
