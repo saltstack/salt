@@ -733,14 +733,14 @@ def grant_add(grant,
     if grant_exists(grant, database, user, host, grant_option, escape):
         log.info(
             'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been added'.format(
-                grant,database, user
+                grant, database, user
             )
         )
         return True
 
     log.info(
         'Grant \'{0}\' on \'{1}\' for user \'{2}\' has NOT been added'.format(
-            grant,database, user
+            grant, database, user
         )
     )
     return False
