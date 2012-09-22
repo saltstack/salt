@@ -1266,6 +1266,37 @@ class BaseHighState(object):
                 matches[env] = ext_matches[env]
         return matches
 
+    def top_excludes(self, top):
+        '''
+        Search through the top high data for maches and return the excludes
+        that this minion needs to know about.
+
+        Returns:
+        {'env': ['exclude1', 'exclude2', ...]}
+        '''
+        excludes = {}
+        for env, body in top.items():
+            if self.opts['environment']:
+                if not env == self.opts['environment']:
+                    continue
+            for match, data in body.items():
+                if self.matcher.confirm_top(
+                        match,
+                        data,
+                        self.opts['nodegroups']
+                        ):
+                    if env not in excludes:
+                        excludes[env] = set()
+                    for element in data:
+                        if not isinstance(element, dict):
+                            continue
+                        if not 'exclude' in element:
+                            continue
+                        for item in element['exclude']:
+                            if isinstance(item, string_types):
+                                excludes[env].add(item)
+        return excludes
+
     def load_dynamic(self, matches):
         '''
         If autoload_dynamic_modules is True then automatically load the
@@ -1401,7 +1432,7 @@ class BaseHighState(object):
             state = {}
         return state, mods, errors
 
-    def render_highstate(self, matches):
+    def render_highstate(self, matches, excludes):
         '''
         Gather the state files and render them into a single unified salt
         high data structure.
@@ -1412,6 +1443,10 @@ class BaseHighState(object):
             mods = set()
             for sls_match in states:
                 for sls in fnmatch.filter(self.avail[env], sls_match):
+                    # don't render the sls as part of the high state if it's in
+                    # the provided exclude list
+                    if sls in excludes.get(env, set()):
+                        continue
                     state, mods, err = self.render_state(sls, env, mods)
                     # The extend members can not be treated as globally unique:
                     if '__extend__' in state and '__extend__' in highstate:
@@ -1471,8 +1506,9 @@ class BaseHighState(object):
             return ret
         err += self.verify_tops(top)
         matches = self.top_matches(top)
+        excludes = self.top_excludes(top)
         self.load_dynamic(matches)
-        high, errors = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches, excludes)
         err += errors
         if err:
             return err
@@ -1488,7 +1524,8 @@ class BaseHighState(object):
         top = self.get_top()
         err += self.verify_tops(top)
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        excludes = self.top_excludes(top)
+        high, errors = self.render_highstate(matches, excludes)
         err += errors
 
         if errors:
@@ -1503,7 +1540,8 @@ class BaseHighState(object):
         '''
         top = self.get_top()
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        excludes = self.top_excludes(top)
+        high, errors = self.render_highstate(matches, excludes)
 
         # If there is extension data reconcile it
         high, ext_errors = self.state.reconcile_extend(high)
