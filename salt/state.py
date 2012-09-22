@@ -1347,6 +1347,16 @@ class BaseHighState(object):
                             state['__extend__'] = [ext]
                         else:
                             state['__extend__'].append(ext)
+                if 'exclude' in state:
+                    exc = state.pop('exclude')
+                    if not isinstance(exc, list):
+                        err = ('Exclude Declaration in SLS {0} is not formed '
+                               'as a list'.format(sls))
+                        errors.append(err)
+                    if '__exclude__' not in stae:
+                        state['__exclude__'] = exc
+                    else:
+                        state['__exclude__'].extend(exc)
                 for name in state:
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
