@@ -49,7 +49,7 @@ def _sync(form, env=None):
     for sub_env in env:
         log.info('Syncing {0} for environment \'{1}\''.format(form, sub_env))
         cache = []
-        log.info('Loading cache from {0},for {1})'.format(source, sub_env))
+        log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
         cache.extend(__salt__['cp.cache_dir'](source, sub_env))
         local_cache_dir=os.path.join(
                 __opts__['cachedir'],

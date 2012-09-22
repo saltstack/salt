@@ -499,16 +499,14 @@ class TimeoutMixIn(object):
         if not hasattr(self, 'default_timeout'):
             raise RuntimeError(
                 'You need to define the \'default_timeout\' attribute '
-                'on {0}'.format(
-                    self.__class__.__name__
-                )
+                'on {0}'.format(self.__class__.__name__)
             )
         self.add_option(
             '-t', '--timeout',
             type=int,
             default=self.default_timeout,
-            help=('Change the timeout, if applicable, for the running command; '
-                  'default=%default')
+            help=('Change the timeout, if applicable, for the running '
+                  'command; default=%default')
         )
 
 
@@ -579,7 +577,8 @@ class OutputOptionsMixIn(object):
             self.error(
                 "The options {0} are mutually exclusive. Please only choose "
                 "one of them".format('/'.join([
-                    option.get_opt_string() for option in group_options_selected
+                    option.get_opt_string() for
+                    option in group_options_selected
                 ]))
             )
         self.config['selected_output_option'] = self.selected_output_option
@@ -704,7 +703,6 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             help=('Return the documentation for the specified module or for '
                   'all modules if none are specified.')
         )
-
 
     def _mixin_after_parsed(self):
         if self.options.query:
