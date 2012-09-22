@@ -80,6 +80,19 @@ with Salt because the minion can apply states right when it first runs. To
 use startup states set the ``startup_states`` configuration option on the
 minion to `highstate`.
 
+New Exclude Declaration
+-----------------------
+
+Some users have asked about adding the ability to ensure that other sls files
+or ids are excluded from a state run. The exclude statement will delete all of
+the data loaded from the specified sls file or will delete the specified id:
+
+.. code-block:: yaml
+
+    exclude:
+      - sls: http
+      - id: /etc/vimrc
+
 Max Open Files
 --------------
 
