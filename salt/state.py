@@ -695,6 +695,8 @@ class State(object):
         req_in_all = req_in.union(set(['require', 'watch']))
         extend = {}
         for id_, body in high.items():
+            if not isinstance(body, dict):
+                continue
             for state, run in body.items():
                 if state.startswith('__'):
                     continue
@@ -1039,6 +1041,7 @@ class State(object):
             return errors
         high, req_in_errors = self.requisite_in(high)
         errors += req_in_errors
+        high = self.apply_exclude(high)
         # Verify that the high data is structurally sound
         if errors:
             return errors
@@ -1389,13 +1392,15 @@ class BaseHighState(object):
                         err = ('Exclude Declaration in SLS {0} is not formed '
                                'as a list'.format(sls))
                         errors.append(err)
-                    if '__exclude__' not in stae:
+                    if '__exclude__' not in state:
                         state['__exclude__'] = exc
                     else:
                         state['__exclude__'].extend(exc)
                 for name in state:
                     if not isinstance(state[name], dict):
                         if name == '__extend__':
+                            continue
+                        if name == '__exclude__':
                             continue
 
                         if isinstance(state[name], string_types):
