@@ -49,6 +49,19 @@
 # set cache_jobs to True
 #cache_jobs: False
 
+# Backup files that are replaced by file.managed and file.recurse under
+# 'cachedir'/file_backups relative to their original location and appended
+# with a timestamp. The only valid setting is "minion". Disabled by default.
+#
+# Alternatively this can be specified for each file in state files:
+#
+# /etc/ssh/sshd_config:
+#   file.managed:
+#     - source: salt://ssh/sshd_config
+#       - backup: minion
+#
+#backup_mode: minion
+
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the time, in
 # seconds, between those reconnection attempts.
