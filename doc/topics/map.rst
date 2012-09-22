@@ -59,14 +59,14 @@ A map file can include grains:
     fedora_small:
       - web1
         minion:
-          log_level: debug
+            log_level: debug
         grains:
-          cheese: tasty
-          omelet: du fromage
+            cheese: tasty
+            omelet: du fromage
       - web2
         minion:
-          log_level: warn
+            log_level: warn
         grains:
-          cheese: more tasty
-          omelet: with peppers
+            cheese: more tasty
+            omelet: with peppers
 
