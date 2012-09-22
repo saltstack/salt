@@ -1426,6 +1426,8 @@ class BaseHighState(object):
                     # The extend members can not be treated as globally unique:
                     if '__extend__' in state and '__extend__' in highstate:
                         highstate['__extend__'].extend(state.pop('__extend__'))
+                    if '__exclude__' in state and '__exclude__' in highstate:
+                        highstate['__exclude__'].extend(state.pop('__exclude__'))
                     for id_ in state:
                         if id_ in highstate:
                             if highstate[id_] != state[id_]:
