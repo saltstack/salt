@@ -112,6 +112,19 @@ The location for minion cache data.
 
     cachedir: /var/cache/salt
 
+.. conf_minion:: cachedir
+
+``backup_mode``
+---------------
+
+Default: ``[]``
+
+Backup files replaced by file.managed and file.recurse under cachedir.
+
+.. code-block:: yaml
+
+    backup_mode: minion
+
 .. conf_minion:: cache_jobs
 
 ``cache_jobs``
@@ -407,6 +420,16 @@ still wish to have 'salt.modules' at the 'debug' level:
 
 .. conf_minion:: include
 
+``default_include``
+-------------------
+
+Default: ``minion.d/*.conf``
+
+The minion can include configuration from other files. Per default the
+minion will automatically include all config files from `minion.d/*.conf`
+where minion.d is relative to the directory of the minion configuration
+file.
+
 ``include``
 -----------
 
@@ -415,12 +438,12 @@ Default: ``not defined``
 The minion can include configuration from other files. To enable this,
 pass a list of paths to this option. The paths can be either relative or
 absolute; if relative, they are considered to be relative to the directory
-the main minion configuration file lives in. Paths can make use of 
+the main minion configuration file lives in. Paths can make use of
 shell-style globbing. If no files are matched by a path passed to this
 option then the minion will log a warning message.
 
 .. code-block:: yaml
-    
+
     # Include files from a minion.d directory in the same
     # directory as the minion config file
     include: minion.d/*
@@ -433,3 +456,40 @@ option then the minion will log a warning message.
       - extra_config
       - minion.d/*
       - /etc/roles/webserver
+
+
+Frozen Build Update Settings
+----------------------------
+
+These options control how :py:func:`salt.modules.saltutil.update` works with esky
+frozen apps. For more information look at `<https://github.com/cloudmatrix/esky/>`_.
+
+.. conf_minion:: update_url
+
+``update_url``
+--------------
+
+Default: ``False`` (Update feature is disabled)
+
+The url to use when looking for application updates. Esky depends on directory
+listings to search for new versions. A webserver running on your Master is a
+good starting point for most setups.
+
+.. code-block:: yaml
+
+    update_url: 'http://salt.example.com/minion-updates'
+
+.. conf_minion:: update_restart_services
+
+``update_restart_services``
+---------------------------
+
+Default: ``[]`` (service restarting on update is disabled)
+
+A list of services to restart when the minion software is updated. This would
+typically just be a list containing the minion's service name, but you may
+have other services that need to go with it.
+
+.. code-block:: yaml
+
+    update_restart_services: ['salt-minion']

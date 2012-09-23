@@ -15,6 +15,24 @@
 # The user to run salt
 #user: root
 
+# Max open files
+# Each minion connecting to the master uses AT LEAST one file descriptor, the
+# master subscription connection. If enough minions connect you might start
+# seeing on the console(and then salt-master crashes):
+#   Too many open files (tcp_listener.cpp:335)
+#   Aborted (core dumped)
+#
+# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+# max open files.
+#
+# If you wish to set a different value than the default one, uncomment and
+# configure this setting. Remember that this value CANNOT be higher that the
+# hard limit. Raising the hard limit depends on your OS and/or distribution,
+# so go to your preferred search engine and search for(for example):
+#   raise max open files hard limit debian
+#
+#max_open_files: 100000
+
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
 # running slowly, increase the number of threads
@@ -100,6 +118,16 @@
 # If an autosign_file is specified permissive access will allow group access
 # to that specific file.
 #permissive_pki_access: False
+#
+# Allow users on the master access to execute specific commands on minions.
+# This setting should be treated with care since it opens up execution
+# capabilities to non root users. By default this capability is completely
+# disabled.
+#
+# client_acl:
+#   larry:
+#     - test.ping
+#     - network.*
 
 
 #####    Master Module Management    #####
@@ -131,6 +159,17 @@
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
 #failhard: False
+#
+# The state_verbose and state_output settings can be used to change the way
+# state system data is printed to the display. By default all data is printed.
+# The state_verbose setting can be set to True or False, when set to False
+# all data that has a result of True and no changes will be suppressed.
+#state_verbose: True
+# 
+# The state_output setting changes if the output is the full multi line
+# output for each changed state if set to 'full', but if set to 'terse'
+# the output will be shortened to a single line.
+#state_output: full
 
 #####      File Server settings      #####
 ##########################################
@@ -265,6 +304,7 @@
 ##########################################
 # The location of the master log file
 #log_file: /var/log/salt/master
+#key_logfile: /var/log/salt/key
 #
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
@@ -275,7 +315,7 @@
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen here:
 #	http://docs.python.org/library/time.html#time.strftime
-#log_datefmt: '%H:%M:%S'
+#log_datefmt: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen here:

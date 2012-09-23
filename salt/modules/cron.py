@@ -144,15 +144,14 @@ def set_special(user, special, cmd):
         salt '*' cron.set_special @hourly 'echo foobar'
     '''
     lst = list_tab(user)
-    for cron in lst['crons']:
-        for spec in lst['special']:
-            if special == cron['special'] and cmd == cron['cmd']:
-                return 'present'
-    spec = {'special': special,
+    for cron in lst['special']:
+        if special == cron['spec'] and cmd == cron['cmd']:
+            return 'present'
+    spec = {'spec': special,
             'cmd': cmd}
     lst['special'].append(spec)
     comdat = _write_cron(user, _render_tab(lst))
-    if not comdat['retcode']:
+    if comdat['retcode']:
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'

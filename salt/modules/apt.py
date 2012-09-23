@@ -17,7 +17,7 @@ def __virtual__():
     return 'pkg' if __grains__['os'] in ('Debian', 'Ubuntu') else False
 
 
-def __init__():
+def __init__(opts):
     '''
     For Debian and derivative systems, set up
     a few env variables to keep apt happy and
@@ -43,15 +43,11 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     version = ''
-    cmd = 'apt-cache -q show {0} | grep ^Version'.format(name)
+    cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
 
     out = __salt__['cmd.run_stdout'](cmd)
 
     version_list = out.split()
-    for comp in version_list:
-        if comp == 'Version:':
-            continue
-        return comp
 
     if len(version_list) >= 2:
         version = version_list[-1]

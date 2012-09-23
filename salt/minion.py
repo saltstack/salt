@@ -9,10 +9,12 @@ import multiprocessing
 
 import fnmatch
 import os
+import hashlib
 import re
 import threading
 import time
 import traceback
+import sys
 
 # Import third party libs
 import zmq
@@ -109,7 +111,7 @@ class SMinion(object):
                 self.opts['environment'],
                 ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts)
-        self.returners = salt.loader.returners(self.opts)
+        self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
@@ -131,10 +133,6 @@ class Minion(object):
         self.functions, self.returners = self.__load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
-        if hasattr(self, '_syndic') and self._syndic:
-            log.warn('Starting the Salt Syndic Minion')
-        else:
-            log.warn('Starting the Salt Minion')
         self.authenticate()
         opts['pillar'] = salt.pillar.get_pillar(
             opts,
@@ -161,7 +159,7 @@ class Minion(object):
         '''
         self.opts['grains'] = salt.loader.grains(self.opts)
         functions = salt.loader.minion_mods(self.opts)
-        returners = salt.loader.returners(self.opts)
+        returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
     def _handle_payload(self, payload):
@@ -230,36 +228,39 @@ class Minion(object):
         if isinstance(data['fun'], string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners = self.__load_modules()
-
-        if self.opts['multiprocessing']:
-            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-                multiprocessing.Process(
-                    target=lambda: self._thread_multi_return(data)
-                ).start()
-            else:
-                multiprocessing.Process(
-                    target=lambda: self._thread_return(data)
-                ).start()
+        if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
+            target = Minion._thread_multi_return
         else:
-            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-                threading.Thread(
-                    target=lambda: self._thread_multi_return(data)
-                ).start()
-            else:
-                threading.Thread(
-                    target=lambda: self._thread_return(data)
-                ).start()
+            target = Minion._thread_return
+        # We stash an instance references to allow for the socket
+        # communication in Windows. You can't pickle functions, and thus
+        # python needs to be able to reconstruct the reference on the other
+        # side.
+        instance = self
+        if self.opts['multiprocessing']:
+            if sys.platform.startswith('win'):
+                # let python reconstruct the minion on the other side if we're
+                # running on windows
+                instance = None
+            multiprocessing.Process(target=target, args=(instance, self.opts, data)).start()
+        else:
+            threading.Thread(target=target, args=(instance, self.opts, data)).start()
 
-    def _thread_return(self, data):
+    @classmethod
+    def _thread_return(class_, minion_instance, opts, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        if self.opts['multiprocessing']:
-            fn_ = os.path.join(self.proc_dir, data['jid'])
+        # this seems awkward at first, but it's a workaround for Windows
+        # multiprocessing communication.
+        if not minion_instance:
+            minion_instance = class_(opts)
+        if opts['multiprocessing']:
+            fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
             sdata = {'pid': os.getpid()}
             sdata.update(data)
-            open(fn_, 'w+').write(self.serial.dumps(sdata))
+            open(fn_, 'w+').write(minion_instance.serial.dumps(sdata))
         ret = {}
         for ind in range(0, len(data['arg'])):
             try:
@@ -274,11 +275,13 @@ class Minion(object):
                 pass
 
         function_name = data['fun']
-        if function_name in self.functions:
+        if function_name in minion_instance.functions:
+            ret['success'] = False
             try:
-                func = self.functions[data['fun']]
+                func = minion_instance.functions[data['fun']]
                 args, kw = detect_kwargs(func, data['arg'], data)
                 ret['return'] = func(*args, **kw)
+                ret['success'] = True
             except CommandNotFoundError as exc:
                 msg = 'Command required for \'{0}\' not found: {1}'
                 log.debug(msg.format(function_name, str(exc)))
@@ -301,12 +304,12 @@ class Minion(object):
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
-        self._return_pub(ret)
+        minion_instance._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
-                ret['id'] = self.opts['id']
+                ret['id'] = opts['id']
                 try:
-                    self.returners[returner](ret)
+                    minion_instance.returners[returner](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(
@@ -315,11 +318,16 @@ class Minion(object):
                                 )
                             )
 
-    def _thread_multi_return(self, data):
+    @classmethod
+    def _thread_multi_return(class_, minion_instance, opts, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
+        # this seems awkward at first, but it's a workaround for Windows
+        # multiprocessing communication.
+        if not minion_instance:
+            minion_instance = class_(opts)
         ret = {'return': {}}
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
@@ -334,10 +342,12 @@ class Minion(object):
                 except Exception:
                     pass
 
+            ret['success'][data['fun'][ind]] = False
             try:
-                func = self.functions[data['fun'][ind]]
+                func = minion_instance.functions[data['fun'][ind]]
                 args, kw = detect_kwargs(func, data['arg'][ind], data)
                 ret['return'][data['fun'][ind]] = func(*args, **kw)
+                ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(
@@ -347,12 +357,12 @@ class Minion(object):
                         )
                 ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
-        self._return_pub(ret)
+        minion_instance._return_pub(ret)
         if data['ret']:
             for returner in set(data['ret'].split(',')):
-                ret['id'] = self.opts['id']
+                ret['id'] = opts['id']
                 try:
-                    self.returners[returner](ret)
+                    minion_instance.returners[returner](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(
@@ -417,6 +427,23 @@ class Minion(object):
             open(fn_, 'w+').write(self.serial.dumps(ret))
         return ret_val
 
+    def _state_run(self):
+        '''
+        Execute a state run based on information set in the minion config file
+        '''
+        if self.opts['startup_states']:
+            data = {'jid': 'req', 'ret': ''}
+            if self.opts['startup_states'] == 'sls':
+                data['fun'] = 'state.sls'
+                data['arg'] = [self.opts['sls_list']]
+            elif self.opts['startup_states'] == 'top':
+                data['fun'] = 'state.top'
+                data['arg'] = [self.opts['top_file']]
+            else:
+                data['fun'] = 'state.highstate'
+                data['arg'] = []
+            self._handle_decoded_payload(data)
+
     @property
     def master_pub(self):
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
@@ -429,7 +456,9 @@ class Minion(object):
         in, signing in can occur as often as needed to keep up with the
         revolving master aes key.
         '''
-        log.debug('Attempting to authenticate with the Salt Master')
+        log.debug('Attempting to authenticate with the Salt Master at {0}'.format(
+            self.opts['master_ip']
+        ))
         auth = salt.crypt.Auth(self.opts)
         while True:
             creds = auth.sign_in()
@@ -468,34 +497,59 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
+        log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         context = zmq.Context()
 
         # Prepare the minion event system
         #
         # Start with the publish socket
-        epub_sock = context.socket(zmq.PUB)
-        epub_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'minion_event_pub.ipc')
+        id_hash = hashlib.md5(self.opts['id']).hexdigest()
+        epub_sock_path = os.path.join(
+                self.opts['sock_dir'],
+                'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
+        epull_sock_path = os.path.join(
+                self.opts['sock_dir'],
+                'minion_event_{0}_pull.ipc'.format(id_hash)
+                )
+        epub_sock = context.socket(zmq.PUB)
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            epub_uri = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts['tcp_pub_port']
+                    )
+            epull_uri = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts['tcp_pull_port']
+                    )
+        else:
+            epub_uri = 'ipc://{0}'.format(epub_sock_path)
+            epull_uri = 'ipc://{0}'.format(epull_sock_path)
+
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(
+                self.__class__.__name__, epub_uri
+            )
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(
+                self.__class__.__name__, epull_uri
+            )
+        )
+
         # Create the pull socket
         epull_sock = context.socket(zmq.PULL)
-        epull_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'minion_event_pull.ipc')
-                )
         # Bind the event sockets
         epub_sock.bind(epub_uri)
         epull_sock.bind(epull_uri)
         # Restrict access to the sockets
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'minion_event_pub.ipc'),
-                448
-                )
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'minion_event_pull.ipc'),
-                448
-                )
+        if not self.opts.get('ipc_mode', '') == 'tcp':
+            os.chmod(
+                    epub_sock_path,
+                    448
+                    )
+            os.chmod(
+                    epull_sock_path,
+                    448
+                    )
 
         poller = zmq.Poller()
         epoller = zmq.Poller()
@@ -510,12 +564,16 @@ class Minion(object):
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
+        # On first startup execute a state run if configured to do so
+        self._state_run()
+
         if self.opts['sub_timeout']:
             last = time.time()
             while True:
                 try:
-                    socks = dict(poller.poll(self.opts['sub_timeout']))
+                    socks = dict(poller.poll(self.opts['sub_timeout'] * 1000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
+                        self.passive_refresh()
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)
                         last = time.time()
@@ -540,7 +598,6 @@ class Minion(object):
                         last = time.time()
                     time.sleep(0.05)
                     multiprocessing.active_children()
-                    self.passive_refresh()
                     # Check the event system
                     if epoller.poll(1):
                         try:
@@ -553,7 +610,7 @@ class Minion(object):
         else:
             while True:
                 try:
-                    socks = dict(poller.poll(60))
+                    socks = dict(poller.poll(60000))
                     if socket in socks and socks[socket] == zmq.POLLIN:
                         payload = self.serial.loads(socket.recv())
                         self._handle_payload(payload)
@@ -568,9 +625,8 @@ class Minion(object):
                             epub_sock.send(package)
                         except Exception:
                             pass
-                except Exception as exc:
+                except Exception:
                     log.critical(traceback.format_exc())
-                
 
 
 class Syndic(salt.client.LocalClient, Minion):

@@ -7,7 +7,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is openSUSE
     '''
-    return 'pkg' if __grains__['os_family'] == 'Suse' else False
+    return 'pkg' if __grains__.get('os_family', '') == 'Suse' else False
 
 
 def _list_removed(old, new):

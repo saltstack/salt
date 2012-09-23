@@ -31,6 +31,6 @@ def render(template, env='', sls=''):
             sls=sls)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
-            'Unknown render error in yaml_jinja renderer'))
+            'Unknown render error in py renderer'))
 
     return tmp_data['data']

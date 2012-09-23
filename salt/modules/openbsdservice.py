@@ -1,9 +1,10 @@
 '''
 The service module for OpenBSD
 '''
-
+# Import Python libs
 import os
-
+# Import Salt libs
+import salt.utils
 
 # XXX enable/disable support would be nice
 
@@ -53,11 +54,13 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = '/etc/rc.d/{0} -f restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
-def status(name):
+def status(name, sig=None):
     '''
     Return the status for a service, returns a bool whether the service is
     running.
@@ -66,5 +69,7 @@ def status(name):
 
         salt '*' service.status <service name>
     '''
+    if sig:
+        return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} -f check'.format(name)
     return not __salt__['cmd.retcode'](cmd)

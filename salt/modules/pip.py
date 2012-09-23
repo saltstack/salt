@@ -1,9 +1,13 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
-
-# Import python libs
+# Import Python libs
 import os
+import tempfile
+import shutil
+# Import Salt libs
+from salt.exceptions import CommandExecutionError
+
 
 def _get_pip_bin(bin_env):
     '''
@@ -11,17 +15,14 @@ def _get_pip_bin(bin_env):
     passed in, or from the global modules options
     '''
     if not bin_env:
-        pips = ['pip2',
-                'pip',
-                'pip-python']
-        return __salt__['cmd.which_bin'](pips)
-    else:
-        # try to get pip bin from env
-        if os.path.exists(os.path.join(bin_env, 'bin', 'pip')):
-            pip_bin = os.path.join(bin_env, 'bin', 'pip')
-        else:
-            pip_bin = bin_env
-    return pip_bin
+        return __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
+
+    # try to get pip bin from env
+    if os.path.isdir(bin_env):
+        pip_bin = os.path.join(bin_env, 'bin', 'pip')
+        if os.path.isfile(pip_bin):
+            return pip_bin
+    return bin_env
 
 
 def install(pkgs=None,
@@ -68,7 +69,7 @@ def install(pkgs=None,
         If installing into a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
     env
-        depreicated, use bin_env now
+        deprecated, use bin_env now
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
@@ -160,17 +161,23 @@ def install(pkgs=None,
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
+    treq = None
     if requirements:
+        if requirements.startswith('salt://'):
+            req = __salt__['cp.cache_file'](requirements)
+            fd_, treq = tempfile.mkstemp()
+            os.close(fd_)
+            shutil.copyfile(req, treq)
         cmd = '{cmd} --requirement "{requirements}" '.format(
-            cmd=cmd, requirements=requirements)
+            cmd=cmd, requirements=treq or requirements)
 
     if log:
         try:
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError("'%s' is not writeable" % log)
-        cmd = '{cmd} --{log} '.format(
+            raise IOError('\'{0}\' is not writeable'.format(log))
+        cmd = '{cmd} --log {log} '.format(
             cmd=cmd, log=log)
 
     if proxy:
@@ -181,7 +188,9 @@ def install(pkgs=None,
         try:
             int(timeout)
         except ValueError:
-            raise ValueError("'%s' is not a valid integer base 10.")
+            raise ValueError(
+                '\'{0}\' is not a valid integer base 10.'.format(timeout)
+            )
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
@@ -193,19 +202,21 @@ def install(pkgs=None,
 
     if find_links:
         if not find_links.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % find_links)
+            raise Exception('\'{0}\' must be a valid url'.format(find_links))
         cmd = '{cmd} --find-links={find_links}'.format(
             cmd=cmd, find_links=find_links)
 
     if index_url:
         if not index_url.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % index_url)
+            raise Exception('\'{0}\' must be a valid url'.format(index_url))
         cmd = '{cmd} --index-url="{index_url}" '.format(
             cmd=cmd, index_url=index_url)
 
     if extra_index_url:
         if not extra_index_url.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % extra_index_url)
+            raise Exception(
+                '\'{0}\' must be a valid url'.format(extra_index_url)
+            )
         cmd = '{cmd} --extra-index_url="{extra_index_url}" '.format(
             cmd=cmd, extra_index_url=extra_index_url)
 
@@ -214,7 +225,7 @@ def install(pkgs=None,
 
     if mirrors:
         if not mirrors.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % mirrors)
+            raise Exception('\'{0}\' must be a valid url'.format(mirrors))
         cmd = '{cmd} --use-mirrors --mirrors={mirrors} '.format(
             cmd=cmd, mirrors=mirrors)
 
@@ -260,7 +271,15 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd)
+    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+
+    if treq:
+        try:
+            os.remove(treq)
+        except Exception:
+            pass
+
+    return result
 
 
 def uninstall(pkgs=None,
@@ -321,16 +340,22 @@ def uninstall(pkgs=None,
         cmd = '{cmd} {pkg} '.format(
             cmd=cmd, pkg=pkg)
 
+    treq = None
     if requirements:
+        if requirements.startswith('salt://'):
+            req = __salt__['cp.cache_file'](requirements)
+            fd_, treq = tempfile.mkstemp()
+            os.close(fd_)
+            shutil.copyfile(req, treq)
         cmd = '{cmd} --requirements "{requirements}" '.format(
-            cmd=cmd, requirements=requirements)
+            cmd=cmd, requirements=treq or requirements)
 
     if log:
         try:
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError("'%s' is not writeable" % log)
+            raise IOError('\'{0}\' is not writeable'.format(log))
         cmd = '{cmd} --{log} '.format(
             cmd=cmd, log=log)
 
@@ -342,11 +367,21 @@ def uninstall(pkgs=None,
         try:
             int(timeout)
         except ValueError:
-            raise ValueError("'%s' is not a valid integer base 10.")
+            raise ValueError(
+                '\'{0}\' is not a valid integer base 10.'.format(timeout)
+            )
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
-    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+    result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+
+    if treq:
+        try:
+            os.remove(treq)
+        except Exception:
+            pass
+
+    return result
 
 
 def freeze(bin_env=None,
@@ -372,8 +407,14 @@ def freeze(bin_env=None,
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
 
-    cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
+    pip_bin = _get_pip_bin(bin_env)
+    activate = os.path.join(os.path.dirname(pip_bin), 'activate')
+    if not os.path.isfile(activate):
+        raise CommandExecutionError(
+            "Could not find the path to the virtualenv's 'activate' binary"
+        )
 
+    cmd = 'source {0}; {1} freeze'.format(activate, pip_bin)
     return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
 
 
@@ -395,14 +436,14 @@ def list(prefix='',
         if line.startswith('-e'):
             line = line.split('-e ')[1]
             line, name = line.split('#egg=')
-            packages[name]=line
+            packages[name] = line
 
         elif len(line.split("==")) >= 2:
             name = line.split("==")[0]
             version = line.split("==")[1]
             if prefix:
                 if line.lower().startswith(prefix.lower()):
-                    packages[name]=version
+                    packages[name] = version
             else:
-                packages[name]=version
+                packages[name] = version
     return packages

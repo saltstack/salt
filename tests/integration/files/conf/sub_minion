@@ -20,3 +20,6 @@ integration.test: True
 grains:
   test_grain: spam
   role: sub
+
+
+ipc_mode: tcp

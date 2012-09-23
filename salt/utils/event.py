@@ -14,7 +14,9 @@ Manage events
 #
 # Import Python libs
 import os
+import hashlib
 import errno
+import logging
 import multiprocessing
 
 # Import Third Party libs
@@ -23,35 +25,59 @@ import zmq
 # Import Salt libs
 import salt.payload
 
+log = logging.getLogger(__name__)
 
 class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, sock_dir, node):
+    def __init__(self, node, sock_dir=None, **kwargs):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
         self.cpub = False
         self.cpush = False
+        self.puburi, self.pulluri = self.__load_uri(sock_dir, node, **kwargs)
+
+    def __load_uri(self, sock_dir, node, **kwargs):
+        '''
+        Return the string uri for the location of the pull and pub sockets to
+        use for firing and listening to events
+        '''
+        id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()
         if node == 'master':
-            self.puburi = 'ipc://{0}'.format(os.path.join(
+            puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'master_event_pub.ipc'
                     ))
-            self.pulluri = 'ipc://{0}'.format(os.path.join(
+            pulluri = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'master_event_pull.ipc'
                     ))
         else:
-            self.puburi = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'minion_event_pub.ipc'
-                    ))
-            self.pulluri = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'minion_event_pull.ipc'
-                    ))
+            if kwargs.get('ipc_mode', '') == 'tcp':
+                puburi = 'tcp://127.0.0.1:{0}'.format(
+                        kwargs.get('tcp_pub_port', 4510)
+                        )
+                pulluri = 'tcp://127.0.0.1:{0}'.format(
+                        kwargs.get('tcp_pull_port', 4511)
+                        )
+            else:
+                puburi = 'ipc://{0}'.format(os.path.join(
+                        sock_dir,
+                        'minion_event_{0}_pub.ipc'.format(id_hash)
+                        ))
+                pulluri = 'ipc://{0}'.format(os.path.join(
+                        sock_dir,
+                        'minion_event_{0}_pull.ipc'.format(id_hash)
+                        ))
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(self.__class__.__name__, pulluri)
+        )
+        return puburi, pulluri
 
     def connect_pub(self):
         '''
@@ -107,8 +133,7 @@ class SaltEvent(object):
         '''
         if not self.cpush:
             self.connect_pull()
-        tag += 20 * '|'
-        tag = tag[:20]
+        tag = '{0:|<20}'.format(tag)
         event = '{0}{1}'.format(tag, self.serial.dumps(data))
         self.push.send(event)
         return True
@@ -119,7 +144,7 @@ class MasterEvent(SaltEvent):
     Create a master event management object
     '''
     def __init__(self, sock_dir):
-        super(MasterEvent, self).__init__(sock_dir, 'master')
+        super(MasterEvent, self).__init__('master', sock_dir)
         self.connect_pub()
 
 
@@ -127,8 +152,8 @@ class MinionEvent(SaltEvent):
     '''
     Create a master event management object
     '''
-    def __init__(self, sock_dir):
-        super(MinionEvent, self).__init__(sock_dir, 'minion')
+    def __init__(self, **kwargs):
+        super(MinionEvent, self).__init__('minion', **kwargs)
 
 
 class EventPublisher(multiprocessing.Process):
@@ -160,10 +185,13 @@ class EventPublisher(multiprocessing.Process):
         epub_sock.bind(epub_uri)
         epull_sock.bind(epull_uri)
         # Restrict access to the sockets
+        pub_mode = 448
+        if self.opts.get('client_acl'):
+            pub_mode = 511
         os.chmod(
                 os.path.join(self.opts['sock_dir'],
                     'master_event_pub.ipc'),
-                448
+                pub_mode
                 )
         os.chmod(
                 os.path.join(self.opts['sock_dir'],

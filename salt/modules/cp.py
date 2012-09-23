@@ -3,10 +3,13 @@ Minion side functions for salt-cp
 '''
 # Import python libs
 import os
+import logging
 
 # Import salt libs
 import salt.minion
 import salt.fileclient
+
+log = logging.getLogger(__name__)
 
 
 def recv(files, dest):

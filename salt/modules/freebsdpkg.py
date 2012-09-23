@@ -4,6 +4,7 @@ Package support for FreeBSD
 
 import os
 
+
 def _check_pkgng():
     '''
     Looks to see if pkgng is being used by checking if database exists
@@ -19,12 +20,13 @@ def search(pkg_name):
 
     CLI Example::
 
-        salt '*' pkg.pkgng_search 'mysql-server'
+        salt '*' pkg.search 'mysql-server'
     '''
     if _check_pkgng():
         res = __salt__['cmd.run']('pkg search {0}'.format(pkg_name))
-        res = [ x for x in res.split('\n') ]
-        return { "Results" : res }
+        res = [x for x in res.split('\n')]
+        return {"Results": res}
+
 
 def __virtual__():
     '''
@@ -72,8 +74,8 @@ def version(name):
 
 def refresh_db():
     '''
-    Use pkg update to get latest repo.txz when using pkgng, else update the 
-    ports tree with portsnap otherwise. If the ports tree does not exist it 
+    Use pkg update to get latest repo.txz when using pkgng, else update the
+    ports tree with portsnap otherwise. If the ports tree does not exist it
     will be downloaded and set up.
 
     CLI Example::
@@ -114,7 +116,7 @@ def list_pkgs():
     return ret
 
 
-def install(name, *args, **kwargs):
+def install(name, refresh=False, repo='', **kwargs):
     '''
     Install the passed package
 
@@ -127,12 +129,19 @@ def install(name, *args, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    if _check_pkgng:
+    env = ()
+    if _check_pkgng():
         pkg_command = 'pkg install -y'
+        if not refresh:
+            pkg_command += ' -L'
+        if repo:
+            env = (('PACKAGESITE', repo),)
     else:
         pkg_command = 'pkg_add -r'
+        if repo:
+            env = (('PACKAGEROOT', repo),)
     old = list_pkgs()
-    __salt__['cmd.retcode']('%s {0}'.format(name) % pkg_command)
+    __salt__['cmd.retcode']('{0} {1}'.format(pkg_command, name), env=env)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -154,7 +163,7 @@ def install(name, *args, **kwargs):
 
 def upgrade():
     '''
-    Run a full system upgrade, a ``freebsd-update fetch install``
+    Run pkg upgrade, if pkgng used. Otherwise do nothing
 
     Return a dict containing the new package names and versions::
 
@@ -165,8 +174,13 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+
+    if not _check_pkgng():
+        # There is not easy way to upgrade packages with old package system
+        return {}
+
     old = list_pkgs()
-    __salt__['cmd.retcode']('freebsd-update fetch install')
+    __salt__['cmd.retcode']('pkg upgrade -y')
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -203,7 +217,7 @@ def remove(name):
             pkg_command = 'pkg delete -y'
         else:
             pkg_command - 'pkg_delete'
-        __salt__['cmd.retcode']('%s {0}'.format(name)% pkg_command)
+        __salt__['cmd.retcode']('{0} {1}'.format(pkg_command, name))
     new = list_pkgs()
     return _list_removed(old, new)
 
@@ -220,6 +234,7 @@ def purge(name):
     '''
     return remove(name)
 
+
 def rehash():
     '''
     Recomputes internal hash table for the PATH variable.
@@ -230,6 +245,6 @@ def rehash():
 
         salt '*' pkg.rehash
     '''
-    shell =  __salt__['cmd.run']('echo $SHELL').split('/')
-    if shell[len(shell)-1] in ["csh","tcsh"]:
+    shell = __salt__['cmd.run']('echo $SHELL').split('/')
+    if shell[len(shell)-1] in ["csh", "tcsh"]:
         __salt__['cmd.run']('rehash')

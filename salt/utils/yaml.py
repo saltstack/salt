@@ -39,7 +39,7 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
             key = self.construct_object(key_node, deep=deep)
             try:
                 hash(key)
-            except TypeError as exc:
+            except TypeError:
                 err = ('While constructing a mapping {0} found unacceptable '
                        'key {1}').format(node.start_mark, key_node.start_mark)
                 raise ConstructorError(err)
