@@ -151,6 +151,7 @@ def minion_config(path):
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'master_finger': '',
             'user': 'root',
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
@@ -158,12 +159,15 @@ def minion_config(path):
             'cachedir': '/var/cache/salt',
             'cache_jobs': False,
             'conf_file': path,
-            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
+            'sock_dir': '/var/run/salt',
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
             'environment': None,
             'state_top': 'top.sls',
+            'startup_states': '',
+            'sls_list': [],
+            'top_file': '',
             'file_client': 'remote',
             'file_roots': {
                 'base': ['/srv/salt'],
@@ -254,7 +258,7 @@ def master_config(path):
             'publish_port': '4505',
             'user': 'root',
             'worker_threads': 5,
-            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
+            'sock_dir': '/var/run/salt',
             'ret_port': '4506',
             'timeout': 5,
             'keep_jobs': 24,
@@ -306,6 +310,9 @@ def master_config(path):
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
     }
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 

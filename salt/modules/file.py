@@ -246,9 +246,9 @@ def get_sum(path, form='md5'):
         with open(path, 'rb') as f:
             return getattr(hashlib, form)(f.read()).hexdigest()
     except (IOError, OSError) as e:
-        return 'File Error: %s' % (str(e))
+        return 'File Error: {0}'.format(e)
     except AttributeError as e:
-        return 'Hash ' + form + ' not supported'
+        return 'Hash {0} not supported'.format(form)
     except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
     except Exception as e:

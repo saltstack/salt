@@ -17,7 +17,7 @@ def _detect_conf():
     '''
     GRUB conf location differs depending on distro
     '''
-    conf = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
+    conf = ('CentOS', 'Scientific', 'RedHat', 'Fedora', 'CloudLinux')
     menu = ('Ubuntu', 'Debian', 'Arch')
     if __grains__['os'] in conf:
         return '/boot/grub/grub.conf'

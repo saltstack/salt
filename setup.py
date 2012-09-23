@@ -144,13 +144,18 @@ freezer_includes = [
     'zmq.core.*',
     'zmq.utils.*',
     'ast',
+    'difflib',
+    'distutils'
 ]
 
-if sys.platform == 'win32':
+if sys.platform.startswith('win'):
     freezer_includes.extend([
+        'win32api',
+        'win32file',
         'win32con',
         'win32security',
-        'ntsecuritycon'
+        'ntsecuritycon',
+        '_winreg'
     ])
 elif sys.platform.startswith('linux'):
     freezer_includes.extend([
@@ -194,4 +199,5 @@ else:
                                'scripts/salt-run',
                                'scripts/salt']
 
-setup(**setup_kwargs)
+if __name__ == '__main__':
+    setup(**setup_kwargs)

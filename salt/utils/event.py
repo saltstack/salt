@@ -14,6 +14,7 @@ Manage events
 #
 # Import Python libs
 import os
+import hashlib
 import errno
 import logging
 import multiprocessing
@@ -43,6 +44,7 @@ class SaltEvent(object):
         Return the string uri for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
+        id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
@@ -63,11 +65,11 @@ class SaltEvent(object):
             else:
                 puburi = 'ipc://{0}'.format(os.path.join(
                         sock_dir,
-                        'minion_event_{0}_pub.ipc'.format(kwargs.get('id', ''))
+                        'minion_event_{0}_pub.ipc'.format(id_hash)
                         ))
                 pulluri = 'ipc://{0}'.format(os.path.join(
                         sock_dir,
-                        'minion_event_{0}_pull.ipc'.format(kwargs.get('id', ''))
+                        'minion_event_{0}_pull.ipc'.format(id_hash)
                         ))
         log.debug(
             '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)

@@ -6,7 +6,7 @@ The latest taste of Salt has come, this release has many fixes and feature
 additions. Modifications have been made to make ZeroMQ connections more
 reliable, the begining of the ACL system is in place, a new command line
 parsing system has been added, dynamic module distribution has become more
-environment aware, the new `master_fingerprint` option and many more!
+environment aware, the new `master_finger` option and many more!
 
 Major Features
 ==============
@@ -32,6 +32,29 @@ and is configured like so:
 Where `fred` is allowed access to functions in the test module and to the
 ``pkg.list_pkgs`` function.
 
+Master Finger Option
+--------------------
+
+The `master_finger` option has been added to improve the security of minion
+provisioning. The `master_finger` option allows for the fingerprint of the
+master public key to be set in the configuration file to double verify that the
+master is valid. This option was added in response to a motivation to pre
+authenticate the master when provisioning new minions to help prevent
+man in the middle attacks in some situations.
+
+Salt Key Fingerprint Generation
+-------------------------------
+
+The ability to generate fingerprints of keys used by Salt has been added to
+``salt-key``. The new option `finger` accepts the name of the key to generate
+and display a fingerprint for.
+
+.. code-block:: base
+
+    salt-key -F master
+
+Will display the fingerprints for the master public and private keys.
+
 Parsing System
 --------------
 
@@ -47,6 +70,28 @@ We have reduced the requirements needed for `salt-key` to generate minion keys.
 You're no longer required to have salt configured and it's common directories 
 created just to generate keys. This might prove useful if you're batch creating 
 keys to pre-load on minions.
+
+Startup States
+--------------
+
+A few configuration options have been added which allow for states to be run
+when the minion daemon starts. This can be a great advantage when deploying
+with Salt because the minion can apply states right when it first runs. To
+use startup states set the ``startup_states`` configuration option on the
+minion to `highstate`.
+
+New Exclude Declaration
+-----------------------
+
+Some users have asked about adding the ability to ensure that other sls files
+or ids are excluded from a state run. The exclude statement will delete all of
+the data loaded from the specified sls file or will delete the specified id:
+
+.. code-block:: yaml
+
+    exclude:
+      - sls: http
+      - id: /etc/vimrc
 
 Max Open Files
 --------------
@@ -127,4 +172,9 @@ specifying the text.
     file.append:
         - source: salt://testfile
 
+Security Fix
+============
 
+A timing vulnerability was uncovered in the code which decrypts the AES
+messages sent over the network. This has been fixed and upgrading is
+strongly recommended.
