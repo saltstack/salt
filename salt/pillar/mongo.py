@@ -36,14 +36,16 @@ work correctly with some experimentation.
 .. code-block:: yaml
 
   ext_pillar:
-    - mongo: {collection: vm, id_field: name, re_pattern: \.example\.com, field: pillar}
+    - mongo: {collection: vm, id_field: name, re_pattern: \.example\.com, fields: [customer_id, software, apache_vhosts]}
 
 In the example above, we've decided to use the ``vm`` collection in the
 database to store the data. Minion ids are stored in the ``name`` field on
 documents in that collection. And, since minon ids are FQDNs in most cases,
 we'll need to trim the domain name in order to find the minon by hostname in
-the collection. When we find a minion, return only the ``pillar`` field, as
-that will contain the dictionary of values for this node.
+the collection. When we find a minion, return only the ``customer_id``,
+``software``, and ``apache_vhosts`` fields, as that will contain the data we
+want for a given node. They will be available directly inside the ``pillar``
+dict in your SLS templates.
 
 
 Module Documentation
@@ -95,7 +97,7 @@ def ext_pillar(collection='pillar', id_field='_id', re_pattern=None,
           be performed - the collection will be searched with the entire
           minion id. Defaults to ``None``.
         * `re_replace`: Use as the replacement value in node ids matched with
-          `re_pattern`. Defaults to ''.
+          `re_pattern`. Defaults to ''. Feel free to use backreferences here.
         * `fields`: The specific fields in the document to use for the pillar
           data. If ``None``, will use the entire document. If using the
           entire document, the ``_id`` field will be converted to string. Be
