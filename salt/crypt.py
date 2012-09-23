@@ -8,7 +8,6 @@ authenticating peers
 import os
 import sys
 import hmac
-import getpass
 import hashlib
 import logging
 import tempfile
@@ -16,9 +15,6 @@ import tempfile
 # Import Cryptography libs
 from M2Crypto import RSA
 from Crypto.Cipher import AES
-
-# Import zeromq libs
-import zmq
 
 # Import salt utils
 import salt.utils
@@ -69,7 +65,7 @@ def gen_keys(keydir, keyname, keysize):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    gen = RSA.gen_key(keysize, 1)
+    gen = RSA.gen_key(keysize, 1, callback=lambda x,y,z:None)
     cumask = os.umask(191)
     gen.save_key(priv, None)
     os.umask(cumask)
@@ -240,6 +236,7 @@ class Auth(object):
         and the decrypted aes key for transport decryption.
         '''
         auth = {}
+        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         try:
             self.opts['master_ip'] = salt.utils.dns_check(
                     self.opts['master'],
@@ -247,7 +244,10 @@ class Auth(object):
                     )
         except SaltClientError:
             return 'retry'
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        sreq = salt.payload.SREQ(
+                self.opts['master_uri'],
+                self.opts.get('id', '')
+                )
         try:
             payload = sreq.send_auto(self.minion_sign_in_payload())
         except SaltReqTimeoutError:
@@ -266,21 +266,35 @@ class Auth(object):
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
-                        'node, this salt minion will wait for %s seconds '
-                        'before attempting to re-authenticate',
-                        self.opts['acceptance_wait_time']
+                        'node, this salt minion will wait for {0} seconds '
+                        'before attempting to re-authenticate'.format(
+                            self.opts['acceptance_wait_time']
+                        )
                     )
                     return 'retry'
         if not self.verify_master(payload['pub_key'], payload['token']):
-            m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
                 'If you are confident that you are connecting to a valid Salt '
                 'Master, then remove the master public key and restart the '
-                'Salt Minion.\nThe master public key can be found at:\n%s',
-                m_pub_fn
+                'Salt Minion.\nThe master public key can be found '
+                'at:\n{0}'.format(m_pub_fn)
             )
             sys.exit(42)
+        if self.opts.get('master_finger', False):
+            if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
+                log.critical((
+                    'The specified fingerprint in the master configuration '
+                    'file:\n{0}\nDoes not match the authenticating master\'s '
+                    'key:\n{1}\nVerify that the configured fingerprint '
+                    'matches the fingerprint of the correct master and that '
+                    'this minion is not subject to a man in the middle attack'
+                    ).format(
+                        self.opts['master_finger'],
+                        salt.utils.pem_finger(m_pub_fn)
+                        )
+                    )
+                sys.exit(42)
         auth['aes'] = self.decrypt_aes(payload['aes'])
         auth['publish_port'] = payload['publish_port']
         return auth
@@ -334,7 +348,14 @@ class Crypticle(object):
         aes_key, hmac_key = self.keys
         sig = data[-self.SIG_SIZE:]
         data = data[:-self.SIG_SIZE]
-        if hmac.new(hmac_key, data, hashlib.sha256).digest() != sig:
+        mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
+        if len(mac_bytes) != len(sig):
+            log.warning('Failed to authenticate message')
+            raise AuthenticationError('message authentication failed')
+        result = 0
+        for x, y in zip(mac_bytes, sig):
+            result |= ord(x) ^ ord(y)
+        if result != 0:
             log.warning('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
         iv_bytes = data[:self.AES_BLOCK_SIZE]

@@ -7,10 +7,12 @@ import integration
 from integration import TestDaemon
 
 
-class MatchTest(integration.ShellCase):
+class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test salt matchers
     '''
+    _call_binary_ = 'salt'
+
     def test_list(self):
         '''
         test salt -L matcher
@@ -113,6 +115,14 @@ class MatchTest(integration.ShellCase):
         data = self.run_salt('minion test.ping --static')
         data = '\n'.join(data)
         self.assertIn('minion', data)
+
+    def test_salt_documentation(self):
+        '''
+        Test to see if we're supporting --doc
+        '''
+        data = self.run_salt('-d user.add')
+        self.assertIn('user.add:', data)
+
 
 
 if __name__ == "__main__":

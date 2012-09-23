@@ -230,9 +230,9 @@ def get_sum(path, form='md5'):
     try:
         return getattr(hashlib, form)(open(path, 'rb').read()).hexdigest()
     except (IOError, OSError) as e:
-        return 'File Error: %s' % (str(e))
+        return 'File Error: {0}'.format(e)
     except AttributeError as e:
-        return 'Hash ' + form + ' not supported'
+        return 'Hash {0} not supported'.format(form)
     except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
     except Exception as e:
@@ -242,7 +242,7 @@ def get_sum(path, form='md5'):
 def find(path, **kwargs):
     '''
     Approximate the Unix find(1) command and return a list of paths that
-    meet the specified critera.
+    meet the specified criteria.
 
     The options include match criteria::
 
@@ -544,10 +544,10 @@ def touch(name, atime=None, mtime=None):
             else:
                 times = (atime, mtime)
             os.utime(name, times)
-    except TypeError as exc:
+    except TypeError:
         msg = "atime and mtime must be integers"
         raise SaltInvocationError(msg)
-    except (IOError, OSError) as exc:
+    except (IOError, OSError):
         return False
 
     return os.path.exists(name)

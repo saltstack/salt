@@ -9,10 +9,16 @@ import stat
 import socket
 import getpass
 import logging
+if sys.platform.startswith('win'):
+    import win32file
+else:
+    import resource
 
+from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
+
 
 def zmq_version():
     '''
@@ -26,8 +32,11 @@ def zmq_version():
 
     # Fallthrough and hope for the best
     if not match:
-        msg = 'Using untested zmq python bindings version: \'{0}\''
-        log.warn(msg.format(ver))
+        msg = "Using untested zmq python bindings version: '{0}'".format(ver)
+        if is_console_configured():
+            log.warn(msg)
+        else:
+            sys.stderr.write("WARNING {0}\n".format(msg))
         return True
 
     major, minor, point = match.groups()
@@ -44,7 +53,11 @@ def zmq_version():
     if major == 2 and minor == 1:
         # zmq 2.1dev could be built against a newer libzmq
         if "dev" in ver and not point:
-            log.warn('Using dev zmq module, please report unexpected results')
+            msg = 'Using dev zmq module, please report unexpected results'
+            if is_console_configured():
+                log.warn(msg)
+            else:
+                sys.stderr.write("WARNING: {0}\n".format(msg))
             return True
         elif point and point >= 9:
             return True
@@ -54,9 +67,13 @@ def zmq_version():
     # If all else fails, gracefully croak and warn the user
     log.critical('ZeroMQ python bindings >= 2.1.9 are required')
     if 'salt-master' in sys.argv[0]:
-        log.critical('The Salt Master is unstable using a ZeroMQ version '
-            'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
-            'org/pipermail/zeromq-dev/2011-June/012094.html')
+        msg = ('The Salt Master is unstable using a ZeroMQ version '
+               'lower than 2.1.11 and requires this fix: http://lists.zeromq.'
+               'org/pipermail/zeromq-dev/2011-June/012094.html')
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            sys.stderr.write("CRITICAL {0}\n".format(msg))
     return False
 
 
@@ -77,8 +94,12 @@ def verify_socket(interface, pub_port, ret_port):
         retsock.close()
         result = True
     except Exception:
-        log.warn("Unable to bind socket, this might not be a problem."
-                 " Is there another salt-master running?")
+        msg = ("Unable to bind socket, this might not be a problem."
+               " Is there another salt-master running?")
+        if is_console_configured():
+            log.warn(msg)
+        else:
+            sys.stderr.write("WARNING: {0}\n".format(msg))
         result = False
     finally:
         pubsock.close()
@@ -87,7 +108,7 @@ def verify_socket(interface, pub_port, ret_port):
     return result
 
 
-def verify_env(dirs, user, permissive=False):
+def verify_env(dirs, user, permissive=False, pki_dir=''):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -109,6 +130,8 @@ def verify_env(dirs, user, permissive=False):
         sys.stderr.write(err)
         sys.exit(2)
     for dir_ in dirs:
+        if not dir_:
+            continue
         if not os.path.isdir(dir_):
             try:
                 cumask = os.umask(63)  # 077
@@ -120,6 +143,7 @@ def verify_env(dirs, user, permissive=False):
             except OSError as e:
                 msg = 'Failed to create directory path "{0}" - {1}\n'
                 sys.stderr.write(msg.format(dir_, e))
+                sys.exit(e.errno)
 
         mode = os.stat(dir_)
         # If starting the process as root, chown the new dirs
@@ -137,6 +161,8 @@ def verify_env(dirs, user, permissive=False):
                 if 'jobs' in root:
                     continue
                 for name in files:
+                    if name.startswith('.'):
+                        continue
                     path = os.path.join(root, name)
                     try:
                         fmode = os.stat(path)
@@ -146,8 +172,8 @@ def verify_env(dirs, user, permissive=False):
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:
-                          # chown the file for the new user
-                          os.chown(path, uid, gid)
+                            # chown the file for the new user
+                            os.chown(path, uid, gid)
                 for name in dirs:
                     path = os.path.join(root, name)
                     fmode = os.stat(path)
@@ -155,27 +181,34 @@ def verify_env(dirs, user, permissive=False):
                         if permissive and fmode.st_gid in groups:
                             pass
                         else:
-                           # chown the file for the new user
-                           os.chown(path, uid, gid)
+                            # chown the file for the new user
+                            os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
         # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
-        smode = stat.S_IMODE(mode.st_mode)
-        if not smode == 448 and not smode == 488:
-            if os.access(dir_, os.W_OK):
-                os.chmod(dir_, 448)
-            else:
-                msg = 'Unable to securely set the permissions of "{0}".'
-                msg = msg.format(dir_)
-                log.critical(msg)
+        # If acls are enabled, the pki_dir needs to remain readable, this
+        # is still secure because the private keys are still only readbale
+        # by the user running the master
+        if dir_ == pki_dir:
+            smode = stat.S_IMODE(mode.st_mode)
+            if not smode == 448 and not smode == 488:
+                if os.access(dir_, os.W_OK):
+                    os.chmod(dir_, 448)
+                else:
+                    msg = 'Unable to securely set the permissions of "{0}".'
+                    msg = msg.format(dir_)
+                    if is_console_configured():
+                        log.critical(msg)
+                    else:
+                        sys.stderr.write("CRITICAL: {0}\n".format(msg))
     # Run the extra verification checks
     zmq_version()
 
 
-def check_user(user, log):
+def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
@@ -192,13 +225,21 @@ def check_user(user, log):
             os.setuid(p.pw_uid)
         except OSError:
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
-            log.critical(msg.format(user))
+            msg = msg.format(user)
+            if is_console_configured():
+                log.critical(msg)
+            else:
+                sys.stderr.write("CRITICAL: {0}\n".format(msg))
             return False
     except KeyError:
         msg = 'User not found: "{0}"'.format(user)
-        log.critical(msg)
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            sys.stderr.write("CRITICAL: {0}\n".format(msg))
         return False
     return True
+
 
 def check_parent_dirs(fname, user='root'):
     '''
@@ -211,10 +252,10 @@ def check_parent_dirs(fname, user='root'):
     dir_comps = fname.split(os.path.sep)[1:-1]
     # Loop over all parent directories of the minion key
     # to properly test if salt has read access to  them.
-    for i,dirname in enumerate(dir_comps):
+    for i, dirname in enumerate(dir_comps):
         # Create the full path to the directory using a list slice
         d = os.path.join(os.path.sep, *dir_comps[:i + 1])
-        msg ='Could not access directory {0}.'.format(d)
+        msg = 'Could not access directory {0}.'.format(d)
         current_user = getpass.getuser()
         # Make the error message more intelligent based on how
         # the user invokes salt-call or whatever other script.
@@ -226,3 +267,64 @@ def check_parent_dirs(fname, user='root'):
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)
+
+
+def check_max_open_files(opts):
+    mof_c = opts.get('max_open_files', 100000)
+    if sys.platform.startswith('win'):
+        # Check the windows api for more detail on this
+        # http://msdn.microsoft.com/en-us/library/xt874334(v=vs.71).aspx
+        # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
+        mof_s = mof_h = win32file._getmaxstdio()
+    else:
+        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+    accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
+    accepted_count = len([
+        key for key in os.listdir(accepted_keys_dir) if
+        os.path.isfile(os.path.join(accepted_keys_dir, key))
+    ])
+
+    log.debug(
+        'This salt-master instance has accepted {0} minion keys.'.format(
+            accepted_count
+        )
+    )
+
+    level = logging.INFO
+
+    if (accepted_count * 4) <= mof_s:
+        # We check for the soft value of max open files here because that's the
+        # value the user chose to raise to.
+        #
+        # The number of accepted keys multiplied by four(4) is lower than the
+        # soft value, everything should be OK
+        return
+
+    msg = (
+        'The number of accepted minion keys({0}) should be lower than 1/4 '
+        'of the max open files soft setting({1}). '.format(
+            accepted_count, mof_s
+        )
+    )
+
+    if accepted_count >= mof_s:
+        # This should never occur, it might have already crashed
+        msg += 'salt-master will crash pretty soon! '
+        level = logging.CRITICAL
+    elif (accepted_count * 2) >= mof_s:
+        # This is way too low, CRITICAL
+        level = logging.CRITICAL
+    elif (accepted_count * 3) >= mof_s:
+        level = logging.WARNING
+        # The accepted count is more than 3 time, WARN
+    elif (accepted_count * 4) >= mof_s:
+        level = logging.INFO
+
+    if mof_c < mof_h:
+        msg += ('According to the system\'s hard limit, there\'s still a '
+                'margin of {0} to raise the salt\'s max_open_files '
+                'setting. ').format(mof_h - mof_c)
+
+    msg += 'Please consider raising this value.'
+    log.log(level=level, msg=msg)

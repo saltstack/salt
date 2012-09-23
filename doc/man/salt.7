@@ -7705,7 +7705,7 @@ salt \(aq*\(aq pkg.available_version <package name>
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.freebsdpkg.install(name, *args, **kwargs)
+.B salt.modules.freebsdpkg.install(name, refresh=False, repo='', **kwargs)
 Install the passed package
 .sp
 Return a dict containing the new package names and versions:
@@ -7807,20 +7807,20 @@ salt \(aq*\(aq pkg.remove <package name>
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.search(pkg_name)
-Use \fIpkg search\fP if pkg is being used.
+Use \fIpkg search\fP if pkgng is being used.
 .sp
 CLI Example:
 .sp
 .nf
 .ft C
-salt \(aq*\(aq pkg.pkgng_search \(aqmysql\-server\(aq
+salt \(aq*\(aq pkg.search \(aqmysql\-server\(aq
 .ft P
 .fi
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.freebsdpkg.upgrade()
-Run a full system upgrade, a \fBfreebsd\-update fetch install\fP
+Run \fBpkg upgrade\fP, if pkgng used. Otherwise do nothing
 .sp
 Return a dict containing the new package names and versions:
 .sp
@@ -16793,7 +16793,7 @@ Return data to a redis data store
 .SH STATE FILE BACKUPS
 .sp
 In 0.10.2 a new feature was added for backing up files that are replaced by
-the file.managed and file.recuse states. The new feature is called the backup
+the file.managed and file.recurse states. The new feature is called the backup
 mode. Setting the backup mode is easy, but is can be set in a number of
 places.
 .sp
@@ -18733,7 +18733,7 @@ takes a few arguments:
 Recursive directory management can also be set via the \fBrecurse\fP
 function. Recursive directory management allows for a directory on the salt
 master to be recursively copied down to the minion. This is a great tool for
-deploying large code and configuration systems. A recuse state would look
+deploying large code and configuration systems. A recurse state would look
 something like this:
 .sp
 .nf
@@ -23760,7 +23760,7 @@ but when enabled the cache is used to make grain matching from the salt command
 more powerful, since the minions that will match can be pre determined.
 .SS Backup Files
 .sp
-By default all files replaced by the file.managed and file.recuse states we
+By default all files replaced by the file.managed and file.recurse states we
 simply deleted. 0.10.2 adds a new option. By setting the backup option to
 \fBminion\fP the files are backed up before they are replaced.
 .sp
@@ -24746,7 +24746,7 @@ Make a symlink.
 .B file.recurse
 The recurse state function will recursively download a directory on the
 master file server and place it on the minion. Any change in the files on
-the master will be pushed to the minion. The recuse function is very
+the master will be pushed to the minion. The recurse function is very
 powerful and has been tested by pushing out the full Linux kernel source.
 .sp
 .nf

@@ -36,9 +36,6 @@ import time
 import getpass
 import fnmatch
 
-# Import zmq modules
-import zmq
-
 # Import salt modules
 import salt.config
 import salt.payload
@@ -75,18 +72,22 @@ class LocalClient(object):
     def __init__(self, c_path='/etc/salt/master'):
         self.opts = salt.config.master_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.key = self.__read_master_key()
         self.salt_user = self.__get_user()
+        self.key = self.__read_master_key()
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
     def __read_master_key(self):
         '''
         Read in the rotating master authentication key
         '''
-        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
+        key_user = self.salt_user
+        if key_user.startswith('sudo_'):
+            key_user = 'root'
+        keyfile = os.path.join(
+                self.opts['cachedir'], '.{0}_key'.format(key_user)
+                )
         # Make sure all key parent directories are accessible
-        user = self.opts.get('user', 'root')
-        salt.utils.verify.check_parent_dirs(keyfile, user)
+        salt.utils.verify.check_parent_dirs(keyfile, key_user)
 
         try:
             with open(keyfile, 'r') as KEY:
@@ -107,12 +108,12 @@ class LocalClient(object):
             env_vars = ['SUDO_USER', 'USER', 'USERNAME']
             for evar in env_vars:
                 if evar in os.environ:
-                    return os.environ[evar]
-            return None
+                    return 'sudo_{0}'.format(os.environ[evar])
+            return user
         # If the running user is just the specified user in the
         # conf file, don't pass the user as it's implied.
         elif user == self.opts['user']:
-            return None
+            return user
         return user
 
     def _check_glob_minions(self, expr):
@@ -120,13 +121,7 @@ class LocalClient(object):
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        try:
-            os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        except OSError:
-            err = ('The Salt Master has not been set up on this system, '
-                   'a salt-master needs to be running to use the salt command')
-            sys.stderr.write(err)
-            sys.exit(2)
+        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
         ret = set(glob.glob(expr))
         os.chdir(cwd)
         return ret
@@ -177,18 +172,20 @@ class LocalClient(object):
                     continue
                 if comps[0] not in grains:
                     minions.remove(id_)
-                if isinstance(grains[comps[0]], list):
+                    continue
+                if isinstance(grains.get(comps[0]), list):
                     # We are matching a single component to a single list member
                     found = False
                     for member in grains[comps[0]]:
                         if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                             found = True
+                            break
                     if found:
                         continue
                     minions.remove(id_)
                     continue
                 if fnmatch.fnmatch(
-                    str(grains[comps[0]]).lower(),
+                    str(grains.get(comps[0], '').lower()),
                     comps[1].lower(),
                     ):
                     continue
@@ -276,10 +273,13 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
         pub_data = self.pub(
             tgt,
             fun,
@@ -288,6 +288,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             return {}
@@ -312,10 +317,13 @@ class LocalClient(object):
         arg = condition_kwarg(arg, kwarg)
         if timeout is None:
             timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
         pub_data = self.pub(
             tgt,
             fun,
@@ -324,6 +332,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             print('Failed to connect to the Master, is the Salt Master running?')
             yield {}
@@ -369,6 +382,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
@@ -409,6 +427,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             yield {}
@@ -448,6 +471,11 @@ class LocalClient(object):
             ret,
             jid=jid,
             timeout=timeout)
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
         if pub_data['jid'] == '0':
             # Failed to connect to the master and send the pub
             return {}
@@ -524,7 +552,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(fret) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if int(time.time()) > start + timeout:
@@ -542,7 +570,7 @@ class LocalClient(object):
                     continue
                 if verbose:
                     if tgt_type == 'glob' or tgt_type == 'pcre':
-                        if not len(fret) >= len(minions):
+                        if len(found.intersection(minions)) >= len(minions):
                             print('\nThe following minions did not return:')
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:
@@ -596,7 +624,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 break
             if int(time.time()) > start + timeout:
                 break
@@ -649,7 +677,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(set(ret.keys()).intersection(minions)) >= len(minions):
                 # All Minions have returned
                 return ret
             if int(time.time()) > start + timeout:
@@ -704,7 +732,7 @@ class LocalClient(object):
                 # The timeout +1 has not been reached and there is still a
                 # write tag for the syndic
                 continue
-            if len(ret) >= len(minions):
+            if len(set(ret.keys()).intersection(minions)) >= len(minions):
                 return ret
             if int(time.time()) > start + timeout:
                 return ret
@@ -731,7 +759,6 @@ class LocalClient(object):
             print('-' * len(msg) + '\n')
         if timeout is None:
             timeout = self.opts['timeout']
-        inc_timeout = timeout
         jid_dir = salt.utils.jid_dir(
                 jid,
                 self.opts['cachedir'],
@@ -743,7 +770,7 @@ class LocalClient(object):
         wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
-            return ret_
+            return ret
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, jid)
@@ -752,12 +779,12 @@ class LocalClient(object):
                 ret[raw['id']] = {'ret': raw['return']}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
-                if len(found) >= len(minions):
+                if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
-            if len(found) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
@@ -815,17 +842,20 @@ class LocalClient(object):
         while True:
             raw = self.event.get_event(timeout, jid)
             if not raw is None:
+                if 'syndic' in raw:
+                    minions.update(raw['syndic'])
+                    continue
                 found.add(raw['id'])
                 ret = {raw['id']: {'ret': raw['return']}}
                 if 'out' in raw:
                     ret[raw['id']]['out'] = raw['out']
                 yield ret
-                if len(found) >= len(minions):
+                if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
-            if len(found) >= len(minions):
+            if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
             if glob.glob(wtag) and not int(time.time()) > start + timeout + 1:
@@ -867,8 +897,6 @@ class LocalClient(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        start = 999999999999
-        gstart = int(time.time())
         found = set()
         # Check to see if the jid is real, if not return the empty dict
         if not os.path.isdir(jid_dir):
@@ -926,15 +954,19 @@ class LocalClient(object):
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         '''
-        return {'glob': self._check_glob_minions,
-                'pcre': self._check_pcre_minions,
-                'list': self._check_list_minions,
-                'grain': self._check_grain_minions,
-                'grain_pcre': self._check_grain_pcre_minions,
-                'exsel': self._all_minions,
-                'pillar': self._all_minions,
-                'compound': self._all_minions,
-                }[expr_form](expr)
+        try:
+            minions = {'glob': self._check_glob_minions,
+                    'pcre': self._check_pcre_minions,
+                    'list': self._check_list_minions,
+                    'grain': self._check_grain_minions,
+                    'grain_pcre': self._check_grain_pcre_minions,
+                    'exsel': self._all_minions,
+                    'pillar': self._all_minions,
+                    'compound': self._all_minions,
+                    }[expr_form](expr)
+        except Exception:
+            minions = expr
+        return minions
 
     def pub(self, tgt, fun, arg=(), expr_form='glob',
             ret='', jid='', timeout=5):
@@ -991,13 +1023,7 @@ class LocalClient(object):
         # return what we get back
         minions = self.check_minions(tgt, expr_form)
 
-        if self.opts['order_masters']:
-            # If we're a master of masters, ignore the check_minion and
-            # set the minions to the target.  This speeds up wait time
-            # for lists and ranges and makes regex and other expression
-            # forms possible
-            minions = tgt
-        elif not minions:
+        if not minions:
             return {'jid': None,
                     'minions': minions}
 
@@ -1023,6 +1049,8 @@ class LocalClient(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         payload = sreq.send('clear', payload_kwargs)
+        if not payload:
+            return payload
         return {'jid': payload['load']['jid'],
                 'minions': minions}
 

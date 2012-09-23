@@ -10,10 +10,11 @@ data
 import os
 import re
 import time
-import hashlib
 import shutil
 import stat
 import sys
+import getpass
+import hashlib
 import fnmatch
 try:
     import grp
@@ -23,6 +24,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.find
+from salt.utils.filebuffer import BufferedReader
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 def __virtual__():
@@ -118,6 +120,8 @@ def user_to_uid(user):
 
         salt '*' file.user_to_uid root
     '''
+    if not user:
+        user = getpass.getuser()
     try:
         return pwd.getpwnam(user).pw_uid
     except KeyError:
@@ -242,9 +246,9 @@ def get_sum(path, form='md5'):
         with open(path, 'rb') as f:
             return getattr(hashlib, form)(f.read()).hexdigest()
     except (IOError, OSError) as e:
-        return 'File Error: %s' % (str(e))
+        return 'File Error: {0}'.format(e)
     except AttributeError as e:
-        return 'Hash ' + form + ' not supported'
+        return 'Hash {0} not supported'.format(form)
     except NameError as e:
         return 'Hashlib unavailable - please fix your python install'
     except Exception as e:
@@ -512,9 +516,9 @@ def contains(path, text):
         return False
 
     try:
-        with open(path, 'r') as fp_:
-            for line in fp_:
-                if text.strip() == line.strip():
+        with BufferedReader(path) as br:
+            for chunk in br:
+                if text.strip() == chunk.strip():
                     return True
         return False
     except (IOError, OSError):
@@ -534,9 +538,11 @@ def contains_regex(path, regex, lchar=''):
         return False
 
     try:
-        with open(path, 'r') as fp_:
-            for line in  fp_:
-                if re.search(regex, line.lstrip(lchar)):
+        with BufferedReader(path) as br:
+            for chunk in br:
+                if lchar:
+                    chunk = chunk.lstrip(lchar)
+                if re.search(regex, chunk):
                     return True
             return False
     except (IOError, OSError):
@@ -555,12 +561,11 @@ def contains_glob(path, glob):
         return False
 
     try:
-        with open(path, 'r') as fp_:
-            data = fp_.read()
-            if fnmatch.fnmatch(data, glob):
-                return True
-            else:
-                return False
+        with BufferedReader(path) as br:
+            for chunk in br:
+                if fnmatch.fnmatch(chunk, glob):
+                    return True
+            return False
     except (IOError, OSError):
         return False
 
@@ -608,21 +613,23 @@ def touch(name, atime=None, mtime=None):
     if mtime and mtime.isdigit():
         mtime = int(mtime)
     try:
-        with open(name, 'a'):
-            if not atime and not mtime:
-                times = None
-            elif not mtime and atime:
-                times = (atime, time.time())
-            elif not atime and mtime:
-                times = (time.time(), mtime)
-            else:
-                times = (atime, mtime)
-            os.utime(name, times)
+        if not os.path.exists(name):
+            open(name, 'a')
+
+        if not atime and not mtime:
+            times = None
+        elif not mtime and atime:
+            times = (atime, time.time())
+        elif not atime and mtime:
+            times = (time.time(), mtime)
+        else:
+            times = (atime, mtime)
+        os.utime(name, times)
+
     except TypeError as exc:
-        msg = 'atime and mtime must be integers'
-        raise SaltInvocationError(msg)
+        raise SaltInvocationError('atime and mtime must be integers')
     except (IOError, OSError) as exc:
-        return False
+        raise CommandExecutionError(exc.strerror)
 
     return os.path.exists(name)
 
@@ -731,7 +738,7 @@ def get_selinux_context(path):
     Get an SELinux context from a given path
 
     CLI Example::
-    
+
         salt '*' selinux.get_context /etc/hosts
     '''
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))

@@ -29,14 +29,14 @@ about this, at least.
   start on ((((filesystem and runlevel [!06]) and started dbus) and (drm-device-added card0 PRIMARY_DEVICE_FOR_DISPLAY=1 or stopped udev-fallback-graphics)) or runlevel PREVLEVEL=S)
   stop on runlevel [016]
 
-DO NOT use this module on red hat systems, as red hat systems should use the
+DO NOT use this module on Red Hat systems, as Red Hat systems should use the
 rh_service module, since red hat systems support chkconfig
 '''
-
+# Import Python libs
 import glob
 import os
-
-from salt import utils
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -49,14 +49,71 @@ def __virtual__():
     return False
 
 
+def _find_utmp():
+    '''
+    Figure out which utmp file to use when determining runlevel.
+    Sometimes /var/run/utmp doesn't exist, /run/utmp is the new hotness.
+    '''
+    result = {}
+    # These are the likely locations for the file on Ubuntu
+    for utmp in ('/var/run/utmp', '/run/utmp'):
+        try:
+            result[os.stat(utmp).st_mtime] = utmp
+        except:
+            pass
+    return result[sorted(result.keys()).pop()]
+
+
+def _default_runlevel():
+    '''
+    Try to figure out the default runlevel.  It is kept in
+    /etc/init/rc-sysinit.conf, but can be overridden with entries
+    in /etc/inittab, or via the kernel command-line at boot
+    '''
+    # Try to get the "main" default.  If this fails, throw up our
+    # hands and just guess "2", because things are horribly broken
+    try:
+        with open('/etc/init/rc-sysinit.conf') as fp_:
+            for line in fp_:
+                if line.startswith('env DEFAULT_RUNLEVEL'):
+                    runlevel = line.split('=')[-1].strip()
+    except:
+        return '2'
+
+    # Look for an optional "legacy" override in /etc/inittab
+    try:
+        with open('/etc/inittab') as fp_:
+            for line in fp_:
+                if not line.startswith('#') and 'initdefault' in line:
+                    runlevel = line.split(':')[1]
+    except:
+        pass
+
+    # The default runlevel can also be set via the kernel command-line.
+    # Kinky.
+    try:
+        valid_strings = set(('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
+        with open('/proc/cmdline') as fp_:
+            for line in fp_:
+                for arg in split(line.strip()):
+                    if arg in valid_strings:
+                        runlevel = arg
+                        break
+    except:
+        pass
+
+    return runlevel
+
 def _runlevel():
     '''
     Return the current runlevel
-    TODO: Should this return the "default" runlevel? For example, bad
-    things will likely happen when 'salt' is run in single-user mode.
     '''
-    out = __salt__['cmd.run']('runlevel').strip()
-    return out.split()[1]
+    out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp())).strip()
+    try:
+        return out.split()[1]
+    except IndexError:
+        # The runlevel is unknown, return the default
+        return _default_runlevel()
 
 
 def _is_symlink(name):
@@ -100,9 +157,7 @@ def _service_is_sysv(name):
     executable, like README or skeleton.
     '''
     script = '/etc/init.d/{0}'.format(name)
-    if not _is_symlink(script):
-        return os.access(script, os.X_OK)
-    return False
+    return not _service_is_upstart(name) and os.access(script, os.X_OK)
 
 
 def _sysv_is_disabled(name):
@@ -122,6 +177,23 @@ def _sysv_is_enabled(name):
     return not _sysv_is_disabled(name)
 
 
+def _iter_service_names():
+    '''
+    Detect all of the service names available to upstart via init configuration
+    files and via classic sysv init scripts
+    '''
+    found = set()
+    for line in glob.glob('/etc/init.d/*'):
+        name = os.path.basename(line)
+        found.add(name)
+        yield name
+    for line in glob.glob('/etc/init/*.conf'):
+        name = os.path.basename(line)[:-5]
+        if name in found:
+            continue
+        yield name
+
+
 def get_enabled():
     '''
     Return the enabled services
@@ -131,8 +203,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = set()
-    for line in glob.glob('/etc/init.d/*'):
-        name = line
+    for name in _iter_service_names():
         if _service_is_upstart(name):
             if _upstart_is_enabled(name):
                 ret.add(name)
@@ -152,8 +223,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = set()
-    for line in glob.glob('/etc/init.d/*'):
-        name = line
+    for name in _iter_service_names():
         if _service_is_upstart(name):
             if _upstart_is_disabled(name):
                 ret.add(name)
@@ -207,7 +277,23 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
     cmd = 'service {0} restart'.format(name)
+    return not __salt__['cmd.retcode'](cmd)
+
+
+def full_restart(name):
+    '''
+    Do a full restart (stop/start) of the named service
+
+    CLI Example::
+
+        salt '*' service.full_restart <service name>
+    '''
+    if name == 'salt-minion':
+        salt.utils.daemonize_if(__opts__)
+    cmd = 'service {0} --full-restart'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -244,7 +330,7 @@ def _get_service_exec():
     http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.3.3
     '''
     executable = 'update-rc.d'
-    utils.check_or_die(executable)
+    salt.utils.check_or_die(executable)
     return executable
 
 

@@ -4,12 +4,15 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions
 '''
-
+# Import Python libs
 import pipes
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
+
+# Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.grains.extra import shell as shell_grain
@@ -58,6 +61,13 @@ def _run(cmd,
     if not cwd:
         cwd = os.path.expanduser('~{0}'.format('' if not runas else runas))
 
+        # make sure we can access the cwd
+        # when run from sudo or another environment where the euid is
+        # changed ~ will expand to the home of the original uid and
+        # the euid might not have access to it. See issue #1844
+        if not os.access(cwd, os.R_OK):
+            cwd = '/'
+
     if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
@@ -78,7 +88,7 @@ def _run(cmd,
         # Save the original command before munging it
         orig_cmd = cmd
         try:
-            p = pwd.getpwnam(runas)
+            pwd.getpwnam(runas)
         except KeyError:
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
@@ -237,6 +247,7 @@ def retcode(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
 
 def script(
         source,
+        args=None,
         cwd=None,
         runas=None,
         shell=DEFAULT_SHELL,
@@ -252,20 +263,24 @@ def script(
     programming language.
 
     The script can also be formated as a template, the default is jinja.
+    Arguments for the script can be specified as well.
 
     CLI Example::
 
         salt '*' cmd.script salt://scripts/runme.sh
+        salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
     '''
     fd_, path = tempfile.mkstemp()
     os.close(fd_)
     if template:
-        fn_ = __salt__['cp.get_template'](source, path, template, env, **kwargs)
+        __salt__['cp.get_template'](source, path, template, env, **kwargs)
     else:
         fn_ = __salt__['cp.cache_file'](source, env)
+        shutil.copyfile(fn_, path)
     os.chmod(path, 320)
+    os.chown(path, __salt__['file.user_to_uid'](runas), -1)
     ret = _run(
-            path,
+            path +' '+ args if args else path,
             cwd=cwd,
             quiet=kwargs.get('quiet', False),
             runas=runas,

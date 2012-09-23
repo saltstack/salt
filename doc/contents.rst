@@ -24,7 +24,6 @@ Full Table of Contents
     topics/troubleshooting/index
     topics/troubleshooting/yaml_idiosyncrasies
     topics/community
-    topics/tutorials/standalone_minion
     topics/projects/index
     topics/event/index
 
@@ -41,6 +40,7 @@ Full Table of Contents
     ref/pillar/all/index
     ref/runners
     ref/peer
+    ref/clientacl
     ref/syndic
     ref/python-api
     ref/file_server/index

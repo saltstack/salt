@@ -16,6 +16,9 @@ import logging
 import hashlib
 import tempfile
 import datetime
+import pwd
+import getpass
+import resource
 import subprocess
 import multiprocessing
 
@@ -37,6 +40,7 @@ import salt.pillar
 import salt.state
 import salt.runner
 import salt.utils.event
+import salt.utils.verify
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -60,7 +64,7 @@ def clean_proc(proc, wait_for_kill=10):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
                 os.kill(signal.SIGKILL, proc.pid)
-    except (AssertionError, AttributeError) as e:
+    except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
@@ -98,19 +102,45 @@ class SMaster(object):
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
-        log.info('Preparing the root key for local communication')
-        keyfile = os.path.join(self.opts['cachedir'], '.root_key')
-        if os.path.isfile(keyfile):
-            with open(keyfile, 'r') as fp_:
-                return fp_.read()
-        else:
-            key = salt.crypt.Crypticle.generate_key_string()
+        users = []
+        keys = {}
+        acl_users = set(self.opts['client_acl'].keys())
+        if self.opts.get('user'):
+            acl_users.add(self.opts['user'])
+        acl_users.add(getpass.getuser())
+        for user in pwd.getpwall():
+            users.append(user.pw_name)
+        for user in acl_users:
+            log.info(
+                    'Preparing the {0} key for local communication'.format(
+                        user
+                        )
+                    )
             cumask = os.umask(191)
+            if not user in users:
+                log.error('ACL user {0} is not available'.format(user))
+                continue
+            keyfile = os.path.join(
+                    self.opts['cachedir'], '.{0}_key'.format(user)
+                    )
+
+            if os.path.exists(keyfile):
+                log.debug('Removing stale keyfile: {0}'.format(keyfile))
+                os.unlink(keyfile)
+
+            key = salt.crypt.Crypticle.generate_key_string()
             with open(keyfile, 'w+') as fp_:
                 fp_.write(key)
             os.umask(cumask)
             os.chmod(keyfile, 256)
-            return key
+            try:
+                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            except OSError:
+                # The master is not being run as root and can therefore not
+                # chown the key file
+                pass
+            keys[user] = key
+        return keys
 
 
 class Master(SMaster):
@@ -152,13 +182,44 @@ class Master(SMaster):
             except KeyboardInterrupt:
                 break
 
+    def __set_max_open_files(self):
+        # Let's check to see how our max open files(ulimit -n) setting is
+        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+        log.info(
+            'Current values for max open files soft/hard setting: '
+            '{0}/{1}'.format(
+                mof_s, mof_h
+            )
+        )
+        # Let's grab, from the configuration file, the value to raise max open
+        # files to
+        mof_c = self.opts['max_open_files']
+        if mof_c > mof_h:
+            # The configured value is higher than what's allowed
+            log.warning(
+                'The value for the \'max_open_files\' setting, {0}, is higher '
+                'than what the user running salt is allowed to raise to, {1}. '
+                'Defaulting to {1}.'.format(mof_c, mof_h)
+            )
+            mof_c = mof_h
+
+        if mof_s < mof_c:
+            # There's room to raise the value. Raise it!
+            log.warning('Raising max open files value to {0}'.format(mof_c))
+            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_c, mof_h))
+            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+            log.warning(
+                'New values for max open files soft/hard values: '
+                '{0}/{1}'.format(mof_s, mof_h)
+            )
+
     def start(self):
         '''
         Turn on the master server components
         '''
         enable_sigusr1_handler()
 
-        log.warn('Starting the Salt Master')
+        self.__set_max_open_files()
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
@@ -176,7 +237,6 @@ class Master(SMaster):
             SIGTERM is encountered.  This is required when running a salt
             master under a process minder like daemontools
             '''
-            mypid = os.getpid()
             log.warn(('Caught signal {0}, stopping the Salt Master'
                 .format(signum)))
             clean_proc(clear_old_jobs_proc)
@@ -227,7 +287,7 @@ class Publisher(multiprocessing.Process):
         except AttributeError:
             pub_sock.setsockopt(zmq.SNDHWM, 1)
             pub_sock.setsockopt(zmq.RCVHWM, 1)
-        pub_uri = 'tcp://{0[interface]}:{0[publish_port]}'.format(self.opts)
+        pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
         pull_uri = 'ipc://{0}'.format(
@@ -255,6 +315,24 @@ class Publisher(multiprocessing.Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
+                if self.opts['pub_refresh']:
+                    pub_sock.close()
+                    #time.sleep(0.5)
+                    pub_sock = context.socket(zmq.PUB)
+                    try:
+                        pub_sock.setsockopt(zmq.HWM, 1)
+                    except AttributeError:
+                        pub_sock.setsockopt(zmq.SNDHWM, 1)
+                        pub_sock.setsockopt(zmq.RCVHWM, 1)
+                    con = False
+                    while not con:
+                        time.sleep(0.1)
+                        try:
+                            pub_sock.bind(pub_uri)
+                            con = True
+                        except zmq.ZMQError:
+                            pass
+
         except KeyboardInterrupt:
             pub_sock.close()
             pull_sock.close()
@@ -270,7 +348,7 @@ class ReqServer(object):
         self.master_key = mkey
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
-        self.uri = 'tcp://%(interface)s:%(ret_port)s' % self.opts
+        self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
         self.clients = self.context.socket(zmq.ROUTER)
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
@@ -395,14 +473,14 @@ class MWorker(multiprocessing.Process):
         '''
         Take care of a cleartext command
         '''
-        log.info('Clear payload received with command %(cmd)s', load)
+        log.info('Clear payload received with command {cmd}'.format(**load))
         return getattr(self.clear_funcs, load['cmd'])(load)
 
     def _handle_pub(self, load):
         '''
         Handle a command sent via a public key pair
         '''
-        log.info('Pubkey payload received with command %(cmd)s', load)
+        log.info('Pubkey payload received with command {cmd}'.format(**load))
 
     def _handle_aes(self, load):
         '''
@@ -439,10 +517,7 @@ class AESFuncs(object):
     #
     def __init__(self, opts, crypticle):
         self.opts = opts
-        self.event = salt.utils.event.SaltEvent(
-                self.opts['sock_dir'],
-                'master'
-                )
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         # Make a client
@@ -652,7 +727,7 @@ class AESFuncs(object):
         if 'id' not in load or 'tag' not in load or 'data' not in load:
             return False
         tag = '{0}_{1}'.format(load['tag'], load['id'])
-        return self.event.fire_event(load['data'], tag)
+        return self.event.fire_event(load, tag)
 
     def _return(self, load):
         '''
@@ -661,7 +736,12 @@ class AESFuncs(object):
         # If the return data is invalid, just ignore it
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
-        log.info('Got return from {0[id]} for job {0[jid]}'.format(load))
+        if load['jid'] == 'req':
+	    # The minion is returning a standalone job, request a jobid
+            load['jid'] = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type'])
+        log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])
         if not self.opts['job_cache']:
             return
@@ -673,7 +753,7 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: %(jid)s', load
+                'that is not present on the master: {jid}'.format(**load)
             )
             return False
         hn_dir = os.path.join(jid_dir, load['id'])
@@ -711,7 +791,7 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: %(jid)s', load
+                'that is not present on the master: {jid}'.format(**load)
             )
             return False
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
@@ -727,6 +807,7 @@ class AESFuncs(object):
             return False
 
         # Format individual return loads
+        self.event.fire_event({'syndic': load['return'].keys()}, load['jid'])
         for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
@@ -893,8 +974,8 @@ class AESFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        log.info(('Publishing minion job: #{0[jid]}, func: "{0[fun]}", args:'
-                  ' "{0[arg]}", target: "{0[tgt]}"').format(load))
+        log.info(('Publishing minion job: #{jid}, func: "{fun}", args:'
+                  ' "{arg}", target: "{tgt}"').format(**load))
         pub_sock.send(self.serial.dumps(payload))
         # Run the client get_returns method based on the form data sent
         if 'form' in clear_load:
@@ -960,10 +1041,7 @@ class ClearFuncs(object):
         self.master_key = master_key
         self.crypticle = crypticle
         # Create the event manager
-        self.event = salt.utils.event.SaltEvent(
-                self.opts['sock_dir'],
-                'master'
-                )
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
@@ -978,7 +1056,7 @@ class ClearFuncs(object):
                 0,
                 'list'
                 )
-        log.debug('Cluster distributed: %s', ret)
+        log.debug('Cluster distributed: {0}'.format(ret))
 
     def _cluster_load(self):
         '''
@@ -1025,10 +1103,11 @@ class ClearFuncs(object):
         fmode = os.stat(filename)
 
         if os.getuid() == 0:
-            if not fmode.st_uid == uid or not fmode.st_gid == gid:
-                if self.opts.get('permissive_pki_access', False) \
-                  and fmode.st_gid in groups:
-                    return True
+            if fmode.st_uid == uid or not fmode.st_gid == gid:
+                return True
+            elif self.opts.get('permissive_pki_access', False) \
+                    and fmode.st_gid in groups:
+                return True
         else:
             if stat.S_IWOTH & fmode.st_mode:
                 # don't allow others to write to the file
@@ -1092,16 +1171,20 @@ class ClearFuncs(object):
         Authenticate the client, use the sent public key to encrypt the aes key
         which was generated at start up.
 
-        This method fires an event over the master event manager. The evnt is
+        This method fires an event over the master event manager. The event is
         tagged "auth" and returns a dict with information about the auth
         event
         '''
+        # 0. Check for max open files
         # 1. Verify that the key we are receiving matches the stored key
         # 2. Store the key if it is not there
         # 3. make an rsa key with the pub key
         # 4. encrypt the aes key as an encrypted salt.payload
         # 5. package the return and return it
-        log.info('Authentication request from %(id)s', load)
+
+        salt.utils.verify.check_max_open_files(self.opts)
+
+        log.info('Authentication request from {id}'.format(**load))
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 load['id'])
@@ -1119,9 +1202,9 @@ class ClearFuncs(object):
             # The key has been accepted check it
             if not open(pubfn, 'r').read() == load['pub']:
                 log.error(
-                    'Authentication attempt from %(id)s failed, the public '
+                    'Authentication attempt from {id} failed, the public '
                     'keys did not match. This may be an attempt to compromise '
-                    'the Salt cluster.', load
+                    'the Salt cluster.'.format(**load)
                 )
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
@@ -1132,7 +1215,7 @@ class ClearFuncs(object):
                 return ret
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for %(id)s', load)
+            log.info('Public key rejected for {id}'.format(**load))
             ret = {'enc': 'clear',
                    'load': {'ret': False}}
             eload = {'result': False,
@@ -1143,7 +1226,7 @@ class ClearFuncs(object):
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
             # This is a new key, stick it in pre
-            log.info('New public key placed in pending for %(id)s', load)
+            log.info('New public key placed in pending for {id}'.format(**load))
             with open(pubfn_pend, 'w+') as fp_:
                 fp_.write(load['pub'])
             ret = {'enc': 'clear',
@@ -1160,9 +1243,9 @@ class ClearFuncs(object):
             # ret False
             if not open(pubfn_pend, 'r').read() == load['pub']:
                 log.error(
-                    'Authentication attempt from %(id)s failed, the public '
+                    'Authentication attempt from {id} failed, the public '
                     'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.', load
+                    'compromise the Salt cluster.'.format(**load)
                 )
                 eload = {'result': False,
                          'id': load['id'],
@@ -1172,9 +1255,8 @@ class ClearFuncs(object):
                         'load': {'ret': False}}
             else:
                 log.info(
-                    'Authentication failed from host %(id)s, the key is in '
-                    'pending and needs to be accepted with salt-key -a %(id)s',
-                    load
+                    'Authentication failed from host {id}, the key is in '
+                    'pending and needs to be accepted with salt-key -a {id}'.format(**load)
                 )
                 eload = {'result': True,
                          'act': 'pend',
@@ -1188,9 +1270,9 @@ class ClearFuncs(object):
             # This key is in pending, if it is the same key auto accept it
             if not open(pubfn_pend, 'r').read() == load['pub']:
                 log.error(
-                    'Authentication attempt from %(id)s failed, the public '
+                    'Authentication attempt from {id} failed, the public '
                     'keys in pending did not match. This may be an attempt to '
-                    'compromise the Salt cluster.', load
+                    'compromise the Salt cluster.'.format(**load)
                 )
                 eload = {'result': False,
                          'id': load['id'],
@@ -1214,7 +1296,7 @@ class ClearFuncs(object):
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
-        log.info('Authentication accepted from %(id)s', load)
+        log.info('Authentication accepted from {id}'.format(**load))
         with open(pubfn, 'w+') as fp_:
             fp_.write(load['pub'])
         pub = None
@@ -1247,8 +1329,40 @@ class ClearFuncs(object):
         by the LocalClient.
         '''
         # Verify that the caller has root on master
-        if not clear_load.pop('key') == self.key:
-            return ''
+        if 'user' in clear_load:
+            if clear_load['user'].startswith('sudo_'):
+                if not clear_load.pop('key') == self.key.get(getpass.getuser(), ''):
+                    return ''
+            elif clear_load['user'] == self.opts.get('user', 'root'):
+                if not clear_load.pop('key') == self.key[self.opts.get('user', 'root')]:
+                    return ''
+            elif clear_load['user'] == getpass.getuser():
+                if not clear_load.pop('key') == self.key.get(getpass.getuser()):
+                    return ''
+            else:
+                if clear_load['user'] in self.key:
+                    # User is authorised, check key and check perms
+                    if not clear_load.pop('key') == self.key[clear_load['user']]:
+                        return ''
+                    good = False
+                    for user in self.opts['client_acl']:
+                        if clear_load['user'] != user:
+                            continue
+                        for regex in self.opts['client_acl'][user]:
+                            if re.match(regex, clear_load['fun']):
+                                good = True
+                    if not good:
+                        return ''
+                else:
+                    return ''
+        else:
+            if not clear_load.pop('key') == self.key[getpass.getuser()]:
+                return ''
+        if not clear_load['jid']:
+            clear_load['jid'] = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
         jid_dir = salt.utils.jid_dir(
                 clear_load['jid'],
                 self.opts['cachedir'],
@@ -1286,12 +1400,12 @@ class ClearFuncs(object):
             load['to'] = clear_load['to']
 
         if 'user' in clear_load:
-            log.info(('User {0[user]} Published command {0[fun]} with jid'
-                      ' {0[jid]}').format(clear_load))
+            log.info(('User {user} Published command {fun} with jid'
+                      ' {jid}').format(**clear_load))
             load['user'] = clear_load['user']
         else:
-            log.info(('Published command {0[fun]} with jid'
-                      ' {0[jid]}').format(clear_load))
+            log.info(('Published command {fun} with jid'
+                      ' {jid}').format(**clear_load))
         log.debug('Published command details {0}'.format(load))
 
         payload['load'] = self.crypticle.dumps(load)
