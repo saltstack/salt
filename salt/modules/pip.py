@@ -176,7 +176,7 @@ def install(pkgs=None,
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError("'%s' is not writeable" % log)
+            raise IOError('\'{0}\' is not writeable'.format(log))
         cmd = '{cmd} --log {log} '.format(
             cmd=cmd, log=log)
 
@@ -188,7 +188,9 @@ def install(pkgs=None,
         try:
             int(timeout)
         except ValueError:
-            raise ValueError("'%s' is not a valid integer base 10.")
+            raise ValueError(
+                '\'{0}\' is not a valid integer base 10.'.format(timeout)
+            )
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
@@ -200,19 +202,21 @@ def install(pkgs=None,
 
     if find_links:
         if not find_links.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % find_links)
+            raise Exception('\'{0}\' must be a valid url'.format(find_links))
         cmd = '{cmd} --find-links={find_links}'.format(
             cmd=cmd, find_links=find_links)
 
     if index_url:
         if not index_url.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % index_url)
+            raise Exception('\'{0}\' must be a valid url'.format(index_url))
         cmd = '{cmd} --index-url="{index_url}" '.format(
             cmd=cmd, index_url=index_url)
 
     if extra_index_url:
         if not extra_index_url.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % extra_index_url)
+            raise Exception(
+                '\'{0}\' must be a valid url'.format(extra_index_url)
+            )
         cmd = '{cmd} --extra-index_url="{extra_index_url}" '.format(
             cmd=cmd, extra_index_url=extra_index_url)
 
@@ -221,7 +225,7 @@ def install(pkgs=None,
 
     if mirrors:
         if not mirrors.startswith("http://"):
-            raise Exception("'%s' must be a valid url" % mirrors)
+            raise Exception('\'{0}\' must be a valid url'.format(mirrors))
         cmd = '{cmd} --use-mirrors --mirrors={mirrors} '.format(
             cmd=cmd, mirrors=mirrors)
 
@@ -351,7 +355,7 @@ def uninstall(pkgs=None,
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError("'%s' is not writeable" % log)
+            raise IOError('\'{0}\' is not writeable'.format(log))
         cmd = '{cmd} --{log} '.format(
             cmd=cmd, log=log)
 
@@ -363,7 +367,9 @@ def uninstall(pkgs=None,
         try:
             int(timeout)
         except ValueError:
-            raise ValueError("'%s' is not a valid integer base 10.")
+            raise ValueError(
+                '\'{0}\' is not a valid integer base 10.'.format(timeout)
+            )
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
@@ -430,14 +436,14 @@ def list(prefix='',
         if line.startswith('-e'):
             line = line.split('-e ')[1]
             line, name = line.split('#egg=')
-            packages[name]=line
+            packages[name] = line
 
         elif len(line.split("==")) >= 2:
             name = line.split("==")[0]
             version = line.split("==")[1]
             if prefix:
                 if line.lower().startswith(prefix.lower()):
-                    packages[name]=version
+                    packages[name] = version
             else:
-                packages[name]=version
+                packages[name] = version
     return packages

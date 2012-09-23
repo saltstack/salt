@@ -346,6 +346,7 @@ _os_family_map = {
     'GoOSe': 'RedHat',
     'Scientific': 'RedHat',
     'Amazon': 'RedHat',
+    'CloudLinux': 'RedHat',
     'Mandrake': 'Mandriva',
     'ESXi': 'VMWare',
     'VMWareESX': 'VMWare',

@@ -47,7 +47,7 @@ class SaltCacheLoader(BaseLoader):
         self.env = env
         self.encoding = encoding
         self.searchpath = path.join(opts['cachedir'], 'files', env)
-        log.debug("Jinja search path: '%s'" % self.searchpath)
+        log.debug('Jinja search path: \'{0}\''.format(self.searchpath))
         self._file_client = None
         self.cached = []
 
@@ -77,8 +77,10 @@ class SaltCacheLoader(BaseLoader):
     def get_source(self, environment, template):
         # checks for relative '..' paths
         if '..' in template:
-            log.warning("Discarded template path '%s', relative paths are"
-                        "prohibited" % template)
+            log.warning(
+                'Discarded template path \'{0}\', relative paths are '
+                'prohibited'.format(template)
+            )
             raise TemplateNotFound(template)
         self.check_cache(template)
         filepath = path.join(self.searchpath, template)
