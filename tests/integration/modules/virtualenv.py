@@ -1,5 +1,6 @@
 # Import python libs
 import os
+import shutil
 import tempfile
 import integration
 
