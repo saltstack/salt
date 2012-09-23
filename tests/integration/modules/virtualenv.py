@@ -1,5 +1,6 @@
 # Import python libs
 import os
+import shutil
 import tempfile
 import integration
 
@@ -43,34 +44,56 @@ class VirtualenvModuleTest(integration.ModuleCase):
         packages = self.run_function('pip.list', prefix='pep8', bin_env=pip_bin)
         self.assertFalse('pep8' in packages)
 
-    def test_issue_2028_pip_installed(self):
-        #self.run_function('virtualenv.create', [self.venv_dir])
-        self.run_function('virtualenv.create', ['/tmp/issue-2028-virtualenv'])
+    def test_issue_2028_pip_installed_1_state(self):
+        ret = self.run_function('state.sls', mods='issue-2028-pip-installed')
 
-        #bin_dir = os.path.join(self.venv_dir, 'bin')
-        bin_dir = '/tmp/issue-2028-virtualenv/bin'
-        pip_bin = os.path.join(bin_dir, 'pip')
+        venv_dir = '/tmp/issue-2028-pip-installed'
+
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'supervisord'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+    def test_issue_2028_pip_installed_1_template(self):
+        venv_dir = '/tmp/issue-2028-pip-installed'
         template = '''
+/tmp/issue-2028-pip-installed:
+  virtualenv.managed:
+    - no_site_packages: True
+    - distribute: True
+
+
 supervisord-pip:
     pip.installed:
       - name: supervisor
-      - bin_env: {0}
+      - bin_env: /tmp/issue-2028-pip-installed
       - require:
-        - pkg: python-dev
-
-python-dev:
-  pkg.installed
+        - virtualenv: /tmp/issue-2028-pip-installed
 '''
-        ret = self.run_function(
-            'state.template_str', [template.format(pip_bin)]
-        )
+        try:
+            ret = self.run_function('state.template_str', [template])
 
-        #print 666, self.run_state('pkg.installed', name='bash')
-        #print 777, self.run_state('pip.installed', name='supervisor', bin_env=pip_bin)
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
 
-        self.assertTrue(
-            os.path.isfile(os.path.join(bin_dir, 'supervisord'))
-        )
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'supervisord'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
 
     def tearDown(self):
         self.run_function('file.remove', [self.venv_test_dir])
