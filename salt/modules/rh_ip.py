@@ -21,8 +21,7 @@ def __virtual__():
     '''
     Confine this module to RHEL/Fedora based distros$
     '''
-    dists = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
-    if __grains__['os'] in dists:
+    if __grains__['os_family'] == 'RedHat':
         return 'ip'
     return False
 
