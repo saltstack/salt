@@ -96,7 +96,8 @@ class Client(object):
 
     def get_file(self, path, dest='', makedirs=False, env='base'):
         '''
-        Copies a file from the local files or master depending on implementation
+        Copies a file from the local files or master depending on
+        implementation
         '''
         raise NotImplementedError
 
@@ -138,6 +139,11 @@ class Client(object):
         '''
         ret = []
         path = self._check_proto(path)
+        log.info(
+            'Caching directory \'{0}\' for environment \'{1}\''.format(
+                path, env
+            )
+        )
         for fn_ in self.file_list(env):
             if fn_.startswith(path):
                 local = self.cache_file('salt://{0}'.format(fn_), env)
@@ -161,7 +167,7 @@ class Client(object):
                         'files',
                         env
                     )
-                    minion_dir = '%s/%s' % (dest,fn_)
+                    minion_dir = '{0}/{1}'.format(dest, fn_)
                     if not os.path.isdir(minion_dir):
                         os.makedirs(minion_dir)
                     ret.append(minion_dir)
@@ -224,9 +230,9 @@ class Client(object):
             if path.endswith('.sls'):
                 # is an sls module!
                 if path.endswith('{0}init.sls'.format(os.sep)):
-                    states.append(path.replace(os.sep, '.')[:-9])
+                    states.append(path.replace('/', '.')[:-9])
                 else:
-                    states.append(path.replace(os.sep, '.')[:-4])
+                    states.append(path.replace('/', '.')[:-4])
         return states
 
     def get_state(self, sls, env):
@@ -266,16 +272,20 @@ class Client(object):
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
                 minion_relpath = string.lstrip(fn_[len(prefix):], '/')
-                ret.append(self.get_file('salt://{0}'.format(fn_),
-                                         '%s/%s' % (dest, minion_relpath),
-                                         True, env))
+                ret.append(
+                    self.get_file(
+                        'salt://{0}'.format(fn_),
+                        '{0}/{1}'.format(dest, minion_relpath),
+                        True, env
+                    )
+                )
         # Replicate empty dirs from master
         for fn_ in self.file_list_emptydirs(env):
             if fn_.startswith(path):
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
                 minion_relpath = string.lstrip(fn_[len(prefix):], '/')
-                minion_mkdir = '%s/%s' % (dest, minion_relpath)
+                minion_mkdir = '{0}/{1}'.format(dest, minion_relpath)
                 os.makedirs(minion_mkdir)
                 ret.append(minion_mkdir)
         ret.sort()
@@ -450,9 +460,8 @@ class LocalClient(Client):
             path = self._check_proto(path)
         except MinionError:
             if not os.path.isfile(path):
-                err = ('Specified file {0} is not present to generate '
-                        'hash').format(path)
-                log.warning(err)
+                err = 'Specified file {0} is not present to generate hash'
+                log.warning(err.format(path))
                 return ret
             else:
                 with open(path, 'rb') as f:
@@ -532,6 +541,7 @@ class RemoteClient(Client):
         dest is ommited, then the downloaded file will be placed in the minion
         cache
         '''
+        log.info('Fetching file \'{0}\''.format(path))
         path = self._check_proto(path)
         load = {'path': path,
                 'env': env,
@@ -622,9 +632,8 @@ class RemoteClient(Client):
             path = self._check_proto(path)
         except MinionError:
             if not os.path.isfile(path):
-                err = ('Specified file {0} is not present to generate '
-                        'hash').format(path)
-                log.warning(err)
+                err = 'Specified file {0} is not present to generate hash'
+                log.warning(err.format(path))
                 return {}
             else:
                 ret = {}

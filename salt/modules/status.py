@@ -86,7 +86,7 @@ def custom():
         keys = opt.split('.')
         if keys[0] != 'status':
             continue
-        func = '%s()' % keys[1]
+        func = '{0}()'.format(keys[1])
         vals = eval(func)
 
         for item in __opts__[opt]:

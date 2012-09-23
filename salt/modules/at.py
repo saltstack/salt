@@ -17,7 +17,7 @@ __outputter__ = {
 # default)
 
 # Tested on CentOS 5.8
-rhel = ('CentOS', 'Scientific', 'RedHat', 'Fedora')
+rhel = ('CentOS', 'Scientific', 'RedHat', 'Fedora', 'CloudLinux')
 
 # Tested on OpenBSD 5.0
 bsd = ('OpenBSD', 'FreeBSD')

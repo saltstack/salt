@@ -16,6 +16,7 @@ grainmap = {
            'Ubuntu': '/etc/init.d',
            'Gentoo': '/etc/init.d',
            'CentOS': '/etc/init.d',
+           'CloudLinux': '/etc/init.d',
            'Amazon': '/etc/init.d',
            'SunOS': '/etc/init.d',
           }
@@ -30,6 +31,7 @@ def __virtual__():
                'CentOS',
                'Amazon',
                'Scientific',
+               'CloudLinux',
                'Fedora',
                'Gentoo',
                'Ubuntu',

@@ -103,7 +103,9 @@ class OptionParser(optparse.OptionParser):
         # Gather and run the process_<option> functions in the proper order
         process_option_funcs = []
         for option_key in options.__dict__.keys():
-            process_option_func = getattr(self, 'process_%s' % option_key, None)
+            process_option_func = getattr(
+                self, 'process_{0}'.format(option_key), None
+            )
             if process_option_func is not None:
                 process_option_funcs.append(process_option_func)
 
@@ -121,7 +123,9 @@ class OptionParser(optparse.OptionParser):
 
         if self.config.get('conf_file', None) is not None:
             logging.getLogger(__name__).info(
-                'Loaded configuration file: %s', self.config['conf_file']
+                'Loaded configuration file: {0}'.format(
+                    self.config['conf_file']
+                )
             )
         # Retain the standard behaviour of optparse to return options and args
         return options, args
@@ -433,7 +437,7 @@ class TargetOptionsMixIn(object):
                 if getattr(self.options, opt.dest):
                     self.selected_target_option = opt.dest
 
-            funcname = 'process_%s' % option.dest
+            funcname = 'process_{0}'.format(option.dest)
             if not hasattr(self, funcname):
                 setattr(self, funcname, partial(process, option))
 
@@ -493,14 +497,16 @@ class TimeoutMixIn(object):
 
     def _mixin_setup(self):
         if not hasattr(self, 'default_timeout'):
-            raise RuntimeError("You need to define the 'default_timeout' "
-                               "attribute on %s" % self.__class__.__name__)
+            raise RuntimeError(
+                'You need to define the \'default_timeout\' attribute '
+                'on {0}'.format(self.__class__.__name__)
+            )
         self.add_option(
             '-t', '--timeout',
             type=int,
             default=self.default_timeout,
-            help=('Change the timeout, if applicable, for the running command; '
-                  'default=%default')
+            help=('Change the timeout, if applicable, for the running '
+                  'command; default=%default')
         )
 
 
@@ -557,7 +563,7 @@ class OutputOptionsMixIn(object):
                 if getattr(self.options, opt.dest):
                     self.selected_output_option = opt.dest
 
-            funcname = 'process_%s' % option.dest
+            funcname = 'process_{0}'.format(option.dest)
             if not hasattr(self, funcname):
                 setattr(self, funcname, partial(process, option))
 
@@ -571,7 +577,8 @@ class OutputOptionsMixIn(object):
             self.error(
                 "The options {0} are mutually exclusive. Please only choose "
                 "one of them".format('/'.join([
-                    option.get_opt_string() for option in group_options_selected
+                    option.get_opt_string() for
+                    option in group_options_selected
                 ]))
             )
         self.config['selected_output_option'] = self.selected_output_option
@@ -696,7 +703,6 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             help=('Return the documentation for the specified module or for '
                   'all modules if none are specified.')
         )
-
 
     def _mixin_after_parsed(self):
         if self.options.query:

@@ -112,6 +112,19 @@ The location for minion cache data.
 
     cachedir: /var/cache/salt
 
+.. conf_minion:: cachedir
+
+``backup_mode``
+---------------
+
+Default: ``[]``
+
+Backup files replaced by file.managed and file.recurse under cachedir.
+
+.. code-block:: yaml
+
+    backup_mode: minion
+
 .. conf_minion:: cache_jobs
 
 ``cache_jobs``

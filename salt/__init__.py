@@ -19,6 +19,7 @@ except ImportError as e:
     if e.args[0] != 'No module named _msgpack':
         raise
 
+
 class Master(parsers.MasterOptionParser):
     '''
     Creates a master server
@@ -50,6 +51,7 @@ class Master(parsers.MasterOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
+        log = logging.getLogger('salt.master')
 
         # Late import so logging works correctly
         if not verify_socket(self.config['interface'],
@@ -58,6 +60,7 @@ class Master(parsers.MasterOptionParser):
             self.exit(4, 'The ports are not available to bind')
 
         import salt.master
+        log.warn('Starting the Salt Master')
         master = salt.master.Master(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
@@ -96,6 +99,7 @@ class Minion(parsers.MinionOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
+        log = logging.getLogger('salt.minion')
 
         # Late import so logging works correctly
         import salt.minion
@@ -105,12 +109,13 @@ class Minion(parsers.MinionOptionParser):
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
         try:
+            log.warn('Starting the Salt Minion "{0}"'.format(self.config['id']))
             minion = salt.minion.Minion(self.config)
             self.set_pidfile()
             if check_user(self.config['user']):
                 minion.tune_in()
         except KeyboardInterrupt:
-            logging.getLogger(__name__).warn('Stopping the Salt Minion')
+            log.warn('Stopping the Salt Minion')
             raise SystemExit('\nExiting on Ctrl-c')
 
 
@@ -137,8 +142,8 @@ class Syndic(parsers.SyndicOptionParser):
         except OSError, err:
             sys.exit(err.errno)
 
-
         self.setup_logfile_logger()
+        log = logging.getLogger('salt.syndic')
 
         # Late import so logging works correctly
         import salt.minion
@@ -147,10 +152,10 @@ class Syndic(parsers.SyndicOptionParser):
 
         if check_user(self.config['user']):
             try:
+                log.warn('Starting the Salt Syndic Minion "{0}"'.format(
+                         self.config['id']))
                 syndic = salt.minion.Syndic(self.config)
                 syndic.tune_in()
             except KeyboardInterrupt:
-                logging.getLogger(__name__).warn(
-                    'Stopping the Salt Syndic Minion'
-                )
+                log.warn('Stopping the Salt Syndic Minion')
                 raise SystemExit('\nExiting on Ctrl-c')

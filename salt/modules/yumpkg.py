@@ -24,7 +24,7 @@ def __virtual__():
 
     # Return this for pkg on RHEL/Fedora based distros that ship with python
     # 2.6 or greater.
-    dists = ('CentOS', 'Scientific', 'RedHat')
+    dists = ('CentOS', 'Scientific', 'RedHat', 'CloudLinux')
     if __grains__['os'] == 'Fedora':
         if int(__grains__['osrelease'].split('.')[0]) >= 11:
             return 'pkg'
