@@ -115,6 +115,7 @@ def _run(cmd,
     run_env.update(env)
     kwargs = {'cwd': cwd,
               'shell': True,
+              'close_fds': True,
               'env': run_env,
               'stdout': stdout,
               'stderr':stderr}
