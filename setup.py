@@ -199,4 +199,5 @@ else:
                                'scripts/salt-run',
                                'scripts/salt']
 
-setup(**setup_kwargs)
+if __name__ == '__main__':
+    setup(**setup_kwargs)
