@@ -18,10 +18,10 @@ def wait(name, **kwargs):
     '''
     Run a single module function only if the watch statement calls it
 
-    name
+    ``name``
         The module function to execute
 
-    **kwargs
+    ``**kwargs``
         Pass any arguments needed to execute the function
     '''
     return {'name': name,
@@ -34,10 +34,10 @@ def run(name, **kwargs):
     '''
     Run a single module function
 
-    name
+    ``name``
         The module function to execute
 
-    **kwargs
+    ``**kwargs``
         Pass any arguments needed to execute the function
     '''
     ret = {'name': name,
@@ -112,10 +112,11 @@ def run(name, **kwargs):
     except Exception:
         ret['comment'] = 'Module function {0} threw an exception'.format(name)
         ret['result'] = False
+    else:
+        ret['changes']['ret'] = mret
 
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
-    ret['changes']['ret'] = mret
     return ret
 
 mod_watch = run
