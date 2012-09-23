@@ -51,7 +51,14 @@ def running(name,
         Name of the user to run the supervisorctl command
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': ''}
-    if restart:
+
+    if __opts__['test']:
+        ret['result'] = None
+        _msg = 'restarted' if restart else 'started'
+        ret['comment'] = (
+            'Service {0} is set to be {1}'.format(
+                name, _msg))
+    elif restart:
         comment = 'Restarting service: {0}'.format(name)
         log.debug(comment)
         result = __salt__['supervisord.restart'](name, user=runas)
@@ -67,4 +74,3 @@ def running(name,
 
     log.debug(unicode(result))
     return ret
-
