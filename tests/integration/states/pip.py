@@ -20,23 +20,86 @@ class PipStateTest(integration.ModuleCase):
         ret = self.run_function('cmd.has_exec', ['virtualenv'])
         if not ret:
             self.skipTest('virtualenv not installed')
-        self.venv_test_dir = tempfile.mkdtemp()
-        self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
-    def test_issue_2028_pip_installed(self):
-        print 123, self.run_function(
-            'virtualenv.create', [self.venv_dir], system_site_packages=True
-        )
-        pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
+    def test_pip_installed_errors(self):
+        venv_dir = '/tmp/pip-installed-errors'
+        try:
+            # Since we don't have the virtualenv created, pip.installed will
+            # thrown and error.
+            ret = self.run_function('state.sls', mods='pip-installed-errors')
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
 
-        print 456, self.run_state(
-            'pip.installed', name='supervisor', bin_env=pip_bin,
-        )
+            for key in ret.keys():
+                self.assertFalse(ret[key]['result'])
+                self.assertEqual(
+                    ret[key]['comment'],
+                    'Failed to install package supervisor. Error: /bin/bash: '
+                    '/tmp/pip-installed-errors: No such file or directory'
+                )
 
-        self.run_function('virtualenv.create', ['/tmp/issue-2028-virtualenv'])
-        self.run_function('state.sls', mods='issue-2028-pip-installed')
+            # We now create the missing virtualenv
+            ret = self.run_function('virtualenv.create', [venv_dir])
+            self.assertTrue(ret['retcode']==0)
 
-    def tearDown(self):
-        super(PipStateTest, self).tearDown()
-        shutil.rmtree(self.venv_test_dir)
-        shutil.rmtree('/tmp/issue-2028-virtualenv')
+            # The state should not have any issues running now
+            ret = self.run_function('state.sls', mods='pip-installed-errors')
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+
+            for key in ret.keys():
+                self.assertTrue(ret[key]['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+    def test_issue_2028_pip_installed_state(self):
+        ret = self.run_function('state.sls', mods='issue-2028-pip-installed')
+
+        venv_dir = '/tmp/issue-2028-pip-installed'
+
+        try:
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'supervisord'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+    def test_issue_2028_pip_installed_template(self):
+        venv_dir = '/tmp/issue-2028-pip-installed'
+        template = '''
+/tmp/issue-2028-pip-installed:
+  virtualenv.managed:
+    - no_site_packages: True
+    - distribute: True
+
+
+supervisord-pip:
+    pip.installed:
+      - name: supervisor
+      - bin_env: /tmp/issue-2028-pip-installed
+      - require:
+        - virtualenv: /tmp/issue-2028-pip-installed
+'''
+        try:
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'supervisord'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)

@@ -98,6 +98,7 @@ def installed(name,
         runas=user,
         cwd=cwd
     )
+
     if pip_install_call and pip_install_call['retcode']==0:
         pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
         version = list(pkg_list.values())[0]
