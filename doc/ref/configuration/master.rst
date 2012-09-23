@@ -390,6 +390,8 @@ The buffer size in the file server in bytes
 
     file_buffer_size: 1048576
 
+.. _pillar-configuration:
+
 Pillar Configuration
 --------------------
 
@@ -436,6 +438,7 @@ Default:: ``None``
       - hiera: /etc/hiera.yaml
       - cmd: cat /etc/salt/yaml
 
+There are additional details at :ref:`salt-pillars`
 
 Syndic Server Settings
 ----------------------
