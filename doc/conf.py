@@ -46,6 +46,7 @@ class Mock(object):
             return Mock()
 
 MOCK_MODULES = [
+    'paramiko',
     'salt',
     'salt.crypt',
     'yaml',
