@@ -6,7 +6,7 @@ import os
 
 # Import Salt libs
 import salt.loader
-import saltcloud
+import saltapi
 
 salt.loader.salt_base_path = os.path.dirname(saltapi.__file__)
 
@@ -17,9 +17,3 @@ def netapi(opts):
     load = salt.loader._create_loader(opts, 'netapi', 'netapi')
     return load.gen_functions()
 
-def netauth(opts):
-    '''
-    Return the network auth functions
-    '''
-    load = salt.loader._create_loader(opts, 'netauth', 'netauth')
-    return load.gen_functions()
