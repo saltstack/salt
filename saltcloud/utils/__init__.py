@@ -138,11 +138,13 @@ def wait_for_ssh(host, port=22, timeout=900):
 
 
 def wait_for_passwd(host, port=22, timeout=900, username='root',
-                    password=None, key_filename=None):
+                    password=None, key_filename=None, maxtries=50,
+                    trysleep=1):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
     start = time.time()
+    trycount=0
     while True:
         try:
             ssh = paramiko.SSHClient()
@@ -157,8 +159,17 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 kwargs['key_filename'] = key_filename
             try:
                 ssh.connect(**kwargs)
+            except paramiko.AuthenticationException as authexc:
+                trycount += 1
+                print('Authentication error (try {0}  of {1}): {2}'.format(trycount, maxtries, authexc))
+                if trycount < maxtries:
+                    sleep(trysleep)
+                    continue
+                else:
+                    print('Authencication failed: {0}'.format(authexec))
+                    return False
             except Exception as exc:
-                print('There was an in wait_for_passwd: {0}'.format(exc))
+                print('There was an error in wait_for_passwd: {0}'.format(exc))
             return True
         except Exception:
             time.sleep(1)
@@ -175,10 +186,18 @@ def deploy_script(host, port=22, timeout=900, username='root',
         if wait_for_passwd(host, port=port, username=username, password=password, key_filename=key_filename, timeout=timeout):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            kwargs = {'hostname': host,
+                      'port': 22,
+                      'username': username,
+                      'timeout': 15}
+            if password and not key_filename:
+                kwargs['password'] = password
             if key_filename:
-                ssh.connect(host, port=port, username=username, key_filename=key_filename)
-            else:
-                ssh.connect(host, port=port, username=username, password=password)
+                kwargs['key_filename'] = key_filename
+            try:
+                ssh.connect(**kwargs)
+            except Exception as exc:
+                print('There was an error in deploy_script: {0}'.format(exc))
             tmpfh, tmppath = tempfile.mkstemp()
             tmpfile = open(tmppath, 'w')
             tmpfile.write(script)
