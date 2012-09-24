@@ -12,6 +12,10 @@
 # The port used by the publisher
 #publish_port: 4505
 
+# Recover minion connections when they are lost. associated with subscribers
+# running on Xen and VMware virtual machines. Default: True
+#pub_refresh: True
+
 # The user to run salt
 #user: root
 
@@ -53,6 +57,9 @@
 
 # Directory to store job and cache data
 #cachedir: /var/cache/salt
+
+# Verify and set permissions on configuration directories at startup
+#verify_env: True
 
 # Set the number of hours to keep old job information
 #keep_jobs: 24
