@@ -432,7 +432,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
                     CN
                     )).read()
                 )
-    except IOError as exc:
+    except IOError:
         return 'There is no CSR that matches the CN "{0}"'.format(CN)
 
     cert = OpenSSL.crypto.X509()
@@ -516,7 +516,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
                     CN
                     )).read()
                 )
-    except IOError as exc:
+    except IOError:
         return 'There is no certificate that matches the CN "{0}"'.format(CN)
 
     pkcs12 = OpenSSL.crypto.PKCS12()
