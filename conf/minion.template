@@ -95,6 +95,10 @@
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
 #ipc_mode: ipc
+#
+# overwrite the default tcp ports used by the minion when in tcp mode
+#tcp_pub_port: 4510
+#tcp_pull_port: 4511
 
 # The minion can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
