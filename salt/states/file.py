@@ -729,7 +729,7 @@ def _check_file_meta(
                     slines = src.readlines()
                     nlines = name_.readlines()
                 changes['diff'] = (
-                        ''.join(difflib.unified_diff(nlines, slines))
+                        ''.join(difflib.unified_diff(slines, nlines))
                         )
             else:
                 changes['sum'] = 'Checksum differs'
@@ -1080,8 +1080,8 @@ def managed(name,
                     nlines = name_.readlines()
                 # Print a diff equivalent to diff -u old new
                     ret['changes']['diff'] = (''.join(difflib
-                                                      .unified_diff(nlines,
-                                                                    slines)))
+                                                      .unified_diff(slines,
+                                                                    nlines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(
@@ -1603,7 +1603,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     if ret['result']:
@@ -1755,7 +1755,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     if ret['result']:
@@ -1867,7 +1867,7 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     ret['comment'] = 'Appended {0} lines'.format(count)
