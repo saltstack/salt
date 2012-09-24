@@ -364,8 +364,8 @@ def create_ca_signed_cert(ca_name, CN, days=365):
 
     try:
         req = OpenSSL.crypto.load_certificate_request(OpenSSL.crypto.FILETYPE_PEM, open("{0}/{1}/certs/{2}.csr".format(_cert_base_path(), ca_name, CN)).read())
-    except IOError as e:
-        return "There is no CSR that matches the CN '{0}".format(CN)
+    except IOError as exc:
+        return 'There is no CSR that matches the CN "{0}"'.format(CN)
 
     cert = OpenSSL.crypto.X509()
     cert.set_subject(req.get_subject())
@@ -408,8 +408,8 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     try:
         cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open("{0}/{1}/certs/{2}.crt".format(_cert_base_path(), ca_name, CN)).read())
         key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, open("{0}/{1}/certs/{2}.key".format(_cert_base_path(), ca_name, CN)).read())
-    except IOError as e:
-        return "There is no certificate that matches the CN '{0}".format(CN)
+    except IOError as exc:
+        return 'There is no certificate that matches the CN "{0}"'.format(CN)
 
     pkcs12 = OpenSSL.crypto.PKCS12()
 
