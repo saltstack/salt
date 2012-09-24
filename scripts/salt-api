@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+
+# Import salt libs
+import saltapi
+
+def main():
+    sapi = saltapi.cli.SaltAPI()
+    sapi.run()
+
+if __name__ == '__main__':
+    main()
