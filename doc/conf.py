@@ -107,7 +107,7 @@ rst_prolog = """\
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
-    'blob': ('https://github.com/saltstack/salt/blob/v%s/%%s' % __version__, None),
+    'blob': ('https://github.com/saltstack/salt/blob/v%s/%%s' % 'develop', None),
     'download': ('https://github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
 }
