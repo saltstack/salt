@@ -45,7 +45,7 @@
 # The port used by the communication interface
 #ret_port: 4506
 
-#Specify the location of the daemon process ID file
+# Specify the location of the daemon process ID file
 #pidfile: /var/run/salt-master.pid
 
 # The root directory prepended to these options: pki_dir, cachedir,
