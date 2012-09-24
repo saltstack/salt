@@ -14,7 +14,9 @@ def api_config(path):
     Read in the salt master config file and add additional configs that
     need to be stubbed out for cloudapi
     '''
-    opts = {}
+    opts = {
+            'extension_modules': [],
+            }
 
     salt.config.load_config(opts, path, 'SALT_MASTER_CONFIG')
 
