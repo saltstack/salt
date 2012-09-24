@@ -16,6 +16,9 @@
 # The user to run salt
 #user: root
 
+# Specify the location of the daemon process ID file
+#pidfile: /var/run/salt-minion.pid
+
 # The root directory prepended to these options: pki_dir, cachedir, log_file.
 #root_dir: /
 
@@ -34,6 +37,17 @@
 # FQDN (for instance, Solaris).
 #append_domain:
 
+# Custom static grains for this minion can be specified here and used in SLS
+# files just like all other grains. This example sets 4 custom grains, with
+# the 'roles' grain having two values that can be matched against:
+#grains:
+#  roles:
+#    - webserver
+#    - memcache
+#  deployment: datacenter4
+#  cabinet: 13
+#  cab_u: 14-15
+
 # If the connection to the server is interrupted, the minion will
 # attempt to reconnect. sub_timeout allows you to control the rate
 # of reconnection attempts (in seconds). To disable reconnects, set
@@ -43,11 +57,17 @@
 # Where cache data goes
 #cachedir: /var/cache/salt
 
+# Verify and set permissions on configuration directories at startup
+#verify_env: True
+
 # The minion can locally cache the return data from jobs sent to it, this
 # can be a good way to keep track of jobs the minion has executed
 # (on the minion side). By default this feature is disabled, to enable
 # set cache_jobs to True
 #cache_jobs: False
+
+# set the directory used to hold unix sockets
+#sock_dir: /var/run/salt
 
 # Backup files that are replaced by file.managed and file.recurse under
 # 'cachedir'/file_backups relative to their original location and appended
@@ -72,6 +92,9 @@
 # your environment then set this value to False.
 #dns_check: True
 
+# Windows platforms lack posix IPC and must rely on slower TCP based inter-
+# process communications. Set ipc_mode to 'tcp' on such systems
+#ipc_mode: ipc
 
 # The minion can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
@@ -115,6 +138,9 @@
 #
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
+#
+# directory for extension modules
+#extension_modules: []
 
 #####    State Management Settings    #####
 ###########################################
@@ -129,6 +155,10 @@
 # json_mako
 #
 #renderer: yaml_jinja
+#
+# The failhard option tells the minions to stop immediately after the first
+# failure detected in the state execution, defaults to False
+#failhard: False
 #
 # state_verbose allows for the data returned from the minion to be more
 # verbose. Normally only states that fail or states that have changes are
@@ -156,6 +186,20 @@
 # If using the local file directory, then the state top file name needs to be
 # defined, by default this is top.sls.
 #state_top: top.sls
+#
+# Run states when the minion daemon starts. To enable, set startup_states to:
+# 'highstate' -- Execute state.highstate
+# 'sls' -- Read in the sls_list option and execute the named sls files
+# 'top' -- Read top_file option and execute based on that file on the Master 
+#startup_states: []
+#
+# list of states to run when the minion starts up if startup_states is 'sls'
+#sls_list: 
+#  - edit.vim
+#  - hyper
+#
+# top file to execute if startup_states is 'top'
+#top_file: []
 
 #####     File Directory Settings    #####
 ##########################################
@@ -225,6 +269,9 @@
 # output for each changed state if set to 'full', but if set to 'terse'
 # the output will be shortened to a single line.
 #state_output: full
+#
+# fingerprint of the master public key to double verify the master is valid
+#master_finger: []
 
 ######         Thread settings        #####
 ###########################################
