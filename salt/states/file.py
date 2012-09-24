@@ -185,11 +185,11 @@ def _check_user(user, group):
     err = ''
     if user:
         uid = __salt__['file.user_to_uid'](user)
-        if not uid:
+        if uid == '':
             err += 'User {0} is not available '.format(user)
     if group:
         gid = __salt__['file.group_to_gid'](group)
-        if not gid:
+        if gid == '':
             err += 'Group {0} is not available'.format(group)
     return err
 
