@@ -40,7 +40,6 @@ setup(
           ],
       packages=['saltapi',
                 'saltapi/netapi',
-                'saltapi/netauth',
                 ],
       data_files=[('share/man/man1',
                      ['doc/man/salt-api.1']),
