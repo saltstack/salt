@@ -17,7 +17,7 @@
 #user: root
 
 # Specify the location of the daemon process ID file
-#pidfile: /var/run/salt-master.pid
+#pidfile: /var/run/salt-minion.pid
 
 # The root directory prepended to these options: pki_dir, cachedir, log_file.
 #root_dir: /
