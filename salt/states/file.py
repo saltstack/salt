@@ -1680,7 +1680,7 @@ def comment(name, regex, char='#', backup='.bak'):
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     if ret['result']:
