@@ -12,6 +12,10 @@
 # The port used by the publisher
 #publish_port: 4505
 
+# Recover minion connections when they are lost. associated with subscribers
+# running on Xen and VMware virtual machines. Default: True
+#pub_refresh: True
+
 # The user to run salt
 #user: root
 
@@ -41,6 +45,9 @@
 # The port used by the communication interface
 #ret_port: 4506
 
+#Specify the location of the daemon process ID file
+#pidfile: /var/run/salt-master.pid
+
 # The root directory prepended to these options: pki_dir, cachedir,
 # sock_dir, log_file, autosign_file.
 #root_dir: /
@@ -51,6 +58,9 @@
 # Directory to store job and cache data
 #cachedir: /var/cache/salt
 
+# Verify and set permissions on configuration directories at startup
+#verify_env: True
+
 # Set the number of hours to keep old job information
 #keep_jobs: 24
 
@@ -59,7 +69,7 @@
 #timeout: 5
 
 # Set the directory used to hold unix sockets
-#sock_dir: /tmp/salt-unix
+#sock_dir: /var/run/salt
 
 # The master maintains a job cache, while this is a great addition it can be
 # a burden on the master for larger deployments (over 5000 minions).
@@ -67,6 +77,9 @@
 # the jobs system and is not generally recommended.
 #
 #job_cache: True
+
+# Cache minion grains and pillar data in the cachedir.
+#minion_data_cache: True
 
 # Set the acceptance level for serialization of messages. This should only be
 # set if the master is newer than 0.9.5 and the minion are older. This option
@@ -137,8 +150,11 @@
 # Add any additional locations to look for master runners
 #runner_dirs: []
 #
-#Enable Cython for master side modules
+# Enable Cython for master side modules
 #cython_enable: False
+#
+# directory for extension modules 
+#extension_modules: []
 
 #####      State System settings     #####
 ##########################################
