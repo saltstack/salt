@@ -1,3 +1,4 @@
+import os
 import integration
 
 
@@ -14,6 +15,8 @@ class SupervisordModuleTest(integration.ModuleCase):
         ret = self.run_function('cmd.has_exec', ['supervisorctl'])
         if not ret:
             self.skipTest('supervisor not installed')
+        if os.geteuid() != 0:
+            self.skipTest('you must be this root to run this test')
 
     def test_start_all(self):
         '''
