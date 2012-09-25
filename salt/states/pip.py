@@ -100,10 +100,19 @@ def installed(name,
     )
 
     if pip_install_call and pip_install_call['retcode']==0:
+        ret['result'] = True
+
         pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
+        if not pkg_list:
+            ret['comment'] = (
+                'There was no error installing package \'{0}\' although '
+                'it does not show when calling \'pip.freeze\'.'.format(name)
+            )
+            ret['changes']["{0}==???".format(name)] = 'Installed'
+            return ret
+
         version = list(pkg_list.values())[0]
         pkg_name = next(iter(pkg_list))
-        ret['result'] = True
         ret['changes']["{0}=={1}".format(pkg_name, version)] = 'Installed'
         ret['comment'] = 'Package was successfully installed'
     elif pip_install_call:

@@ -51,6 +51,50 @@ class PipStateTest(integration.ModuleCase):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+    def test_pip_installed_weird_install(self):
+        ographite = '/opt/graphite'
+        if os.path.isdir(ographite):
+            self.skipTest(
+                'You already have \'{0}\'. This test would overwrite this '
+                'directory'.format(ographite)
+            )
+        try:
+            os.makedirs(ographite)
+        except OSError, err:
+            if err.errno == 13:
+                # Permission denied
+                self.skipTest(
+                    'You don\'t have the required permissions to run this test'
+                )
+        finally:
+            if os.path.isdir(ographite):
+                shutil.rmtree(ographite)
+
+        venv_dir = '/tmp/pip-installed-weird-install'
+        try:
+            # Since we don't have the virtualenv created, pip.installed will
+            # thrown and error.
+            ret = self.run_function(
+                'state.sls', mods='pip-installed-weird-install'
+            )
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+
+            for key in ret.keys():
+                self.assertTrue(ret[key]['result'])
+                if ret[key]['comment'] == 'Created new virtualenv':
+                    continue
+                self.assertEqual(
+                    ret[key]['comment'],
+                    'There was no error installing package \'carbon\' '
+                    'although it does not show when calling \'pip.freeze\'.'
+                )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+            if os.path.isdir('/opt/graphite'):
+                shutil.rmtree('/opt/graphite')
+
     def test_issue_2028_pip_installed_state(self):
         ret = self.run_function('state.sls', mods='issue-2028-pip-installed')
 
