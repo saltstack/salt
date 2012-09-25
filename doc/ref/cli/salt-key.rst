@@ -60,3 +60,39 @@ Options
     The master configuration file needs to be read to determine where the Salt
     keys are stored via the pki_dir configuration value;
     default=/etc/salt/master
+
+.. option:: -p PRINT, --print=PRINT
+
+   Print the specified public key
+
+.. option:: -P, --print-all
+
+   Print all public keys
+
+.. option:: -q, --quiet
+
+   Supress output
+
+.. option:: -y, --yes
+
+   Answer 'Yes' to all questions presented, defaults to False
+
+.. option:: --key-logfile=KEY_LOGFILE
+
+   Send all output to a file. Default is /var/log/salt/key
+
+.. option:: --gen-keys=GEN_KEYS
+
+   Set a name to generate a keypair for use with salt
+
+.. option:: --gen-keys-dir=GEN_KEYS_DIR
+
+   Set the directory to save the generated keypair.  Only works
+   with 'gen_keys_dir' option; default is the current directory.
+
+.. option:: --keysize=KEYSIZE
+
+   Set the keysize for the generated key, only works with
+   the '--gen-keys' option, the key size must be 2048 or
+   higher, otherwise it will be rounded up to 2048. The
+   default is 2048.
