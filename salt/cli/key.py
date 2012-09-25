@@ -413,7 +413,7 @@ class Key(object):
             if fin:
                 self._log('Signature for {0} public key: {1}'.format(fkey, fin))
                 sigs['{0}.pub'.format(fkey)] = fin
-            pri = os.path.join(dir_, '{0}.pub'.format(fkey))
+            pri = os.path.join(dir_, '{0}.pem'.format(fkey))
             fin = salt.utils.pem_finger(pri)
             if fin:
                 self._log('Signature for {0} private key: {1}'.format(fkey, fin))
