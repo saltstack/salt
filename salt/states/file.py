@@ -1529,7 +1529,7 @@ def recurse(name,
         removed = _clean_dir(name, list(keep))
         if removed:
             ret['changes']['removed'] = removed
-            ret['comment'] += 'Files cleaned from directory {0}'.format(name)
+            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
 
 
