@@ -159,7 +159,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 kwargs['key_filename'] = key_filename
             try:
                 ssh.connect(**kwargs)
-            except paramiko.AuthenticationException as authexc:
+            except (paramiko.AuthenticationException, paramiko.SSHException) as authexc:
                 trycount += 1
                 print('Authentication error (try {0}  of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
