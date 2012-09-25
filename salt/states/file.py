@@ -178,6 +178,22 @@ def _makedirs_perms(name, user=None, group=None, mode=0755):
     _check_perms(name, None, user, group, int("%o" % mode) if mode else None)
 
 
+def _check_user(user, group):
+    '''
+    Checks if the named user and group are present on the minion
+    '''
+    err = ''
+    if user:
+        uid = __salt__['file.user_to_uid'](user)
+        if uid == '':
+            err += 'User {0} is not available '.format(user)
+    if group:
+        gid = __salt__['file.group_to_gid'](group)
+        if gid == '':
+            err += 'Group {0} is not available'.format(group)
+    return err
+
+
 def _is_bin(path):
     '''
     Return True if a file is a bin, just checks for NULL char, this should be
@@ -489,7 +505,6 @@ def _get_recurse_dest(prefix, fn_, source, env):
         local_roots.sort(key=lambda p: len(p), reverse=True)
 
     srcpath = source[7:] # the path after "salt://"
-    pathsep = os.path.sep
 
     # in solo mode(ie, file_client=='local'), fn_ is a path below
     # a file root; in remote mode, fn_ is a path below the cache_dir.
@@ -713,7 +728,7 @@ def _check_file_meta(
                     slines = src.readlines()
                     nlines = name_.readlines()
                 changes['diff'] = (
-                        ''.join(difflib.unified_diff(nlines, slines))
+                        ''.join(difflib.unified_diff(slines, nlines))
                         )
             else:
                 changes['sum'] = 'Checksum differs'
@@ -963,6 +978,10 @@ def managed(name,
            'comment': '',
            'name': name,
            'result': True}
+    u_check = _check_user(user, group)
+    if u_check:
+        # The specified user or group do not exist
+        return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
             ret, ('Specified file {0} is not an absolute'
@@ -1060,8 +1079,8 @@ def managed(name,
                     nlines = name_.readlines()
                 # Print a diff equivalent to diff -u old new
                     ret['changes']['diff'] = (''.join(difflib
-                                                      .unified_diff(nlines,
-                                                                    slines)))
+                                                      .unified_diff(slines,
+                                                                    nlines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(
@@ -1214,6 +1233,10 @@ def directory(name,
            'changes': {},
            'result': True,
            'comment': ''}
+    u_check = _check_user(user, group)
+    if u_check:
+        # The specified user or group do not exist
+        return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -1403,6 +1426,10 @@ def recurse(name,
            'result': True,
            'comment': {}  # { path: [comment, ...] }
            }
+    u_check = _check_user(user, group)
+    if u_check:
+        # The specified user or group do not exist
+        return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -1502,7 +1529,7 @@ def recurse(name,
         removed = _clean_dir(name, list(keep))
         if removed:
             ret['changes']['removed'] = removed
-            ret['comment'] += 'Files cleaned from directory {0}'.format(name)
+            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
     return ret
 
 
@@ -1575,7 +1602,7 @@ def sed(name, before, after, limit='', backup='.bak', options='-r -e',
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     if ret['result']:
@@ -1652,7 +1679,7 @@ def comment(name, regex, char='#', backup='.bak'):
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     if ret['result']:
@@ -1727,7 +1754,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     if ret['result']:
@@ -1839,7 +1866,7 @@ def append(name, text=None, makedirs=False, source=None, source_hash=None):
     if slines != nlines:
         # Changes happened, add them
         ret['changes']['diff'] = (
-                ''.join(difflib.unified_diff(nlines, slines))
+                ''.join(difflib.unified_diff(slines, nlines))
                 )
 
     ret['comment'] = 'Appended {0} lines'.format(count)

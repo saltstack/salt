@@ -70,38 +70,56 @@ def installed(name,
                 name)
         return ret
 
-    if __salt__['pip.install'](pkgs=name,
-                               requirements=requirements,
-                               bin_env=bin_env,
-                               log=log,
-                               proxy=proxy,
-                               timeout=timeout,
-                               editable=editable,
-                               find_links=find_links,
-                               index_url=index_url,
-                               extra_index_url=extra_index_url,
-                               no_index=no_index,
-                               mirrors=mirrors,
-                               build=build,
-                               target=target,
-                               download=download,
-                               download_cache=download_cache,
-                               source=source,
-                               upgrade=upgrade,
-                               force_reinstall=force_reinstall,
-                               ignore_installed=ignore_installed,
-                               no_deps=no_deps,
-                               no_install=no_install,
-                               no_download=no_download,
-                               install_options=install_options,
-                               runas=user,
-                               cwd=cwd):
+    pip_install_call = __salt__['pip.install'](
+        pkgs=name,
+        requirements=requirements,
+        bin_env=bin_env,
+        log=log,
+        proxy=proxy,
+        timeout=timeout,
+        editable=editable,
+        find_links=find_links,
+        index_url=index_url,
+        extra_index_url=extra_index_url,
+        no_index=no_index,
+        mirrors=mirrors,
+        build=build,
+        target=target,
+        download=download,
+        download_cache=download_cache,
+        source=source,
+        upgrade=upgrade,
+        force_reinstall=force_reinstall,
+        ignore_installed=ignore_installed,
+        no_deps=no_deps,
+        no_install=no_install,
+        no_download=no_download,
+        install_options=install_options,
+        runas=user,
+        cwd=cwd
+    )
+
+    if pip_install_call and pip_install_call['retcode']==0:
+        ret['result'] = True
+
         pkg_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
+        if not pkg_list:
+            ret['comment'] = (
+                'There was no error installing package \'{0}\' although '
+                'it does not show when calling \'pip.freeze\'.'.format(name)
+            )
+            ret['changes']["{0}==???".format(name)] = 'Installed'
+            return ret
+
         version = list(pkg_list.values())[0]
         pkg_name = next(iter(pkg_list))
-        ret['result'] = True
         ret['changes']["{0}=={1}".format(pkg_name, version)] = 'Installed'
         ret['comment'] = 'Package was successfully installed'
+    elif pip_install_call:
+        ret['result'] = False
+        ret['comment'] = 'Failed to install package {0}. Error: {1}'.format(
+            name, pip_install_call['stderr']
+        )
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install package'

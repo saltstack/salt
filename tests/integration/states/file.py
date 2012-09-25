@@ -328,8 +328,6 @@ class FileTest(integration.ModuleCase):
                 ignore_errors=True
             )
 
-
-
     def test_touch(self):
         '''
         file.touch

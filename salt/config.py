@@ -7,7 +7,6 @@ import glob
 import os
 import socket
 import logging
-import tempfile
 
 # import third party libs
 import yaml

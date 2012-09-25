@@ -45,8 +45,8 @@ instead of the default 5.
 
     data = event.get_event(wait=10, tag='auth')
 
-Instead of looking for a single event, the iter_event method can be used to
-make a generator which will continually yield salt events. The iter_event
+Instead of looking for a single event, the iter_events method can be used to
+make a generator which will continually yield salt events. The iter_events
 method also accepts a tag, but not a wait time:
 
 .. code-block:: python
@@ -55,5 +55,5 @@ method also accepts a tag, but not a wait time:
 
     event = salt.utils.event.MasterEvent('/var/run/salt')
 
-    for data in event.iter_event(tag='auth'):
+    for data in event.iter_events(tag='auth'):
         print(data)

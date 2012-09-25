@@ -605,7 +605,7 @@ class Minion(object):
                             epub_sock.send(package)
                         except Exception:
                             pass
-                except Exception as exc:
+                except Exception:
                     log.critical(traceback.format_exc())
         else:
             while True:

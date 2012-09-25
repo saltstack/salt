@@ -1,45 +1,22 @@
 '''
-Service support for classic Red Hat type systems. This interface uses the
-service command (so it is compatible with upstart systems) and the chkconfig
-command.
+Service support for Solaris 10 and 11, should work with other systems
+that use SMF also. (e.g. SmartOS) 
 '''
-# Import Salt libs
-import salt.utils
 
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on systems which default to SMF
     '''
-    # Disable on these platforms, specific service modules exist:
+    # Don't let this work on Solaris 9 since SMF doesn't exist on it.
     enable = [
-               'RedHat',
-               'CentOS',
-               'Scientific',
-               'CloudLinux',
-               'Amazon',
-               'Fedora',
+               'Solaris',
               ]
     if __grains__['os'] in enable:
-        if __grains__['os'] == 'Fedora':
-            if __grains__['osrelease'] > 15:
-                return False
+        if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == "5.9":
+            return False
         return 'service'
     return False
-
-def _runlevel():
-    '''
-    Return the current runlevel
-    '''
-    out = __salt__['cmd.run']('runlevel').strip()
-    # unknown will be returned while inside a kickstart environment, since
-    # this is usually a server deployment it should be safe to assume runlevel
-    # 3.  If not all service related states will throw an out of range
-    # exception here which will cause other functions to fail.
-    if 'unknown' in out:
-        return '3'
-    else:
-        return out.split()[1]
 
 
 def get_enabled():
@@ -50,17 +27,17 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    rlevel = _runlevel()
     ret = set()
-    cmd = '/sbin/chkconfig --list'
+    cmd = 'svcs -H -o SVC,STATE -s SVC'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
         if not comps:
             continue
-        if '{0}:on'.format(rlevel) in line:
+        if 'online' in line:
             ret.add(comps[0])
     return sorted(ret)
+
 
 def get_disabled():
     '''
@@ -70,17 +47,17 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    rlevel = _runlevel()
     ret = set()
-    cmd = '/sbin/chkconfig --list'
+    cmd = 'svcs -aH -o SVC,STATE -s SVC'
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         comps = line.split()
         if not comps:
             continue
-        if not '{0}:on'.format(rlevel) in line:
+        if not 'online' in line and not 'legacy_run' in line:
             ret.add(comps[0])
     return sorted(ret)
+
 
 def get_all():
     '''
@@ -90,7 +67,16 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(get_enabled() + get_disabled())
+    ret = set()
+    cmd = 'svcs -aH -o SVC,STATE -s SVC'
+    lines = __salt__['cmd.run'](cmd).split('\n')
+    for line in lines:
+        comps = line.split()
+        if not comps:
+            continue
+        ret.add(comps[0])
+    return sorted(ret)
+
 
 def start(name):
     '''
@@ -100,7 +86,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = '/sbin/service {0} start'.format(name)
+    cmd = '/usr/sbin/svcadm enable -t {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -112,7 +98,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = '/sbin/service {0} stop'.format(name)
+    cmd = '/usr/sbin/svcadm disable -t {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -124,9 +110,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    if name == 'salt-minion':
-        salt.utils.daemonize_if(__opts__)
-    cmd = '/sbin/service {0} restart'.format(name)
+    cmd = '/usr/sbin/svcadm restart {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -139,10 +123,12 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
-    if sig:
-        return bool(__salt__['status.pid'](sig))
-    cmd = '/sbin/service {0} status'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = '/usr/bin/svcs -H -o STATE {0}'.format(name)
+    line = __salt__['cmd.run'](cmd).strip()
+    if line == 'online':
+        return True
+    else:
+        return False 
 
 
 def enable(name):
@@ -153,7 +139,7 @@ def enable(name):
 
         salt '*' service.enable <service name>
     '''
-    cmd = '/sbin/chkconfig {0} on'.format(name)
+    cmd = '/usr/sbin/svcadm enable {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -165,7 +151,7 @@ def disable(name):
 
         salt '*' service.disable <service name>
     '''
-    cmd = '/sbin/chkconfig {0} off'.format(name)
+    cmd = '/usr/sbin/svcadm disable {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 

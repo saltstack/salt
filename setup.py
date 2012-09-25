@@ -145,7 +145,8 @@ freezer_includes = [
     'zmq.utils.*',
     'ast',
     'difflib',
-    'distutils'
+    'distutils',
+    'distutils.version'
 ]
 
 if sys.platform.startswith('win'):
@@ -199,4 +200,5 @@ else:
                                'scripts/salt-run',
                                'scripts/salt']
 
-setup(**setup_kwargs)
+if __name__ == '__main__':
+    setup(**setup_kwargs)
