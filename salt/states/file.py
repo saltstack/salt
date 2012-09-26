@@ -899,6 +899,26 @@ def absent(name):
     return ret
 
 
+def exists(name):
+    '''
+    Verify that the named file or directory is present or exists. 
+    Ensures pre-requisites outside of salts per-vue have been previously
+    satisified (aka, keytabs, private keys, etc.) before deployment
+
+    name
+        Absolute path which must exist
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    if not os.path.exists(name):
+      return _error(ret, ('Specified path {0} does not exist').format(name))
+
+    ret['comment'] = 'Path {0} exists'.format(name)
+    return ret
+
+
 def managed(name,
         source=None,
         source_hash='',
