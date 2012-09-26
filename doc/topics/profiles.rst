@@ -24,9 +24,9 @@ public cloud provider. A number of additional paramaters can also be inserted:
       size: 1024 server
       os: RHEL6
       minion:
-        grains:
-          role: webserver
         master: salt.example.com
+      grains:
+        role: webserver
 
 Some paramaters can be specified in the main Salt cloud config file and then
 are applied to all cloud profiles. For instance if only a single cloud provider

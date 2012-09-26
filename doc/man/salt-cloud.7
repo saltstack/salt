@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "August 13, 2012" "0.7.0" "salt-cloud"
+.TH "SALT-CLOUD" "7" "September 25, 2012" "0.8.0" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.\" Man page generated from reStructuredText.
+.\" Man page generated from reStructeredText.
 .
 .SH VM PROFILES
 .sp
@@ -57,9 +57,9 @@ centos_rackspace:
   size: 1024 server
   os: RHEL6
   minion:
-    grains:
-      role: webserver
     master: salt.example.com
+  grains:
+    role: webserver
 .ft P
 .fi
 .sp
@@ -127,22 +127,22 @@ machines to make from said profile:
 .nf
 .ft C
 fedora_small:
-  \- web1
-  \- web2
-  \- web3
-  \- web3
-  \- web4
-  \- web5
+    \- web1
+    \- web2
+    \- web3
+    \- web3
+    \- web4
+    \- web5
 fedora_high:
-  \- redis1
-  \- redis2
-  \- redis3
+    \- redis1
+    \- redis2
+    \- redis3
 cent_high:
-  \- riak1
-  \- riak2
-  \- riak3
-  \- riak4
-  \- riak5
+    \- riak1
+    \- riak2
+    \- riak3
+    \- riak4
+    \- riak5
 .ft P
 .fi
 .sp
@@ -171,6 +171,26 @@ that exist but are not specified in the map file will be destroyed:
 .nf
 .ft C
 $ salt\-cloud \-m /path/to/mapfile \-P \-H
+.ft P
+.fi
+.sp
+A map file can include grains:
+.sp
+.nf
+.ft C
+fedora_small:
+    \- web1:
+        minion:
+            log_level: debug
+        grains:
+            cheese: tasty
+            omelet: du fromage
+    \- web2:
+        minion:
+            log_level: warn
+        grains:
+            cheese: more tasty
+            omelet: with peppers
 .ft P
 .fi
 .SH WRITING CLOUD PROVIDER MODULES
@@ -329,9 +349,643 @@ GOGRID.sharedsecret: saltybacon
 .ft P
 .fi
 .SH RELEASE NOTES AND UPGRADE INSTRUCTIONS
+.SS Salt Cloud 0.6.0 Release Notes
+.sp
+The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
+has been developed to ease the automation and integration of Salt with public
+cloud providers by allowing cloud vms to be cleanly defined, created and
+automatically hooked back into a Salt Master.
+.sp
+While Salt Cloud is primarily made to build cloud vms to tie into a Salt Mater,
+it has been created in a generic way, so that it can be used to provision and
+hook systems of any type via the familiar Salt modules system.
+.sp
+This release supports three public cloud providers (all via libcloud),
+Amazon EC2, Rackspace Cloud and Linode.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+Packages are not yet available, Salt Cloud requires three dependencies, the
+salt libs, libcloud, and paramiko.
+.SS Extensible With Cloud Modules
+.sp
+The Salt loader system has been employed to make adding support for additional
+public cloud systems just as modular and simple as adding support for new
+package managers in Salt.
+.sp
+Adding support for a new cloud provider is extremely simple, just add a cloud
+module and everything cleanly links together.
+.SS Define VM Profiles
+.sp
+The way a vms is created is done via profiles. Profiles are used to define what
+properties a vm will have, the cloud provider, the size and the image.
+.sp
+.nf
+.ft C
+centos_rackspace:
+  provider: rackspace
+  image: CentOS 6.2
+  size: 1024 server
+  os: RHEL6
+  minion:
+    grains:
+        role: webserver
+    master: salt.example.com
+.ft P
+.fi
+.sp
+This profile will be used to create vms on Rackspace cloud with the CentOS 6.2
+image and the Rackspace 1024 vm size. Particulars of the minion config can
+also be specified.
+.sp
+Individual vms can be created from profiles:
+.sp
+.nf
+.ft C
+# salt\-cloud \-p centos_rackspace web1
+.ft P
+.fi
+.sp
+This command creates a vms with the name web1 on the Rackspace cloud and
+connects the new vm to a Salt Master located at salt.example.com. The new VM
+has the Salt id of web1.
+.SS Define Maps of Profiles
+.sp
+When it is desired to have a predefined mapping of many, or a specific group
+of vms then a cloud map can be defined:
+.sp
+.nf
+.ft C
+centos_rackspace:
+  web1
+  web2
+  web3
+  web4
+centos_linode:
+  redis1
+  riak1
+  riak2
+  riak3
+ubuntu_ec2:
+  dev1
+  dev2
+  cassandra1
+  cassandra2
+  cassandra3
+.ft P
+.fi
+.sp
+This map file will create vms named web 1\-4 using the centos_rackspace profile
+on rackspace, the redis and riak vms on linode and the dev and Cassandra vms on
+ec2. It can be run with salt\-cloud:
+.sp
+.nf
+.ft C
+# salt\-cloud \-m mapfile
+.ft P
+.fi
+.sp
+When creating more than one vm the \-P option can be passed, to make the vms
+provision in parallel, greatly speeding up large scale expansions of vms.
+.SS Salt Cloud 0.7.0 Release Notes
+.sp
+Salt Cloud marches forward with the 0.7.0 release. As is customary for Salt
+Stack projects the 0.7.0 release is intended to be much more robust and
+deliver a more complete core feature set. Salt Cloud 0.7.0 is just that.
+.sp
+With new tools to help look into what is available on cloud providers,
+new additions to make cloud management more stateful and the addition of
+more supported cloud platforms 0.7.0 has greatly enhanced the capabilities
+of the overall Salt platform.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS New Cloud Provider Support
+.sp
+The following cloud providers are now supported:
+.INDENT 0.0
+.TP
+.B Amazon AWS
+\fI\%http://aws.amazon.com/ec2/\fP
+.TP
+.B Rackspace Cloud
+\fI\%http://www.rackspace.com/cloud/\fP
+.TP
+.B Linode
+\fI\%http://www.linode.com/\fP
+.TP
+.B Joyent
+\fI\%http://joyent.com/\fP
+.TP
+.B GoGrid
+\fI\%http://www.gogrid.com/\fP
+.UNINDENT
+.SS List Available Resources
+.sp
+Setting up Salt Cloud requires knowlege of the available sizes and images on
+cloud providers. Listing the available images and sizes can now be done with
+the salt\-cloud command:
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-\-list\-sizes linode
+linode
+  Linode 1024
+    bandwidth: 400
+    disk: 40960
+    id: 3
+    name: Linode 1024
+    ram: 1024
+    uuid: 56e6f495190cb2ed1a343f7159ad447cf27d906d
+  Linode 12GB
+    bandwidth: 2000
+    disk: 491520
+    id: 8
+    name: Linode 12GB
+    ram: 12288
+    uuid: 3d1731ebefdbcb4c283957b43d45f89a01f67c5f
+  Linode 1536
+    bandwidth: 600
+    disk: 61440
+    id: 4
+    name: Linode 1536
+    ram: 1536
+    uuid: f0f28628cc70c5f2656aa3f313588d8509ee3787
+  Linode 16GB
+    bandwidth: 2000
+    disk: 655360
+    id: 9
+    name: Linode 16GB
+    ram: 16384
+    uuid: 208cc3c0a60c4eab6ed6861344fef0311c13ffd2
+  Linode 2048
+    bandwidth: 800
+    disk: 81920
+    id: 5
+    name: Linode 2048
+    ram: 2048
+    uuid: 0c9ee69dc7ef7a4cdce71963f8d18e76c61dd57f
+  Linode 20GB
+    bandwidth: 2000
+    disk: 819200
+    id: 10
+    name: Linode 20GB
+    ram: 20480
+    uuid: e0a7b61e3830a120eec94459c9fc34ef7c9e0e36
+  Linode 4GB
+    bandwidth: 1600
+    disk: 163840
+    id: 6
+    name: Linode 4GB
+    ram: 4096
+    uuid: 09585e0f1d4ef4aad486cfa3d53f9d8960f575e7
+  Linode 512
+    bandwidth: 200
+    disk: 20480
+    id: 1
+    name: Linode 512
+    ram: 512
+    uuid: 3497f7def3d6081e6f65ac6e577296bc6b810c05
+  Linode 768
+    bandwidth: 300
+    disk: 30720
+    id: 2
+    name: Linode 768
+    ram: 768
+    uuid: da9f0dbc144aaa234aa5d555426863c8068a8c70
+  Linode 8GB
+    bandwidth: 2000
+    disk: 327680
+    id: 7
+    name: Linode 8GB
+    ram: 8192
+    uuid: e08f8a57551297b9310545430c67667f59120606
+.ft P
+.fi
+.SS Destroy!
+.sp
+Salt Cloud can now destroy cloud vms as easily as it can create them. The new
+\fB\-\-destroy\fP option can be passed to end the life of a vm:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-d web1
+.ft P
+.fi
+.sp
+The map operation can now also destroy vms, the new \fBhard\fP option can be
+passed which makes vm maps much more stateful. With the \fBhard\fP option the
+vm maps are viewed as the absolute source of information for the state of
+cloud resources, and any vm that is not specified in the map file will be
+destroyed:
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-m /etc/salt/cloud.map \-H
+The following virtual machines are set to be created:
+  web1
+  riak4
+The following virtual machines are set to be destroyed:
+  app7
+  devtest4
+
+Proceed? [N/y]
+.ft P
+.fi
+.SS Salt Cloud 0.8.0 Release Notes
+.sp
+Salt Cloud has reached another milestone, with the 0.8.0 release. This
+release includes many improvements to usability, error handling and general
+stability of the product.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.0.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS Increased Formatting Options
+.sp
+Additional options have been added to salt\-cloud \-Q, to support the same kinds
+of formatting already available in Salt:
+.sp
+.nf
+.ft C
+\-\-raw\-out
+\-\-text\-out
+\-\-yaml\-out
+\-\-json\-out
+\-\-no\-color
+.ft P
+.fi
+.SS More Helpful Error Messages
+.sp
+As an ongoing effort, we have been cleaning up and adding error messages in an
+attempt to make salt\-cloud more helpful when something goes wrong. This
+includes displaying messages as they are received from libcloud.
+.SS Specify Grains in Map Files
+.sp
+Previously, map files only had the ability to specify a profile name, and the
+node names that would be associated with it. Now you can also specify grains
+that will be laid down in each individual node:
+.sp
+.nf
+.ft C
+vm_profile:
+  \- mynodename:
+    minion:
+      master: salt\-master
+    grains:
+      fromage: tasty
+.ft P
+.fi
+.sp
+These grains can also be specified in the profile itself. When this happens,
+the grains in map files will override grains in the profile. For example:
+.sp
+.nf
+.ft C
+vm_profile:
+  provider: gogrid
+  size: 512MB
+  image: CentOS 6.2 (64\-bit) w/ None
+  os: RHEL6
+  minion:
+    master: salt.mycompany.com
+  grains:
+    french: fries
+.ft P
+.fi
+.sp
+In this example, mynodename will include grains for both fromage and french,
+but the master will be salt\-master, not salt\-mycompany.com.
+.SS AWS Improvements
+.sp
+AWS is much more complex to work with than any of the other supported cloud
+providers. As such, additional configuration has been added in order to
+accomodate their usage:
+.INDENT 0.0
+.TP
+.B AWS.ssh_username:
+Because AWS images can include a variety of different usernames for the
+initial login, this option allows you to specify which one(s) to use to
+install salt upon firstboot.
+.TP
+.B AWS.ssh_interface:
+AWS instances include both private and public IP addresses. By default,
+salt\-cloud will use the public IP to login. In situations where the
+salt\-master is also located within AWS, the private IP can be used instead.
+.TP
+.B AWS.location and AWS.availability_zone:
+These options allow you to specify from within salt\-cloud, which AWS
+locations your machines spin up in.
+.UNINDENT
+.SS Ubuntu Fixes
+.sp
+Ubuntu packages automatically start the service upon installation, and needed
+to be handled differently in the deploy script. Configuration is now laid down
+before the package is installed, so that the minion can make its initial start
+happen with the correct configuration.
+.SH SALT CLOUD 0.6.0 RELEASE NOTES
+.sp
+The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
+has been developed to ease the automation and integration of Salt with public
+cloud providers by allowing cloud vms to be cleanly defined, created and
+automatically hooked back into a Salt Master.
+.sp
+While Salt Cloud is primarily made to build cloud vms to tie into a Salt Mater,
+it has been created in a generic way, so that it can be used to provision and
+hook systems of any type via the familiar Salt modules system.
+.sp
+This release supports three public cloud providers (all via libcloud),
+Amazon EC2, Rackspace Cloud and Linode.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.6.0.tar.gz\fP
+.sp
+Packages are not yet available, Salt Cloud requires three dependencies, the
+salt libs, libcloud, and paramiko.
+.SS Extensible With Cloud Modules
+.sp
+The Salt loader system has been employed to make adding support for additional
+public cloud systems just as modular and simple as adding support for new
+package managers in Salt.
+.sp
+Adding support for a new cloud provider is extremely simple, just add a cloud
+module and everything cleanly links together.
+.SS Define VM Profiles
+.sp
+The way a vms is created is done via profiles. Profiles are used to define what
+properties a vm will have, the cloud provider, the size and the image.
+.sp
+.nf
+.ft C
+centos_rackspace:
+  provider: rackspace
+  image: CentOS 6.2
+  size: 1024 server
+  os: RHEL6
+  minion:
+    grains:
+        role: webserver
+    master: salt.example.com
+.ft P
+.fi
+.sp
+This profile will be used to create vms on Rackspace cloud with the CentOS 6.2
+image and the Rackspace 1024 vm size. Particulars of the minion config can
+also be specified.
+.sp
+Individual vms can be created from profiles:
+.sp
+.nf
+.ft C
+# salt\-cloud \-p centos_rackspace web1
+.ft P
+.fi
+.sp
+This command creates a vms with the name web1 on the Rackspace cloud and
+connects the new vm to a Salt Master located at salt.example.com. The new VM
+has the Salt id of web1.
+.SS Define Maps of Profiles
+.sp
+When it is desired to have a predefined mapping of many, or a specific group
+of vms then a cloud map can be defined:
+.sp
+.nf
+.ft C
+centos_rackspace:
+  web1
+  web2
+  web3
+  web4
+centos_linode:
+  redis1
+  riak1
+  riak2
+  riak3
+ubuntu_ec2:
+  dev1
+  dev2
+  cassandra1
+  cassandra2
+  cassandra3
+.ft P
+.fi
+.sp
+This map file will create vms named web 1\-4 using the centos_rackspace profile
+on rackspace, the redis and riak vms on linode and the dev and Cassandra vms on
+ec2. It can be run with salt\-cloud:
+.sp
+.nf
+.ft C
+# salt\-cloud \-m mapfile
+.ft P
+.fi
+.sp
+When creating more than one vm the \-P option can be passed, to make the vms
+provision in parallel, greatly speeding up large scale expansions of vms.
+.SH SALT CLOUD 0.7.0 RELEASE NOTES
+.sp
+Salt Cloud marches forward with the 0.7.0 release. As is customary for Salt
+Stack projects the 0.7.0 release is intended to be much more robust and
+deliver a more complete core feature set. Salt Cloud 0.7.0 is just that.
+.sp
+With new tools to help look into what is available on cloud providers,
+new additions to make cloud management more stateful and the addition of
+more supported cloud platforms 0.7.0 has greatly enhanced the capabilities
+of the overall Salt platform.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.7.0.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS New Cloud Provider Support
+.sp
+The following cloud providers are now supported:
+.INDENT 0.0
+.TP
+.B Amazon AWS
+\fI\%http://aws.amazon.com/ec2/\fP
+.TP
+.B Rackspace Cloud
+\fI\%http://www.rackspace.com/cloud/\fP
+.TP
+.B Linode
+\fI\%http://www.linode.com/\fP
+.TP
+.B Joyent
+\fI\%http://joyent.com/\fP
+.TP
+.B GoGrid
+\fI\%http://www.gogrid.com/\fP
+.UNINDENT
+.SS List Available Resources
+.sp
+Setting up Salt Cloud requires knowlege of the available sizes and images on
+cloud providers. Listing the available images and sizes can now be done with
+the salt\-cloud command:
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-\-list\-sizes linode
+linode
+  Linode 1024
+    bandwidth: 400
+    disk: 40960
+    id: 3
+    name: Linode 1024
+    ram: 1024
+    uuid: 56e6f495190cb2ed1a343f7159ad447cf27d906d
+  Linode 12GB
+    bandwidth: 2000
+    disk: 491520
+    id: 8
+    name: Linode 12GB
+    ram: 12288
+    uuid: 3d1731ebefdbcb4c283957b43d45f89a01f67c5f
+  Linode 1536
+    bandwidth: 600
+    disk: 61440
+    id: 4
+    name: Linode 1536
+    ram: 1536
+    uuid: f0f28628cc70c5f2656aa3f313588d8509ee3787
+  Linode 16GB
+    bandwidth: 2000
+    disk: 655360
+    id: 9
+    name: Linode 16GB
+    ram: 16384
+    uuid: 208cc3c0a60c4eab6ed6861344fef0311c13ffd2
+  Linode 2048
+    bandwidth: 800
+    disk: 81920
+    id: 5
+    name: Linode 2048
+    ram: 2048
+    uuid: 0c9ee69dc7ef7a4cdce71963f8d18e76c61dd57f
+  Linode 20GB
+    bandwidth: 2000
+    disk: 819200
+    id: 10
+    name: Linode 20GB
+    ram: 20480
+    uuid: e0a7b61e3830a120eec94459c9fc34ef7c9e0e36
+  Linode 4GB
+    bandwidth: 1600
+    disk: 163840
+    id: 6
+    name: Linode 4GB
+    ram: 4096
+    uuid: 09585e0f1d4ef4aad486cfa3d53f9d8960f575e7
+  Linode 512
+    bandwidth: 200
+    disk: 20480
+    id: 1
+    name: Linode 512
+    ram: 512
+    uuid: 3497f7def3d6081e6f65ac6e577296bc6b810c05
+  Linode 768
+    bandwidth: 300
+    disk: 30720
+    id: 2
+    name: Linode 768
+    ram: 768
+    uuid: da9f0dbc144aaa234aa5d555426863c8068a8c70
+  Linode 8GB
+    bandwidth: 2000
+    disk: 327680
+    id: 7
+    name: Linode 8GB
+    ram: 8192
+    uuid: e08f8a57551297b9310545430c67667f59120606
+.ft P
+.fi
+.SS Destroy!
+.sp
+Salt Cloud can now destroy cloud vms as easily as it can create them. The new
+\fB\-\-destroy\fP option can be passed to end the life of a vm:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-d web1
+.ft P
+.fi
+.sp
+The map operation can now also destroy vms, the new \fBhard\fP option can be
+passed which makes vm maps much more stateful. With the \fBhard\fP option the
+vm maps are viewed as the absolute source of information for the state of
+cloud resources, and any vm that is not specified in the map file will be
+destroyed:
+.sp
+.nf
+.ft C
+[root@saltmaster]# salt\-cloud \-m /etc/salt/cloud.map \-H
+The following virtual machines are set to be created:
+  web1
+  riak4
+The following virtual machines are set to be destroyed:
+  app7
+  devtest4
+
+Proceed? [N/y]
+.ft P
+.fi
 .SH AUTHOR
 Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
 .SH COPYRIGHT
 2012, Thomas S Hatch
 .\" Generated by docutils manpage writer.
+.\" 
 .

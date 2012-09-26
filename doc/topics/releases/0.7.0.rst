@@ -6,7 +6,7 @@ Salt Cloud marches forward with the 0.7.0 release. As is customary for Salt
 Stack projects the 0.7.0 release is intended to be much more robust and
 deliver a more complete core feature set. Salt Cloud 0.7.0 is just that.
 
-With new tools to help look into what is availiable on cloud providers,
+With new tools to help look into what is available on cloud providers,
 new additions to make cloud management more stateful and the addition of
 more supported cloud platforms 0.7.0 has greatly enhanced the capabilities
 of the overall Salt platform.
@@ -144,7 +144,7 @@ Salt Cloud can now destroy cloud vms as easily as it can create them. The new
 
     $ salt-cloud -d web1
 
-The map opperation can now also destroy vms, the new ``hard`` option can be
+The map operation can now also destroy vms, the new ``hard`` option can be
 passed which makes vm maps much more stateful. With the ``hard`` option the
 vm maps are viewed as the absolute source of information for the state of
 cloud resources, and any vm that is not specified in the map file will be

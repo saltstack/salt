@@ -18,6 +18,9 @@ import sys, os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
+from sphinx.directives import TocTree
+
+
 class Mock(object):
     '''
     Mock out specified imports
@@ -43,6 +46,7 @@ class Mock(object):
             return Mock()
 
 MOCK_MODULES = [
+    'paramiko',
     'salt',
     'salt.crypt',
     'yaml',
@@ -337,3 +341,21 @@ epub_copyright = u'2012, Thomas S Hatch'
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
+
+def _normalize_version(args):
+    _, path = args
+    return '.'.join([x.zfill(4) for x in (path.split('/')[-1].split('.'))])
+
+
+class ReleasesTree(TocTree):
+    option_spec = dict(TocTree.option_spec)
+
+    def run(self):
+        rst = super(ReleasesTree, self).run()
+        entries = rst[0][0]['entries'][:]
+        entries.sort(key=_normalize_version, reverse=True)
+        rst[0][0]['entries'][:] = entries
+        return rst
+
+def setup(app):
+    app.add_directive('releasestree', ReleasesTree)

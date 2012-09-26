@@ -12,6 +12,7 @@ import multiprocessing
 import saltcloud.utils
 import saltcloud.loader
 import salt.client
+import salt.utils
 
 # Import third party libs
 import yaml
@@ -143,14 +144,16 @@ class Cloud(object):
         priv, pub = saltcloud.utils.gen_keys(
                 saltcloud.utils.get_option('keysize', self.opts, vm_)
                 )
-        saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
         vm_['pub_key'] = pub
         vm_['priv_key'] = priv
+        ok = False
         try:
-            self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
+            ok = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
         except KeyError as exc:
             print('Failed to create vm {0}. Configuration value {1} needs '
                   'to be set'.format(vm_['name'], exc))
+        if ok != False:
+            saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
 
     def run_profile(self):
         '''
@@ -232,7 +235,8 @@ class Map(Cloud):
             for name in pmap[prov]:
                 exist.add(name)
                 if name in ret['create']:
-                    ret['create'].pop(name)
+                    if prov != 'aws' or pmap['aws'][name]['state'] != 2:
+                      ret['create'].pop(name)
         if self.opts['hard']:
             # Look for the items to delete
             ret['destroy'] = exist.difference(defined)
@@ -255,13 +259,23 @@ class Map(Cloud):
         if not res.lower().startswith('y'):
             return
         # We are good to go, execute!
+        # Generate the fingerprint of the master pubkey in
+        #     order to mitigate man-in-the-middle attacks
+        master_pub = self.opts['pki_dir'] + '/master.pub'
+        master_finger = ''
+        if os.path.isfile(master_pub) and hasattr(salt.utils, 'pem_finger'):
+            master_finger = salt.utils.pem_finger(master_pub)
         for name, profile in dmap['create'].items():
             tvm = copy.deepcopy(profile)
             tvm['name'] = name
+            tvm['master_finger'] = master_finger
             for miniondict in self.map[tvm['profile']]:
-                if name in miniondict:
-                    tvm['map_grains'] = miniondict[name]['grains']
-                    tvm['map_minion'] = miniondict[name]['minion']
+                if isinstance(miniondict, dict):
+                    if name in miniondict:
+                        if 'grains' in miniondict[name]:
+                            tvm['map_grains'] = miniondict[name]['grains']
+                        if 'minion' in miniondict[name]:
+                            tvm['map_minion'] = miniondict[name]['minion']
             if self.opts['parallel']:
                 multiprocessing.Process(
                         target=lambda: self.create(tvm)

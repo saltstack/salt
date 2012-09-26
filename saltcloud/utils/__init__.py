@@ -9,6 +9,8 @@ import shutil
 import socket
 import tempfile
 import time
+import paramiko
+import subprocess
 
 # Import salt libs
 import salt.crypt
@@ -103,13 +105,19 @@ def minion_conf_string(opts, vm_):
     configuration file
     '''
     minion = {'id': vm_['name']}
+    if 'master_finger' in vm_:
+        minion['master_finger'] = vm_['master_finger']
     minion.update(opts.get('minion', {}))
     minion.update(vm_.get('minion', {}))
     minion.update(opts.get('map_minion', {}))
     minion.update(vm_.get('map_minion', {}))
-    minion['grains'].update(opts.get('map_grains', {}))
-    minion['grains'].update(vm_.get('map_grains', {}))
-    return yaml.safe_dump(minion)
+    optsgrains = opts.get('map_grains', {})
+    if optsgrains:
+        minion['grains'].update(optsgrains)
+    vmgrains = vm_.get('map_grains', {})
+    if vmgrains:
+        minion['grains'].update(vmgrains)
+    return yaml.safe_dump(minion, default_flow_style=False)
 
 
 def wait_for_ssh(host, port=22, timeout=900):
@@ -124,6 +132,95 @@ def wait_for_ssh(host, port=22, timeout=900):
             sock.shutdown(2)
             return True
         except Exception:
+            time.sleep(1)
             if time.time() - start > timeout:
                 return False
 
+
+def wait_for_passwd(host, port=22, timeout=900, username='root',
+                    password=None, key_filename=None, maxtries=50,
+                    trysleep=1):
+    '''
+    Wait until ssh connection can be accessed via password or ssh key
+    '''
+    start = time.time()
+    trycount=0
+    while True:
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            kwargs = {'hostname': host,
+                      'port': 22,
+                      'username': username,
+                      'timeout': 15}
+            if password and not key_filename:
+                kwargs['password'] = password
+            if key_filename:
+                kwargs['key_filename'] = key_filename
+            try:
+                ssh.connect(**kwargs)
+            except (paramiko.AuthenticationException, paramiko.SSHException) as authexc:
+                trycount += 1
+                print('Authentication error (try {0}  of {1}): {2}'.format(trycount, maxtries, authexc))
+                if trycount < maxtries:
+                    sleep(trysleep)
+                    continue
+                else:
+                    print('Authencication failed: {0}'.format(authexec))
+                    return False
+            except Exception as exc:
+                print('There was an error in wait_for_passwd: {0}'.format(exc))
+            return True
+        except Exception:
+            time.sleep(1)
+            if time.time() - start > timeout:
+                return False
+
+def deploy_script(host, port=22, timeout=900, username='root',
+                  password=None, key_filename=None, script=None,
+                  deploy_command='bash /tmp/deploy.sh', tty=None):
+    '''
+    Copy a deploy script to a remote server, execute it, and remove it
+    '''
+    if wait_for_ssh(host=host, port=port, timeout=timeout):
+        if wait_for_passwd(host, port=port, username=username, password=password, key_filename=key_filename, timeout=timeout):
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            kwargs = {'hostname': host,
+                      'port': 22,
+                      'username': username,
+                      'timeout': 15}
+            if password and not key_filename:
+                kwargs['password'] = password
+            if key_filename:
+                kwargs['key_filename'] = key_filename
+            try:
+                ssh.connect(**kwargs)
+            except Exception as exc:
+                print('There was an error in deploy_script: {0}'.format(exc))
+            tmpfh, tmppath = tempfile.mkstemp()
+            tmpfile = open(tmppath, 'w')
+            tmpfile.write(script)
+            tmpfile.close()
+            sftp = ssh.get_transport()
+            sftp.open_session()
+            sftp = paramiko.SFTPClient.from_transport(sftp)
+            sftp.put(tmppath, '/tmp/deploy.sh')
+            os.remove(tmppath)
+            ssh.exec_command('chmod +x /tmp/deploy.sh')
+            if tty:
+                # Tried this with paramiko's invoke_shell(), and got tired of
+                # fighting with it
+                cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "sudo bash /tmp/deploy.sh"').format(
+                        key_filename,
+                        username,
+                        host
+                        )
+                subprocess.call(cmd, shell=True)
+            else:
+                stdin, stdout, stderr = ssh.exec_command(deploy_command)
+                for line in stdout:
+                    sys.stdout.write(line)
+            ssh.exec_command('rm /tmp/deploy.sh')
+            return True
+    return False
