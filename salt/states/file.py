@@ -980,8 +980,9 @@ def managed(name,
         file.
 
     replace
-        If this file should be replaced, if false then this command will
-        be ignored if the file exists already. Default is true.
+        If this file should be replaced.  If false, this command will
+        not overwrite file contents but will enforce permissions if the file 
+        exists already.  Default is true.
 
     context
         Overrides default context variables passed to the template.
@@ -1016,7 +1017,13 @@ def managed(name,
 
     if not replace:
         if os.path.exists(name):
-            ret['comment'] = 'File {0} exists. No changes made'.format(name)
+           # Check and set the permissions if necessary
+            ret, perms = _check_perms(name, ret, user, group, mode)
+            if __opts__['test']:
+                ret['comment'] = 'File {0} not updated'.format(name)
+            elif not ret['changes'] and ret['result']:
+                ret['comment'] = ('File {0} exists with proper permissions.'
+                                  '  No changes made.').format(name)
             return ret
         if not source:
             return touch(name, makedirs=makedirs)
