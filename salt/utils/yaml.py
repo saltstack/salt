@@ -34,6 +34,9 @@ class CustomeConstructor(yaml.constructor.SafeConstructor):
             raise ConstructorError(None, None,
                     'expected a mapping node, but found {0}'.format(node.id),
                     node.start_mark)
+
+        self.flatten_mapping(node)
+
         mapping = {}
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
