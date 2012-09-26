@@ -112,6 +112,11 @@ def securitygroup(vm_):
     Return the security group
     '''
     return vm_.get('securitygroup', __opts__.get('AWS.securitygroup', 'default'))
+    securitygroups = vm_.get('securitygroup', __opts__.get('AWS.securitygroup', 'default'))
+    if not isinstance(securitygroups, list):
+        securitygroup = securitygroups
+        securitygroups = [securitygroup]
+    return securitygroups
 
 
 def ssh_username(vm_):
