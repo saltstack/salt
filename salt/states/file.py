@@ -899,7 +899,7 @@ def absent(name):
     return ret
 
 
-def present(name):
+def exists(name):
     '''
     Verify that the named file or directory is present or exists. 
     Ensures pre-requisites outside of salts per-vue have been previously
