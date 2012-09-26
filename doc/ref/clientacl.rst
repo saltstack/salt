@@ -24,14 +24,17 @@ specified user. This configuration is much like the ``peer`` configuration:
 Permission Issues
 =================
 
-Earlier versions of salt set overly restrictive permissions on some of the
-directories required for ``client_acl`` support. These directories will need
-to be manually modified if upgrading from an earlier version.
+To enable use of ``client_acl`` non-root users most have read access to the
+following directories:
 
 .. code-block:: bash
 
-    chmod 755 /var/cache/salt
-    chmod 755 /var/cache/salt/jobs
-    chmod 755 /var/run/salt
+    chmod 755 /var/cache/salt /var/cache/salt/jobs /var/run/salt
+
+If you are upgrading from an earlier version of Salt you must also remove 
+any existing user keys and re-start the Salt master:
+
+.. code-block:: bash
+
     rm /var/cache/salt/.*keys
     service salt-master restart
