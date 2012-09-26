@@ -96,6 +96,29 @@ Options
 
     Specify an alternative location for the salt cloud profiles file.
     Default location is /etc/salt/cloud.profiles.
+
+.. option:: --raw-out
+
+    Print the output from the salt command in raw python
+    form, this is suitable for re-reading the output into
+    an executing python script with eval.
+
+.. option:: --text-out
+
+    Print the output from the salt command in the same form the shell would.
+
+.. option:: --yaml-out
+
+    Print the output from the salt command in yaml.
+
+.. option:: --json-out
+
+    Print the output from the salt command in json.
+
+.. option:: --no-color
+
+    Disable all colored output.
+
     
 Examples
 ========
