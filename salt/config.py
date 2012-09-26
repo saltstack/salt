@@ -274,7 +274,7 @@ def master_config(path):
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },
-            'ext_pillar': [],
+            'ext_pillar': {},
             'syndic_master': '',
             'runner_dirs': [],
             'client_acl': {},
