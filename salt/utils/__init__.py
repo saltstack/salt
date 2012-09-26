@@ -421,17 +421,18 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if cachedir:
         bkroot = os.path.join(cachedir, 'file_backup')
     if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
-        msecs = str(int(time.time() * 1000000))[-6:]
-        stamp = time.asctime().replace(' ', '_')
-        stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
-        bkpath = os.path.join(
-                bkroot,
-                dname[1:],
-                '{0}_{1}'.format(bname, stamp)
-                )
-        if not os.path.isdir(os.path.dirname(bkpath)):
-            os.makedirs(os.path.dirname(bkpath))
-        shutil.copyfile(source, bkpath)
+        if os.path.exists(dest):
+            msecs = str(int(time.time() * 1000000))[-6:]
+            stamp = time.asctime().replace(' ', '_')
+            stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+            bkpath = os.path.join(
+                    bkroot,
+                    dname[1:],
+                    '{0}_{1}'.format(bname, stamp)
+                    )
+            if not os.path.isdir(os.path.dirname(bkpath)):
+                os.makedirs(os.path.dirname(bkpath))
+            shutil.copyfile(dest, bkpath)
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
