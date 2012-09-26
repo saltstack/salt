@@ -30,8 +30,13 @@ def get_template(filename, opts, env):
         return jinja.get_template(relpath)
     else:
         # fallback for templates outside the state tree
-        with open(filename, 'r') as f:
-            return Template(f.read())
+        loader = FileSystemLoader(path.dirname(filename))
+        if opts.get('allow_undefined', False):
+            jinja = Environment(loader=loader)
+        else:
+            jinja = Environment(loader=loader, undefined=StrictUndefined)
+        relpath = path.relpath(filename, path.dirname(filename))
+        return jinja.get_template(relpath)
 
 
 class SaltCacheLoader(BaseLoader):
