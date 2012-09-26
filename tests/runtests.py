@@ -30,7 +30,7 @@ def run_suite(opts, path, display_name, suffix='[!_]*.py'):
     '''
     loader = saltunittest.TestLoader()
     if opts.name:
-        tests = loader.loadTestsFromName(opts.name)
+        tests = loader.loadTestsFromName(display_name)
     else:
         tests = loader.discover(path, suffix, TEST_DIR)
     print('~' * PNUM)
@@ -85,8 +85,9 @@ def run_integration_tests(opts):
         return status
     with TestDaemon(clean=opts.clean):
         if opts.name:
-            results = run_suite(opts, '', opts.name)
-            status.append(results)
+            for name in opts.name:
+                results = run_suite(opts, '', name)
+                status.append(results)
         if opts.runner:
             status.append(run_integration_suite(opts, 'runners', 'Runner'))
         if opts.module:
@@ -173,7 +174,8 @@ def parse_opts():
     parser.add_option('-n',
             '--name',
             dest='name',
-            default='',
+            action='append',
+            default=[],
             help='Specific test name to run')
     parser.add_option('--clean',
             dest='clean',
