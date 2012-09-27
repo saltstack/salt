@@ -113,3 +113,31 @@ class PipStateTest(integration.ModuleCase):
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
+
+    def test_issue_2087_missing_pip(self):
+        venv_dir = '/tmp/issue-2087-missing-pip'
+        try:
+            # XXX: Once state.template_str is fixed, consider not using a file
+            # for this test.
+
+            # Let's create the testing virtualenv
+            self.run_function('virtualenv.create', [venv_dir])
+
+            # Let's remove the pip binary
+            pip_bin = os.path.join(venv_dir, 'bin', 'pip')
+            if not os.path.isfile(pip_bin):
+                self.skipTest(
+                    'Failed to find the pip binary to the test virtualenv'
+                )
+            os.remove(pip_bin)
+
+            # Let's run the state which should fail because pip is missing
+            ret = self.run_function('state.sls', mods='issue-2087-missing-pip')
+            self.assertFalse(ret.values()[0]['result'])
+            self.assertEqual(
+                ret.values()[0]['comment'],
+                'Error installing \'pep8\': \'Could not find a `pip` binary\''
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
