@@ -74,3 +74,29 @@ def running(name,
 
     log.debug(unicode(result))
     return ret
+
+
+def dead(name,
+         runas=None):
+    '''
+    Ensure the named service is dead (not running).
+
+    name
+        Service name as defined in the supervisor configuration file
+    runas
+        Name of the user to run the supervisorctl command
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': ''}
+
+    if __opts__['test']:
+        ret['comment'] = (
+            'Service {0} is set to be stopped'.format(name))
+    else:
+        comment = 'Stopping service: {0}'.format(name)
+        log.debug(comment)
+        result = __salt__['supervisord.stop'](name, user=runas)
+
+        ret.update(_check_error(result, comment))
+
+    log.debug(unicode(result))
+    return ret
