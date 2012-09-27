@@ -286,6 +286,7 @@ def _source_list(source, source_hash, env):
     if isinstance(source, list):
         # get the master file list
         mfiles = __salt__['cp.list_master'](env)
+        mdirs = __salt__['cp.list_master_dirs'](env)
         for single in source:
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
@@ -309,7 +310,7 @@ def _source_list(source, source_hash, env):
                         source_hash = single_hash
                         break
             elif isinstance(single, string_types):
-                if single[7:] in mfiles:
+                if single[7:] in mfiles or single[7:] in mdirs:
                     source = single
                     break
     return source, source_hash
@@ -1500,6 +1501,9 @@ def recurse(name,
             comments.extend(_ret['comment'])
         if _ret['changes']:
             ret['changes'][path] = changetype
+
+    # If source is a list, find which in the list actually exists
+    source, source_hash = _source_list(source, '', env)
 
     vdir = set()
     for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
