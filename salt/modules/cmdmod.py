@@ -140,10 +140,10 @@ def _run(cmd,
         out, err = proc.communicate()
 
     if rstrip:
-        if out:
+        if out is not None:
             out = out.rstrip()
         # None lacks a rstrip() method
-        if err:
+        if err is not None:
             err = err.rstrip()
 
     ret['stdout'] = out
