@@ -66,14 +66,14 @@ def _nodetool(cmd):
     Internal cassandra nodetool wrapper. Some functions are not
     available via pycassa so we must rely on nodetool.
     '''
-    return __salt__['cmd.run_stdout'](nt + ' -h ' + host + ' ' + cmd)
+    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nt, host, cmd))
 
 
 def _sys_mgr():
     '''
     Return a pycassa system manager connection object
     '''
-    return SystemManager(host + ':' + thrift_port)
+    return SystemManager('{0}:{1}'.format(host, thrift_port))
 
 
 def compactionstats():

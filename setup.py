@@ -145,7 +145,8 @@ freezer_includes = [
     'zmq.utils.*',
     'ast',
     'difflib',
-    'distutils'
+    'distutils',
+    'distutils.version'
 ]
 
 if sys.platform.startswith('win'):

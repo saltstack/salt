@@ -200,6 +200,18 @@ def list_master(env='base'):
     return client.file_list(env)
 
 
+def list_master_dirs(env='base'):
+    '''
+    List all of the directories stored on the master
+
+    CLI Exmaple::
+
+        salt '*' cp.list_master_dirs
+    '''
+    client = salt.fileclient.get_file_client(__opts__)
+    return client.dir_list(env)
+
+
 def list_minion(env='base'):
     '''
     List all of the files cached on the minion

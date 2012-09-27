@@ -8,7 +8,7 @@ try:
     import rpm
     from rpmUtils.arch import getBaseArch
     has_yumdeps = True
-except ImportError:
+except (ImportError, AttributeError):
     has_yumdeps = False
 
 import logging
