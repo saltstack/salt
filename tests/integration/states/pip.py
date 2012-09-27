@@ -116,20 +116,15 @@ class PipStateTest(integration.ModuleCase):
 
     def test_issue_2028_pip_installed_template(self):
         venv_dir = '/tmp/issue-2028-pip-installed'
-        template = '''
-/tmp/issue-2028-pip-installed:
-  virtualenv.managed:
-    - no_site_packages: True
-    - distribute: True
 
+        # Let's load the template from the filesystem. If from state it works
+        # so should like this.
+        template_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'files', 'file', 'base', 'issue-2028-pip-installed.sls'
+        )
 
-supervisord-pip:
-    pip.installed:
-      - name: supervisor
-      - bin_env: /tmp/issue-2028-pip-installed
-      - require:
-        - virtualenv: /tmp/issue-2028-pip-installed
-'''
+        template = open(template_path, 'r').read()
         try:
             ret = self.run_function('state.template_str', [template])
 
