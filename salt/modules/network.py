@@ -222,6 +222,9 @@ def _interfaces_ifconfig(out):
 
 
 def interfaces():
+    '''
+    Return a dictionary of information about all the interfaces on the minion
+    '''
     ifaces = dict()
     if __salt__['cmd.has_exec']('ip'):
         cmd = __salt__['cmd.run']('ip addr show')
