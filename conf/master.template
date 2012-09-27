@@ -9,10 +9,16 @@
 # The address of the interface to bind to
 #interface: 0.0.0.0
 
-# The port used by the publisher
+# The tcp port used by the publisher
 #publish_port: 4505
 
-# The user to run salt
+# Refresh the publisher connections when sending out commands, this is a fix
+# for zeromq losing some minion connections. Default: True
+#pub_refresh: True
+
+# The user to run the salt-master as. Salt will update all permissions to
+# allow the specified user to run the master. If the modified files cause
+# conflicts set verify_env to False.
 #user: root
 
 # Max open files
@@ -26,9 +32,9 @@
 # max open files.
 #
 # If you wish to set a different value than the default one, uncomment and
-# configure this setting. Remember that this value CANNOT be higher that the
+# configure this setting. Remember that this value CANNOT be higher than the
 # hard limit. Raising the hard limit depends on your OS and/or distribution,
-# so go to your preferred search engine and search for(for example):
+# a good way to find the limit is to search the internet for(for example):
 #   raise max open files hard limit debian
 #
 #max_open_files: 100000
@@ -38,11 +44,15 @@
 # running slowly, increase the number of threads
 #worker_threads: 5
 
-# The port used by the communication interface
+# The port used by the communication interface. The ret (return) port is the
+# interface used for the file server, authentication, job returnes, etc.
 #ret_port: 4506
 
+# Specify the location of the daemon process ID file
+#pidfile: /var/run/salt-master.pid
+
 # The root directory prepended to these options: pki_dir, cachedir,
-# sock_dir, log_file, autosign_file.
+# sock_dir, log_file, autosign_file, extension_modules
 #root_dir: /
 
 # Directory used to store public key data
@@ -51,7 +61,10 @@
 # Directory to store job and cache data
 #cachedir: /var/cache/salt
 
-# Set the number of hours to keep old job information
+# Verify and set permissions on configuration directories at startup
+#verify_env: True
+
+# Set the number of hours to keep old job information in the job cache
 #keep_jobs: 24
 
 # Set the default timeout for the salt command and api, the default is 5
@@ -59,7 +72,7 @@
 #timeout: 5
 
 # Set the directory used to hold unix sockets
-#sock_dir: /tmp/salt-unix
+#sock_dir: /var/run/salt
 
 # The master maintains a job cache, while this is a great addition it can be
 # a burden on the master for larger deployments (over 5000 minions).
@@ -67,6 +80,9 @@
 # the jobs system and is not generally recommended.
 #
 #job_cache: True
+
+# Cache minion grains and pillar data in the cachedir.
+#minion_data_cache: True
 
 # Set the acceptance level for serialization of messages. This should only be
 # set if the master is newer than 0.9.5 and the minion are older. This option
@@ -137,8 +153,9 @@
 # Add any additional locations to look for master runners
 #runner_dirs: []
 #
-#Enable Cython for master side modules
+# Enable Cython for master side modules
 #cython_enable: False
+#
 
 #####      State System settings     #####
 ##########################################
@@ -280,25 +297,6 @@
 #   foo.example.com:
 #     - manage.up
 #
-
-#####         Cluster settings       #####
-##########################################
-# Salt supports automatic clustering, salt creates a single ip address which
-# is shared among the individual salt components using ucarp. The private key
-# and all of the minion keys are maintained across the defined cluster masters.
-# The failover service is automatically managed via these settings
-
-# List the identifiers for the other cluster masters in this manner:
-# [saltmaster-01.foo.com,saltmaster-02.foo.com,saltmaster-03.foo.com]
-# The members of this master array must be running as salt minions to
-# facilitate the distribution of cluster information
-#cluster_masters: []
-
-# The cluster modes are "paranoid" and "full"
-# paranoid will only distribute the accepted minion public keys.
-# full will also distribute the master private key.
-#cluster_mode: paranoid
-
 
 #####         Logging settings       #####
 ##########################################

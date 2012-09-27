@@ -15,7 +15,7 @@ def __virtual__():
     Only run this module if the augeas python module is installed
     '''
     if load:
-        return "augeas"
+        return 'augeas'
     else:
         return False
 
@@ -33,7 +33,7 @@ def _recurmatch(path, aug):
         clean_path = path.rstrip('/*')
         yield (clean_path, aug.get(path))
 
-        for i in aug.match(clean_path + "/*"):
+        for i in aug.match(clean_path + '/*'):
             i = i.replace('!', '\!')  # escape some dirs
             for x in _recurmatch(i, aug):
                 yield x
@@ -66,7 +66,7 @@ def get(path, value=''):
 
     path = path.rstrip('/')
     if value:
-        path += "/{0}".format(value.strip('/'))
+        path += '/{0}'.format(value.strip('/'))
 
     try:
         _match = aug.match(path)

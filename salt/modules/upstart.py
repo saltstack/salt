@@ -92,10 +92,12 @@ def _default_runlevel():
     # The default runlevel can also be set via the kernel command-line.
     # Kinky.
     try:
-        valid_strings = set(('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
+        valid_strings = set(
+                ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single')
+                )
         with open('/proc/cmdline') as fp_:
             for line in fp_:
-                for arg in split(line.strip()):
+                for arg in line.strip().split():
                     if arg in valid_strings:
                         runlevel = arg
                         break

@@ -120,6 +120,7 @@ def _run(cmd,
               'stderr':stderr}
     if not os.environ.get('os', '').startswith('Windows'):
         kwargs['executable'] = shell
+        kwargs['close_fds'] = True
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
@@ -139,10 +140,10 @@ def _run(cmd,
         out, err = proc.communicate()
 
     if rstrip:
-        if out:
+        if out is not None:
             out = out.rstrip()
         # None lacks a rstrip() method
-        if err:
+        if err is not None:
             err = err.rstrip()
 
     ret['stdout'] = out

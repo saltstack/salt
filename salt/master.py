@@ -675,6 +675,18 @@ class AESFuncs(object):
                     ret.append(os.path.relpath(root, path))
         return ret
 
+    def _dir_list(self, load):
+        '''
+        Return a list of all directories on the master
+        '''
+        ret = []
+        if load['env'] not in self.opts['file_roots']:
+            return ret
+        for path in self.opts['file_roots'][load['env']]:
+            for root, dirs, files in os.walk(path, followlinks=True):
+                ret.append(os.path.relpath(root, path))
+        return ret
+
     def _master_opts(self, load):
         '''
         Return the master options to the minion

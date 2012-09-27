@@ -7,7 +7,6 @@ import glob
 import os
 import socket
 import logging
-import tempfile
 
 # import third party libs
 import yaml
@@ -160,6 +159,7 @@ def minion_config(path):
             'cache_jobs': False,
             'conf_file': path,
             'sock_dir': '/var/run/salt',
+            'backup_mode': '',
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
@@ -274,6 +274,9 @@ def master_config(path):
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },
+            'ext_pillar': {},
+            'syndic_master': '',
+            'runner_dirs': [],
             'client_acl': {},
             'file_buffer_size': 1048576,
             'max_open_files': 100000,

@@ -6,10 +6,8 @@
 
 import os
 import shutil
-import tempfile
 
 # Import salt libs
-from saltunittest import skipIf
 import integration
 
 
@@ -34,7 +32,7 @@ class PipStateTest(integration.ModuleCase):
                 self.assertFalse(ret[key]['result'])
                 self.assertEqual(
                     ret[key]['comment'],
-                    'Failed to install package supervisor. Error: /bin/bash: '
+                    'Error installing \'supervisor\': /bin/bash: '
                     '/tmp/pip-installed-errors: No such file or directory'
                 )
 
@@ -52,6 +50,50 @@ class PipStateTest(integration.ModuleCase):
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
+
+    def test_pip_installed_weird_install(self):
+        ographite = '/opt/graphite'
+        if os.path.isdir(ographite):
+            self.skipTest(
+                'You already have \'{0}\'. This test would overwrite this '
+                'directory'.format(ographite)
+            )
+        try:
+            os.makedirs(ographite)
+        except OSError, err:
+            if err.errno == 13:
+                # Permission denied
+                self.skipTest(
+                    'You don\'t have the required permissions to run this test'
+                )
+        finally:
+            if os.path.isdir(ographite):
+                shutil.rmtree(ographite)
+
+        venv_dir = '/tmp/pip-installed-weird-install'
+        try:
+            # Since we don't have the virtualenv created, pip.installed will
+            # thrown and error.
+            ret = self.run_function(
+                'state.sls', mods='pip-installed-weird-install'
+            )
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+
+            for key in ret.keys():
+                self.assertTrue(ret[key]['result'])
+                if ret[key]['comment'] == 'Created new virtualenv':
+                    continue
+                self.assertEqual(
+                    ret[key]['comment'],
+                    'There was no error installing package \'carbon\' '
+                    'although it does not show when calling \'pip.freeze\'.'
+                )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+            if os.path.isdir('/opt/graphite'):
+                shutil.rmtree('/opt/graphite')
 
     def test_issue_2028_pip_installed_state(self):
         ret = self.run_function('state.sls', mods='issue-2028-pip-installed')
@@ -99,6 +141,34 @@ supervisord-pip:
 
             self.assertTrue(
                 os.path.isfile(os.path.join(venv_dir, 'bin', 'supervisord'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+    def test_issue_2087_missing_pip(self):
+        venv_dir = '/tmp/issue-2087-missing-pip'
+        try:
+            # XXX: Once state.template_str is fixed, consider not using a file
+            # for this test.
+
+            # Let's create the testing virtualenv
+            self.run_function('virtualenv.create', [venv_dir])
+
+            # Let's remove the pip binary
+            pip_bin = os.path.join(venv_dir, 'bin', 'pip')
+            if not os.path.isfile(pip_bin):
+                self.skipTest(
+                    'Failed to find the pip binary to the test virtualenv'
+                )
+            os.remove(pip_bin)
+
+            # Let's run the state which should fail because pip is missing
+            ret = self.run_function('state.sls', mods='issue-2087-missing-pip')
+            self.assertFalse(ret.values()[0]['result'])
+            self.assertEqual(
+                ret.values()[0]['comment'],
+                'Error installing \'pep8\': Could not find a `pip` binary'
             )
         finally:
             if os.path.isdir(venv_dir):
