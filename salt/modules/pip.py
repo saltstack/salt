@@ -384,7 +384,7 @@ def uninstall(pkgs=None,
         cmd = '{cmd} --timeout={timeout} '.format(
             cmd=cmd, timeout=timeout)
 
-    result = __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
 
     if treq:
         try:
@@ -427,7 +427,13 @@ def freeze(bin_env=None,
         )
 
     cmd = 'source {0}; {1} freeze'.format(activate, pip_bin)
-    return __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split('\n')
+
+    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+
+    if result['retcode'] > 0:
+        raise CommandExecutionError(result['stderr'])
+
+    return result['stdout'].split('\n')
 
 
 def list(prefix='',
@@ -435,20 +441,22 @@ def list(prefix='',
          runas=None,
          cwd=None):
     '''
-    Filter list of installed apps from ``freeze`` and check to see if ``prefix``
-    exists in the list of packages installed.
+    Filter list of installed apps from ``freeze`` and check to see if
+    ``prefix`` exists in the list of packages installed.
 
     CLI Example::
 
         salt '*' pip.list salt
     '''
     packages = {}
-    try:
-        cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
-    except CommandExecutionError, err:
-        return dict(comment=err, result=False)
 
-    for line in __salt__['cmd.run'](cmd, runas=runas, cwd=cwd).split("\n"):
+    cmd = '{0} freeze'.format(_get_pip_bin(bin_env))
+
+    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+    if result['retcode'] > 0:
+        raise CommandExecutionError(result['stderr'])
+
+    for line in result['stdout'].split('\n'):
         if line.startswith('-e'):
             line = line.split('-e ')[1]
             line, name = line.split('#egg=')

@@ -48,6 +48,17 @@ class PipModuleTest(integration.ModuleCase):
                 'a `pip` binary'.format(func)
             )
 
+    def test_pip_uninstall(self):
+        # Let's create the testing virtualenv
+        self.run_function('virtualenv.create', [self.venv_dir])
+        ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
+        self.assertEqual(ret['retcode'], 0)
+        self.assertIn('installed pep8', ret['stdout'])
+        ret = self.run_function('pip.uninstall', ['pep8'], bin_env=self.venv_dir)
+        self.assertEqual(ret['retcode'], 0)
+        self.assertIn('installed pep8', ret['stdout'])
+
+
     def tearDown(self):
         super(PipModuleTest, self).tearDown()
         if os.path.isdir(self.venv_test_dir):
