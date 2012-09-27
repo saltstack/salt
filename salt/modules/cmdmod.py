@@ -115,12 +115,12 @@ def _run(cmd,
     run_env.update(env)
     kwargs = {'cwd': cwd,
               'shell': True,
-              'close_fds': True,
               'env': run_env,
               'stdout': stdout,
               'stderr':stderr}
     if not os.environ.get('os', '').startswith('Windows'):
         kwargs['executable'] = shell
+        kwargs['close_fds'] = True
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
