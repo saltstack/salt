@@ -338,7 +338,14 @@ def id_():
     '''
     return {'id': __opts__['id']}
 
+# This maps (at most) the first ten characters (no spaces, lowercased) of 
+# 'osfullname' to the 'os' grain that Salt traditionally uses.
+_os_name_map = {
+    'redhatente': 'RedHat',
+    'debian': 'Debian'
+}
 
+# Map the 'os' grain to the 'os_family' grain
 _os_family_map = {
     'Ubuntu': 'Debian',
     'Fedora': 'RedHat',
@@ -413,9 +420,14 @@ def os_data():
         # It's worth noting that Ubuntu has patched their Python distribution
         # so that platform.linux_distribution() does the /etc/lsb-release
         # parsing, but we do it anyway here for the sake for full portability.
-        grains['os'] = grains.get('lsb_distrib_id', osname)
+        grains['osfullname'] = grains.get('lsb_distrib_id', osname)
         grains['osrelease'] = grains.get('lsb_distrib_release', osrelease)
         grains['oscodename'] = grains.get('lsb_distrib_codename', oscodename)
+        # return the first ten characters with no spaces, lowercased
+        shortname = grains['osfullname'].replace(' ', '').lower()[:10]
+        # this maps the long names from the /etc/DISTRO-release files to the
+        # traditional short names that Salt has used.
+        grains['os'] = _os_name_map.get(shortname, grains['osfullname'])
         grains.update(_linux_cpudata())
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
