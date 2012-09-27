@@ -11,6 +11,9 @@ A state module to manage system installed python packages
         - version: 3.0.1
 '''
 
+# Import Salt libs
+from salt.exceptions import CommandNotFoundError
+
 
 def installed(name,
               pip_bin=None,
@@ -59,7 +62,14 @@ def installed(name,
         bin_env = env
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name in __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd):
+    try:
+        pip_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
+    except CommandNotFoundError, err:
+        ret['result'] = False
+        ret['comment'] = 'Error installing \'{0}\': \'{1}\''.format(name, err)
+        return ret
+
+    if name in pip_list:
         ret['result'] = True
         ret['comment'] = 'Package already installed'
         return ret
@@ -146,7 +156,17 @@ def removed(name,
     """
 
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    if name not in __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd):
+
+    try:
+        pip_list = __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd)
+    except CommandNotFoundError, err:
+        ret['result'] = False
+        ret['comment'] = 'Error uninstalling \'{0}\': \'{1}\''.format(
+            name, err
+        )
+        return ret
+
+    if name not in pip_list:
         ret["result"] = True
         ret["comment"] = "Package is not installed."
         return ret

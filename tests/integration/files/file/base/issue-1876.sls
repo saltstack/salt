@@ -3,7 +3,7 @@
   file:
     - managed
     - source: salt://testfile
-    
+
   file.append:
     - text: foo
 

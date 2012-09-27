@@ -8,5 +8,6 @@ carbon-weird-setup:
     - name: carbon
     - no_deps: True
     - bin_env: /tmp/pip-installed-weird-install
+    - mirrors: http://testpypi.python.org/pypi
     - require:
       - virtualenv: /tmp/pip-installed-weird-install
