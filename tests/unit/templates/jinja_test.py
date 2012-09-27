@@ -96,7 +96,7 @@ class TestSaltCacheLoader(TestCase):
 class TestGetTemplate(TestCase):
     def test_fallback(self):
         '''
-        A Template without loader is returned as fallback
+        A Template with a filesystem loader is returned as fallback
         if the file is not contained in the searchpath
         '''
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
@@ -105,12 +105,12 @@ class TestGetTemplate(TestCase):
 
     def test_fallback_noloader(self):
         '''
-        If the fallback is used any attempt to load other templates
-        will raise a TypeError.
+        A Template with a filesystem loader is returned as fallback
+        if the file is not contained in the searchpath
         '''
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         tmpl = get_template(filename, {'cachedir': TEMPLATES_DIR}, env='other')
-        self.assertRaises(TypeError, tmpl.render)
+        self.assertEqual(tmpl.render(), 'Hey world !a b !')
 
     def test_env(self):
         '''
