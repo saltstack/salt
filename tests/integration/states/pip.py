@@ -32,7 +32,7 @@ class PipStateTest(integration.ModuleCase):
                 self.assertFalse(ret[key]['result'])
                 self.assertEqual(
                     ret[key]['comment'],
-                    'Failed to install package supervisor. Error: /bin/bash: '
+                    'Error installing \'supervisor\': /bin/bash: '
                     '/tmp/pip-installed-errors: No such file or directory'
                 )
 
@@ -136,7 +136,7 @@ class PipStateTest(integration.ModuleCase):
             self.assertFalse(ret.values()[0]['result'])
             self.assertEqual(
                 ret.values()[0]['comment'],
-                'Error installing \'pep8\': \'Could not find a `pip` binary\''
+                'Error installing \'pep8\': Could not find a `pip` binary'
             )
         finally:
             if os.path.isdir(venv_dir):
