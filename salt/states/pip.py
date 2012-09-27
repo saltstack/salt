@@ -12,7 +12,7 @@ A state module to manage system installed python packages
 '''
 
 # Import Salt libs
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
 def installed(name,
@@ -64,9 +64,9 @@ def installed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     try:
         pip_list = __salt__['pip.list'](name, bin_env, runas=user, cwd=cwd)
-    except CommandNotFoundError, err:
+    except (CommandNotFoundError, CommandExecutionError), err:
         ret['result'] = False
-        ret['comment'] = 'Error installing \'{0}\': \'{1}\''.format(name, err)
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
         return ret
 
     if name in pip_list:
@@ -159,11 +159,9 @@ def removed(name,
 
     try:
         pip_list = __salt__["pip.list"](bin_env=bin_env, runas=user, cwd=cwd)
-    except CommandNotFoundError, err:
+    except (CommandExecutionError, CommandNotFoundError), err:
         ret['result'] = False
-        ret['comment'] = 'Error uninstalling \'{0}\': \'{1}\''.format(
-            name, err
-        )
+        ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
         return ret
 
     if name not in pip_list:
