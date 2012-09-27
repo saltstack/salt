@@ -203,6 +203,12 @@ class Client(object):
         '''
         return []
 
+    def dir_list(self, env='base'):
+        '''
+        This function must be overwritten
+        '''
+        return []
+
     def is_cached(self, path, env='base'):
         '''
         Returns the full path to a file if it is cached locally on the minion
@@ -449,6 +455,18 @@ class LocalClient(Client):
                     ret.append(os.path.relpath(root, path))
         return ret
 
+    def dir_list(self, env='base'):
+        '''
+        List the dirs in the file_roots
+        '''
+        ret = []
+        if env not in self.opts['file_roots']:
+            return ret
+        for path in self.opts['file_roots'][env]:
+            for root, dirs, files in os.walk(path, followlinks=True):
+                ret.append(os.path.relpath(root, path))
+        return ret
+
     def hash_file(self, path, env='base'):
         '''
         Return the hash of a file, to get the hash of a file in the file_roots
@@ -611,6 +629,23 @@ class RemoteClient(Client):
         '''
         load = {'env': env,
                 'cmd': '_file_list_emptydirs'}
+        try:
+            return self.auth.crypticle.loads(
+                    self.sreq.send(
+                        'aes',
+                        self.auth.crypticle.dumps(load),
+                        3,
+                        60)
+                    )
+        except SaltReqTimeoutError:
+            return ''
+
+    def dir_list(self, env='base'):
+        '''
+        List the dirs on the master
+        '''
+        load = {'env': env,
+                'cmd': '_dir_list'}
         try:
             return self.auth.crypticle.loads(
                     self.sreq.send(
