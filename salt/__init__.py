@@ -57,7 +57,7 @@ class Master(parsers.MasterOptionParser):
         if not verify_socket(self.config['interface'],
                              self.config['publish_port'],
                              self.config['ret_port']):
-            self.exit(4, 'The ports are not available to bind')
+            self.exit(4, 'The ports are not available to bind\n')
 
         import salt.master
         log.warn('Starting the Salt Master')

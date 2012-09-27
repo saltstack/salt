@@ -899,6 +899,26 @@ def absent(name):
     return ret
 
 
+def exists(name):
+    '''
+    Verify that the named file or directory is present or exists. 
+    Ensures pre-requisites outside of salts per-vue have been previously
+    satisified (aka, keytabs, private keys, etc.) before deployment
+
+    name
+        Absolute path which must exist
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    if not os.path.exists(name):
+      return _error(ret, ('Specified path {0} does not exist').format(name))
+
+    ret['comment'] = 'Path {0} exists'.format(name)
+    return ret
+
+
 def managed(name,
         source=None,
         source_hash='',
@@ -960,8 +980,9 @@ def managed(name,
         file.
 
     replace
-        If this file should be replaced, if false then this command will
-        be ignored if the file exists already. Default is true.
+        If this file should be replaced.  If false, this command will
+        not overwrite file contents but will enforce permissions if the file 
+        exists already.  Default is true.
 
     context
         Overrides default context variables passed to the template.
@@ -996,7 +1017,13 @@ def managed(name,
 
     if not replace:
         if os.path.exists(name):
-            ret['comment'] = 'File {0} exists. No changes made'.format(name)
+           # Check and set the permissions if necessary
+            ret, perms = _check_perms(name, ret, user, group, mode)
+            if __opts__['test']:
+                ret['comment'] = 'File {0} not updated'.format(name)
+            elif not ret['changes'] and ret['result']:
+                ret['comment'] = ('File {0} exists with proper permissions.'
+                                  '  No changes made.').format(name)
             return ret
         if not source:
             return touch(name, makedirs=makedirs)
@@ -1079,8 +1106,8 @@ def managed(name,
                     nlines = name_.readlines()
                 # Print a diff equivalent to diff -u old new
                     ret['changes']['diff'] = (''.join(difflib
-                                                      .unified_diff(slines,
-                                                                    nlines)))
+                                                      .unified_diff(nlines,
+                                                                    slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(
