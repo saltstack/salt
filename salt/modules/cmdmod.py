@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import sys
 
 # Import Salt libs
 import salt.utils
@@ -68,7 +69,7 @@ def _run(cmd,
         if not os.access(cwd, os.R_OK):
             cwd = '/'
 
-    if 'os' in os.environ and not os.environ['os'].startswith('Windows'):
+    if not sys.platform.startswith('win'):
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
@@ -118,7 +119,9 @@ def _run(cmd,
               'env': run_env,
               'stdout': stdout,
               'stderr':stderr}
-    if not os.environ.get('os', '').startswith('Windows'):
+    if not sys.platform.startswith('win'):
+        # close_fds is not supported on Windows platforms if you redirect
+        # stdin/stdout/stderr
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
     # This is where the magic happens
