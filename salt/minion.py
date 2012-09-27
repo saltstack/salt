@@ -328,7 +328,10 @@ class Minion(object):
         # multiprocessing communication.
         if not minion_instance:
             minion_instance = class_(opts)
-        ret = {'return': {}}
+        ret = {
+                'return': {},
+                'success': {},
+                }
         for ind in range(0, len(data['fun'])):
             for index in range(0, len(data['arg'][ind])):
                 try:
