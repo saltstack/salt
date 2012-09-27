@@ -61,6 +61,7 @@ class TestsLoggingHandler(object):
         self.level = level
         self.format = format
         self.activated = False
+        self.prev_logging_level = None
 
     def activate(self):
         class Handler(logging.Handler):
@@ -76,11 +77,20 @@ class TestsLoggingHandler(object):
         self.handler.setFormatter(formatter)
         logging.root.addHandler(self.handler)
         self.activated = True
+        # Make sure we're running with the lowest logging level with our
+        # tests logging handler
+        current_logging_level = logging.root.getEffectiveLevel()
+        if current_logging_level > logging.DEBUG:
+            self.prev_logging_level = current_logging_level
+            logging.root.setLevel(0)
 
     def deactivate(self):
         if not self.activated:
             return
         logging.root.removeHandler(self.handler)
+        # Restore previous logging level if changed
+        if self.prev_logging_level is not None:
+            logging.root.setLevel(self.prev_logging_level)
 
     @property
     def messages(self):
