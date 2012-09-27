@@ -56,7 +56,7 @@ class PipModuleTest(integration.ModuleCase):
         self.assertIn('installed pep8', ret['stdout'])
         ret = self.run_function('pip.uninstall', ['pep8'], bin_env=self.venv_dir)
         self.assertEqual(ret['retcode'], 0)
-        self.assertIn('installed pep8', ret['stdout'])
+        self.assertIn('uninstalled pep8', ret['stdout'])
 
 
     def tearDown(self):
