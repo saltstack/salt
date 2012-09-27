@@ -1106,8 +1106,8 @@ def managed(name,
                     nlines = name_.readlines()
                 # Print a diff equivalent to diff -u old new
                     ret['changes']['diff'] = (''.join(difflib
-                                                      .unified_diff(slines,
-                                                                    nlines)))
+                                                      .unified_diff(nlines,
+                                                                    slines)))
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(
