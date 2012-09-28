@@ -141,6 +141,35 @@ fi
         finally:
             os.unlink('/tmp/salttest/issue-1879')
 
+    def test_include(self):
+        fnames = ('/tmp/include-test', '/tmp/to-include-test')
+        try:
+            ret = self.run_function('state.sls', mods='include-test')
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+            for fname in fnames:
+                self.assertTrue(os.path.isfile(fname))
+            self.assertFalse(os.path.isfile('/tmp/exclude-test'))
+        finally:
+            for fname in list(fnames) + ['/tmp/exclude-test']:
+                if os.path.isfile(fname):
+                    os.remove(fname)
+
+    def test_exclude(self):
+        fnames = ('/tmp/include-test', '/tmp/exclude-test')
+        try:
+            ret = self.run_function('state.sls', mods='exclude-test')
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+            for fname in fnames:
+                self.assertTrue(os.path.isfile(fname))
+            self.assertFalse(os.path.isfile('/tmp/to-include-test'))
+        finally:
+            for fname in list(fnames) + ['/tmp/to-include-test']:
+                if os.path.isfile(fname):
+                    os.remove(fname)
+
+
 
 
 if __name__ == '__main__':
