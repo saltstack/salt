@@ -916,7 +916,7 @@ class State(object):
                 else:
                     low['require'] = low.pop('watch')
             else:
-            present = True
+                present = True
         if 'require' in low:
             present = True
         if not present:
