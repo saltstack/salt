@@ -1054,15 +1054,99 @@ class State(object):
         ret = self.call_chunks(chunks)
         return ret
 
+    def render_template(self, high, template):
+        errors = []
+        if not high:
+            return high, errors
+
+        if not isinstance(high, dict):
+            errors.append(
+                'Template {0} does not render to a dictionary'.format(template)
+            )
+            return high, errors
+
+        invalid_items = ('include', 'exclude', 'extends')
+        for item in invalid_items:
+            if item in high:
+                errors.append(
+                    'The \'{0}\' declaration found on \'{1}\' is invalid when '
+                    'rendering single templates'.format(item, template)
+                )
+                return high, errors
+
+        for name in high:
+            if not isinstance(high[name], dict):
+                if isinstance(high[name], string_types):
+                    # Is this is a short state, it needs to be padded
+                    if '.' in high[name]:
+                        comps = high[name].split('.')
+                        high[name] = {
+                            #'__sls__': template,
+                            #'__env__': None,
+                            comps[0]: [comps[1]]
+                        }
+                        continue
+
+                    errors.append(
+                        'Name {0} in template {1} is not a dictionary'.format(
+                            name, template
+                        )
+                    )
+                    continue
+            skeys = set()
+            for key in sorted(high[name]):
+                if key.startswith('_'):
+                    continue
+                if not isinstance(high[name][key], list):
+                    continue
+                if '.' in key:
+                    comps = key.split('.')
+                    # Salt doesn't support state files such as:
+                    #
+                    # /etc/redis/redis.conf:
+                    # file.managed:
+                    # - source: salt://redis/redis.conf
+                    # - user: redis
+                    # - group: redis
+                    # - mode: 644
+                    # file.comment:
+                    # - regex: ^requirepass
+                    #
+                    # XXX: Bad example here since no features requiring a
+                    # master should be here.
+                    if comps[0] in skeys:
+                        errors.append(
+                            'Name \'{0}\' in template \'{1}\' contains '
+                            'multiple state decs of the same type'.format(
+                                name, template
+                            )
+                        )
+                        continue
+                    high[name][comps[0]] = high[name].pop(key)
+                    high[name][comps[0]].append(comps[1])
+                    skeys.add(comps[0])
+                    continue
+                skeys.add(key)
+
+                #if '__sls__' not in high[name]:
+                #    high[name]['__sls__'] = template
+                #if '__env__' not in high[name]:
+                #    high[name]['__env__'] = None
+
+        return high, errors
+
     def call_template(self, template):
         '''
         Enforce the states in a template
         '''
         high = compile_template(
             template, self.rend, self.opts['renderer'])
-        if high:
-            return self.call_high(high)
-        return high
+        if not high:
+            return high
+        high, errors = self.render_template(high, template)
+        if errors:
+            return errors
+        return self.call_high(high)
 
     def call_template_str(self, template):
         '''
@@ -1070,9 +1154,12 @@ class State(object):
         '''
         high = compile_template_str(
             template, self.rend, self.opts['renderer'])
-        if high:
-            return self.call_high(high)
-        return high
+        if not high:
+            return high
+        high, errors = self.render_template(high, '<template-str>')
+        if errors:
+            return errors
+        return self.call_high(high)
 
 
 class BaseHighState(object):
