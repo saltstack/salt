@@ -342,7 +342,8 @@ def id_():
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
 _os_name_map = {
     'redhatente': 'RedHat',
-    'debian': 'Debian'
+    'debian': 'Debian',
+    'arch', 'Arch',
 }
 
 # Map the 'os' grain to the 'os_family' grain
