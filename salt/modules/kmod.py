@@ -49,12 +49,11 @@ def available():
         salt '*' kmod.available
     '''
     ret = []
-    for path in __salt__['cmd.run']('modprobe -l').split('\n'):
-        bpath = os.path.basename(path)
-        comps = bpath.split('.')
-        if 'ko' in comps:
-            # This is a kernel module, return it without the .ko extension
-            ret.append('.'.join(comps[:comps.index('ko')]))
+    mod_dir = os.path.join('/lib/modules/', os.uname()[2], 'kernel')
+    for root, dirs, files in os.walk(mod_dir):
+        for fn_ in files:
+            if '.ko' in fn_:
+                ret.append(fn_[:fn_.index('.ko')])
     return sorted(list(ret))
 
 
