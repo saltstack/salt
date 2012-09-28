@@ -69,11 +69,6 @@ def _new_serial(ca_name, CN):
     cachedir = __opts__['cachedir']
     log.debug('cachedir: {0}'.format(cachedir))
     serial_file = '{0}/{1}.serial'.format(cachedir, ca_name)
-    if os.path.exists(serial_file):
-        fr = open(serial_file, 'r')
-        lines = fr.readlines()
-        fr.close()
-
     with open(serial_file, 'a+') as f:
         f.write(str(hashnum))
 
@@ -420,7 +415,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
                     ca_name
                     )).read()
                 )
-    except IOError as exc:
+    except IOError:
         return 'There is no CA named "{0}"'.format(ca_name)
 
     try:
@@ -496,7 +491,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
                     ca_name
                     )).read()
                 )
-    except IOError as exc:
+    except IOError:
         return 'There is no CA named "{0}"'.format(ca_name)
 
     try:
