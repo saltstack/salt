@@ -10,9 +10,9 @@ echo 'PACKAGESITE: http://pkgbeta.freebsd.org/freebsd-9-amd64/latest' > /usr/loc
 /usr/local/sbin/pkg delete -y salt
 mkdir -p /root/git
 cd /root/git
-git clone git://github.com/saltstack/salt.git
+/usr/local/bin/git clone git://github.com/saltstack/salt.git
 cd salt
-python setup.py install
+/usr/local/bin/python setup.py install
 cd
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
