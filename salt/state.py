@@ -910,6 +910,12 @@ class State(object):
         '''
         present = False
         if 'watch' in low:
+            if not '{0}.mod_watch'.format(low['state']) in self.states:
+                if 'require' in low:
+                    low['require'].extend(low.pop('watch'))
+                else:
+                    low['require'] = low.pop('watch')
+            else:
             present = True
         if 'require' in low:
             present = True
