@@ -268,6 +268,28 @@ fi
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+    def test_template_invalid_items(self):
+        TEMPLATE = '''\
+{0}:
+  - issue-2068-template-str
+
+/tmp/test-template-invalid-items:
+  file:
+    - managed
+    - source: salt://testfile
+'''
+        for item in ('include', 'exclude', 'extends'):
+            ret = self.run_function(
+                'state.template_str', [TEMPLATE.format(item)]
+            )
+            self.assertTrue(isinstance(ret, list))
+            self.assertNotEqual(ret, [])
+            self.assertEqual(
+                ['The \'{0}\' declaration found on \'<template-str>\' is '
+                 'invalid when rendering single templates'.format(item)],
+                ret
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests
