@@ -56,7 +56,7 @@ class StateModuleTest(integration.ModuleCase):
         self.run_function('state.sls', mods='testappend')
         self.run_function('state.sls', mods='testappend.step-1')
         self.run_function('state.sls', mods='testappend.step-2')
-        self.assertMultiLineEqual("""\
+        self.assertMultiLineEqual('''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -67,12 +67,12 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
-""", open("/tmp/salttest/test.append", "r").read())
+''', open('/tmp/salttest/test.append', 'r').read())
 
         # Re-append switching order
         self.run_function('state.sls', mods='testappend.step-2')
         self.run_function('state.sls', mods='testappend.step-1')
-        self.assertMultiLineEqual("""\
+        self.assertMultiLineEqual('''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -83,7 +83,7 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
-""", open("/tmp/salttest/test.append", "r").read())
+''', open('/tmp/salttest/test.append', 'r').read())
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -106,7 +106,7 @@ fi
         )
 
     def test_issue_1879_too_simple_contains_check(self):
-        contents = """\
+        contents = '''\
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -117,7 +117,7 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
-"""
+'''
         # Create the file
         self.run_function('state.sls', mods='issue-1879')
         # The first append
@@ -127,16 +127,15 @@ fi
         # Does it match?
         try:
             self.assertMultiLineEqual(
-                contents, open("/tmp/salttest/issue-1879", "r").read()
+                contents, open('/tmp/salttest/issue-1879', 'r').read()
             )
             # Make sure we don't re-append existing text
             self.run_function('state.sls', mods='issue-1879.step-1')
             self.run_function('state.sls', mods='issue-1879.step-2')
             self.assertMultiLineEqual(
-                contents, open("/tmp/salttest/issue-1879", "r").read()
+                contents, open('/tmp/salttest/issue-1879', 'r').read()
             )
         except Exception:
-            import shutil
             shutil.copy('/tmp/salttest/issue-1879', '/tmp/salttest/issue-1879.bak')
             raise
         finally:
