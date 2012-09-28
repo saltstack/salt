@@ -343,7 +343,7 @@ def id_():
 _os_name_map = {
     'redhatente': 'RedHat',
     'debian': 'Debian',
-    'arch', 'Arch',
+    'arch': 'Arch',
 }
 
 # Map the 'os' grain to the 'os_family' grain
