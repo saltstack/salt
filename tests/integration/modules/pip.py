@@ -12,7 +12,6 @@ import shutil
 import tempfile
 
 # Import salt libs
-from saltunittest import skipIf
 import integration
 
 
