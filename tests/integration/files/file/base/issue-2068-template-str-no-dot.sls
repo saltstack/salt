@@ -5,10 +5,10 @@
     - distribute: True
 
 pep8-pip:
-    pip:
-      - installed
-      - name: pep8
-      - bin_env: /tmp/issue-2068-template-str
-      - mirrors: http://testpypi.python.org/pypi
-      - require:
-        - virtualenv: /tmp/issue-2068-template-str
+  pip:
+    - installed
+    - name: pep8
+    - bin_env: /tmp/issue-2068-template-str
+    - mirrors: http://testpypi.python.org/pypi
+    - require:
+      - virtualenv: /tmp/issue-2068-template-str
