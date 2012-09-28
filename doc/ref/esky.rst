@@ -33,6 +33,11 @@ Once you have your tools installed and the environment configured, you can then
 all the scripts up into a redistributable. There will be an appropriately
 versioned ``salt-VERSION.zip`` in ``dist/`` if everything went smoothly.
 
+Windows
+-------
+You will need to add ``C:\Python27\lib\site-packages\zmq`` to your PATH
+variable. This helps bbfreeze find the zmq dll so it can pack it up.
+
 Using the Frozen Build
 ======================
 
@@ -49,6 +54,11 @@ new version.
 
 Gotchas
 =======
+
+My Windows minion isn't responding
+----------------------------------
+The process dispatch on Windows is slower than it is on *nix. You may need to
+add '-t 15' to your salt calls to give them plenty of time to return.
 
 Windows and the Visual Studio Redist
 ------------------------------------
