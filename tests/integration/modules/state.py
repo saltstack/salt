@@ -209,6 +209,17 @@ fi
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+        # Now using state.template
+        try:
+            ret = self.run_function('state.template', [template_path])
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
         # Now the problematic #2068 including dot's
         try:
             ret = self.run_function(
@@ -242,6 +253,17 @@ fi
             self.assertTrue(
                 os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
             )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Now using state.template
+        try:
+            ret = self.run_function('state.template', [template_path])
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
