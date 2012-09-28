@@ -37,7 +37,7 @@
 # a good way to find the limit is to search the internet for(for example):
 #   raise max open files hard limit debian
 #
-#max_open_files: 100000
+#max_open_files: 4096
 
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
