@@ -78,7 +78,7 @@ def create(vm_):
     kwargs['size'] = get_size(conn, vm_)
     try:
         data = conn.create_node(**kwargs)
-    except DeploymentError as exc:
+    except Exception as exc:
         err = ('Error creating {0} on RACKSPACE\n\n'
                'The following exception was thrown by libcloud when trying to '
                'run the initial deployment: \n{1}').format(
