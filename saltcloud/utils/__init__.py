@@ -211,10 +211,11 @@ def deploy_script(host, port=22, timeout=900, username='root',
             if tty:
                 # Tried this with paramiko's invoke_shell(), and got tired of
                 # fighting with it
-                cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "sudo bash /tmp/deploy.sh"').format(
+                cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"').format(
                         key_filename,
                         username,
-                        host
+                        host,
+                        deploy_command
                         )
                 subprocess.call(cmd, shell=True)
             else:

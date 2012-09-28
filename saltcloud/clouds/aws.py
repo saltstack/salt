@@ -212,11 +212,14 @@ def create(vm_):
                 username = user
                 break
         kwargs['ssh_username'] = username
+    deploy_command='sudo bash /tmp/deploy.sh'
+    if username == 'root':
+        deploy_command='/tmp/deploy.sh'
     deployed = saltcloud.utils.deploy_script(
         host=ip_address,
         username=username,
         key_filename=__opts__['AWS.private_key'],
-        deploy_command='sudo bash /tmp/deploy.sh',
+        deploy_command=deploy_command,
         tty=True,
         script=deploy_script.script)
     if deployed:
