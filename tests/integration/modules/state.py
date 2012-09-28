@@ -1,5 +1,6 @@
 # Import python libs
 import os
+import shutil
 import integration
 
 
@@ -141,6 +142,153 @@ fi
         finally:
             os.unlink('/tmp/salttest/issue-1879')
 
+    def test_include(self):
+        fnames = ('/tmp/include-test', '/tmp/to-include-test')
+        try:
+            ret = self.run_function('state.sls', mods='include-test')
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+            for fname in fnames:
+                self.assertTrue(os.path.isfile(fname))
+            self.assertFalse(os.path.isfile('/tmp/exclude-test'))
+        finally:
+            for fname in list(fnames) + ['/tmp/exclude-test']:
+                if os.path.isfile(fname):
+                    os.remove(fname)
+
+    def test_exclude(self):
+        fnames = ('/tmp/include-test', '/tmp/exclude-test')
+        try:
+            ret = self.run_function('state.sls', mods='exclude-test')
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+            for fname in fnames:
+                self.assertTrue(os.path.isfile(fname))
+            self.assertFalse(os.path.isfile('/tmp/to-include-test'))
+        finally:
+            for fname in list(fnames) + ['/tmp/to-include-test']:
+                if os.path.isfile(fname):
+                    os.remove(fname)
+
+    def test_issue_2068_template_str(self):
+        venv_dir = '/tmp/issue-2068-template-str'
+
+        try:
+            ret = self.run_function(
+                'state.sls', mods='issue-2068-template-str-no-dot'
+            )
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Let's load the template from the filesystem. If running this state
+        # with state.sls works, so should using state.template_str
+        template_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'files', 'file', 'base', 'issue-2068-template-str-no-dot.sls'
+        )
+
+        template = open(template_path, 'r').read()
+        try:
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Now using state.template
+        try:
+            ret = self.run_function('state.template', [template_path])
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Now the problematic #2068 including dot's
+        try:
+            ret = self.run_function(
+                'state.sls', mods='issue-2068-template-str'
+            )
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Let's load the template from the filesystem. If running this state
+        # with state.sls works, so should using state.template_str
+        template_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'files', 'file', 'base', 'issue-2068-template-str.sls'
+        )
+
+        template = open(template_path, 'r').read()
+        try:
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Now using state.template
+        try:
+            ret = self.run_function('state.template', [template_path])
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+    def test_template_invalid_items(self):
+        TEMPLATE = '''\
+{0}:
+  - issue-2068-template-str
+
+/tmp/test-template-invalid-items:
+  file:
+    - managed
+    - source: salt://testfile
+'''
+        for item in ('include', 'exclude', 'extends'):
+            ret = self.run_function(
+                'state.template_str', [TEMPLATE.format(item)]
+            )
+            self.assertTrue(isinstance(ret, list))
+            self.assertNotEqual(ret, [])
+            self.assertEqual(
+                ['The \'{0}\' declaration found on \'<template-str>\' is '
+                 'invalid when rendering single templates'.format(item)],
+                ret
+            )
 
 
 if __name__ == '__main__':
