@@ -114,33 +114,6 @@ class PipStateTest(integration.ModuleCase):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
-    def test_issue_2028_pip_installed_template(self):
-        venv_dir = '/tmp/issue-2028-pip-installed'
-
-        # Let's load the template from the filesystem. If from state it works
-        # so should like this.
-        template_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            'files', 'file', 'base', 'issue-2028-pip-installed.sls'
-        )
-
-        template = open(template_path, 'r').read()
-        try:
-            ret = self.run_function('state.template_str', [template])
-
-            self.assertTrue(isinstance(ret, dict)), ret
-            self.assertNotEqual(ret, {})
-
-            for key in ret.iterkeys():
-                self.assertTrue(ret[key]['result'])
-
-            self.assertTrue(
-                os.path.isfile(os.path.join(venv_dir, 'bin', 'supervisord'))
-            )
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
-
     def test_issue_2087_missing_pip(self):
         venv_dir = '/tmp/issue-2087-missing-pip'
         try:

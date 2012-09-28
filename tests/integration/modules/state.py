@@ -1,5 +1,6 @@
 # Import python libs
 import os
+import shutil
 import integration
 
 
@@ -169,7 +170,81 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
 
+    def test_issue_2068_template_str(self):
+        venv_dir = '/tmp/issue-2068-template-str'
 
+        try:
+            ret = self.run_function(
+                'state.sls', mods='issue-2068-template-str-no-dot'
+            )
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Let's load the template from the filesystem. If running this state
+        # with state.sls works, so should using state.template_str
+        template_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'files', 'file', 'base', 'issue-2068-template-str-no-dot.sls'
+        )
+
+        template = open(template_path, 'r').read()
+        try:
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Now the problematic #2068 including dot's
+        try:
+            ret = self.run_function(
+                'state.sls', mods='issue-2068-template-str'
+            )
+            self.assertTrue(isinstance(ret, dict))
+            self.assertNotEqual(ret, {})
+            for part in ret.itervalues():
+                self.assertTrue(part['result'])
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
+        # Let's load the template from the filesystem. If running this state
+        # with state.sls works, so should using state.template_str
+        template_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'files', 'file', 'base', 'issue-2068-template-str.sls'
+        )
+
+        template = open(template_path, 'r').read()
+        try:
+            ret = self.run_function('state.template_str', [template])
+
+            self.assertTrue(isinstance(ret, dict)), ret
+            self.assertNotEqual(ret, {})
+
+            for key in ret.iterkeys():
+                self.assertTrue(ret[key]['result'])
+
+            self.assertTrue(
+                os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
+            )
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
 
 
 if __name__ == '__main__':
