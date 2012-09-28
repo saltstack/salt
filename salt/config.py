@@ -279,7 +279,7 @@ def master_config(path):
             'runner_dirs': [],
             'client_acl': {},
             'file_buffer_size': 1048576,
-            'max_open_files': 100000,
+            'max_open_files': 4096,
             'hash_type': 'md5',
             'conf_file': path,
             'pub_refresh': True,
