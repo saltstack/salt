@@ -436,7 +436,7 @@ Default:: ``None``
 
     ext_pillar:
       - hiera: /etc/hiera.yaml
-      - cmd: cat /etc/salt/yaml
+      - cmd_yaml: cat /etc/salt/yaml
 
 There are additional details at :ref:`salt-pillars`
 
