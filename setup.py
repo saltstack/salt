@@ -36,10 +36,12 @@ exec(compile(open(salt_version).read(), salt_version, 'exec'))
 
 class TestCommand(Command):
     description = 'Run tests'
-    user_options = []
+    user_options = [
+        ('runtests-opts=', 'R', 'Command line options to pass to runtests.py')
+    ]
 
     def initialize_options(self):
-        pass
+        self.runtests_opts = None
 
     def finalize_options(self):
         pass
@@ -49,7 +51,10 @@ class TestCommand(Command):
         self.run_command('build')
         build_cmd = self.get_finalized_command('build_ext')
         runner = os.path.abspath('tests/runtests.py')
-        test_cmd = 'python %s' % runner
+        test_cmd = 'python {0}'.format(runner)
+        if self.runtests_opts:
+            test_cmd += ' {0}'.format(self.runtests_opts)
+
         print("running test")
         test_process = Popen(
             test_cmd, shell=True,
