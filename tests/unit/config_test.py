@@ -40,15 +40,6 @@ class ConfigTestCase(TestCase):
         self.assertEqual(config['log_file'], fpath)
         shutil.rmtree(tempdir)
 
-    def test_assert_1(self):
-        self.assertTrue(False)
-
-    def test_assert_2(self):
-        1/0
-
-    def test_assert_3(self):
-        1/0
-
 
 if __name__ == "__main__":
     loader = TestLoader()
