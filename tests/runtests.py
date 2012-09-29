@@ -216,6 +216,11 @@ def parse_opts():
             action='store_false',
             help=('Don\'t clean up test environment before and after '
                   'integration testing (speed up test process)'))
+    parser.add_option('--no-report',
+            default=False,
+            action='store_true',
+            help='Do NOT show the overall tests result'
+    )
 
     options, _ = parser.parse_args()
 
@@ -254,16 +259,29 @@ if __name__ == '__main__':
     status = run_unit_tests(opts)
     overall_status.extend(status)
     false_count = overall_status.count(False)
-    if TEST_RESULTS:
-        print('')
-        print_header('  Overall Tests Resume  ', sep='=', centered=True, inline=True)
+
+    show_report = False
+    for (name, results) in TEST_RESULTS:
+        if results.failures or results.errors or results.skipped:
+            show_report = True
+            break
+
+    if opts.no_report or not show_report:
+        if false_count > 0:
+            sys.exit(1)
+        else:
+            sys.exit(0)
+
+
+    print('')
+    print_header(u'  Overall Tests Resume  ', sep=u'=', centered=True, inline=True)
 
 
     for (name, results) in TEST_RESULTS:
         if not results.failures and not results.errors and not results.skipped:
             continue
 
-        print_header(u'\u2219\u2219\u2219 {0}  '.format(name), sep=u'\u2219', inline=True)
+        print_header(u'\u22c6\u22c6\u22c6 {0}  '.format(name), sep=u'\u22c6', inline=True)
         if results.skipped:
             print_header(u' --------  Skipped Tests  ', sep='-', inline=True)
             maxlen = len(max([tc.id() for (tc, reason) in results.skipped], key=len))
@@ -275,26 +293,24 @@ if __name__ == '__main__':
         if results.errors:
             print_header(u' --------  Tests with Errors  ', sep='-', inline=True)
             for tc, reason in results.errors:
-                print_header(u'   \u2192 {0}  '.format(tc.id()), sep=u'~', inline=True)
+                print_header(u'   \u2192 {0}  '.format(tc.id()), sep=u'.', inline=True)
                 for line in reason.rstrip().splitlines():
                     print('       {0}'.format(line.rstrip()))
-                print_header(u'   ', sep=u'~', inline=True)
+                print_header(u'   ', sep=u'.', inline=True)
             print_header(u' ', sep='-', inline=True)
 
         if results.failures:
             print_header(u' --------  Failed Tests  ', sep='-', inline=True)
             for tc, reason in results.failures:
-                print_header(u'   \u2192 {0}  '.format(tc.id()), sep=u'~', inline=True)
+                print_header(u'   \u2192 {0}  '.format(tc.id()), sep=u'.', inline=True)
                 for line in reason.rstrip().splitlines():
                     print('       {0}'.format(line.rstrip()))
-                print_header(u'   ', sep=u'~', inline=True)
+                print_header(u'   ', sep=u'.', inline=True)
             print_header(u' ', sep='-', inline=True)
 
-        print_header(u'', sep=u'\u2219', inline=True)
+        print_header(u'', sep=u'\u22c6', inline=True)
 
-
-    if TEST_RESULTS:
-        print_header('  Overall Tests Resume  ', sep='=', centered=True, inline=True)
+    print_header('  Overall Tests Resume  ', sep='=', centered=True, inline=True)
 
     if false_count > 0:
         sys.exit(1)
