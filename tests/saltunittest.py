@@ -21,7 +21,7 @@ if sys.version_info[0:2] < (2, 7):
             TestCase,
             expectedFailure,
             TestSuite,
-            skipIf
+            skipIf,
         )
     except ImportError:
         raise SystemExit("You need to install unittest2 to run the salt tests")
@@ -32,7 +32,7 @@ else:
         TestCase,
         expectedFailure,
         TestSuite,
-        skipIf
+        skipIf,
     )
 
 
@@ -43,6 +43,14 @@ SALT_LIBS = os.path.dirname(TEST_DIR)
 for dir_ in [TEST_DIR, SALT_LIBS]:
     if not dir_ in sys.path:
         sys.path.insert(0, dir_)
+
+
+def destructiveTest(func):
+    def wrap(cls):
+        if os.environ.get('DESTRUCTIVE_TESTS', 'False').lower() == 'false':
+            cls.skipTest('Destructive tests are disabled')
+        return func(cls)
+    return wrap
 
 
 class TestsLoggingHandler(object):
