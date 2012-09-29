@@ -31,7 +31,6 @@ REQUIRED_OPEN_FILES = 2048
 
 TEST_RESULTS = []
 
-
 def print_header(header, sep='~', top=True, bottom=True, inline=False,
                  centered=False):
     if top and not inline:
@@ -216,6 +215,13 @@ def parse_opts():
             action='store_false',
             help=('Don\'t clean up test environment before and after '
                   'integration testing (speed up test process)'))
+    parser.add_option('--run-destructive',
+            action='store_true',
+            default=False,
+            help='Run destructive tests. These tests can include adding or '
+                 'removing users from your system for example. Default: '
+                 '%default'
+    )
     parser.add_option('--no-report',
             default=False,
             action='store_true',
@@ -237,6 +243,8 @@ def parse_opts():
         )
     else:
         logging.basicConfig(stream=open(os.devnull, 'w'), level=0)
+
+    os.environ['DESTRUCTIVE_TESTS'] = str(options.run_destructive)
 
     if not any((options.module, options.client,
                 options.shell, options.unit,
@@ -271,7 +279,6 @@ if __name__ == '__main__':
             sys.exit(1)
         else:
             sys.exit(0)
-
 
     print('')
     print_header(u'  Overall Tests Resume  ', sep=u'=', centered=True, inline=True)
