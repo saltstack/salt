@@ -109,8 +109,12 @@ def _run(cmd,
         if not runas:
             log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
         else:
-            log.info('Executing command {0} as user {1} in directory {2}'.format(
-                    orig_cmd, runas, cwd))
+            log.info(
+                'Executing command {0} as user {1} in directory {2}'.format(
+                    orig_cmd, runas, cwd
+                )
+            )
+        log.debug('Actual command line to execute: {0!r}'.format(cmd))
 
     run_env = os.environ
     run_env.update(env)
