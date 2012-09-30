@@ -19,7 +19,13 @@ import os
 import time
 import logging
 import hashlib
-import OpenSSL
+
+has_ssl = False
+try:
+    import OpenSSL
+    has_ssl = True
+except ImportError:
+    pass
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
@@ -30,7 +36,9 @@ def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-    return 'ca'
+    if has_ssl:
+        return 'ca'
+    return False
 
 
 def _cert_base_path():
