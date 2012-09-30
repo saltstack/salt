@@ -9,6 +9,7 @@ import os
 import logging
 import optparse
 import resource
+import tempfile
 
 # Import salt libs
 try:
@@ -105,7 +106,7 @@ def run_integration_tests(opts):
         finally:
             print('~' * PNUM)
 
-    print_header('Setting up Salt daemons to execute tests')
+    print_header('Setting up Salt daemons to execute tests', top=False)
     status = []
     if not any([opts.client, opts.module, opts.runner,
                 opts.shell, opts.state, opts.name]):
@@ -230,19 +231,33 @@ def parse_opts():
 
     options, _ = parser.parse_args()
 
-    # Setup minimal logging to stop errors and use if greater verbosity is used
+    # Setup logging
+    formatter = logging.Formatter(
+        '%(asctime)s,%(msecs)03.0f [%(name)-5s:%(lineno)-4d]'
+        '[%(levelname)-8s] %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    logfile = os.path.join(tempfile.gettempdir(), 'runtests.log')
+    filehandler = logging.FileHandler(
+        mode='w',           # Not preserved between re-runs
+        filename=logfile
+    )
+    filehandler.setLevel(logging.DEBUG)
+    filehandler.setFormatter(formatter)
+    logging.root.addHandler(filehandler)
+    logging.root.setLevel(logging.DEBUG)
+
+    print_header('Logging tests on {0}'.format(logfile), bottom=False)
+
+    # With greater verbosity we can also log to the console
     if options.verbosity > 2:
-        # -vv
-        level = logging.INFO
+        consolehandler = logging.StreamHandler(stream=sys.stderr)
+        consolehandler.setLevel(logging.INFO)       # -vv
+        consolehandler.setFormatter(formatter)
         if options.verbosity > 3:
-            # -vvv
-            level = logging.DEBUG
-        logging.basicConfig(
-            stream=sys.stderr, level=level,
-            format="[%(levelname)-8s][%(name)-10s:%(lineno)-4d] %(message)s"
-        )
-    else:
-        logging.basicConfig(stream=open(os.devnull, 'w'), level=0)
+            consolehandler.setLevel(logging.DEBUG)  # -vvv
+
+        logging.root.addHandler(consolehandler)
 
     os.environ['DESTRUCTIVE_TESTS'] = str(options.run_destructive)
 
@@ -274,19 +289,21 @@ if __name__ == '__main__':
             show_report = True
             break
 
-    if opts.no_report or not show_report:
+    if opts.no_report:
         if false_count > 0:
             sys.exit(1)
         else:
             sys.exit(0)
 
-    print('')
-    print_header(u'  Overall Tests Resume  ', sep=u'=', centered=True, inline=True)
+    print
+    print_header(u'  Overall Tests Report  ', sep=u'=', centered=True, inline=True)
 
-
+    no_problems_found = True
     for (name, results) in TEST_RESULTS:
         if not results.failures and not results.errors and not results.skipped:
             continue
+
+        no_problems_found = False
 
         print_header(u'\u22c6\u22c6\u22c6 {0}  '.format(name), sep=u'\u22c6', inline=True)
         if results.skipped:
@@ -317,7 +334,13 @@ if __name__ == '__main__':
 
         print_header(u'', sep=u'\u22c6', inline=True)
 
-    print_header('  Overall Tests Resume  ', sep='=', centered=True, inline=True)
+    if no_problems_found:
+        print_header(
+            u'\u22c6\u22c6\u22c6  No Problems Found While Running Tests  ',
+            sep=u'\u22c6', inline=True
+        )
+
+    print_header('  Overall Tests Report  ', sep='=', centered=True, inline=True)
 
     if false_count > 0:
         sys.exit(1)
