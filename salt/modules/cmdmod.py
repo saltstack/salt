@@ -114,7 +114,7 @@ def _run(cmd,
                     orig_cmd, runas, cwd
                 )
             )
-        log.debug('Actual command line to execute: {0!r}'.format(cmd))
+        log.debug('Actual command line to execute: {0}'.format(cmd))
 
     run_env = os.environ
     run_env.update(env)
