@@ -55,9 +55,13 @@ def present(name,
         ret['result'] = None
         ret['comment'] = 'User {0} is set to be created'.format(name)
         return ret
-    if __salt__['postgres.user_create'](username=name, createdb=createdb,
-                                        createuser=createuser, encrypted=encrypted,
-                                        password=password, runas=runas):
+    if __salt__['postgres.user_create'](username=name,
+                                        createdb=createdb,
+                                        createuser=createuser,
+                                        encrypted=encrypted,
+                                        superuser=superuser,
+                                        password=password,
+                                        runas=runas):
         ret['comment'] = 'The user {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:

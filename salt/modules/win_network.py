@@ -13,6 +13,7 @@ __outputter__ = {
     'netstat': 'txt',
 }
 
+
 def __virtual__():
     '''
     Only works on Windows systems
@@ -27,7 +28,7 @@ def _sanitize_host(host):
     '''
     Sanitize host string.
     '''
-    return "".join([
+    return ''.join([
         c for c in host[0:255] if c in (ascii_letters + digits + '.-')
     ])
 
@@ -40,7 +41,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -n 4 %s' % _sanitize_host(host)
+    cmd = 'ping -n 4 {0}'.format(_sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -81,7 +82,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'tracert %s' % _sanitize_host(host)
+    cmd = 'tracert {0}'.format(_sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         if not ' ' in line:
@@ -133,7 +134,7 @@ def nslookup(host):
         salt '*' network.nslookup archlinux.org
     '''
     ret = []
-    cmd = 'nslookup %s' % _sanitize_host(host)
+    cmd = 'nslookup {0}'.format(_sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         if line.startswith('Non-authoritative'):
@@ -154,7 +155,7 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig %s' % _sanitize_host(host)
+    cmd = 'dig {0}'.format(_sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -170,7 +171,7 @@ def _cidr_to_ipv4_netmask(cidr_bits):
             netmask += '255'
             cidr_bits -= 8
         else:
-            netmask += '%d' % (256-(2**(8-cidr_bits)))
+            netmask += '{0:d}'.format(256-(2**(8-cidr_bits)))
             cidr_bits = 0
     return netmask
 
@@ -204,7 +205,7 @@ def _interfaces_ipconfig(out):
                     iface['inet'] = list()
                 addr = {'address': val.rstrip('(Preferred)'),
                         'netmask': None,
-                        'broadcast': None} # TODO find the broadcast
+                        'broadcast': None}  # TODO find the broadcast
                 iface['inet'].append(addr)
             elif 'IPv6 Address' in key:
                 if 'inet6' not in iface:
