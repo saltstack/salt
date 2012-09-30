@@ -1,8 +1,9 @@
 '''
 Support for nzbget
 '''
-
+# Import Salt libs
 import salt.utils
+
 
 def __virtual__():
     '''
@@ -12,6 +13,7 @@ def __virtual__():
     if salt.utils.which(cmd):
         return 'nzbget'
     return False
+
 
 def version():
     '''
@@ -24,7 +26,8 @@ def version():
     cmd = 'nzbget -v'
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
-    return { 'version': ret[1] }
+    return {'version': ret[1] }
+
 
 def serverversion():
     '''
@@ -42,8 +45,9 @@ def serverversion():
     cmd = 'nzbget -V -c ~' + user + '/.nzbget | grep "server returned"'
     out = __salt__['cmd.run'](cmd).split('\n')
     ret = out[0].split(': ')
-    return { 'user': user,
-             'version': ret[1], }
+    return {'user': user,
+            'version': ret[1], }
+
 
 def start(user=None):
     '''
@@ -58,7 +62,8 @@ def start(user=None):
     if user:
         cmd = 'su - ' + user + ' -c "' + cmd + '"'
     out = __salt__['cmd.run'](cmd).split('\n')
-    return cmd
+    return out
+
 
 def stop(user=None):
     '''
@@ -73,7 +78,8 @@ def stop(user=None):
     if user:
         cmd = 'su - ' + user + ' -c "' + cmd + '"'
     out = __salt__['cmd.run'](cmd).split('\n')
-    return cmd
+    return out
+
 
 def list(user=None):
     '''
@@ -111,6 +117,7 @@ def list(user=None):
         ret['Queue List'] = queuelist
     return ret
 
+
 def pause(user=None):
     '''
     Pause nzbget daemon using -P option.
@@ -124,7 +131,8 @@ def pause(user=None):
     if user:
         cmd = cmd + ' -c ~' + user + '/.nzbget'
     out = __salt__['cmd.run'](cmd).split('\n')
-    return cmd
+    return out
+
 
 def unpause(user=None):
     '''
@@ -139,5 +147,5 @@ def unpause(user=None):
     if user:
         cmd = cmd + ' -c ~' + user + '/.nzbget'
     out = __salt__['cmd.run'](cmd).split('\n')
-    return cmd
+    return out
 

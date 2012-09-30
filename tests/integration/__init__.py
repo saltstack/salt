@@ -237,23 +237,30 @@ class ModuleCase(TestCase):
         Generate the tools to test a module
         '''
         self.client = salt.client.LocalClient(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'master'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
-    def run_function(self, function, arg=(), **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion',
-                               function,
-                               arg,
-                               timeout=100,
-                               kwarg=kwargs)
-        return orig['minion']
+        know_to_return_none = ('file.chown', 'file.chgrp')
+        orig = self.client.cmd(
+            minion_tgt, function, arg, timeout=100, kwarg=kwargs
+        )
+
+        if minion_tgt not in orig:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
+                'from the minion \'{0}\''.format(minion_tgt)
+            )
+        elif orig[minion_tgt] is None and function not in know_to_return_none:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
+                'the minion \'{1}\''.format(function, minion_tgt)
+            )
+        return orig[minion_tgt]
 
     def state_result(self, ret):
         '''
@@ -273,10 +280,16 @@ class ModuleCase(TestCase):
         Return the options used for the minion
         '''
         return salt.config.minion_config(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'minion'
-            )
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'minion')
+        )
+
+    @property
+    def sub_minion_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return salt.config.minion_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
         )
 
     @property
@@ -284,11 +297,8 @@ class ModuleCase(TestCase):
         '''
         Return the options used for the minion
         '''
-        return salt.config.minion_config(
-            os.path.join(
-                INTEGRATION_TEST_DIR,
-                'files', 'conf', 'master'
-            )
+        return salt.config.master_config(
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
 
@@ -313,6 +323,11 @@ class SyndicCase(TestCase):
         behavior of the raw function call
         '''
         orig = self.client.cmd('minion', function, arg)
+        if 'minion' not in orig:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
+                'from the minion. Received: \'{0}\''.format(orig)
+            )
         return orig['minion']
 
 
@@ -320,7 +335,7 @@ class ShellCase(TestCase):
     '''
     Execute a test for a shell command
     '''
-    def run_script(self, script, arg_str):
+    def run_script(self, script, arg_str, catch_stderr=False):
         '''
         Execute a script with the given argument string
         '''
@@ -329,17 +344,46 @@ class ShellCase(TestCase):
             return False
         ppath = 'PYTHONPATH={0}:{1}'.format(CODE_DIR, ':'.join(sys.path[1:]))
         cmd = '{0} {1} {2} {3}'.format(ppath, PYEXEC, path, arg_str)
-        data = subprocess.Popen(cmd,
-                                shell=True,
-                                stdout=subprocess.PIPE
-                                ).communicate()[0].split('\n')
-        return data
+
+        if catch_stderr:
+            process = subprocess.Popen(
+                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            if sys.version_info[0:2] < (2, 7):
+                # On python 2.6, the subprocess'es communicate() method uses
+                # select which, is limited by the OS to 1024 file descriptors
+                # We need more available descriptors to run the tests which
+                # need the stderr output.
+                # So instead of .communicate() we wait for the process to
+                # finish, but, as the python docs state "This will deadlock
+                # when using stdout=PIPE and/or stderr=PIPE and the child
+                # process generates enough output to a pipe such that it
+                # blocks waiting for the OS pipe buffer to accept more data.
+                # Use communicate() to avoid that." <- a catch, catch situation
+                #
+                # Use this work around were it's needed only, python 2.6
+                process.wait()
+                out = process.stdout.read()
+                err = process.stderr.read()
+            else:
+                out, err = process.communicate()
+            # Force closing stderr/stdout to release file descriptors
+            process.stdout.close()
+            process.stderr.close()
+            return out.split('\n'), err.split('\n')
+
+        process = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE
+        )
+        data = process.communicate()
+        process.stdout.close()
+        return data[0].split('\n')
 
     def run_salt(self, arg_str):
         '''
         Execute salt
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt', arg_str)
 
@@ -347,7 +391,7 @@ class ShellCase(TestCase):
         '''
         Execute salt-run
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
         return self.run_script('salt-run', arg_str)
 
@@ -361,18 +405,61 @@ class ShellCase(TestCase):
             '{0} {1} {2}'.format(options, fun, ' '.join(arg))
         )
         opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master'))
-        opts.update({'doc': False,
-                     'fun': fun,
-                     'arg': arg})
+            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        )
+        opts.update({'doc': False, 'fun': fun, 'arg': arg})
         runner = salt.runner.Runner(opts)
         ret['fun'] = runner.run()
         return ret
 
-    def run_key(self, arg_str):
+    def run_key(self, arg_str, catch_stderr=False):
         '''
         Execute salt-key
         '''
-        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
         arg_str = '-c {0} {1}'.format(mconf, arg_str)
-        return self.run_script('salt-key', arg_str)
+        return self.run_script('salt-key', arg_str, catch_stderr=catch_stderr)
+
+    def run_cp(self, arg_str):
+        '''
+        Execute salt-cp
+        '''
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
+        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-cp', arg_str)
+
+    def run_call(self, arg_str):
+        mconf = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
+        arg_str = '--config-dir {0} {1}'.format(mconf, arg_str)
+        return self.run_script('salt-call', arg_str)
+
+
+class ShellCaseCommonTestsMixIn(object):
+
+    def test_deprecated_config(self):
+        """
+        test for the --config deprecation warning
+
+        Once --config is fully deprecated, this test can be removed
+
+        """
+
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest("'_call_binary_' not defined.")
+
+        cfgfile = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
+        out, err = self.run_script(
+            self._call_binary_,
+            '--config {0}'.format(cfgfile),
+            catch_stderr=True
+        )
+        self.assertIn('Usage: {0}'.format(self._call_binary_), '\n'.join(err))
+        self.assertIn('deprecated', '\n'.join(err))
+
+    def test_version_includes_binary_name(self):
+        if getattr(self, '_call_binary_', None) is None:
+            self.skipTest("'_call_binary_' not defined.")
+
+        out = '\n'.join(self.run_script(self._call_binary_, "--version"))
+        self.assertIn(self._call_binary_, out)
+        self.assertIn(salt.__version__, out)

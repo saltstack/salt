@@ -9,22 +9,50 @@
 # The address of the interface to bind to
 #interface: 0.0.0.0
 
-# The port used by the publisher
+# The tcp port used by the publisher
 #publish_port: 4505
 
-# The user to run salt
+# Refresh the publisher connections when sending out commands, this is a fix
+# for zeromq losing some minion connections. Default: True
+#pub_refresh: True
+
+# The user to run the salt-master as. Salt will update all permissions to
+# allow the specified user to run the master. If the modified files cause
+# conflicts set verify_env to False.
 #user: root
+
+# Max open files
+# Each minion connecting to the master uses AT LEAST one file descriptor, the
+# master subscription connection. If enough minions connect you might start
+# seeing on the console(and then salt-master crashes):
+#   Too many open files (tcp_listener.cpp:335)
+#   Aborted (core dumped)
+#
+# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+# max open files.
+#
+# If you wish to set a different value than the default one, uncomment and
+# configure this setting. Remember that this value CANNOT be higher than the
+# hard limit. Raising the hard limit depends on your OS and/or distribution,
+# a good way to find the limit is to search the internet for(for example):
+#   raise max open files hard limit debian
+#
+#max_open_files: 100000
 
 # The number of worker threads to start, these threads are used to manage
 # return calls made from minions to the master, if the master seems to be
 # running slowly, increase the number of threads
 #worker_threads: 5
 
-# The port used by the communication interface
+# The port used by the communication interface. The ret (return) port is the
+# interface used for the file server, authentication, job returnes, etc.
 #ret_port: 4506
 
+# Specify the location of the daemon process ID file
+#pidfile: /var/run/salt-master.pid
+
 # The root directory prepended to these options: pki_dir, cachedir,
-# sock_dir, log_file, autosign_file.
+# sock_dir, log_file, autosign_file, extension_modules
 #root_dir: /
 
 # Directory used to store public key data
@@ -33,7 +61,10 @@
 # Directory to store job and cache data
 #cachedir: /var/cache/salt
 
-# Set the number of hours to keep old job information
+# Verify and set permissions on configuration directories at startup
+#verify_env: True
+
+# Set the number of hours to keep old job information in the job cache
 #keep_jobs: 24
 
 # Set the default timeout for the salt command and api, the default is 5
@@ -41,7 +72,7 @@
 #timeout: 5
 
 # Set the directory used to hold unix sockets
-#sock_dir: /tmp/salt-unix
+#sock_dir: /var/run/salt
 
 # The master maintains a job cache, while this is a great addition it can be
 # a burden on the master for larger deployments (over 5000 minions).
@@ -49,6 +80,9 @@
 # the jobs system and is not generally recommended.
 #
 #job_cache: True
+
+# Cache minion grains and pillar data in the cachedir.
+#minion_data_cache: True
 
 # Set the acceptance level for serialization of messages. This should only be
 # set if the master is newer than 0.9.5 and the minion are older. This option
@@ -100,6 +134,16 @@
 # If an autosign_file is specified permissive access will allow group access
 # to that specific file.
 #permissive_pki_access: False
+#
+# Allow users on the master access to execute specific commands on minions.
+# This setting should be treated with care since it opens up execution
+# capabilities to non root users. By default this capability is completely
+# disabled.
+#
+# client_acl:
+#   larry:
+#     - test.ping
+#     - network.*
 
 
 #####    Master Module Management    #####
@@ -109,8 +153,9 @@
 # Add any additional locations to look for master runners
 #runner_dirs: []
 #
-#Enable Cython for master side modules
+# Enable Cython for master side modules
 #cython_enable: False
+#
 
 #####      State System settings     #####
 ##########################################
@@ -131,6 +176,17 @@
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
 #failhard: False
+#
+# The state_verbose and state_output settings can be used to change the way
+# state system data is printed to the display. By default all data is printed.
+# The state_verbose setting can be set to True or False, when set to False
+# all data that has a result of True and no changes will be suppressed.
+#state_verbose: True
+# 
+# The state_output setting changes if the output is the full multi line
+# output for each changed state if set to 'full', but if set to 'terse'
+# the output will be shortened to a single line.
+#state_output: full
 
 #####      File Server settings      #####
 ##########################################
@@ -180,7 +236,7 @@
 #
 #ext_pillar:
 #  - hiera: /etc/hiera.yaml
-#  - cmd: cat /etc/salt/yaml
+#  - cmd_yaml: cat /etc/salt/yaml
 #
 
 #####          Syndic settings       #####
@@ -242,29 +298,11 @@
 #     - manage.up
 #
 
-#####         Cluster settings       #####
-##########################################
-# Salt supports automatic clustering, salt creates a single ip address which
-# is shared among the individual salt components using ucarp. The private key
-# and all of the minion keys are maintained across the defined cluster masters.
-# The failover service is automatically managed via these settings
-
-# List the identifiers for the other cluster masters in this manner:
-# [saltmaster-01.foo.com,saltmaster-02.foo.com,saltmaster-03.foo.com]
-# The members of this master array must be running as salt minions to
-# facilitate the distribution of cluster information
-#cluster_masters: []
-
-# The cluster modes are "paranoid" and "full"
-# paranoid will only distribute the accepted minion public keys.
-# full will also distribute the master private key.
-#cluster_mode: paranoid
-
-
 #####         Logging settings       #####
 ##########################################
 # The location of the master log file
 #log_file: /var/log/salt/master
+#key_logfile: /var/log/salt/key
 #
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
@@ -275,7 +313,7 @@
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen here:
 #	http://docs.python.org/library/time.html#time.strftime
-#log_datefmt: '%H:%M:%S'
+#log_datefmt: '%Y-%m-%d %H:%M:%S'
 #
 # The format of the console logging messages. Allowed formatting options can
 # be seen here:

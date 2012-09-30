@@ -35,6 +35,12 @@ can use the `Freenode webchat client`__ right from your browser.
 .. __: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
 .. __: http://irclog.perlgeek.de/salt/
 
+Salt development
+----------------
+
+If you wish to discuss the development of Salt itself join us in
+``#salt-devel``.
+
 .. _community-github:
 
 Follow on Github
@@ -69,6 +75,8 @@ A few examples of salt states from the community:
 * https://github.com/kevingranade/kevingranade-salt-state
 * https://github.com/uggedal/states
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
+* https://github.com/rentalita/ubuntu-setup/
+* https://github.com/brutasse/states
 
 Follow on ohloh
 ===============

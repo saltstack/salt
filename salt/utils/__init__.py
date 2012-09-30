@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import os
+import re
 import imp
 import random
 import sys
@@ -13,8 +14,10 @@ import logging
 import hashlib
 import datetime
 import tempfile
+import shlex
 import shutil
 import time
+import platform
 from calendar import month_abbr as months
 
 # Import Salt libs
@@ -64,7 +67,7 @@ def is_empty(filename):
     try:
         return os.stat(filename).st_size == 0
     except OSError:
-        # Non-existant file or permission denied to the parent dir
+        # Non-existent file or permission denied to the parent dir
         return False
 
 
@@ -111,49 +114,6 @@ def daemonize():
     '''
     Daemonize a process
     '''
-    if 'os' in os.environ:
-        if os.environ['os'].startswith('Windows'):
-            import ctypes
-            if ctypes.windll.shell32.IsUserAnAdmin() == 0:
-                import win32api
-                executablepath = sys.executable
-                pypath = executablepath.split('\\')
-                win32api.ShellExecute(
-                    0,
-                    'runas',
-                    executablepath,
-                    os.path.join(
-                        pypath[0],
-                        os.sep,
-                        pypath[1],
-                        'Lib\\site-packages\\salt\\utils\\saltminionservice.py'
-                    ),
-                    os.path.join(pypath[0], os.sep, pypath[1]),
-                    0
-                )
-                sys.exit(0)
-            else:
-                from . import saltminionservice
-                import win32serviceutil
-                import win32service
-                import winerror
-                servicename = 'salt-minion'
-                try:
-                    status = win32serviceutil.QueryServiceStatus(servicename)
-                except win32service.error as details:
-                    if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
-                        saltminionservice.instart(
-                            saltminionservice.MinionService,
-                            servicename,
-                            'Salt Minion'
-                        )
-                        sys.exit(0)
-                if status[1] == win32service.SERVICE_RUNNING:
-                    win32serviceutil.StopServiceWithDeps(servicename)
-                    win32serviceutil.StartService(servicename)
-                else:
-                    win32serviceutil.StartService(servicename)
-                sys.exit(0)
     try:
         pid = os.fork()
         if pid > 0:
@@ -182,7 +142,7 @@ def daemonize():
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
     # not cleanly redirected and the parent process dies when the
-    # multiprocessing process attemps to access stdout or err.
+    # multiprocessing process attempts to access stdout or err.
     #dev_null = open('/dev/null', 'rw')
     #os.dup2(dev_null.fileno(), sys.stdin.fileno())
     #os.dup2(dev_null.fileno(), sys.stdout.fileno())
@@ -197,6 +157,8 @@ def daemonize_if(opts, **kwargs):
     if 'salt-call' in sys.argv[0]:
         return
     if not opts['multiprocessing']:
+        return
+    if sys.platform.startswith('win'):
         return
     # Daemonizing breaks the proc dir, so the proc needs to be rewritten
     data = {}
@@ -245,7 +207,11 @@ def which(exe=None):
         (path, name) = os.path.split(exe)
         if os.access(exe, os.X_OK):
             return exe
-        for path in os.environ.get('PATH').split(os.pathsep):
+
+        # default path based on busybox's default
+        default_path = "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
+
+        for path in os.environ.get('PATH', default_path).split(os.pathsep):
             full_path = os.path.join(path, exe)
             if os.access(full_path, os.X_OK):
                 return full_path
@@ -414,13 +380,15 @@ def jid_dir(jid, cachedir, sum_type):
 
 def check_or_die(command):
     '''
-    Simple convienence function for modules to  use
-    for gracefully blowing up if a required tool is
-    not available in the system path.
+    Simple convenience function for modules to use for gracefully blowing up
+    if a required tool is not available in the system path.
 
-    Lazily import salt.modules.cmdmod to avoid any
-    sort of circular dependencies.
+    Lazily import `salt.modules.cmdmod` to avoid any sort of circular
+    dependencies.
     '''
+    if command is None:
+        raise CommandNotFoundError("'None' is not a valid command.")
+
     import salt.modules.cmdmod
     __salt__ = {'cmd.has_exec': salt.modules.cmdmod.has_exec}
 
@@ -446,22 +414,128 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     fd_, tgt = tempfile.mkstemp(prefix=bname, dir=dname)
     os.close(fd_)
     shutil.copyfile(source, tgt)
+    mask = os.umask(0)
+    os.umask(mask)
+    os.chmod(tgt, 0666 - mask)
     bkroot = ''
     if cachedir:
         bkroot = os.path.join(cachedir, 'file_backup')
     if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
-        msecs = str(int(time.time() * 1000000))[-6:]
-        stamp = time.asctime().replace(' ', '_')
-        stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
-        bkpath = os.path.join(
-                bkroot,
-                dname[1:],
-                '{0}_{1}'.format(bname, stamp)
-                )
-        if not os.path.isdir(os.path.dirname(bkpath)):
-            os.makedirs(os.path.dirname(bkpath))
-        shutil.copyfile(source, bkpath)
+        if os.path.exists(dest):
+            fstat = os.stat(dest)
+            msecs = str(int(time.time() * 1000000))[-6:]
+            stamp = time.asctime().replace(' ', '_')
+            stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+            bkpath = os.path.join(
+                    bkroot,
+                    dname[1:],
+                    '{0}_{1}'.format(bname, stamp)
+                    )
+            if not os.path.isdir(os.path.dirname(bkpath)):
+                os.makedirs(os.path.dirname(bkpath))
+            shutil.copyfile(dest, bkpath)
+            os.chown(bkpath, fstat.st_uid, fstat.st_gid)
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
-    shutil.move(tgt, dest)
+    try:
+        shutil.move(tgt, dest)
+    except Exception:
+        pass
+    if os.path.isfile(tgt):
+        # The temp file failed to move
+        try:
+            os.remove(tgt)
+        except Exception:
+            pass
+
+
+def path_join(*parts):
+    '''
+    This functions tries to solve some issues when joining multiple absolute
+    paths on both *nix and windows platforms.
+
+    See tests/unit/utils/path_join_test.py for some examples on what's being
+    talked about here.
+    '''
+    # Normalize path converting any os.sep as needed
+    parts = [os.path.normpath(p) for p in parts]
+
+    root = parts.pop(0)
+    if not parts:
+        return root
+
+    if platform.system().lower() == 'windows':
+        if len(root) == 1:
+            root += ':'
+        root = root.rstrip(os.sep) + os.sep
+
+    return os.path.normpath(os.path.join(
+        root, *[p.lstrip(os.sep) for p in parts]
+    ))
+
+
+def pem_finger(path, sum_type='md5'):
+    '''
+    Pass in the location of a pem file and the type of cryptographic hash to
+    use. The default is md5.
+    '''
+    if not os.path.isfile(path):
+        return ''
+    with open(path, 'rb') as fp_:
+        key = ''.join(fp_.readlines()[1:-1])
+    pre = getattr(hashlib, sum_type)(key).hexdigest()
+    finger = ''
+    for ind in range(len(pre)):
+        if ind % 2:
+            # Is odd
+            finger += '{0}:'.format(pre[ind])
+        else:
+            finger += pre[ind]
+    return finger.rstrip(':')
+
+
+def build_whitepace_splited_regex(text):
+    '''
+    Create a regular expression at runtime which should match ignoring the
+    addition or deletion of white space or line breaks, unless between commas
+
+    Example::
+
+    >>> import re
+    >>> from salt.utils import *
+    >>> regex = build_whitepace_splited_regex(
+    ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
+    ... )
+
+    >>> regex
+    '(?:[\\s]+)?if(?:[\\s]+)?\\[(?:[\\s]+)?\\-z(?:[\\s]+)?\\"\\$debian'
+    '\\_chroot\\"(?:[\\s]+)?\\](?:[\\s]+)?\\&\\&(?:[\\s]+)?\\[(?:[\\s]+)?'
+    '\\-r(?:[\\s]+)?\\/etc\\/debian\\_chroot(?:[\\s]+)?\\]\\;(?:[\\s]+)?'
+    'then(?:[\\s]+)?'
+    >>> re.search(
+    ...     regex,
+    ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
+    ... )
+
+    <_sre.SRE_Match object at 0xb70639c0>
+    >>>
+
+    '''
+
+    def __build_parts(text):
+        lexer = shlex.shlex(text)
+        lexer.whitespace_split = True
+        lexer.commenters = ''
+        if '"' in text:
+            lexer.quotes = '"'
+        elif '\'' in text:
+            lexer.quotes = '\''
+        return list(lexer)
+
+
+    regex = r''
+    for line in text.splitlines():
+        parts = [re.escape(s) for s in __build_parts(line)]
+        regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
+    return regex

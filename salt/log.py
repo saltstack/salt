@@ -41,9 +41,11 @@ MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
 __CONSOLE_CONFIGURED = False
 __LOGFILE_CONFIGURED = False
 
+
 def is_console_configured():
     global __CONSOLE_CONFIGURED
     return __CONSOLE_CONFIGURED
+
 
 def is_logfile_configured():
     global __LOGFILE_CONFIGURED
@@ -118,10 +120,14 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     Setup the console logger
     '''
     if is_console_configured():
-        logging.getLogger(__name__).warning("Console logging already configured")
+        logging.getLogger(__name__).warn('Console logging already configured')
         return
 
     init()
+
+    if log_level is None:
+        log_level = 'warning'
+
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
     rootLogger = logging.getLogger()
@@ -151,18 +157,21 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     '''
 
     if is_logfile_configured():
-        logging.getLogger(__name__).warning("Logfile logging already configured")
+        logging.getLogger(__name__).warn('Logfile logging already configured')
         return
 
     init()
+
+    if log_level is None:
+        log_level = 'warning'
+
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
     try:
         rootLogger = logging.getLogger()
         handler = getattr(
-            logging.handlers, 'WatchedFileHandler', logging.FileHandler)(
-                log_path, 'a', 'utf-8', delay=0
-        )
+            logging.handlers, 'WatchedFileHandler', logging.FileHandler
+        )(log_path, 'a', 'utf-8', delay=0)
     except (IOError, OSError):
         err = ('Failed to open log file, do you have permission to write to '
                '{0}'.format(log_path))
@@ -175,7 +184,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     if not log_format:
         log_format = '%(asctime)s [%(name)-15s][%(levelname)-8s] %(message)s'
     if not date_format:
-        date_format = '%H:%M:%S'
+        date_format = '%Y-%m-%d %H:%M:%S'
 
     formatter = logging.Formatter(log_format, datefmt=date_format)
 

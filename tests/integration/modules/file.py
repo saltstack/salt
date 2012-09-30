@@ -6,8 +6,6 @@ import shutil
 import sys
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError
-
 from saltunittest import skipIf
 import integration
 
@@ -21,7 +19,9 @@ class FileModuleTest(integration.ModuleCase):
         with open(self.myfile, 'w+') as fp:
             fp.write("Hello\n")
         self.mydir = os.path.join(integration.TMP, 'mydir/isawesome')
-        os.makedirs(self.mydir)
+        if not os.path.isdir(self.mydir):
+            # left behind... Don't fail because of this!
+            os.makedirs(self.mydir)
         super(FileModuleTest, self).setUp()
 
     def tearDown(self):
@@ -36,27 +36,25 @@ class FileModuleTest(integration.ModuleCase):
             group = 'staff'
         elif sys.platform.startswith('linux'):
             group = getpass.getuser()
-        ret = self.run_function('file.chown',
-                                arg=[self.myfile, user, group])
+        ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIsNone(ret)
         fstat = os.stat(self.myfile)
-        self.assertTrue(fstat.st_uid, os.getuid())
-        self.assertTrue(fstat.st_gid, grp.getgrnam(group).gr_gid)
+        self.assertEqual(fstat.st_uid, os.getuid())
+        self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
+
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown_no_user(self):
         user = 'notanyuseriknow'
         group = getpass.getuser()
-        ret = self.run_function('file.chown',
-                                arg=[self.myfile, user, group])
+        ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIn('not exist', ret)
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chown_no_user_no_group(self):
         user = 'notanyuseriknow'
         group = 'notanygroupyoushoulduse'
-        ret = self.run_function('file.chown',
-                                arg=[self.myfile, user, group])
+        ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIn('Group does not exist', ret)
         self.assertIn('User does not exist', ret)
 
@@ -75,12 +73,12 @@ class FileModuleTest(integration.ModuleCase):
     def test_chown_noop(self):
         user = ''
         group = ''
-        ret = self.run_function('file.chown',
-                                arg=[self.myfile, user, group])
+        ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIsNone(ret)
         fstat = os.stat(self.myfile)
-        self.assertTrue(fstat.st_uid, os.getuid())
-        self.assertTrue(fstat.st_gid, os.getgid())
+        self.assertEqual(fstat.st_uid, os.getuid())
+        self.assertEqual(fstat.st_gid, os.getgid())
+
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chgrp(self):
@@ -88,17 +86,15 @@ class FileModuleTest(integration.ModuleCase):
             group = 'everyone'
         elif sys.platform.startswith('linux'):
             group = getpass.getuser()
-        ret = self.run_function('file.chgrp',
-                                arg=[self.myfile, group])
+        ret = self.run_function('file.chgrp', arg=[self.myfile, group])
         self.assertIsNone(ret)
         fstat = os.stat(self.myfile)
-        self.assertTrue(fstat.st_gid, grp.getgrnam(group).gr_gid)
+        self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
 
     @skipIf(sys.platform.startswith('win'), 'No chgrp on Windows')
     def test_chgrp_failure(self):
         group = 'thisgroupdoesntexist'
-        ret = self.run_function('file.chgrp',
-                                arg=[self.myfile, group])
+        ret = self.run_function('file.chgrp', arg=[self.myfile, group])
         self.assertIn('not exist', ret)
 
     def test_remove_file(self):
@@ -112,7 +108,8 @@ class FileModuleTest(integration.ModuleCase):
     def test_cannot_remove(self):
         ret = self.run_function('file.remove', args=['/dev/tty'])
         self.assertEqual(
-            'ERROR executing file.remove: File path must be absolute.', ret)
+            'ERROR executing file.remove: File path must be absolute.', ret
+        )
 
 if __name__ == '__main__':
     from integration import run_tests

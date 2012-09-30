@@ -3,10 +3,11 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 '''
 # Import python libs
 from os import path
+import logging
 
 # Import third-party libs
-from jinja2 import Template, BaseLoader, Environment
-from jinja2.loaders import split_template_path
+from jinja2 import (BaseLoader, Environment, StrictUndefined,
+                    FileSystemLoader)
 from jinja2.exceptions import TemplateNotFound
 
 # Import Salt libs
@@ -14,18 +15,29 @@ import salt
 import salt.fileclient
 
 
+log = logging.getLogger(__name__)
+
+
 def get_template(filename, opts, env):
     loader = SaltCacheLoader(opts, env)
     if filename.startswith(loader.searchpath):
-        jinja = Environment(loader=loader)
+        if opts.get('allow_undefined', False):
+            jinja = Environment(loader=loader)
+        else:
+            jinja = Environment(loader=loader, undefined=StrictUndefined)
         relpath = path.relpath(filename, loader.searchpath)
         # the template was already fetched
         loader.cached.append(relpath)
         return jinja.get_template(relpath)
     else:
         # fallback for templates outside the state tree
-        with open(filename, 'r') as f:
-            return Template(f.read())
+        loader = FileSystemLoader(path.dirname(filename))
+        if opts.get('allow_undefined', False):
+            jinja = Environment(loader=loader)
+        else:
+            jinja = Environment(loader=loader, undefined=StrictUndefined)
+        relpath = path.relpath(filename, path.dirname(filename))
+        return jinja.get_template(relpath)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -41,6 +53,7 @@ class SaltCacheLoader(BaseLoader):
         self.env = env
         self.encoding = encoding
         self.searchpath = path.join(opts['cachedir'], 'files', env)
+        log.debug('Jinja search path: \'{0}\''.format(self.searchpath))
         self._file_client = None
         self.cached = []
 
@@ -69,7 +82,12 @@ class SaltCacheLoader(BaseLoader):
 
     def get_source(self, environment, template):
         # checks for relative '..' paths
-        template = path.join(*split_template_path(template))
+        if '..' in template:
+            log.warning(
+                'Discarded template path \'{0}\', relative paths are '
+                'prohibited'.format(template)
+            )
+            raise TemplateNotFound(template)
         self.check_cache(template)
         filepath = path.join(self.searchpath, template)
         with open(filepath, 'rb') as f:

@@ -31,5 +31,13 @@ def render(template_file, env='', sls=''):
             sls=sls)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
-            'Unknown render error in yaml_mako renderer'))
-    return json.loads(tmp_data['data'])
+            'Unknown render error in json_mako renderer'))
+
+    # Ensure that we're not passing lines with a shebang in the JSON.
+    to_return = []
+    for line in tmp_data['data'].split('\n'):
+        if line and "#!" not in line:
+            to_return.append(line)
+    to_return = '\n'.join(to_return)
+
+    return json.loads(to_return)

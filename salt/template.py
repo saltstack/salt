@@ -48,9 +48,7 @@ def compile_template_str(template, renderers, default):
     os.close(fd_)
     with open(fn_, 'w+') as f:
         f.write(template)
-    high = renderers[template_shebang(fn_, renderers, default)](fn_)
-    os.remove(fn_)
-    return high
+    return compile_template(fn_, renderers, default)
 
 
 def template_shebang(template, renderers, default):

@@ -37,7 +37,7 @@ class Service(win32serviceutil.ServiceFramework):
                                             win32event.INFINITE)
             self.log('done')
         except Exception as x:
-            self.log('Exception : %s' % x)
+            self.log('Exception: {0}'.format(x))
             self.SvcStop()
 
     def SvcStop(self):
@@ -74,7 +74,7 @@ def instart(cls, name, display_name=None, stay_alive=True):
         from sys import executable
         module_path = executable
     module_file = splitext(abspath(module_path))[0]
-    cls._svc_reg_class_ = '%s.%s' % (module_file, cls.__name__)
+    cls._svc_reg_class_ = '{0}.{1}'.format(module_file, cls.__name__)
     if stay_alive:
         win32api.SetConsoleCtrlHandler(lambda x: True, True)
     try:

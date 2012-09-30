@@ -1,7 +1,8 @@
 import sys
 
-__version_info__ = (0, 10, 2)
+__version_info__ = (0, 10, 3)
 __version__ = '.'.join(map(str, __version_info__))
+
 
 def versions_report():
     libs = (
@@ -12,14 +13,17 @@ def versions_report():
         ("pycrypto", "Crypto", "__version__"),
         ("PyYAML", "yaml", "__version__"),
         ("PyZMQ", "zmq", "__version__"),
-
     )
 
-    fmt = "{0:>%d}: {1}" % (len(max([lib[0] for lib in libs], key=len)) + 1)
+    padding = len(max([lib[0] for lib in libs], key=len)) + 1
 
-    yield fmt.format("Salt", __version__)
+    fmt = '{0:>{pad}}: {1}'
 
-    yield fmt.format("Python", sys.version.rsplit('\n')[0].strip())
+    yield fmt.format("Salt", __version__, pad=padding)
+
+    yield fmt.format(
+        "Python", sys.version.rsplit('\n')[0].strip(), pad=padding
+    )
 
     for name, imp, attr in libs:
         try:
@@ -27,9 +31,9 @@ def versions_report():
             version = getattr(imp, attr)
             if not isinstance(version, basestring):
                 version = '.'.join(map(str, version))
-            yield fmt.format(name, version)
+            yield fmt.format(name, version, pad=padding)
         except ImportError:
-            yield fmt.format(name, "not installed")
+            yield fmt.format(name, "not installed", pad=padding)
 
 
 if __name__ == '__main__':

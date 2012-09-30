@@ -1,4 +1,18 @@
+'''
+Define some generic socket functions for network modules
+'''
+# Import Python libs
 import socket
+from string import ascii_letters, digits
+
+def _sanitize_host(host):
+    '''
+    Sanitize host string.
+    '''
+    return ''.join([
+        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
+    ])
+
 
 def isportopen(host, port):
     '''

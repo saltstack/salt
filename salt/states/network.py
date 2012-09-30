@@ -41,6 +41,13 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
         - type: slave
         - master: bond0
 
+    eth4:
+      network.managed:
+        - enabled: True
+        - type: eth
+        - proto: dhcp
+        - bridge: br0
+
     bond0:
       network.managed:
         - type: bond
@@ -114,6 +121,18 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
           - network: bond0
         - require:
           - network: bond0
+    br0:
+      network.managed:
+        - enabled: True
+        - type: bridge
+        - proto: dhcp
+        - bridge: br0
+        - delay: 0
+        - bypassfirewall: True
+        - use:
+          - network: eth4
+        - require:
+          - network: eth4
 '''
 import difflib
 
@@ -146,6 +165,7 @@ def managed(name, type, enabled=True, **kwargs):
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name)
     }
+    kwargs['test'] = __opts__['test']
 
     # Build interface
     try:
@@ -153,23 +173,21 @@ def managed(name, type, enabled=True, **kwargs):
         new = __salt__['ip.build_interface'](name, type, enabled, kwargs)
         if __opts__['test']:
             if old == new:
-                return ret
+                pass
             if not old and new:
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be added.'
-                ret['comment'] = ret['comment'].format(name)
-                return ret
+                ret['comment'] = 'Interface {0} is set to be added.'.format(name)
             elif old != new:
+                diff = difflib.unified_diff(old, new)
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} is set to be updated.'
-                ret['comment'] = ret['comment'].format(
-                    name)
-                return ret
-        if not old and new:
-            ret['changes']['interface'] = 'Added network interface.'
-        elif old != new:
-            diff = difflib.unified_diff(old, new)
-            ret['changes']['interface'] = ''.join(diff)
+                ret['comment'] = 'Interface {0} is set to be updated.'.format(name)
+                ret['changes']['interface'] = ''.join(diff)
+        else:
+            if not old and new:
+                ret['changes']['interface'] = 'Added network interface.'
+            elif old != new:
+                diff = difflib.unified_diff(old, new)
+                ret['changes']['interface'] = ''.join(diff)
     except AttributeError as error:
         ret['result'] = False
         ret['comment'] = error.message
@@ -180,16 +198,31 @@ def managed(name, type, enabled=True, **kwargs):
         try:
             old = __salt__['ip.get_bond'](name)
             new = __salt__['ip.build_bond'](name, kwargs)
-            if not old and new:
-                ret['changes']['bond'] = 'Added bond.'
-            elif old != new:
-                diff = difflib.unified_diff(old, new)
-                ret['changes']['bond'] = ''.join(diff)
+            if __opts__['test']:
+                if old == new:
+                    pass
+                if not old and new:
+                    ret['result'] = None
+                    ret['comment'] = 'Bond interface {0} is set to be added.'.format(name)
+                elif old != new:
+                    diff = difflib.unified_diff(old, new)
+                    ret['result'] = None
+                    ret['comment'] = 'Bond interface {0} is set to be updated.'.format(name)
+                    ret['changes']['bond'] = ''.join(diff)
+            else:
+                if not old and new:
+                    ret['changes']['bond'] = 'Added bond {0}.'.format(name)
+                elif old != new:
+                    diff = difflib.unified_diff(old, new)
+                    ret['changes']['bond'] = ''.join(diff)
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
             ret['comment'] = error.message
             return ret
+
+    if __opts__['test']:
+        return ret
 
     #Bring up/shutdown interface
     try:
@@ -224,6 +257,7 @@ def system(name, **kwargs):
         'comment': 'Global network settings are up to date.'
     }
     apply_net_settings = False
+    kwargs['test'] = __opts__['test']
     # Build global network settings
     try:
         old = __salt__['ip.get_network_settings']()
@@ -236,14 +270,14 @@ def system(name, **kwargs):
                 ret['comment'] = 'Global network settings are set to be added.'
                 return ret
             elif old != new:
+                diff = difflib.unified_diff(old, new)
                 ret['result'] = None
-                ret['comment'] = \
-                    'Global network settings are set to be updated.'
+                ret['comment'] = 'Global network settings are set to be updated.'
+                ret['changes']['network_settings'] = ''.join(diff)
                 return ret
         if not old and new:
             apply_net_settings = True
-            ret['changes']['network_settings'] = \
-                'Added global network settings.'
+            ret['changes']['network_settings'] = 'Added global network settings.'
         elif old != new:
             diff = difflib.unified_diff(old, new)
             apply_net_settings = True
