@@ -1,3 +1,9 @@
+salt (0.10.3) precise; urgency=low
+
+  * New upstream version
+
+ -- Thomas S Hatch <thatch@saltstack.com>  Sun, 30 Aug 2012 13:34:10 -0700
+
 salt (0.10.2) precise; urgency=low
 
   * Non-maintainer upload.
