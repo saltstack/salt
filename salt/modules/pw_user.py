@@ -62,7 +62,7 @@ def delete(name, remove=False, force=False):
 
     CLI Example::
 
-        salt '*' user.delete name True True
+        salt '*' user.delete name remove=True force=True
     '''
     cmd = 'pw userdel '
     if remove:
@@ -219,6 +219,9 @@ def list_groups(name):
         salt '*' user.list_groups foo
     '''
     ugrp = set()
+    # Add the primary user's group
+    ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
+    # Now, all other groups the user belongs to
     for group in grp.getgrall():
         if name in group.gr_mem:
             ugrp.add(group.gr_name)
