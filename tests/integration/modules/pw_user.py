@@ -4,7 +4,7 @@ import random
 
 # Import salt libs
 import integration
-from saltunittest import destructiveTest
+from saltunittest import destructiveTest, skipIf
 
 
 class UseraddModuleTest(integration.ModuleCase):
@@ -26,6 +26,7 @@ class UseraddModuleTest(integration.ModuleCase):
         )
 
     @destructiveTest
+    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the
         # name
@@ -62,4 +63,4 @@ class UseraddModuleTest(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(VirtualenvModuleTest)
+    run_tests(UseraddModuleTest)
