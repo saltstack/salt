@@ -62,7 +62,7 @@ def delete(name, remove=False, force=False):
 
     CLI Example::
 
-        salt '*' user.delete name True True
+        salt '*' user.delete name remove=True force=True
     '''
     cmd = 'pw userdel '
     if remove:
