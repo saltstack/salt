@@ -3,15 +3,17 @@ Install Python packages with pip to either the system or a virtualenv
 '''
 # Import Python libs
 import os
+import logging
 import tempfile
 import shutil
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-
 # It would be cool if we could use __virtual__() in this module, though, since
 # pip can be installed on a virtualenv anywhere on the filesystem, there's no
 # definite way to tell if pip is installed on not.
+
+logger = logging.getLogger(__name__)
 
 def _get_pip_bin(bin_env):
     '''
@@ -182,6 +184,13 @@ def install(pkgs=None,
         cmd = '{cmd} --requirement "{requirements}" '.format(
             cmd=cmd, requirements=treq or requirements)
 
+    if treq is not None and runas:
+        logger.debug(
+            'Changing ownership of requirements file \'{0}\' to '
+            'user \'{1}\''.format(treq, runas)
+        )
+        __salt__['file.chown'](treq, runas, None)
+
     if log:
         try:
             # TODO make this check if writeable
@@ -282,13 +291,14 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
-
-    if treq:
-        try:
-            os.remove(treq)
-        except Exception:
-            pass
+    try:
+        result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+    finally:
+        if treq:
+            try:
+                os.remove(treq)
+            except Exception:
+                pass
 
     return result
 

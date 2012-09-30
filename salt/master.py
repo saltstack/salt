@@ -217,6 +217,10 @@ class Master(SMaster):
         '''
         Turn on the master server components
         '''
+        log.info(
+            'salt-master is starting as user \'{0}\''.format(getpass.getuser())
+        )
+
         enable_sigusr1_handler()
 
         self.__set_max_open_files()
@@ -749,7 +753,7 @@ class AESFuncs(object):
         if 'return' not in load or 'jid' not in load or 'id' not in load:
             return False
         if load['jid'] == 'req':
-	    # The minion is returning a standalone job, request a jobid
+        # The minion is returning a standalone job, request a jobid
             load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
                     self.opts['hash_type'])
