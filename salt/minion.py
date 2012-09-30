@@ -5,6 +5,7 @@ Routines to set up a minion
 # Import python libs
 
 import logging
+import getpass
 import multiprocessing
 
 import fnmatch
@@ -500,6 +501,12 @@ class Minion(object):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         '''
+        log.info(
+            '{0} is starting as user \'{0}\''.format(
+                self.__class__.__name__,
+                getpass.getuser()
+            )
+        )
         log.debug('Minion "{0}" trying to tune in'.format(self.opts['id']))
         context = zmq.Context()
 

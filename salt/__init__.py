@@ -6,6 +6,7 @@ Make me some salt!
 import os
 import sys
 import logging
+import getpass
 
 # Import salt libs, the try block bypasses an issue at build time so that
 # modules don't cause the build to fail
@@ -51,7 +52,7 @@ class Master(parsers.MasterOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        log = logging.getLogger('salt.master')
+        logging.getLogger(__name__).warn('Setting up the Salt Master')
 
         # Late import so logging works correctly
         if not verify_socket(self.config['interface'],
@@ -60,7 +61,6 @@ class Master(parsers.MasterOptionParser):
             self.exit(4, 'The ports are not available to bind\n')
 
         import salt.master
-        log.warn('Starting the Salt Master')
         master = salt.master.Master(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
@@ -99,7 +99,11 @@ class Minion(parsers.MinionOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        log = logging.getLogger('salt.minion')
+        logging.getLogger(__name__).warn(
+            'Setting up the Salt Minion "{0}"'.format(
+                self.config['id']
+            )
+        )
 
         # Late import so logging works correctly
         import salt.minion
@@ -109,7 +113,6 @@ class Minion(parsers.MinionOptionParser):
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
         try:
-            log.warn('Starting the Salt Minion "{0}"'.format(self.config['id']))
             minion = salt.minion.Minion(self.config)
             self.set_pidfile()
             if check_user(self.config['user']):
@@ -143,7 +146,11 @@ class Syndic(parsers.SyndicOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        log = logging.getLogger('salt.syndic')
+        logging.getLogger(__name__).warn(
+            'Setting up the Salt Syndic Minion "{0}"'.format(
+                self.config['id']
+            )
+        )
 
         # Late import so logging works correctly
         import salt.minion
@@ -152,8 +159,6 @@ class Syndic(parsers.SyndicOptionParser):
 
         if check_user(self.config['user']):
             try:
-                log.warn('Starting the Salt Syndic Minion "{0}"'.format(
-                         self.config['id']))
                 syndic = salt.minion.Syndic(self.config)
                 syndic.tune_in()
             except KeyboardInterrupt:
