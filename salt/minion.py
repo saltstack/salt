@@ -502,7 +502,7 @@ class Minion(object):
         Lock onto the publisher. This is the main event loop for the minion
         '''
         log.info(
-            '{0} is starting as user \'{0}\''.format(
+            '{0} is starting as user \'{1}\''.format(
                 self.__class__.__name__,
                 getpass.getuser()
             )
