@@ -182,6 +182,13 @@ def install(pkgs=None,
         cmd = '{cmd} --requirement "{requirements}" '.format(
             cmd=cmd, requirements=treq or requirements)
 
+    if treq is not None and runas:
+        log.debug(
+            'Changing ownership of requirements file \'{0}\' to '
+            'user \'{1}\''.format(treq, runas)
+        )
+        __salt__['file.chown'](treq, runas, None)
+
     if log:
         try:
             # TODO make this check if writeable
@@ -282,13 +289,14 @@ def install(pkgs=None,
         cmd = '{cmd} --install-options={install_options} '.format(
             cmd=cmd, install_options=install_options)
 
-    result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
-
-    if treq:
-        try:
-            os.remove(treq)
-        except Exception:
-            pass
+    try:
+        result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
+    finally:
+        if treq:
+            try:
+                os.remove(treq)
+            except Exception:
+                pass
 
     return result
 
