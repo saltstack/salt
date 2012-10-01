@@ -36,7 +36,7 @@ class SaltAPI(object):
                 '--master-config',
                 '--config',
                 dest='config',
-                default='/etc/salt/master',
+                default='/etc/salt/',
                 help='The location of the master config file')
 
         parser.add_option('-d',

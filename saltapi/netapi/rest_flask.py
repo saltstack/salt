@@ -29,6 +29,7 @@ def make_json_error(ex):
     response.status_code = (ex.code if isinstance(ex, HTTPException) else 500)
     return response
 
+
 class SaltAPI(MethodView):
     '''
     A collection of convenience functions for use when creating API endpoints
@@ -50,6 +51,7 @@ class SaltAPI(MethodView):
             self._runner = salt.loader.runner(__opts__)
 
         return self._runner
+
 
 class JobsView(SaltAPI):
     '''
@@ -94,6 +96,7 @@ class JobsView(SaltAPI):
                 request.form['cmd'])
         return jsonify(ret)
 
+
 def build_app():
     '''
     Build the Flask app
@@ -109,6 +112,7 @@ def build_app():
 
     return app
 
+
 def __virtual__():
     '''
     Verify enough infos to actually start server.
@@ -117,6 +121,7 @@ def __virtual__():
     #     return False
 
     return 'rest'
+
 
 def bind():
     '''

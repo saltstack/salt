@@ -17,3 +17,16 @@ def netapi(opts):
     load = salt.loader._create_loader(opts, 'netapi', 'netapi')
     return load.gen_functions()
 
+def runner(opts):
+    '''
+    Load the runners, this function bypasses the issue with the altered
+    basepath
+    '''
+    load = salt.loader._create_loader(
+            opts,
+            'runners',
+            'runner',
+            ext_type_dirs='runner_dirs',
+            base_path=os.path.dirname(salt.__file__)
+            )
+    return load.gen_functions()
