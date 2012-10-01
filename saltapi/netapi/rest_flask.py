@@ -84,19 +84,41 @@ class JobsView(SaltAPI):
                 request.form['cmd'])
         return jsonify(ret)
 
+class RunnersView(SaltAPI):
+    def get(self):
+        '''
+        Return all available runners
+        '''
+        return jsonify({'runners': self.runners.keys()})
+
+    def post(self):
+        '''
+        Execute runner commands
+        '''
+        cmd = request.form['cmd']
+
+        if not cmd in self.runners:
+            raise exceptions.BadRequest("Runner '{0}' not found".format(cmd))
+
+        ret = self.runners[cmd]()
+        return jsonify({'return': ret})
+
 
 def build_app():
     '''
     Build the Flask app
     '''
     app = Flask('rest_flask')
-    jobs = JobsView.as_view('jobs')
 
     for code in exceptions.default_exceptions.iterkeys():
         app.error_handler_spec[None][code] = make_json_error
 
+    jobs = JobsView.as_view('jobs')
     app.add_url_rule('/jobs', view_func=jobs, methods=['GET', 'POST'])
     app.add_url_rule('/jobs/<jid>', view_func=jobs, methods=['GET'])
+
+    runners = RunnersView.as_view('runners')
+    app.add_url_rule('/runners', view_func=runners, methods=['GET', 'POST'])
 
     return app
 
