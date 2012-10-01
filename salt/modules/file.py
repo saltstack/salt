@@ -19,7 +19,6 @@ import getpass
 import hashlib
 import difflib
 import fnmatch
-import logging
 try:
     import grp
     import pwd
@@ -798,7 +797,6 @@ def set_selinux_context(path, user=None, role=None, type=None, range=None):
         return ret
 
 
-### NEW STUFF STARTS HERE
 def source_list(source, source_hash, env):
     '''
     Check the source list and return the source to use
