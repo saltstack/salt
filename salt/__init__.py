@@ -99,7 +99,8 @@ class Minion(parsers.MinionOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logging.getLogger(__name__).warn(
+        log = logging.getLogger(__name__)
+        log.warn(
             'Setting up the Salt Minion "{0}"'.format(
                 self.config['id']
             )
@@ -146,7 +147,8 @@ class Syndic(parsers.SyndicOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logging.getLogger(__name__).warn(
+        log = logging.getLogger(__name__)
+        log.warn(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']
             )
