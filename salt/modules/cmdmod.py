@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import sys
+from functools import partial
 
 # Import Salt libs
 import salt.utils
@@ -35,12 +36,55 @@ __outputter__ = {
 
 DEFAULT_SHELL = shell_grain()['shell']
 
+
 def __virtual__():
     '''
     Overwriting the cmd python module makes debugging modules
     with pdb a bit harder so lets do it this way instead.
     '''
     return 'cmd'
+
+
+def _chugid(runas):
+    uinfo = pwd.getpwnam(runas)
+
+    if os.getuid() == uinfo.pw_uid and os.getgid() == uinfo.pw_gid:
+        # No need to change user or group
+        return
+
+    # No logging can happen on this function
+    #
+    # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
+    #   File "/usr/lib/python2.7/logging/__init__.py", line 870, in emit
+    #     self.flush()
+    #   File "/usr/lib/python2.7/logging/__init__.py", line 832, in flush
+    #     self.stream.flush()
+    # IOError: [Errno 9] Bad file descriptor
+    # Logged from file cmdmod.py, line 59
+    # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
+    #
+    # apparently because we closed fd's on Popen, though if not closed, output
+    # would also go to it's stderr
+
+    if os.getgid() != uinfo.pw_gid:
+        try:
+            os.setgid(uinfo.pw_gid)
+        except OSError, err:
+            raise CommandExecutionError(
+                'Failed to change from gid {0} to {1}. Error: {2}'.format(
+                    os.getgid(), uinfo.pw_gid, err
+                )
+            )
+
+    if os.getuid() != uinfo.pw_uid:
+        try:
+            os.setuid(uinfo.pw_uid)
+        except OSError, err:
+            raise CommandExecutionError(
+                'Failed to change from uid {0} to {1}. Error: {2}'.format(
+                    os.getuid(), uinfo.pw_uid, err
+                )
+            )
 
 
 def _run(cmd,
@@ -87,30 +131,19 @@ def _run(cmd,
 
     if runas:
         # Save the original command before munging it
-        orig_cmd = cmd
         try:
             pwd.getpwnam(runas)
         except KeyError:
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
 
-        cmd_prefix = 'su -s {0}'.format(shell)
-
-        # Load the 'nix environment
-        if with_env:
-            cmd_prefix += ' -'
-            cmd = 'cd {0} && {1}'.format(cwd, cmd)
-
-        cmd_prefix += ' {0} -c'.format(runas)
-        cmd = '{0} {1}'.format(cmd_prefix, pipes.quote(cmd))
-
     if not quiet:
         # Put the most common case first
-        if not runas:
-            log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-        else:
-            log.info('Executing command {0} as user {1} in directory {2}'.format(
-                    orig_cmd, runas, cwd))
+        log.info(
+            'Executing command {0!r} {1}in directory {2!r}'.format(
+                cmd, 'as user {0!r} '.format(runas) if runas else '', cwd
+            )
+        )
 
     run_env = os.environ
     run_env.update(env)
@@ -118,12 +151,17 @@ def _run(cmd,
               'shell': True,
               'env': run_env,
               'stdout': stdout,
-              'stderr':stderr}
+              'stderr': stderr}
+
+    if runas:
+        kwargs['preexec_fn'] = partial(_chugid, runas)
+
     if not sys.platform.startswith('win'):
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
+
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
