@@ -1,5 +1,5 @@
-'''A REST API for Salt
-
+'''
+A REST API for Salt
 '''
 from flask import Flask
 from flask import jsonify
@@ -9,8 +9,18 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 import salt.client
-import salt.loader
 import salt.runner
+import saltapi.loader
+
+def __virtual__():
+    '''
+    Verify enough infos to actually start server.
+    '''
+    # if not 'port' in __opts__ or not __opts__['port']:
+    #     return False
+
+    return 'rest'
+
 
 def make_json_error(ex):
     '''
@@ -30,51 +40,29 @@ def make_json_error(ex):
     return response
 
 
-class SaltAPI(MethodView):
-    '''
-    A collection of convenience functions for use when creating API endpoints
-    '''
-    def get_client(self):
-        '''
-        Return, or instantiate and return, a Salt LocalClient
-        '''
-        if not hasattr(self, '_client'):
-            self._client = salt.client.LocalClient(__opts__['conf_file'])
-
-        return self._client
-
-    def get_runner(self):
-        '''
-        Return, or instantiate and return, a Salt runner dict
-        '''
-        if not hasattr(self, '_runner'):
-            self._runner = salt.loader.runner(__opts__)
-
-        return self._runner
-
-
-class JobsView(SaltAPI):
+class JobsView(MethodView):
     '''
     View Salt jobs or create new jobs (run commands)
     '''
+    def __init__(self):
+        self.runners = saltapi.loader.runner(__opts__)
+        self.local = salt.client.LocalClient(__opts__['conf_file'])
+
     def get_job_by_jid(self, jid):
         '''
         Return information on a previously run job
         '''
-        runner = self.get_runner()
-        runner['jobs.lookup_jid'](jid)
+        self.runners['jobs.lookup_jid'](jid)
 
         # TODO: add cache headers based on the keep_jobs settings
-        client = self.get_client()
-        ret = client.cmd('*', ['grains.items', 'sys.list_functions'], [[], []])
+        ret = self.local.cmd('*', ['grains.items', 'sys.list_functions'], [[], []])
         return jsonify(ret)
 
     def get_jobs_list(self):
         '''
         Return a previously run jobs
         '''
-        runner = self.get_runner()
-        return runner['jobs.list_jobs']()
+        return self.runners['jobs.list_jobs']()
 
     def get(self, jid=None):
         '''
@@ -89,9 +77,7 @@ class JobsView(SaltAPI):
         '''
         Run minion commands
         '''
-        client = self.get_client()
-        runner = self.get_runner()
-        ret = client.cmd(
+        ret = self.local.cmd(
                 request.form['tgt'],
                 request.form['cmd'])
         return jsonify(ret)
@@ -101,7 +87,7 @@ def build_app():
     '''
     Build the Flask app
     '''
-    app = Flask(__name__)
+    app = Flask('rest_flask')
     jobs = JobsView.as_view('jobs')
 
     for code in default_exceptions.iterkeys():
@@ -111,16 +97,6 @@ def build_app():
     app.add_url_rule('/jobs/<int:jid>', view_func=jobs, methods=['GET'])
 
     return app
-
-
-def __virtual__():
-    '''
-    Verify enough infos to actually start server.
-    '''
-    # if not 'port' in __opts__ or not __opts__['port']:
-    #     return False
-
-    return 'rest'
 
 
 def bind():
