@@ -623,7 +623,15 @@ class AESFuncs(object):
             if grains in load['opts']:
                 grains = load['opts']['grains']
         for fun in self.tops:
-            ret.update(self.tops[fun](opts, grains))
+            try:
+                ret.update(self.tops[fun](opts, grains))
+            except Exception as exc:
+                log.error(
+                        ('Top function {0} failed with error {1} for minion '
+                         '{2}').format(fun, exc, load['id'])
+                        )
+                # If anything happens in the top generation, log it and move on
+                pass
         return ret
 
     def _serve_file(self, load):
