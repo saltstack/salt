@@ -5,8 +5,7 @@ from flask import Flask
 from flask import jsonify
 from flask import request
 from flask.views import MethodView
-from werkzeug.exceptions import default_exceptions
-from werkzeug.exceptions import HTTPException
+from werkzeug import exceptions
 
 import salt.client
 import salt.runner
@@ -36,7 +35,8 @@ def make_json_error(ex):
 
     '''
     response = jsonify(message=str(ex))
-    response.status_code = (ex.code if isinstance(ex, HTTPException) else 500)
+    response.status_code = (ex.code
+            if isinstance(ex, exceptions.HTTPException) else 500)
     return response
 
 class SaltAPI(MethodView):
@@ -92,7 +92,7 @@ def build_app():
     app = Flask('rest_flask')
     jobs = JobsView.as_view('jobs')
 
-    for code in default_exceptions.iterkeys():
+    for code in exceptions.default_exceptions.iterkeys():
         app.error_handler_spec[None][code] = make_json_error
 
     app.add_url_rule('/jobs', view_func=jobs, methods=['GET', 'POST'])
