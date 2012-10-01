@@ -97,7 +97,6 @@ class JobsView(SaltAPI):
 def build_app():
     '''
     Build the Flask app
-
     '''
     app = Flask(__name__)
     jobs = JobsView.as_view('jobs')
