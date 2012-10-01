@@ -52,17 +52,15 @@ class JobsView(MethodView):
         '''
         Return information on a previously run job
         '''
-        self.runners['jobs.lookup_jid'](jid)
-
-        # TODO: add cache headers based on the keep_jobs settings
-        ret = self.local.cmd('*', ['grains.items', 'sys.list_functions'], [[], []])
+        ret = self.runners['jobs.lookup_jid'](jid)
         return jsonify(ret)
 
     def get_jobs_list(self):
         '''
         Return a previously run jobs
         '''
-        return self.runners['jobs.list_jobs']()
+        ret = self.runners['jobs.list_jobs']()
+        return jsonify(ret)
 
     def get(self, jid=None):
         '''
