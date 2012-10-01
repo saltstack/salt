@@ -43,7 +43,7 @@ class SaltAPI(MethodView):
     '''
     Base class for salt objects
     '''
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.runners = saltapi.loader.runner(__opts__)
         self.local = salt.client.LocalClient(__opts__['conf_file'])
 
