@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import sys
+from functools import partial
 
 # Import Salt libs
 import salt.utils
@@ -35,12 +36,47 @@ __outputter__ = {
 
 DEFAULT_SHELL = shell_grain()['shell']
 
+
 def __virtual__():
     '''
     Overwriting the cmd python module makes debugging modules
     with pdb a bit harder so lets do it this way instead.
     '''
     return 'cmd'
+
+
+def _chugid(runas):
+    uinfo = pwd.getpwnam(runas)
+
+    if os.getuid() == uinfo.pw_uid and os.getgid() == uinfo.pw_gid:
+        # No need to change user or group
+        return
+
+    if os.getgid() != uinfo.pw_gid:
+        logging.getLogger(__name__).debug(
+            'Switching group {0} -> {1}'.format(os.getgid(), uinfo.pw_gid)
+        )
+        try:
+            os.setgid(uinfo.pw_gid)
+        except Exception, err:
+            logging.getLogger(__name__).error(
+                'Failed to switch group {0} -> {1}: {2}'.format(
+                    os.getgid(), uinfo.pw_gid, err
+                )
+            )
+
+    if os.getuid() != uinfo.pw_uid:
+        logging.getLogger(__name__).debug(
+            'Switching user {0} -> {1}'.format(os.getuid(), uinfo.pw_uid)
+        )
+        try:
+            os.setuid(uinfo.pw_uid)
+        except Exception, err:
+            logging.getLogger(__name__).error(
+                'Failed to switch group {0} -> {1}: {2}'.format(
+                    os.getuid(), uinfo.pw_uid, err
+                )
+            )
 
 
 def _run(cmd,
@@ -87,34 +123,19 @@ def _run(cmd,
 
     if runas:
         # Save the original command before munging it
-        orig_cmd = cmd
         try:
             pwd.getpwnam(runas)
         except KeyError:
             msg = 'User \'{0}\' is not available'.format(runas)
             raise CommandExecutionError(msg)
 
-        cmd_prefix = 'su -s {0}'.format(shell)
-
-        # Load the 'nix environment
-        if with_env:
-            cmd_prefix += ' -'
-            cmd = 'cd {0} && {1}'.format(cwd, cmd)
-
-        cmd_prefix += ' {0} -c'.format(runas)
-        cmd = '{0} {1}'.format(cmd_prefix, pipes.quote(cmd))
-
     if not quiet:
         # Put the most common case first
-        if not runas:
-            log.info('Executing command {0} in directory {1}'.format(cmd, cwd))
-        else:
-            log.info(
-                'Executing command {0} as user {1} in directory {2}'.format(
-                    orig_cmd, runas, cwd
-                )
+        log.info(
+            'Executing command {0!r} {1}in directory {2!r}'.format(
+                cmd, 'as user {0!r} '.format(runas) if runas else '', cwd
             )
-        log.debug('Actual command line to execute: {0}'.format(cmd))
+        )
 
     run_env = os.environ
     run_env.update(env)
@@ -122,12 +143,17 @@ def _run(cmd,
               'shell': True,
               'env': run_env,
               'stdout': stdout,
-              'stderr':stderr}
+              'stderr': stderr}
+
+    if runas:
+        kwargs['preexec_fn'] = partial(_chugid, runas)
+
     if not sys.platform.startswith('win'):
         # close_fds is not supported on Windows platforms if you redirect
         # stdin/stdout/stderr
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
+
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
