@@ -39,14 +39,21 @@ def make_json_error(ex):
     response.status_code = (ex.code if isinstance(ex, HTTPException) else 500)
     return response
 
-
-class JobsView(MethodView):
+class SaltAPI(MethodView):
     '''
-    View Salt jobs or create new jobs (run commands)
+    Base class for salt objects
     '''
     def __init__(self):
         self.runners = saltapi.loader.runner(__opts__)
         self.local = salt.client.LocalClient(__opts__['conf_file'])
+
+
+class JobsView(SaltAPI):
+    '''
+    View Salt jobs or create new jobs (run commands)
+    '''
+    def __init__(self):
+        SaltAPI.__init__(self)
 
     def get_job_by_jid(self, jid):
         '''
