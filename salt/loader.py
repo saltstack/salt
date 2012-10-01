@@ -22,7 +22,13 @@ salt_base_path = os.path.dirname(salt.__file__)
 loaded_base_name = 'salt.loaded'
 
 
-def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
+def _create_loader(
+        opts,
+        ext_type,
+        tag,
+        ext_dirs=True,
+        ext_type_dirs=None,
+        base_path=None):
     '''
     Creates Loader instance
 
@@ -31,8 +37,11 @@ def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
         extension types,
         base types.
     '''
+    if base_path:
+        sys_types = os.path.join(base_path, ext_type)
+    else:
+        sys_types = os.path.join(salt_base_path, ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
-    sys_types = os.path.join(salt_base_path, ext_type)
 
     ext_type_types = []
     if ext_dirs:
