@@ -288,6 +288,7 @@ def master_config(path):
             'renderer': 'yaml_jinja',
             'failhard': False,
             'state_top': 'top.sls',
+            'master_tops': {},
             'external_nodes': '',
             'order_masters': False,
             'job_cache': True,
