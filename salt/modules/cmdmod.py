@@ -52,28 +52,36 @@ def _chugid(runas):
         # No need to change user or group
         return
 
+    # No logging can happen on this function
+    #
+    # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
+    #   File "/usr/lib/python2.7/logging/__init__.py", line 870, in emit
+    #     self.flush()
+    #   File "/usr/lib/python2.7/logging/__init__.py", line 832, in flush
+    #     self.stream.flush()
+    # IOError: [Errno 9] Bad file descriptor
+    # Logged from file cmdmod.py, line 59
+    # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
+    #
+    # apparently because we closed fd's on Popen, though if not closed, output
+    # would also go to it's stderr
+
     if os.getgid() != uinfo.pw_gid:
-        logging.getLogger(__name__).debug(
-            'Switching group {0} -> {1}'.format(os.getgid(), uinfo.pw_gid)
-        )
         try:
             os.setgid(uinfo.pw_gid)
-        except Exception, err:
-            logging.getLogger(__name__).error(
-                'Failed to switch group {0} -> {1}: {2}'.format(
+        except OSError, err:
+            raise CommandExecutionError(
+                'Failed to change from gid {0} to {1}. Error: {2}'.format(
                     os.getgid(), uinfo.pw_gid, err
                 )
             )
 
     if os.getuid() != uinfo.pw_uid:
-        logging.getLogger(__name__).debug(
-            'Switching user {0} -> {1}'.format(os.getuid(), uinfo.pw_uid)
-        )
         try:
             os.setuid(uinfo.pw_uid)
-        except Exception, err:
-            logging.getLogger(__name__).error(
-                'Failed to switch group {0} -> {1}: {2}'.format(
+        except OSError, err:
+            raise CommandExecutionError(
+                'Failed to change from uid {0} to {1}. Error: {2}'.format(
                     os.getuid(), uinfo.pw_uid, err
                 )
             )
