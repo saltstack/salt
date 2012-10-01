@@ -524,6 +524,10 @@ class AESFuncs(object):
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
+        # Create a functions load for the master
+        self.functions = salt.loader.minion_mods(self.opts)
+        # Create the tops dict for loading external top data
+        self.tops = salt.loader.tops(self.opts, self.functions)
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
 
@@ -582,6 +586,10 @@ class AESFuncs(object):
         if not 'id' in load:
             log.error('Received call for external nodes without an id')
             return {}
+        ret = {}
+        # The old ext_nodes method is set to be deprecated in 0.10.4
+        # and should be removed within 3-5 releases in favor of the 
+        # "master_tops" system
         if not self.opts['external_nodes']:
             return {}
         if not salt.utils.which(self.opts['external_nodes']):
@@ -596,7 +604,6 @@ class AESFuncs(object):
                     shell=True,
                     stdout=subprocess.PIPE
                     ).communicate()[0])
-        ret = {}
         if 'environment' in ndata:
             env = ndata['environment']
         else:
@@ -609,6 +616,9 @@ class AESFuncs(object):
                 ret[env] = ndata['classes']
             else:
                 return ret
+        # Evaluate all configured master_tops interfaces
+        for fun in self.tops:
+            ret.update(state.tops[fun]())
         return ret
 
     def _serve_file(self, load):

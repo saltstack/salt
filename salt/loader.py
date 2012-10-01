@@ -94,6 +94,16 @@ def pillars(opts, functions):
     return load.filter_func('ext_pillar', pack)
 
 
+def tops(opts, functions):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'tops', 'top')
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.filter_func('top', pack)
+
+
 def states(opts, functions):
     '''
     Returns the state modules
