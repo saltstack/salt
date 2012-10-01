@@ -2,6 +2,9 @@
 The cmd_yaml replaces the original ext_nodes function
 '''
 
+# Import python libs
+import subprocess
+
 # Import third party libs
 import yaml
 
@@ -29,7 +32,12 @@ def top(**kwargs):
                    '').format(__opts__['master_tops']['ext_nodes']))
         return {}
     cmd = '{0} {1}'.format(__opts__['master_tops']['ext_nodes'], kwargs['id'])
-    ndata = yaml.safe_load(__salt__['cmd.run'](cmd))
+    ndata = yaml.safe_load(
+            subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE
+                ).communicate()[0])
     ret = {}
     if 'environment' in ndata:
         env = ndata['environment']
