@@ -164,6 +164,17 @@
 # root of the base environment as defined in "File Server settings" below.
 #state_top: top.sls
 #
+# The master_tops option replaces the external_nodes option by creating
+# a plugable system for the generation of external top data. The external_nodes
+# option is deprecated by the master_tops option.
+# To gain the capabilities of the classic external_nodes system use the
+# following configuration
+#
+# master_tops:
+#   cmd_yaml: <Shell command which returns yaml>
+#
+#master_tops: {}
+# 
 # The external_nodes option allows Salt to gather data that would normally be
 # placed in a top file. The external_nodes option is the executable that will
 # return the ENC data. Remember that Salt will look for external nodes AND top
