@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-# vim: sw=4 ts=4 fenc=utf-8
 """
     :copyright: © 2012 UfSoft.org - :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :license: BSD, see LICENSE for more details
+    :license: Apache 2.0, see LICENSE for more details
 """
 
 # Import python libs
