@@ -52,8 +52,8 @@ class JobsView(SaltAPI):
     '''
     View Salt jobs or create new jobs (run commands)
     '''
-    def __init__(self):
-        SaltAPI.__init__(self)
+    def __init__(self, *args, **kwargs):
+        super(JobsView, self).__init__(self, *args, **kwargs)
 
     def get_job_by_jid(self, jid):
         '''
