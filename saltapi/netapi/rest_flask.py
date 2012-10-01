@@ -9,6 +9,8 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 import salt.client
+import salt.loader
+import salt.runner
 
 def make_json_error(ex):
     '''
@@ -28,19 +30,66 @@ def make_json_error(ex):
     return response
 
 class SaltAPI(MethodView):
-    def __init__(self, *args, **kwargs):
-        super(SaltAPI, self).__init__(*args, **kwargs)
-        self.client = salt.client.LocalClient(__opts__['conf_file'])
+    '''
+    A collection of convenience functions for use when creating API endpoints
+    '''
+    def get_client(self):
+        '''
+        Return, or instantiate and return, a Salt LocalClient
+        '''
+        if not hasattr(self, '_client'):
+            self._client = salt.client.LocalClient(__opts__['conf_file'])
 
-    def get(self):
-        ret = self.client.cmd('*', ['grains.items', 'sys.list_functions'], [[], []])
+        return self._client
+
+    def get_runner(self):
+        '''
+        Return, or instantiate and return, a Salt runner dict
+        '''
+        if not hasattr(self, '_runner'):
+            self._runner = salt.loader.runner(__opts__)
+
+        return self._runner
+
+class JobsView(SaltAPI):
+    '''
+    View Salt jobs or create new jobs (run commands)
+    '''
+    def get_job_by_jid(self, jid):
+        '''
+        Return information on a previously run job
+        '''
+        runner = self.get_runner()
+        runner['jobs.lookup_jid'](jid)
+
+        # TODO: add cache headers based on the keep_jobs settings
+        client = self.get_client()
+        ret = client.cmd('*', ['grains.items', 'sys.list_functions'], [[], []])
         return jsonify(ret)
+
+    def get_jobs_list(self):
+        '''
+        Return a previously run jobs
+        '''
+        runner = self.get_runner()
+        return runner['jobs.list_jobs']()
+
+    def get(self, jid=None):
+        '''
+        View a list of previously run jobs, or fetch a single job
+        '''
+        if jid:
+            return self.get_job_by_jid(jid)
+
+        return self.get_jobs_list()
 
     def post(self):
         '''
-        Return grains and available functions for each minion
+        Run minion commands
         '''
-        ret = self.client.cmd(
+        client = self.get_client()
+        runner = self.get_runner()
+        ret = client.cmd(
                 request.form['tgt'],
                 request.form['cmd'])
         return jsonify(ret)
@@ -51,11 +100,13 @@ def build_app():
 
     '''
     app = Flask(__name__)
+    jobs = JobsView.as_view('jobs')
 
     for code in default_exceptions.iterkeys():
         app.error_handler_spec[None][code] = make_json_error
 
-    app.add_url_rule('/', view_func=SaltAPI.as_view('index'))
+    app.add_url_rule('/jobs', view_func=jobs, methods=['GET', 'POST'])
+    app.add_url_rule('/jobs/<int:jid>', view_func=jobs, methods=['GET'])
 
     return app
 
