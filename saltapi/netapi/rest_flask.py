@@ -96,7 +96,7 @@ def build_app():
         app.error_handler_spec[None][code] = make_json_error
 
     app.add_url_rule('/jobs', view_func=jobs, methods=['GET', 'POST'])
-    app.add_url_rule('/jobs/<int:jid>', view_func=jobs, methods=['GET'])
+    app.add_url_rule('/jobs/<jid>', view_func=jobs, methods=['GET'])
 
     return app
 
