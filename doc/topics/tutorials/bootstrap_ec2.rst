@@ -23,7 +23,8 @@ Here is a sample script::
     # Install saltstack
     add-apt-repository ppa:saltstack/salt -y
     apt-get update -y
-    apt-get install salt -y
+    apt-get install salt-minion -y
+    apt-get install salt-master -y
     apt-get upgrade -y
 
     # Set salt master location and start minion
