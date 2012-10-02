@@ -144,7 +144,16 @@
 #   larry:
 #     - test.ping
 #     - network.*
-
+#
+# The external auth system uses the Salt auth modules to authenticate and
+# validate users to access areas of the Salt system
+#
+# external_auth:
+#   pam:
+#     fred:
+#       - keys: ro
+#       - file_roots: ro
+#       - 'G@os:RedHat': test.ping
 
 #####    Master Module Management    #####
 ##########################################
