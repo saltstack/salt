@@ -39,6 +39,7 @@ import salt.payload
 import salt.pillar
 import salt.state
 import salt.runner
+import salt.auth
 import salt.utils.event
 import salt.utils.verify
 from salt.utils.debug import enable_sigusr1_handler
@@ -1084,6 +1085,8 @@ class ClearFuncs(object):
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
+        # Make an Auth object
+        self.loadauth = salt.auth.LoadAuth(opts)
 
     def _send_cluster(self):
         '''
@@ -1368,6 +1371,9 @@ class ClearFuncs(object):
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         '''
+        # Check for external auth calls
+        if 'eauth' in clear_load:
+            pass
         # Verify that the caller has root on master
         if 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
