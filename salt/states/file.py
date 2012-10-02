@@ -334,8 +334,8 @@ def _check_dir_meta(
     if not group is None and group != stats['group']:
         changes['group'] = group
     # Normalize the dir mode
-    smode = __manage_mode(stats['mode'])
-    mode = __manage_mode(mode)
+    smode = __salt__['config.manage_mode'](stats['mode'])
+    mode = __salt__['config.manage_mode'](mode)
     if not mode is None and mode != smode:
         changes['mode'] = mode
     if changes:
@@ -730,7 +730,7 @@ def directory(name,
         Require other resources such as packages or files
 
     '''
-    mode = __manage_mode(mode)
+    mode = __salt__['config.manage_mode'](mode)
     ret = {'name': name,
            'changes': {},
            'result': True,
