@@ -186,7 +186,7 @@ def _error(ret, err_msg):
     return ret
 
 
-def check_recurse(
+def _check_recurse(
         name,
         source,
         clean,
