@@ -54,7 +54,7 @@ class LoadAuth(object):
             return False
         return False
 
-    def auth(self, load):
+    def time_auth(self, load):
         '''
         Make sure that all failures happen in the same amount of time
         '''
@@ -70,4 +70,20 @@ class LoadAuth(object):
         while start + r_time > time.time():
             time.sleep(0.001)
         return False
+
+    def mk_token(self, load):
+        '''
+        Run time_auth and create a token. Return False or the token
+        '''
+        ret = time_auth(load)
+        if ret is False:
+            return ret
+        tok = hashlib.md5(os.urandom(512)).hexdigest()
+        t_path = os.path.join(opts['token_dir'], tok)
+        while os.path.isfile(t_path):
+            tok = hashlib.md5(os.urandom(512)).hexdigest()
+            t_path = os.path.join(opts['token_dir'], tok)
+        fcall = salt.utils.format_call(self.auth[fstr], load)
+        open(t_path, 'w+').write(fcall['args'][0])
+        return tok
 
