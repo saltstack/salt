@@ -24,9 +24,23 @@ from integration import TestDaemon
 try:
     import xmlrunner
 except ImportError:
-    pass
+    xmlrunner = None
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+
+
+try:
+    import coverage
+    # Cover any subprocess
+    coverage.process_startup()
+    # Setup coverage
+    code_coverage = coverage.coverage(
+        branch=True,
+        source=[os.path.join(os.path.dirname(TEST_DIR), 'salt')],
+    )
+except ImportError:
+    code_coverage = None
+
 
 REQUIRED_OPEN_FILES = 2048
 
@@ -229,7 +243,47 @@ def parse_opts():
             help='Do NOT show the overall tests result'
     )
 
+    parser.add_option('--coverage',
+            default=False,
+            action='store_true',
+            help='Run tests and report code coverage'
+    )
+
     options, _ = parser.parse_args()
+
+    if options.xmlout and xmlrunner is None:
+        parser.error('\'--xml\' is not available. The xmlrunner library '
+                     'is not installed.')
+
+    if options.coverage and code_coverage is None:
+        parser.error(
+            'Cannot run tests with coverage report. '
+            'Please install coverage>=3.5.3'
+        )
+    elif options.coverage:
+        coverage_version = tuple(
+            [int(part) for part in coverage.__version__.split('.')]
+        )
+        if coverage_version < (3, 5, 3):
+            # Should we just print the error instead of exiting?
+            parser.error(
+                'Versions lower than 3.5.3 of the coverage library are know '
+                'to produce incorrect results. Please consider upgrading...'
+            )
+
+        if any((options.module, options.client, options.shell, options.unit,
+                options.state, options.runner, options.name,
+                os.geteuid() is not 0, not options.run_destructive)):
+            parser.error(
+                'No sense in generating the tests coverage report when not '
+                'running the full test suite, including the destructive '
+                'tests, as \'root\'. It would only produce incorrect '
+                'results.'
+            )
+
+        # Update environ so that any subprocess started on test are also
+        # included in the report
+        os.environ['COVERAGE_PROCESS_START'] = '1'
 
     # Setup logging
     formatter = logging.Formatter(
@@ -237,7 +291,7 @@ def parse_opts():
         '[%(levelname)-8s] %(message)s',
         datefmt='%H:%M:%S'
     )
-    logfile = os.path.join(tempfile.gettempdir(), 'runtests.log')
+    logfile = os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
     filehandler = logging.FileHandler(
         mode='w',           # Not preserved between re-runs
         filename=logfile
@@ -276,6 +330,9 @@ def parse_opts():
 
 if __name__ == '__main__':
     opts = parse_opts()
+    if opts.coverage:
+        code_coverage.start()
+
     overall_status = []
     status = run_integration_tests(opts)
     overall_status.extend(status)
@@ -283,11 +340,10 @@ if __name__ == '__main__':
     overall_status.extend(status)
     false_count = overall_status.count(False)
 
-    show_report = False
-    for (name, results) in TEST_RESULTS:
-        if results.failures or results.errors or results.skipped:
-            show_report = True
-            break
+    if opts.coverage:
+        print('Stopping and saving coverage info')
+        code_coverage.stop()
+        code_coverage.save()
 
     if opts.no_report:
         if false_count > 0:
@@ -341,6 +397,22 @@ if __name__ == '__main__':
         )
 
     print_header('  Overall Tests Report  ', sep='=', centered=True, inline=True)
+
+    if opts.coverage:
+        report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
+
+        print(
+            '\nGenerating Coverage HTML Report Under {0!r} ...'.format(
+                report_dir
+            )
+        ),
+        sys.stdout.flush()
+
+        if os.path.isdir(report_dir):
+            import shutil
+            shutil.rmtree(report_dir)
+        code_coverage.html_report(directory=report_dir)
+        print('Done.\n')
 
     if false_count > 0:
         sys.exit(1)

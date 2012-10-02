@@ -148,7 +148,8 @@ class TestDaemon(object):
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
                     ],
-                   pwd.getpwuid(os.getuid())[0])
+                   pwd.getpwuid(os.getuid()).pw_name)
+
         # Set up PATH to mockbin
         self._enter_mockbin()
 
