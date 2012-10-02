@@ -329,11 +329,11 @@ def master_config(path):
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
-    opts['tokens'] = os.path.join(opts['cachedir'], 'tokens')
+    opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
                             'sock_dir', 'key_logfile', 'extension_modules',
-                            'autosign_file', 'tokens'])
+                            'autosign_file', 'token_dir'])
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
