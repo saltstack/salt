@@ -276,6 +276,7 @@ class Publisher(multiprocessing.Process):
         super(Publisher, self).__init__()
         self.opts = opts
 
+
     def run(self):
         '''
         Bind to the interface specified in the configuration file
@@ -586,7 +587,7 @@ class AESFuncs(object):
             return {}
         ret = {}
         # The old ext_nodes method is set to be deprecated in 0.10.4
-        # and should be removed within 3-5 releases in favor of the 
+        # and should be removed within 3-5 releases in favor of the
         # "master_tops" system
         if not self.opts['external_nodes']:
             return {}
