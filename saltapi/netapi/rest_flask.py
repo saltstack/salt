@@ -108,7 +108,7 @@ def build_app():
     '''
     Build the Flask app
     '''
-    app = Flask('rest_flask')
+    app = Flask(__name__)
 
     for code in exceptions.default_exceptions.iterkeys():
         app.error_handler_spec[None][code] = make_json_error
