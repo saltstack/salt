@@ -6,9 +6,9 @@ Salt was added to the OpenCSW package repository in September of 2012 by Romeo T
 
 Comments and patches for better support on these platforms is very welcome. Currently at version 0.10.3 of salt, remote execution works good, grain detection is good and service control with SMF is supported. Work is underway to fill in the remaining gaps by adding support for the following: 
 
-   'pkg' states with pkgadd and pkgutil modules
-   support for solaris cron
-   support for user and group management
+1.   'pkg' states with pkgadd and pkgutil modules
+2.   support for solaris cron
+3.   support for user and group management
 
 We hope to have all of the above included in v0.10.4 of Salt.
 
