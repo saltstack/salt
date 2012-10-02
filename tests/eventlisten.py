@@ -51,8 +51,8 @@ def listen(sock_dir, node):
     Attach to the pub socket and grab messages
     '''
     event = salt.utils.event.SaltEvent(
+            node,
             sock_dir,
-            node
             )
     while True:
         ret = event.get_event(full=True)
