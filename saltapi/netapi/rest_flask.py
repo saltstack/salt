@@ -20,25 +20,6 @@ def __virtual__():
 
     return 'rest'
 
-
-def make_json_error(ex):
-    '''
-    Creates a JSON-oriented Flask app.
-
-    All error responses that you don't specifically
-    manage yourself will have application/json content
-    type, and will contain JSON like this (just an example)::
-
-        { "message": "405: Method Not Allowed" }
-
-    http://flask.pocoo.org/snippets/83/
-
-    '''
-    response = jsonify(message=str(ex))
-    response.status_code = (ex.code
-            if isinstance(ex, exceptions.HTTPException) else 500)
-    return response
-
 class SaltAPI(MethodView):
     '''
     Base class for salt objects
@@ -46,7 +27,6 @@ class SaltAPI(MethodView):
     def __init__(self, *args, **kwargs):
         self.runners = saltapi.loader.runner(__opts__)
         self.local = salt.client.LocalClient(__opts__['conf_file'])
-
 
 class JobsView(SaltAPI):
     '''
@@ -103,15 +83,29 @@ class RunnersView(SaltAPI):
         ret = self.runners[cmd]()
         return jsonify({'return': ret})
 
-
 def build_app():
     '''
     Build the Flask app
     '''
     app = Flask(__name__)
 
-    for code in exceptions.default_exceptions.iterkeys():
-        app.error_handler_spec[None][code] = make_json_error
+    def make_json_error(ex):
+        '''
+        Return errors as JSON objects
+        '''
+        status = getattr(ex, 'code', 500)
+
+        response = jsonify(message='Error {0}: {1}'.format(
+            status,
+            ex if app.debug else 'Internal server error',
+        ))
+        response.status_code = status
+
+        return response
+
+    # Allow using custom error handler when debug=True
+    app.config['PROPAGATE_EXCEPTIONS'] = False
+    app.error_handler_spec[None][500] = make_json_error
 
     jobs = JobsView.as_view('jobs')
     app.add_url_rule('/jobs', view_func=jobs, methods=['GET', 'POST'])
