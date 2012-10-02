@@ -116,7 +116,7 @@ def auth(opts):
     Returns the returner modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
-    return load.filter_func('auth')
+    return load.gen_functions()
 
 
 def states(opts, functions):
