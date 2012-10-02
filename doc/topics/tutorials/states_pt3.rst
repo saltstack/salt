@@ -21,7 +21,7 @@ value in the master config.
 .. _`Jinja2`: http://jinja.pocoo.org/
 
 All states are passed through a templating system when they are initially read.
-To make use of the templating system, simple add some templating markup.
+To make use of the templating system, simply add some templating markup.
 An example of an sls module with templating markup may look like this:
 
 .. code-block:: yaml
