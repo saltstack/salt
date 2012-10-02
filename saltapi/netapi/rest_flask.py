@@ -24,7 +24,8 @@ class SaltAPI(MethodView):
     '''
     Base class for salt objects
     '''
-    def __init__(self, *args, **kwargs):
+    def __init__(self, app, *args, **kwargs):
+        self.app = app
         self.runners = saltapi.loader.runner(__opts__)
         self.local = salt.client.LocalClient(__opts__['conf_file'])
 
@@ -107,11 +108,11 @@ def build_app():
     app.config['PROPAGATE_EXCEPTIONS'] = False
     app.error_handler_spec[None][500] = make_json_error
 
-    jobs = JobsView.as_view('jobs')
+    jobs = JobsView.as_view('jobs', app=app)
     app.add_url_rule('/jobs', view_func=jobs, methods=['GET', 'POST'])
     app.add_url_rule('/jobs/<jid>', view_func=jobs, methods=['GET'])
 
-    runners = RunnersView.as_view('runners')
+    runners = RunnersView.as_view('runners', app=app)
     app.add_url_rule('/runners', view_func=runners, methods=['GET', 'POST'])
 
     return app
