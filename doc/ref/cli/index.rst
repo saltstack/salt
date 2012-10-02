@@ -135,6 +135,22 @@ Calling the Function
 The function to call on the specified target is placed after the target
 specification.
 
+.. versionadded:: 0.9.8
+
+Functions may also accept arguments, space-delimited:
+
+.. code-block:: bash
+
+    salt '*' cmd.exec_code python 'import sys; print sys.version'
+
+Optional, keyword arguments are also supported:
+
+.. code-block:: bash
+
+    salt '*' pip.install salt timeout=5 upgrade=True
+
+They are always in the form of ``kwarg=argument``. 
+
 Finding available minion functions
 ``````````````````````````````````
 
