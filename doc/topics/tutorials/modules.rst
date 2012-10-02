@@ -65,3 +65,9 @@ arguments
 Space-delimited arguments to the function::
 
     salt '*' cmd.exec_code python 'import sys; print sys.version'
+
+Optional, keyword arguments are also supported::
+
+    salt '*' pip.install salt timeout=5 upgrade=True
+
+They are always in the form of ``kwarg=argument``.
