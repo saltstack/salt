@@ -20,6 +20,7 @@ import random
 # Import Salt libs
 import salt.loader
 import salt.utils
+import salt.payload
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class LoadAuth(object):
     def __init__(self, opts):
         self.opts = opts
         self.max_fail = 1.0
+        self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
 
     def auth_call(self, load):
@@ -66,7 +68,10 @@ class LoadAuth(object):
         if f_time > self.max_fail:
             self.max_fail = f_time
         deviation = self.max_time / 4
-        r_time = random.uniform(self.max_time - deviation, self.max_time + deviation)
+        r_time = random.uniform(
+                self.max_time - deviation,
+                self.max_time + deviation
+                )
         while start + r_time > time.time():
             time.sleep(0.001)
         return False
@@ -84,6 +89,20 @@ class LoadAuth(object):
             tok = hashlib.md5(os.urandom(512)).hexdigest()
             t_path = os.path.join(opts['token_dir'], tok)
         fcall = salt.utils.format_call(self.auth[fstr], load)
-        open(t_path, 'w+').write(fcall['args'][0])
+        tdata = {'start': time.time(),
+                 'expire': time.time() + self.opts['token_expire'],
+                 'name': fcall['args'][0],}
+        with open(t_path, 'w+') as fp_:
+            fp_.write(self.serial.dumps(tdata))
         return tok
 
+    def get_tok(self, tok):
+        '''
+        Return the name associate with the token, or False ifthe token is not valid
+        '''
+        t_path = os.path.join(opts['token_dir'], tok)
+        if not os.path.isfile:
+            return False
+        with open(t_path, 'r') as fp_:
+            return self.serial.loads(fp_.read())
+        return False
