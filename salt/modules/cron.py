@@ -93,7 +93,10 @@ def raw_cron(user):
 
         salt '*' cron.raw_cron root
     '''
-    cmd = 'crontab -l -u {0}'.format(user)
+    if __grains__['os'] == 'Solaris':
+        cmd = 'crontab -l {0}'.format(user)
+    else:
+        cmd = 'crontab -l -u {0}'.format(user)
     return __salt__['cmd.run_stdout'](cmd)
 
 
