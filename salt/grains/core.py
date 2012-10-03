@@ -237,6 +237,15 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             elif 'virtio' in model:
                 grains['virtual'] = 'kvm'
+            # Break out of the loop so the next log message is not issued
+            break
+    else:
+        log.warn(
+            'Both \'dmidecode\' and \'lspci\' failed to execute, either '
+            'because they do not exist on the system of the user running '
+            'this instance does not have the necessary permissions to '
+            'execute them. Grains output might not be accurate.'
+        )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
