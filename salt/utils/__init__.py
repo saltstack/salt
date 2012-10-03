@@ -25,7 +25,6 @@ import salt.minion
 import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
-log = logging.getLogger(__name__)
 
 # Do not use these color declarations, use get_colors()
 # These color declarations will be removed in the future
@@ -139,7 +138,7 @@ def daemonize():
             sys.exit(0)
     except OSError as exc:
         msg = 'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
-        log.error(msg)
+        logging.getLogger(__name__).error(msg)
         sys.exit(1)
 
     # decouple from parent environment
@@ -154,7 +153,7 @@ def daemonize():
             sys.exit(0)
     except OSError as exc:
         msg = 'fork #2 failed: {0} ({1})'
-        log.error(msg.format(exc.errno, exc.strerror))
+        logging.getLogger(__name__).error(msg.format(exc.errno, exc.strerror))
         sys.exit(1)
 
     # A normal daemonization redirects the process output to /dev/null.
@@ -327,7 +326,7 @@ def dns_check(addr, safe=False):
                     # If logging is not configured it also means that either
                     # the master or minion instance calling this hasn't even
                     # started running
-                    log.error(err)
+                    logging.getLogger(__name__).error(err)
                 raise SaltClientError
             else:
                 err = err.format(addr)

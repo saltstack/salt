@@ -18,6 +18,7 @@ import socket
 import sys
 import re
 import platform
+import logging
 
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
@@ -25,12 +26,18 @@ from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'enterprise', 'ovs', 'system')
 
+import salt.log
 import salt.utils
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-__salt__ = {'cmd.run': salt.modules.cmdmod._run_quiet}
+__salt__ = {
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
+}
+
+log = logging.getLogger(__name__)
 
 
 def _windows_cpudata():
@@ -122,7 +129,7 @@ def _sunos_cpudata(osdata):
     for line in __salt__['cmd.run']('/usr/sbin/psrinfo 2>/dev/null').split('\n'):
         grains['num_cpus'] += 1
     grains['cpu_model'] = __salt__['cmd.run']('kstat -p cpu_info:0:cpu_info0:implementation').split()[1].strip()
-    
+
     return grains
 
 
@@ -150,9 +157,9 @@ def _memdata(osdata):
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
     elif osdata['kernel'] == 'SunOS':
         for line in __salt__['cmd.run']('/usr/sbin/prtconf 2>/dev/null').split('\n'):
-            comps = line.split(' ')	
+            comps = line.split(' ')
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
-                grains['mem_total'] = int(comps[2].strip()) 
+                grains['mem_total'] = int(comps[2].strip())
     elif osdata['kernel'] == 'Windows':
         for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
             comps = line.split(':')
@@ -177,38 +184,69 @@ def _virtual(osdata):
     lspci = salt.utils.which('lspci')
     dmidecode = salt.utils.which('dmidecode')
 
-    if dmidecode:
-        output = __salt__['cmd.run']('dmidecode')
-        # Product Name: VirtualBox
-        if 'Vendor: QEMU' in output:
-            # FIXME: Make this detect between kvm or qemu
-            grains['virtual'] = 'kvm'
-        if 'Vendor: Bochs' in output:
-            grains['virtual'] = 'kvm'
-        elif 'VirtualBox' in output:
-            grains['virtual'] = 'VirtualBox'
-        # Product Name: VMware Virtual Platform
-        elif 'VMware' in output:
-            grains['virtual'] = 'VMware'
-        # Manufacturer: Microsoft Corporation
-        # Product Name: Virtual Machine
-        elif 'Manufacturer: Microsoft' in output and 'Virtual Machine' in output:
-            grains['virtual'] = 'VirtualPC'
-        # Manufacturer: Parallels Software International Inc.
-        elif 'Parallels Software' in output:
-            grains['virtual'] = 'Parallels'
-    # Fall back to lspci if dmidecode isn't available
-    elif lspci:
-        model = __salt__['cmd.run']('lspci').lower()
-        if 'vmware' in model:
-            grains['virtual'] = 'VMware'
-        # 00:04.0 System peripheral: InnoTek Systemberatung GmbH VirtualBox Guest Service
-        elif 'virtualbox' in model:
-            grains['virtual'] = 'VirtualBox'
-        elif 'qemu' in model:
-            grains['virtual'] = 'kvm'
-        elif 'virtio' in model:
-            grains['virtual'] = 'kvm'
+    for command in ('dmidecode', 'lspci'):
+        which = salt.utils.which(command)
+
+        if which is None:
+            continue
+
+        ret = __salt__['cmd.run_all'](which)
+
+        if ret['retcode'] > 0:
+            if salt.log.is_logging_configured():
+                log.warn(
+                    'Although \'{0}\' was found in path, the current user '
+                    'cannot execute it. Grains output might not be '
+                    'accurate.'.format(command)
+                )
+            continue
+
+        output = ret['stdout']
+
+        if command == 'dmidecode':
+            # Product Name: VirtualBox
+            if 'Vendor: QEMU' in output:
+                # FIXME: Make this detect between kvm or qemu
+                grains['virtual'] = 'kvm'
+            if 'Vendor: Bochs' in output:
+                grains['virtual'] = 'kvm'
+            elif 'VirtualBox' in output:
+                grains['virtual'] = 'VirtualBox'
+            # Product Name: VMware Virtual Platform
+            elif 'VMware' in output:
+                grains['virtual'] = 'VMware'
+            # Manufacturer: Microsoft Corporation
+            # Product Name: Virtual Machine
+            elif 'Manufacturer: Microsoft' in output and 'Virtual Machine' in output:
+                grains['virtual'] = 'VirtualPC'
+            # Manufacturer: Parallels Software International Inc.
+            elif 'Parallels Software' in output:
+                grains['virtual'] = 'Parallels'
+            # Break out of the loop, lspci parsing is not necessary
+            break
+        elif command == 'lspci':
+            # dmidecode not available or the user does not have the necessary
+            # permissions
+            model = output.lower()
+            if 'vmware' in model:
+                grains['virtual'] = 'VMware'
+            # 00:04.0 System peripheral: InnoTek Systemberatung GmbH VirtualBox Guest Service
+            elif 'virtualbox' in model:
+                grains['virtual'] = 'VirtualBox'
+            elif 'qemu' in model:
+                grains['virtual'] = 'kvm'
+            elif 'virtio' in model:
+                grains['virtual'] = 'kvm'
+            # Break out of the loop so the next log message is not issued
+            break
+    else:
+        log.warn(
+            'Both \'dmidecode\' and \'lspci\' failed to execute, either '
+            'because they do not exist on the system of the user running '
+            'this instance does not have the necessary permissions to '
+            'execute them. Grains output might not be accurate.'
+        )
+
     choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
@@ -268,7 +306,7 @@ def _virtual(osdata):
         # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
         zonename = salt.utils.which('zonename')
         if zonename:
-            zone = __salt__['cmd.run']('{0}'.format(zonename)).strip() 
+            zone = __salt__['cmd.run']('{0}'.format(zonename)).strip()
             if zone != "global":
                 grains['virtual'] = 'zone'
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
@@ -338,7 +376,7 @@ def id_():
     '''
     return {'id': __opts__['id']}
 
-# This maps (at most) the first ten characters (no spaces, lowercased) of 
+# This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
 _os_name_map = {
     'redhatente': 'RedHat',

@@ -202,6 +202,14 @@ def _run_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
                 quiet=True, shell=shell, env=env)['stdout']
 
 
+def _run_all_quiet(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
+    '''
+    Helper for running commands quietly for minion startup.
+    Returns a dict of return data
+    '''
+    return _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=True)
+
+
 def run(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
     '''
     Execute the passed command and return the output as a string
@@ -251,6 +259,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
     ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)
+
     if ret['retcode'] != 0:
         rcode = ret['retcode']
         msg = 'Command \'{0}\' failed with return code: {1}'

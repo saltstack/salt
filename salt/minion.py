@@ -99,6 +99,10 @@ class SMinion(object):
     def __init__(self, opts):
         # Generate all of the minion side components
         self.opts = opts
+        # Late setup the of the opts grains, so we can log from the grains
+        # module
+        opts['grains'] = salt.loader.grains(opts)
+        self.opts = opts
         self.gen_modules()
 
     def gen_modules(self):
@@ -128,6 +132,9 @@ class Minion(object):
         '''
         Pass in the options dict
         '''
+        # Late setup the of the opts grains, so we can log from the grains
+        # module
+        opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self.__prep_mod_opts()
