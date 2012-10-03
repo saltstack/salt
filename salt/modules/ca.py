@@ -11,7 +11,7 @@ REQUIREMENT 2:
 Add the following values in /etc/salt/minion for the
 CA module to function properly::
 
-ca.cert_base_path: '/etc/pki/koji'
+ca.cert_base_path: '/etc/pki'
 '''
 
 # Import Python libs
@@ -167,7 +167,7 @@ def create_ca(
         organization, default is "Salt Stack"
     OU
         organizational unit, default is None
-    email
+    emailAddress
         email address for the CA owner, default is 'xyz@pdq.net'
 
     Writes out a CA certificate based upon defined config values. If the file
@@ -205,7 +205,7 @@ def create_ca(
     ca.get_subject().emailAddress = emailAddress
 
     ca.gmtime_adj_notBefore(0)
-    ca.gmtime_adj_notAfter(days * 24 * 60 * 60)
+    ca.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
     ca.set_issuer(ca.get_subject())
     ca.set_pubkey(key)
 
@@ -441,7 +441,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     cert = OpenSSL.crypto.X509()
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(days * 24 * 60 * 60)
+    cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
     cert.set_serial_number(_new_serial(ca_name, CN))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
