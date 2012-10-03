@@ -258,7 +258,7 @@ def run_all(cmd, cwd=None, runas=None, shell=DEFAULT_SHELL, env=()):
 
         salt '*' cmd.run_all "ls -l | awk '/foo/{print $2}'"
     '''
-    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env, quiet=quiet)
+    ret = _run(cmd, runas=runas, cwd=cwd, shell=shell, env=env)
 
     if ret['retcode'] != 0:
         rcode = ret['retcode']
