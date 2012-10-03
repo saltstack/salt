@@ -13,7 +13,6 @@ import getpass
 from salt.version import __version__
 
 try:
-    import salt.config
     from salt.utils import parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as e:

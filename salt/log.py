@@ -52,6 +52,11 @@ def is_logfile_configured():
     return __LOGFILE_CONFIGURED
 
 
+def is_logging_configured():
+    global __CONSOLE_CONFIGURED, __LOGFILE_CONFIGURED
+    return __CONSOLE_CONFIGURED or __LOGFILE_CONFIGURED
+
+
 class Logging(LoggingLoggerClass):
     def __new__(cls, logger_name, *args, **kwargs):
         global MAX_LOGGER_MODNAME_LENGTH
