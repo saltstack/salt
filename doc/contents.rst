@@ -16,6 +16,7 @@ Full Table of Contents
     topics/tutorials/states*
     topics/tutorials/firewall
     topics/tutorials/bootstrap_ec2
+    topics/tutorials/esky
     topics/tutorials/preseed_key
     topics/tutorials/standalone_minion
     topics/pillar/index
