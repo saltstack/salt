@@ -280,7 +280,8 @@ class LocalClient(object):
             arg,
             expr_form,
             ret,
-            timeout):
+            timeout,
+            **kwargs):
         '''
         Prep the job dir and send minions the pub.
         Returns a dict of (checked) pub_data or an empty dict.
@@ -300,7 +301,8 @@ class LocalClient(object):
             expr_form,
             ret,
             jid=jid,
-            timeout=timeout or self.opts['timeout'])
+            timeout=timeout or self.opts['timeout'],
+            **kwargs)
 
         return self._check_pub_data(pub_data)
 
