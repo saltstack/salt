@@ -151,9 +151,7 @@
 # external_auth:
 #   pam:
 #     fred:
-#       - keys: ro
-#       - file_roots: ro
-#       - 'G@os:RedHat': test.ping
+#       - test.*
 
 #####    Master Module Management    #####
 ##########################################
