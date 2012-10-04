@@ -59,9 +59,8 @@ def _changes(
         # Scan over the users
         if lusr['name'] == name:
             found = True
-            # No need to sort the groups for comparison against values from
-            # user.getent, since putting them into a set does this already
-            wanted_groups = list(set((groups or []) + (optional_groups or [])))
+            wanted_groups = sorted(
+                    list(set((groups or []) + (optional_groups or []))))
             if uid:
                 if lusr['uid'] != uid:
                     change['uid'] = uid
