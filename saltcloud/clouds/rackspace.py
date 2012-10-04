@@ -90,7 +90,9 @@ def create(vm_):
         host=data.public_ips[0],
         username='root',
         password=data.extra['password'],
-        script=deploy_script.script)
+        script=deploy_script.script,
+        name=vm_['name'],
+        sock_dir=__opts__['sock_dir'])
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
     else:
