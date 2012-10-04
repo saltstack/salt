@@ -55,9 +55,9 @@ class LoadAuth(object):
         '''
         Return the token and set the cache data for use 
         '''
-        if not 'fun' in load:
+        if not 'eauth' in load:
             return False
-        fstr = '{0}.auth'.format(load['fun'])
+        fstr = '{0}.auth'.format(load['eauth'])
         if not fstr in self.auth:
             return False
         fcall = salt.utils.format_call(self.auth[fstr], load)
@@ -83,10 +83,10 @@ class LoadAuth(object):
         f_time = time.time() - start
         if f_time > self.max_fail:
             self.max_fail = f_time
-        deviation = self.max_time / 4
+        deviation = self.max_fail / 4
         r_time = random.uniform(
-                self.max_time - deviation,
-                self.max_time + deviation
+                self.max_fail - deviation,
+                self.max_fail + deviation
                 )
         while start + r_time > time.time():
             time.sleep(0.001)

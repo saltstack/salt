@@ -1384,7 +1384,7 @@ class ClearFuncs(object):
                 return ''
             good = False
             for regex in self.opts['external_auth'][extra['eauth']][name]:
-                if re.match(regex, extra['fun']):
+                if re.match(regex, clear_load['fun']):
                     good = True
             if not good:
                 return ''
