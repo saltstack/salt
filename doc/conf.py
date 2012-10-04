@@ -33,32 +33,32 @@ class Mock(object):
 
 MOCK_MODULES = [
     # salt core
-    'yaml',
-    'yaml.nodes',
-    'yaml.constructor',
-    'msgpack',
-    'zmq',
     'Crypto',
     'Crypto.Cipher',
     'Crypto.Hash',
     'Crypto.PublicKey',
     'Crypto.Random',
     'M2Crypto',
+    'msgpack',
+    'yaml',
+    'yaml.constructor',
+    'yaml.nodes',
+    'zmq',
     # modules, renderers, states, returners, et al
+    'django',
+    'libvirt',
+    'mako',
+    'mako.template',
     'MySQLdb',
     'MySQLdb.cursors',
     'psutil',
-    'libvirt',
-    'yum',
-    'mako',
-    'mako.template',
+    'pycassa',
     'pymongo',
     'redis',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
-    'pycassa',
-    'django',
+    'yum',
 ]
 
 for mod_name in MOCK_MODULES:
