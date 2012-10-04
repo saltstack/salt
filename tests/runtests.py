@@ -340,12 +340,11 @@ if __name__ == '__main__':
     overall_status.extend(status)
     false_count = overall_status.count(False)
 
-    if opts.coverage:
-        print('Stopping and saving coverage info')
-        code_coverage.stop()
-        code_coverage.save()
-
     if opts.no_report:
+        if opts.coverage:
+            code_coverage.stop()
+            code_coverage.save()
+
         if false_count > 0:
             sys.exit(1)
         else:
@@ -399,8 +398,11 @@ if __name__ == '__main__':
     print_header('  Overall Tests Report  ', sep='=', centered=True, inline=True)
 
     if opts.coverage:
-        report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
+        print('Stopping and saving coverage info')
+        code_coverage.stop()
+        code_coverage.save()
 
+        report_dir = os.path.join(os.path.dirname(__file__), 'coverage-report')
         print(
             '\nGenerating Coverage HTML Report Under {0!r} ...'.format(
                 report_dir
