@@ -40,9 +40,9 @@ class LoadAuth(object):
         Return the primary name associate with the load, if an empty string
         is returned then the load does not match the function
         '''
-        if not 'fun' in load:
+        if not 'eauth' in load:
             return ''
-        fstr = '{0}.auth'.format(load['fun'])
+        fstr = '{0}.auth'.format(load['eauth'])
         if not fstr in self.auth:
             return ''
         fcall = salt.utils.format_call(self.auth[fstr], load)
