@@ -275,6 +275,7 @@ def master_config(path):
             'syndic_master': '',
             'runner_dirs': [],
             'client_acl': {},
+            'external_auth', {},
             'file_buffer_size': 1048576,
             'max_open_files': 100000,
             'hash_type': 'md5',
