@@ -196,6 +196,9 @@ Salt is many splendid things.
     management. The possibilities are endless and Salt's future looks
     bright.
 
+:doc:`Testing Salt <topics/tests/index>`
+    A howto for writing unit tests and integration tests.
+
 :doc:`Python API interface <ref/python-api>`
     Use Salt programmatically from your own scripts and programs easily and
     simply via ``import salt``.

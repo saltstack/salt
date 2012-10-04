@@ -27,6 +27,7 @@ Full Table of Contents
     topics/community
     topics/projects/index
     topics/event/index
+    topics/tests/*
 
     ref/index
     ref/modules/*
