@@ -317,34 +317,19 @@ class LocalClient(object):
         Execute a salt command and return.
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        try:
-            jid = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type']
-                    )
-        except Exception:
-            jid = ''
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            return {}
-        elif not pub_data['jid']:
-            return {}
-        return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
+            return pub_data
+
+        return self.get_returns(pub_data['jid'], pub_data['minions'],
+                timeout or self.opts['timeout'])
 
     def cmd_cli(
         self,
@@ -361,43 +346,27 @@ class LocalClient(object):
         output
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        try:
-            jid = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type']
-                    )
-        except Exception:
-            jid = ''
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            print('Failed to connect to the Master, is the Salt Master running?')
-            yield {}
-        elif not pub_data['jid']:
-            print('No minions match the target')
-            yield {}
+            yield pub_data
         else:
             for fn_ret in self.get_cli_event_returns(pub_data['jid'],
                     pub_data['minions'],
-                    timeout,
+                    timeout or self.opts['timeout'],
                     tgt,
                     expr_form,
                     verbose):
+
                 if not fn_ret:
                     continue
+
                 yield fn_ret
 
     def cmd_iter(
@@ -414,30 +383,16 @@ class LocalClient(object):
         received
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            yield {}
-        elif not pub_data['jid']:
-            yield {}
+            yield pub_data
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
@@ -459,30 +414,16 @@ class LocalClient(object):
         Execute a salt command and return
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            yield {}
-        elif not pub_data['jid']:
-            yield {}
+            yield pub_data
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
@@ -503,30 +444,17 @@ class LocalClient(object):
         Execute a salt command and return
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            return {}
-        elif not pub_data['jid']:
-            return {}
+            return pub_data
+
         return (self.get_cli_static_event_returns(pub_data['jid'],
                     pub_data['minions'],
                     timeout,
