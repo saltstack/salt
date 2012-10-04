@@ -61,7 +61,7 @@ def _changes(
             found = True
             # No need to sort the groups for comparison against values from
             # user.getent, since putting them into a set does this already
-            wanted_groups = sorted(list(set(groups + optional_groups)))
+            wanted_groups = list(set(groups + optional_groups))
             if uid:
                 if lusr['uid'] != uid:
                     change['uid'] = uid
