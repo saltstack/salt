@@ -314,7 +314,8 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return.
         '''
@@ -325,7 +326,8 @@ class LocalClient(object):
             arg,
             expr_form,
             ret,
-            timeout)
+            timeout,
+            **kwargs)
 
         if not pub_data:
             return pub_data
@@ -342,7 +344,8 @@ class LocalClient(object):
         expr_form='glob',
         ret='',
         verbose=False,
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return data conditioned for command line
         output
@@ -354,7 +357,8 @@ class LocalClient(object):
             arg,
             expr_form,
             ret,
-            timeout)
+            timeout,
+            **kwargs)
 
         if not pub_data:
             yield pub_data
@@ -379,7 +383,8 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return an iterator to return data as it is
         received
@@ -391,7 +396,8 @@ class LocalClient(object):
             arg,
             expr_form,
             ret,
-            timeout)
+            timeout,
+            **kwargs)
 
         if not pub_data:
             yield pub_data
@@ -411,7 +417,8 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return
         '''
@@ -422,7 +429,8 @@ class LocalClient(object):
             arg,
             expr_form,
             ret,
-            timeout)
+            timeout,
+            **kwargs)
 
         if not pub_data:
             yield pub_data
@@ -441,7 +449,8 @@ class LocalClient(object):
         expr_form='glob',
         ret='',
         verbose=False,
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return
         '''
@@ -452,7 +461,8 @@ class LocalClient(object):
             arg,
             expr_form,
             ret,
-            timeout)
+            timeout,
+            **kwargs)
 
         if not pub_data:
             return pub_data
