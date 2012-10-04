@@ -258,6 +258,52 @@ class LocalClient(object):
                 2,
                 tgt_type)
 
+    def _check_pub_data(self, pub_data):
+        '''
+        Common checks on the pub_data data structure returned from running pub
+        '''
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
+
+        # Failed to connect to the master and send the pub
+        if not 'jid' in pub_data or pub_data['jid'] == '0':
+            return {}
+
+        return pub_data
+
+    def run_job(self,
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            timeout):
+        '''
+        Prep the job dir and send minions the pub.
+        Returns a dict of (checked) pub_data or an empty dict.
+        '''
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
+
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout or self.opts['timeout'])
+
+        return self._check_pub_data(pub_data)
+
     def cmd(
         self,
         tgt,
