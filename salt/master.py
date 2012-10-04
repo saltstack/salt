@@ -1373,9 +1373,22 @@ class ClearFuncs(object):
         '''
         # Check for external auth calls
         if 'eauth' in clear_load:
-            pass
+            if not clear_load['eauth'] in self.opts['external_auth']:
+                # The eauth system is not enabled, fail
+                return ''
+            name = self.auth.load_name(clear_load)
+            if not name in self.opts['external_auth'][clear_load['eauth']]:
+                return ''
+            if not self.auth.time_auth(load):
+                return ''
+	    good = False
+		for regex in self.opts['external_auth'][clear_load['eauth']][name]:
+		    if re.match(regex, clear_load['fun']):
+			good = True
+	    if not good:
+		return ''
         # Verify that the caller has root on master
-        if 'user' in clear_load:
+        elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
                 if not clear_load.pop('key') == self.key.get(getpass.getuser(), ''):
                     return ''
