@@ -9,6 +9,7 @@ import os
 import sys
 import shutil
 import subprocess
+import tempfile
 try:
     import pwd
 except ImportError:
@@ -31,7 +32,10 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
-TMP = os.path.join(INTEGRATION_TEST_DIR, 'tmp')
+TMP = os.path.join(tempfile.gettempdir(), 'salt-tests-tmpdir')
+if not os.path.isdir(TMP):
+    os.makedirs(TMP)
+
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 
@@ -217,16 +221,8 @@ class TestDaemon(object):
             shutil.rmtree(self.master_opts['root_dir'])
         if os.path.isdir(self.smaster_opts['root_dir']):
             shutil.rmtree(self.smaster_opts['root_dir'])
-        for fn_ in os.listdir(TMP):
-            if fn_ == '_README':
-                continue
-            path = os.path.join(TMP, fn_)
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            elif os.path.isfile(path):
-                os.remove(path)
-            elif os.path.islink(path):
-                os.remove(path)
+        if os.path.isdir(TMP):
+            shutil.rmtree(TMP)
 
 
 class ModuleCase(TestCase):
@@ -248,7 +244,7 @@ class ModuleCase(TestCase):
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=100, kwarg=kwargs
+            minion_tgt, function, arg, timeout=500, kwarg=kwargs
         )
 
         if minion_tgt not in orig:
@@ -323,7 +319,7 @@ class SyndicCase(TestCase):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg)
+        orig = self.client.cmd('minion', function, arg, timeout=500)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
