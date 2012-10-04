@@ -1371,16 +1371,16 @@ class ClearFuncs(object):
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         '''
-        extra = clear_load.get('extra', {})
+        extra = clear_load.get('kwargs', {})
         # Check for external auth calls
         if 'eauth' in extra:
             if not extra['eauth'] in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
                 return ''
-            name = self.auth.load_name(extra)
+            name = self.loadauth.load_name(extra)
             if not name in self.opts['external_auth'][extra['eauth']]:
                 return ''
-            if not self.auth.time_auth(extra):
+            if not self.loadauth.time_auth(extra):
                 return ''
             good = False
             for regex in self.opts['external_auth'][extra['eauth']][name]:
