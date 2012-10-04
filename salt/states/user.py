@@ -23,12 +23,16 @@ as either absent or present
       user.absent
 '''
 
+import logging
+
+log = logging.getLogger(__name__)
 
 def _changes(
         name,
         uid=None,
         gid=None,
         groups=None,
+        optional_groups=None,
         home=True,
         password=None,
         enforce_password=True,
@@ -55,6 +59,9 @@ def _changes(
         # Scan over the users
         if lusr['name'] == name:
             found = True
+            # No need to sort the groups for comparison against values from
+            # user.getent, since putting them into a set does this already
+            wanted_groups = sorted(list(set(groups + optional_groups)))
             if uid:
                 if lusr['uid'] != uid:
                     change['uid'] = uid
@@ -62,8 +69,8 @@ def _changes(
                 if lusr['gid'] != gid:
                     change['gid'] = gid
             if groups:
-                if lusr['groups'] != sorted(groups):
-                    change['groups'] = groups
+                if lusr['groups'] != wanted_groups:
+                    change['groups'] = wanted_groups
             if home:
                 if lusr['home'] != home:
                     if not home is True:
@@ -103,6 +110,7 @@ def present(
         gid=None,
         gid_from_name=False,
         groups=None,
+        optional_groups=None,
         home=True,
         password=None,
         enforce_password=True,
@@ -129,10 +137,20 @@ def present(
         The default group id
     
     gid_from_name
-        If True, the default group id will be set to the id of the group with the same name as the user.
+        If True, the default group id will be set to the id of the group with
+        the same name as the user.
 
     groups
-        A list of groups to assign the user to, pass a list object
+        A list of groups to assign the user to, pass a list object. If a group
+        specified here does not exist on the minion, the state will fail.
+
+    optional_groups
+        A list of groups to assign the user to, pass a list object. If a group
+        specified here does not exist on the minion, the state will silently
+        ignore it.
+
+    NOTE: If the same group is specified in both "groups" and
+    "optional_groups", then it will be assumed to be required and not optional.
 
     home
         The location of the home directory to manage
@@ -182,6 +200,30 @@ def present(
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
 
+    if groups:
+        missing_groups = [x for x in groups if not __salt__['group.info'](x)]
+        if missing_groups:
+            ret['comment'] = 'The following group(s) are not present: ' \
+                             '{0}'.format(','.join(missing_groups))
+            ret['result'] = False
+            return ret
+
+    if optional_groups:
+        present_optgroups = [x for x in optional_groups
+                             if __salt__['group.info'](x)]
+        for missing_optgroup in [x for x in optional_groups
+                                 if x not in present_optgroups]:
+            log.debug('Optional group "{0}" for user "{1}" is not '
+                      'present'.format(missing_optgroup,name))
+
+
+    # Log a warning for all groups specified in both "groups" and
+    # "optional_groups" lists.
+    if groups and optional_groups:
+        for x in set(groups).intersection(optional_groups):
+            log.warning('Group "{0}" specified in both groups and '
+                        'optional_groups for user {1}'.format(x,name))
+
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
     changes = _changes(
@@ -189,6 +231,7 @@ def present(
             uid,
             gid,
             groups,
+            present_optgroups,
             home,
             password,
             enforce_password,
