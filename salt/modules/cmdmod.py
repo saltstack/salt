@@ -162,6 +162,10 @@ def _run(cmd,
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
+    if retcode:
+        kwargs['stdout'] = None
+        kwargs['stderr'] = None
+
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
 
@@ -169,14 +173,8 @@ def _run(cmd,
     # this is used to bypass ampersand issues with background processes in
     # scripts
     if retcode:
-        while True:
-            retcode = proc.poll()
-            if retcode is None:
-                continue
-            else:
-                out = ''
-                err = ''
-                break
+        retcode = proc.wait()
+        out = err = ''
     else:
         out, err = proc.communicate()
 
