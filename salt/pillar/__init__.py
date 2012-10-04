@@ -327,7 +327,7 @@ class Pillar(object):
                     else:
                         ext.update(self.ext_pillars[key](val))
                 except Exception:
-                    log.critical('Failed to load ext_pillar {0}'.format(key))
+                    log.exception('Failed to load ext_pillar {0}'.format(key))
         return ext
 
     def compile_pillar(self):
