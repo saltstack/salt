@@ -857,6 +857,25 @@ class Matcher(object):
             comps[1].lower(),
             ))
 
+    def ipcidr_match(self, tgt):
+        '''
+        Matches based on ip address or CIDR notation
+        '''
+        num_parts = len(tgt.split('/'))
+        if num_parts > 2:
+            return False
+        elif num_parts == 2:
+            return self.functions['network.in_subnet'](tgt)
+        else:
+            import socket
+            try:
+                socket.inet_aton(tgt)
+            except socket.error:
+                # Not a valid IPv4 address
+                return False
+            else:
+                return tgt in self.functions['network.ip_addrs']()
+
     def compound_match(self, tgt):
         '''
         Runs the compound target check
@@ -869,12 +888,13 @@ class Matcher(object):
                'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
+               'S': 'ipcidr',
                'E': 'pcre'}
         results = []
         opers = ['and', 'or', 'not']
         for match in tgt.split():
             # Try to match tokens from the compound target, first by using
-            # the 'G, X, I, L, E' matcher types, then by hostname glob.
+            # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
                 comps = match.split('@')
                 matcher = ref.get(comps[0])

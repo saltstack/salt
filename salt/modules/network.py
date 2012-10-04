@@ -293,8 +293,6 @@ def in_subnet(cidr):
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
-    ifaces = interfaces()
-
     netstart_bin = _ipv4_to_bits(netstart)
 
     if netsize < 32 and len(netstart_bin.rstrip('0')) > netsize:
@@ -303,16 +301,39 @@ def in_subnet(cidr):
         return False
 
     netstart_leftbits = netstart_bin[0:netsize]
-    for ipv4_info in ifaces.values():
-        for ipv4 in ipv4_info.get('inet', []):
-            if ipv4['address'] == '127.0.0.1': continue
-            if netsize == 32:
-                if netstart == ipv4['address']: return True
-            else:
-                ip_leftbits = _ipv4_to_bits(ipv4['address'])[0:netsize]
-                if netstart_leftbits == ip_leftbits: return True
+    for ip_addr in ip_addrs():
+        if netsize == 32:
+            if netstart == ip_addr: return True
+        else:
+            ip_leftbits = _ipv4_to_bits(ip_addr)[0:netsize]
+            if netstart_leftbits == ip_leftbits: return True
 
     return False
+
+
+def ip_addrs():
+    '''
+    Returns a list of IPv4 addresses assigned to the host. (127.0.0.1 is
+    ignored)
+    '''
+    ret = []
+    ifaces = interfaces()
+    for ipv4_info in ifaces.values():
+        for ipv4 in ipv4_info.get('inet',[]):
+            if ipv4['address'] != '127.0.0.1': ret.append(ipv4['address'])
+    return ret
+
+
+def ip_addrs6():
+    '''
+    Returns a list of IPv6 addresses assigned to the host. (::1 is ignored)
+    '''
+    ret = []
+    ifaces = interfaces()
+    for ipv6_info in ifaces.values():
+        for ipv6 in ipv6_info.get('inet6',[]):
+            if ipv6['address'] != '::1': ret.append(ipv6['address'])
+    return ret
 
 
 def ping(host):
