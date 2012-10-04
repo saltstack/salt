@@ -58,6 +58,7 @@ MOCK_MODULES = [
     'rpmUtils',
     'rpmUtils.arch',
     'pycassa',
+    'django',
 ]
 
 for mod_name in MOCK_MODULES:
