@@ -942,8 +942,15 @@ class LocalClient(object):
             minions = expr
         return minions
 
-    def pub(self, tgt, fun, arg=(), expr_form='glob',
-            ret='', jid='', timeout=5):
+    def pub(self, 
+            tgt, 
+            fun, 
+            arg=(),
+            expr_form='glob',
+            ret='',
+            jid='',
+            timeout=5,
+            **kwargs):
         '''
         Take the required arguments and publish the given command.
         Arguments:
@@ -1010,6 +1017,10 @@ class LocalClient(object):
                            'tgt_type': expr_form,
                            'ret': ret,
                            'jid': jid}
+
+        # if kwargs are passed, pack them.
+        if kwargs:
+            payload_kwargs['kwargs'] = kwargs
 
         # If we have a salt user, add it to the payload
         if self.salt_user:
