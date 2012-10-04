@@ -487,6 +487,12 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'for the target is the pillar key followed by a glob'
                   'expression:\n"role:production*"')
         )
+        group.add_option(
+            '-S', '--ipcidr',
+            default=False,
+            action='store_true',
+            help=('Match based on Subnet (CIDR notation) or IPv4 address.')
+        )
 
         self._create_process_functions()
 
