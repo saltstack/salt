@@ -1381,12 +1381,12 @@ class ClearFuncs(object):
                 return ''
             if not self.auth.time_auth(load):
                 return ''
-	    good = False
-		for regex in self.opts['external_auth'][clear_load['eauth']][name]:
-		    if re.match(regex, clear_load['fun']):
-			good = True
-	    if not good:
-		return ''
+            good = False
+            for regex in self.opts['external_auth'][clear_load['eauth']][name]:
+                if re.match(regex, clear_load['fun']):
+                    good = True
+            if not good:
+                return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
