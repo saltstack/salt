@@ -61,14 +61,14 @@ def _changes(
             found = True
             # No need to sort the groups for comparison against values from
             # user.getent, since putting them into a set does this already
-            wanted_groups = list(set(groups + optional_groups))
+            wanted_groups = list(set((groups or []) + (optional_groups or [])))
             if uid:
                 if lusr['uid'] != uid:
                     change['uid'] = uid
             if gid:
                 if lusr['gid'] != gid:
                     change['gid'] = gid
-            if groups:
+            if wanted_groups:
                 if lusr['groups'] != wanted_groups:
                     change['groups'] = wanted_groups
             if home:
@@ -215,6 +215,8 @@ def present(
                                  if x not in present_optgroups]:
             log.debug('Optional group "{0}" for user "{1}" is not '
                       'present'.format(missing_optgroup,name))
+    else:
+        present_optgroups = None
 
 
     # Log a warning for all groups specified in both "groups" and
