@@ -1371,11 +1371,25 @@ class ClearFuncs(object):
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         '''
+        extra = clear_load.get('extra', {})
         # Check for external auth calls
-        if 'eauth' in clear_load:
-            pass
+        if 'eauth' in extra:
+            if not extra['eauth'] in self.opts['external_auth']:
+                # The eauth system is not enabled, fail
+                return ''
+            name = self.auth.load_name(extra)
+            if not name in self.opts['external_auth'][extra['eauth']]:
+                return ''
+            if not self.auth.time_auth(extra):
+                return ''
+            good = False
+            for regex in self.opts['external_auth'][extra['eauth']][name]:
+                if re.match(regex, extra['fun']):
+                    good = True
+            if not good:
+                return ''
         # Verify that the caller has root on master
-        if 'user' in clear_load:
+        elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
                 if not clear_load.pop('key') == self.key.get(getpass.getuser(), ''):
                     return ''

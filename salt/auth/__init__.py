@@ -35,6 +35,22 @@ class LoadAuth(object):
         self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
 
+    def load_name(self, load):
+        '''
+        Return the primary name associate with the load, if an empty string
+        is returned then the load does not match the function
+        '''
+        if not 'fun' in load:
+            return ''
+        fstr = '{0}.auth'.format(load['fun'])
+        if not fstr in self.auth:
+            return ''
+        fcall = salt.utils.format_call(self.auth[fstr], load)
+        try:
+            return fcall['args'][0]
+        except IndexError:
+            return ''
+
     def auth_call(self, load):
         '''
         Return the token and set the cache data for use 
