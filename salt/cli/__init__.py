@@ -57,7 +57,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 'timeout': self.options.timeout}
 
             if self.selected_target_option:
-                kwargs['expr_form'] = selected_target_option
+                kwargs['expr_form'] = self.selected_target_option
             else:
                 kwargs['expr_form'] = 'glob'
 
