@@ -136,19 +136,19 @@ class Resolver(object):
         self.opts = opts
         self.loadauth = LoadAuth(opts)
 
-    def cli(self, load):
+    def cli(self, eauth):
         '''
         Execute the cli options to fill in the extra data needed for the
         defined eauth system
         '''
         ret = {}
-        if not 'eauth' in load:
+        if not eauth:
             print 'External authentication system has not been specified'
             return ret
-        fstr = '{0}.auth'.format(load['eauth'])
+        fstr = '{0}.auth'.format(eauth)
         if not fstr in self.loadauth:
             print ('The specified external authentication system "{0}" is '
-                   'not available').format(load['eauth'])
+                   'not available').format(eauth)
             return ret
 
         args = salt.utils.arg_lookup(self.loadauth[fstr])
