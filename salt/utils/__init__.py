@@ -540,7 +540,6 @@ def build_whitepace_splited_regex(text):
     >>>
 
     '''
-
     def __build_parts(text):
         lexer = shlex.shlex(text)
         lexer.whitespace_split = True
@@ -595,5 +594,29 @@ def format_call(fun, data):
             ret['args'].append(kwargs[arg])
         else:
             ret['args'].append(data[arg])
+    return ret
+
+
+def arg_lookup(fun):
+    '''
+    Return a dict containing the arguments and default arguments to the function
+    '''
+    ret = {}
+    aspec = _getargs(fun)
+    arglen = 0
+    deflen = 0
+    if isinstance(aspec[0], list):
+        arglen = len(aspec[0])
+    if isinstance(aspec[3], tuple):
+        deflen = len(aspec[3])
+    for ind in range(arglen - 1, 0, -1):
+        minus = arglen - ind
+        if deflen - minus > -1:
+            ret[aspec[0][ind]] = aspec[3][-minus]
+    for arg in aspec[0]:
+        if arg in ret:
+            continue
+        else:
+            ret[arg] = None
     return ret
 
