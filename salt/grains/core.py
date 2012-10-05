@@ -19,6 +19,7 @@ import sys
 import re
 import platform
 import logging
+import locale
 
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
@@ -343,30 +344,38 @@ def _windows_platform_data(osdata):
     #    productname
     #    biosversion
     #    osfullname
-    #    inputlocale
     #    timezone
     #    windowsdomain
 
-    grains = {}
-    get_these_grains = {
-        'OS Manufacturer': 'osmanufacturer',
-        'System Manufacturer': 'manufacturer',
-        'System Model': 'productname',
-        'BIOS Version': 'biosversion',
-        'OS Name': 'osfullname',
-        'Input Locale': 'inputlocale',
-        'Time Zone': 'timezone',
-        'Domain': 'windowsdomain',
-        }
-    systeminfo = __salt__['cmd.run']('SYSTEMINFO')
-    for line in  systeminfo.split('\n'):
-        comps = line.split(':', 1)
-        if not len(comps) > 1:
-            continue
-        item = comps[0].strip()
-        value = comps[1].strip()
-        if item in get_these_grains:
-            grains[get_these_grains[item]] = value
+    import wmi
+    from datetime import datetime
+    wmi_c = wmi.WMI()
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
+    systeminfo = wmi_c.Win32_ComputerSystem()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
+    osinfo = wmi_c.Win32_OperatingSystem()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
+    biosinfo = wmi_c.Win32_BIOS()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
+    timeinfo = wmi_c.Win32_TimeZone()[0]
+
+    # the name of the OS comes with a bunch of other data about the install
+    # location. For example:
+    # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
+    (osfullname, _) = osinfo.Name.split('|', 1)
+    osfullname = osfullname.strip()
+    grains = {
+        'osmanufacturer': osinfo.Manufacturer,
+        'manufacturer': systeminfo.Manufacturer,
+        'productname': systeminfo.Model,
+        # bios name had a bunch of whitespace appended to it in my testing
+        # 'PhoenixBIOS 4.0 Release 6.0     '
+        'biosversion': biosinfo.Name.strip(),
+        'osfullname': osfullname,
+        'timezone': timeinfo.Description,
+        'windowsdomain': systeminfo.Domain,
+    }
+
     return grains
 
 
@@ -412,10 +421,12 @@ def os_data():
     Return grains pertaining to the operating system
     '''
     grains = {}
+    (grains['defaultlanguage'],
+     grains['defaultencoding']) = locale.getdefaultlocale()
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
     # Ubuntu 10.04
-    # ('Linux', 'FIRE66VMA01', '2.6.32-38-server', '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
+    # ('Linux', 'MINIONNAME', '2.6.32-38-server', '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
     (grains['kernel'], grains['host'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
     if grains['kernel'] == 'Windows':
