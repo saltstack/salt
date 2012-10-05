@@ -350,17 +350,26 @@ def _windows_platform_data(osdata):
     import wmi
     from datetime import datetime
     wmi_c = wmi.WMI()
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
     systeminfo = wmi_c.Win32_ComputerSystem()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
     osinfo = wmi_c.Win32_OperatingSystem()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
     biosinfo = wmi_c.Win32_BIOS()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
     timeinfo = wmi_c.Win32_TimeZone()[0]
 
+    # the name of the OS comes with a bunch of other data about the install
+    # location. For example:
+    # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
     (osfullname, _) = osinfo.Name.split('|', 1)
     osfullname = osfullname.strip()
     grains = {
         'osmanufacturer': osinfo.Manufacturer,
         'manufacturer': systeminfo.Manufacturer,
         'productname': systeminfo.Model,
+        # bios name had a bunch of whitespace appended to it in my testing
+        # 'PhoenixBIOS 4.0 Release 6.0     '
         'biosversion': biosinfo.Name.strip(),
         'osfullname': osfullname,
         'timezone': timeinfo.Description,
