@@ -162,6 +162,11 @@ def list_pkgs(*args):
     '''
     ts = rpm.TransactionSet()
     pkgs = {}
+    # In order to support specific package versions, we are going to use the yum
+    # libraries to handle pattern matching
+    yb = yum.YumBase()
+    setattr(yb.conf, 'assumeyes', True)
+
     # if no args are passed in get all packages
     if len(args) == 0:
         for h in ts.dbMatch():
@@ -169,6 +174,12 @@ def list_pkgs(*args):
     else:
         # get package version for each package in *args
         for arg in args:
+            # Make yum do the pattern matching
+            a = yb.pkgSack.returnPackages(patterns=[arg], ignore_case=False)
+            # make sure there is an a
+            if len(a) > 0:
+              arg = a[0].name
+            # use the name from yum to do an rpm lookup
             for h in ts.dbMatch('name', arg):
                 pkgs[h['name']] = '-'.join([h['version'],h['release']])
 
@@ -238,7 +249,12 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
         yb.repos.enableRepo(repo)
     for pkg in pkgs:
         try:
-            yb.install(name=pkg)
+            # Changed to pattern to allow specific package versions
+            a = yb.install(pattern=pkg)
+            # if you yum didn't install anything, maybe its a downgrade?
+            if len(a) == 0:
+              a = yb.downgrade(pattern=pkg)
+
         except Exception:
             log.error('Package {0} failed to install'.format(pkg))
     # Resolve Deps before attempting install.  This needs to be improved
