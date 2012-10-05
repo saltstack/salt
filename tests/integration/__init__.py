@@ -33,9 +33,6 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
 TMP = os.path.join(tempfile.gettempdir(), 'salt-tests-tmpdir')
-if not os.path.isdir(TMP):
-    os.makedirs(TMP)
-
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 
@@ -151,6 +148,7 @@ class TestDaemon(object):
                     self.smaster_opts['sock_dir'],
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
+                    TMP
                     ],
                    pwd.getpwuid(os.getuid()).pw_name)
 
