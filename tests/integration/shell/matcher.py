@@ -108,6 +108,12 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
 
+    def test_exsel(self):
+        data = self.run_salt('-X test.ping test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
+
     def test_static(self):
         '''
         test salt static call
@@ -122,7 +128,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_salt('-d user.add')
         self.assertIn('user.add:', data)
-
 
 
 if __name__ == "__main__":
