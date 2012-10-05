@@ -134,7 +134,7 @@ class Resolver(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.loadauth = LoadAuth(opts)
+        self.auth = salt.loader.auth(opts)
 
     def cli(self, eauth):
         '''
@@ -146,12 +146,12 @@ class Resolver(object):
             print 'External authentication system has not been specified'
             return ret
         fstr = '{0}.auth'.format(eauth)
-        if not fstr in self.loadauth:
+        if not fstr in self.auth:
             print ('The specified external authentication system "{0}" is '
                    'not available').format(eauth)
             return ret
 
-        args = salt.utils.arg_lookup(self.loadauth[fstr])
+        args = salt.utils.arg_lookup(self.auth[fstr])
         for arg in args['args']:
             if arg.startswith('pass'):
                 ret[arg] = getpass.getpass('{0}: '.format(arg))
