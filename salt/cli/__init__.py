@@ -13,6 +13,7 @@ import salt.cli.batch
 import salt.client
 import salt.output
 import salt.runner
+import salt.auth
 
 from salt.utils import parsers
 from salt.utils.verify import verify_env
@@ -63,6 +64,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
+
+            if 'eauth' in self.options:
+                resolver = salt.auth.Resolver(self.config)
+                res = resolver.cli(self.options['eauth'])
+                if not res:
+                    sys.exit(2)
+                kwargs.update(res)
+                kwargs['eauth'] = self.options['eauth']
+
             try:
                 # local will be None when there was an error
                 if local:
