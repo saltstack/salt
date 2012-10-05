@@ -536,6 +536,8 @@ class AESFuncs(object):
         '''
         fnd = {'path': '',
                'rel': ''}
+        if os.path.isabs(path):
+            return fnd
         if env not in self.opts['file_roots']:
             return fnd
         for root in self.opts['file_roots'][env]:
