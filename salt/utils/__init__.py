@@ -601,7 +601,8 @@ def arg_lookup(fun):
     '''
     Return a dict containing the arguments and default arguments to the function
     '''
-    ret = {}
+    ret = {'args': [],
+           'kwargs': {}}
     aspec = _getargs(fun)
     arglen = 0
     deflen = 0
@@ -612,11 +613,11 @@ def arg_lookup(fun):
     for ind in range(arglen - 1, 0, -1):
         minus = arglen - ind
         if deflen - minus > -1:
-            ret[aspec[0][ind]] = aspec[3][-minus]
+            ret['kwargs'][aspec[0][ind]] = aspec[3][-minus]
     for arg in aspec[0]:
         if arg in ret:
             continue
         else:
-            ret[arg] = None
+            ret['args'].append(arg)
     return ret
 

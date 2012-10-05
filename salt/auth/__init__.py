@@ -16,7 +16,9 @@ so that any external authentication system can be used inside of Salt
 import time
 import logging
 import random
-#
+import inspect
+import getpass
+
 # Import Salt libs
 import salt.loader
 import salt.utils
@@ -114,7 +116,8 @@ class LoadAuth(object):
 
     def get_tok(self, tok):
         '''
-        Return the name associate with the token, or False ifthe token is not valid
+        Return the name associate with the token, or False if the token is
+        not valid
         '''
         t_path = os.path.join(opts['token_dir'], tok)
         if not os.path.isfile:
@@ -122,3 +125,39 @@ class LoadAuth(object):
         with open(t_path, 'r') as fp_:
             return self.serial.loads(fp_.read())
         return False
+
+
+class Resolver(object):
+    '''
+    The class used to resolve options for the command line and for genric
+    interactive interfaces
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.loadauth = LoadAuth(opts)
+
+    def cli(self, load):
+        '''
+        Execute the cli options to fill in the extra data needed for the
+        defined eauth system
+        '''
+        ret = {}
+        if not 'eauth' in load:
+            print 'External authentication system has not been specified'
+            return ret
+        fstr = '{0}.auth'.format(load['eauth'])
+        if not fstr in self.loadauth:
+            print ('The specified external authentication system "{0}" is '
+                   'not available').format(load['eauth'])
+            return ret
+
+        args = salt.utils.arg_lookup(self.loadauth[fstr])
+        for arg in args['args']:
+            if arg.startswith('pass'):
+                ret[arg] = getpass.getpass('{0}: '.format(arg))
+            else:
+                ret[arg] = raw_input('{0}: '.format(arg))
+        for kwarg, default in args['kwargs'].items():
+            ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
+
+        return ret
