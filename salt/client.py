@@ -276,10 +276,10 @@ class LocalClient(object):
     def run_job(self,
             tgt,
             fun,
-            arg,
-            expr_form,
-            ret,
-            timeout,
+            arg=(),
+            expr_form='glob',
+            ret='',
+            timeout=None,
             **kwargs):
         '''
         Prep the job dir and send minions the pub.
