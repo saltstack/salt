@@ -163,8 +163,10 @@ if sys.platform.startswith('win'):
         'win32con',
         'win32security',
         'ntsecuritycon',
-        '_winreg'
+        '_winreg',
+        'wmi',
     ])
+    setup_kwargs['install_requires'] += '\nwmi'
 elif sys.platform.startswith('linux'):
     freezer_includes.extend([
         'yum'
