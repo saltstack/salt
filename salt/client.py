@@ -93,9 +93,8 @@ class LocalClient(object):
             with open(keyfile, 'r') as KEY:
                 return KEY.read()
         except (OSError, IOError):
-            # In theory, this should never get hit. Belt & suspenders baby!
-            raise SaltClientError(('Problem reading the salt root key. Are'
-                                   ' you root?'))
+            # Fall back to eauth
+            return ''
 
     def __get_user(self):
         '''
