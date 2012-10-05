@@ -74,7 +74,7 @@ def lookup_jid(jid):
     full_ret = client.get_full_returns(jid, [], 0)
     formatted = _format_ret(full_ret)
 
-    if formatted:
+    if all(formatted):
         ret = formatted[0]
         out = formatted[1]
     else:
