@@ -685,6 +685,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'minions to have running')
         )
         self.add_option(
+            '-a', '--auth', '--eauth', '--extended-auth',
+            default='',
+            dest='eauth',
+            help=('Specify an extended authentication system to use.'))
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
