@@ -65,7 +65,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
 
-            if 'eauth' in self.options:
+            if self.options['eauth']:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options['eauth'])
                 if not res:
