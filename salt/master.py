@@ -40,6 +40,7 @@ import salt.pillar
 import salt.state
 import salt.runner
 import salt.auth
+import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
 from salt.utils.debug import enable_sigusr1_handler
@@ -277,7 +278,6 @@ class Publisher(multiprocessing.Process):
         super(Publisher, self).__init__()
         self.opts = opts
 
-
     def run(self):
         '''
         Bind to the interface specified in the configuration file
@@ -399,7 +399,6 @@ class ReqServer(object):
         # Start the publisher
         self.publisher = Publisher(self.opts)
         self.publisher.start()
-
 
     def start_event_publisher(self):
         '''
@@ -809,11 +808,24 @@ class AESFuncs(object):
                     ' attack').format(load['id'])
                     )
             return False
-        self.serial.dump(load['return'],
-                open(os.path.join(hn_dir, 'return.p'), 'w+'))
+
+        self.serial.dump(
+            load['return'],
+            # Use atomic open here to avoid the file being read before it's
+            # completely written to. Refs #1935
+            salt.utils.atomicfile.atomic_open(
+                os.path.join(hn_dir, 'return.p'), 'w+'
+            )
+        )
         if 'out' in load:
-            self.serial.dump(load['out'],
-                    open(os.path.join(hn_dir, 'out.p'), 'w+'))
+            self.serial.dump(
+                load['out'],
+                # Use atomic open here to avoid the file being read before
+                # it's completely written to. Refs #1935
+                salt.utils.atomicfile.atomic_open(
+                    os.path.join(hn_dir, 'out.p'), 'w+'
+                )
+            )
 
     def _syndic_return(self, load):
         '''
@@ -897,7 +909,6 @@ class AESFuncs(object):
         opts.update(self.opts)
         runner = salt.runner.Runner(opts)
         return runner.run()
-
 
     def minion_publish(self, clear_load):
         '''

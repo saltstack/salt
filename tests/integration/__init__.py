@@ -128,8 +128,13 @@ class TestDaemon(object):
         ]
         # clean up the old files
         self._clean()
-        self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
-        self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
+
+        # Point the config values to the correct temporary paths
+        for name in ('hosts', 'aliases'):
+            self.master_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
+            self.minion_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
+            self.sub_minion_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
+
         verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
                     os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.master_opts['pki_dir'],
@@ -248,12 +253,16 @@ class ModuleCase(TestCase):
         if minion_tgt not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
-                'from the minion \'{0}\''.format(minion_tgt)
+                'from the minion \'{0}\'. Command output: {1}'.format(
+                    minion_tgt, orig
+                )
             )
         elif orig[minion_tgt] is None and function not in know_to_return_none:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
-                'the minion \'{1}\''.format(function, minion_tgt)
+                'the minion \'{1}\'. Command output: {2}'.format(
+                    function, minion_tgt, orig
+                )
             )
         return orig[minion_tgt]
 
@@ -321,7 +330,7 @@ class SyndicCase(TestCase):
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
-                'from the minion. Received: \'{0}\''.format(orig)
+                'from the minion. Command output: {0}'.format(orig)
             )
         return orig['minion']
 
