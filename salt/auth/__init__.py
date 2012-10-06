@@ -13,10 +13,11 @@ so that any external authentication system can be used inside of Salt
 # 6. Interface to verify tokens
 
 # Import Python libs
+import os
+import hashlib
 import time
 import logging
 import random
-import inspect
 import getpass
 
 # Import Salt libs
@@ -98,14 +99,15 @@ class LoadAuth(object):
         '''
         Run time_auth and create a token. Return False or the token
         '''
-        ret = time_auth(load)
+        ret = self.time_auth(load)
         if ret is False:
             return ret
+        fstr = '{0}.auth'.format(load['eauth'])
         tok = hashlib.md5(os.urandom(512)).hexdigest()
-        t_path = os.path.join(opts['token_dir'], tok)
+        t_path = os.path.join(self.opts['token_dir'], tok)
         while os.path.isfile(t_path):
             tok = hashlib.md5(os.urandom(512)).hexdigest()
-            t_path = os.path.join(opts['token_dir'], tok)
+            t_path = os.path.join(self.opts['token_dir'], tok)
         fcall = salt.utils.format_call(self.auth[fstr], load)
         tdata = {'start': time.time(),
                  'expire': time.time() + self.opts['token_expire'],
@@ -119,7 +121,7 @@ class LoadAuth(object):
         Return the name associate with the token, or False if the token is
         not valid
         '''
-        t_path = os.path.join(opts['token_dir'], tok)
+        t_path = os.path.join(self.opts['token_dir'], tok)
         if not os.path.isfile:
             return False
         with open(t_path, 'r') as fp_:
