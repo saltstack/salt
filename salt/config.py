@@ -104,7 +104,6 @@ def include_config(include, opts, orig_path, verbose):
     Parses extra configuration file(s) specified in an include list in the
     main config file.
     '''
-
     # Protect against empty option
     if not include:
         return opts
