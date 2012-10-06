@@ -338,3 +338,19 @@ def master_config(path):
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
     return opts
+
+
+def client_config(mdir):
+    '''
+    Load in the configuration data needed for the LocalClient. This function
+    searches for client specific configurations and adds them to the data from
+    the master configuration.
+    '''
+    opts = master_config(mdir)
+    cpath = os.path.expanduser('~/.salt')
+    load_config(opts, cpath, 'SALT_CLIENT_CONFIG')
+    if 'token_file' in opts:
+        if os.path.isfile(opts['token_file']):
+            with open(opts['token_file']) as fp_:
+                opts['token'] = fp_.read().strip()
+    return opts
