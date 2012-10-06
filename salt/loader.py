@@ -534,17 +534,17 @@ class Loader(object):
         Pass in a function object returned from get_functions to load in
         introspection functions.
         '''
-        funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
+        funcs['sys.list_functions'] = lambda module='': self.list_funcs(funcs, module)
         funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
         funcs['sys.reload_modules'] = lambda: True
         return funcs
 
-    def list_funcs(self, funcs):
+    def list_funcs(self, funcs, module=''):
         '''
-        List the functions
+        List the functions.  Optionally, specify a module to list from.
         '''
-        return sorted(funcs)
+        return sorted(f for f in funcs if f.startswith(module + '.')) if module else sorted(funcs)
 
     def list_modules(self, funcs):
         '''
