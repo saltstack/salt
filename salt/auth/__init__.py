@@ -111,7 +111,8 @@ class LoadAuth(object):
         fcall = salt.utils.format_call(self.auth[fstr], load)
         tdata = {'start': time.time(),
                  'expire': time.time() + self.opts['token_expire'],
-                 'name': fcall['args'][0],}
+                 'name': fcall['args'][0],
+                 'token': tok}
         with open(t_path, 'w+') as fp_:
             fp_.write(self.serial.dumps(tdata))
         return tok
