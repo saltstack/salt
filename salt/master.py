@@ -1400,7 +1400,9 @@ class ClearFuncs(object):
                 if re.match(regex, clear_load['fun']):
                     good = True
             if not good:
-                return ''
+                # Accept find_job so the cli will function cleanly
+                if not clear_load['fun'] == 'saltutil.find_job':
+                    return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
