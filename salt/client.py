@@ -1010,18 +1010,12 @@ class LocalClient(object):
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
 
-        # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module
         # make the zmq client
         # connect to the req server
         # send!
         # return what we get back
-        minions = self.check_minions(tgt, expr_form)
-
-        if not minions:
-            return {'jid': None,
-                    'minions': minions}
 
         # Generate the standard keyword args to feed to format_payload
         payload_kwargs = {'cmd': 'publish',
@@ -1052,7 +1046,7 @@ class LocalClient(object):
         if not payload:
             return payload
         return {'jid': payload['load']['jid'],
-                'minions': minions}
+                'minions': payload['minions']}
 
 
 class FunctionWrapper(dict):
