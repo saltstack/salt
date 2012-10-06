@@ -43,6 +43,7 @@ import salt.auth
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
+import salt.utils.minions
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -1098,6 +1099,8 @@ class ClearFuncs(object):
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
+        # Make an minion checker object
+        self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
 
@@ -1492,5 +1495,7 @@ class ClearFuncs(object):
             )
         pub_sock.connect(pull_uri)
         pub_sock.send(self.serial.dumps(payload))
+        minions = self.ckminions.check_minions(load['tgt'], load.get('tgt_type', 'glob'))
         return {'enc': 'clear',
-                'load': {'jid': clear_load['jid']}}
+                'load': {'jid': clear_load['jid'],
+                         'minions': minions}}
