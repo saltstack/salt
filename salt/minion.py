@@ -731,10 +731,9 @@ class Matcher(object):
     '''
     def __init__(self, opts, functions=None):
         self.opts = opts
-        if not functions:
+        if functions is None:
             functions = salt.loader.minion_mods(self.opts)
-        else:
-            self.functions = functions
+        self.functions = functions
 
     def confirm_top(self, match, data, nodegroups=None):
         '''
