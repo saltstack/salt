@@ -42,7 +42,7 @@ import salt.payload
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
-from salt.exceptions import SaltClientError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
@@ -246,7 +246,7 @@ class LocalClient(object):
             print(("Range server exception: {0}".format(e)))
             return []
 
-    def gather_job_info(self, jid, tgt, tgt_type):
+    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -255,7 +255,8 @@ class LocalClient(object):
                 'saltutil.find_job',
                 [jid],
                 2,
-                tgt_type)
+                tgt_type,
+                **kwargs)
 
     def _check_pub_data(self, pub_data):
         '''
@@ -367,7 +368,8 @@ class LocalClient(object):
                     timeout or self.opts['timeout'],
                     tgt,
                     expr_form,
-                    verbose):
+                    verbose,
+                    **kwargs):
 
                 if not fn_ret:
                     continue
@@ -480,7 +482,8 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
-            verbose=False):
+            verbose=False,
+            **kwargs):
         '''
         This method starts off a watcher looking at the return data for
         a specified jid, it returns all of the information for the jid
@@ -543,7 +546,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -795,7 +798,8 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
-            verbose=False):
+            verbose=False,
+            **kwargs):
         '''
         Get the returns for the command line interface via the event system
         '''
@@ -850,7 +854,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
