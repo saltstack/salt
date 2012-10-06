@@ -1046,7 +1046,7 @@ class LocalClient(object):
         if not payload:
             return payload
         return {'jid': payload['load']['jid'],
-                'minions': payload['minions']}
+                'minions': payload['load']['minions']}
 
 
 class FunctionWrapper(dict):
