@@ -28,7 +28,7 @@ class CkMinions(object):
         os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
         ret = set(glob.glob(expr))
         os.chdir(cwd)
-        return ret
+        return list(ret)
 
     def _check_list_minions(self, expr):
         '''
@@ -53,7 +53,7 @@ class CkMinions(object):
             if reg.match(fn_):
                 ret.add(fn_)
         os.chdir(cwd)
-        return ret
+        return list(ret)
 
     def _check_grain_minions(self, expr):
         '''
