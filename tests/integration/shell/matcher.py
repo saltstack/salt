@@ -1,5 +1,6 @@
 # Import python libs
 import sys
+import yaml
 
 # Import salt libs
 from saltunittest import TestLoader, TextTestRunner
@@ -110,6 +111,25 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     def test_exsel(self):
         data = self.run_salt('-X test.ping test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
+
+    def test_ipcadr(self):
+        subnets_data = self.run_salt('\'*\' network.subnets')
+        subnet = None
+        for line in subnets_data:
+            try:
+                yamline = yaml.load(line)
+                subnet = yamline.values()[0][0]
+                break
+            except:
+                continue
+
+        if subnet is None:
+            self.skipTest('Failed to query the minion\'s subnets')
+
+        data = self.run_salt('-S {0} test.ping'.format(subnet))
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
