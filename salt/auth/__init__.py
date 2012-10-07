@@ -156,15 +156,15 @@ class Resolver(object):
 
         args = salt.utils.arg_lookup(self.auth[fstr])
         for arg in args['args']:
-            if arg in self.config:
-                ret[arg] = self.config[arg]
+            if arg in self.opts:
+                ret[arg] = self.opts[arg]
             elif arg.startswith('pass'):
                 ret[arg] = getpass.getpass('{0}: '.format(arg))
             else:
                 ret[arg] = raw_input('{0}: '.format(arg))
         for kwarg, default in args['kwargs'].items():
-            if kwarg in self.config:
-                ret['kwarg'] = self.config[kwarg]
+            if kwarg in self.opts:
+                ret['kwarg'] = self.opts[kwarg]
             else:
                 ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
 
