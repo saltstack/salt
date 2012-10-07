@@ -1396,30 +1396,11 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(extra)
             if not name in self.opts['external_auth'][extra['eauth']]:
                 return ''
-            good = False
-            for ind in self.opts['external_auth'][extra['eauth']][name]:
-                if isinstance(ind, str):
-                    # Allowed for all minions
-                    if re.match(ind, clear_load['fun']):
-                        good = True
-                elif isinstance(ind, dict):
-                    if len(ind) != 1:
-                        # Invalid argument
-                        continue
-                    valid = ind.keys()[0]
-                    # Check if minions are allowed
-                    if self.ckminions.validate_tgt(
-                            valid,
-                            clear_load['tgt'],
-                            clear_load.get('tgt_type', 'glob')):
-                        # Minions are allowed, verify function in allowed list
-                        if isinstance(ind[valid], str):
-                            if re.match(ind[valid], clear_load['fun']):
-                                good = True
-                        elif isinstance(ind[valid], list):
-                            for regex in ind[valid]:
-                                if re.match(regex, clear_load['fun']):
-                                    good = True
+            good = self.ckminions.auth_check(
+                    self.opts['external_auth'][extra['eauth']][name],
+                    clear_load['fun'],
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob'))
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
