@@ -1424,14 +1424,15 @@ class ClearFuncs(object):
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
                         return ''
                     good = False
-                    for user in self.opts['client_acl']:
-                        if clear_load['user'] != user:
-                            continue
-                        for regex in self.opts['client_acl'][user]:
-                            if re.match(regex, clear_load['fun']):
-                                good = True
+                    good = self.ckminions.auth_check(
+                            self.opts['client_acl'],
+                            clear_load['fun'],
+                            clear_load['tgt'],
+                            clear_load.get('tgt_type', 'glob'))
                     if not good:
-                        return ''
+                        # Accept find_job so the cli will function cleanly
+                        if not clear_load['fun'] == 'saltutil.find_job':
+                            return ''
                 else:
                     return ''
         else:
