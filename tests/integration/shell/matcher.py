@@ -1,4 +1,5 @@
 # Import python libs
+import re
 import sys
 import yaml
 
@@ -118,7 +119,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def test_ipcadr(self):
         subnets_data = self.run_salt('\'*\' network.subnets')
         subnet = None
-        for line in subnets_data:
+        for line in re.findall(r'{[^}]+}', '\n'.join(subnets_data)):
             try:
                 yamline = yaml.load(line)
                 subnet = yamline.values()[0][0]
