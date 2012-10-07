@@ -58,6 +58,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 'arg': self.config['arg'],
                 'timeout': self.options.timeout}
 
+            if 'token' in self.config:
+                kwargs['token'] = self.config['token']
+
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
             else:
