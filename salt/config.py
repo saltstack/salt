@@ -340,13 +340,13 @@ def master_config(path):
     return opts
 
 
-def client_config(mdir):
+def client_config(path):
     '''
     Load in the configuration data needed for the LocalClient. This function
     searches for client specific configurations and adds them to the data from
     the master configuration.
     '''
-    opts = master_config(mdir)
+    opts = master_config(path)
     cpath = os.path.expanduser('~/.salt')
     load_config(opts, cpath, 'SALT_CLIENT_CONFIG')
     if 'token_file' in opts:

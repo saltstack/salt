@@ -753,7 +753,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                 self.config['arg'] = self.args[2:]
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        return config.client_config(self.get_config_file_path('master'))
 
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
