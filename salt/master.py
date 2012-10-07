@@ -1418,7 +1418,7 @@ class ClearFuncs(object):
                                 good = True
                         elif isinstance(ind[valid], list):
                             for regex in ind[valid]:
-                                if re.match(ind[valid], clear_load['fun']):
+                                if re.match(regex, clear_load['fun']):
                                     good = True
             if not good:
                 # Accept find_job so the cli will function cleanly
