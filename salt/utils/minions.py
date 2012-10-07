@@ -191,6 +191,7 @@ class CkMinions(object):
             v_expr = comps[1]
         else:
             v_matcher = 'glob'
+            v_expr = valid
         if v_matcher in infinate:
             # We can't be sure what the subset is, only match the identical
             # target
@@ -199,4 +200,7 @@ class CkMinions(object):
             return v_expr == expr
         v_minions = set(self.check_minions(v_expr, v_matcher))
         minions = set(self.check_minions(expr, expr_form))
-        return minions.difference(v_minions)
+        d_bool = bool(minions.difference(v_minions))
+        if len(v_minions) == len(minions) and not d_bool:
+            return True
+        return d_bool
