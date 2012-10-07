@@ -70,7 +70,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_gid, os.getgid())
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 0)
+        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
