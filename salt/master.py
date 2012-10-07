@@ -526,6 +526,7 @@ class AESFuncs(object):
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
+        self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
         # Make a client
@@ -954,13 +955,12 @@ class AESFuncs(object):
                     clear_load['id'])
             log.warn(msg)
             return {}
-        perms = set()
+        perms = []
         for match in self.opts['peer']:
             if re.match(match, clear_load['id']):
                 # This is the list of funcs/modules!
                 if isinstance(self.opts['peer'][match], list):
-                    perms.update(self.opts['peer'][match])
-        good = False
+                    perms.extend(self.opts['peer'][match])
         if ',' in clear_load['fun']:
             # 'arg': [['cat', '/proc/cpuinfo'], [], ['foo']]
             clear_load['fun'] = clear_load['fun'].split(',')
@@ -968,15 +968,11 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
-        for perm in perms:
-            if isinstance(clear_load['fun'], list):
-                good = True
-                for fun in clear_load['fun']:
-                    if not re.match(perm, fun):
-                        good = False
-            else:
-                if re.match(perm, clear_load['fun']):
-                    good = True
+        good = self.ckminions.auth_check(
+                perms,
+                clear_load['fun'],
+                clear_load['tgt'],
+                clear_load.get('tgt_type', 'glob'))
         if not good:
             return {}
         # Set up the publication payload
