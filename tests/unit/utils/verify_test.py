@@ -1,3 +1,8 @@
+'''
+Test the verification routines
+'''
+
+# Import Python libs
 import getpass
 import os
 import sys
@@ -6,6 +11,7 @@ import shutil
 import resource
 import tempfile
 
+# Import Salt libs
 from saltunittest import skipIf, TestCase, TestsLoggingHandler
 
 from salt.utils.verify import (
@@ -18,6 +24,9 @@ from salt.utils.verify import (
 
 
 class TestVerify(TestCase):
+    '''
+    Verify module tests
+    '''
 
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
@@ -60,7 +69,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_uid, os.getuid())
         self.assertEqual(dir_stat.st_gid, os.getgid())
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 0)
+        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 0)
 
     def test_verify_socket(self):
