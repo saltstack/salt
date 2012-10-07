@@ -7,7 +7,12 @@ try:
 except ImportError:
     pass
 
+import logging
+from copy import deepcopy
+
 from salt._compat import string_types, callable
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -25,19 +30,45 @@ def __virtual__():
     return 'user' if __grains__['kernel'] in ('Linux', 'Darwin') else False
 
 
+def _get_gecos(name):
+    '''
+    Retrieve GECOS field info and return it in dictionary form
+    '''
+    gecos_field = pwd.getpwnam(name).pw_gecos.split(',', 3)
+    if not gecos_field:
+        return {}
+    else:
+        # Assign empty strings for any unspecified trailing GECOS fields
+        while len(gecos_field) < 4: gecos_field.append('')
+        return {'fullname': str(gecos_field[0]),
+                'roomnumber': str(gecos_field[1]),
+                'workphone': str(gecos_field[2]),
+                'homephone': str(gecos_field[3])}
+
+
+def _build_gecos(gecos_dict):
+    '''
+    Accepts a dictionary entry containing GECOS field names and their values,
+    and returns a full GECOS comment string, to be used with usermod.
+    '''
+    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname',''),
+                                    gecos_dict.get('roomnumber',''),
+                                    gecos_dict.get('workphone',''),
+                                    gecos_dict.get('homephone',''))
+
+
 def add(name,
         uid=None,
         gid=None,
         groups=None,
         home=True,
         shell=None,
-        fullname=None,
-        roomnumber=None,
-        workphone=None,
-        homephone=None,
-        other=None,
         unique=True,
-        system=False):
+        system=False,
+        fullname='',
+        roomnumber='',
+        workphone='',
+        homephone=''):
     '''
     Add a user to the minion
 
@@ -90,8 +121,6 @@ def add(name,
             chworkphone(name, workphone)
         if homephone:
             chhomephone(name, homephone)
-        if other:
-            chother(name, other)
         return True
 
 
@@ -233,16 +262,20 @@ def chgroups(name, groups, append=False):
 
 def chfullname(name, fullname):
     '''
-    Change the users Full Name
+    Change the user's Full Name
 
     CLI Example::
 
         salt '*' user.chfullname foo "Foo Bar"
     '''
-    pre_info = info(name)
+    fullname = str(fullname)
+    pre_info = _get_gecos(name)
+    if not pre_info: return False
     if fullname == pre_info['fullname']:
         return True
-    cmd = 'chfn -f "{0}" {1}'.format(fullname, name)
+    gecos_field = deepcopy(pre_info)
+    gecos_field['fullname'] = fullname
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['fullname'] != pre_info['fullname']:
@@ -258,10 +291,14 @@ def chroomnumber(name, roomnumber):
 
         salt '*' user.chroomnumber foo 123
     '''
-    pre_info = info(name)
+    roomnumber = str(roomnumber)
+    pre_info = _get_gecos(name)
+    if not pre_info: return False
     if roomnumber == pre_info['roomnumber']:
         return True
-    cmd = 'chfn -r "{0}" {1}'.format(roomnumber, name)
+    gecos_field = deepcopy(pre_info)
+    gecos_field['roomnumber'] = roomnumber
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['roomnumber'] != pre_info['roomnumber']:
@@ -277,10 +314,14 @@ def chworkphone(name, workphone):
 
         salt '*' user.chworkphone foo "7735550123"
     '''
-    pre_info = info(name)
+    workphone = str(workphone)
+    pre_info = _get_gecos(name)
+    if not pre_info: return False
     if workphone == pre_info['workphone']:
         return True
-    cmd = 'chfn -w "{0}" {1}'.format(workphone, name)
+    gecos_field = deepcopy(pre_info)
+    gecos_field['workphone'] = workphone
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['workphone'] != pre_info['workphone']:
@@ -296,33 +337,18 @@ def chhomephone(name, homephone):
 
         salt '*' user.chhomephone foo "7735551234"
     '''
-    pre_info = info(name)
+    homephone = str(homephone)
+    pre_info = _get_gecos(name)
+    if not pre_info: return False
     if homephone == pre_info['homephone']:
         return True
-    cmd = 'chfn -h "{0}" {1}'.format(homephone, name)
+    gecos_field = deepcopy(pre_info)
+    gecos_field['homephone'] = homephone
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['homephone'] != pre_info['homephone']:
         return post_info['homephone'] == homephone
-    return False
-
-
-def chother(name, other):
-    '''
-    Change the user's "Other" GECOS field
-
-    CLI Example::
-
-        salt '*' user.chother foo "fax=7735555678"
-    '''
-    pre_info = info(name)
-    if other == pre_info['other']:
-        return True
-    cmd = 'chfn -o "{0}" {1}'.format(other, name)
-    __salt__['cmd.run'](cmd)
-    post_info = info(name)
-    if post_info['other'] != pre_info['other']:
-        return post_info['other'] == other
     return False
 
 
@@ -345,15 +371,13 @@ def info(name):
         ret['shell'] = data.pw_shell
         ret['uid'] = data.pw_uid
         # Put GECOS info into a list
-        gecos_field = data.pw_gecos.split(',', 4)
+        gecos_field = data.pw_gecos.split(',', 3)
         # Assign empty strings for any unspecified GECOS fields
-        while len(gecos_field) < 5:
-            gecos_field.append('')
+        while len(gecos_field) < 4: gecos_field.append('')
         ret['fullname'] = gecos_field[0]
         ret['roomnumber'] = gecos_field[1]
         ret['workphone'] = gecos_field[2]
         ret['homephone'] = gecos_field[3]
-        ret['other'] = gecos_field[4]
     except KeyError:
         ret['gid'] = ''
         ret['groups'] = ''
@@ -366,7 +390,6 @@ def info(name):
         ret['roomnumber'] = ''
         ret['workphone'] = ''
         ret['homephone'] = ''
-        ret['other'] = ''
     return ret
 
 
