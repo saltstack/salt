@@ -27,7 +27,7 @@ class ManageTest(integration.ShellCase):
         jobs.lookup_jid
         '''
         ret = self.run_run_plus('jobs.lookup_jid', '', '23974239742394')
-        self.assertFalse(ret['fun'])
+        self.assertFalse(ret['fun'].startswith('AssertionError'))
         self.assertFalse(ret['out'][1])
 
     def test_list_jobs(self):
