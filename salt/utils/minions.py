@@ -164,3 +164,39 @@ class CkMinions(object):
             minions = expr
         return minions
 
+    def validate_tgt(self, valid, expr, expr_form):
+        '''
+        Return a Bool. This function returns if the expresion sent in is within
+        the scope of the valid expression
+        '''
+        ref = {'G': 'grain',
+               'P': 'grain_pcre',
+               'X': 'exsel',
+               'I': 'pillar',
+               'L': 'list',
+               'S': 'ipcidr',
+               'E': 'pcre',
+               'N': 'node'}
+        infinate = [
+                'node',
+                'ipcidr',
+                'grain',
+                'grain_pcre',
+                'exsel',
+                'pillar',
+                ]
+        if '@' in valid and valid[1] == '@':
+            comps = valid.split('@')
+            v_matcher = ref.get(comps[0])
+            v_expr = comps[1]
+        else:
+            v_matcher = 'glob'
+        if v_matcher in infinate:
+            # We can't be sure what the subset is, only match the identical
+            # target
+            if not v_matcher == expr_form:
+                return False
+            return v_expr == expr
+        v_minions = set(self.check_minions(v_expr, v_matcher))
+        minions = set(self.check_minions(expr, expr_form))
+        return minions.difference(v_minions)
