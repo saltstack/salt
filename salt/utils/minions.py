@@ -205,7 +205,7 @@ class CkMinions(object):
             return True
         return d_bool
 
-    def auth_check(self, auth_list, valid, fun, tgt, tgt_type='glob'):
+    def auth_check(self, auth_list, fun, tgt, tgt_type='glob'):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
