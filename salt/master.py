@@ -1036,7 +1036,7 @@ class AESFuncs(object):
         if ret_form == 'clean':
             return self.local.get_returns(
                     jid,
-                    self.local.check_minions(
+                    self.ckminions.check_minions(
                         clear_load['tgt'],
                         expr_form
                         ),
@@ -1045,7 +1045,7 @@ class AESFuncs(object):
         elif ret_form == 'full':
             ret = self.local.get_full_returns(
                     jid,
-                    self.local.check_minions(
+                    self.ckminions.check_minions(
                         clear_load['tgt'],
                         expr_form
                         ),
