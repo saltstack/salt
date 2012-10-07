@@ -34,22 +34,16 @@ def _get_gecos(name):
     '''
     Retrieve GECOS field info and return it in dictionary form
     '''
-    passwd_entry = __salt__['cmd.run_all'](
-            'egrep "^{0}:" /etc/passwd | cut -f5 -d:'.format(name)
-            )['stdout']
-    if not passwd_entry: return {}
-    try:
-        gecos_field = passwd_entry.split(',')
-        # Assign empty strings for any unspecified GECOS fields
+    gecos_field = pwd.getpwnam(name).pw_gecos.split(',', 3)
+    if not gecos_field:
+        return {}
+    else:
+        # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4: gecos_field.append('')
         return {'fullname': str(gecos_field[0]),
                 'roomnumber': str(gecos_field[1]),
                 'workphone': str(gecos_field[2]),
                 'homephone': str(gecos_field[3])}
-    except IndexError:
-        log.error('Unexpected formatting in passwd file entry for user '
-                  '{0}'.format(name))
-        return {}
 
 
 def _build_gecos(gecos_dict):
