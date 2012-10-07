@@ -204,3 +204,34 @@ class CkMinions(object):
         if len(v_minions) == len(minions) and not d_bool:
             return True
         return d_bool
+
+    def auth_check(self, auth_list, valid, fun, tgt, tgt_type='glob'):
+        '''
+        Returns a bool which defines if the requested function is authorized.
+        Used to evaluate the standard structure under external master
+        authentication interfaces, like eauth, peer, peer_run, etc.
+        '''
+        for ind in auth_list:
+            if isinstance(ind, str):
+                # Allowed for all minions
+                if re.match(ind, fun):
+                    return True
+            elif isinstance(ind, dict):
+                if len(ind) != 1:
+                    # Invalid argument
+                    continue
+                valid = ind.keys()[0]
+                # Check if minions are allowed
+                if self.validate_tgt(
+                        valid,
+                        tgt,
+                        tgt_type):
+                    # Minions are allowed, verify function in allowed list
+                    if isinstance(ind[valid], str):
+                        if re.match(ind[valid], fun):
+                            return True
+                    elif isinstance(ind[valid], list):
+                        for regex in ind[valid]:
+                            if re.match(regex, fun):
+                                return True
+        return False
