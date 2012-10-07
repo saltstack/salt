@@ -38,7 +38,9 @@ def _get_all_unit_files():
                       '|'.join(VALID_UNIT_TYPES) +
                       ')\s+(?P<state>.+)$')
 
-    out = __salt__['cmd.run_stdout']('systemctl --no-legend list-unit-files | col -b')
+    out = __salt__['cmd.run_stdout'](
+            'systemctl --full list-unit-files | col -b'
+    )
 
     ret = {}
     for match in rexp.finditer(out):
