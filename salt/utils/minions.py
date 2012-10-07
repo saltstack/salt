@@ -205,6 +205,22 @@ class CkMinions(object):
             return True
         return d_bool
 
+    def match_check(self, regex, fun):
+        '''
+        Validate a single regex to function comparison, the function argument
+        can be a list of functions. It is all or nothing for a list of
+        functions
+        '''
+        vals = []
+        if isinstance(fun, str):
+            fun = [fun]
+        for func in fun:
+            if re.match(regex, func):
+                vals.append(True)
+            else:
+                vals.append(False)
+        return all(vals)
+
     def auth_check(self, auth_list, fun, tgt, tgt_type='glob'):
         '''
         Returns a bool which defines if the requested function is authorized.
@@ -214,7 +230,7 @@ class CkMinions(object):
         for ind in auth_list:
             if isinstance(ind, str):
                 # Allowed for all minions
-                if re.match(ind, fun):
+                if self.match_check(ind, fun):
                     return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
@@ -228,10 +244,10 @@ class CkMinions(object):
                         tgt_type):
                     # Minions are allowed, verify function in allowed list
                     if isinstance(ind[valid], str):
-                        if re.match(ind[valid], fun):
+                        if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
                         for regex in ind[valid]:
-                            if re.match(regex, fun):
+                            if self.match_check(regex, fun):
                                 return True
         return False
