@@ -37,13 +37,11 @@ def _changes(
         password=None,
         enforce_password=True,
         shell=None,
-        fullname=None,
-        roomnumber=None,
-        workphone=None,
-        homephone=None,
-        other=None,
         unique=True,
-        ):
+        fullname='',
+        roomnumber='',
+        workphone='',
+        homephone=''):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
@@ -83,21 +81,16 @@ def _changes(
                             lshad['pwd'] != '!' and enforce_password:
                         if lshad['pwd'] != password:
                             change['passwd'] = password
-            if fullname:
-                if lusr['fullname'] != fullname:
-                    change['fullname'] = fullname
-            if roomnumber:
-                if lusr['roomnumber'] != roomnumber:
-                    change['roomnumber'] = roomnumber
-            if workphone:
-                if lusr['workphone'] != workphone:
-                    change['workphone'] = workphone
-            if homephone:
-                if lusr['homephone'] != homephone:
-                    change['homephone'] = homephone
-            if other:
-                if lusr['other'] != other:
-                    change['other'] = other
+            # GECOS fields
+            if lusr['fullname'] != fullname:
+                change['fullname'] = fullname
+            if lusr['roomnumber'] != roomnumber:
+                change['roomnumber'] = roomnumber
+            if lusr['workphone'] != workphone:
+                change['workphone'] = workphone
+            if lusr['homephone'] != homephone:
+                change['homephone'] = homephone
+
     if not found:
         return False
     return change
@@ -114,14 +107,12 @@ def present(
         password=None,
         enforce_password=True,
         shell=None,
-        fullname=None,
-        roomnumber=None,
-        workphone=None,
-        homephone=None,
-        other=None,
         unique=True,
         system=False,
-        ):
+        fullname='',
+        roomnumber='',
+        workphone='',
+        homephone=''):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -166,8 +157,14 @@ def present(
     shell
         The login shell, defaults to the system default shell
 
+    unique
+        Require a unique UID, True by default
 
-    User comment field (GECOS) support (currently Linux-only):
+    system
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
+
+
+    User comment field (GECOS) support (currently Linux and FreeBSD only):
 
     The below values should be specified as strings to avoid ambiguities when
     the values are loaded. (Especially the phone and room number fields which
@@ -184,15 +181,6 @@ def present(
 
     homephone
         The user's home phone number
-
-    other
-        The user's "other" GECOS field
-
-    unique
-        Require a unique UID, True by default
-
-    system
-        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
     '''
     ret = {'name': name,
            'changes': {},
@@ -225,6 +213,11 @@ def present(
             log.warning('Group "{0}" specified in both groups and '
                         'optional_groups for user {1}'.format(x,name))
 
+    if fullname is None: fullname = ''
+    if roomnumber is None: roomnumber = ''
+    if workphone is None: workphone = ''
+    if homephone is None: homephone = ''
+
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
     changes = _changes(
@@ -237,12 +230,11 @@ def present(
             password,
             enforce_password,
             shell,
+            unique,
             fullname,
             roomnumber,
             workphone,
-            homephone,
-            other,
-            unique)
+            homephone)
     if changes:
         if __opts__['test']:
             ret['result'] = None
@@ -290,13 +282,12 @@ def present(
                                 groups=groups,
                                 home=home,
                                 shell=shell,
+                                unique=unique,
+                                system=system,
                                 fullname=fullname,
                                 roomnumber=roomnumber,
                                 workphone=workphone,
-                                homephone=homephone,
-                                other=other,
-                                unique=unique,
-                                system=system):
+                                homephone=homephone):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if password:
