@@ -11,7 +11,7 @@ from werkzeug import exceptions
 
 import salt.client
 import salt.runner
-import saltapi.loader
+import salt.utils
 
 def __virtual__():
     '''
@@ -28,8 +28,8 @@ class SaltAPI(MethodView):
     '''
     def __init__(self, app, *args, **kwargs):
         self.app = app
-        self.runners = saltapi.loader.runner(__opts__)
         self.local = salt.client.LocalClient(__opts__['conf_file'])
+        self.runner = salt.runner.RunnerClient(__opts__)
 
 class JobsView(SaltAPI):
     '''
@@ -39,14 +39,14 @@ class JobsView(SaltAPI):
         '''
         Return information on a previously run job
         '''
-        ret = self.runners['jobs.lookup_jid'](jid)
+        ret = self.runner.cmd('jobs.lookup_jid', [jid])
         return jsonify(ret)
 
     def get_jobs_list(self):
         '''
         Return a previously run jobs
         '''
-        ret = self.runners['jobs.list_jobs']()
+        ret = self.runner.cmd('jobs.list_jobs', [])
         return jsonify(ret)
 
     def get(self, jid=None):
@@ -97,18 +97,17 @@ class RunnersView(SaltAPI):
         '''
         Return all available runners
         '''
-        return jsonify({'runners': self.runners.keys()})
+        return jsonify({'runners': self.runner.functions.keys()})
 
     def post(self):
         '''
         Execute runner commands
         '''
-        cmd = request.form['cmd']
+        fun = request.form.get('fun')
+        arg = request.form.get('arg')
 
-        if not cmd in self.runners:
-            raise exceptions.BadRequest("Runner '{0}' not found".format(cmd))
-
-        ret = self.runners[cmd]()
+        # pylint: disable-msg=W0142
+        ret = self.runner.cmd(fun, arg)
         return jsonify({'return': ret})
 
 def build_app():
