@@ -52,6 +52,10 @@ def parse():
             action='store_true',
             default=False,
             help='Don\'t cleanup temporary files/directories')
+    parser.add_option('--root-dir',
+            dest='root_dir',
+            default=None,
+            help='Override the minion root_dir config')
 
     options, args = parser.parse_args()
 
@@ -69,7 +73,12 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.swarm_root = tempfile.mkdtemp(prefix='mswarm-root', suffix='.d')
+
+        # If given a root_dir, keep the tmp files there as well
+        tmpdir = opts['root_dir'] or os.path.join(opts['root_dir'], 'tmp')
+        self.swarm_root = tempfile.mkdtemp(prefix='mswarm-root', suffix='.d',
+            dir=tmpdir)
+
         self.pki = self._pki_dir()
         self.__zfill = len(str(self.opts['minions']))
 
@@ -104,6 +113,7 @@ class Swarm(object):
         data = {
             'id': minion_id,
             'user': pwd.getpwuid(os.getuid()).pw_name,
+            'root_dir': self.opts['root_dir'],
             'pki_dir': self.pki,
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
