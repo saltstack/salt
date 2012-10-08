@@ -117,3 +117,14 @@ Description: This package represents the master-of-masters for salt
  .
  This particular package provides the master of masters for salt-- it enables
  the management of multiple masters at a time.
+
+
+Package: salt-doc
+Architecture: all
+Description: Documentation for Salt in html
+ Salt is a powerful remote execution and configuration management
+ tool.  It allows commands to be executed across large groups of
+ systems simultaneously, with modules that automate many common
+ tasks and quick introspection into running systems.
+ .
+ This package contains the documentation in HTML format.

@@ -2,7 +2,8 @@
 #export DH_VERBOSE=1
 %:
 	dh $@ #--with python2
-dh_override_auto_build:
+	make -C doc html BUILDDIR=../build/doc
+dh_override_auto_build: 
 	python setup.py build #--install-layout=deb build
 #get-orig-source:
 #	git clone https://github.com/saltstack/salt.git
