@@ -6,6 +6,7 @@ import re
 # Import Salt libs
 import salt.utils
 
+LOCAL_CONFIG_PATH = '/etc/systemd/system'
 VALID_UNIT_TYPES = ['service','socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']
 
@@ -20,14 +21,29 @@ def __virtual__():
     return False
 
 
+def _canonical_unit_name(name):
+    '''
+    Build a canonical unit name treating unit names without one
+    of the valid suffixes as a service.
+    '''
+    if any(name.endswith(suffix) for suffix in VALID_UNIT_TYPES):
+        return name
+    return '{0}.service'.format(name)
+
+
+def _canonical_template_unit_name(name):
+    '''
+    Build a canonical unit name for unit instances based on templates.
+    '''
+    return re.sub(r'@.+?(\.|$)', r'@\1', name)
+
+
 def _systemctl_cmd(action, name):
     '''
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
     '''
-    if not any(name.endswith(suffix) for suffix in VALID_UNIT_TYPES):
-        name += '.service'
-    return 'systemctl {0} {1}'.format(action, name)
+    return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
 
 def _get_all_unit_files():
     '''
@@ -90,6 +106,14 @@ def get_all():
         salt '*' service.get_all
     '''
     return sorted(_get_all_unit_files().keys())
+
+
+def available(name):
+    '''
+    Check that the given service is available taking into account
+    template units.
+    '''
+    return _canonical_template_unit_name(name) in get_all()
 
 
 def start(name):
@@ -180,6 +204,24 @@ def disable(name):
     return not __salt__['cmd.retcode'](_systemctl_cmd('disable', name))
 
 
+def _templated_instance_enabled(name):
+    '''
+    Services instantiated based on templates can not be checked with
+    systemctl is-enabled. Presence of the actual symlinks is checked
+    as a fall-back.
+    '''
+    if '@' not in name:
+        return False
+    find_unit_by_name = 'find {0} -name {1} -type l -print -quit'
+    return len(__salt__['cmd.run'](find_unit_by_name.format(LOCAL_CONFIG_PATH,
+                                                            _canonical_unit_name(name))))
+
+
+def _enabled(name):
+    is_enabled = not bool(__salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name)))
+    return is_enabled or _templated_instance_enabled(name)
+
+
 def enabled(name):
     '''
     Return if the named service is enabled to start on boot
@@ -188,7 +230,7 @@ def enabled(name):
 
         salt '*' service.enabled <service name>
     '''
-    return not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name))
+    return _enabled(name)
 
 
 def disabled(name):
@@ -199,4 +241,4 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    return bool(__salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name)))
+    return not _enabled(name)
