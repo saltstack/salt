@@ -187,6 +187,18 @@ def _disable(name, started):
         return ret
 
 
+def _available(name, ret):
+    # Check if the service is available
+    if 'service.available' in __salt__:
+        ret['available'] = __salt__['service.available'](name)
+    elif 'service.get_all' in __salt__:
+        ret['available'] = name in __salt__['service.get_all']()
+    if not ret.get('available', True):
+        ret['result'] = False
+        ret['comment'] = 'The named service {0} is not available'.format(name)
+    return ret
+
+
 def running(name, enable=None, sig=None):
     '''
     Verify that the service is running
@@ -216,15 +228,10 @@ def running(name, enable=None, sig=None):
         else:
             return ret
 
-    # Check if the service is available
-    if 'service.get_all' in __salt__:
-        # get_all is available, we can reliable check for the service
-        services = __salt__['service.get_all']()
-        if not name in services:
-            ret['result'] = False
-            ret['comment'] = 'The named service {0} is not available'.format(
-                    name)
-            return ret
+    # Check if the service is available:
+    ret = _available(name, ret)
+    if not ret.pop('available', True):
+        return ret
 
     # Run the tests
     if __opts__['test']:
@@ -282,15 +289,10 @@ def dead(name, enable=None, sig=None):
         else:
             return ret
 
-    # Check if the service is available
-    if 'service.get_all' in __salt__:
-        # get_all is available, we can reliable check for the service
-        services = __salt__['service.get_all']()
-        if not name in services:
-            ret['result'] = False
-            ret['comment'] = 'The named service {0} is not available'.format(
-                    name)
-            return ret
+    # Check if the service is available:
+    ret = _available(name, ret)
+    if not ret.pop('available', True):
+        return ret
 
     if __opts__['test']:
         ret['result'] = None
