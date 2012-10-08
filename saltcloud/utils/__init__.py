@@ -89,6 +89,15 @@ def accept_key(pki_dir, pub, id_):
     with open(key, 'w+') as fp_:
         fp_.write(pub)
 
+def remove_key(pki_dir, id_):
+    '''
+    This method removes a specified key from the accepted keys dir
+    '''
+    key = os.path.join(
+            pki_dir,
+            'minions/{0}'.format(id_)
+            )
+    os.remove(key)
 
 def get_option(option, opts, vm_):
     '''
