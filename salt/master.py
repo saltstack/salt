@@ -1385,7 +1385,25 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
         # Check for external auth calls
-        if 'eauth' in extra:
+        if 'token' in extra:
+            # A token was passwd, check it
+            token = self.loadauth.get_tok(extra['token'])
+            if not token:
+                return ''
+            if not token['eauth'] in self.opts['extrnal_auth']:
+                return ''
+            if not token['name'] in self.opts['external_auth'][token['eauth']]:
+                return ''
+            good = self.ckminions.auth_check(
+                    self.opts['external_auth'][token['eauth']][token['name']],
+                    clear_load['fun'],
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob'))
+            if not good:
+                # Accept find_job so the cli will function cleanly
+                if not clear_load['fun'] == 'saltutil.find_job':
+                    return ''
+        elif 'eauth' in extra:
             if not extra['eauth'] in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
                 return ''
