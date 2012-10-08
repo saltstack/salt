@@ -164,13 +164,12 @@ def _memdata(osdata):
     elif osdata['kernel'] == 'Windows':
         import wmi
         wmi_c = wmi.WMI()
-        total = 0
         # this is a list of each stick of ram in a system
-        for mem in wmi_c.Win32_PhysicalMemory():
-            # capacity is listed in bytes
-            total += int(mem.Capacity)
+        # WMI returns it as the string value of the number of bytes
+        tot_bytes = sum(map(lambda x: int(x.Capacity),
+                            wmi_c.Win32_PhysicalMemory()), 0)
         # return memory info in gigabytes
-        grains['mem_total'] = int(total / (1024 ** 2))
+        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
 
 
