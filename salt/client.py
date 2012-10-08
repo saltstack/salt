@@ -29,12 +29,10 @@ The data structure needs to be:
 # This means that the primary client to build is, the LocalClient
 
 import os
-import re
 import sys
 import glob
 import time
 import getpass
-import fnmatch
 
 # Import salt modules
 import salt.config
@@ -875,13 +873,13 @@ class LocalClient(object):
 
         # Generate the standard keyword args to feed to format_payload
         payload_kwargs = {'cmd': 'publish',
-                           'tgt': tgt,
-                           'fun': fun,
-                           'arg': arg,
-                           'key': self.key,
-                           'tgt_type': expr_form,
-                           'ret': ret,
-                           'jid': jid}
+                          'tgt': tgt,
+                          'fun': fun,
+                          'arg': arg,
+                          'key': self.key,
+                          'tgt_type': expr_form,
+                          'ret': ret,
+                          'jid': jid}
 
         # if kwargs are passed, pack them.
         if kwargs:
