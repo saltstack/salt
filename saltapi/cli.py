@@ -62,5 +62,5 @@ class SaltAPI(object):
         '''
         netapi = saltapi.loader.netapi(self.opts)
         for fun in netapi:
-            if fun.endswith('.bind'):
+            if fun.endswith('.start'):
                 multiprocessing.Process(target=netapi[fun]).start()

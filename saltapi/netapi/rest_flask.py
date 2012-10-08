@@ -118,7 +118,7 @@ def build_app():
     return app
 
 
-def bind():
+def start():
     '''
     Server loop here. Started in a multiprocess.
     '''
