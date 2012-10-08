@@ -106,6 +106,7 @@ def build_app():
 
     # Allow using custom error handler when debug=True
     app.config['PROPAGATE_EXCEPTIONS'] = False
+    app.config['TRAP_HTTP_EXCEPTIONS'] = True
     app.error_handler_spec[None][500] = make_json_error
 
     jobs = JobsView.as_view('jobs', app=app)
