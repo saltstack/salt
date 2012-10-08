@@ -99,8 +99,16 @@ class SaltCloud(object):
                 dest='query',
                 default=False,
                 action='store_true',
-                help=('Execute a query and return information about the nodes '
-                      'running on configured cloud providers'))
+                help=('Execute a query and return some information about the '
+                      'nodes running on configured cloud providers'))
+
+        parser.add_option('-F',
+                '--full-query',
+                dest='full_query',
+                default=False,
+                action='store_true',
+                help=('Execute a query and return all information about the '
+                      'nodes running on configured cloud providers'))
 
         parser.add_option('--list-images',
                 dest='list_images',
@@ -199,7 +207,7 @@ class SaltCloud(object):
         import saltcloud.cloud
         mapper = saltcloud.cloud.Map(self.opts)
 
-        if self.opts['query']:
+        if self.opts['query'] or self.opts['full_query']:
             get_outputter = salt.output.get_outputter
             if self.opts['raw_out']:
                 printout = get_outputter('raw')
@@ -212,8 +220,12 @@ class SaltCloud(object):
             else:
                 printout = get_outputter(None)
 
+            query = 'list_nodes'
+            if self.opts['full_query']:
+                query = 'list_nodes_full'
+
             color = not bool(self.opts['no_color'])
-            printout(mapper.map_providers(), color=color)
+            printout(mapper.map_providers(query=query), color=color)
 
         if self.opts['version']:
             print VERSION

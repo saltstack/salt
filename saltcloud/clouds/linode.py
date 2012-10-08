@@ -35,6 +35,7 @@ avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
 script = types.FunctionType(script.__code__, globals())
 destroy = types.FunctionType(destroy.__code__, globals())
 list_nodes = types.FunctionType(list_nodes.__code__, globals())
+list_nodes_full = types.FunctionType(list_nodes_full.__code__, globals())
 
 
 # Only load in this module if the LINODE configurations are in place

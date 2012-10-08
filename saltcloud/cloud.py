@@ -48,7 +48,7 @@ class Cloud(object):
             provs.add(fun[:fun.index('.')])
         return provs
 
-    def map_providers(self):
+    def map_providers(self, query='list_nodes'):
         '''
         Return a mapping of what named vms are running on what vm providers
         based on what providers are defined in the configs and vms
@@ -56,7 +56,7 @@ class Cloud(object):
         provs = self.get_providers()
         pmap = {}
         for prov in provs:
-            fun = '{0}.list_nodes'.format(prov)
+            fun = '{0}.{1}'.format(prov, query)
             if not fun in self.clouds:
                 print('Public cloud provider {0} is not available'.format(
                     self.provider(vm_))
