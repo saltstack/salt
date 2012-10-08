@@ -162,14 +162,15 @@ def _memdata(osdata):
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
     elif osdata['kernel'] == 'Windows':
-        for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
-            comps = line.split(':')
-            if not len(comps) > 1:
-                continue
-            if comps[0].strip() == 'Total Physical Memory':
-                # Windows XP use '.' as separator and Windows 2008 Server R2 use ','
-                grains['mem_total'] = int(comps[1].split()[0].replace('.', '').replace(',', ''))
-                break
+        import wmi
+        wmi_c = wmi.WMI()
+        total = 0
+        # this is a list of each stick of ram in a system
+        for mem in wmi_c.Win32_PhysicalMemory():
+            # capacity is listed in bytes
+            total += int(mem.Capacity)
+        # return memory info in gigabytes
+        grains['mem_total'] = int(total / (1024 ** 2))
     return grains
 
 
