@@ -275,6 +275,7 @@ def master_config(path):
             'runner_dirs': [],
             'client_acl': {},
             'external_auth': {},
+            'token_expire': 720,
             'file_buffer_size': 1048576,
             'max_open_files': 100000,
             'hash_type': 'md5',
