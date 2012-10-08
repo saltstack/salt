@@ -3,7 +3,9 @@ A REST API for Salt
 '''
 from flask import Flask
 from flask import jsonify
+from flask import redirect
 from flask import request
+from flask import url_for
 from flask.views import MethodView
 from werkzeug import exceptions
 
@@ -56,14 +58,39 @@ class JobsView(SaltAPI):
 
         return self.get_jobs_list()
 
+class MinionsView(SaltAPI):
+    def get(self, mid=None):
+        '''
+        List all minions (and grains and functions for each minion)
+        '''
+        return jsonify(self.local.cmd(mid or '*',
+            ['sys.list_functions', 'grains.items'], [[], []]))
+
     def post(self):
         '''
-        Run minion commands
+        Begin command execution on minion(s) and redirect to the JID URI
         '''
-        ret = self.local.cmd(
-                request.form['tgt'],
-                request.form['cmd'])
-        return jsonify(ret)
+        tgt = request.form.get('tgt')
+        expr = request.form.get('expr', 'glob')
+        funs = request.form.getlist('fun')
+        args = []
+
+        # Make a list & strip out empty strings: ['']
+        for i in request.form.getlist('arg'):
+            args.append([i] if i else [])
+
+        if not tgt:
+            raise exceptions.BadRequest("Missing target.")
+
+        if not funs:
+            raise exceptions.BadRequest("Missing command(s).")
+
+        if len(funs) != len(args):
+            raise exceptions.BadRequest(
+                    "Mismatched number of commands and args.")
+
+        jid = self.local.run_job(tgt, funs, args, expr_form=expr).get('jid')
+        return redirect(url_for('jobs', jid=jid, _method='GET'))
 
 class RunnersView(SaltAPI):
     def get(self):
@@ -112,6 +139,11 @@ def build_app():
     jobs = JobsView.as_view('jobs', app=app)
     app.add_url_rule('/jobs', view_func=jobs, methods=['GET', 'POST'])
     app.add_url_rule('/jobs/<jid>', view_func=jobs, methods=['GET'])
+
+    minions = MinionsView.as_view('minions', app=app)
+    app.add_url_rule('/minions', view_func=minions, methods=['GET', 'POST'])
+    app.add_url_rule('/minions/<mid>', view_func=minions,
+            methods=['GET', 'POST'])
 
     runners = RunnersView.as_view('runners', app=app)
     app.add_url_rule('/runners', view_func=runners, methods=['GET', 'POST'])
