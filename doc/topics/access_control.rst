@@ -20,7 +20,7 @@ case of the peer system.
 
 The access controls are manifest using matchers in these configurations:
 
-.. code_blck:: yaml
+.. code_block:: yaml
 
     client_acl:
       fred:
