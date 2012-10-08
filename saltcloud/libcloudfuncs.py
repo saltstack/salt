@@ -136,9 +136,10 @@ def destroy(name):
     ret = conn.destroy_node(node)
     if ret:
         print('Destroyed VM: {0}'.format(name))
+        return True
     else:
         print('Failed to Destroy VM: {0}'.format(name))
-
+        return False
 
 def list_nodes():
     '''

@@ -129,7 +129,8 @@ class Cloud(object):
         for prov, names_ in dels.items():
             fun = '{0}.destroy'.format(prov)
             for name in names_:
-            	self.clouds[fun](name)
+                if self.clouds[fun](name):
+                    saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
     def create(self, vm_):
         '''
