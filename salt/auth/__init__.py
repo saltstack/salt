@@ -112,6 +112,7 @@ class LoadAuth(object):
         tdata = {'start': time.time(),
                  'expire': time.time() + self.opts['token_expire'],
                  'name': fcall['args'][0],
+                 'eauth': load['eauth'],
                  'token': tok}
         with open(t_path, 'w+') as fp_:
             fp_.write(self.serial.dumps(tdata))
@@ -124,10 +125,22 @@ class LoadAuth(object):
         '''
         t_path = os.path.join(self.opts['token_dir'], tok)
         if not os.path.isfile:
-            return False
+            return {}
         with open(t_path, 'r') as fp_:
-            return self.serial.loads(fp_.read())
-        return False
+            tdata = self.serial.loads(fp_.read())
+        rm_tok = False
+        if not 'expire' in tdata:
+            # invalid token, delete it!
+            rm_tok = True
+        if tdata.get('expire', '0') < time.time():
+            rm_tok = True
+        if rm_tok:
+            try:
+                os.remove(t_path)
+                return {}
+            except (IOError, OSError):
+                pass
+        return tdata
 
 
 class Resolver(object):
