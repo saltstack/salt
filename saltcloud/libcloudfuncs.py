@@ -164,7 +164,6 @@ def list_nodes_full():
     conn = get_conn() 
     nodes = conn.list_nodes()
     ret = {}
-    import pprint
     for node in nodes:
         pairs = {}
         for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
