@@ -347,11 +347,13 @@ def client_config(path):
     searches for client specific configurations and adds them to the data from
     the master configuration.
     '''
-    opts = master_config(path)
+    opts = {'token_file': os.path.expanduser('~/.salt_token')}
+    opts.update(master_config(path))
     cpath = os.path.expanduser('~/.salt')
     load_config(opts, cpath, 'SALT_CLIENT_CONFIG')
     if 'token_file' in opts:
-        if os.path.isfile(opts['token_file']):
-            with open(opts['token_file']) as fp_:
-                opts['token'] = fp_.read().strip()
+        opts['token_file'] = os.path.expand_user(opts['token_file'])
+    if os.path.isfile(opts['token_file']):
+        with open(opts['token_file']) as fp_:
+            opts['token'] = fp_.read().strip()
     return opts

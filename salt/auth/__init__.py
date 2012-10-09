@@ -116,7 +116,7 @@ class LoadAuth(object):
                  'token': tok}
         with open(t_path, 'w+') as fp_:
             fp_.write(self.serial.dumps(tdata))
-        return tok
+        return tdata
 
     def get_tok(self, tok):
         '''
@@ -182,3 +182,12 @@ class Resolver(object):
                 ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
 
         return ret
+
+    def token_cli(self, eauth):
+        '''
+        Create the token from the cli and request the correct data to
+        authenticate via the passed authentication mechanism
+        '''
+        load = self.cli(eauth)
+        tdata = self.auth.mktoken(load)
+        
