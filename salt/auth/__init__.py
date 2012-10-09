@@ -151,6 +151,7 @@ class Resolver(object):
     def __init__(self, opts):
         self.opts = opts
         self.auth = salt.loader.auth(opts)
+        self.serial = salt.payload.Serial(opts)
 
     def cli(self, eauth):
         '''
@@ -190,4 +191,9 @@ class Resolver(object):
         '''
         load = self.cli(eauth)
         tdata = self.auth.mktoken(load)
-        
+        try:
+            with open(self.opts['token_file'], 'w+') as fp_:
+                fp_.write(self.serial.dumps(tdata))
+        except (IOError, OSError):
+            pass
+        return tdata
