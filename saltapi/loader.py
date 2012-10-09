@@ -1,5 +1,5 @@
 '''
-The salt cloud module loader interface
+The salt api module loader interface
 '''
 # Import python libs
 import os

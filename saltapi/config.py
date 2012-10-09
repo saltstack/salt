@@ -1,5 +1,5 @@
 '''
-Manage configuration files in salt-cloud
+Manage configuration files in salt-api
 '''
 
 # Import python libs
@@ -12,7 +12,7 @@ import salt.config
 def api_config(path):
     '''
     Read in the salt master config file and add additional configs that
-    need to be stubbed out for cloudapi
+    need to be stubbed out for salt-api
     '''
     opts = {}
 
