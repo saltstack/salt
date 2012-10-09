@@ -1385,7 +1385,7 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
         # Check for external auth calls
-        if 'token' in extra:
+        if extra.get('token', False):
             # A token was passwd, check it
             token = self.loadauth.get_tok(extra['token'])
             if not token:
