@@ -688,7 +688,16 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             '-a', '--auth', '--eauth', '--extended-auth',
             default='',
             dest='eauth',
-            help=('Specify an extended authentication system to use.'))
+            help=('Specify an extended authentication system to use.')
+            )
+        self.add_option(
+            '-T', '--token',
+            default=False,
+            dest='token',
+            help=('Generate and save an authentication token for re-use. The' 
+                  'token is generated and made available for the period '
+                  'defined in the Salt Master.')
+            )
         self.add_option(
             '--return',
             default='',
