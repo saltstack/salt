@@ -13,10 +13,16 @@ exec(compile(
     open("saltcloud/version.py").read(), "saltcloud/version.py", 'exec')
     )
 
+saltcloud_reqs = os.path.join(os.path.abspath(
+    os.path.dirname(__file__)), 'requirements.txt')
+
 NAME = 'salt-cloud'
 VER = __version__
 DESC = ('Generic cloud provisioning system with build in functions ')
 
+requirements = ''
+with open(saltcloud_reqs) as f:
+    requirements = f.read()
 
 setup(
       name=NAME,
@@ -49,5 +55,6 @@ setup(
                      ['doc/man/salt-cloud.1']),
                      ('share/man/man7',
                      ['doc/man/salt-cloud.7'])],
+      install_requires=requirements,
       scripts=['scripts/salt-cloud'],
      )
