@@ -184,12 +184,11 @@ class Resolver(object):
 
         return ret
 
-    def token_cli(self, eauth):
+    def token_cli(self, eauth, load):
         '''
         Create the token from the cli and request the correct data to
         authenticate via the passed authentication mechanism
         '''
-        load = self.cli(eauth)
         tdata = self.auth.mktoken(load)
         try:
             with open(self.opts['token_file'], 'w+') as fp_:
