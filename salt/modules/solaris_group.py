@@ -9,7 +9,7 @@ except ImportError:
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the group module if the kernel is SunOS
     '''
     return 'group' if __grains__['kernel'] == 'SunOS' else False
 
