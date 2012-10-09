@@ -54,9 +54,12 @@ class LoadAuth(object):
         except IndexError:
             return ''
 
-    def auth_call(self, load):
+    def __auth_call(self, load):
         '''
         Return the token and set the cache data for use 
+
+        Do not call this directly! Use the time_auth method to overcome timing
+        attacks
         '''
         if not 'eauth' in load:
             return False
@@ -80,7 +83,7 @@ class LoadAuth(object):
         Make sure that all failures happen in the same amount of time
         '''
         start = time.time()
-        ret = self.auth_call(load)
+        ret = self.__auth_call(load)
         if ret:
             return ret
         f_time = time.time() - start
@@ -103,7 +106,7 @@ class LoadAuth(object):
         if ret is False:
             return ret
         fstr = '{0}.auth'.format(load['eauth'])
-        tok = hashlib.md5(os.urandom(512)).hexdigest()
+        tok = str(hashlib.md5(os.urandom(512)).hexdigest())
         t_path = os.path.join(self.opts['token_dir'], tok)
         while os.path.isfile(t_path):
             tok = hashlib.md5(os.urandom(512)).hexdigest()
@@ -151,7 +154,6 @@ class Resolver(object):
     def __init__(self, opts):
         self.opts = opts
         self.auth = salt.loader.auth(opts)
-        self.serial = salt.payload.Serial(opts)
 
     def cli(self, eauth):
         '''
@@ -189,10 +191,15 @@ class Resolver(object):
         Create the token from the cli and request the correct data to
         authenticate via the passed authentication mechanism
         '''
-        tdata = self.auth.mktoken(load)
+        load['cmd'] = 'mk_token'
+        load['eauth'] = eauth
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        tdata = sreq.send('clear', load)
         try:
             with open(self.opts['token_file'], 'w+') as fp_:
-                fp_.write(self.serial.dumps(tdata))
+                fp_.write(tdata['token'])
         except (IOError, OSError):
             pass
         return tdata
