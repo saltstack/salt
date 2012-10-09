@@ -1378,6 +1378,19 @@ class ClearFuncs(object):
         self.event.fire_event(eload, 'auth')
         return ret
 
+    def mk_token(self, clear_load):
+        if not 'eauth' in clear_load:
+            return ''
+        if not clear_load['eauth'] in self.opts['external_auth']:
+            # The eauth system is not enabled, fail
+            return ''
+        name = self.loadauth.load_name(clear_load)
+        if not name in self.opts['external_auth'][clear_load['eauth']]:
+            return ''
+        if not self.loadauth.time_auth(clear_load):
+            return ''
+        return self.loadauth.mk_token(clear_load)
+
     def publish(self, clear_load):
         '''
         This method sends out publications to the minions, it can only be used
@@ -1390,7 +1403,7 @@ class ClearFuncs(object):
             token = self.loadauth.get_tok(extra['token'])
             if not token:
                 return ''
-            if not token['eauth'] in self.opts['extrnal_auth']:
+            if not token['eauth'] in self.opts['external_auth']:
                 return ''
             if not token['name'] in self.opts['external_auth'][token['eauth']]:
                 return ''
@@ -1410,6 +1423,8 @@ class ClearFuncs(object):
             name = self.loadauth.load_name(extra)
             if not name in self.opts['external_auth'][extra['eauth']]:
                 return ''
+            if not self.loadauth.time_auth(extra):
+                return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][extra['eauth']][name],
                     clear_load['fun'],
@@ -1419,8 +1434,6 @@ class ClearFuncs(object):
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
                     return ''
-            if not self.loadauth.time_auth(extra):
-                return ''
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
