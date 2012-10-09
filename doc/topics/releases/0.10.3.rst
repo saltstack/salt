@@ -49,7 +49,7 @@ The ability to generate fingerprints of keys used by Salt has been added to
 ``salt-key``. The new option `finger` accepts the name of the key to generate
 and display a fingerprint for.
 
-.. code-block:: base
+.. code-block:: bash
 
     salt-key -F master
 

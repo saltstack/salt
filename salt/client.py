@@ -29,12 +29,10 @@ The data structure needs to be:
 # This means that the primary client to build is, the LocalClient
 
 import os
-import re
 import sys
 import glob
 import time
 import getpass
-import fnmatch
 
 # Import salt modules
 import salt.config
@@ -42,7 +40,7 @@ import salt.payload
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
-from salt.exceptions import SaltClientError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
@@ -69,8 +67,8 @@ class LocalClient(object):
     '''
     Connect to the salt master via the local server and via root
     '''
-    def __init__(self, c_path='/etc/salt/master'):
-        self.opts = salt.config.master_config(c_path)
+    def __init__(self, c_path='/etc/salt'):
+        self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
         self.salt_user = self.__get_user()
         self.key = self.__read_master_key()
@@ -93,9 +91,8 @@ class LocalClient(object):
             with open(keyfile, 'r') as KEY:
                 return KEY.read()
         except (OSError, IOError):
-            # In theory, this should never get hit. Belt & suspenders baby!
-            raise SaltClientError(('Problem reading the salt root key. Are'
-                                   ' you root?'))
+            # Fall back to eauth
+            return ''
 
     def __get_user(self):
         '''
@@ -116,129 +113,6 @@ class LocalClient(object):
             return user
         return user
 
-    def _check_glob_minions(self, expr):
-        '''
-        Return the minions found by looking via globs
-        '''
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        ret = set(glob.glob(expr))
-        os.chdir(cwd)
-        return ret
-
-    def _check_list_minions(self, expr):
-        '''
-        Return the minions found by looking via a list
-        '''
-        ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
-            if fn_ in expr:
-                if fn_ not in ret:
-                    ret.append(fn_)
-        return ret
-
-    def _check_pcre_minions(self, expr):
-        '''
-        Return the minions found by looking via regular expressions
-        '''
-        ret = set()
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        reg = re.compile(expr)
-        for fn_ in os.listdir('.'):
-            if reg.match(fn_):
-                ret.add(fn_)
-        os.chdir(cwd)
-        return ret
-
-    def _check_grain_minions(self, expr):
-        '''
-        Return the minions found by looking via a list
-        '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
-        if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not id_ in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
-                grains = self.serial.load(open(datap)).get('grains')
-                comps = expr.split(':')
-                if len(comps) < 2:
-                    continue
-                if comps[0] not in grains:
-                    minions.remove(id_)
-                    continue
-                if isinstance(grains.get(comps[0]), list):
-                    # We are matching a single component to a single list member
-                    found = False
-                    for member in grains[comps[0]]:
-                        if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                            found = True
-                            break
-                    if found:
-                        continue
-                    minions.remove(id_)
-                    continue
-                if fnmatch.fnmatch(
-                    str(grains.get(comps[0], '').lower()),
-                    comps[1].lower(),
-                    ):
-                    continue
-                else:
-                    minions.remove(id_)
-        return list(minions)
-
-    def _check_grain_pcre_minions(self, expr):
-        '''
-        Return the minions found by looking via a list
-        '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
-        if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not id_ in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
-                grains = self.serial.load(open(datap)).get('grains')
-                comps = expr.split(':')
-                if len(comps) < 2:
-                    continue
-                if comps[0] not in grains:
-                    minions.remove(id_)
-                if isinstance(grains[comps[0]], list):
-                    # We are matching a single component to a single list member
-                    found = False
-                    for member in grains[comps[0]]:
-                        if re.match(comps[1].lower(), str(member).lower()):
-                            found = True
-                    if found:
-                        continue
-                    minions.remove(id_)
-                    continue
-                if re.match(
-                    comps[1].lower(),
-                    str(grains[comps[0]]).lower()
-                    ):
-                    continue
-                else:
-                    minions.remove(id_)
-        return list(minions)
-
-    def _all_minions(self, expr=None):
-        '''
-        Return a list of all minions that have auth'd
-        '''
-        return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
-
     def _convert_range_to_list(self, tgt):
         range = seco.range.Range(self.opts['range_server'])
         try:
@@ -247,7 +121,7 @@ class LocalClient(object):
             print(("Range server exception: {0}".format(e)))
             return []
 
-    def gather_job_info(self, jid, tgt, tgt_type):
+    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -256,7 +130,56 @@ class LocalClient(object):
                 'saltutil.find_job',
                 [jid],
                 2,
-                tgt_type)
+                tgt_type,
+                **kwargs)
+
+    def _check_pub_data(self, pub_data):
+        '''
+        Common checks on the pub_data data structure returned from running pub
+        '''
+        if not pub_data:
+            err = ('Failed to authenticate, is this user permitted to execute '
+                   'commands?\n')
+            sys.stderr.write(err)
+            sys.exit(4)
+
+        # Failed to connect to the master and send the pub
+        if not 'jid' in pub_data or pub_data['jid'] == '0':
+            return {}
+
+        return pub_data
+
+    def run_job(self,
+            tgt,
+            fun,
+            arg=(),
+            expr_form='glob',
+            ret='',
+            timeout=None,
+            **kwargs):
+        '''
+        Prep the job dir and send minions the pub.
+        Returns a dict of (checked) pub_data or an empty dict.
+        '''
+        try:
+            jid = salt.utils.prep_jid(
+                    self.opts['cachedir'],
+                    self.opts['hash_type']
+                    )
+        except Exception:
+            jid = ''
+
+        pub_data = self.pub(
+            tgt,
+            fun,
+            arg,
+            expr_form,
+            ret,
+            jid=jid,
+            timeout=timeout or self.opts['timeout'],
+            **kwargs)
+
+        return self._check_pub_data(pub_data)
 
     def cmd(
         self,
@@ -266,39 +189,26 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return.
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        try:
-            jid = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type']
-                    )
-        except Exception:
-            jid = ''
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout,
+            **kwargs)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            return {}
-        elif not pub_data['jid']:
-            return {}
-        return self.get_returns(pub_data['jid'], pub_data['minions'], timeout)
+            return pub_data
+
+        return self.get_returns(pub_data['jid'], pub_data['minions'],
+                timeout or self.opts['timeout'])
 
     def cmd_cli(
         self,
@@ -309,49 +219,36 @@ class LocalClient(object):
         expr_form='glob',
         ret='',
         verbose=False,
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return data conditioned for command line
         output
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        try:
-            jid = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type']
-                    )
-        except Exception:
-            jid = ''
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout,
+            **kwargs)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            print('Failed to connect to the Master, is the Salt Master running?')
-            yield {}
-        elif not pub_data['jid']:
-            print('No minions match the target')
-            yield {}
+            yield pub_data
         else:
             for fn_ret in self.get_cli_event_returns(pub_data['jid'],
                     pub_data['minions'],
-                    timeout,
+                    timeout or self.opts['timeout'],
                     tgt,
                     expr_form,
-                    verbose):
+                    verbose,
+                    **kwargs):
+
                 if not fn_ret:
                     continue
+
                 yield fn_ret
 
     def cmd_iter(
@@ -362,36 +259,24 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return an iterator to return data as it is
         received
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout,
+            **kwargs)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            yield {}
-        elif not pub_data['jid']:
-            yield {}
+            yield pub_data
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
@@ -408,35 +293,23 @@ class LocalClient(object):
         timeout=None,
         expr_form='glob',
         ret='',
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout,
+            **kwargs)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            yield {}
-        elif not pub_data['jid']:
-            yield {}
+            yield pub_data
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                     pub_data['minions'],
@@ -452,35 +325,24 @@ class LocalClient(object):
         expr_form='glob',
         ret='',
         verbose=False,
-        kwarg=None):
+        kwarg=None,
+        **kwargs):
         '''
         Execute a salt command and return
         '''
         arg = condition_kwarg(arg, kwarg)
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        pub_data = self.pub(
+        pub_data = self.run_job(
             tgt,
             fun,
             arg,
             expr_form,
             ret,
-            jid=jid,
-            timeout=timeout)
+            timeout,
+            **kwargs)
+
         if not pub_data:
-            err = ('Failed to authenticate, is this user permitted to execute '
-                   'commands?\n')
-            sys.stderr.write(err)
-            sys.exit(4)
-        if pub_data['jid'] == '0':
-            # Failed to connect to the master and send the pub
-            return {}
-        elif not pub_data['jid']:
-            return {}
+            return pub_data
+
         return (self.get_cli_static_event_returns(pub_data['jid'],
                     pub_data['minions'],
                     timeout,
@@ -495,7 +357,8 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
-            verbose=False):
+            verbose=False,
+            **kwargs):
         '''
         This method starts off a watcher looking at the return data for
         a specified jid, it returns all of the information for the jid
@@ -558,7 +421,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -810,7 +673,8 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
-            verbose=False):
+            verbose=False,
+            **kwargs):
         '''
         Get the returns for the command line interface via the event system
         '''
@@ -865,7 +729,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -947,29 +811,15 @@ class LocalClient(object):
                 continue
         return ret
 
-    def check_minions(self, expr, expr_form='glob'):
-        '''
-        Check the passed regex against the available minions' public keys
-        stored for authentication. This should return a set of ids which
-        match the regex, this will then be used to parse the returns to
-        make sure everyone has checked back in.
-        '''
-        try:
-            minions = {'glob': self._check_glob_minions,
-                    'pcre': self._check_pcre_minions,
-                    'list': self._check_list_minions,
-                    'grain': self._check_grain_minions,
-                    'grain_pcre': self._check_grain_pcre_minions,
-                    'exsel': self._all_minions,
-                    'pillar': self._all_minions,
-                    'compound': self._all_minions,
-                    }[expr_form](expr)
-        except Exception:
-            minions = expr
-        return minions
-
-    def pub(self, tgt, fun, arg=(), expr_form='glob',
-            ret='', jid='', timeout=5):
+    def pub(self, 
+            tgt, 
+            fun, 
+            arg=(),
+            expr_form='glob',
+            ret='',
+            jid='',
+            timeout=5,
+            **kwargs):
         '''
         Take the required arguments and publish the given command.
         Arguments:
@@ -1014,28 +864,26 @@ class LocalClient(object):
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
 
-        # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module
         # make the zmq client
         # connect to the req server
         # send!
         # return what we get back
-        minions = self.check_minions(tgt, expr_form)
-
-        if not minions:
-            return {'jid': None,
-                    'minions': minions}
 
         # Generate the standard keyword args to feed to format_payload
         payload_kwargs = {'cmd': 'publish',
-                           'tgt': tgt,
-                           'fun': fun,
-                           'arg': arg,
-                           'key': self.key,
-                           'tgt_type': expr_form,
-                           'ret': ret,
-                           'jid': jid}
+                          'tgt': tgt,
+                          'fun': fun,
+                          'arg': arg,
+                          'key': self.key,
+                          'tgt_type': expr_form,
+                          'ret': ret,
+                          'jid': jid}
+
+        # if kwargs are passed, pack them.
+        if kwargs:
+            payload_kwargs['kwargs'] = kwargs
 
         # If we have a salt user, add it to the payload
         if self.salt_user:
@@ -1052,7 +900,7 @@ class LocalClient(object):
         if not payload:
             return payload
         return {'jid': payload['load']['jid'],
-                'minions': minions}
+                'minions': payload['load']['minions']}
 
 
 class FunctionWrapper(dict):

@@ -487,6 +487,12 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'for the target is the pillar key followed by a glob'
                   'expression:\n"role:production*"')
         )
+        group.add_option(
+            '-S', '--ipcidr',
+            default=False,
+            action='store_true',
+            help=('Match based on Subnet (CIDR notation) or IPv4 address.')
+        )
 
         self._create_process_functions()
 
@@ -679,6 +685,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'minions to have running')
         )
         self.add_option(
+            '-a', '--auth', '--eauth', '--extended-auth',
+            default='',
+            dest='eauth',
+            help=('Specify an extended authentication system to use.'))
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -742,7 +753,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                 self.config['arg'] = self.args[2:]
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        return config.client_config(self.get_config_file_path('master'))
 
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,

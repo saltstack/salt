@@ -112,7 +112,7 @@ The location for minion cache data.
 
     cachedir: /var/cache/salt
 
-.. conf_minion:: cachedir
+.. conf_minion:: backup_mode
 
 ``backup_mode``
 ---------------

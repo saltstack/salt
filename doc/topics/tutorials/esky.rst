@@ -57,7 +57,7 @@ Gotchas
 
 My Windows minion isn't responding
 ----------------------------------
-The process dispatch on Windows is slower than it is on *nix. You may need to
+The process dispatch on Windows is slower than it is on \*nix. You may need to
 add '-t 15' to your salt calls to give them plenty of time to return.
 
 Windows and the Visual Studio Redist

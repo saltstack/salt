@@ -104,7 +104,6 @@ def include_config(include, opts, orig_path, verbose):
     Parses extra configuration file(s) specified in an include list in the
     main config file.
     '''
-
     # Protect against empty option
     if not include:
         return opts
@@ -276,11 +275,12 @@ def master_config(path):
             'runner_dirs': [],
             'client_acl': {},
             'external_auth': {},
+            'token_expire': 720,
             'file_buffer_size': 1048576,
             'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
-            'pub_refresh': True,
+            'pub_refresh': False,
             'open_mode': False,
             'auto_accept': False,
             'renderer': 'yaml_jinja',
@@ -338,4 +338,20 @@ def master_config(path):
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
+    return opts
+
+
+def client_config(path):
+    '''
+    Load in the configuration data needed for the LocalClient. This function
+    searches for client specific configurations and adds them to the data from
+    the master configuration.
+    '''
+    opts = master_config(path)
+    cpath = os.path.expanduser('~/.salt')
+    load_config(opts, cpath, 'SALT_CLIENT_CONFIG')
+    if 'token_file' in opts:
+        if os.path.isfile(opts['token_file']):
+            with open(opts['token_file']) as fp_:
+                opts['token'] = fp_.read().strip()
     return opts

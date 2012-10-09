@@ -7,16 +7,16 @@ REQUIREMENT 1:
 
 In order to connect to LDAP, certain configuration is required
 in the salt minion config on the LDAP server.
-The minimum configuration items that must be set are:
+The minimum configuration items that must be set are::
 
     ldap.basedn: dc=acme,dc=com (example values, adjust to suit)
 
-If your LDAP server requires authentication then you must also set:
+If your LDAP server requires authentication then you must also set::
 
     ldap.binddn: <user>
     ldap.bindpw: <password>
 
-In addition, the following optional values may be set:
+In addition, the following optional values may be set::
 
     ldap.server:    localhost   (default=localhost)
     ldap.port:      389         (default=389, standard port)
@@ -97,20 +97,20 @@ def search(filter, dn=None, scope=None, attrs=None, **kwargs):
     '''
     Run an LDAP query and return the results.
 
-    CLI Examples:
+    CLI Examples::
 
         salt 'ldaphost' ldap.search filter=cn=myhost
 
-    returns: 
+    returns::
 
-    'myhost': { 'count': 1,
+        'myhost': { 'count': 1,
                 'results': [['cn=myhost,ou=hosts,o=acme,c=gb',
                     {'saltKeyValue': ['ntpserver=ntp.acme.local', 'foo=myfoo'],
                      'saltState': ['foo', 'bar']}]],
                 'time': {'human': '1.2ms', 'raw': '0.00123'}}}
 
     Search and connection options can be overridden by specifying the relevant
-    option as key=value pairs, for example:
+    option as key=value pairs, for example::
 
         salt 'ldaphost' ldap.search filter=cn=myhost dn=ou=hosts,o=acme,c=gb scope=1 attrs='' server=localhost port=7393 tls=True bindpw=ssh
     '''

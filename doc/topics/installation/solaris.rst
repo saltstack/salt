@@ -58,7 +58,7 @@ Ok, time to install salt.
    root> /opt/csw/bin/pkgutil -i -y py_salt
 
 Minion Configuration
-=============
+====================
 
 Now that salt is installed you can find it's configuration files in:
 
@@ -105,7 +105,7 @@ Run a simple test against the minion:
     salt '<your-salt-minion>' test.ping
 
 Troubleshooting
-=============
+===============
 
 Logs are in ``/var/log/salt``
 

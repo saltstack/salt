@@ -70,7 +70,6 @@ truly make it work for you.
 .. sidebar:: More tutorials!
 
     * :doc:`Bootstraping Salt on EC2 <topics/tutorials/bootstrap_ec2>`
-    * :doc:`Installing Salt on FreeBSD <topics/installation/freebsd>`
     * :doc:`Preseeding Minions with Accepted Keys <topics/tutorials/preseed_key>`
 
 .. contents:: The components of Salt
@@ -197,11 +196,14 @@ Salt is many splendid things.
     management. The possibilities are endless and Salt's future looks
     bright.
 
+:doc:`Testing Salt <topics/tests/index>`
+    A howto for writing unit tests and integration tests.
+
 :doc:`Python API interface <ref/python-api>`
     Use Salt programmatically from your own scripts and programs easily and
     simply via ``import salt``.
 
-:doc:`Automatic Updates and Frozen Deployments <ref/esky>`
+:doc:`Automatic Updates and Frozen Binary Deployments <ref/esky>`
     Use a frozen install to make deployments easier (Even on Windows!). Or
     take advantage of automatic updates to keep your minions running your
     latest builds.

@@ -11,7 +11,7 @@ Node groups
 Nodegroups are declared using a compound target specification. The compount
 target documentation can be found here:
 
-:doc:`Compound Matchers <topics/targeting/compound>`
+:doc:`Compound Matchers <compound>`
 
 For example, in the master config file :conf_master:`nodegroups` setting::
 
