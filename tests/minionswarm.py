@@ -75,7 +75,11 @@ class Swarm(object):
         self.opts = opts
 
         # If given a root_dir, keep the tmp files there as well
-        tmpdir = opts['root_dir'] or os.path.join(opts['root_dir'], 'tmp')
+        if opts['root_dir']:
+            tmpdir = os.path.join(opts['root_dir'], 'tmp')
+        else:
+            tmpdir = opts['root_dir']
+
         self.swarm_root = tempfile.mkdtemp(prefix='mswarm-root', suffix='.d',
             dir=tmpdir)
 
@@ -113,12 +117,14 @@ class Swarm(object):
         data = {
             'id': minion_id,
             'user': pwd.getpwuid(os.getuid()).pw_name,
-            'root_dir': self.opts['root_dir'],
             'pki_dir': self.pki,
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
             'log_file': os.path.join(dpath, 'minion.log')
         }
+
+        if self.opts['root_dir']:
+            data['root_dir'] = self.opts['root_dir']
 
         path = os.path.join(dpath, 'minion')
 
