@@ -352,7 +352,7 @@ def client_config(path):
     cpath = os.path.expanduser('~/.salt')
     load_config(opts, cpath, 'SALT_CLIENT_CONFIG')
     if 'token_file' in opts:
-        opts['token_file'] = os.path.expand_user(opts['token_file'])
+        opts['token_file'] = os.path.expanduser(opts['token_file'])
     if os.path.isfile(opts['token_file']):
         with open(opts['token_file']) as fp_:
             opts['token'] = fp_.read().strip()
