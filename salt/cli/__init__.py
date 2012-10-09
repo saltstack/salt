@@ -72,6 +72,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
+                if self.options.token:
+                    resolver.token_cli(self.options.eauth, res)
                 if not res:
                     sys.exit(2)
                 kwargs.update(res)
