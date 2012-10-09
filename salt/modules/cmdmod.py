@@ -162,21 +162,14 @@ def _run(cmd,
         kwargs['executable'] = shell
         kwargs['close_fds'] = True
 
+    # If all we want is the return code then don't block on gathering input.
     if retcode:
         kwargs['stdout'] = None
         kwargs['stderr'] = None
 
     # This is where the magic happens
     proc = subprocess.Popen(cmd, **kwargs)
-
-    # If all we want is the return code then don't block on gathering input,
-    # this is used to bypass ampersand issues with background processes in
-    # scripts
-    if retcode:
-        retcode = proc.wait()
-        out = err = ''
-    else:
-        out, err = proc.communicate()
+    out, err = proc.communicate()
 
     if rstrip:
         if out is not None:
