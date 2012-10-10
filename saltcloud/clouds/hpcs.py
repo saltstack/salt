@@ -90,11 +90,17 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
-    print data
-    print vars(data)
-    print '&'*80
+    # NOTE
+    # We need to insert a wait / poll until we have
+    # public ips for our node.  Otherwise, we cannot
+    # complete the next step of deploying a script to the new
+    # server : (
+    if data.public_ips:
+        host_addr = public_ips[0]
+    else:
+        host_addr = None
     deployed = saltcloud.utils.deploy_script(
-        host=data.public_ips[0],
+        host=host_addr,
         username='root',
         password=data.extra['password'],
         script=deploy_script.script,
