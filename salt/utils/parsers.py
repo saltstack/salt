@@ -70,6 +70,8 @@ class OptionParserMeta(MixInMeta):
 
 
 class OptionParser(optparse.OptionParser):
+    VERSION = version.__version__
+
     usage = '%prog'
 
     epilog = ('You can find additional help about %prog issuing "man %prog" '
@@ -80,7 +82,7 @@ class OptionParser(optparse.OptionParser):
     _mixin_prio_ = 100
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('version', '%prog {0}'.format(version.__version__))
+        kwargs.setdefault('version', '%prog {0}'.format(self.VERSION))
         kwargs.setdefault('usage', self.usage)
         if self.description:
             kwargs.setdefault('description', self.description)
