@@ -63,7 +63,7 @@ def _connection_defaults(user=None, host=None, port=None):
     return (user, host, port)
 
 
-def _postgres_cmd(command, *args, **kwargs):
+def _psql_cmd(*args, **kwargs):
     '''
     Return string with fully composed psql command.
 
@@ -73,7 +73,7 @@ def _postgres_cmd(command, *args, **kwargs):
     (user, host, port) = _connection_defaults(kwargs.get('user'),
                                               kwargs.get('host'),
                                               kwargs.get('port'))
-    cmd = [command, '--no-password']
+    cmd = ['psql', '--no-align', '--no-readline', '--no-password']
     if user is not None:
         cmd += ['--username', user]
     if host is not None:
@@ -84,9 +84,6 @@ def _postgres_cmd(command, *args, **kwargs):
     cmdstr = ' '.join(map(pipes.quote, cmd))
     return cmdstr
 
-
-def _psql_cmd(*args, **kwargs):
-    return _postgres_cmd('psql', '--no-align', '--no-readline', *args, **kwargs)
 
 '''
 Database related actions
@@ -170,21 +167,29 @@ def db_create(name,
             log.info("template '{0}' does not exist.".format(template, ))
             return False
 
-    # CLI-options to create a database
+    # Base query to create a database
+    query = 'CREATE DATABASE {0}'.format(name)
+
+    # "With"-options to create a database
     with_args = {
-        '--owner': owner,
-        '--template': template,
-        '--encoding': encoding,
-        '--lc-collate': lc_collate,
-        '--lc-ctype': lc_ctype,
-        '--tablespace': tablespace,
-     }
-    args = [u'%s=%s' % (k,v) for k,v in with_args.iteritems() if v]
-    # database name is last argument
-    args.append(name)
+        'OWNER': owner,
+        'TEMPLATE': template,
+        'ENCODING': encoding and "'{0}'".format(encoding),
+        'LC_COLLATE': lc_collate and "'{0}'".format(lc_collate),
+        'LC_CTYPE': lc_ctype and "'{0}'".format(lc_ctype),
+        'TABLESPACE': tablespace,
+    }
+    with_chunks = []
+    for k, v in with_args.iteritems():
+        if v is not None:
+            with_chunks += [k, '=', v]
+    # Build a final query
+    if with_chunks:
+        with_chunks.insert(0, ' WITH')
+        query += ' '.join(with_chunks)
 
     # Execute the command
-    cmd = _postgres_cmd('createdb', *args, user=user, host=host, port=port)
+    cmd = _psql_cmd('-c', query, user=user, host=host, port=port)
     __salt__['cmd.run'](cmd, runas=runas)
 
     # Check the result
