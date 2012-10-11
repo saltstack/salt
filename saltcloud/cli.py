@@ -225,7 +225,12 @@ class SaltCloud(object):
                 query = 'list_nodes_full'
 
             color = not bool(self.opts['no_color'])
-            printout(mapper.map_providers(query=query), color=color)
+            query_map = {}
+            if self.opts['map']:
+                query_map = mapper.interpolated_map(query=query)
+            else:
+                query_map = mapper.map_providers(query=query)
+            printout(query_map, color=color)
 
         if self.opts['version']:
             print VERSION
@@ -241,5 +246,5 @@ class SaltCloud(object):
             mapper.destroy(self.opts.get('names'))
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
-        elif self.opts['map']:
+        elif self.opts['map'] and not (self.opts['query'] or self.opts['full_query']):
             mapper.run_map()
