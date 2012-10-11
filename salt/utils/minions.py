@@ -180,11 +180,13 @@ class CkMinions(object):
         infinate = [
                 'node',
                 'ipcidr',
-                'grain',
-                'grain_pcre',
                 'exsel',
                 'pillar',
                 ]
+        if not self.opts.get('minion_data_cache', False):
+            infinate.append('grain')
+            infinate.append('grain_pcre')
+
         if '@' in valid and valid[1] == '@':
             comps = valid.split('@')
             v_matcher = ref.get(comps[0])
