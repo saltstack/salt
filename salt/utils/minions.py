@@ -12,6 +12,28 @@ import re
 import salt.payload
 
 
+def nodegroup_comp(group, nodegroups, skip=None):
+    '''
+    Take the nodegroup and the nodegroups and fill in nodegroup refs
+    '''
+    if skip is None:
+        skip = set([group])
+    if not group in nodegroups:
+        return ''
+    gstr = nodegroups[group]
+    ret = ''
+    for comp in gstr.split():
+        if not comp.startswith('N@'):
+            ret += '{0} '.format(comp)
+            continue
+        ngroup = comp[2:]
+        if ngroup in skip:
+            continue
+        skip.add(ngroup)
+        ret += nodegroup_comp(ngroup, nodegroups, skip)
+    return ret
+
+
 class CkMinions(object):
     '''
     Used to check what minions should respond from a target
