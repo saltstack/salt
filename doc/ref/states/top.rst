@@ -10,6 +10,13 @@ matches systems should draw from.
 Environments
 ============
 
+.. glossary::
+
+    Environment
+        A configuration that allows conceptually organizing state tree
+        directories. Environments can be made to be self-contained or state
+        trees can be made to bleed through environments.
+
 The environments in the top file corresponds with the environments defined in
 the file_roots variable. In a simple, single environment setup you only have
 the base environment, and therefore only one state tree. Here is a simple
