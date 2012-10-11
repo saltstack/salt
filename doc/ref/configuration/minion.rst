@@ -263,6 +263,17 @@ This setting requires that ``gcc`` and ``cython`` are installed on the minion
 
     cython_enable: False
 
+.. conf_minion:: providers
+
+``providers``
+-------------
+
+Default: (empty)
+
+A module provider can be statically overwritten or extended for the minion via
+the providers option. This can be done on an individual basis in an SLS file or
+globally here in the minion config.
+
 State Management Settings
 -------------------------
 
