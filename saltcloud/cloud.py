@@ -156,6 +156,11 @@ class Cloud(object):
         if ok != False:
             saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
 
+    def profile_provider(self, profile=None):
+        for definition in self.opts['vm']:
+            if definition['profile'] == profile:
+                return definition['provider']
+
     def run_profile(self):
         '''
         Parse over the options passed on the command line and determine how to
@@ -190,6 +195,31 @@ class Map(Cloud):
     def __init__(self, opts):
         Cloud.__init__(self, opts)
         self.map = self.read()
+
+    def interpolated_map(self, query=None):
+        query_map = self.map_providers(query=query)
+        full_map = {}
+        dmap = self.read()
+        for profile, vmap in dmap.items():
+            provider = self.profile_provider(profile)
+            vms = [i.keys() for i in vmap]
+            for vm in vms:
+                if provider not in full_map:
+                    full_map[provider] = {}
+    
+                if vm[0] in query_map[provider]:
+                    full_map[provider][vm[0]] = query_map[provider][vm[0]]
+                else:
+                    full_map[provider][vm[0]] = 'Absent'
+        return full_map
+
+    def delete_map(self, query=None):
+        query_map = self.interpolated_map(query=query)
+        names = []
+        for profile in query_map:
+            for vm in query_map[profile]:
+                names.append(vm)
+        return names
 
     def read(self):
         '''
