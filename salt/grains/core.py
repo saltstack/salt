@@ -424,8 +424,14 @@ def os_data():
     Return grains pertaining to the operating system
     '''
     grains = {}
-    (grains['defaultlanguage'],
-     grains['defaultencoding']) = locale.getdefaultlocale()
+    try:
+        (grains['defaultlanguage'],
+         grains['defaultencoding']) = locale.getdefaultlocale()
+    except Exception:
+        # locale.getdefaultlocale can ValueError!! Catch anything else it
+        # might do, per #2205
+        grains['defaultlanguage'] = 'unknown'
+        grains['defaultencoding'] = 'unknown'
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
     # Ubuntu 10.04
