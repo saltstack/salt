@@ -162,12 +162,6 @@
 # failure detected in the state execution, defaults to False
 #failhard: False
 #
-# state_verbose allows for the data returned from the minion to be more
-# verbose. Normally only states that fail or states that have changes are
-# returned, but setting state_verbose to True will return all states that
-# were checked
-#state_verbose: False
-#
 # autoload_dynamic_modules Turns on automatic loading of modules found in the
 # environments on the master. This is turned on by default, to turn of
 # autoloading modules when states run set this value to False
