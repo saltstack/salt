@@ -855,7 +855,10 @@ class LocalClient(object):
                 conf_file = self.opts.get('conf_file', 'the master config file')
                 err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
                 raise SaltInvocationError(err)
-            tgt = self.opts['nodegroups'][tgt]
+            tgt = salt.utils.minions.nodegroup_comp(
+                    tgt,
+                    self.opts['nodegroups']
+                    )
             expr_form = 'compound'
 
         # Convert a range expression to a list of nodes and change expression
