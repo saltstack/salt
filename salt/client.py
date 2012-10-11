@@ -616,6 +616,7 @@ class LocalClient(object):
         '''
         Get the returns for the command line interface via the event system
         '''
+        minions = set(minions)
         if verbose:
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
