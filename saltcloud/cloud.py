@@ -212,6 +212,14 @@ class Map(Cloud):
                     full_map[provider][vm[0]] = 'Absent'
         return full_map
 
+    def delete_map(self, query=None):
+        query_map = self.interpolated_map(query=query)
+        names = []
+        for profile in query_map:
+            for vm in query_map[profile]:
+                names.append(vm)
+        return names
+
     def read(self):
         '''
         Read in the specified map file and return the map structure

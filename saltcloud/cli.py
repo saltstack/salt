@@ -242,9 +242,14 @@ class SaltCloud(object):
             saltcloud.output.double_layer(
                     mapper.size_list(self.opts['list_sizes'])
                     )
-        elif self.opts.get('names') and self.opts['destroy']:
-            mapper.destroy(self.opts.get('names'))
+        elif self.opts['destroy'] and (self.opts.get('names') or self.opts['map']):
+            names = []
+            if self.opts['map']:
+                names = mapper.delete_map(query='list_nodes')
+            else:
+                names = self.opts.get('names')
+            mapper.destroy(names)
         elif self.opts.get('names', False) and self.opts['profile']:
             mapper.run_profile()
-        elif self.opts['map'] and not (self.opts['query'] or self.opts['full_query']):
+        elif self.opts['map'] and not (self.opts['query'] or self.opts['full_query'] or self.opts['destroy']):
             mapper.run_map()
