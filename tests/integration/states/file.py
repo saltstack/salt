@@ -384,7 +384,7 @@ class FileTest(integration.ModuleCase):
         # Now our real test
         try:
             ret = self.run_function(
-                'state.sls', mods='testappend.issue-2227-percent-symbol'
+                'state.sls', mods='testappend.issue-2227'
             )
             for change in ret.values():
                 self.assertTrue(isinstance(change, dict))
@@ -393,7 +393,7 @@ class FileTest(integration.ModuleCase):
 
             # It should not append text again
             ret = self.run_function(
-                'state.sls', mods='testappend.issue-2227-percent-symbol'
+                'state.sls', mods='testappend.issue-2227'
             )
             for change in ret.values():
                 self.assertTrue(isinstance(change, dict))
