@@ -33,7 +33,6 @@ Install on Windows XP 32bit
         git clone git://github.com/saltstack/salt.git
 
 2.  Install `Microsoft Visual Studio 2008 Express`_ with the web installer.
-    Or `download a full iso with the installer`_ .
     You must use Visual Studio 2008 Express, **not** Visual Studio 2010 Express.
 
 3.  Install `Python 2.7.x`_
@@ -130,8 +129,7 @@ Install on Windows XP 32bit
 
 
 .. _msysgit: http://code.google.com/p/msysgit/downloads/list?can=3
-.. _Microsoft Visual Studio 2008 Express: http://www.microsoft.com/visualstudio/en-us/products/2008-editions/express 
-.. _download a full iso with the installer: http://www.microsoft.com/download/en/details.aspx?id=20682
+.. _Microsoft Visual Studio 2008 Express: http://www.microsoft.com/en-gb/download/details.aspx?id=20682
 .. _Python 2.7.x: http://www.python.org
 .. _vcredist_x86: http://www.microsoft.com/download/en/details.aspx?id=5582
 .. _Win32OpenSSL-1_0_0e.exe: http://www.slproweb.com/products/Win32OpenSSL.html
