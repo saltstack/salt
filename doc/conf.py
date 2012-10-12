@@ -48,6 +48,8 @@ class Mock(object):
 MOCK_MODULES = [
     'paramiko',
     'salt',
+    'salt.utils',
+    'salt.utils.event',
     'salt.crypt',
     'yaml',
     'salt.loader',
