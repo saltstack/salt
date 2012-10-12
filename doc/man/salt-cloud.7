@@ -1,4 +1,4 @@
-.TH "SALT-CLOUD" "7" "September 25, 2012" "0.8.0" "salt-cloud"
+.TH "SALT-CLOUD" "7" "October 12, 2012" "0.8.1" "salt-cloud"
 .SH NAME
 salt-cloud \- Salt Cloud Documentation
 .
@@ -28,7 +28,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.\" Man page generated from reStructeredText.
+.\" Man page generated from reStructuredText.
 .
 .SH VM PROFILES
 .sp
@@ -130,9 +130,6 @@ fedora_small:
     \- web1
     \- web2
     \- web3
-    \- web3
-    \- web4
-    \- web5
 fedora_high:
     \- redis1
     \- redis2
@@ -141,8 +138,6 @@ cent_high:
     \- riak1
     \- riak2
     \- riak3
-    \- riak4
-    \- riak5
 .ft P
 .fi
 .sp
@@ -191,6 +186,34 @@ fedora_small:
         grains:
             cheese: more tasty
             omelet: with peppers
+.ft P
+.fi
+.sp
+A map file may also be used with the various query options:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-Q
+{\(aqaws\(aq: {\(aqweb1\(aq: {\(aqid\(aq: \(aqi\-e6aqfegb\(aq,
+                     \(aqimage\(aq: None,
+                     \(aqprivate_ips\(aq: [],
+                     \(aqpublic_ips\(aq: [],
+                     \(aqsize\(aq: None,
+                     \(aqstate\(aq: 0}},
+         \(aqweb2\(aq: {\(aqAbsent\(aq}}
+.ft P
+.fi
+.sp
+...or with the delete option:
+.sp
+.nf
+.ft C
+$ salt\-cloud \-m /path/to/mapfile \-d
+The following virtual machines are set to be destroyed:
+  web1
+  web2
+
+Proceed? [N/y]
 .ft P
 .fi
 .SH WRITING CLOUD PROVIDER MODULES
@@ -717,6 +740,92 @@ Ubuntu packages automatically start the service upon installation, and needed
 to be handled differently in the deploy script. Configuration is now laid down
 before the package is installed, so that the minion can make its initial start
 happen with the correct configuration.
+.SS Salt Cloud 0.8.1 Release Notes
+.sp
+In a somewhat quicker timeline than usual, Salt Cloud 0.8.1 has been released!
+While many of the updates in this release focus on stability, users of map
+files and AWS also have some new features to look forward to.
+.SS Documentation
+.sp
+The documentation for Salt Cloud can be found on Read the Docs:
+\fI\%http://salt-cloud.readthedocs.org\fP
+.SS Download
+.sp
+Salt Cloud can be downloaded and install via pypi or github:
+.sp
+\fI\%http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.1.tar.gz\fP
+.sp
+\fI\%https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.1.tar.gz\fP
+.sp
+Some packages have been made available for salt\-cloud and more on on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+.SS Full Query Option
+.sp
+The \-Q or \-\-query option only displays a small amount of information about
+each virtual machine. This is to keep command\-line reports small and
+manageable. Now the \-F or \-\-full\-query option can be used to display all
+of the information about a VM that salt\-cloud knows about. The amount of
+information returned varies between providers, depending on the kinds of
+functionality available through them.
+.SS Increased Map Functionality
+.sp
+Previously, map files were only used for creating VMs. Now they can also be
+used to query and delete VMs. The \-Q, \-F and \-d options can all be used in
+conjunction with \-m, to display map\-specific data. If a VM that is specified
+in the map does not exist, it will still show up under \-Q and \-F as "Absent".
+If a VM specified in the map does not exist when a \-d is specified, it will
+of course be ignored.
+.SS Multiple Security Groups in AWS
+.sp
+AWS allows for multiple security groups to be applied to any given VM, but
+until this release, Salt Cloud only supported managing one. This update allows
+a list of security groups to be specified. In the main configuration file, an
+example of multiple security groups would look like:
+.sp
+.nf
+.ft C
+AWS.securitygroup:
+  \- default
+  \- extra
+.ft P
+.fi
+.sp
+In a profile, an example would be:
+.sp
+.nf
+.ft C
+micro_amazon:
+  provider: aws
+  image: ami\-e565ba8c
+  size: Micro Instance
+  os: RHEL6
+  securitygroup:
+      \- default
+      \- extra
+.ft P
+.fi
+.SS Bug Fixes
+.sp
+A number of bugs have been fixed in this release. Most of these were internal
+fixes related to authentication and deployment across various providers. Bug
+fixes in this release include:
+.sp
+Ubuntu users may notice that deploying an instance has become significantly
+noisier. A change was made to make Ubuntu display information returned as
+packages are installed, which is more aligned with how yum\-based machines
+already behaved. This also forced these VMs to deploy salt in a much more
+reliable manner.
+.sp
+Requirements listed in requirements.txt are also pulled into setup.py, to make
+it easy to use the easy_install tool.
+.sp
+Most cloud providers default to root as the initial user, but AWS typically
+providers a different user (ec2\-user, ubuntu, bitnami, etc). Deployment on
+such images must be handled using sudo. Previously, sudo was used to issue
+all deployment commands, but this failed on images where sudo was not installed
+by default (such as FreeBSD). Now sudo will only be used with non\-root logins.
 .SH SALT CLOUD 0.6.0 RELEASE NOTES
 .sp
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
@@ -983,9 +1092,8 @@ Proceed? [N/y]
 .ft P
 .fi
 .SH AUTHOR
-Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
+Thomas S. Hatch <thatch@saltstack.com> and many others, please see the Authors file
 .SH COPYRIGHT
-2012, Thomas S Hatch
+2012, SaltStack, Inc.
 .\" Generated by docutils manpage writer.
-.\" 
 .
