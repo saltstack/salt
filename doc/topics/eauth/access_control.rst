@@ -30,7 +30,7 @@ The access controls are manifest using matchers in these configurations:
           - apache.*
 
 In the above example, fred is able to send commands only to minions which match
-the specifieed glb target. This can be expanded to include other functions for
+the specifieed glob target. This can be expanded to include other functions for
 other minions based on standard targets.
 
 .. code-block:: yaml
