@@ -24,7 +24,7 @@ The commands sent out via the salt client are broadcast out to the minions via
 ZeroMQ PUB/SUB. This is done by allowing the minions to maintain a connection
 back to the Salt Master and then all connecions are informed to download the
 command data at once. The command data is kept extreamly small (usually less
-than 1K) so it is bnto a burden on the network.
+than 1K) so it is not a burden on the network.
 
 Return
 ======
