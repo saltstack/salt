@@ -252,12 +252,11 @@ def chgroups(name, groups, append=False):
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
-    cmd = 'usermod -G {0} {1} '.format(','.join(groups), name)
+    cmd = 'usermod '
     if append:
-        cmd += '-a'
-    __salt__['cmd.run'](cmd)
-    agrps = set(list_groups(name))
-    return len(ugrps - agrps) == 0
+        cmd += '-a '
+    cmd += '-G {0} {1}'.format(','.join(groups), name)
+    return not __salt__['cmd.retcode'](cmd)
 
 
 def chfullname(name, fullname):
