@@ -42,6 +42,22 @@ The network port to set up the publication interface
 
     publish_port: 4505
 
+
+.. conf_master:: pub_refresh
+
+``pub_refresh``
+---------------
+
+Default: ``False``
+
+The pub_refresh system manually refreshed the master ZeroMQ publisher. It is
+used in some cases where the minions loose connection to the master and it
+is solved by restarting the master.
+
+.. code-block:: yaml
+
+    pub_refresh: False
+
 .. conf_master:: user
 
 ``user``
@@ -54,6 +70,32 @@ The user to run the Salt processes
 .. code-block:: yaml
 
     user: root
+
+.. conf_master:: max_open_files
+
+``max_open_files``
+------------------
+
+Default: ``max_open_files``
+
+Each minion connecting to the master uses AT LEAST one file descriptor, the
+master subscription connection. If enough minions connect you might start
+seeing on the console(and then salt-master crashes):
+  Too many open files (tcp_listener.cpp:335)
+  Aborted (core dumped)
+
+By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+max open files.
+
+If you wish to set a different value than the default one, uncomment and
+configure this setting. Remember that this value CANNOT be higher than the
+hard limit. Raising the hard limit depends on your OS and/or distribution,
+a good way to find the limit is to search the internet for(for example):
+  raise max open files hard limit debian
+
+.. code-block:: yaml
+
+    max_open_files: 100000
 
 .. conf_master:: worker_threads
 
@@ -83,6 +125,19 @@ execution returns and command executions.
 .. code-block:: yaml
 
     ret_port: 4506
+
+.. conf_master:: pidfile
+
+``pidfile``
+-----------
+
+Default: ``/var/run/salt-master.pid``
+
+Specify the location of the master pidfile
+
+.. code-block:: yaml
+
+    pidfile: /var/run/salt-master.pid
 
 .. conf_master:: root_dir
 
