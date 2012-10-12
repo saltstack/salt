@@ -921,5 +921,7 @@ class Matcher(object):
         matcher is used in states
         '''
         if tgt in nodegroups:
-            return self.compound_match(nodegroups[tgt])
+            return self.compound_match(
+                    salt.utils.nodegroup_comp(tgt, nodegroups)
+                    )
         return False

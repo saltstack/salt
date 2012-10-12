@@ -14,7 +14,6 @@ might look like::
 This data can also be passed into pillar. Options passed into opts will
 overwrite options passed into pillar
 '''
-import pipes
 import logging
 from salt.utils import check_or_die
 from salt.exceptions import CommandNotFoundError
@@ -62,6 +61,11 @@ def _connection_defaults(user=None, host=None, port=None):
 
     return (user, host, port)
 
+def _quote(s):
+    r = s.replace("'", r"\'").replace('"', r'\"')
+    if ' ' in s:
+        r = "'%s'" % r
+    return r
 
 def _psql_cmd(*args, **kwargs):
     '''
@@ -81,7 +85,7 @@ def _psql_cmd(*args, **kwargs):
     if port is not None:
         cmd += ['--port', port]
     cmd += args
-    cmdstr = ' '.join(map(pipes.quote, cmd))
+    cmdstr = ' '.join(map(_quote, cmd))
     return cmdstr
 
 

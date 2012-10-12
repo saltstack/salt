@@ -58,6 +58,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 'arg': self.config['arg'],
                 'timeout': self.options.timeout}
 
+            if 'token' in self.config:
+                kwargs['token'] = self.config['token']
+
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
             else:
@@ -66,9 +69,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
 
+            print self.options.eauth
             if self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
+                if self.options.mktoken:
+                    kwargs['token'] = resolver.token_cli(
+                            self.options.eauth,
+                            res
+                            )['token']
                 if not res:
                     sys.exit(2)
                 kwargs.update(res)

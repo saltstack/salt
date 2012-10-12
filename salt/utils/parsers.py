@@ -70,17 +70,19 @@ class OptionParserMeta(MixInMeta):
 
 
 class OptionParser(optparse.OptionParser):
+    VERSION = version.__version__
+
     usage = '%prog'
 
     epilog = ('You can find additional help about %prog issuing "man %prog" '
-              'or on http://docs.saltstack.org/en/latest/index.html')
+              'or on http://docs.saltstack.org')
     description = None
 
     # Private attributes
     _mixin_prio_ = 100
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('version', '%prog {0}'.format(version.__version__))
+        kwargs.setdefault('version', '%prog {0}'.format(self.VERSION))
         kwargs.setdefault('usage', self.usage)
         if self.description:
             kwargs.setdefault('description', self.description)
@@ -688,7 +690,17 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             '-a', '--auth', '--eauth', '--extended-auth',
             default='',
             dest='eauth',
-            help=('Specify an extended authentication system to use.'))
+            help=('Specify an extended authentication system to use.')
+            )
+        self.add_option(
+            '-T', '--make-token',
+            default=False,
+            dest='mktoken',
+            action='store_true',
+            help=('Generate and save an authentication token for re-use. The' 
+                  'token is generated and made available for the period '
+                  'defined in the Salt Master.')
+            )
         self.add_option(
             '--return',
             default='',
@@ -753,7 +765,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                 self.config['arg'] = self.args[2:]
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        return config.client_config(self.get_config_file_path('master'))
 
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,

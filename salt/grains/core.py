@@ -127,10 +127,13 @@ def _sunos_cpudata(osdata):
     grains = {'num_cpus': 0}
 
     grains['cpuarch'] = __salt__['cmd.run']('uname -p').strip()
-    for line in __salt__['cmd.run']('/usr/sbin/psrinfo 2>/dev/null').split('\n'):
+    for line in __salt__['cmd.run'](
+            '/usr/sbin/psrinfo 2>/dev/null'
+            ).split('\n'):
         grains['num_cpus'] += 1
-    grains['cpu_model'] = __salt__['cmd.run']('kstat -p cpu_info:0:cpu_info0:implementation').split()[1].strip()
-
+    grains['cpu_model'] = __salt__['cmd.run'](
+            'kstat -p cpu_info:*:*:implementation'
+            ).split()[1].strip()
     return grains
 
 
@@ -162,14 +165,14 @@ def _memdata(osdata):
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
     elif osdata['kernel'] == 'Windows':
-        for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
-            comps = line.split(':')
-            if not len(comps) > 1:
-                continue
-            if comps[0].strip() == 'Total Physical Memory':
-                # Windows XP use '.' as separator and Windows 2008 Server R2 use ','
-                grains['mem_total'] = int(comps[1].split()[0].replace('.', '').replace(',', ''))
-                break
+        import wmi
+        wmi_c = wmi.WMI()
+        # this is a list of each stick of ram in a system
+        # WMI returns it as the string value of the number of bytes
+        tot_bytes = sum(map(lambda x: int(x.Capacity),
+                            wmi_c.Win32_PhysicalMemory()), 0)
+        # return memory info in gigabytes
+        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
 
 
@@ -421,8 +424,14 @@ def os_data():
     Return grains pertaining to the operating system
     '''
     grains = {}
-    (grains['defaultlanguage'],
-     grains['defaultencoding']) = locale.getdefaultlocale()
+    try:
+        (grains['defaultlanguage'],
+         grains['defaultencoding']) = locale.getdefaultlocale()
+    except Exception:
+        # locale.getdefaultlocale can ValueError!! Catch anything else it
+        # might do, per #2205
+        grains['defaultlanguage'] = 'unknown'
+        grains['defaultencoding'] = 'unknown'
     # Windows Server 2008 64-bit
     # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
     # Ubuntu 10.04

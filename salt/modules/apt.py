@@ -13,7 +13,6 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-
     return 'pkg' if __grains__['os'] in ('Debian', 'Ubuntu') else False
 
 

@@ -7,20 +7,20 @@ try:
 except ImportError:
     pass
 
-import os
 import logging
 from copy import deepcopy
 
-from salt._compat import string_types
+from salt._compat import string_types, callable
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is SunOS
     '''
-    return 'user' if __grains__['kernel'] == 'FreeBSD' else False
+
+    return 'user' if __grains__['kernel'] == 'SunOS' else False
 
 
 def _get_gecos(name):
@@ -42,7 +42,7 @@ def _get_gecos(name):
 def _build_gecos(gecos_dict):
     '''
     Accepts a dictionary entry containing GECOS field names and their values,
-    and returns a full GECOS comment string, to be used with pw usermod.
+    and returns a full GECOS comment string, to be used with usermod.
     '''
     return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname',''),
                                     gecos_dict.get('roomnumber',''),
@@ -61,8 +61,7 @@ def add(name,
         fullname='',
         roomnumber='',
         workphone='',
-        homephone='',
-        **kwargs):
+        homephone=''):
     '''
     Add a user to the minion
 
@@ -72,7 +71,7 @@ def add(name,
     '''
     if isinstance(groups, string_types):
         groups = groups.split(',')
-    cmd = 'pw useradd '
+    cmd = 'useradd '
     if shell:
         cmd += '-s {0} '.format(shell)
     if uid:
@@ -82,19 +81,38 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home:
-        if home is True:
-            cmd += '-m '
+        if home is not True:
+            if system:
+                cmd += '-d {0} '.format(home)
+            else:
+                cmd += '-m -d {0} '.format(home)
         else:
-            cmd += '-m -b {0} '.format(os.path.dirname(home))
-    gecos_field = '{0},{1},{2},{3}'.format(fullname,
-                                           roomnumber,
-                                           workphone,
-                                           homephone)
-    cmd += '-c "{0}" '.format(gecos_field)
-    cmd += '-n {0}'.format(name)
-    ret = __salt__['cmd.run_all'](cmd)
-
-    return not ret['retcode']
+            if not system:
+                cmd += '-m '
+    if not unique:
+        cmd += '-o '
+    cmd += name
+    ret = __salt__['cmd.retcode'](cmd)
+    if ret != 0:
+        return False
+    else:
+        # At this point, the user was successfully created, so return true
+        # regardless of the outcome of the below functions. If there is a
+        # problem wth changing any of the user's info below, it will be raised
+        # in a future highstate call. If anyone has a better idea on how to do
+        # this, feel free to change it, but I didn't think it was a good idea
+        # to return False when the user was successfully created since A) the
+        # user does exist, and B) running useradd again would result in a
+        # nonzero exit status and be interpreted as a False result.
+        if fullname:
+            chfullname(name, fullname)
+        if roomnumber:
+            chroomnumber(name, roomnumber)
+        if workphone:
+            chworkphone(name, workphone)
+        if homephone:
+            chhomephone(name, homephone)
+        return True
 
 
 def delete(name, remove=False, force=False):
@@ -105,7 +123,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    cmd = 'pw userdel '
+    cmd = 'userdel '
     if remove:
         cmd += '-r '
     cmd += name
@@ -140,7 +158,7 @@ def chuid(name, uid):
     pre_info = info(name)
     if uid == pre_info['uid']:
         return True
-    cmd = 'pw usermod -u {0} {1}'.format(uid, name)
+    cmd = 'usermod -u {0} {1}'.format(uid, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
@@ -159,7 +177,7 @@ def chgid(name, gid):
     pre_info = info(name)
     if gid == pre_info['gid']:
         return True
-    cmd = 'pw usermod -g {0} {1}'.format(gid, name)
+    cmd = 'usermod -g {0} {1}'.format(gid, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['gid'] != pre_info['gid']:
@@ -178,7 +196,7 @@ def chshell(name, shell):
     pre_info = info(name)
     if shell == pre_info['shell']:
         return True
-    cmd = 'pw usermod -s {0} {1}'.format(shell, name)
+    cmd = 'usermod -s {0} {1}'.format(shell, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
@@ -198,7 +216,7 @@ def chhome(name, home, persist=False):
     pre_info = info(name)
     if home == pre_info['home']:
         return True
-    cmd = 'pw usermod -d {0} '.format(home)
+    cmd = 'usermod -d {0} '.format(home)
     if persist:
         cmd += ' -m '
     cmd += name
@@ -223,12 +241,10 @@ def chgroups(name, groups, append=False):
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
-    cmd = 'pw usermod -G {0} -n {1} '.format(','.join(groups), name)
     if append:
-        cmd += '-a'
-    __salt__['cmd.run'](cmd)
-    agrps = set(list_groups(name))
-    return len(ugrps - agrps) == 0
+        groups += ugrps 
+    cmd = 'usermod -G {0} {1} '.format(','.join(groups), name)
+    return not __salt__['cmd.retcode'](cmd)
 
 
 def chfullname(name, fullname):
@@ -246,7 +262,7 @@ def chfullname(name, fullname):
         return True
     gecos_field = deepcopy(pre_info)
     gecos_field['fullname'] = fullname
-    cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['fullname'] != pre_info['fullname']:
@@ -269,7 +285,7 @@ def chroomnumber(name, roomnumber):
         return True
     gecos_field = deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
-    cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['roomnumber'] != pre_info['roomnumber']:
@@ -292,7 +308,7 @@ def chworkphone(name, workphone):
         return True
     gecos_field = deepcopy(pre_info)
     gecos_field['workphone'] = workphone
-    cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['workphone'] != pre_info['workphone']:
@@ -315,7 +331,7 @@ def chhomephone(name, homephone):
         return True
     gecos_field = deepcopy(pre_info)
     gecos_field['homephone'] = homephone
-    cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
+    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['homephone'] != pre_info['homephone']:
@@ -379,4 +395,5 @@ def list_groups(name):
     for group in grp.getgrall():
         if name in group.gr_mem:
             ugrp.add(group.gr_name)
+
     return sorted(list(ugrp))

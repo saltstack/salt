@@ -13,10 +13,11 @@ so that any external authentication system can be used inside of Salt
 # 6. Interface to verify tokens
 
 # Import Python libs
+import os
+import hashlib
 import time
 import logging
 import random
-import inspect
 import getpass
 
 # Import Salt libs
@@ -53,9 +54,12 @@ class LoadAuth(object):
         except IndexError:
             return ''
 
-    def auth_call(self, load):
+    def __auth_call(self, load):
         '''
         Return the token and set the cache data for use 
+
+        Do not call this directly! Use the time_auth method to overcome timing
+        attacks
         '''
         if not 'eauth' in load:
             return False
@@ -79,7 +83,7 @@ class LoadAuth(object):
         Make sure that all failures happen in the same amount of time
         '''
         start = time.time()
-        ret = self.auth_call(load)
+        ret = self.__auth_call(load)
         if ret:
             return ret
         f_time = time.time() - start
@@ -98,33 +102,48 @@ class LoadAuth(object):
         '''
         Run time_auth and create a token. Return False or the token
         '''
-        ret = time_auth(load)
+        ret = self.time_auth(load)
         if ret is False:
             return ret
-        tok = hashlib.md5(os.urandom(512)).hexdigest()
-        t_path = os.path.join(opts['token_dir'], tok)
+        fstr = '{0}.auth'.format(load['eauth'])
+        tok = str(hashlib.md5(os.urandom(512)).hexdigest())
+        t_path = os.path.join(self.opts['token_dir'], tok)
         while os.path.isfile(t_path):
             tok = hashlib.md5(os.urandom(512)).hexdigest()
-            t_path = os.path.join(opts['token_dir'], tok)
+            t_path = os.path.join(self.opts['token_dir'], tok)
         fcall = salt.utils.format_call(self.auth[fstr], load)
         tdata = {'start': time.time(),
                  'expire': time.time() + self.opts['token_expire'],
-                 'name': fcall['args'][0],}
+                 'name': fcall['args'][0],
+                 'eauth': load['eauth'],
+                 'token': tok}
         with open(t_path, 'w+') as fp_:
             fp_.write(self.serial.dumps(tdata))
-        return tok
+        return tdata
 
     def get_tok(self, tok):
         '''
         Return the name associate with the token, or False if the token is
         not valid
         '''
-        t_path = os.path.join(opts['token_dir'], tok)
+        t_path = os.path.join(self.opts['token_dir'], tok)
         if not os.path.isfile:
-            return False
+            return {}
         with open(t_path, 'r') as fp_:
-            return self.serial.loads(fp_.read())
-        return False
+            tdata = self.serial.loads(fp_.read())
+        rm_tok = False
+        if not 'expire' in tdata:
+            # invalid token, delete it!
+            rm_tok = True
+        if tdata.get('expire', '0') < time.time():
+            rm_tok = True
+        if rm_tok:
+            try:
+                os.remove(t_path)
+                return {}
+            except (IOError, OSError):
+                pass
+        return tdata
 
 
 class Resolver(object):
@@ -153,11 +172,34 @@ class Resolver(object):
 
         args = salt.utils.arg_lookup(self.auth[fstr])
         for arg in args['args']:
-            if arg.startswith('pass'):
+            if arg in self.opts:
+                ret[arg] = self.opts[arg]
+            elif arg.startswith('pass'):
                 ret[arg] = getpass.getpass('{0}: '.format(arg))
             else:
                 ret[arg] = raw_input('{0}: '.format(arg))
         for kwarg, default in args['kwargs'].items():
-            ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
+            if kwarg in self.opts:
+                ret['kwarg'] = self.opts[kwarg]
+            else:
+                ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
 
         return ret
+
+    def token_cli(self, eauth, load):
+        '''
+        Create the token from the cli and request the correct data to
+        authenticate via the passed authentication mechanism
+        '''
+        load['cmd'] = 'mk_token'
+        load['eauth'] = eauth
+        sreq = salt.payload.SREQ(
+                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+                )
+        tdata = sreq.send('clear', load)
+        try:
+            with open(self.opts['token_file'], 'w+') as fp_:
+                fp_.write(tdata['token'])
+        except (IOError, OSError):
+            pass
+        return tdata

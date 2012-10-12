@@ -42,6 +42,7 @@ class Master(parsers.MasterOptionParser):
                     os.path.join(self.config['cachedir'], 'jobs'),
                     os.path.dirname(self.config['log_file']),
                     self.config['sock_dir'],
+                    self.config['token_dir'],
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],

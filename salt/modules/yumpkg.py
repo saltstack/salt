@@ -88,7 +88,7 @@ def list_upgrades(*args):
         for pkg in pkgs:
             exactmatch, matched, unmatched  = yum.packages.parsePackages(pl, [pkg])
             for pkg in exactmatch:
-                if pkg.arch == getBaseArch():
+                if pkg.arch == getBaseArch() or pkg.arch == 'noarch':
                     versions_list[pkg['name']] = '-'.join([pkg['version'],pkg['release']])
     return versions_list
 
@@ -114,7 +114,7 @@ def available_version(name):
         # installed.  Maybe we should just return the value if we get a hit
         # on available, and only iterate though updates if we don't..
         for pkg in exactmatch:
-            if pkg.arch == getBaseArch():
+            if pkg.arch == getBaseArch() or pkg.arch == 'noarch':
                 versions_list.append('-'.join([pkg.version, pkg.release]))
 
     if len(versions_list) == 0:

@@ -43,6 +43,7 @@ import salt.auth
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
+import salt.utils.minions
 from salt.utils.debug import enable_sigusr1_handler
 
 
@@ -525,6 +526,7 @@ class AESFuncs(object):
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
+        self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
         # Make a client
@@ -953,13 +955,12 @@ class AESFuncs(object):
                     clear_load['id'])
             log.warn(msg)
             return {}
-        perms = set()
+        perms = []
         for match in self.opts['peer']:
             if re.match(match, clear_load['id']):
                 # This is the list of funcs/modules!
                 if isinstance(self.opts['peer'][match], list):
-                    perms.update(self.opts['peer'][match])
-        good = False
+                    perms.extend(self.opts['peer'][match])
         if ',' in clear_load['fun']:
             # 'arg': [['cat', '/proc/cpuinfo'], [], ['foo']]
             clear_load['fun'] = clear_load['fun'].split(',')
@@ -967,15 +968,11 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
-        for perm in perms:
-            if isinstance(clear_load['fun'], list):
-                good = True
-                for fun in clear_load['fun']:
-                    if not re.match(perm, fun):
-                        good = False
-            else:
-                if re.match(perm, clear_load['fun']):
-                    good = True
+        good = self.ckminions.auth_check(
+                perms,
+                clear_load['fun'],
+                clear_load['tgt'],
+                clear_load.get('tgt_type', 'glob'))
         if not good:
             return {}
         # Set up the publication payload
@@ -1039,7 +1036,7 @@ class AESFuncs(object):
         if ret_form == 'clean':
             return self.local.get_returns(
                     jid,
-                    self.local.check_minions(
+                    self.ckminions.check_minions(
                         clear_load['tgt'],
                         expr_form
                         ),
@@ -1048,7 +1045,7 @@ class AESFuncs(object):
         elif ret_form == 'full':
             ret = self.local.get_full_returns(
                     jid,
-                    self.local.check_minions(
+                    self.ckminions.check_minions(
                         clear_load['tgt'],
                         expr_form
                         ),
@@ -1098,6 +1095,8 @@ class ClearFuncs(object):
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
         self.local = salt.client.LocalClient(self.opts['conf_file'])
+        # Make an minion checker object
+        self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
 
@@ -1379,6 +1378,19 @@ class ClearFuncs(object):
         self.event.fire_event(eload, 'auth')
         return ret
 
+    def mk_token(self, clear_load):
+        if not 'eauth' in clear_load:
+            return ''
+        if not clear_load['eauth'] in self.opts['external_auth']:
+            # The eauth system is not enabled, fail
+            return ''
+        name = self.loadauth.load_name(clear_load)
+        if not name in self.opts['external_auth'][clear_load['eauth']]:
+            return ''
+        if not self.loadauth.time_auth(clear_load):
+            return ''
+        return self.loadauth.mk_token(clear_load)
+
     def publish(self, clear_load):
         '''
         This method sends out publications to the minions, it can only be used
@@ -1386,7 +1398,25 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
         # Check for external auth calls
-        if 'eauth' in extra:
+        if extra.get('token', False):
+            # A token was passwd, check it
+            token = self.loadauth.get_tok(extra['token'])
+            if not token:
+                return ''
+            if not token['eauth'] in self.opts['external_auth']:
+                return ''
+            if not token['name'] in self.opts['external_auth'][token['eauth']]:
+                return ''
+            good = self.ckminions.auth_check(
+                    self.opts['external_auth'][token['eauth']][token['name']],
+                    clear_load['fun'],
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob'))
+            if not good:
+                # Accept find_job so the cli will function cleanly
+                if not clear_load['fun'] == 'saltutil.find_job':
+                    return ''
+        elif 'eauth' in extra:
             if not extra['eauth'] in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
                 return ''
@@ -1395,10 +1425,11 @@ class ClearFuncs(object):
                 return ''
             if not self.loadauth.time_auth(extra):
                 return ''
-            good = False
-            for regex in self.opts['external_auth'][extra['eauth']][name]:
-                if re.match(regex, clear_load['fun']):
-                    good = True
+            good = self.ckminions.auth_check(
+                    self.opts['external_auth'][extra['eauth']][name],
+                    clear_load['fun'],
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob'))
             if not good:
                 # Accept find_job so the cli will function cleanly
                 if not clear_load['fun'] == 'saltutil.find_job':
@@ -1420,14 +1451,15 @@ class ClearFuncs(object):
                     if not clear_load.pop('key') == self.key[clear_load['user']]:
                         return ''
                     good = False
-                    for user in self.opts['client_acl']:
-                        if clear_load['user'] != user:
-                            continue
-                        for regex in self.opts['client_acl'][user]:
-                            if re.match(regex, clear_load['fun']):
-                                good = True
+                    good = self.ckminions.auth_check(
+                            self.opts['client_acl'],
+                            clear_load['fun'],
+                            clear_load['tgt'],
+                            clear_load.get('tgt_type', 'glob'))
                     if not good:
-                        return ''
+                        # Accept find_job so the cli will function cleanly
+                        if not clear_load['fun'] == 'saltutil.find_job':
+                            return ''
                 else:
                     return ''
         else:
@@ -1492,5 +1524,7 @@ class ClearFuncs(object):
             )
         pub_sock.connect(pull_uri)
         pub_sock.send(self.serial.dumps(payload))
+        minions = self.ckminions.check_minions(load['tgt'], load.get('tgt_type', 'glob'))
         return {'enc': 'clear',
-                'load': {'jid': clear_load['jid']}}
+                'load': {'jid': clear_load['jid'],
+                         'minions': minions}}

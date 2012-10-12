@@ -14,6 +14,7 @@ Full Table of Contents
     topics/tutorials/modules
     topics/tutorials/starting_states
     topics/tutorials/states*
+    topics/eauth*
     topics/tutorials/firewall
     topics/tutorials/bootstrap_ec2
     topics/tutorials/esky

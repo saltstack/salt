@@ -29,12 +29,10 @@ The data structure needs to be:
 # This means that the primary client to build is, the LocalClient
 
 import os
-import re
 import sys
 import glob
 import time
 import getpass
-import fnmatch
 
 # Import salt modules
 import salt.config
@@ -42,7 +40,7 @@ import salt.payload
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
-from salt.exceptions import SaltClientError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 # Try to import range from https://github.com/ytoolshed/range
 RANGE = False
@@ -69,8 +67,8 @@ class LocalClient(object):
     '''
     Connect to the salt master via the local server and via root
     '''
-    def __init__(self, c_path='/etc/salt/master'):
-        self.opts = salt.config.master_config(c_path)
+    def __init__(self, c_path='/etc/salt'):
+        self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
         self.salt_user = self.__get_user()
         self.key = self.__read_master_key()
@@ -115,129 +113,6 @@ class LocalClient(object):
             return user
         return user
 
-    def _check_glob_minions(self, expr):
-        '''
-        Return the minions found by looking via globs
-        '''
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        ret = set(glob.glob(expr))
-        os.chdir(cwd)
-        return ret
-
-    def _check_list_minions(self, expr):
-        '''
-        Return the minions found by looking via a list
-        '''
-        ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
-            if fn_ in expr:
-                if fn_ not in ret:
-                    ret.append(fn_)
-        return ret
-
-    def _check_pcre_minions(self, expr):
-        '''
-        Return the minions found by looking via regular expressions
-        '''
-        ret = set()
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        reg = re.compile(expr)
-        for fn_ in os.listdir('.'):
-            if reg.match(fn_):
-                ret.add(fn_)
-        os.chdir(cwd)
-        return ret
-
-    def _check_grain_minions(self, expr):
-        '''
-        Return the minions found by looking via a list
-        '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
-        if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not id_ in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
-                grains = self.serial.load(open(datap)).get('grains')
-                comps = expr.split(':')
-                if len(comps) < 2:
-                    continue
-                if comps[0] not in grains:
-                    minions.remove(id_)
-                    continue
-                if isinstance(grains.get(comps[0]), list):
-                    # We are matching a single component to a single list member
-                    found = False
-                    for member in grains[comps[0]]:
-                        if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
-                            found = True
-                            break
-                    if found:
-                        continue
-                    minions.remove(id_)
-                    continue
-                if fnmatch.fnmatch(
-                    str(grains.get(comps[0], '').lower()),
-                    comps[1].lower(),
-                    ):
-                    continue
-                else:
-                    minions.remove(id_)
-        return list(minions)
-
-    def _check_grain_pcre_minions(self, expr):
-        '''
-        Return the minions found by looking via a list
-        '''
-        minions = set(os.listdir(os.path.join(self.opts['pki_dir'], 'minions')))
-        if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not id_ in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
-                grains = self.serial.load(open(datap)).get('grains')
-                comps = expr.split(':')
-                if len(comps) < 2:
-                    continue
-                if comps[0] not in grains:
-                    minions.remove(id_)
-                if isinstance(grains[comps[0]], list):
-                    # We are matching a single component to a single list member
-                    found = False
-                    for member in grains[comps[0]]:
-                        if re.match(comps[1].lower(), str(member).lower()):
-                            found = True
-                    if found:
-                        continue
-                    minions.remove(id_)
-                    continue
-                if re.match(
-                    comps[1].lower(),
-                    str(grains[comps[0]]).lower()
-                    ):
-                    continue
-                else:
-                    minions.remove(id_)
-        return list(minions)
-
-    def _all_minions(self, expr=None):
-        '''
-        Return a list of all minions that have auth'd
-        '''
-        return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
-
     def _convert_range_to_list(self, tgt):
         range = seco.range.Range(self.opts['range_server'])
         try:
@@ -246,7 +121,7 @@ class LocalClient(object):
             print(("Range server exception: {0}".format(e)))
             return []
 
-    def gather_job_info(self, jid, tgt, tgt_type):
+    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -255,7 +130,8 @@ class LocalClient(object):
                 'saltutil.find_job',
                 [jid],
                 2,
-                tgt_type)
+                tgt_type,
+                **kwargs)
 
     def _check_pub_data(self, pub_data):
         '''
@@ -367,7 +243,8 @@ class LocalClient(object):
                     timeout or self.opts['timeout'],
                     tgt,
                     expr_form,
-                    verbose):
+                    verbose,
+                    **kwargs):
 
                 if not fn_ret:
                     continue
@@ -480,7 +357,8 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
-            verbose=False):
+            verbose=False,
+            **kwargs):
         '''
         This method starts off a watcher looking at the return data for
         a specified jid, it returns all of the information for the jid
@@ -543,7 +421,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -738,6 +616,7 @@ class LocalClient(object):
         '''
         Get the returns for the command line interface via the event system
         '''
+        minions = set(minions)
         if verbose:
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
@@ -795,7 +674,8 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
-            verbose=False):
+            verbose=False,
+            **kwargs):
         '''
         Get the returns for the command line interface via the event system
         '''
@@ -850,7 +730,7 @@ class LocalClient(object):
             if int(time.time()) > start + timeout:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
                 more_time = False
                 for id_ in jinfo:
                     if jinfo[id_]:
@@ -932,27 +812,6 @@ class LocalClient(object):
                 continue
         return ret
 
-    def check_minions(self, expr, expr_form='glob'):
-        '''
-        Check the passed regex against the available minions' public keys
-        stored for authentication. This should return a set of ids which
-        match the regex, this will then be used to parse the returns to
-        make sure everyone has checked back in.
-        '''
-        try:
-            minions = {'glob': self._check_glob_minions,
-                    'pcre': self._check_pcre_minions,
-                    'list': self._check_list_minions,
-                    'grain': self._check_grain_minions,
-                    'grain_pcre': self._check_grain_pcre_minions,
-                    'exsel': self._all_minions,
-                    'pillar': self._all_minions,
-                    'compound': self._all_minions,
-                    }[expr_form](expr)
-        except Exception:
-            minions = expr
-        return minions
-
     def pub(self, 
             tgt, 
             fun, 
@@ -997,7 +856,10 @@ class LocalClient(object):
                 conf_file = self.opts.get('conf_file', 'the master config file')
                 err = 'Node group {0} unavailable in {1}'.format(tgt, conf_file)
                 raise SaltInvocationError(err)
-            tgt = self.opts['nodegroups'][tgt]
+            tgt = salt.utils.minions.nodegroup_comp(
+                    tgt,
+                    self.opts['nodegroups']
+                    )
             expr_form = 'compound'
 
         # Convert a range expression to a list of nodes and change expression
@@ -1006,28 +868,22 @@ class LocalClient(object):
             tgt = self._convert_range_to_list(tgt)
             expr_form = 'list'
 
-        # Run a check_minions, if no minions match return False
         # format the payload - make a function that does this in the payload
         #   module
         # make the zmq client
         # connect to the req server
         # send!
         # return what we get back
-        minions = self.check_minions(tgt, expr_form)
-
-        if not minions:
-            return {'jid': None,
-                    'minions': minions}
 
         # Generate the standard keyword args to feed to format_payload
         payload_kwargs = {'cmd': 'publish',
-                           'tgt': tgt,
-                           'fun': fun,
-                           'arg': arg,
-                           'key': self.key,
-                           'tgt_type': expr_form,
-                           'ret': ret,
-                           'jid': jid}
+                          'tgt': tgt,
+                          'fun': fun,
+                          'arg': arg,
+                          'key': self.key,
+                          'tgt_type': expr_form,
+                          'ret': ret,
+                          'jid': jid}
 
         # if kwargs are passed, pack them.
         if kwargs:
@@ -1048,7 +904,7 @@ class LocalClient(object):
         if not payload:
             return payload
         return {'jid': payload['load']['jid'],
-                'minions': minions}
+                'minions': payload['load']['minions']}
 
 
 class FunctionWrapper(dict):

@@ -58,41 +58,14 @@ def lookup_jid(jid):
     '''
     Return the printout from a previously executed job
     '''
-    def _format_ret(full_ret):
-        '''
-        Take the full return data and format it to simple output
-        '''
-        out = None
-        ret = {}
-        for key, data in full_ret.items():
-            ret[key] = data['ret']
-            if 'out' in data:
-                out = data['out']
-        return ret, out
-
     client = salt.client.LocalClient(__opts__['conf_file'])
-    full_ret = client.get_full_returns(jid, [], 0)
-    formatted = _format_ret(full_ret)
 
-    if all(formatted):
-        ret = formatted[0]
-        out = formatted[1]
-    else:
-        ret = SaltException(
-            'Job {0} hasn\'t finished. No data yet :('.format(jid)
-        )
-        out = ''
+    ret = {}
+    for mid, data in client.get_full_returns(jid, [], 0).items():
+        printout = salt.output.get_outputter(data.get('out', None))
+        ret[mid] = data.get('ret')
+        printout({mid: ret[mid]})
 
-    # Determine the proper output method and run it
-    get_outputter = salt.output.get_outputter
-    if isinstance(ret, (list, dict, string_types)) and out:
-        printout = get_outputter(out)
-    # Pretty print any salt exceptions
-    elif isinstance(ret, SaltException):
-        printout = get_outputter("txt")
-    else:
-        printout = get_outputter(None)
-    printout(ret)
     return ret
 
 

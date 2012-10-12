@@ -145,7 +145,7 @@ html_context = {
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
 }
 
-html_use_index = False
+html_use_index = True
 html_last_updated_fmt = '%b %d, %Y'
 html_show_sourcelink = False
 html_show_sphinx = True
