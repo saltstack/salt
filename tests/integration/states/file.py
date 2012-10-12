@@ -368,6 +368,43 @@ class FileTest(integration.ModuleCase):
         self.assertTrue(os.path.isdir(name))
         os.removedirs(name)
 
+    def test_issue_2227_file_append(self):
+        '''
+        Text to append includes a percent symbol
+        '''
+        # let's make use of existing state to create a file with contents to
+        # test against
+        tmp_file_append = '/tmp/salttest/test.append'
+        if os.path.isfile(tmp_file_append):
+            os.remove(tmp_file_append)
+        self.run_function('state.sls', mods='testappend')
+        self.run_function('state.sls', mods='testappend.step1')
+        self.run_function('state.sls', mods='testappend.step2')
+
+        # Now our real test
+        try:
+            ret = self.run_function(
+                'state.sls', mods='testappend.issue-2227'
+            )
+            for change in ret.values():
+                self.assertTrue(isinstance(change, dict))
+                self.assertTrue(change['result'])
+            contents = open(tmp_file_append, 'r').read()
+
+            # It should not append text again
+            ret = self.run_function(
+                'state.sls', mods='testappend.issue-2227'
+            )
+            for change in ret.values():
+                self.assertTrue(isinstance(change, dict))
+                self.assertTrue(change['result'])
+
+            self.assertEqual(contents, open(tmp_file_append, 'r').read())
+
+        finally:
+            if os.path.isfile(tmp_file_append):
+                os.remove(tmp_file_append)
+
 
 if __name__ == '__main__':
     from integration import run_tests
