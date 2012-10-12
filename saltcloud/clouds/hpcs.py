@@ -1,19 +1,19 @@
 '''
-Rackspace Cloud Module
+HP Cloud Module
 ======================
 
-The Rackspace cloud module. This module uses the preferred means to set up a
+The HP cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
-The rackspace cloud module interfaces with the Rackspace public cloud service
+The HP cloud module interfaces with the HP public cloud service
 and requires that two configuration paramaters be set for use:
 
 .. code-block:: yaml
 
-    # The Rackspace login user
+    # The HP login user
     HPCLOUD.user: fred
-    # The Rackspace user's apikey
+    # The HP user's apikey
     HPCLOUD.apikey: 901d3f579h23c8v73q9
 
 '''
@@ -22,6 +22,7 @@ and requires that two configuration paramaters be set for use:
 
 # Import python libs
 import os
+import sys
 import types
 import paramiko
 import tempfile
@@ -48,9 +49,21 @@ list_nodes_full = types.FunctionType(list_nodes_full.__code__, globals())
 # Only load in this module is the HPCLOUD configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for HPCLOUD configs
+    Set up the libcloud functions and check for HPCLOUD configs
     '''
-    if 'HPCLOUD.user' in __opts__ and 'HPCLOUD.apikey' in __opts__:
+    key_values = [ 'HPCLOUD.user'
+                 , 'HPCLOUD.apikey'
+                 , 'HPCLOUD.auth_endpoint'
+                 , 'HPCLOUD.region'
+                 , 'HPCLOUD.key_name'
+                 , 'HPCLOUD.tenant_name'
+                 ]
+    have_values = 0 
+    for value in key_values:
+        if value in __opts__:
+            have_values += 1
+            print have_values, len(key_values), value
+    if have_values == len(key_values):
         return 'hpcs'
     return False
 
@@ -59,12 +72,15 @@ def get_conn():
     '''
     Return a conn object for the passed vm data
     '''
-    driver = get_driver(Provider.HPCLOUD)
+    driver = get_driver(Provider.OPENSTACK)
     return driver(
             __opts__['HPCLOUD.user'],
             __opts__['HPCLOUD.apikey'],
             ex_force_auth_url = __opts__['HPCLOUD.auth_endpoint'],
             ex_force_auth_version = '2.0_password',
+            ex_force_service_name = 'Compute',
+            ex_force_service_region = __opts__['HPCLOUD.region'],
+            ex_key_name = __opts__['HPCLOUD.key_name'],
             ex_tenant_name = __opts__['HPCLOUD.tenant_name']
             )
 
@@ -96,7 +112,7 @@ def create(vm_):
     # complete the next step of deploying a script to the new
     # server : (
     if data.public_ips:
-        host_addr = public_ips[0]
+        host_addr = data.public_ips[0]
     else:
         host_addr = None
     deployed = saltcloud.utils.deploy_script(
