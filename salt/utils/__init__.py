@@ -544,12 +544,11 @@ def build_whitepace_splited_regex(text):
         lexer = shlex.shlex(text)
         lexer.whitespace_split = True
         lexer.commenters = ''
-        if '"' in text:
+        if '\'' in text:
             lexer.quotes = '"'
-        elif '\'' in text:
+        elif '"' in text:
             lexer.quotes = '\''
         return list(lexer)
-
 
     regex = r''
     for line in text.splitlines():
