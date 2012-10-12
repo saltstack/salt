@@ -29,7 +29,7 @@ import salt.fileclient
 from salt._compat import string_types, callable
 
 from salt.template import compile_template, compile_template_str
-from salt.exceptions import SaltReqTimeoutError
+from salt.exceptions import SaltReqTimeoutError, SaltException
 
 log = logging.getLogger(__name__)
 
@@ -263,6 +263,24 @@ class State(object):
                 _refresh()
         elif data['state'] == 'pkg':
             _refresh()
+
+    def verify_ret(self, ret):
+        '''
+        Verify the state return data
+        '''
+        if not isinstance(ret, dict):
+            raise SaltException(
+                    'Malformed state return, return must be a dict'
+                    )
+        bad = []
+        for val in ['name', 'result', 'changes', 'comment']:
+            if not val in ret:
+                bad.append(val)
+        if bad:
+            raise SaltException(
+                    ('The following keys were not present in the state '
+                     'return: {0}'
+                     ).format(','.join(bad)))
 
     def verify_data(self, data):
         '''
@@ -860,6 +878,7 @@ class State(object):
                     *cdata['args'], **cdata['kwargs'])
             else:
                 ret = self.states[cdata['full']](*cdata['args'])
+            self.verify_ret(ret)
         except Exception:
             trb = traceback.format_exc()
             ret = {
