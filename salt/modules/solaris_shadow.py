@@ -8,15 +8,13 @@ try:
 except ImportError:
     pass
 
+
 def __virtual__():
     '''
     Only work on posix-like systems
     '''
 
-    # Disable on Windows, a specific file module exists:
-    if __grains__['os'] == 'Windows' or __grains__['kernel'] == 'SunOS':
-        return False
-    return 'shadow'
+    return 'shadow' if __grains__['kernel'] == 'SunOS' else False 
 
 
 def info(name):
@@ -50,26 +48,10 @@ def info(name):
             'expire': ''}
     return ret
 
-def set_inactdays(name, inactdays):
-    '''
-    Set the number of days of inactivity after a password has expired before the account is locked. See man chage.
-
-    CLI Example::
-
-        salt '*' shadow.set_inactdays username 7
-    '''
-    pre_info = info(name)
-    if inactdays == pre_info['inact']:
-        return True
-    cmd = 'chage -I {0} {1}'.format(inactdays, name)
-    __salt__['cmd.run'](cmd)
-    post_info = info(name)
-    if post_info['inact'] != pre_info['inact']:
-        return post_info['inact'] == inactdays
 
 def set_maxdays(name, maxdays):
     '''
-    Set the maximum number of days during which a password is valid. See man chage.
+    Set the maximum number of days during which a password is valid. See man passwd.
 
     CLI Example::
 
@@ -78,15 +60,16 @@ def set_maxdays(name, maxdays):
     pre_info = info(name)
     if maxdays == pre_info['max']:
         return True
-    cmd = 'chage -M {0} {1}'.format(maxdays, name)
+    cmd = 'passwd -x {0} {1}'.format(maxdays, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['max'] != pre_info['max']:
         return post_info['max'] == maxdays
 
+
 def set_mindays(name, mindays):
     '''
-    Set the minimum number of days between password changes. See man chage.
+    Set the minimum number of days between password changes. See man passwd.
 
     CLI Example::
 
@@ -95,12 +78,13 @@ def set_mindays(name, mindays):
     pre_info = info(name)
     if mindays == pre_info['min']:
         return True
-    cmd = 'chage -m {0} {1}'.format(mindays, name)
+    cmd = 'passwd -n {0} {1}'.format(mindays, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['min'] != pre_info['min']:
         return post_info['min'] == mindays
     return False
+
 
 def set_password(name, password):
     '''
@@ -129,9 +113,10 @@ def set_password(name, password):
     uinfo = info(name)
     return uinfo['pwd'] == password
 
+
 def set_warndays(name, warndays):
     '''
-    Set the number of days of warning before a password change is required. See man chage.
+    Set the number of days of warning before a password change is required. See man passwd.
 
     CLI Example::
 
@@ -140,21 +125,9 @@ def set_warndays(name, warndays):
     pre_info = info(name)
     if warndays == pre_info['warn']:
         return True
-    cmd = 'chage -W {0} {1}'.format(warndays, name)
+    cmd = 'passwd -w {0} {1}'.format(warndays, name)
     __salt__['cmd.run'](cmd)
     post_info = info(name)
     if post_info['warn'] != pre_info['warn']:
         return post_info['warn'] == warndays
     return False
-
-def set_date(name, date):
-    '''
-    sets the value for the date the password was last changed to the epoch (January 1, 1970). See man chage.
-
-    CLI Example::
-
-        salt '*' shadow.set_date username 0
-    '''
-    cmd = 'chage -d {0} {1}'.format(date, name)
-    __salt__['cmd.run'](cmd)
-    
