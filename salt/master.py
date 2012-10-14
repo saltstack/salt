@@ -1372,7 +1372,7 @@ class ClearFuncs(object):
               }
         if 'token' in load:
             try:
-                mtoken = self.master_key.key.private_decrypt(load['token'])
+                mtoken = self.master_key.key.private_decrypt(load['token'], 4)
                 ret['token'] = pub.public_encrypt(mtoken, 4)
             except Exception:
                 # Token failed to decrypt, send back the salty bacon to
