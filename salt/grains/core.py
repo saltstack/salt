@@ -394,6 +394,7 @@ _os_name_map = {
     'redhatente': 'RedHat',
     'debian': 'Debian',
     'arch': 'Arch',
+    'amazonlinu': 'Amazon',
 }
 
 # Map the 'os' grain to the 'os_family' grain
