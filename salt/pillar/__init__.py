@@ -52,11 +52,13 @@ class RemotePillar(object):
         load = {'id': self.id_,
                 'grains': self.grains,
                 'env': self.opts['environment'],
+                'ver': '2',
                 'cmd': '_pillar'}
-        return self.auth.crypticle.loads(
-                self.sreq.send('aes', self.auth.crypticle.dumps(load), 3, 7200)
-                )
-
+        ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), 3, 7200)
+        key = self.auth.get_keys()
+        aes = key.private_decrypt(ret['key'], 4)
+        pcrypt = salt.crypt.Crypticle(self.opts, aes)
+        return pcrypt.loads(ret['pillar'])
 
 
 class Pillar(object):
