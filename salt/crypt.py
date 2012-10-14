@@ -11,7 +11,6 @@ import hmac
 import hashlib
 import logging
 import tempfile
-import random
 
 # Import Cryptography libs
 from M2Crypto import RSA
@@ -180,8 +179,8 @@ class Auth(object):
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
         try:
-            pub = RSA.load_pub_key(self.mpub)
-            payload['load']['token'] = pub.public_encrypt(self.token)
+            pub = RSA.load_pub_key(os.path.join(self.opts['pki_dir'], self.mpub))
+            payload['load']['token'] = pub.public_encrypt(self.token, 4)
         except Exception:
             pass
         with open(tmp_pub, 'r') as fp_:
@@ -225,10 +224,17 @@ class Auth(object):
                           'have been subverted, verify salt master\'s public '
                           'key')
                 return False
-            if token and not self.decrypt_aes(token) == self.token:
+            try:
+                if token and not self.decrypt_aes(token) == self.token:
+                    log.error('The master failed to decrypt the random minion token')
+                    return False
+            except Exception:
                 log.error('The master failed to decrypt the random minion token')
+                return False
+            return True
         else:
             open(m_pub_fn, 'w+').write(master_pub)
+            return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')
         return False
@@ -279,8 +285,8 @@ class Auth(object):
         if not self.verify_master(payload['pub_key'], payload['token']):
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
-                'The master may need to be updated it it is a version of Salt'
-                'lower than 0.10.4, or'
+                'The master may need to be updated if it is a version of Salt '
+                'lower than 0.10.4, or\n'
                 'If you are confident that you are connecting to a valid Salt '
                 'Master, then remove the master public key and restart the '
                 'Salt Minion.\nThe master public key can be found '
