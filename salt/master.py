@@ -1370,6 +1370,15 @@ class ClearFuncs(object):
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
+        if 'token' in load:
+            try:
+                mtoken = self.master_key.key.private_decrypt(load['token'])
+                ret['token'] = pub.public_encrypt(mtoken, 4)
+            except Exception:
+                # Token failed to decrypt, send back the salty bacon to
+                # support older minions
+                pass
+
         ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
         eload = {'result': True,
                  'act': 'accept',
