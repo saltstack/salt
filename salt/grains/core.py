@@ -27,7 +27,6 @@ from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'enterprise', 'ovs', 'system')
 
-
 import salt.log
 import salt.utils
 
@@ -51,6 +50,7 @@ if sys.platform.startswith('win'):
     except ImportError:
         log.exception("Unable to import Python wmi module, some core grains "
                       "will be missing")
+
 
 def _windows_cpudata():
     '''
@@ -363,7 +363,6 @@ def _windows_platform_data(osdata):
     if not has_wmi:
         return {}
 
-    from datetime import datetime
     wmi_c = wmi.WMI()
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
     systeminfo = wmi_c.Win32_ComputerSystem()[0]
