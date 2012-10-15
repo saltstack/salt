@@ -314,7 +314,7 @@ def in_subnet(cidr):
 def ip_addrs(include_loopback=False):
     '''
     Returns a list of IPv4 addresses assigned to the host. (127.0.0.1 is
-    ignored)
+    ignored, unless 'include_loopback=True' is indicated)
     '''
     ret = []
     ifaces = interfaces()
@@ -328,7 +328,8 @@ def ip_addrs(include_loopback=False):
 
 def ip_addrs6(include_loopback=False):
     '''
-    Returns a list of IPv6 addresses assigned to the host. (::1 is ignored)
+    Returns a list of IPv6 addresses assigned to the host. (::1 is ignored,
+    unless 'include_loopback=True' is indicated)
     '''
     ret = []
     ifaces = interfaces()
