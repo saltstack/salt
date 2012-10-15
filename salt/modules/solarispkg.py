@@ -136,6 +136,16 @@ def install(name, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name once installed> source='http://packages.server.com/<package filename>'
         salt '*' pkg.install SMClgcc346 source='http://packages.server.com/gcc-3.4.6-sol10-sparc-local.pkg'
+
+    If working with solaris zones and you want to install a package only in the global zone 
+    you can pass 'current_zone_only=True' to salt to have the package only installed in the
+    global zone. (Behind the scenes this is passing '-G' to the pkgadd command.) Solaris default
+    when installing a package in the global zone is to install it in all zones. This overrides
+    that and installs the package only in the global::
+    
+    CLI Example, installing a datastream package only in the global zone::
+    
+    salt 'global_zone' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg current_zone_only=True 
     
     By default salt automatically provides an adminfile, to automate package installation, with these options set:
 
@@ -227,8 +237,15 @@ def install(name, refresh=False, **kwargs):
     # what got installed.
     old = _get_pkgs()
 
+    cmd = '/usr/sbin/pkgadd -n -a {0} '.format(adminfile)
+
+    # Global only?
+    if kwargs.get('current_zone_only') == "True":
+        cmd += '-G '
+
+    cmd += '-d {0} \'all\''.format(pkgname)
+
     # Install the package
-    cmd = '/usr/sbin/pkgadd -n -a {0} -d {1} \'all\''.format(adminfile, pkgname)
     __salt__['cmd.retcode'](cmd)
 
     # Get a list of the packages again, including newly installed ones.
