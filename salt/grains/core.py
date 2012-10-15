@@ -40,6 +40,17 @@ __salt__ = {
 
 log = logging.getLogger(__name__)
 
+has_wmi = False
+if sys.platform.startswith('win'):
+    # attempt to import the python wmi module
+    # the Windows minion uses WMI for some of its grains
+    try:
+        import wmi
+        has_wmi = True
+    except ImportError:
+        log.exception("Unable to import Python wmi module, some core grains "
+                      "will be missing")
+
 
 def _windows_cpudata():
     '''
@@ -164,8 +175,7 @@ def _memdata(osdata):
             comps = line.split(' ')
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
-    elif osdata['kernel'] == 'Windows':
-        import wmi
+    elif osdata['kernel'] == 'Windows' and has_wmi:
         wmi_c = wmi.WMI()
         # this is a list of each stick of ram in a system
         # WMI returns it as the string value of the number of bytes
@@ -350,8 +360,9 @@ def _windows_platform_data(osdata):
     #    timezone
     #    windowsdomain
 
-    import wmi
-    from datetime import datetime
+    if not has_wmi:
+        return {}
+
     wmi_c = wmi.WMI()
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
     systeminfo = wmi_c.Win32_ComputerSystem()[0]
