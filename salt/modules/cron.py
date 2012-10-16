@@ -80,6 +80,8 @@ def _write_cron_lines(user, lines):
     os.close(fd_)
     with open(path, 'w+') as fp_:
         fp_.writelines(lines)
+    if __grains__['os'] == 'Solaris' and user != "root":
+        __salt__['cmd.run']('chown {0} {1}'.format(user, path))
     ret = __salt__['cmd.run_all'](_get_cron_cmdstr(user, path))
     os.remove(path)
     return ret
