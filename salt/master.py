@@ -593,43 +593,42 @@ class AESFuncs(object):
         # The old ext_nodes method is set to be deprecated in 0.10.4
         # and should be removed within 3-5 releases in favor of the
         # "master_tops" system
-        if not self.opts['external_nodes']:
-            return {}
-        if not salt.utils.which(self.opts['external_nodes']):
-            log.error(('Specified external nodes controller {0} is not'
-                       ' available, please verify that it is installed'
-                       '').format(self.opts['external_nodes']))
-            return {}
-        cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-        ndata = yaml.safe_load(
-                subprocess.Popen(
-                    cmd,
-                    shell=True,
-                    stdout=subprocess.PIPE
-                    ).communicate()[0])
-        if 'environment' in ndata:
-            env = ndata['environment']
-        else:
-            env = 'base'
-
-        if 'classes' in ndata:
-            if isinstance(ndata['classes'], dict):
-                ret[env] = list(ndata['classes'])
-            elif isinstance(ndata['classes'], list):
-                ret[env] = ndata['classes']
+        if self.opts['external_nodes']:
+            if not salt.utils.which(self.opts['external_nodes']):
+                log.error(('Specified external nodes controller {0} is not'
+                           ' available, please verify that it is installed'
+                           '').format(self.opts['external_nodes']))
+                return {}
+            cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
+            ndata = yaml.safe_load(
+                    subprocess.Popen(
+                        cmd,
+                        shell=True,
+                        stdout=subprocess.PIPE
+                        ).communicate()[0])
+            if 'environment' in ndata:
+                env = ndata['environment']
             else:
-                return ret
+                env = 'base'
+
+            if 'classes' in ndata:
+                if isinstance(ndata['classes'], dict):
+                    ret[env] = list(ndata['classes'])
+                elif isinstance(ndata['classes'], list):
+                    ret[env] = ndata['classes']
+                else:
+                    return ret
         # Evaluate all configured master_tops interfaces
 
         opts = {}
         grains = {}
         if 'opts' in load:
             opts = load['opts']
-            if grains in load['opts']:
+            if 'grains' in load['opts']:
                 grains = load['opts']['grains']
         for fun in self.tops:
             try:
-                ret.update(self.tops[fun](opts, grains))
+                ret.update(self.tops[fun](opts=opts, grains=grains))
             except Exception as exc:
                 log.error(
                         ('Top function {0} failed with error {1} for minion '
