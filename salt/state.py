@@ -1591,9 +1591,11 @@ class BaseHighState(object):
                                 errors.append(('Detected conflicting IDs, SLS'
                                 ' IDs need to be globally unique.\n    The'
                                 ' conflicting ID is "{0}" and is found in SLS'
-                                ' "{1}" and SLS "{2}"').format(
+                                ' "{1}:{2}" and SLS "{3}:{4}"').format(
                                         id_,
+                                        highstate[id_]['__env__'],
                                         highstate[id_]['__sls__'],
+                                        state[id_]['__env__'],
                                         state[id_]['__sls__'])
                                 )
                     if state:
