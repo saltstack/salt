@@ -11,11 +11,11 @@ By default SLS files are rendered as Jinja templates and then parsed as YAML
 documents. But since the only thing the state system cares about is raw data,
 the SLS files can be any structured format that can be dreamed up.
 
-Currently there is support for ``Jinja + YAML``, ``Mako + YAML``,
-``Jinja + json`` and ``Mako + json``. But renderers can be written to support
-anything. This means that the Salt states could be managed by xml files, html
-files, puppet files, or any format that can be translated into the data
-structure used by the state system.
+Currently there is support for ``Jinja + YAML``, ``Mako + YAML``, 
+``Wempy + YAML``, ``Jinja + json`` ``Mako + json`` and ``Wempy + json``. But
+renderers can be written to support anything. This means that the Salt states
+could be managed by xml files, html files, puppet files, or any format that
+can be translated into the data structure used by the state system.
 
 Multiple Renderers
 ------------------
