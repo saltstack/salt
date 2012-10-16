@@ -32,8 +32,9 @@ Is changed to this:
 Then the existing cron will be updated, but if the cron command is changed,
 then a new cron job will be added to the user's crontab.
 '''
-
+# Import python libs
 import os
+
 
 def _check_cron(cmd, user, minute, hour, dom, month, dow):
     '''
@@ -112,6 +113,7 @@ def present(name,
         The information to be set in the day of day of week section. Default is
         ``*``
     '''
+    name = name.strip()
     ret = {'changes': {},
            'comment': '',
            'name': name,
