@@ -1,0 +1,28 @@
+==============
+salt-api 0.5.0
+==============
+
+:program:`salt-api` is gearing up for the initial public release with 0.5.0.
+Although this release ships with working basic functionality it is awaiting the
+authentication backend that will be introduced in Salt 0.10.4 before it can be
+considered ready for testing at large.
+
+REST API
+========
+
+This release presents the flagship netapi module which provides a RESTful
+interface to a running Salt system. It allows for viewing minions, runners, and
+jobs as well as running execution modules and runners of a running Salt system
+through a REST API that returns JSON.
+
+Participation
+=============
+
+:program:`salt-api` is just getting off the ground so feedback, questions, and
+ideas are critical as we solidify how this project fits into the overall Salt
+infrastructure management stack. Please get involved by `filing issues`__ on
+GitHub, `discussing on the mailing list`__, and chatting in ``#salt`` on
+Freenode.
+
+.. __: https://github.com/saltstack/salt-api/issues
+.. __: https://groups.google.com/forum/#!forum/salt-users
