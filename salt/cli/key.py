@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import logging
+import glob
 # Import salt modules
 import salt.crypt
 import salt.utils
@@ -281,6 +282,7 @@ class Key(object):
         Delete a key
         '''
         # Don't ask for verification if yes is not set
+        del_ = []
         yes = self.opts.get('yes', True)
         (minions_accepted,
          minions_pre,
@@ -290,48 +292,25 @@ class Key(object):
         else:
             # If a key is explicitly passed then don't ask for verification
             yes = True
-        pre = os.path.join(minions_pre, delete)
-        acc = os.path.join(minions_accepted, delete)
-        rej = os.path.join(minions_rejected, delete)
-        if os.path.exists(pre):
+        del_.extend(glob.glob(os.path.join(minions_pre, delete)))
+        del_.extend(glob.glob(os.path.join(minions_accepted, delete)))
+        del_.extend(glob.glob(os.path.join(minions_rejected, delete)))
+        if del_:
             rm_ = True
             if not yes:
-                msg = ('The following pending key is set to be removed: {0}'
-                       '\n[n/Y]').format(delete)
-                veri = raw_input(msg)
-                # Default to Yes
+                msg = 'The following keys are going to be deleted:\n'
+                #for key in sorted(del_):
+                for key in sorted(set(del_)):
+                    msg += '{0}\n'.format(key)
+                veri = raw_input('{0}[n/Y]'.format(msg))
                 if veri.lower().startswith('n'):
                     rm_ = False
             if rm_:
-                os.remove(pre)
-                self._log('Removed pending key {0}'.format(delete),
-                             level='info')
-        if os.path.exists(acc):
-            rm_ = True
-            if not yes:
-                msg = ('The following accepted key is set to be removed: {0}'
-                       '\n[n/Y]').format(delete)
-                veri = raw_input(msg)
-                # Default to Yes
-                if veri.lower().startswith('n'):
-                    rm_ = False
-            if rm_:
-                os.remove(acc)
-                self._log('Removed accepted key {0}'.format(delete),
-                             level='info')
-        if os.path.exists(rej):
-            rm_ = True
-            if not yes:
-                msg = ('The following rejected key is set to be removed: {0}'
-                       '\n[n/Y]').format(delete)
-                veri = raw_input(msg)
-                # Default to Yes
-                if veri.lower().startswith('n'):
-                    rm_ = False
-            if rm_:
-                os.remove(rej)
-                self._log('Removed rejected key {0}'.format(delete),
-                             level='info')
+                for key in del_:
+                    os.remove(key)
+                    filepath, filename = os.path.split(key)
+                    self._log('Removed pending key {0}'.format(filename),
+                            level='info')
 
     def _delete_all(self):
         '''
