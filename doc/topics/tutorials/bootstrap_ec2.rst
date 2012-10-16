@@ -29,7 +29,7 @@ Here is a sample script::
 
     # Set salt master location and start minion
     cp /etc/salt/minion.template /etc/salt/minion
-    sed -i '' -e 's/#master: salt/master: [salt_master_fqdn]' /etc/salt/minion
+    sed -i 's/#master: salt/master: [salt_master_fqdn]/' /etc/salt/minion
     salt-minion -d
 
 First the script adds the saltstack ppa and installs the package. Then

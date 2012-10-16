@@ -203,7 +203,7 @@ Salt is many splendid things.
     Use Salt programmatically from your own scripts and programs easily and
     simply via ``import salt``.
 
-:doc:`Automatic Updates and Frozen Binary Deployments <ref/esky>`
+:doc:`Automatic Updates and Frozen Binary Deployments <topics/tutorials/esky>`
     Use a frozen install to make deployments easier (Even on Windows!). Or
     take advantage of automatic updates to keep your minions running your
     latest builds.

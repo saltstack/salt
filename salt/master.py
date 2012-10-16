@@ -1072,6 +1072,27 @@ class AESFuncs(object):
         # (we don't care about the return value, so why encrypt it?)
         if func == '_return':
             return ret
+        if func == '_pillar' and 'id' in load:
+            if not load.get('ver') == '2' and self.opts['pillar_version'] == 1:
+                # Authorized to return old pillar proto
+                return self.crypticle.dumps(ret)
+            # encrypt with a specific aes key
+            pubfn = os.path.join(self.opts['pki_dir'],
+                    'minions',
+                    load['id'])
+            key = salt.crypt.Crypticle.generate_key_string()
+            pcrypt = salt.crypt.Crypticle(
+                    self.opts,
+                    key)
+            try:
+                pub = RSA.load_pub_key(pubfn)
+            except RSA.RSAError, e:
+                return self.crypticle.dumps({})
+
+            pret = {}
+            pret['key'] = pub.public_encrypt(key, 4)
+            pret['pillar'] = pcrypt.dumps(ret)
+            return pret
         # AES Encrypt the return
         return self.crypticle.dumps(ret)
 
@@ -1370,6 +1391,15 @@ class ClearFuncs(object):
                'token': self.master_key.token,
                'publish_port': self.opts['publish_port'],
               }
+        if 'token' in load:
+            try:
+                mtoken = self.master_key.key.private_decrypt(load['token'], 4)
+                ret['token'] = pub.public_encrypt(mtoken, 4)
+            except Exception:
+                # Token failed to decrypt, send back the salty bacon to
+                # support older minions
+                pass
+
         ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
         eload = {'result': True,
                  'act': 'accept',
