@@ -170,6 +170,20 @@ class Minion(object):
         returners = salt.loader.returners(self.opts, functions)
         return functions, returners
 
+    def _fire_master(self, data, tag):
+        '''
+        Fire an event on the master
+        '''
+        load = {'id': self.opts['id'],
+                'tag': tag,
+                'data': data,
+                'cmd': '_minion_event'}
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            sreq.send('aes', self.crypticle.dumps(load))
+        except:
+            pass
+
     def _handle_payload(self, payload):
         '''
         Takes a payload from the master publisher and does whatever the
@@ -577,6 +591,14 @@ class Minion(object):
         socket.connect(self.master_pub)
         poller.register(socket, zmq.POLLIN)
         epoller.register(epull_sock, zmq.POLLIN)
+        # Send an event to the master that the minion is live
+        self._fire_master(
+                'Minion {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                    ),
+                'minion_start'
+                )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
