@@ -21,6 +21,7 @@ Full Table of Contents
     topics/tutorials/preseed_key
     topics/tutorials/standalone_minion
     topics/pillar/index
+    topics/master_tops/index
     topics/jobs/index
     topics/nonroot
     topics/troubleshooting/index
@@ -41,6 +42,8 @@ Full Table of Contents
     ref/renderers/all/index
     ref/pillar/*
     ref/pillar/all/index
+    ref/tops/*
+    ref/topstops/all/index
     ref/runners
     ref/peer
     ref/clientacl
