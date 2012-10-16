@@ -157,7 +157,7 @@ def grains(opts):
         salt.config.load_config(
             pre_opts, opts['conf_file'], 'SALT_MINION_CONFIG'
         )
-        default_include = pre_opts.get('default_include', [])
+        default_include = pre_opts.get('default_include', opts['default_include'])
         include = pre_opts.get('include', [])
         pre_opts = salt.config.include_config(
             default_include, pre_opts, opts['conf_file'], verbose=False
