@@ -11,6 +11,7 @@ import yaml
 # Import Salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only run if properly configured
@@ -24,20 +25,16 @@ def top(**kwargs):
     '''
     Run the command configured
     '''
-    if not 'id' in kwargs:
+    if not 'id' in kwargs['opts']:
         return {}
-    if not salt.utils.which(__opts__['master_tops']['ext_nodes']):
-        log.error(('Specified external nodes controller {0} is not'
-                   ' available, please verify that it is installed'
-                   '').format(__opts__['master_tops']['ext_nodes']))
-        return {}
-    cmd = '{0} {1}'.format(__opts__['master_tops']['ext_nodes'], kwargs['id'])
+    cmd = '{0} {1}'.format(__opts__['master_tops']['ext_nodes'], kwargs['opts']['id'])
     ndata = yaml.safe_load(
             subprocess.Popen(
                 cmd,
                 shell=True,
                 stdout=subprocess.PIPE
                 ).communicate()[0])
+    print ndata
     ret = {}
     if 'environment' in ndata:
         env = ndata['environment']
