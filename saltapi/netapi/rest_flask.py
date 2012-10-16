@@ -1,5 +1,5 @@
 '''
-A REST API for Salt
+A REST interface for Salt using the Flask framework
 '''
 from flask import Flask
 from flask import jsonify
@@ -33,18 +33,19 @@ class SaltAPI(MethodView):
 
 class JobsView(SaltAPI):
     '''
-    View Salt jobs or create new jobs (run commands)
+    * List previously run jobs (up to the :conf_master:`keep_jobs` expiration).
+    * View the full return from a job.
     '''
-    def get_job_by_jid(self, jid):
+    def _get_job_by_jid(self, jid):
         '''
-        Return information on a previously run job
+        Return the output from a previously run job
         '''
         ret = self.runner.cmd('jobs.lookup_jid', [jid])
         return jsonify(ret)
 
-    def get_jobs_list(self):
+    def _get_jobs_list(self):
         '''
-        Return a previously run jobs
+        Return a list of previously run jobs
         '''
         ret = self.runner.cmd('jobs.list_jobs', [])
         return jsonify(ret)
@@ -54,21 +55,31 @@ class JobsView(SaltAPI):
         View a list of previously run jobs, or fetch a single job
         '''
         if jid:
-            return self.get_job_by_jid(jid)
+            return self._get_job_by_jid(jid)
 
-        return self.get_jobs_list()
+        return self._get_jobs_list()
 
 class MinionsView(SaltAPI):
+    '''
+    * View lists of minions and available grains and execution modules for each
+      minion.
+    * Run commands on minions.
+    '''
     def get(self, mid=None):
         '''
-        List all minions (and grains and functions for each minion)
+        Return grains and functions for all minions or for a single minion if
+        specified. This runs the :py:func:`salt.modules.grains.items` and
+        :py:func:`salt.modules.sys.list_functions` commands.
         '''
         return jsonify(self.local.cmd(mid or '*',
             ['sys.list_functions', 'grains.items'], [[], []]))
 
     def post(self):
         '''
-        Begin command execution on minion(s) and redirect to the JID URI
+        Execute a Salt command and return the job ID. Commands are executed as
+        a compound command so you may specify multiple functions to run. All
+        function parameters *must* have a corresponding arguments parameter,
+        even if it is empty.
         '''
         tgt = request.form.get('tgt')
         expr = request.form.get('expr', 'glob')
@@ -93,6 +104,10 @@ class MinionsView(SaltAPI):
         return redirect(url_for('jobs', jid=jid, _method='GET'))
 
 class RunnersView(SaltAPI):
+    '''
+    * View lists of available runners.
+    * Execute runners on the master.
+    '''
     def get(self):
         '''
         Return all available runners
@@ -101,7 +116,7 @@ class RunnersView(SaltAPI):
 
     def post(self):
         '''
-        Execute runner commands
+        Execute a runner command and return the result
         '''
         fun = request.form.get('fun')
         arg = request.form.get('arg')
@@ -130,6 +145,7 @@ def build_app():
 
         return response
 
+    # FIXME: Y U NO TRAILING SLASH?!
     # Allow using custom error handler when debug=True
     app.config['PROPAGATE_EXCEPTIONS'] = False
     app.config['TRAP_HTTP_EXCEPTIONS'] = True
