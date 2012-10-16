@@ -279,7 +279,7 @@ class Key(object):
 
     def _delete_key(self, delete=None):
         '''
-        Delete a key
+        Delete a key or keys by glob
         '''
         # Don't ask for verification if yes is not set
         del_ = []
