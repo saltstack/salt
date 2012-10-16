@@ -7,9 +7,9 @@ of ways in which files can be managed.
 
 Regular files can be enforced with the ``managed`` function. This function
 downloads files from the salt master and places them on the target system.
-The downloaded files can be rendered as a jinja or mako template adding
-a dynamic component to file management. An example of ``file.managed`` which
-makes use of the jinja templating system would look like this:
+The downloaded files can be rendered as a jinja, mako, or wempy template
+adding a dynamic component to file management. An example of ``file.managed``
+which makes use of the jinja templating system would look like this:
 
 .. code-block:: yaml
 
@@ -872,8 +872,8 @@ def managed(name,
 
     template
         If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja and mako are
-        supported
+        used to render the downloaded file, currently jinja, mako, and wempy
+        are supported
 
     makedirs
         If the file is located in a path without a parent directory, then
