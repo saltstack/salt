@@ -624,9 +624,10 @@ class State(object):
             for name, body in ext_chunk.items():
                 if name not in high:
                     errors.append(
-                        'Extension {0} is not part of the high state'.format(
-                            name
-                            )
+                        'Cannot extend ID {0} in "{1}:{2}". It is not part '
+                        'of the high state.'.format(name,
+                                                    body['__env__'],
+                                                    body['__sls__'])
                         )
                     continue
                 for state, run in body.items():
