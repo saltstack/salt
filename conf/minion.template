@@ -112,8 +112,10 @@
 # rendered from a jinja template, the available options are:
 # yaml_jinja
 # yaml_mako
+# yaml_wempy
 # json_jinja
 # json_mako
+# json_wempy
 #
 #renderer: yaml_jinja
 #
