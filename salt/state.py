@@ -665,6 +665,10 @@ class State(object):
                                         # Replace the value
                                         high[name][state][hind] = arg
                                         update = True
+                                if (argfirst == 'name' and
+                                    next(iter(high[name][state][hind])) == 'names'):
+                                    # If names are overwritten by name use the name
+                                    high[name][state][hind] = arg
                         if not update:
                             high[name][state].append(arg)
         return high, errors
