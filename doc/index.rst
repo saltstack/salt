@@ -158,8 +158,8 @@ effortless, simultaneous configuration of thousands of hosts.
     file type of your choice. The world doesn't need yet another DSL.
 
     :doc:`Full list of renderers <ref/renderers/all/index>`
-        YAML? JSON? Jinja? Mako? Python? We got you covered. (And if we
-        don't, new renderers are *tiny* and easy to write.)
+        YAML? JSON? Jinja? Mako? Wempy? Python? We got you covered. (And if
+        we don't, new renderers are *tiny* and easy to write.)
 
     :doc:`Renderers <ref/renderers/index>`
         Salt states are only concerned with the ultimate highstate data
