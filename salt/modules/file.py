@@ -51,7 +51,7 @@ def __clean_tmp(sfn):
     '''
     Clean out a template temp file
     '''
-    if sfn.startswith(tempfile.tempdir):
+    if sfn.startswith(tempfile.gettempdir()):
         # Only clean up files that exist
         if os.path.exists(sfn):
             os.remove(sfn)
