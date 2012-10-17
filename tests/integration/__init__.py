@@ -240,6 +240,13 @@ class ModuleCase(TestCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
+    def minion_run(self, _function, *args, **kw):
+        '''
+        Run a single salt function on the 'minion' target and condition
+        the return down to match the behavior of the raw function call
+        '''
+        return self.run_function(_function, args, **kw)
+
     def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
         '''
         Run a single salt function and condition the return down to match the

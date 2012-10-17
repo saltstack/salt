@@ -525,6 +525,33 @@ def comment(path, regex, char='#', backup='.bak'):
         backup=backup)
 
 
+def patch(originalfile, patchfile, options='', dry_run=False):
+    '''
+    Apply a patch to a file
+
+    Equivalent to::
+
+        patch <options> <originalfile> <patchfile>
+
+    originalfile
+        The full path to the file or directory to be patched
+    patchfile
+        A patch file to apply to ``originalfile``
+    options
+        Options to pass to patch.
+
+    CLI Example::
+
+        salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
+
+    .. versionadded:: 0.10.4
+    '''
+    dry_run_opt = ' --dry-run' if dry_run else ''
+    cmd = 'patch {}{} {} {}'.format(
+        options, dry_run_opt, originalfile, patchfile)
+    return __salt__['cmd.run_all'](cmd)
+
+
 def contains(path, text):
     '''
     Return True if the file at ``path`` contains ``text``
