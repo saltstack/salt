@@ -13,3 +13,4 @@ Full list of builtin pillars
     cmd_yaml
     hiera
     mongo
+    pillar_ldap
