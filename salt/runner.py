@@ -7,6 +7,7 @@ import sys
 # Import salt modules
 import salt.loader
 import salt.exceptions
+import salt.utils
 
 
 class RunnerClient(object):
@@ -42,6 +43,19 @@ class RunnerClient(object):
         self._verify_fun(fun)
         # pylint: disable-msg=W0142
         return self.functions[fun](*arg)
+
+    def low(self, fun, low):
+        '''
+        Pass in the runner function name and the low data structure
+        '''
+        l_fun = self.functions[fun]
+        fcall = salt.utils.format_call(l_fun, low)
+        if 'kwargs' in fcall:
+            ret = l_fun(*fcall['args'], **fcall['kwargs'])
+        else:
+            ret = l_fun(*f_call['args'])
+        return ret
+                      
 
 class Runner(RunnerClient):
     '''
