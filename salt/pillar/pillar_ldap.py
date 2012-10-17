@@ -1,59 +1,8 @@
 '''
-Pillar LDAP is a plugin module for the salt pillar system which allows external
-data (in this case data stored in an LDAP directory) to be incorporated into 
-salt state files.
-
-This module was written by Kris Saxton <kris@automationlogic.com>
-
-REQUIREMENTS:
-
-The salt ldap module
-An LDAP directory
-
-INSTALLATION:
-
-Drop this module into the 'pillar' directory under the root of the salt 
-python pkg; Restart your master.
-
-CONFIGURATION:
-
-Add something like the following to your salt master's config file:
-
-ext_pillar:
-  - pillar_ldap: /etc/salt/pillar/plugins/pillar_ldap.yaml
-
-Configure the 'pillar_ldap' config file with your LDAP sources 
-and an order in which to search them:
-
-ldap: &defaults
-  server: localhost
-  port: 389
-  tls: False
-  dn: o=acme,c=gb
-  binddn: uid=admin,o=acme,c=gb
-  bindpw: sssssh
-  attrs: [saltKeyValue, saltState]
-  scope: 1
-
-hosts:
-  <<: *defaults
-  filter: ou=hosts
-  dn: o=customer,o=acme,c=gb
-
-{{ fqdn }}:
-  <<: *defaults
-  filter: cn={{ fqdn }}
-  dn: ou=hosts,o=customer,o=acme,c=gb
-
-search_order:
-  - hosts
-  - {{ fqdn }}
-
-Essentially whatever is referenced in the 'search_order' list will be searched
-from first to last.  The config file is templated allowing you to ref grains.
-
-Where repeated instances of the same data are found during the searches, the
-instance found latest in the search order will override any earlier instances.
+This pillar module parses a config file (specified in the salt master config),
+and executes a series of LDAP searches based on that config.  Data returned by
+these searches is aggregrated, with data items found later in the LDAP search
+order overriding data found earlier on.
 The final result set is merged with the pillar data.
 '''
 
@@ -61,11 +10,6 @@ The final result set is merged with the pillar data.
 import os
 import logging
 import traceback
-
-# Import salt libs
-import salt.config
-import salt.utils
-from salt._compat import string_types
 
 # Import third party libs
 import yaml
@@ -80,6 +24,7 @@ except ImportError:
 # Set up logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only return if ldap module is installed
@@ -88,6 +33,7 @@ def __virtual__():
         return 'pillar_ldap'
     else:
         return False
+
 
 def _render_template(config_file):
     '''
@@ -99,6 +45,7 @@ def _render_template(config_file):
     config = template.render(__grains__)
     return config
 
+
 def _config(name, conf):
     '''
     Return a value for 'name' from  the config file options.
@@ -109,35 +56,53 @@ def _config(name, conf):
         value = None
     return value
 
-def _result_to_dict(data, attrs=None):
+
+def _result_to_dict(data, result, conf):
     '''
-    Formats LDAP search results as a pillar dictionary.
-    Attributes tagged in the pillar config file ('attrs') are scannned for the
-    'key=value' format.  Matches are written to the dictionary directly as:
-    dict[key] = value
+    Aggregates LDAP search result based on rules, returns a dictionary.
+
+    Rules:
+    Attributes tagged in the pillar config as 'attrs' or 'lists' are
+    scanned for a 'key=value' format (non matching entires are ignored.
+
+    Entries matching the 'attrs' tag overwrite previous values where
+    the key matches a previous result.
+
+    Entries matching the 'lists' tag are appended to list of values where
+    the key matches a previous result.
+
+    All Matching entries are then written directly to the pillar data
+    dictionary as data[key] = value.
+
     For example, search result:
 
-        saltKeyValue': ['ntpserver=ntp.acme.local', 'foo=myfoo']
-    
+        { saltKeyValue': ['ntpserver=ntp.acme.local', 'foo=myfoo'],
+          'saltList': ['vhost=www.acme.net', 'vhost=www.acme.local' }
+
     is written to the pillar data dictionary as:
 
-        {'ntpserver': 'ntp.acme.local', 'foo': 'myfoo'}
+        { 'ntpserver': 'ntp.acme.local', 'foo': 'myfoo',
+           'vhost': ['www.acme.net', 'www.acme.local' }
     '''
-    
-    if not attrs:
-        attrs = []
-    result = {}
-    for key in data:
+    attrs = _config('attrs', conf) or []
+    lists = _config('lists', conf) or []
+    for key in result:
         if key in attrs:
-            for item in data.get(key):
+            for item in result.get(key):
                 if '=' in item:
-                    k, v = item.split('=')
-                    result[k] = v
-                else:
-                    result[key] = data.get(key)
-        else:
-            result[key] = data.get(key)
-    return result
+                    k, v = item.split('=', 1)
+                    data[k] = v
+        elif key in lists:
+            for item in result.get(key):
+                if '=' in item:
+                    k, v = item.split('=', 1)
+                    if not k in data:
+                        data[k] = [v]
+                    else:
+                        data[k].append(v)
+    print 'Returning data %s' % data
+    return data
+
 
 def _do_search(conf):
     '''
@@ -154,20 +119,27 @@ def _do_search(conf):
     except KeyError:
         raise SaltInvocationError('missing filter')
     dn = _config('dn', conf)
-    scope = _config('scope', conf) 
-    attrs = _config('attrs', conf) 
+    scope = _config('scope', conf)
+    _lists = _config('lists', conf) or []
+    _attrs = _config('attrs', conf) or []
+    attrs = _lists + _attrs
+    if not attrs:
+        attrs = None
     # Perform the search
     try:
-        raw_result = __salt__['ldap.search'](filter, dn, scope, attrs, **connargs)['results'][0][1]
-    except IndexError: # we got no results for this search
-        raw_result = {}
-        log.debug('LDAP search returned no results for filter {0}'.format(filter))
+        result = __salt__['ldap.search'](filter, dn, scope, attrs,
+                                         **connargs)['results'][0][1]
+        msg = 'LDAP search returned no results for filter {0}'.format(filter)
+        log.debug(msg)
+    except IndexError:  # we got no results for this search
+        result = {}
     except Exception:
-        msg = traceback.format_exc()
-        log.critical('Failed to retrieve pillar data from LDAP: {0}'.format(msg))
+        trace = traceback.format_exc()
+        msg = 'Failed to retrieve pillar data from LDAP: {0}'.format(trace)
+        log.critical(msg)
         return {}
-    result = _result_to_dict(raw_result, attrs)
     return result
+
 
 def ext_pillar(config_file):
     '''
@@ -175,9 +147,9 @@ def ext_pillar(config_file):
     '''
     if os.path.isfile(config_file):
         try:
-            with open(config_file, 'r') as raw_config:
-                config = _render_template(config_file) or {}
-                opts = yaml.safe_load(config) or {}
+            #open(config_file, 'r') as raw_config:
+            config = _render_template(config_file) or {}
+            opts = yaml.safe_load(config) or {}
             opts['conf_file'] = config_file
         except Exception as e:
             import salt.log
@@ -193,6 +165,7 @@ def ext_pillar(config_file):
     for source in opts['search_order']:
         config = opts[source]
         result = _do_search(config)
+        print 'source %s got result %s' % (source, result)
         if result:
-            data.update(result)
+            data = _result_to_dict(data, result, config)
     return data
