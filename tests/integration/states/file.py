@@ -405,6 +405,38 @@ class FileTest(integration.ModuleCase):
             if os.path.isfile(tmp_file_append):
                 os.remove(tmp_file_append)
 
+    def do_patch(self, patch_name='hello', src="Hello\n"):
+        if not self.run_function('cmd.has_exec', ['patch']):
+            self.skipTest('patch is not installed')
+        src_file = os.path.join(integration.TMP, 'src.txt')
+        with open(src_file, 'w+') as fp:
+            fp.write(src)
+        ret = self.run_state('file.patch',
+            name=src_file,
+            source='salt://{}.patch'.format(patch_name),
+            hash='md5=f0ef7081e1539ac00ef5b761b4fb01b3',
+        )
+        return src_file, ret
+
+    def test_patch(self):
+        src_file, ret = self.do_patch()
+        self.assert_success(ret)
+        with open(src_file) as fp:
+            self.assertEqual(fp.read(), 'Hello world\n')
+
+    def test_patch_hash_mismatch(self):
+        src_file, ret = self.do_patch('hello_dolly')
+        result = self.state_result(ret, raw=True)
+        msg = 'File {} hash mismatch after patch was applied'.format(src_file)
+        self.assertEqual(result['comment'], msg)
+        self.assertEqual(result['result'], False)
+
+    def test_patch_already_applied(self):
+        ret = self.do_patch(src='Hello world\n')[1]
+        result = self.state_result(ret, raw=True)
+        self.assertEqual(result['comment'], 'Patch is already applied')
+        self.assertEqual(result['result'], True)
+
 
 if __name__ == '__main__':
     from integration import run_tests

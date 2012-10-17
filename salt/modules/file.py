@@ -278,6 +278,49 @@ def get_sum(path, form='md5'):
         return str(e)
 
 
+def get_hash(path, form='md5', chunk_size=4096):
+    '''
+    Get the hash sum of a file
+
+    This is better than ``get_sum`` for the following reasons:
+        - It does not read the entire file into memory.
+        - It does not return a string on error. The returned value of
+            ``get_sum`` cannot really be trusted since it is vulnerable to
+            collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
+    '''
+    try:
+        hash_type = getattr(hashlib, form)
+    except AttributeError:
+        raise ValueError('Invalid hash type: {}'.format(form))
+    with open(path, 'rb') as f:
+        hash_obj = hash_type()
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                return hash_obj.hexdigest()
+            hash_obj.update(chunk)
+
+
+def check_hash(path, hash):
+    '''
+    Check if a file matches the given hash string
+
+    Returns true if the hash matched, otherwise false. Raises ValueError if
+    the hash was not formatted correctly.
+
+    path
+        A file path
+    hash
+        A string in the form <hash_type>=<hash_value>. For example:
+        ``md5=e138491e9d5b97023cea823fe17bac22``
+    '''
+    hash_parts = hash.split('=', 1)
+    if len(hash_parts) != 2:
+        raise ValueError('Bad hash format: {!r}'.format(hash))
+    hash_form, hash_value = hash_parts
+    return get_hash(path, hash_form) == hash_value
+
+
 def find(path, **kwargs):
     '''
     Approximate the Unix find(1) command and return a list of paths that
