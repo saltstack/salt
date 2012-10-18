@@ -24,15 +24,6 @@ def __virtual__():
     return False
 
 
-def _sanitize_host(host):
-    '''
-    Sanitize host string.
-    '''
-    return ''.join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
-    ])
-
-
 def ping(host):
     '''
     Performs a ping to a host
@@ -41,7 +32,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -n 4 {0}'.format(_sanitize_host(host))
+    cmd = 'ping -n 4 {0}'.format(sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -82,7 +73,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'tracert {0}'.format(_sanitize_host(host))
+    cmd = 'tracert {0}'.format(sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         if not ' ' in line:
@@ -134,7 +125,7 @@ def nslookup(host):
         salt '*' network.nslookup archlinux.org
     '''
     ret = []
-    cmd = 'nslookup {0}'.format(_sanitize_host(host))
+    cmd = 'nslookup {0}'.format(sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).split('\n')
     for line in lines:
         if line.startswith('Non-authoritative'):
@@ -155,7 +146,7 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig {0}'.format(_sanitize_host(host))
+    cmd = 'dig {0}'.format(sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 

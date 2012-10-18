@@ -5,7 +5,7 @@ Define some generic socket functions for network modules
 import socket
 from string import ascii_letters, digits
 
-def _sanitize_host(host):
+def sanitize_host(host):
     '''
     Sanitize host string.
     '''
@@ -27,7 +27,7 @@ def isportopen(host, port):
         return False
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    out = sock.connect_ex((_sanitize_host(host), int(port)))
+    out = sock.connect_ex((sanitize_host(host), int(port)))
 
     return out
 
