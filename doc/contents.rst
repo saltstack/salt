@@ -44,7 +44,7 @@ Full Table of Contents
     ref/pillar/all/index
     ref/tops/*
     ref/topstops/all/index
-    ref/runners
+    ref/runners/index
     ref/peer
     ref/clientacl
     ref/syndic
