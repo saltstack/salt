@@ -59,7 +59,6 @@ def list():
     lines.pop(0)
     lines.pop(0)
     lines.pop(0)
-    lines.pop(0)
 
     pecls = {}
     for line in lines:
