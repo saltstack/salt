@@ -1083,7 +1083,7 @@ def check_file_meta(
                     slines = src.readlines()
                     nlines = name_.readlines()
                 changes['diff'] = (
-                        ''.join(difflib.unified_diff(slines, nlines))
+                        ''.join(difflib.unified_diff(nlines, slines))
                         )
             else:
                 changes['sum'] = 'Checksum differs'
