@@ -1273,6 +1273,16 @@ class ClearFuncs(object):
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
             pass
+        elif os.path.isfile(pubfn_rejected):
+            # The key has been rejected, don't place it in pending
+            log.info('Public key rejected for {id}'.format(**load))
+            ret = {'enc': 'clear',
+                   'load': {'ret': False}}
+            eload = {'result': False,
+                     'id': load['id'],
+                     'pub': load['pub']}
+            self.event.fire_event(eload, 'auth')
+            return ret
         elif os.path.isfile(pubfn):
             # The key has been accepted check it
             if not open(pubfn, 'r').read() == load['pub']:
@@ -1288,16 +1298,6 @@ class ClearFuncs(object):
                          'pub': load['pub']}
                 self.event.fire_event(eload, 'auth')
                 return ret
-        elif os.path.isfile(pubfn_rejected):
-            # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for {id}'.format(**load))
-            ret = {'enc': 'clear',
-                   'load': {'ret': False}}
-            eload = {'result': False,
-                     'id': load['id'],
-                     'pub': load['pub']}
-            self.event.fire_event(eload, 'auth')
-            return ret
         elif not os.path.isfile(pubfn_pend)\
                 and not self._check_autosign(load['id']):
             # This is a new key, stick it in pre
