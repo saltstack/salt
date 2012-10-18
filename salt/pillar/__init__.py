@@ -70,15 +70,18 @@ class Pillar(object):
         self.opts = self.__gen_opts(opts, grains, id_, env)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts)
+        if opts['file_client'] == 'local':
+            self.functions = salt.loader.minion_mods(opts)
+        else:
+            self.functions = salt.loader.minion_mods(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.ext_pillars = salt.loader.pillars(self.opts, self.functions)
 
-    def __gen_opts(self, opts, grains, id_, env=None):
+    def __gen_opts(self, opts_in, grains, id_, env=None):
         '''
         The options need to be altered to conform to the file client
         '''
-        opts = copy.deepcopy(opts)
+        opts = dict(opts_in)
         opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
         opts['grains'] = grains
