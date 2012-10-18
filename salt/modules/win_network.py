@@ -18,7 +18,6 @@ def __virtual__():
     Only works on Windows systems
     '''
     if __grains__['os'] == 'Windows':
-        setattr(sys.modules['salt.utils.interfaces'], 'interfaces', interfaces)
         return 'network'
     return False
 
