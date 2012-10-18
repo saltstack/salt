@@ -6,8 +6,7 @@ import sys
 import logging
 
 # Import Salt libs
-from salt.utils.interfaces import *
-from salt.utils.socket_util import *
+from salt.utils.socket_util import sanitize_host
 
 __outputter__ = {
     'dig':     'txt',
