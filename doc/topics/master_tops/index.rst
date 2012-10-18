@@ -12,7 +12,7 @@ system instead. The master tops system contains a number of subsystems that
 are loaded via the Salt loader interfaces like modules, states, returners,
 runners, etc.
 
-Using the ner `master_tops` option is simple:
+Using the new `master_tops` option is simple:
 
 .. code-block:: yaml
 
