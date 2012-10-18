@@ -97,6 +97,27 @@ class FileModuleTest(integration.ModuleCase):
         ret = self.run_function('file.chgrp', arg=[self.myfile, group])
         self.assertIn('not exist', ret)
 
+    def test_patch(self):
+        if not self.run_function('cmd.has_exec', ['patch']):
+            self.skipTest('patch is not installed')
+
+        src_patch = os.path.join(
+            integration.FILES, 'file', 'base', 'hello.patch')
+        src_file = os.path.join(integration.TMP, 'src.txt')
+        with open(src_file, 'w+') as fp:
+            fp.write("Hello\n")
+
+        # dry-run should not modify src_file
+        ret = self.minion_run('file.patch', src_file, src_patch, dry_run=True)
+        assert ret['retcode'] == 0, repr(ret)
+        with open(src_file) as fp:
+            self.assertEqual(fp.read(), 'Hello\n')
+
+        ret = self.minion_run('file.patch', src_file, src_patch)
+        assert ret['retcode'] == 0, repr(ret)
+        with open(src_file) as fp:
+            self.assertEqual(fp.read(), 'Hello world\n')
+
     def test_remove_file(self):
         ret = self.run_function('file.remove', args=[self.myfile])
         self.assertTrue(ret)

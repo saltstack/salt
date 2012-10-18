@@ -240,6 +240,13 @@ class ModuleCase(TestCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
+    def minion_run(self, _function, *args, **kw):
+        '''
+        Run a single salt function on the 'minion' target and condition
+        the return down to match the behavior of the raw function call
+        '''
+        return self.run_function(_function, args, **kw)
+
     def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
         '''
         Run a single salt function and condition the return down to match the
@@ -266,11 +273,14 @@ class ModuleCase(TestCase):
             )
         return orig[minion_tgt]
 
-    def state_result(self, ret):
+    def state_result(self, ret, raw=False):
         '''
         Return the result data from a single state return
         '''
-        return ret[next(iter(ret))]['result']
+        res = ret[next(iter(ret))]
+        if raw:
+            return res
+        return res['result']
 
     def run_state(self, function, **kwargs):
         '''
@@ -304,6 +314,20 @@ class ModuleCase(TestCase):
         return salt.config.master_config(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
+
+    def assert_success(self, ret):
+        try:
+            res = self.state_result(ret, raw=True)
+        except TypeError:
+            pass
+        else:
+            if isinstance(res, dict):
+                if res['result'] == True:
+                    return
+                if 'comment' in res:
+                    raise AssertionError(res['comment'])
+                ret = res
+        raise AssertionError('bad result: %r' % (ret))
 
 
 class SyndicCase(TestCase):
