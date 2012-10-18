@@ -101,7 +101,7 @@ class LocalClient(object):
         user = getpass.getuser()
         # if our user is root, look for other ways to figure out
         # who we are
-        if user == 'root':
+        if user == 'root' or 'SUDO_USER' in os.environ:
             env_vars = ['SUDO_USER', 'USER', 'USERNAME']
             for evar in env_vars:
                 if evar in os.environ:
