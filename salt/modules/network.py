@@ -24,7 +24,7 @@ def __virtual__():
     # Disable on Windows, a specific file module exists:
     if __grains__['os'] in ('Windows',):
         return False
-    setattr(sys.modules['salt.utils.interfaces'], 'interfaces', interfaces)
+
     return 'network'
 
 
