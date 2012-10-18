@@ -70,7 +70,7 @@ class Pillar(object):
         self.opts = self.__gen_opts(opts, grains, id_, env)
         self.client = salt.fileclient.get_file_client(self.opts)
         self.matcher = salt.minion.Matcher(self.opts)
-        if opts['file_client'] == 'local':
+        if opts.get('file_client', '') == 'local':
             self.functions = salt.loader.minion_mods(opts)
         else:
             self.functions = salt.loader.minion_mods(self.opts)
