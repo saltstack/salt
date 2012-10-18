@@ -18,7 +18,7 @@ def _check_puppet():
     # I thought about making this a virtual module, but then I realized that I
     # would require the minion to restart if puppet was installed after the
     # minion was started, and that would be rubbish
-    utils.check_or_die('puppetd')
+    utils.check_or_die('puppet')
 
 def _check_facter():
     '''
@@ -40,7 +40,7 @@ def run(tags=None):
     '''
     Execute a puppet run and return a dict with the stderr, stdout,
     return code, etc. If an argument is specified, it is treated as
-    a comma separated list of tags passed to puppetd --test --tags:
+    a comma separated list of tags passed to puppet --test --tags:
     http://projects.puppetlabs.com/projects/1/wiki/Using_Tags
 
     CLI Examples::
@@ -52,9 +52,9 @@ def run(tags=None):
     _check_puppet()
 
     if not tags:
-        cmd = 'puppetd --test'
+        cmd = 'puppet --test'
     else:
-        cmd = 'puppetd --test --tags "{0}"'.format(tags)
+        cmd = 'puppet --test --tags "{0}"'.format(tags)
 
     return __salt__['cmd.run_all'](cmd)
 
@@ -62,7 +62,7 @@ def noop(tags=None):
     '''
     Execute a puppet noop run and return a dict with the stderr, stdout,
     return code, etc. If an argument is specified, it is  treated  as  a
-    comma separated list of tags passed to puppetd --test --noop   --tags
+    comma separated list of tags passed to puppet --test --noop   --tags
 
     CLI Example::
 
@@ -73,9 +73,9 @@ def noop(tags=None):
     _check_puppet()
 
     if not tags:
-        cmd = 'puppetd --test --noop'
+        cmd = 'puppet --test --noop'
     else:
-        cmd = 'puppetd --test --tags "{0}" --noop'.format(tags)
+        cmd = 'puppet --test --tags "{0}" --noop'.format(tags)
 
     return __salt__['cmd.run_all'](cmd)
 
