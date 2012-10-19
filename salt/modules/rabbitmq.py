@@ -41,7 +41,6 @@ def list_users(runas=None):
     res = __salt__['cmd.run']('rabbitmqctl list_users')
     for line in res.split('\n'):
         if '...' not in line or line == '\n':
-            # TODO Rename these vars
             s = line.split('\t')
             user, properties = s[0], s[1]
             d[user] = properties
