@@ -339,7 +339,7 @@ components.
 
     <ID Declaration>:
       <State Declaration>:
-        - <Function>:
+        - <Function>
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>

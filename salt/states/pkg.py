@@ -245,7 +245,14 @@ def purged(name):
 
 def mod_init(low):
     '''
-    Refresh the package database here so that it only needs to happen once
+    Set a flag to tell the install functions to refresh the package database.
+    This ensures that the package database is refreshed only once durring
+    a state run significaltly improving the speed of package management
+    durring a state run.
+
+    It sets a flag for a number of reasons, primarily due to timeline logic.
+    When originally setting up the mod_init for pkg a number of corner cases
+    arose with different package managers and how they refresh package data.
     '''
     if low['fun'] == 'installed' or low['fun'] == 'latest':
         rtag = __gen_rtag()

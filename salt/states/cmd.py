@@ -360,3 +360,10 @@ def mod_watch(name, **kwargs):
         return run(name, **kwargs)
     elif kwargs['sfun'] == 'wait_script' or kwargs['sfun'] == 'script':
         return script(name, **kwargs)
+    return {'name': name,
+            'changes': {},
+            'comment': ('cmd.{0} does nto work with the watch requisite, '
+                       'please use cmd.wait of cmd.wait_script').format(
+                           kwargs['sfun']
+                           ),
+            'result': False}

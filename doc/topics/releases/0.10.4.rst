@@ -1,0 +1,40 @@
+=========================
+Salt 0.10.4 Release Notes
+=========================
+
+The latest taste of Salt has come, this release has many fixes and feature
+additions. Modifications have been made to make ZeroMQ connections more
+reliable, the begining of the ACL system is in place, a new command line
+parsing system has been added, dynamic module distribution has become more
+environment aware, the new `master_finger` option and many more!
+
+Major Features
+==============
+
+External Authentication System
+------------------------------
+
+Access Control System
+---------------------
+
+Master Tops System
+------------------
+
+Next Level Solaris Support
+--------------------------
+
+Security
+========
+
+A vulnerability in the handshake was found and has been repaired, old minions
+should be able to connect to a new master, so as usual the master should be
+updated first and then the minions.
+
+Pillar Updates
+--------------
+
+The pillar communication has been updated to add some extra levels of
+verification that the intended minion is the only one allowed to gather the
+data. Once all minions and the master are updated to salt 0.10.4 please
+activate pillar 2 by changing the `pillar_version` in the master config to
+`2`. This will be set to `2` by default in a future release.

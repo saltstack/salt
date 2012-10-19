@@ -23,23 +23,25 @@ as either absent or present
       user.absent
 '''
 
+import logging
+
+log = logging.getLogger(__name__)
 
 def _changes(
         name,
         uid=None,
         gid=None,
         groups=None,
+        optional_groups=None,
         home=True,
         password=None,
         enforce_password=True,
         shell=None,
-        fullname=None,
-        roomnumber=None,
-        workphone=None,
-        homephone=None,
-        other=None,
         unique=True,
-        ):
+        fullname='',
+        roomnumber='',
+        workphone='',
+        homephone=''):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
@@ -55,15 +57,17 @@ def _changes(
         # Scan over the users
         if lusr['name'] == name:
             found = True
+            wanted_groups = sorted(
+                    list(set((groups or []) + (optional_groups or []))))
             if uid:
                 if lusr['uid'] != uid:
                     change['uid'] = uid
             if gid:
                 if lusr['gid'] != gid:
                     change['gid'] = gid
-            if groups:
-                if lusr['groups'] != sorted(groups):
-                    change['groups'] = groups
+            if wanted_groups:
+                if lusr['groups'] != wanted_groups:
+                    change['groups'] = wanted_groups
             if home:
                 if lusr['home'] != home:
                     if not home is True:
@@ -77,21 +81,16 @@ def _changes(
                             lshad['pwd'] != '!' and enforce_password:
                         if lshad['pwd'] != password:
                             change['passwd'] = password
-            if fullname:
-                if lusr['fullname'] != fullname:
-                    change['fullname'] = fullname
-            if roomnumber:
-                if lusr['roomnumber'] != roomnumber:
-                    change['roomnumber'] = roomnumber
-            if workphone:
-                if lusr['workphone'] != workphone:
-                    change['workphone'] = workphone
-            if homephone:
-                if lusr['homephone'] != homephone:
-                    change['homephone'] = homephone
-            if other:
-                if lusr['other'] != other:
-                    change['other'] = other
+            # GECOS fields
+            if lusr['fullname'] != fullname:
+                change['fullname'] = fullname
+            if lusr['roomnumber'] != roomnumber:
+                change['roomnumber'] = roomnumber
+            if lusr['workphone'] != workphone:
+                change['workphone'] = workphone
+            if lusr['homephone'] != homephone:
+                change['homephone'] = homephone
+
     if not found:
         return False
     return change
@@ -103,18 +102,17 @@ def present(
         gid=None,
         gid_from_name=False,
         groups=None,
+        optional_groups=None,
         home=True,
         password=None,
         enforce_password=True,
         shell=None,
-        fullname=None,
-        roomnumber=None,
-        workphone=None,
-        homephone=None,
-        other=None,
         unique=True,
         system=False,
-        ):
+        fullname='',
+        roomnumber='',
+        workphone='',
+        homephone=''):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -129,10 +127,20 @@ def present(
         The default group id
     
     gid_from_name
-        If True, the default group id will be set to the id of the group with the same name as the user.
+        If True, the default group id will be set to the id of the group with
+        the same name as the user.
 
     groups
-        A list of groups to assign the user to, pass a list object
+        A list of groups to assign the user to, pass a list object. If a group
+        specified here does not exist on the minion, the state will fail.
+
+    optional_groups
+        A list of groups to assign the user to, pass a list object. If a group
+        specified here does not exist on the minion, the state will silently
+        ignore it.
+
+    NOTE: If the same group is specified in both "groups" and
+    "optional_groups", then it will be assumed to be required and not optional.
 
     home
         The location of the home directory to manage
@@ -149,8 +157,14 @@ def present(
     shell
         The login shell, defaults to the system default shell
 
+    unique
+        Require a unique UID, True by default
 
-    User comment field (GECOS) support (currently Linux-only):
+    system
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
+
+
+    User comment field (GECOS) support (currently Linux and FreeBSD only):
 
     The below values should be specified as strings to avoid ambiguities when
     the values are loaded. (Especially the phone and room number fields which
@@ -167,20 +181,42 @@ def present(
 
     homephone
         The user's home phone number
-
-    other
-        The user's "other" GECOS field
-
-    unique
-        Require a unique UID, True by default
-
-    system
-        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
+
+    if groups:
+        missing_groups = [x for x in groups if not __salt__['group.info'](x)]
+        if missing_groups:
+            ret['comment'] = 'The following group(s) are not present: ' \
+                             '{0}'.format(','.join(missing_groups))
+            ret['result'] = False
+            return ret
+
+    if optional_groups:
+        present_optgroups = [x for x in optional_groups
+                             if __salt__['group.info'](x)]
+        for missing_optgroup in [x for x in optional_groups
+                                 if x not in present_optgroups]:
+            log.debug('Optional group "{0}" for user "{1}" is not '
+                      'present'.format(missing_optgroup,name))
+    else:
+        present_optgroups = None
+
+
+    # Log a warning for all groups specified in both "groups" and
+    # "optional_groups" lists.
+    if groups and optional_groups:
+        for x in set(groups).intersection(optional_groups):
+            log.warning('Group "{0}" specified in both groups and '
+                        'optional_groups for user {1}'.format(x,name))
+
+    if fullname is None: fullname = ''
+    if roomnumber is None: roomnumber = ''
+    if workphone is None: workphone = ''
+    if homephone is None: homephone = ''
 
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
@@ -189,16 +225,16 @@ def present(
             uid,
             gid,
             groups,
+            present_optgroups,
             home,
             password,
             enforce_password,
             shell,
+            unique,
             fullname,
             roomnumber,
             workphone,
-            homephone,
-            other,
-            unique)
+            homephone)
     if changes:
         if __opts__['test']:
             ret['result'] = None
@@ -246,13 +282,12 @@ def present(
                                 groups=groups,
                                 home=home,
                                 shell=shell,
+                                unique=unique,
+                                system=system,
                                 fullname=fullname,
                                 roomnumber=roomnumber,
                                 workphone=workphone,
-                                homephone=homephone,
-                                other=other,
-                                unique=unique,
-                                system=system):
+                                homephone=homephone):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if password:

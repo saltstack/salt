@@ -21,6 +21,7 @@ Full list of builtin modules
     apache
     apt
     archive
+    at
     augeas_cfg
     bluez
     brew
@@ -29,13 +30,14 @@ Full list of builtin modules
     cassandra
     cluster
     cmdmod
+    config
     cp
     cron
     data
     debconfmod
     debian_service
     disk
-    django
+    djangomod
     ebuild
     event
     file
@@ -54,8 +56,10 @@ Full list of builtin modules
     kmod
     kvm_hyper
     launchctl
+    ldap
     linux_sysctl
     mdadm
+    mongodb
     monit
     moosefs
     mount
@@ -67,6 +71,7 @@ Full list of builtin modules
     openbsdservice
     osxdesktop
     pacman
+    pecl
     pillar
     pip
     pkgng
@@ -86,11 +91,13 @@ Full list of builtin modules
     selinux
     service
     shadow
+    smf
     solr
     sqlite3
     ssh
     state
     status
+    supervisord
     systemd
     test
     tomcat
@@ -106,7 +113,7 @@ Full list of builtin modules
     win_service
     win_shadow
     win_useradd
-    yumpkg5
     yumpkg
-    zfs
+    yumpkg5
+    zpool
     zypper

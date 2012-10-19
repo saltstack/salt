@@ -11,6 +11,7 @@ import random
 import sys
 import socket
 import logging
+import inspect
 import hashlib
 import datetime
 import tempfile
@@ -25,7 +26,6 @@ import salt.minion
 import salt.payload
 from salt.exceptions import SaltClientError, CommandNotFoundError
 
-log = logging.getLogger(__name__)
 
 # Do not use these color declarations, use get_colors()
 # These color declarations will be removed in the future
@@ -48,6 +48,24 @@ WHITE = '\033[1;37m'
 DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
+
+
+def _getargs(func):
+    '''
+    A small wrapper around getargspec that also supports callable classes
+    '''
+    if not callable(func):
+        raise TypeError('{0} is not a callable'.format(func))
+
+    if inspect.isfunction(func):
+        aspec = inspect.getargspec(func)
+    elif isinstance(func, object):
+        aspec = inspect.getargspec(func.__call__)
+        del aspec.args[0]  # self
+    else:
+        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+
+    return aspec
 
 
 def safe_rm(tgt):
@@ -121,7 +139,7 @@ def daemonize():
             sys.exit(0)
     except OSError as exc:
         msg = 'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
-        log.error(msg)
+        logging.getLogger(__name__).error(msg)
         sys.exit(1)
 
     # decouple from parent environment
@@ -136,7 +154,7 @@ def daemonize():
             sys.exit(0)
     except OSError as exc:
         msg = 'fork #2 failed: {0} ({1})'
-        log.error(msg.format(exc.errno, exc.strerror))
+        logging.getLogger(__name__).error(msg.format(exc.errno, exc.strerror))
         sys.exit(1)
 
     # A normal daemonization redirects the process output to /dev/null.
@@ -309,7 +327,7 @@ def dns_check(addr, safe=False):
                     # If logging is not configured it also means that either
                     # the master or minion instance calling this hasn't even
                     # started running
-                    log.error(err)
+                    logging.getLogger(__name__).error(err)
                 raise SaltClientError
             else:
                 err = err.format(addr)
@@ -522,20 +540,83 @@ def build_whitepace_splited_regex(text):
     >>>
 
     '''
-
     def __build_parts(text):
         lexer = shlex.shlex(text)
         lexer.whitespace_split = True
         lexer.commenters = ''
-        if '"' in text:
+        if '\'' in text:
             lexer.quotes = '"'
-        elif '\'' in text:
+        elif '"' in text:
             lexer.quotes = '\''
         return list(lexer)
-
 
     regex = r''
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
     return regex
+
+
+def format_call(fun, data):
+    '''
+    Pass in a function and a dict containing arguments to the function.
+
+    A dict with the keys args and kwargs is returned
+    '''
+    ret = {}
+    ret['args'] = []
+    aspec = _getargs(fun)
+    arglen = 0
+    deflen = 0
+    if isinstance(aspec[0], list):
+        arglen = len(aspec[0])
+    if isinstance(aspec[3], tuple):
+        deflen = len(aspec[3])
+    if aspec[2]:
+        # This state accepts kwargs
+        ret['kwargs'] = {}
+        for key in data:
+            # Passing kwargs the conflict with args == stack trace
+            if key in aspec[0]:
+                continue
+            ret['kwargs'][key] = data[key]
+    kwargs = {}
+    for ind in range(arglen - 1, 0, -1):
+        minus = arglen - ind
+        if deflen - minus > -1:
+            kwargs[aspec[0][ind]] = aspec[3][-minus]
+    for arg in kwargs:
+        if arg in data:
+            kwargs[arg] = data[arg]
+    for arg in aspec[0]:
+        if arg in kwargs:
+            ret['args'].append(kwargs[arg])
+        else:
+            ret['args'].append(data[arg])
+    return ret
+
+
+def arg_lookup(fun):
+    '''
+    Return a dict containing the arguments and default arguments to the function
+    '''
+    ret = {'args': [],
+           'kwargs': {}}
+    aspec = _getargs(fun)
+    arglen = 0
+    deflen = 0
+    if isinstance(aspec[0], list):
+        arglen = len(aspec[0])
+    if isinstance(aspec[3], tuple):
+        deflen = len(aspec[3])
+    for ind in range(arglen - 1, 0, -1):
+        minus = arglen - ind
+        if deflen - minus > -1:
+            ret['kwargs'][aspec[0][ind]] = aspec[3][-minus]
+    for arg in aspec[0]:
+        if arg in ret:
+            continue
+        else:
+            ret['args'].append(arg)
+    return ret
+

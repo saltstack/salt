@@ -17,17 +17,21 @@ Full list of builtin states
     gem
     git
     group
+    hg
     host
     kmod
     module
+    mongodb_database
+    mongodb_user
     mount
     mysql_database
     mysql_grants
     mysql_user
     network
+    pecl
     pip
-    pkgng
     pkg
+    pkgng
     postgres_database
     postgres_user
     rvm
@@ -35,6 +39,7 @@ Full list of builtin states
     service
     ssh_auth
     ssh_known_hosts
+    supervisord
     sysctl
     user
     virtualenv

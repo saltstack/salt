@@ -4,6 +4,7 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 import os
+import sys
 
 # Import salt components
 import salt.cli.caller
@@ -13,6 +14,7 @@ import salt.cli.batch
 import salt.client
 import salt.output
 import salt.runner
+import salt.auth
 
 from salt.utils import parsers
 from salt.utils.verify import verify_env
@@ -50,42 +52,57 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if self.options.timeout <= 0:
                 self.options.timeout = local.opts['timeout']
 
-            args = [
-                self.config['tgt'],
-                self.config['fun'],
-                self.config['arg'],
-                self.options.timeout,
-            ]
+            kwargs = {
+                'tgt': self.config['tgt'],
+                'fun': self.config['fun'],
+                'arg': self.config['arg'],
+                'timeout': self.options.timeout}
+
+            if 'token' in self.config:
+                kwargs['token'] = self.config['token']
 
             if self.selected_target_option:
-                args.append(self.selected_target_option)
+                kwargs['expr_form'] = self.selected_target_option
             else:
-                args.append('glob')
+                kwargs['expr_form'] = 'glob'
 
             if getattr(self.options, 'return'):
-                args.append(getattr(self.options, 'return'))
-            else:
-                args.append('')
+                kwargs['ret'] = getattr(self.options, 'return')
+
+            print self.options.eauth
+            if self.options.eauth:
+                resolver = salt.auth.Resolver(self.config)
+                res = resolver.cli(self.options.eauth)
+                if self.options.mktoken:
+                    kwargs['token'] = resolver.token_cli(
+                            self.options.eauth,
+                            res
+                            )['token']
+                if not res:
+                    sys.exit(2)
+                kwargs.update(res)
+                kwargs['eauth'] = self.options.eauth
+
             try:
                 # local will be None when there was an error
                 if local:
                     if self.options.static:
                         if self.options.verbose:
-                            args.append(True)
-                        full_ret = local.cmd_full_return(*args)
+                            kwargs['verbose'] = True
+                        full_ret = local.cmd_full_return(**kwargs)
                         ret, out = self._format_ret(full_ret)
                         self._output_ret(ret, out)
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
-                        for full_ret in local.cmd_cli(*args):
+                        for full_ret in local.cmd_cli(**kwargs):
                             ret_, out = self._format_ret(full_ret)
                             ret.update(ret_)
                         self._output_ret(ret, out)
                     else:
                         if self.options.verbose:
-                            args.append(True)
-                        for full_ret in local.cmd_cli(*args):
+                            kwargs['verbose'] = True
+                        for full_ret in local.cmd_cli(**kwargs):
                             ret, out = self._format_ret(full_ret)
                             self._output_ret(ret, out)
             except SaltInvocationError as exc:
