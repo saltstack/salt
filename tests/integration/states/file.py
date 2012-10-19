@@ -413,7 +413,7 @@ class FileTest(integration.ModuleCase):
             fp.write(src)
         ret = self.run_state('file.patch',
             name=src_file,
-            source='salt://{}.patch'.format(patch_name),
+            source='salt://{0}.patch'.format(patch_name),
             hash='md5=f0ef7081e1539ac00ef5b761b4fb01b3',
         )
         return src_file, ret
@@ -427,7 +427,7 @@ class FileTest(integration.ModuleCase):
     def test_patch_hash_mismatch(self):
         src_file, ret = self.do_patch('hello_dolly')
         result = self.state_result(ret, raw=True)
-        msg = 'File {} hash mismatch after patch was applied'.format(src_file)
+        msg = 'File {0} hash mismatch after patch was applied'.format(src_file)
         self.assertEqual(result['comment'], msg)
         self.assertEqual(result['result'], False)
 
