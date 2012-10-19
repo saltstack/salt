@@ -238,7 +238,10 @@ def minion_config(path):
     opts['open_mode'] = opts['open_mode'] is True
 
     # set up the extension_modules location from the cachedir
-    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+    opts['extension_modules'] = (
+            opts.get('extension_modules') or 
+            os.path.join(opts['cachedir'], 'extmods')
+            )
 
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file', 'sock_dir',
@@ -328,7 +331,10 @@ def master_config(path):
 
     opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
-    opts['extension_modules'] = os.path.join(opts['cachedir'], 'extmods')
+    opts['extension_modules'] = (
+            opts.get('extension_modules') or 
+            os.path.join(opts['cachedir'], 'extmods')
+            )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
     # Prepend root_dir to other paths
     prepend_root_dir(opts, ['pki_dir', 'cachedir', 'log_file',
