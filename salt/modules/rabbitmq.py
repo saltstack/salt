@@ -1,7 +1,22 @@
 '''
-Module to provide rabbitMQ compatibility to salt.
-Todo: A lot, need to add cluster support, logging, and minion configuration data.
+Module to provide RabbitMQ compatibility to Salt.
+Todo: A lot, need to add cluster support, logging, and minion configuration
+data.
 '''
+from salt import exceptions, utils
+import logging
+
+
+def __virtual__():
+    '''Verify RabbitMQ is installed.
+    '''
+    name = 'rabbitmq'
+    try:
+        utils.check_or_die('rabbitmqctl')
+    except exceptions.CommandNotFoundError:
+        name = False
+    return name
+
 
 def list_users():
     '''
@@ -9,12 +24,15 @@ def list_users():
 
     CLI Example::
 
-        salt '*' rabbitmq-server.list_users
+        salt '*' rabbitmq.list_users
     '''
     d = {}
     res = __salt__['cmd.run']('rabbitmqctl list_users')
     for line in res.split('\n'):
-        if '...' not in line or line == '\n': d[ line.split('\t')[0] ] = line.split('\t')[1]
+        if '...' not in line or line == '\n':
+            # TODO Rename these vars
+            k = line.split('\t')[0]
+            d[k] = line.split('\t')[1]
     return d
 
 
@@ -24,13 +42,14 @@ def list_vhosts():
 
     CLI Example::
 
-        salt '*' rabbitmq-server.list_vhosts
+        salt '*' rabbitmq.list_vhosts
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_vhosts')
-    r = res.split('\n')
-    vhost = []
-    [vhost.append(x) for x in r if '...' not in x]
-    return { 'vhost_list' : vhost }
+    lines = res.split('\n')
+    vhost = [line for line in lines if '...' not in line]
+    return {
+        'vhost_list': vhost
+    }
 
 
 def add_user(name, password):
@@ -39,12 +58,18 @@ def add_user(name, password):
 
     CLI Example::
 
-        salt '*' rabbitmq-server.add_user 'meow' 'mix'
+        salt '*' rabbitmq.add_user rabbit_user password
     '''
-    res = __salt__['cmd.run']('rabbitmqctl add_user {0} {1}'.format(name, password))
+    res = __salt__['cmd.run'](
+        'rabbitmqctl add_user {0} {1}'.format(name, password))
+
+    msg = 'Added'
     if 'Error' in res:
-        return { 'Error' : res.replace('\n', '') }
-    return { 'Added' : res.replace('\n', '') }
+        msg = 'Error'
+
+    return {
+        msg: res.replace('\n', '')
+    }
 
 
 def delete_user(name):
@@ -53,7 +78,7 @@ def delete_user(name):
 
     CLI Example::
 
-        salt '*' rabbitmq-server.delete_user 'meow'
+        salt '*' rabbitmq.delete_user rabbit_user
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name))
     if 'Error' in res:
@@ -67,7 +92,7 @@ def add_vhost(vhost):
 
     CLI Example::
 
-        salt '*' rabbitmq-server add_vhost '<vhost_name>'
+        salt '*' rabbitmq add_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost))
     if 'Error' in res:
@@ -81,7 +106,7 @@ def delete_vhost(vhost):
 
     CLI Example::
 
-        salt '*' rabbitmq-server.delete_vhost '<vhost_name>'
+        salt '*' rabbitmq.delete_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost))
     if 'Error' in res:
@@ -95,7 +120,7 @@ def set_permissions(vhost,user,conf='.*',write='.*',read='.*'):
 
     CLI Example::
 
-        salt '*' rabbitmq-server.set_permissions 'myvhost' 'myuser'
+        salt '*' rabbitmq.set_permissions 'myvhost' 'myuser'
     '''
     res = __salt__['cmd.run']('rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(vhost,user,conf,write,read))
     return { 'set_permissions': res.replace('\n', '') }
@@ -107,7 +132,7 @@ def list_user_permissions(name):
 
     Example::
 
-        salt '*' rabbitmq-server.list_user_permissions 'user'.
+        salt '*' rabbitmq.list_user_permissions 'user'.
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_user_permissions {0}'.format(name))
     return { 'user_permissions' : [ r.split('\t') for r in res.split('\n') ] }
