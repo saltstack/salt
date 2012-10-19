@@ -1,5 +1,14 @@
 '''
-Manage RabbitMQ VHosts.
+Manage RabbitMQ Virtual Hosts.
+
+.. code-block:: yaml
+
+    virtual_host:
+        rabbitmq_vhost.present:
+            - user: rabbit_user
+            - conf: .*
+            - write: .*
+            - read: .*
 '''
 import logging
 
@@ -84,4 +93,36 @@ def present(name,
         elif 'Permissions Set':
             ret['comment'] += ' {0}'.format(result['Permissions Set'])
 
+    return ret
+
+
+def absent(name,
+           runas=None,
+       ):
+    '''
+    Ensure the RabbitMQ Virtual Host is absent
+
+    name
+        Name of the Virtual Host to remove
+    runas
+        User to run the command
+    '''
+    ret = {'name': name, 'result': True, 'comment': ''}
+
+    vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
+
+    if __opts__['test']:
+        ret['result'] = None
+        if vhost_exists:
+            ret['comment'] = 'Removing Virtual Host {0}'.format(name)
+        else:
+            ret['comment'] = 'Virtual Host {0} is not present'.format(name)
+    else:
+        if vhost_exists:
+            result = __salt__['rabbitmq.delete_vhost'](name, runas=runas)
+            if 'Error' in result:
+                ret['result'] = False
+                ret['comment'] = result['Error']
+            elif 'Deleted' in result:
+                ret['comment'] = result['Deleted']
     return ret
