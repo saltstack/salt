@@ -182,7 +182,7 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(
-            vhost,user,conf,write,read))
+            vhost, user, conf, write, read))
     msg = 'Permissions Set'
     return _format_response(res, msg)
 
