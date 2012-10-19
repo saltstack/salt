@@ -49,7 +49,7 @@ def exists(name,
     else:
         if not user_exists:
             log.debug(
-                "User doesn't exist - Creating'")
+                "User doesn't exist - Creating")
             result = __salt__['rabbitmq.add_user'](name, password, user=runas)
         elif force:
             log.debug('User exists and force is set - Overriding password')
