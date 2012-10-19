@@ -18,6 +18,15 @@ def __virtual__():
     return name
 
 
+def _format_response(response, msg):
+    if 'Error' in response:
+        msg = 'Error'
+
+    return {
+        msg: response.replace('\n', '')
+    }
+
+
 def list_users():
     '''
     Return a list of users based off of rabbitmqctl user_list.
@@ -64,12 +73,7 @@ def add_user(name, password):
         'rabbitmqctl add_user {0} {1}'.format(name, password))
 
     msg = 'Added'
-    if 'Error' in res:
-        msg = 'Error'
-
-    return {
-        msg: res.replace('\n', '')
-    }
+    return _format_response(res, msg)
 
 
 def delete_user(name):
@@ -81,9 +85,38 @@ def delete_user(name):
         salt '*' rabbitmq.delete_user rabbit_user
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name))
-    if 'Error' in res:
-        return { 'Error' : res.replace('\n', '') }
-    return { 'deleted' : res.replace('\n','') }
+    msg = 'Deleted'
+
+    return _format_response(res, msg)
+
+
+def change_password(name, password):
+    '''
+    Changes a user's password.
+
+    CLI Example::
+
+        salt '*' rabbitmq.change_password rabbit_user password
+    '''
+    res = __salt__['cmd.run'](
+        'rabbitmqctl change_password {0} {1}'.format(name, password))
+    msg = 'Password Changed'
+
+    return _format_response(res, msg)
+
+
+def clear_password(name):
+    '''
+    Removes a user's password.
+
+    CLI Example::
+
+        salt '*' rabbitmq.clear_password rabbit_user
+    '''
+    res = __salt__['cmd.run']('rabbitmqctl clear_password {0}'.format(name))
+    msg = 'Password Cleared'
+
+    return _format_response(res, msg)
 
 
 def add_vhost(vhost):
