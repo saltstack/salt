@@ -22,7 +22,8 @@ class RabbitVHostTestCase(integration.ModuleCase):
         '''
         rabbitmq_vhost.present null_host
         '''
-        ret = self.run_state('rabbitmq_vhost.present', name='null_host')
+        ret = self.run_state(
+            'rabbitmq_vhost.present', name='null_host', test=True)
 
         self.assertTrue(ret)
         self.assertEqual(self.state_result(ret), None)
@@ -31,7 +32,8 @@ class RabbitVHostTestCase(integration.ModuleCase):
         '''
         rabbitmq_vhost.absent null_host
         '''
-        ret = self.run_state('rabbitmq_vhost.absent', name='null_host')
+        ret = self.run_state(
+            'rabbitmq_vhost.absent', name='null_host', test=True)
 
         self.assertTrue(ret)
         self.assertEqual(self.state_result(ret), None)

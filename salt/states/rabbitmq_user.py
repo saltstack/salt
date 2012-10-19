@@ -54,12 +54,12 @@ def present(name,
         else:
             ret['comment'] = 'User {0} is not going to be modified'
         ret['comment'] = ret['comment'].format(name)
-        raise Exception(unicode(ret))
     else:
         if not user_exists:
             log.debug(
                 "User doesn't exist - Creating")
-            result = __salt__['rabbitmq.add_user'](name, password, runas=runas)
+            result = __salt__['rabbitmq.add_user'](
+                name, password, runas=runas)
         elif force:
             log.debug('User exists and force is set - Overriding password')
             if password is not None:
@@ -67,7 +67,8 @@ def present(name,
                     name, password, runas=runas)
             else:
                 log.debug('Password is not set - Clearing password')
-                result = __salt__['rabbitmq.clear_password'](name, runas=runas)
+                result = __salt__['rabbitmq.clear_password'](
+                    name, runas=runas)
         else:
             log.debug('User exists, and force is not set - Abandoning')
             result = {

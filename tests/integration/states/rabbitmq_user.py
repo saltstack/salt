@@ -22,7 +22,8 @@ class RabbitUserTestCase(integration.ModuleCase):
         '''
         rabbitmq_user.present null_name
         '''
-        ret = self.run_state('rabbitmq_user.present', name='null_name')
+        ret = self.run_state(
+            'rabbitmq_user.present', name='null_name', test=True)
 
         self.assertTrue(ret)
         self.assertEqual(self.state_result(ret), None)
@@ -31,7 +32,8 @@ class RabbitUserTestCase(integration.ModuleCase):
         '''
         rabbitmq_user.absent null_name
         '''
-        ret = self.run_state('rabbitmq_user.absent', name='null_name')
+        ret = self.run_state(
+            'rabbitmq_user.absent', name='null_name', test=True)
 
         self.assertTrue(ret)
         self.assertEqual(self.state_result(ret), None)

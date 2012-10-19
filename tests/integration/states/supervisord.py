@@ -21,27 +21,29 @@ class SupervisordTest(integration.ModuleCase):
         '''
         supervisord.running restart = False
         '''
-        ret = self.run_state('supervisord.running', name='null_service')
+        ret = self.run_state(
+            'supervisord.running', name='null_service', test=True)
 
         self.assertTrue(ret)
-        self.assertEqual(ret.items()[0][1]['result'], False)
+        self.assertEqual(self.state_result(ret), False)
 
     def test_restart(self):
         '''
         supervisord.running restart = True
         '''
         ret = self.run_state(
-            'supervisord.running', name='null_service', restart=True)
+            'supervisord.running', name='null_service', restart=True,
+            test=True)
 
         self.assertTrue(ret)
-        self.assertEqual(ret.items()[0][1]['result'], False)
+        self.assertEqual(self.state_result(ret), False)
 
     def test_stop(self):
         '''
         supervisord.dead
         '''
         ret = self.run_state(
-            'supervisord.dead', name='null_service')
+            'supervisord.dead', name='null_service', test=True)
 
         self.assertTrue(ret)
-        self.assertEqual(ret.items()[0][1]['result'], False)
+        self.assertEqual(self.state_result(ret), False)
