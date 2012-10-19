@@ -9,7 +9,6 @@ Build-Depends: debhelper (>= 8),
                python-crypto,
                python-m2crypto,
                python-zmq (>= 2.1.9),
-               libzmq-dev (>= 2.1.9),
                python-jinja2,
                msgpack-python
 Standards-Version: 3.9.3
