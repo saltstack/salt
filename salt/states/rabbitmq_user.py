@@ -54,6 +54,7 @@ def present(name,
         else:
             ret['comment'] = 'User {0} is not going to be modified'
         ret['comment'] = ret['comment'].format(name)
+        raise Exception(unicode(ret))
     else:
         if not user_exists:
             log.debug(

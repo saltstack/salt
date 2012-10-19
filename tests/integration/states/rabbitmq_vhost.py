@@ -5,12 +5,12 @@ import os
 import integration
 
 
-class RabbitUserTestCase(integration.ModuleCase):
+class RabbitVHostTestCase(integration.ModuleCase):
     '''
-    Validate the rabbitmq user states.
+    Validate the rabbitmq virtual host states.
     '''
     def setUp(self):
-        super(RabbitUserTestCase, self).setUp()
+        super(RabbitVHostTestCase, self).setUp()
         rabbit_installed = self.run_function('cmd.has_exec', ['rabbitmqctl'])
 
         if not rabbit_installed:
@@ -20,18 +20,18 @@ class RabbitUserTestCase(integration.ModuleCase):
 
     def test_present(self):
         '''
-        rabbitmq_user.present null_name
+        rabbitmq_vhost.present null_host
         '''
-        ret = self.run_state('rabbitmq_user.present', name='null_name')
+        ret = self.run_state('rabbitmq_vhost.present', name='null_host')
 
         self.assertTrue(ret)
         self.assertEqual(self.state_result(ret), None)
 
     def absent(self):
         '''
-        rabbitmq_user.absent null_name
+        rabbitmq_vhost.absent null_host
         '''
-        ret = self.run_state('rabbitmq_user.absent', name='null_name')
+        ret = self.run_state('rabbitmq_vhost.absent', name='null_host')
 
         self.assertTrue(ret)
         self.assertEqual(self.state_result(ret), None)
