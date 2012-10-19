@@ -406,6 +406,7 @@ _os_name_map = {
     'debian': 'Debian',
     'arch': 'Arch',
     'amazonlinu': 'Amazon',
+    'centoslinu': 'CentOS',
 }
 
 # Map the 'os' grain to the 'os_family' grain
