@@ -6,6 +6,8 @@ data.
 from salt import exceptions, utils
 import logging
 
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''Verify RabbitMQ is installed.
@@ -55,10 +57,33 @@ def list_vhosts():
     '''
     res = __salt__['cmd.run']('rabbitmqctl list_vhosts')
     lines = res.split('\n')
-    vhost = [line for line in lines if '...' not in line]
-    return {
-        'vhost_list': vhost
-    }
+    vhost_list = [line for line in lines if '...' not in line]
+    return vhost_list
+
+
+def user_exists(name):
+    '''
+    Return whether the user exists based on rabbitmqctl list_users.
+
+    CLI Example::
+
+        salt '*' rabbitmq.user_exists rabbit_user
+    '''
+    user_list = list_users()
+    log.debug(user_list)
+
+    return name in user_list
+
+
+def vhost_exists(name):
+    '''
+    Return whether the vhost exists based on rabbitmqctl list_vhosts.
+
+    CLI Example::
+
+        salt '*' rabbitmq.vhost_exists rabbit_host
+    '''
+    return name in list_vhosts()
 
 
 def add_user(name, password):

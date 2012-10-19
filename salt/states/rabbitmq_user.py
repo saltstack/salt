@@ -35,13 +35,7 @@ def exists(name,
     '''
     ret = {'name': name, 'result': True, 'comment': ''}
 
-    user_list = __salt__['rabbitmq.list_users'](user=runas)
-
-    user_exists = False
-    for host, users in user_list.iteritems():
-        if name in users:
-            user_exists = True
-            break
+    user_exists = __salt__['rabbitmq.user_exists'](name, user=runas)
 
     if __opts__['test']:
         ret['result'] = None
