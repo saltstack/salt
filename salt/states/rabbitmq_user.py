@@ -1,5 +1,12 @@
 '''
 Manage RabbitMQ Users.
+
+.. code-block:: yaml
+
+    rabbit_user:
+        rabbitmq_user.present:
+            - password: password
+            - force: True
 '''
 import logging
 
@@ -17,9 +24,9 @@ def __virtual__():
 
 
 def present(name,
-          password=None,
-          force=False,
-          runas=None,
+           password=None,
+           force=False,
+           runas=None,
         ):
     '''
     Ensure the RabbitMQ user exists.
@@ -75,5 +82,40 @@ def present(name,
             ret['comment'] = result['Password Changed']
         elif 'Password Cleared' in result:
             ret['comment'] = result['Password Cleared']
+
+    return ret
+
+
+def absent(name,
+           runas=None,
+        ):
+    '''
+    Ensure the named user is absent
+
+    name
+        The name of the user to remove
+    runas
+        User to run the command
+    '''
+    ret = {'name': name, 'result': True, 'comment': ''}
+
+    user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
+
+    if __opts__['test']:
+        ret['result'] = None
+        if user_exists:
+            ret['comment'] = 'Removing user {0}'.format(name)
+        else:
+            ret['comment'] = 'User {0} is not present'.format(name)
+    else:
+        if user_exists:
+            result = __salt__['rabbitmq.delete_user']
+            if 'Error' in result:
+                ret['result'] = False
+                ret['comment'] = result['Error']
+            elif 'Deleted' in result:
+                ret['comment'] = 'Deleted'
+        else:
+            ret['comment'] = 'User {0} is not present'.format(name)
 
     return ret
