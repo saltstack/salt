@@ -15,7 +15,7 @@ except ImportError:
     has_redis = False
 
 __opts__ = {'redis.db': '0',
-            'redis.host': 'mcp',
+            'redis.host': 'redis',
             'redis.port': 6379}
 
 
@@ -33,7 +33,7 @@ def returner(ret):
                        port=__opts__['redis.port'],
                        db=__opts__['redis.db'])
 
-    serv.sadd("%(id)s:jobs" % ret, ret['jid'])
-    serv.set("%(jid)s:%(id)s" % ret, json.dumps(ret['return']))
+    serv.sadd('{0}:jobs'.format(ret['id']))
+    serv.set('{0}:{1}'.format(ret['jid'], json.dumps(ret['return'])))
     serv.sadd('jobs', ret['jid'])
     serv.sadd(ret['jid'], ret['id'])
