@@ -14,6 +14,7 @@ might look like::
 This data can also be passed into pillar. Options passed into opts will
 overwrite options passed into pillar
 '''
+import re
 import logging
 from salt.utils import check_or_die
 from salt.exceptions import CommandNotFoundError
@@ -62,7 +63,7 @@ def _connection_defaults(user=None, host=None, port=None):
     return (user, host, port)
 
 def _quote(s):
-    r = s.replace("'", r"\'").replace('"', r'\"')
+    r = re.sub('([\'\"()])', r'\\\1', s)
     if ' ' in s:
         r = "'%s'" % r
     return r
