@@ -42,8 +42,9 @@ def list_users(runas=None):
     for line in res.split('\n'):
         if '...' not in line or line == '\n':
             # TODO Rename these vars
-            k = line.split('\t')[0]
-            d[k] = line.split('\t')[1]
+            s = line.split('\t')
+            user, properties = s[0], s[1]
+            d[user] = properties
     return d
 
 
