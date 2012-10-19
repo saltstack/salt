@@ -98,7 +98,7 @@ def present(name,
 
 def absent(name,
            runas=None,
-       ):
+        ):
     '''
     Ensure the RabbitMQ Virtual Host is absent
 
