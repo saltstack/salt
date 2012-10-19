@@ -16,7 +16,7 @@ def __virtual__():
     return name
 
 
-def exists(name,
+def present(name,
           password=None,
           force=False,
           runas=None,
@@ -35,10 +35,11 @@ def exists(name,
     '''
     ret = {'name': name, 'result': True, 'comment': ''}
 
-    user_exists = __salt__['rabbitmq.user_exists'](name, user=runas)
+    user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
     if __opts__['test']:
         ret['result'] = None
+
         if not user_exists:
             ret['comment'] = 'User {0} is set to be created'
         elif force:
@@ -50,15 +51,15 @@ def exists(name,
         if not user_exists:
             log.debug(
                 "User doesn't exist - Creating")
-            result = __salt__['rabbitmq.add_user'](name, password, user=runas)
+            result = __salt__['rabbitmq.add_user'](name, password, runas=runas)
         elif force:
             log.debug('User exists and force is set - Overriding password')
             if password is not None:
                 result = __salt__['rabbitmq.change_password'](
-                    name, password, user=runas)
+                    name, password, runas=runas)
             else:
                 log.debug('Password is not set - Clearing password')
-                result = __salt__['rabbitmq.clear_password'](name, user=runas)
+                result = __salt__['rabbitmq.clear_password'](name, runas=runas)
         else:
             log.debug('User exists, and force is not set - Abandoning')
             result = {

@@ -18,10 +18,10 @@ class RabbitUserTestCase(integration.ModuleCase):
         if os.geteuid() != 0:
             self.skipTest('You must be root to run this test')
 
-    def test_add_user(self):
+    def test_present(self):
         '''
         '''
-        ret = self.run_state('rabbitmq_user.exists', name='null_name')
+        ret = self.run_state('rabbitmq_user.present', name='null_name')
 
         self.assertTrue(ret)
-        self.assertEqual(ret.items()[0][1]['result'], False)
+        self.assertEqual(ret.items()[0][1]['result'], None)

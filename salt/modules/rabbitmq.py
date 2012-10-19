@@ -29,7 +29,7 @@ def _format_response(response, msg):
     }
 
 
-def list_users():
+def list_users(runas=None):
     '''
     Return a list of users based off of rabbitmqctl user_list.
 
@@ -47,7 +47,7 @@ def list_users():
     return d
 
 
-def list_vhosts():
+def list_vhosts(runas=None):
     '''
     Return a list of vhost based of of rabbitmqctl list_vhosts.
 
@@ -61,7 +61,7 @@ def list_vhosts():
     return vhost_list
 
 
-def user_exists(name):
+def user_exists(name, runas=None):
     '''
     Return whether the user exists based on rabbitmqctl list_users.
 
@@ -75,7 +75,7 @@ def user_exists(name):
     return name in user_list
 
 
-def vhost_exists(name):
+def vhost_exists(name, runas=None):
     '''
     Return whether the vhost exists based on rabbitmqctl list_vhosts.
 
@@ -86,7 +86,7 @@ def vhost_exists(name):
     return name in list_vhosts()
 
 
-def add_user(name, password):
+def add_user(name, password, runas=None):
     '''
     Add a rabbitMQ user via rabbitmqctl user_add <user> <password>
 
@@ -101,7 +101,7 @@ def add_user(name, password):
     return _format_response(res, msg)
 
 
-def delete_user(name):
+def delete_user(name, runas=None):
     '''
     Deletes a user via rabbitmqctl delete_user.
 
@@ -115,7 +115,7 @@ def delete_user(name):
     return _format_response(res, msg)
 
 
-def change_password(name, password):
+def change_password(name, password, runas=None):
     '''
     Changes a user's password.
 
@@ -130,7 +130,7 @@ def change_password(name, password):
     return _format_response(res, msg)
 
 
-def clear_password(name):
+def clear_password(name, runas=None):
     '''
     Removes a user's password.
 
@@ -144,7 +144,7 @@ def clear_password(name):
     return _format_response(res, msg)
 
 
-def add_vhost(vhost):
+def add_vhost(vhost, runas=None):
     '''
     Adds a vhost via rabbitmqctl add_vhost.
 
@@ -153,12 +153,12 @@ def add_vhost(vhost):
         salt '*' rabbitmq add_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost))
-    if 'Error' in res:
-        return { 'Error' : res.replace('\n', '') }
-    return { 'added_vhost' : res.replace('\n', '') }
+
+    msg = 'Added'
+    return _format_response(res, msg)
 
 
-def delete_vhost(vhost):
+def delete_vhost(vhost, runas=None):
     '''
     Deletes a vhost rabbitmqctl delete_vhost.
 
@@ -167,12 +167,12 @@ def delete_vhost(vhost):
         salt '*' rabbitmq.delete_vhost '<vhost_name>'
     '''
     res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost))
-    if 'Error' in res:
-        return { 'Error' : res.replace('\n', '') }
-    return { 'deleted_vhost' : res.replace('\n','') }
+    msg = 'Deleted'
+    return _format_response(res, msg)
 
 
-def set_permissions(vhost,user,conf='.*',write='.*',read='.*'):
+def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
+        runas=None):
     '''
     Sets permissions for vhost via rabbitmqctl set_permissions
 
@@ -180,11 +180,14 @@ def set_permissions(vhost,user,conf='.*',write='.*',read='.*'):
 
         salt '*' rabbitmq.set_permissions 'myvhost' 'myuser'
     '''
-    res = __salt__['cmd.run']('rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(vhost,user,conf,write,read))
-    return { 'set_permissions': res.replace('\n', '') }
+    res = __salt__['cmd.run'](
+        'rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(
+            vhost,user,conf,write,read))
+    msg = 'Permissions Set'
+    return _format_response(res, msg)
 
 
-def list_user_permissions(name):
+def list_user_permissions(name, user=None):
     '''
     List permissions for a user via rabbitmqctl list_user_permissions
 
@@ -192,5 +195,6 @@ def list_user_permissions(name):
 
         salt '*' rabbitmq.list_user_permissions 'user'.
     '''
-    res = __salt__['cmd.run']('rabbitmqctl list_user_permissions {0}'.format(name))
-    return { 'user_permissions' : [ r.split('\t') for r in res.split('\n') ] }
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_user_permissions {0}'.format(name))
+    return [r.split('\t') for r in res.split('\n')]
