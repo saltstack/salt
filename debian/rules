@@ -1,11 +1,7 @@
 #!/usr/bin/make -f
-#export DH_VERBOSE=1
 %:
-	dh $@ #--with python2
+	dh $@
+# overrides require debuilder >= 7.0.50
+# http://pkg-perl.alioth.debian.org/debhelper.html#forcing_special_tests
 dh_override_auto_build:
-	python setup.py build #--install-layout=deb build
-#get-orig-source:
-#	git clone https://github.com/saltstack/salt.git
-#	mv salt salt-0.9.8
-#	tar -zcvf salt_0.9.8.orig.tar.gz --exclude "debian*" --exclude-vcs salt-0.9.8
-##	rm -rf salt-0.9.8
+	python setup.py build
