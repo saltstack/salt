@@ -5,15 +5,13 @@ Ubuntu
 Installation
 ============
 
-To install Salt on Ubuntu, use the following command:
+Add the Saltstack package archive and install the minion or master (or both as shown here):
 
 .. code-block:: bash
 
-    sudo apt-get install python-software-properties
     sudo add-apt-repository ppa:saltstack/salt
     sudo apt-get update
-    sudo apt-get install salt-master
-    sudo apt-get install salt-minion
+    sudo apt-get install salt-minion salt-master
 
 .. admonition:: Installing on Ubuntu 11.04
 
