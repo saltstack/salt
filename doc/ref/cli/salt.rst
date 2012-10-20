@@ -94,7 +94,11 @@ Options
 .. option:: -N, --nodegroup
 
     Use a predefined compound target defined in the Salt master configuration
-    file
+    file.
+
+.. option:: -S, --ipcidr
+
+    Match based on Subnet (CIDR notation) or IPv4 address.
 
 .. option:: -R, --range
 

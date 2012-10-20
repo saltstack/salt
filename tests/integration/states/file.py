@@ -368,6 +368,75 @@ class FileTest(integration.ModuleCase):
         self.assertTrue(os.path.isdir(name))
         os.removedirs(name)
 
+    def test_issue_2227_file_append(self):
+        '''
+        Text to append includes a percent symbol
+        '''
+        # let's make use of existing state to create a file with contents to
+        # test against
+        tmp_file_append = '/tmp/salttest/test.append'
+        if os.path.isfile(tmp_file_append):
+            os.remove(tmp_file_append)
+        self.run_function('state.sls', mods='testappend')
+        self.run_function('state.sls', mods='testappend.step1')
+        self.run_function('state.sls', mods='testappend.step2')
+
+        # Now our real test
+        try:
+            ret = self.run_function(
+                'state.sls', mods='testappend.issue-2227'
+            )
+            for change in ret.values():
+                self.assertTrue(isinstance(change, dict))
+                self.assertTrue(change['result'])
+            contents = open(tmp_file_append, 'r').read()
+
+            # It should not append text again
+            ret = self.run_function(
+                'state.sls', mods='testappend.issue-2227'
+            )
+            for change in ret.values():
+                self.assertTrue(isinstance(change, dict))
+                self.assertTrue(change['result'])
+
+            self.assertEqual(contents, open(tmp_file_append, 'r').read())
+
+        finally:
+            if os.path.isfile(tmp_file_append):
+                os.remove(tmp_file_append)
+
+    def do_patch(self, patch_name='hello', src="Hello\n"):
+        if not self.run_function('cmd.has_exec', ['patch']):
+            self.skipTest('patch is not installed')
+        src_file = os.path.join(integration.TMP, 'src.txt')
+        with open(src_file, 'w+') as fp:
+            fp.write(src)
+        ret = self.run_state('file.patch',
+            name=src_file,
+            source='salt://{0}.patch'.format(patch_name),
+            hash='md5=f0ef7081e1539ac00ef5b761b4fb01b3',
+        )
+        return src_file, ret
+
+    def test_patch(self):
+        src_file, ret = self.do_patch()
+        self.assert_success(ret)
+        with open(src_file) as fp:
+            self.assertEqual(fp.read(), 'Hello world\n')
+
+    def test_patch_hash_mismatch(self):
+        src_file, ret = self.do_patch('hello_dolly')
+        result = self.state_result(ret, raw=True)
+        msg = 'File {0} hash mismatch after patch was applied'.format(src_file)
+        self.assertEqual(result['comment'], msg)
+        self.assertEqual(result['result'], False)
+
+    def test_patch_already_applied(self):
+        ret = self.do_patch(src='Hello world\n')[1]
+        result = self.state_result(ret, raw=True)
+        self.assertEqual(result['comment'], 'Patch is already applied')
+        self.assertEqual(result['result'], True)
+
 
 if __name__ == '__main__':
     from integration import run_tests

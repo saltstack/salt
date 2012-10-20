@@ -9,6 +9,7 @@ from __future__ import with_statement
 import os
 import sys
 from distutils.cmd import Command
+from distutils.command.clean import clean
 from distutils.sysconfig import get_python_lib, PREFIX
 
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
@@ -64,6 +65,22 @@ class TestCommand(Command):
         test_process.communicate()
         sys.exit(test_process.returncode)
 
+
+class Clean(clean):
+    def run(self):
+        clean.run(self)
+        # Let's clean compiled *.py[c,o]
+        remove_extensions = ('.pyc', '.pyo')
+        for subdir in ('salt', 'tests'):
+            root = os.path.join(os.path.dirname(__file__), subdir)
+            for dirname, dirnames, filenames in os.walk(root):
+                for filename in filenames:
+                    for ext in remove_extensions:
+                        if filename.endswith(ext):
+                            os.remove(os.path.join(dirname, filename))
+                            break
+
+
 NAME = 'salt'
 VER = __version__
 DESC = ('Portable, distributed, remote execution and '
@@ -91,7 +108,7 @@ setup_kwargs = {'name': NAME,
                 'author': 'Thomas S Hatch',
                 'author_email': 'thatch45@gmail.com',
                 'url': 'http://saltstack.org',
-                'cmdclass': {'test': TestCommand},
+                'cmdclass': {'test': TestCommand, 'clean': Clean},
                 'classifiers': ['Programming Language :: Python',
                                 'Programming Language :: Cython',
                                 'Programming Language :: Python :: 2.6',
@@ -110,6 +127,8 @@ setup_kwargs = {'name': NAME,
                 'packages': ['salt',
                              'salt.cli',
                              'salt.ext',
+                             'salt.auth',
+                             'salt.tops',
                              'salt.grains',
                              'salt.modules',
                              'salt.pillar',
@@ -161,8 +180,10 @@ if sys.platform.startswith('win'):
         'win32con',
         'win32security',
         'ntsecuritycon',
-        '_winreg'
+        '_winreg',
+        'wmi',
     ])
+    setup_kwargs['install_requires'] += '\nwmi'
 elif sys.platform.startswith('linux'):
     freezer_includes.extend([
         'yum'

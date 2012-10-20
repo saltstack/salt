@@ -13,7 +13,6 @@ import getpass
 from salt.version import __version__
 
 try:
-    import salt.config
     from salt.utils import parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as e:
@@ -43,6 +42,7 @@ class Master(parsers.MasterOptionParser):
                     os.path.join(self.config['cachedir'], 'jobs'),
                     os.path.dirname(self.config['log_file']),
                     self.config['sock_dir'],
+                    self.config['token_dir'],
                 ],
                 self.config['user'],
                 permissive=self.config['permissive_pki_access'],
@@ -99,7 +99,8 @@ class Minion(parsers.MinionOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logging.getLogger(__name__).warn(
+        log = logging.getLogger(__name__)
+        log.warn(
             'Setting up the Salt Minion "{0}"'.format(
                 self.config['id']
             )
@@ -146,7 +147,8 @@ class Syndic(parsers.SyndicOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        logging.getLogger(__name__).warn(
+        log = logging.getLogger(__name__)
+        log.warn(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']
             )

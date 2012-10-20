@@ -31,8 +31,8 @@ class MixInMeta(type):
         instance = super(MixInMeta, cls).__new__(cls, name, bases, attrs)
         if not hasattr(instance, '_mixin_setup'):
             raise RuntimeError(
-                'Don\'t subclass {0} in {1} if you\'re not going to use it as a '
-                'salt parser mix-in.'.format(cls.__name__, name)
+                'Don\'t subclass {0} in {1} if you\'re not going to use it '
+                'as a salt parser mix-in.'.format(cls.__name__, name)
             )
         return instance
 
@@ -70,17 +70,19 @@ class OptionParserMeta(MixInMeta):
 
 
 class OptionParser(optparse.OptionParser):
+    VERSION = version.__version__
+
     usage = '%prog'
 
     epilog = ('You can find additional help about %prog issuing "man %prog" '
-              'or on http://docs.saltstack.org/en/latest/index.html')
+              'or on http://docs.saltstack.org')
     description = None
 
     # Private attributes
     _mixin_prio_ = 100
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('version', '%prog {0}'.format(version.__version__))
+        kwargs.setdefault('version', '%prog {0}'.format(self.VERSION))
         kwargs.setdefault('usage', self.usage)
         if self.description:
             kwargs.setdefault('description', self.description)
@@ -487,6 +489,12 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'for the target is the pillar key followed by a glob'
                   'expression:\n"role:production*"')
         )
+        group.add_option(
+            '-S', '--ipcidr',
+            default=False,
+            action='store_true',
+            help=('Match based on Subnet (CIDR notation) or IPv4 address.')
+        )
 
         self._create_process_functions()
 
@@ -679,6 +687,21 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                   'minions to have running')
         )
         self.add_option(
+            '-a', '--auth', '--eauth', '--extended-auth',
+            default='',
+            dest='eauth',
+            help=('Specify an extended authentication system to use.')
+            )
+        self.add_option(
+            '-T', '--make-token',
+            default=False,
+            dest='mktoken',
+            action='store_true',
+            help=('Generate and save an authentication token for re-use. The' 
+                  'token is generated and made available for the period '
+                  'defined in the Salt Master.')
+            )
+        self.add_option(
             '--return',
             default='',
             metavar='RETURNER',
@@ -742,7 +765,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
                 self.config['arg'] = self.args[2:]
 
     def setup_config(self):
-        return config.master_config(self.get_config_file_path('master'))
+        return config.client_config(self.get_config_file_path('master'))
 
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
