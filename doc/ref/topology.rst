@@ -3,8 +3,8 @@ Network Topology
 ================
 
 Salt is based on a powerful, asynchronous, network topology using ZeroMQ. Many
-ZeroMQ systems are in place to emable communication. The central idea is have
-the fastest communication possible.
+ZeroMQ systems are in place to enable communication. The central idea is to
+have the fastest communication possible.
 
 Servers
 =======
@@ -30,6 +30,6 @@ Return
 ======
 
 The PUB/SUB system is a one way communication, so once a publish is sent out
-the PUB interface on the master has not future communication with the minion.
-The minion after running the command then sends the command's return data back
-to the master via the ``ret_port``.
+the PUB interface on the master has no further communication with the minion.
+The minion, after running the command, then sends the command's return data
+back to the master via the ``ret_port``.
