@@ -20308,7 +20308,7 @@ of ways in which files can be managed.
 .sp
 Regular files can be enforced with the \fBmanaged\fP function. This function
 downloads files from the salt master and places them on the target system.
-The downloaded files can be rendered as a jinja or mako template adding
+The downloaded files can be rendered as a jinja, mako or wempy template adding
 a dynamic component to file management. An example of \fBfile.managed\fP which
 makes use of the jinja templating system would look like this:
 .sp
@@ -20563,8 +20563,8 @@ The permissions to set on this file, aka 644, 0775, 4664
 .TP
 .B template
 If this setting is applied then the named templating engine will be
-used to render the downloaded file, currently jinja and mako are
-supported
+used to render the downloaded file, currently jinja, mako and wempy
+are supported
 .TP
 .B makedirs
 If the file is located in a path without a parent directory, then
@@ -22335,7 +22335,8 @@ documents. But since the only thing the state system cares about is raw data,
 the SLS files can be any structured format that can be dreamed up.
 .sp
 Currently there is support for \fBJinja + YAML\fP, \fBMako + YAML\fP,
-\fBJinja + json\fP and \fBMako + json\fP. But renderers can be written to support
+\fBWempy + YAML\fP, \fBJinja + json\fP, \fBMako + json\fP, and
+\fBWempy + json\fP. But renderers can be written to support
 anything. This means that the Salt states could be managed by xml files, html
 files, puppet files, or any format that can be translated into the data
 structure used by the state system.
