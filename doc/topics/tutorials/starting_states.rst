@@ -145,8 +145,8 @@ out as just files. A SLS is just a file and files to download are just files.
 The Apache example would be laid out in the root of the Salt file server like
 this: ::
 
-    /apache/init.sls
-    /apache/httpd.conf
+    apache/init.sls
+    apache/httpd.conf
 
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
@@ -154,7 +154,7 @@ directly.
 But with more than a single SLS file, more components can be added to the
 toolkit, consider this SSH example:
 
-``/ssh/init.sls:``
+``ssh/init.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -211,13 +211,13 @@ toolkit, consider this SSH example:
 
 Now our State Tree looks like this: ::
 
-    /apache/init.sls
-    /apache/httpd.conf
-    /ssh/init.sls
-    /ssh/server.sls
-    /ssh/banner
-    /ssh/ssh_config
-    /ssh/sshd_config
+    apache/init.sls
+    apache/httpd.conf
+    ssh/init.sls
+    ssh/server.sls
+    ssh/banner
+    ssh/ssh_config
+    ssh/sshd_config
 
 This example now introduces the ``include`` statement. The include statement
 includes another SLS file so that components found in it can be required,
@@ -236,7 +236,7 @@ needs to be placed.
 
 These examples will add more watchers to apache and change the ssh banner.
 
-``/ssh/custom-server.sls:``
+``ssh/custom-server.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -249,7 +249,7 @@ These examples will add more watchers to apache and change the ssh banner.
         file:
           - source: salt://ssh/custom-banner
 
-``/python/mod_python.sls:``
+``python/mod_python.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -273,9 +273,7 @@ to configure the banner.
 In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
-There is a bit of a trick here, in the extend statement Requisite Statements
-are extended, so the ``- pkg: mod_python`` is appended to the watch list. But
-all other statements are overwritten.
+.. include:: extend_with_require_watch.rst
 
 Understanding the Render System
 ===============================
@@ -313,7 +311,7 @@ available, ``salt``, ``grains``, and ``pillar``. The ``salt`` object allows for
 any Salt function to be called from within the template, and ``grains`` allows for
 the Grains to be accessed from within the template. A few examples:
 
-``/apache/init.sls:``
+``apache/init.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -356,7 +354,7 @@ Red Hat, then the name of the Apache package and service needs to be httpd.
 A more aggressive way to use Jinja can be found here, in a module to set up
 a MooseFS distributed filesystem chunkserver:
 
-``/moosefs/chunk.sls:``
+``moosefs/chunk.sls:``
 
 .. code-block:: yaml
    :linenos:
@@ -428,7 +426,7 @@ but a SLS file set to use another renderer can be easily added to the tree.
 
 This example shows a very basic Python SLS file:
 
-``/python/django.sls:``
+``python/django.sls:``
 
 .. code-block:: python
    :linenos:
@@ -467,14 +465,14 @@ needed by using a pure Python SLS.
 Running and debugging salt states.
 ----------------------------------
 
-after writing out your top.sls file, to run it you call
-``salt '*' state.highstate``. If you get back just the hostnames with 
-a : after, but no return, then chances are there is a problem with the sls
-files.  To debug these, to see what's going on, and see the errors, use the
-``salt-call`` command like so: ``salt-call state.highstate -l debug``. This
-should help you figure out what's going wrong.  You can also start the minions
-in the foreground in debug mode, as a possible way to help debug as well.
-To start the minion in debug mode call it like this: ``salt-minion -l debug``.
+Once the rules in an SLS are ready, they need to be tested to ensure they
+work properly. To invoke the rules, simply execute ``salt '*' state.highstate``
+on the command line. If you get back just the hostnames with a `:` after,
+but no return, chances are there is a problem with the one or more of the sls
+files. Use the ``salt-call`` command: ``salt-call state.highstate -l debug``
+and examine the output for errors. This should help troubleshoot the issue.
+The minions can also be started in the foreground in debug mode. Start the
+minion in debug mode with: ``salt-minion -l debug``.
 
 
 Now onto the :doc:`States tutorial, part 1</topics/tutorials/states_pt1>`.

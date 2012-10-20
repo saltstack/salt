@@ -94,7 +94,7 @@ def make_pkgng_aware(jname):
 
     if os.path.isfile(os.path.join(cdir,jname) + '-make.conf'):
         ret['changes'] = 'Created {0}'.format(
-                os.path.join(cdir, '{0}-make.conf'.format(janme))
+                os.path.join(cdir, '{0}-make.conf'.format(jname))
                 )
         return ret
     else:

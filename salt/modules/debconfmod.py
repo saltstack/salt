@@ -1,13 +1,16 @@
 '''
 Support for Debconf
 '''
-
+# Import Salt libs
 import os
 import re
 import tempfile
 
 
 def _unpack_lines(out):
+    '''
+    Unpack the debconf lines
+    '''
     rexp = ('(?ms)'
             '^(?P<package>[^#]\S+)[\t ]+'
             '(?P<question>\S+)[\t ]+'
@@ -21,7 +24,6 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-
     return 'debconf' if __grains__['os'] in ['Debian', 'Ubuntu'] else False
 
 
@@ -73,9 +75,12 @@ def show(name):
     return result
 
 def _set_file(path):
+    '''
+    Execute the set selections command for debconf
+    '''
     cmd = 'debconf-set-selections {0}'.format(path)
 
-    out = __salt__['cmd.run_stdout'](cmd)
+    __salt__['cmd.run_stdout'](cmd)
 
 def set(package, question, type, value, *extra):
     '''

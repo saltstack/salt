@@ -15,9 +15,16 @@ REQUIREMENT 2:
 The python module, 'pycassa', also needs to be installed on the
 minion.
 '''
-
+# Import Python libs
 import logging
 log = logging.getLogger(__name__)
+
+load = False
+try:
+    from pycassa.system_manager import SystemManager
+    load = True
+except ImportError:
+    pass
 
 __outputter__ = {
   'compactionstats': 'txt',
@@ -29,15 +36,20 @@ __outputter__ = {
 
 
 def __virtual__():
+    '''
+    Only load if pycassa is available and the system is configured
+    '''
     global nt
     global host
     global thrift_port
+
+    if not load:
+        return False
 
     try:
         nt = __pillar__['cassandra.nodetool']
         host = __pillar__['cassandra.host']
         thrift_port = str(__pillar__['cassandra.thrift_port'])
-        from pycassa.system_manager import SystemManager
     except ImportError:
         #log.info('Module failed to load: pycassa is not installed')
         return False
@@ -54,15 +66,14 @@ def _nodetool(cmd):
     Internal cassandra nodetool wrapper. Some functions are not
     available via pycassa so we must rely on nodetool.
     '''
-    return __salt__['cmd.run_stdout'](nt + ' -h ' + host + ' ' + cmd)
+    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nt, host, cmd))
 
 
 def _sys_mgr():
     '''
     Return a pycassa system manager connection object
     '''
-    from pycassa.system_manager import SystemManager
-    return SystemManager(host + ':' + thrift_port)
+    return SystemManager('{0}:{1}'.format(host, thrift_port))
 
 
 def compactionstats():

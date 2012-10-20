@@ -7,7 +7,6 @@ import glob
 import os
 import socket
 import logging
-import tempfile
 
 # import third party libs
 import yaml
@@ -26,9 +25,10 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
-__dflt_log_datefmt = '%H:%M:%S'
+__dflt_log_datefmt = '%Y-%m-%d %H:%M:%S'
 __dflt_log_fmt_console = '[%(levelname)-8s] %(message)s'
 __dflt_log_fmt_logfile = '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+
 
 def _validate_file_roots(file_roots):
     '''
@@ -139,8 +139,9 @@ def prepend_root_dir(opts, path_options):
     root_dir = os.path.abspath(opts['root_dir'])
     for path_option in path_options:
         if path_option in opts:
-            opts[path_option] = os.path.normpath(
-                    os.sep.join([root_dir, opts[path_option]]))
+            if opts[path_option].startswith(opts['root_dir']):
+                opts[path_option] = opts[path_option][len(opts['root_dir']):]
+            opts[path_option] = salt.utils.path_join(root_dir, opts[path_option])
 
 
 def minion_config(path):
@@ -149,6 +150,7 @@ def minion_config(path):
     '''
     opts = {'master': 'salt',
             'master_port': '4506',
+            'master_finger': '',
             'user': 'root',
             'root_dir': '/',
             'pki_dir': '/etc/salt/pki',
@@ -156,12 +158,16 @@ def minion_config(path):
             'cachedir': '/var/cache/salt',
             'cache_jobs': False,
             'conf_file': path,
-            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
+            'sock_dir': '/var/run/salt',
+            'backup_mode': '',
             'renderer': 'yaml_jinja',
             'failhard': False,
             'autoload_dynamic_modules': True,
             'environment': None,
             'state_top': 'top.sls',
+            'startup_states': '',
+            'sls_list': [],
+            'top_file': '',
             'file_client': 'remote',
             'file_roots': {
                 'base': ['/srv/salt'],
@@ -182,8 +188,11 @@ def minion_config(path):
             'open_mode': False,
             'multiprocessing': True,
             'sub_timeout': 60,
+            'ipc_mode': 'ipc',
+            'tcp_pub_port': 4510,
+            'tcp_pull_port': 4511,
             'log_file': '/var/log/salt/minion',
-            'log_level': 'warning',
+            'log_level': None,
             'log_level_logfile': None,
             'log_datefmt': __dflt_log_datefmt,
             'log_fmt_console': __dflt_log_fmt_console,
@@ -191,13 +200,20 @@ def minion_config(path):
             'log_granular_levels': {},
             'test': False,
             'cython_enable': False,
-            'state_verbose': False,
+            'state_verbose': True,
+            'state_output': 'full',
             'acceptance_wait_time': 10,
             'dns_check': True,
+            'verify_env': True,
             'grains': {},
             'permissive_pki_access': False,
             'default_include': 'minion.d/*.conf',
+            'update_url': False,
+            'update_restart_services': [],
             }
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     load_config(opts, path, 'SALT_MINION_CONFIG')
 
@@ -242,7 +258,7 @@ def master_config(path):
             'publish_port': '4505',
             'user': 'root',
             'worker_threads': 5,
-            'sock_dir': os.path.join(tempfile.gettempdir(), '.salt-unix'),
+            'sock_dir': '/var/run/salt',
             'ret_port': '4506',
             'timeout': 5,
             'keep_jobs': 24,
@@ -258,9 +274,15 @@ def master_config(path):
             'pillar_roots': {
                 'base': ['/srv/pillar'],
                 },
+            'ext_pillar': {},
+            'syndic_master': '',
+            'runner_dirs': [],
+            'client_acl': {},
             'file_buffer_size': 1048576,
+            'max_open_files': 100000,
             'hash_type': 'md5',
             'conf_file': path,
+            'pub_refresh': True,
             'open_mode': False,
             'auto_accept': False,
             'renderer': 'yaml_jinja',
@@ -271,7 +293,7 @@ def master_config(path):
             'job_cache': True,
             'minion_data_cache': True,
             'log_file': '/var/log/salt/master',
-            'log_level': 'warning',
+            'log_level': None,
             'log_level_logfile': None,
             'log_datefmt': __dflt_log_datefmt,
             'log_fmt_console': __dflt_log_fmt_console,
@@ -282,12 +304,18 @@ def master_config(path):
             'cluster_mode': 'paranoid',
             'range_server': 'range:80',
             'serial': 'msgpack',
+            'state_verbose': True,
+            'state_output': 'full',
             'nodegroups': {},
             'cython_enable': False,
             'key_logfile': '/var/log/salt/key',
+            'verify_env': True,
             'permissive_pki_access': False,
             'default_include': 'master.d/*.conf',
     }
+
+    if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
+        opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
     load_config(opts, path, 'SALT_MASTER_CONFIG')
 

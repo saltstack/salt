@@ -63,6 +63,11 @@ Create a new `virtualenv`_::
 
     virtualenv /path/to/your/virtualenv
 
+.. note:: site packages
+
+    If you wish to use installed packages rather than have pip download and
+    compile new ones into this environment, add "--system-site-packages".
+
 .. _`virtualenv`: http://pypi.python.org/pypi/virtualenv
 
 Activate the virtualenv::
@@ -75,10 +80,17 @@ Install Salt (and dependencies) into the virtualenv::
 
 .. note:: Installing M2Crypto
 
-    If you and encounter the error ``command 'swig' failed with exit status 1``
+    You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you 
+    encounter the error ``command 'swig' failed with exit status 1``
     while installing M2Crypto, try installing it with the following command::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
+
+    Debian and Ubuntu systems have modified openssl libraries and mandate that
+    a patched version of M2Crypto be installed. This means that M2Crypto
+    needs to be installed via apt:
+
+        apt-get install python-m2crypto
 
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,14 +122,21 @@ Edit the minion config file:
     "saltdev". This isn't strictly necessary but it will serve as a reminder of
     which Salt installation you are working with.
 
+.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+
+    If you plan to run `salt-call` with this self-contained development
+    environment in a masterless setup, you should invoke `salt-call` with
+    ``-c /path/to/your/virtualenv/etc/salt`` so that salt can find the minion
+    config file. Without the ``-c`` option, Salt finds its config files in `/etc/salt`.
+
 Start the master and minion, accept the minon's key, and verify your local Salt
 installation is working::
 
-    salt-master -c ./etc/salt/master -d
-    salt-minion -c ./etc/salt/minion -d
-    salt-key -c ./etc/salt/master -L
-    salt-key -c ./etc/salt/master -A
-    salt -c ./etc/salt/master '*' test.ping
+    salt-master -c ./etc/salt -d
+    salt-minion -c ./etc/salt -d
+    salt-key -c ./etc/salt -L
+    salt-key -c ./etc/salt -A
+    salt -c ./etc/salt '*' test.ping
 
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
@@ -126,9 +145,11 @@ Check your file descriptor limit with::
 
     ulimit -n
 
-If it is less than 1024, you should increase it with::
+If it is less than 2047, you should increase it with::
 
-    ulimit -n 1024
+    ulimit -n 2047
+    (or "limit descriptors 2047" for c-shell)
+
 
 Running the tests
 ~~~~~~~~~~~~~~~~~
@@ -144,3 +165,7 @@ If you are on Python < 2.7 then you will also need unittest2::
 Finally you use setup.py to run the tests with the following command::
 
     ./setup.py test
+
+For greater control while running the tests, please try::
+
+	./tests/runtests.py -h

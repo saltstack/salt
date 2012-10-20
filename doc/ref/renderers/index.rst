@@ -53,7 +53,8 @@ Writing a renderer is easy, all that is required is that a Python module
 is placed in the rendered directory and that the module implements the
 render function. The render function will be passed the path of the SLS file.
 In the render function, parse the passed file and return the data structure
-derived from the file.
+derived from the file. You can place your custom renderers in a ``_renderers``
+directory in your file root (``/srv/salt/``).
 
 Examples
 --------

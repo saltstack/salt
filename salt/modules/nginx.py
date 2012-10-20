@@ -35,7 +35,7 @@ def version():
 
 def signal(signal=None):
     '''
-    Signals httpd to start, restart, or stop.
+    Signals nginx to start, restart, or stop.
 
     CLI Example::
 

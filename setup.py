@@ -36,10 +36,12 @@ exec(compile(open(salt_version).read(), salt_version, 'exec'))
 
 class TestCommand(Command):
     description = 'Run tests'
-    user_options = []
+    user_options = [
+        ('runtests-opts=', 'R', 'Command line options to pass to runtests.py')
+    ]
 
     def initialize_options(self):
-        pass
+        self.runtests_opts = None
 
     def finalize_options(self):
         pass
@@ -49,7 +51,10 @@ class TestCommand(Command):
         self.run_command('build')
         build_cmd = self.get_finalized_command('build_ext')
         runner = os.path.abspath('tests/runtests.py')
-        test_cmd = 'python %s' % runner
+        test_cmd = 'python {0}'.format(runner)
+        if self.runtests_opts:
+            test_cmd += ' {0}'.format(self.runtests_opts)
+
         print("running test")
         test_process = Popen(
             test_cmd, shell=True,
@@ -128,7 +133,55 @@ setup_kwargs = {'name': NAME,
                                ('share/man/man7', ['doc/man/salt.7']),
                                ],
                 'install_requires': requirements,
+                # The dynamic module loading in salt.modules makes this
+                # package zip unsafe.
+                'zip_safe': False
                 }
+
+
+# bbfreeze explicit includes
+# Sometimes the auto module traversal doesn't find everything, so we
+# explicitly add it. The auto dependency tracking especially does not work for
+# imports occurring in salt.modules, as they are loaded at salt runtime.
+# Specifying includes that don't exist doesn't appear to cause a freezing
+# error.
+freezer_includes = [
+    'zmq.core.*',
+    'zmq.utils.*',
+    'ast',
+    'difflib',
+    'distutils',
+    'distutils.version'
+]
+
+if sys.platform.startswith('win'):
+    freezer_includes.extend([
+        'win32api',
+        'win32file',
+        'win32con',
+        'win32security',
+        'ntsecuritycon',
+        '_winreg'
+    ])
+elif sys.platform.startswith('linux'):
+    freezer_includes.extend([
+        'yum'
+    ])
+
+if 'bdist_esky' in sys.argv:
+    # Add the esky bdist target if the module is available
+    # may require additional modules depending on platform
+    from esky import bdist_esky
+    # bbfreeze chosen for its tight integration with distutils
+    import bbfreeze
+    options = setup_kwargs.get('options', {})
+    options['bdist_esky'] = {
+         "freezer_module": "bbfreeze",
+         "freezer_options": {
+             "includes": freezer_includes
+         }
+    }
+    setup_kwargs['options'] = options
 
 if with_setuptools:
     setup_kwargs['entry_points'] = {
@@ -152,4 +205,5 @@ else:
                                'scripts/salt-run',
                                'scripts/salt']
 
-setup(**setup_kwargs)
+if __name__ == '__main__':
+    setup(**setup_kwargs)

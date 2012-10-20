@@ -78,7 +78,7 @@ is not desirable, then a deeply nested dict can be declared with curly braces:
 Integers are Parsed as Integers
 ===============================
 
-NOTE: This has been fixed in salt 0.9.10, as of this release passing an
+NOTE: This has been fixed in salt 0.10.0, as of this release passing an
 integer that is preceded by a 0 will be correctly parsed
 
 When passing `integers`_ into an SLS file, they are passed as integers. This means
@@ -99,7 +99,7 @@ This is best explained when setting the mode for a file:
 
 Salt manages this well, since the mode is passed as 644, but if the mode is
 zero padded as 0644, then it is read by YAML as an integer and evaluated as
-a hexadecimal value, 0644 becomes 420. Therefore, if the file mode is
+an octal value, 0644 becomes 420. Therefore, if the file mode is
 preceded by a 0 then it needs to be passed as a string:
 
 .. code-block:: yaml
@@ -172,4 +172,40 @@ WORKS:
       ssh.present:
         - name: AAAAB3NzaC...
         - enc: dsa
+
+YAML support only plain ASCII
+=============================
+
+According to YAML specification, only ASCII characters can be used.
+
+Within double-quotes, special characters may be represented with C-style
+escape sequences starting with a backslash ( \\ ).
+
+Examples:
+
+.. code-block:: yaml
+
+    - micro: "\u00b5"
+    - copyright: "\u00A9"
+    - A: "\x41"
+    - alpha: "\u0251"
+    - Alef: "\u05d0"
+
+
+    
+List of useable `Unicode characters`_  will help you to identify correct numbers.
+
+.. _`Unicode characters`: http://en.wikipedia.org/wiki/List_of_Unicode_characters
+
+
+Python can also be used to discover the Unicode number for a character:
+
+.. code-block:: python
+
+    repr(u"Text with wrong characters i need to figure out")
+
+This shell command can find wrong characters in your SLS files:
+
+.. code-block: shell
+    find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
 
