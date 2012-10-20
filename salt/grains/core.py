@@ -337,7 +337,7 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
-    elif osdata['os'] == 'Solaris':
+    elif osdata['os_family'] == 'Solaris':
         grains['ps'] = '/usr/ucb/ps auxwww'
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
@@ -428,7 +428,9 @@ _os_family_map = {
     'SLES': 'Suse',
     'SLED': 'Suse',
     'openSUSE': 'Suse',
-    'SUSE': 'Suse'
+    'SUSE': 'Suse',
+    'Solaris': 'Solaris',
+    'SmartOS': 'Solaris',
 }
 
 
@@ -503,6 +505,11 @@ def os_data():
         grains.update(_linux_cpudata())
     elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
+        if os.path.isfile('/etc/release'):
+            with open('/etc/release', 'r') as fp_:
+                rel_data = fp_.read()
+                if 'SmartOS' in rel_data:
+                    grains['os'] = 'SmartOS'
         grains.update(_sunos_cpudata(grains))
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
