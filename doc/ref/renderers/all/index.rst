@@ -13,7 +13,7 @@ Full list of builtin renderers
     json_jinja
     json_mako
     json_wempy
-    py
     yaml_jinja
     yaml_mako
     yaml_wempy
+    py
