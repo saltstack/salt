@@ -197,6 +197,8 @@ class Resolver(object):
                 'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
                 )
         tdata = sreq.send('clear', load)
+        if not 'token' in tdata:
+            return tdata
         try:
             with open(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
