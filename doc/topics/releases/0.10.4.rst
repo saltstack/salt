@@ -2,7 +2,7 @@
 Salt 0.10.4 Release Notes
 =========================
 
-The latest taste of Salt has come, this release has many fixes and feature
+The latest taste of Salt has come. This release has many fixes and feature
 additions. Modifications have been made to make ZeroMQ connections more
 reliable, the begining of the ACL system is in place, a new command line
 parsing system has been added, dynamic module distribution has become more
@@ -32,7 +32,8 @@ in the master configuration file, and uses the new access control system:
             - test.*
             - network.*
 
-The configuration above allows the user `thatch` to execute functions in the test and network modules on minions that match the web* target.
+The configuration above allows the user `thatch` to execute functions in the
+test and network modules on minions that match the web* target.
 
 Access Control System
 ---------------------
@@ -57,8 +58,8 @@ Access controls are configured like this:
 Salt Key Delete by Glob
 -----------------------
 
-The ability to delete minion keys by glob has been added to ``salt-key``.
-To delete all minion keys whose minion name starts with 'web':
+The ability to delete minion keys by glob has been added to ``salt-key``.  To
+delete all minion keys whose minion name starts with 'web':
 
 .. code-block:: bash
 
@@ -84,14 +85,15 @@ Next Level Solaris Support
 --------------------------
 
 A lot of work has been put into improved Solaris support by Romeo Theriault.
-Packaging modules and states, cron support and user and group management.
+Packaging modules and states, cron support and user and group management have
+all been added and improved upon.
 
 Security
 ========
 
-A vulnerability in the handshake was found and has been repaired, old minions
-should be able to connect to a new master, so as usual the master should be
-updated first and then the minions.
+A vulnerability in the security handshake was found and has been repaired, old
+minions should be able to connect to a new master, so as usual, the master
+should be updated first and then the minions.
 
 Pillar Updates
 --------------
@@ -99,5 +101,5 @@ Pillar Updates
 The pillar communication has been updated to add some extra levels of
 verification that the intended minion is the only one allowed to gather the
 data. Once all minions and the master are updated to salt 0.10.4 please
-activate pillar 2 by changing the `pillar_version` in the master config to
-`2`. This will be set to `2` by default in a future release.
+activate pillar 2 by changing the `pillar_version` in the master config to `2`.
+This will be set to `2` by default in a future release.
