@@ -76,9 +76,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     tok = resolver.token_cli(
                             self.options.eauth,
                             res
-                            ).get('token', '')
+                            )
                     if tok:
-                        kwargs['token'] = tok
+                        kwargs['token'] = tok.get('token', '')
                 if not res:
                     sys.exit(2)
                 kwargs.update(res)
