@@ -105,7 +105,7 @@ class LocalClient(object):
         # if our user is root, look for other ways to figure out
         # who we are
         if user == 'root' or 'SUDO_USER' in os.environ:
-            env_vars = ['SUDO_USER', 'USER', 'USERNAME']
+            env_vars = ['SUDO_USER']
             for evar in env_vars:
                 if evar in os.environ:
                     return 'sudo_{0}'.format(os.environ[evar])
