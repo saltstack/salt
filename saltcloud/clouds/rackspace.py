@@ -42,6 +42,7 @@ avail_sizes = types.FunctionType(avail_sizes.__code__, globals())
 script = types.FunctionType(script.__code__, globals())
 destroy = types.FunctionType(destroy.__code__, globals())
 list_nodes = types.FunctionType(list_nodes.__code__, globals())
+list_nodes_full = types.FunctionType(list_nodes_full.__code__, globals())
 
 
 # Only load in this module is the RACKSPACE configurations are in place
@@ -78,7 +79,7 @@ def create(vm_):
     kwargs['size'] = get_size(conn, vm_)
     try:
         data = conn.create_node(**kwargs)
-    except DeploymentError as exc:
+    except Exception as exc:
         err = ('Error creating {0} on RACKSPACE\n\n'
                'The following exception was thrown by libcloud when trying to '
                'run the initial deployment: \n{1}').format(
@@ -90,7 +91,9 @@ def create(vm_):
         host=data.public_ips[0],
         username='root',
         password=data.extra['password'],
-        script=deploy_script.script)
+        script=deploy_script.script,
+        name=vm_['name'],
+        sock_dir=__opts__['sock_dir'])
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
     else:

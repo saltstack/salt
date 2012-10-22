@@ -32,42 +32,51 @@ Options
 
 .. option:: -p PROFILE, --profile=PROFILE
 
-    Select a single profile to build the named cloud vms from. The profile
+    Select a single profile to build the named cloud VMs from. The profile
     must be defined in the specified profiles file.
 
 .. option:: -m MAP, --map=MAP
 
-    Specify a map file to use. This option will ensure that all of the mapped
-    vms are created. If the named vm already exists then it will be skipped.
+    Specify a map file to use. If used without any other options, this option
+    will ensure that all of the mapped VMs are created. If the named VM
+    already exists then it will be skipped.
 
 .. option:: -H, --hard
 
     When specifying a map file, the default behavior is to ensure that all of
-    the vms specified in the map file are created. If the --hard option is
-    set, then any vms that exist on configured cloud providers that are
+    the VMs specified in the map file are created. If the --hard option is
+    set, then any VMs that exist on configured cloud providers that are
     not specified in the map file will be destroyed. Be advised that this can
     be a destructive operation and should be used with care.
 
 .. option:: -d, --destroy
 
-    Pass in the name(s) of vms to destroy, salt-cloud will search the
+    Pass in the name(s) of VMs to destroy, salt-cloud will search the
     configured cloud providers for the specified names and destroy the
-    vms. Be advised that this is a destructive operation and should be used
-    with care.
+    VMs. Be advised that this is a destructive operation and should be used
+    with care. Can be used in conjunction with the -m option to specify a map
+    of VMs to be deleted.
 
 .. option:: -P, --parallel
 
     Normally when building many cloud VMs they are executed serially. The -P
     option will run each cloud vm build in a separate process allowing for
-    large groups of vms to be build at once.
+    large groups of VMs to be build at once.
 
     Be advised that some cloud provider's systems don't seem to be well suited
-    for this influx of vm creation. When creating large groups of vms watch the
+    for this influx of vm creation. When creating large groups of VMs watch the
     cloud provider carefully.
 
 .. option:: -Q, --query
 
-    Execute a query and print out the information about all cloud vms.
+    Execute a query and print out information about all cloud VMs. Can be used
+    in conjunction with -m to display only information about the specified map.
+
+.. option:: -F, --full-query
+
+    Execute a query and print out all available information about all cloud VMs.
+    Can be used in conjunction with -m to display only information about the
+    specified map.
 
 .. option:: --list-images
 
@@ -123,21 +132,29 @@ Options
 Examples
 ========
 
-To create 4 vms named web1, web2, db1 and db2 from specified profiles:
+To create 4 VMs named web1, web2, db1 and db2 from specified profiles:
 
 # salt-cloud -p fedora_rackspace web1 web2 db1 db2
 
-To read in a map file and create all vms specified therein:
+To read in a map file and create all VMs specified therein:
 
 # salt-cloud -m /path/to/cloud.map
 
-To read in a map file and create all vms specified therein in parallel:
+To read in a map file and create all VMs specified therein in parallel:
 
 # salt-cloud -m /path/to/cloud.map -P
 
-To delete any vms not specified in the maf file:
+To delete any VMs specified in the map file:
 
-# salt-cloud -m /path/to/cloud.map -H -P
+# salt-cloud -m /path/to/cloud.map -d
+
+To delete any VMs NOT specified in the map file:
+
+# salt-cloud -m /path/to/cloud.map -H
+
+To display the status of all VMs specified in the map file:
+
+# salt-cloud -m /path/to/cloud.map -Q
 
 See also
 ========

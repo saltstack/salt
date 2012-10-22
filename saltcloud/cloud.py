@@ -48,7 +48,7 @@ class Cloud(object):
             provs.add(fun[:fun.index('.')])
         return provs
 
-    def map_providers(self):
+    def map_providers(self, query='list_nodes'):
         '''
         Return a mapping of what named vms are running on what vm providers
         based on what providers are defined in the configs and vms
@@ -56,7 +56,7 @@ class Cloud(object):
         provs = self.get_providers()
         pmap = {}
         for prov in provs:
-            fun = '{0}.list_nodes'.format(prov)
+            fun = '{0}.{1}'.format(prov, query)
             if not fun in self.clouds:
                 print('Public cloud provider {0} is not available'.format(
                     self.provider(vm_))
@@ -129,7 +129,8 @@ class Cloud(object):
         for prov, names_ in dels.items():
             fun = '{0}.destroy'.format(prov)
             for name in names_:
-            	self.clouds[fun](name)
+                if self.clouds[fun](name):
+                    saltcloud.utils.remove_key(self.opts['pki_dir'], name)
 
     def create(self, vm_):
         '''
@@ -154,6 +155,11 @@ class Cloud(object):
                   'to be set'.format(vm_['name'], exc))
         if ok != False:
             saltcloud.utils.accept_key(self.opts['pki_dir'], pub, vm_['name'])
+
+    def profile_provider(self, profile=None):
+        for definition in self.opts['vm']:
+            if definition['profile'] == profile:
+                return definition['provider']
 
     def run_profile(self):
         '''
@@ -189,6 +195,31 @@ class Map(Cloud):
     def __init__(self, opts):
         Cloud.__init__(self, opts)
         self.map = self.read()
+
+    def interpolated_map(self, query=None):
+        query_map = self.map_providers(query=query)
+        full_map = {}
+        dmap = self.read()
+        for profile, vmap in dmap.items():
+            provider = self.profile_provider(profile)
+            vms = [i.keys() for i in vmap]
+            for vm in vms:
+                if provider not in full_map:
+                    full_map[provider] = {}
+    
+                if vm[0] in query_map[provider]:
+                    full_map[provider][vm[0]] = query_map[provider][vm[0]]
+                else:
+                    full_map[provider][vm[0]] = 'Absent'
+        return full_map
+
+    def delete_map(self, query=None):
+        query_map = self.interpolated_map(query=query)
+        names = []
+        for profile in query_map:
+            for vm in query_map[profile]:
+                names.append(vm)
+        return names
 
     def read(self):
         '''

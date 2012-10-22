@@ -11,6 +11,9 @@ import tempfile
 import time
 import paramiko
 import subprocess
+import salt.utils.event
+import multiprocessing
+import time
 
 # Import salt libs
 import salt.crypt
@@ -86,6 +89,15 @@ def accept_key(pki_dir, pub, id_):
     with open(key, 'w+') as fp_:
         fp_.write(pub)
 
+def remove_key(pki_dir, id_):
+    '''
+    This method removes a specified key from the accepted keys dir
+    '''
+    key = os.path.join(
+            pki_dir,
+            'minions/{0}'.format(id_)
+            )
+    os.remove(key)
 
 def get_option(option, opts, vm_):
     '''
@@ -178,12 +190,16 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
 
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
-                  deploy_command='bash /tmp/deploy.sh', tty=None):
+                  deploy_command='bash /tmp/deploy.sh', tty=None,
+                  name=None, pub_key=None, sock_dir=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
+    starttime = time.mktime(time.localtime())
     if wait_for_ssh(host=host, port=port, timeout=timeout):
-        if wait_for_passwd(host, port=port, username=username, password=password, key_filename=key_filename, timeout=timeout):
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        if wait_for_passwd(host, port=port, username=username, password=password, key_filename=key_filename, timeout=newtimeout):
+            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             kwargs = {'hostname': host,
@@ -208,13 +224,23 @@ def deploy_script(host, port=22, timeout=900, username='root',
             sftp.put(tmppath, '/tmp/deploy.sh')
             os.remove(tmppath)
             ssh.exec_command('chmod +x /tmp/deploy.sh')
+
+            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            queue = multiprocessing.Queue()
+            process = multiprocessing.Process(
+                    target=lambda: check_auth(name=name, pub_key=pub_key, sock_dir=sock_dir,
+                                              timeout=newtimeout, queue=queue),
+                    )
+            process.start()
+
             if tty:
                 # Tried this with paramiko's invoke_shell(), and got tired of
                 # fighting with it
-                cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "sudo bash /tmp/deploy.sh"').format(
+                cmd = ('ssh -oStrictHostKeyChecking=no -t -i {0} {1}@{2} "{3}"').format(
                         key_filename,
                         username,
-                        host
+                        host,
+                        deploy_command
                         )
                 subprocess.call(cmd, shell=True)
             else:
@@ -222,5 +248,25 @@ def deploy_script(host, port=22, timeout=900, username='root',
                 for line in stdout:
                     sys.stdout.write(line)
             ssh.exec_command('rm /tmp/deploy.sh')
+            queuereturn = queue.get()
+            process.join()
             return True
     return False
+
+def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
+    event = salt.utils.event.SaltEvent(
+        'master',
+        sock_dir,
+        )
+    starttime = time.mktime(time.localtime())
+    newtimeout = timeout
+    while newtimeout > 0:
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        ret = event.get_event(full=True)
+        if ret is None:
+            continue
+        if ret['tag'] == 'auth' and ret['data']['id'] == name:
+            queue.put(True)
+            newtimeout = 0
+        else:
+            queue.put(False)

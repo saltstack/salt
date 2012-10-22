@@ -136,9 +136,10 @@ def destroy(name):
     ret = conn.destroy_node(node)
     if ret:
         print('Destroyed VM: {0}'.format(name))
+        return True
     else:
         print('Failed to Destroy VM: {0}'.format(name))
-
+        return False
 
 def list_nodes():
     '''
@@ -156,3 +157,18 @@ def list_nodes():
                 'size': node.size,
                 'state': node.state}
     return ret
+
+def list_nodes_full():
+    '''
+    Return a list of the vms that are on the provider
+    '''
+    conn = get_conn() 
+    nodes = conn.list_nodes()
+    ret = {}
+    for node in nodes:
+        pairs = {}
+        for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
+            pairs[key] = value
+        ret[node.name] = pairs
+    return ret
+
