@@ -127,7 +127,7 @@ class LoadAuth(object):
         not valid
         '''
         t_path = os.path.join(self.opts['token_dir'], tok)
-        if not os.path.isfile:
+        if not os.path.isfile(t_path):
             return {}
         with open(t_path, 'r') as fp_:
             tdata = self.serial.loads(fp_.read())
