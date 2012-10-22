@@ -79,6 +79,9 @@ class LocalClient(object):
         Read in the rotating master authentication key
         '''
         key_user = self.salt_user
+        if key_user == 'root':
+            if self.opts.get('user', 'root') != 'root':
+                key_user = self.opts.get('user', 'root')
         if key_user.startswith('sudo_'):
             key_user = 'root'
         keyfile = os.path.join(
