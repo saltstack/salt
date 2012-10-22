@@ -291,7 +291,7 @@ def get_hash(path, form='md5', chunk_size=4096):
     try:
         hash_type = getattr(hashlib, form)
     except AttributeError:
-        raise ValueError('Invalid hash type: {}'.format(form))
+        raise ValueError('Invalid hash type: {0}'.format(form))
     with open(path, 'rb') as f:
         hash_obj = hash_type()
         while True:
@@ -590,7 +590,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     .. versionadded:: 0.10.4
     '''
     dry_run_opt = ' --dry-run' if dry_run else ''
-    cmd = 'patch {}{} {} {}'.format(
+    cmd = 'patch {0}{1} {2} {3}'.format(
         options, dry_run_opt, originalfile, patchfile)
     return __salt__['cmd.run_all'](cmd)
 
