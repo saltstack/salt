@@ -104,7 +104,7 @@ class LoadAuth(object):
         '''
         ret = self.time_auth(load)
         if ret is False:
-            return ret
+            return {}
         fstr = '{0}.auth'.format(load['eauth'])
         tok = str(hashlib.md5(os.urandom(512)).hexdigest())
         t_path = os.path.join(self.opts['token_dir'], tok)
