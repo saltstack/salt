@@ -148,6 +148,10 @@ class Cloud(object):
         vm_['pub_key'] = pub
         vm_['priv_key'] = priv
         ok = False
+
+        if 'script' in vm_:
+            vm_['os'] = vm_['script']
+
         try:
             ok = self.clouds['{0}.create'.format(self.provider(vm_))](vm_)
         except KeyError as exc:
