@@ -12,6 +12,7 @@ except (ImportError, AttributeError):
     has_yumdeps = False
 
 import logging
+import re
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ def __virtual__():
         else:
             return False
 
+
 def _list_removed(old, new):
     '''
     List the packages which have been removed between the two package objects
@@ -49,6 +51,36 @@ def _list_removed(old, new):
             pkgs.append(pkg)
 
     return pkgs
+
+
+def _parse_pkg_meta(path):
+    '''
+    Retrieve package name and version number from package metadata
+    '''
+    name = ''
+    version = ''
+    rel = ''
+    result = __salt__['cmd.run_all']('rpm -qpi "{0}"'.format(path))
+    if result['retcode'] == 0:
+        for line in result['stdout'].split('\n'):
+            if not name:
+                m = re.match('^Name\s*:\s*(.+)\s*$',line)
+                if m:
+                    name = m.group(1)
+                    continue
+            if not version:
+                m = re.match('^Version\s*:\s*(.+)\s*$',line)
+                if m:
+                    version = m.group(1)
+                    continue
+            if not rel:
+                m = re.match('^Release\s*:\s*(.+)\s*$',line)
+                if m:
+                    version = m.group(1)
+                    continue
+    if rel: version += '-{0}'.format(rel)
+    return name,version
+
 
 def _compare_versions(old, new):
     '''
@@ -239,6 +271,34 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
     else:
         pkgs = pkgs.split(' ')
 
+    if 'source' in kwargs:
+        if ',' in kwargs['source']:
+            srcsplit = kwargs['source'].split(',')
+        else:
+            srcsplit = kwargs['source'].split(' ')
+
+        # Ensure that number of sources matches number of packages specified
+        if len(srcsplit) != len(pkgs):
+            log.error('Number of sources ({0}) does not match '
+                      'number of specfiied packages '
+                      '({1})'.format(len(srcsplit),len(pkgs)))
+            return {}
+
+        sources = [__salt__['cp.cache_file'](x) 
+                        if __salt__['config.valid_fileproto'](x) else x
+                        for x in srcsplit]
+
+        # Check metadata to make sure the name passed matches the source
+        for i in range(0,len(pkgs)):
+            pname,pversion = _parse_pkg_meta(sources[i])
+            if pkgs[i] != pname:
+                log.error('Package file {0} (Name: {1}) does not match '
+                          'the specified package name '
+                          '({2})'.format(kwargs['source'],pname,name))
+    else:
+        sources = None
+
+
     old = list_pkgs(*pkgs)
 
     yb = yum.YumBase()
@@ -247,16 +307,23 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
 
     if repo:
         yb.repos.enableRepo(repo)
-    for pkg in pkgs:
+    for i in range(0,len(pkgs)):
         try:
-            # Changed to pattern to allow specific package versions
-            a = yb.install(pattern=pkg)
-            # if you yum didn't install anything, maybe its a downgrade?
-            if len(a) == 0:
-              a = yb.downgrade(pattern=pkg)
-
+            if sources is not None:
+                target = sources[i]
+                a = yb.installLocal(target)
+                # if yum didn't install anything, maybe its a downgrade?
+                if len(a) == 0:
+                  a = yb.downgradeLocal(target)
+            else:
+                target = pkgs[i]
+                # Changed to pattern to allow specific package versions
+                a = yb.install(pattern=target)
+                # if yum didn't install anything, maybe its a downgrade?
+                if len(a) == 0:
+                  a = yb.downgrade(pattern=target)
         except Exception:
-            log.error('Package {0} failed to install'.format(pkg))
+            log.error('Package {0} failed to install'.format(target))
     # Resolve Deps before attempting install.  This needs to be improved
     # by also tracking any deps that may get upgraded/installed during this
     # process.  For now only the version of the package(s) you request be
