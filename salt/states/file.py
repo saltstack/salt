@@ -1454,7 +1454,7 @@ def patch(name, source=None, hash=None, options='',
     if ret['result'] and not __salt__['file.check_hash'](name, hash):
         ret.update(
             result=False,
-            comment='File {} hash mismatch after patch was applied'.format(name)
+            comment='File {0} hash mismatch after patch was applied'.format(name)
         )
     return ret
 

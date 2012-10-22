@@ -42,6 +42,8 @@ def list_users(runas=None):
     for line in res.split('\n'):
         if '...' not in line or line == '\n':
             s = line.split('\t')
+            if len(s) < 2:
+                continue
             user, properties = s[0], s[1]
             d[user] = properties
     return d
