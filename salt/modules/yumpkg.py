@@ -295,6 +295,7 @@ def install(pkgs, refresh=False, repo='', skip_verify=False, **kwargs):
                 log.error('Package file {0} (Name: {1}) does not match '
                           'the specified package name '
                           '({2})'.format(kwargs['source'],pname,name))
+                return {}
     else:
         sources = None
 
