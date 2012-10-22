@@ -36,12 +36,12 @@ def _parse_pkg_meta(path):
     if result['retcode'] == 0:
         for line in result['stdout'].split('\n'):
             if not name:
-                m = re.match('^Name\s*:\s*(.+)$',line)
+                m = re.match('^Name\s*:\s*(.+)\s*$',line)
                 if m:
                     name = m.group(1)
                     continue
             if not version:
-                m = re.match('^Version\s*:\s*(.+)$',line)
+                m = re.match('^Version\s*:\s*(.+)\s*$',line)
                 if m:
                     version = m.group(1)
                     continue
