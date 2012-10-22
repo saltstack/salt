@@ -2,7 +2,7 @@
 Salt 0.10.4 Release Notes
 =========================
 
-The latest taste of Salt has come, this release has many fixes and feature
+The latest taste of Salt has come. This release has many fixes and feature
 additions. Modifications have been made to make ZeroMQ connections more
 reliable, the begining of the ACL system is in place, a new command line
 parsing system has been added, dynamic module distribution has become more
@@ -14,21 +14,86 @@ Major Features
 External Authentication System
 ------------------------------
 
+The new external authentication system allows for Salt to pass through
+authentication to any authentication system to determine if a user has
+permission to execute a Salt command. The Unix PAM system is the first
+supported system with more to come!
+
+The external authentication system allows for specific users to be granted
+access to execute specific functions on specific minions. Access is configured
+in the master configuration file, and uses the new access control system:
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        thatch:
+          - 'web*':
+            - test.*
+            - network.*
+
+The configuration above allows the user `thatch` to execute functions in the
+test and network modules on minions that match the web* target.
+
 Access Control System
 ---------------------
+
+All Salt systems can now be configured to grant access to non-administrative
+users in a granular way. The old configuration continues to work. Specific
+functions can be opened up to specific minions from specific users in the case
+of external auth and client acls, and for specific minions in the case of the
+peer system.
+
+Access controls are configured like this:
+
+.. code-block:: yaml
+
+    client_acl:
+      fred:
+        - web\*:
+          - pkg.list_pkgs
+          - test.*
+          - apache.*
+
+Salt Key Delete by Glob
+-----------------------
+
+The ability to delete minion keys by glob has been added to ``salt-key``.  To
+delete all minion keys whose minion name starts with 'web':
+
+.. code-block:: bash
+
+    $ salt-key -d 'web*'
 
 Master Tops System
 ------------------
 
+The `external_nodes` system has been upgraded to allow for modular subsystems
+to be used to generate the top file data for a highstate run.
+
+The `external_nodes` option still works but will be deprecated in the future in
+favor of the new `master_tops` option.
+
+Example of using `master_tops`:
+
+.. code-block:: yaml
+
+    master_tops:
+      ext_nodes: cobbler-external-nodes
+
 Next Level Solaris Support
 --------------------------
+
+A lot of work has been put into improved Solaris support by Romeo Theriault.
+Packaging modules and states, cron support and user and group management have
+all been added and improved upon.
 
 Security
 ========
 
-A vulnerability in the handshake was found and has been repaired, old minions
-should be able to connect to a new master, so as usual the master should be
-updated first and then the minions.
+A vulnerability in the security handshake was found and has been repaired, old
+minions should be able to connect to a new master, so as usual, the master
+should be updated first and then the minions.
 
 Pillar Updates
 --------------
@@ -36,5 +101,5 @@ Pillar Updates
 The pillar communication has been updated to add some extra levels of
 verification that the intended minion is the only one allowed to gather the
 data. Once all minions and the master are updated to salt 0.10.4 please
-activate pillar 2 by changing the `pillar_version` in the master config to
-`2`. This will be set to `2` by default in a future release.
+activate pillar 2 by changing the `pillar_version` in the master config to `2`.
+This will be set to `2` by default in a future release.
