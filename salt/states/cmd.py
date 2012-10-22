@@ -204,7 +204,7 @@ def run(name,
         ret['comment'] = 'Desired working directory is not available'
         return ret
 
-    if env:
+    if env and not isinstance(env, dict):
         _env = {}
         for var in env.split():
             try:
@@ -217,10 +217,11 @@ def run(name,
 
     pgid = os.getegid()
 
-    cmd_kwargs = {'cwd': cwd,
+    cmd_kwargs = copy.deepcopy(kwargs)
+    cmd_kwargs.update({'cwd': cwd,
                   'runas': user,
                   'shell': shell or __grains__['shell'],
-                  'env': env}
+                  'env': env})
 
     try:
         cret = _run_check(cmd_kwargs, onlyif, unless, cwd, user, group, shell)
