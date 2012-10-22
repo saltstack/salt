@@ -372,7 +372,7 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
-def prep_jid(cachedir, sum_type):
+def prep_jid(cachedir, sum_type, user='root'):
     '''
     Return a job id and prepare the job id directory
     '''

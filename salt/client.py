@@ -167,7 +167,8 @@ class LocalClient(object):
         try:
             jid = salt.utils.prep_jid(
                     self.opts['cachedir'],
-                    self.opts['hash_type']
+                    self.opts['hash_type'],
+                    user = __opts__['user']
                     )
         except Exception:
             jid = ''
