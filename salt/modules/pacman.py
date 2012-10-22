@@ -3,6 +3,10 @@ A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
 
+import logging
+import re
+
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -20,6 +24,28 @@ def _list_removed(old, new):
         if pkg not in new:
             pkgs.append(pkg)
     return pkgs
+
+
+def _parse_pkg_meta(path):
+    '''
+    Retrieve package name and version number from package metadata
+    '''
+    name = ''
+    version = ''
+    result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
+    if result['retcode'] == 0:
+        for line in result['stdout'].split('\n'):
+            if not name:
+                m = re.match('^Name\s*:\s*(.+)$',line)
+                if m:
+                    name = m.group(1)
+                    continue
+            if not version:
+                m = re.match('^Version\s*:\s*(.+)$',line)
+                if m:
+                    version = m.group(1)
+                    continue
+    return name,version
 
 
 def available_version(name):
@@ -141,18 +167,37 @@ def install(name, refresh=False, **kwargs):
 
         salt '*' pkg.install <package name>
     '''
-    fname = name
-    for vkey, vsign in (('gt', '>'), ('lt', '<'), ('eq', '='), ('version', '=')):
-        if vkey in kwargs and kwargs[vkey] is not None:
-            fname = '"{0}{1}{2}"'.format(name, vsign, kwargs[vkey])
-            break
-    old = list_pkgs()
-    cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
-    if refresh:
-        cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
 
-    __salt__['cmd.retcode'](cmd)
+    if 'source' in kwargs:
+        if __salt__['config.valid_fileproto'](kwargs['source']):
+            pkg_file = __salt__['cp.cache_file'](kwargs['source'])
+        else:
+            pkg_file = kwargs['source']
+        pname,pversion = _parse_pkg_meta(pkg_file)
+        if name != pname:
+            log.error('Package file {0} (Name: {1}) does not match the '
+                      'specified package name ({2})'.format(kwargs['source'],
+                                                            pname,
+                                                            name))
+            cmd = ''
+        else:
+            cmd = 'pacman -U --noprogressbar --noconfirm {0}'.format(pkg_file)
+    else:
+        fname = name
+        for vkey, vsign in (('gt', '>'), ('lt', '<'),
+                            ('eq', '='), ('version', '=')):
+            if vkey in kwargs and kwargs[vkey] is not None:
+                fname = '"{0}{1}{2}"'.format(name, vsign, kwargs[vkey])
+                break
+        if refresh:
+            cmd = 'pacman -Syu --noprogressbar --noconfirm {0}'.format(fname)
+        else:
+            cmd = 'pacman -S --noprogressbar --noconfirm {0}'.format(fname)
+
+    old = list_pkgs()
+    if cmd: __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
+
     pkgs = {}
     for npkg in new:
         if npkg in old:
