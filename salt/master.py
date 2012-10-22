@@ -1474,6 +1474,9 @@ class ClearFuncs(object):
             elif clear_load['user'] == getpass.getuser():
                 if not clear_load.pop('key') == self.key.get(getpass.getuser()):
                     return ''
+            elif clear_load['user'] == 'root':
+                if not clear_load.pop('key') == self.key.get(self.opts.get('user', 'root')):
+                    return ''
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
