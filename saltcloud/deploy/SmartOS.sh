@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgin -y in libtool-base autoconf automake libuuid gcc-compiler gmake
+pkgin -y in libtool-base autoconf automake libuuid gcc-compiler gmake python27 py27-setuptools py27-yaml py27-crypto swig
 
 wget http://download.zeromq.org/zeromq-3.2.1-rc2.tar.gz
 tar -xvf zeromq-3.2.1-rc2.tar.gz
@@ -9,12 +9,8 @@ cd zeromq-3.2.1
 make
 make install
 
-pkgin -y in python27 py27-setuptools py27-yaml py27-crypto swig
-
-# salt-cloud deps
-#pkgin -y in gcc-compiler
-#easy_install-2.7 paramiko
-#easy_install-2.7 apache-libcloud
+easy_install-2.7 pyzmq
+easy_install-2.7 salt
 
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
@@ -22,6 +18,8 @@ echo '{{ vm['pub_key'] }}' > /etc/salt/pki/minion.pub
 echo '{{ minion }}' > /etc/salt/minion
 
 ###
-# TODO: Need to do the smartos version of chkconfig on
+# TODO: * create /opt/local/share/smf/salt-minion/manifest.xml in salt.git
+#       * svcadm enable salt-minion
+#       * remove line below
 ###
 /opt/local/bin/salt-minion -d
