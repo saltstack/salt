@@ -85,8 +85,10 @@ Next Level Solaris Support
 --------------------------
 
 A lot of work has been put into improved Solaris support by Romeo Theriault.
-Packaging modules and states, cron support and user and group management have
-all been added and improved upon.
+Packaging modules (pkgadd/pkgrm and pkgutil) and states, cron support and user and group management have
+all been added and improved upon. These additions along with SMF (Service Management Facility) service
+support and improved Solaris grain detection in 0.10.3 add up to Salt becoming a great tool
+to manage Solaris servers with.
 
 Security
 ========
