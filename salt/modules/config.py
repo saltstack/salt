@@ -2,6 +2,8 @@
 Return config information
 '''
 
+import re
+
 def backup_mode(backup=''):
     '''
     Return the backup mode
@@ -30,3 +32,12 @@ def manage_mode(mode):
     return mode
 
 
+def valid_fileproto(uri):
+    '''
+    Returns a boolean value based on whether or not the URI passed has a valid
+    remote file protocol designation
+    '''
+    try:
+        return bool(re.match('^(?:salt|https?|ftp)://',uri))
+    except:
+        return False
