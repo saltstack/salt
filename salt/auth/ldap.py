@@ -21,7 +21,7 @@ try:
     import ldap
     import ldap.modlist
 except ImportError:
-    log.error('Failed to import LDAP module, LDAP authentication disabled')
+    pass
 
 # Defaults, override in master config
 __defopts__ = {'auth.ldap.server': 'localhost',
