@@ -778,7 +778,7 @@ def remove(path):
 
     if os.path.exists(path):
         try:
-            if os.path.isfile(path):
+            if os.path.isfile(path) or os.path.islink(path):
                 os.remove(path)
                 return True
             elif os.path.isdir(path):
