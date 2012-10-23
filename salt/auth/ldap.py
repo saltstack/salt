@@ -13,6 +13,8 @@ import traceback
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
+log = logging.getLogger(__name__)
+
 # Import third party libs
 from jinja2 import Environment
 try:
@@ -21,8 +23,6 @@ try:
 except ImportError:
     log.error('Failed to import LDAP module, LDAP authentication disabled')
     log.error(traceback.format_exc())
-
-log = logging.getLogger(__name__)
 
 # Defaults, override in master config
 __defopts__ = {'auth.ldap.server': 'localhost',
