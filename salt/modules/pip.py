@@ -7,6 +7,7 @@ import logging
 import tempfile
 import shutil
 # Import Salt libs
+from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # It would be cool if we could use __virtual__() in this module, though, since
@@ -288,8 +289,15 @@ def install(pkgs=None,
         cmd = '{cmd} --no-download '.format(cmd=cmd)
 
     if install_options:
-        cmd = '{cmd} --install-options={install_options} '.format(
-            cmd=cmd, install_options=install_options)
+        opts = ''
+
+        if isinstance(install_options, string_types):
+            install_options = [install_options]
+
+        for opt in install_options:
+            opts += '--install-option={opt} '.format(opt=opt)
+
+        cmd = '{cmd} {opts} '.format(cmd=cmd, opts=opts)
 
     try:
         result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
