@@ -2,11 +2,17 @@
 Salt 0.10.4 Release Notes
 =========================
 
-The latest taste of Salt has come. This release has many fixes and feature
-additions. Modifications have been made to make ZeroMQ connections more
-reliable, the begining of the ACL system is in place, a new command line
-parsing system has been added, dynamic module distribution has become more
-environment aware, the new `master_finger` option and many more!
+Salt 0.10.4 is a monumental release for the Salt team, with two new module
+systems, many additions to allow granular access to Salt, improved platform
+support and much more.
+
+This release is also exciting because we have been able to shorten the release
+cycle back to under a month. We are working hard to keep up the aggressive pace
+and look forward to having releases happen more frequently!
+
+This release also includes a serious security fix and all users are very
+strongly recommended to upgrade. As usual, upgrade the master first, and then
+the minion to ensure that the process is smooth.
 
 Major Features
 ==============
@@ -55,6 +61,26 @@ Access controls are configured like this:
           - test.*
           - apache.*
 
+Target by Network
+-----------------
+
+A new matcher has been added to the system which allows for minions to be
+targeted by network. This new matcher can be called with the `-S` flag on the
+command line and is available in all places that the matcher system is
+available. Using it is simple:
+
+.. code-block:: bash
+
+    $ salt -S '192.168.1.0/24' test.ping
+    $ salt -S '192.168.1.100' test.ping
+
+Nodegroup Nesting
+-----------------
+
+Previously a nodegroup was limited by not being able to include another
+nodegroup, this restraint has been lifted and now nodegroups will be expanded
+within other nodegroups with the `N@` classifier.
+
 Salt Key Delete by Glob
 -----------------------
 
@@ -85,9 +111,10 @@ Next Level Solaris Support
 --------------------------
 
 A lot of work has been put into improved Solaris support by Romeo Theriault.
-Packaging modules (pkgadd/pkgrm and pkgutil) and states, cron support and user and group management have
-all been added and improved upon. These additions along with SMF (Service Management Facility) service
-support and improved Solaris grain detection in 0.10.3 add up to Salt becoming a great tool
+Packaging modules (pkgadd/pkgrm and pkgutil) and states, cron support and user
+and group management have all been added and improved upon. These additions
+along with SMF (Service Management Facility) service support and improved
+Solaris grain detection in 0.10.3 add up to Salt becoming a great tool
 to manage Solaris servers with.
 
 Security
@@ -101,7 +128,7 @@ Pillar Updates
 --------------
 
 The pillar communication has been updated to add some extra levels of
-verification that the intended minion is the only one allowed to gather the
+verification so that the intended minion is the only one allowed to gather the
 data. Once all minions and the master are updated to salt 0.10.4 please
-activate pillar 2 by changing the `pillar_version` in the master config to `2`.
-This will be set to `2` by default in a future release.
+activate pillar `2` by changing the `pillar_version` in the master config to
+`2`. This will be set to `2` by default in a future release.
