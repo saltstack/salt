@@ -277,8 +277,9 @@ class LogLevelMixIn(object):
         self.add_option(
             '-l', '--log-level',
             choices=list(log.LOG_LEVELS),
-            help=('Logging log level. One of {0}. For the logfile settings see '
-                  'the configuration file. Default: \'{1}\'.').format(
+            help=('Console logging log level. One of {0}. For the log file '
+                  'setting see the configuration file. '
+                  'Default: \'{1}\'.').format(
                       ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
                       getattr(self, '_default_logging_level_', 'warning')
                   )
@@ -697,7 +698,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, TimeoutMixIn,
             default=False,
             dest='mktoken',
             action='store_true',
-            help=('Generate and save an authentication token for re-use. The' 
+            help=('Generate and save an authentication token for re-use. The'
                   'token is generated and made available for the period '
                   'defined in the Salt Master.')
             )
