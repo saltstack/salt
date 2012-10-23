@@ -57,8 +57,9 @@ def _render_template(filter, username):
 
 
 class _LDAPConnection:
-
-    """Setup an LDAP connection."""
+    '''
+    Setup an LDAP connection.
+    '''
 
     def __init__(self, server, port, tls, binddn, bindpw):
         '''
