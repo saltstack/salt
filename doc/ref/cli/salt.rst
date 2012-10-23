@@ -49,6 +49,17 @@ Options
     an explicit number of minions to execute at once, or a percentage of
     minions to execute on.
 
+.. option:: -a EAUTH, --auth=EAUTH
+
+    Pass in an external authentication medium to validate against. The
+    credentials will be prompted for. Can be used with the -T option.
+
+.. option:: -T, --make-token
+
+    Used in conjunction with the -a option. This creates a token that allows
+    for the authenticated user to send commands without needing to
+    re-authenticate.
+
 .. option:: --version
 
     Print the version of Salt that is running.
