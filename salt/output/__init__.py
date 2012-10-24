@@ -16,3 +16,16 @@ def display_output(data, out, opts=None):
     if not out in outputters:
         outputters['pprint'](data)
     outputters[out](data)
+
+def get_printout(out, opts=None, **kwargs):
+    '''
+    Return a printer function
+    '''
+    if opts is None:
+        opts = {}
+    opts.update(kwargs)
+    outputters = salt.loader.outputters(opts)
+    if not out in outputters:
+        return outputters['pprint']
+    return outputters[out]
+
