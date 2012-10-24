@@ -35,6 +35,8 @@ their web interface:
 import os
 import types
 import tempfile
+import time
+import sys
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -100,6 +102,7 @@ def create(vm_):
     kwargs['name'] = vm_['name']
     kwargs['image'] = get_image(conn, vm_)
     kwargs['size'] = get_size(conn, vm_)
+    kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -110,10 +113,33 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
+    not_ready = True
+    nr_count = 0
+    while not_ready:
+        print('Looking for IP addresses')
+        nodelist = list_nodes()
+        private = nodelist[vm_['name']]['private_ips']
+        public = nodelist[vm_['name']]['public_ips']
+        if private and not public:
+            print('Private IPs returned, but not public... checking for misidentified IPs')
+            for private_ip in private:
+                if saltcloud.utils.is_public_ip(private_ip):
+                    print('{0} is a public ip'.format(private_ip))
+                    data.public_ips.append(private_ip)
+                    not_ready = False
+                else:
+                    print('{0} is a private ip'.format(private_ip))
+                    if private_ip not in data.private_ips:
+                        data.private_ips.append(private_ip)
+        nr_count += 1
+        if nr_count > 50:
+            not_ready = False
+        time.sleep(1)
+    print('Running deploy script')
     deployed = saltcloud.utils.deploy_script(
         host=data.public_ips[0],
         username='root',
-        password=data.extra['password'],
+        key_filename=__opts__['OPENSTACK.ssh_key_file'],
         script=deploy_script.script,
         name=vm_['name'],
         sock_dir=__opts__['sock_dir'])

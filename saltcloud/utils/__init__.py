@@ -157,7 +157,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
     '''
     start = time.time()
     trycount=0
-    while True:
+    while trycount < maxtries:
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -173,7 +173,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
                 ssh.connect(**kwargs)
             except (paramiko.AuthenticationException, paramiko.SSHException) as authexc:
                 trycount += 1
-                print('Authentication error (try {0}  of {1}): {2}'.format(trycount, maxtries, authexc))
+                print('Attempting to authenticate (try {0} of {1}): {2}'.format(trycount, maxtries, authexc))
                 if trycount < maxtries:
                     sleep(trysleep)
                     continue
@@ -187,6 +187,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
             time.sleep(1)
             if time.time() - start > timeout:
                 return False
+
 
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
@@ -253,6 +254,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
             return True
     return False
 
+
 def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
     event = salt.utils.event.SaltEvent(
         'master',
@@ -270,3 +272,21 @@ def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
             newtimeout = 0
         else:
             queue.put(False)
+
+
+def ip_to_int(ip):
+    ret = 0 
+    for octet in ip.split('.'):
+        ret = ret * 256 + int(octet)
+    return ret 
+
+
+def is_public_ip(ip):
+    addr = ip_to_int(ip)
+    if addr > 167772160 and addr < 184549375:
+        return False
+    elif addr > 3232235520 and addr < 3232301055:
+        return False
+    elif addr > 2886729728 and addr < 2887778303:
+        return False
+    return True
