@@ -169,7 +169,7 @@ class Key(object):
         '''
         selected_output = self.opts.get('selected_output_option', None)
         printout = salt.output.get_printout(
-            {}, selected_output, self.opts, indent=2
+            selected_output, self.opts, indent=2
         )
 
         if name in ('pre', 'un', 'unaccept', 'unaccepted'):
