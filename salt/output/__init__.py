@@ -28,6 +28,6 @@ def get_printout(out, opts=None, **kwargs):
     opts.update(kwargs)
     outputters = salt.loader.outputters(opts)
     if not out in outputters:
-        return outputters['pprint']
+        return None
     return outputters[out]
 
