@@ -27,18 +27,16 @@ number of servers, from a handful of local network systems to international
 deployments across disparate datacenters. The topology is a simple
 server/client model with the needed functionality built into a single set of
 daemons. While the default configuration will work with little to no
-modification, Salt can be fine tuned to meet specific needs.
+modification, Salt can be fine-tuned to meet specific needs.
 
-Parallel Execution
-==================
+Granular Controls
+=================
 
-The core function of Salt is to enable remote commands to be called in parallel
-rather than in serial. It does this over a secure and encrypted protocol using
-the smallest and fastest network payloads possible. All of this is possible
-and Salt still manages to have a simple interface for developers. Salt also
-introduces more granular controls to the realm of remote execution,
-allowing for commands to be executed in parallel and for systems to be targeted
-based on more than just hostname, but by live system properties.
+Salt also introduces powerful granular controls to the realm of remote execution. 
+By default, commands are executed in parallel. However, using more advanced 
+options, commands can be executed in batch groups or even in serial. By using 
+simple built-in filters or regular expression matching, systems can be targeted by 
+hostname, metadata or system properties such as number of cpus or OS type.
 
 Building on Proven Technology
 =============================
@@ -83,10 +81,10 @@ influence on the core design tenets.
 Open
 ====
 
-Salt is developed under the `Apache 2.0 licence`_, and can be used for
+Salt is developed under the `Apache 2.0 license`_, and can be used for
 open and proprietary projects. Please submit your expansions back to
 the Salt project so that we can all benefit together as Salt grows.
 Finally, please sprinkle some Salt around your systems and let the
 deliciousness come forth.
 
-.. _`Apache 2.0 licence`: http://www.apache.org/licenses/LICENSE-2.0.html
+.. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html

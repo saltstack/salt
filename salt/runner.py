@@ -49,13 +49,10 @@ class RunnerClient(object):
         Pass in the runner function name and the low data structure
         '''
         l_fun = self.functions[fun]
-        fcall = salt.utils.format_call(l_fun, low)
-        if 'kwargs' in fcall:
-            ret = l_fun(*fcall['args'], **fcall['kwargs'])
-        else:
-            ret = l_fun(*f_call['args'])
+        f_call = salt.utils.format_call(l_fun, low)
+        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
-                      
+
 
 class Runner(RunnerClient):
     '''
