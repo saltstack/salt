@@ -90,20 +90,14 @@ class Caller(object):
         Print out the grains
         '''
         grains = salt.loader.grains(self.opts)
-        printout = salt.output.get_printout(grains, 'yaml', self.opts, indent=2)
-        printout(grains, color=not bool(self.opts['no_color']))
+        salt.output.display_output(grains, 'yaml', self.opts)
 
     def run(self):
         '''
         Execute the salt call logic
         '''
         ret = self.call()
-        printout = salt.output.get_printout(
-            ret, ret.get('out', None), self.opts, indent=2
-        )
-        if printout is None:
-            printout = salt.output.get_outputter(None)
-        printout(
+        salt.output.display_output(
                 {'local': ret['return']},
-                color=not bool(self.opts['no_color']),
-                **self.opts)
+                ret.get('out', 'pprint'),
+                self.opts)
