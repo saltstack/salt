@@ -1,4 +1,18 @@
+'''
+Define some generic socket functions for network modules
+'''
+# Import Python libs
 import socket
+from string import ascii_letters, digits
+
+def sanitize_host(host):
+    '''
+    Sanitize host string.
+    '''
+    return ''.join([
+        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
+    ])
+
 
 def isportopen(host, port):
     '''
@@ -13,7 +27,7 @@ def isportopen(host, port):
         return False
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    out = sock.connect_ex((_sanitize_host(host), int(port)))
+    out = sock.connect_ex((sanitize_host(host), int(port)))
 
     return out
 

@@ -68,9 +68,11 @@ def __write_aliases_file(lines):
         if not line_comment:
             line_comment = ''
         if line_alias and line_target:
-            out.write('%s: %s%s\n' % (line_alias, line_target, line_comment))
+            out.write('{0}: {1}{2}\n'.format(
+                line_alias, line_target, line_comment
+            ))
         else:
-            out.write('%s\n' % line_comment)
+            out.write('{0}\n'.format(line_comment))
 
     out.close()
     os.rename(out.name, afn)

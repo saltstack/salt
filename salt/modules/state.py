@@ -162,7 +162,7 @@ def show_sls(mods, env='base', test=None, **kwargs):
 
     CLI Example::
 
-        salt '*' state.sls core,edit.vim dev
+        salt '*' state.show_sls core,edit.vim dev
     '''
     opts = copy.copy(__opts__)
     if not test is None:
@@ -190,7 +190,7 @@ def show_masterstate():
     return st_.compile_master()
 
 
-def single(fun=None, test=None, **kwargs):
+def single(fun, name, test=None, **kwargs):
     '''
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
@@ -199,17 +199,13 @@ def single(fun=None, test=None, **kwargs):
 
         salt '*' state.single pkg.installed name=vim
     '''
-    if not 'name' in kwargs:
-        return False
-    if fun:
-        comps = fun.split('.')
-        if len(comps) < 2:
-            return False
-    else:
-        return False
+    comps = fun.split('.')
+    if len(comps) < 2:
+        return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
-                   '__id__': kwargs['name']})
+                   '__id__': name,
+                   'name': name})
     opts = copy.copy(__opts__)
     if not test is None:
         opts['test'] = test

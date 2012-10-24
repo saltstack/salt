@@ -1,5 +1,7 @@
 # Import python libs
+import re
 import sys
+import yaml
 
 # Import salt libs
 from saltunittest import TestLoader, TextTestRunner
@@ -7,10 +9,12 @@ import integration
 from integration import TestDaemon
 
 
-class MatchTest(integration.ShellCase):
+class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Test salt matchers
     '''
+    _call_binary_ = 'salt'
+
     def test_list(self):
         '''
         test salt -L matcher
@@ -106,6 +110,31 @@ class MatchTest(integration.ShellCase):
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
 
+    def test_exsel(self):
+        data = self.run_salt('-X test.ping test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
+
+    def test_ipcadr(self):
+        subnets_data = self.run_salt('\'*\' network.subnets')
+        subnet = None
+        for line in re.findall(r'{[^}]+}', '\n'.join(subnets_data)):
+            try:
+                yamline = yaml.load(line)
+                subnet = yamline.values()[0][0]
+                break
+            except:
+                continue
+
+        if subnet is None:
+            self.skipTest('Failed to query the minion\'s subnets')
+
+        data = self.run_salt('-S {0} test.ping'.format(subnet))
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
+
     def test_static(self):
         '''
         test salt static call
@@ -113,6 +142,13 @@ class MatchTest(integration.ShellCase):
         data = self.run_salt('minion test.ping --static')
         data = '\n'.join(data)
         self.assertIn('minion', data)
+
+    def test_salt_documentation(self):
+        '''
+        Test to see if we're supporting --doc
+        '''
+        data = self.run_salt('-d user.add')
+        self.assertIn('user.add:', data)
 
 
 if __name__ == "__main__":

@@ -119,7 +119,7 @@ def set_host(ip, alias):
     if not ovr:
         # make sure there is a newline
         if lines and not lines[-1].endswith(('\n', '\r')):
-            lines[-1] = '%s\n' % lines[-1]
+            lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
     open(hfn, 'w+').writelines(lines)
@@ -195,7 +195,7 @@ def add_host(ip, alias):
     if not ovr:
         # make sure there is a newline
         if lines and not lines[-1].endswith(('\n', '\r')):
-            lines[-1] = '%s\n' % lines[-1]
+            lines[-1] = '{0}\n'.format(lines[-1])
         line = ip + '\t\t' + alias + '\n'
         lines.append(line)
     open(hfn, 'w+').writelines(lines)

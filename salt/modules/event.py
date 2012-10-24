@@ -35,5 +35,4 @@ def fire(data, tag):
 
         salt '*' event.fire 'stuff to be in the event' 'tag'
     '''
-    esock = salt.utils.event.MinionEvent(__opts__['sock_dir'])
-    return esock.fire_event(data, tag)
+    return salt.utils.event.MinionEvent(**__opts__).fire_event(data, tag)

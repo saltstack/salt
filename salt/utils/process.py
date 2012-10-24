@@ -11,7 +11,7 @@ def set_pidfile(pidfile):
     Save the pidfile
     '''
     pdir = os.path.dirname(pidfile)
-    if not os.path.isdir(pdir):
+    if not os.path.isdir(pdir) and pdir:
         os.makedirs(pdir)
     try:
         with open(pidfile, 'w+') as f:
@@ -37,7 +37,7 @@ def clean_proc(proc, wait_for_kill=10):
                 log.error(('Process did not die with terminate(): {0}'
                     .format(proc.pid)))
                 os.kill(signal.SIGKILL, proc.pid)
-    except (AssertionError, AttributeError) as e:
+    except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType

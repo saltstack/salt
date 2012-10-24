@@ -13,11 +13,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-
     return 'pkg' if __grains__['os'] in ('Debian', 'Ubuntu') else False
 
 
-def __init__():
+def __init__(opts):
     '''
     For Debian and derivative systems, set up
     a few env variables to keep apt happy and
@@ -43,15 +42,11 @@ def available_version(name):
         salt '*' pkg.available_version <package name>
     '''
     version = ''
-    cmd = 'apt-cache -q show {0} | grep ^Version'.format(name)
+    cmd = 'apt-cache -q policy {0} | grep Candidate'.format(name)
 
     out = __salt__['cmd.run_stdout'](cmd)
 
     version_list = out.split()
-    for comp in version_list:
-        if comp == 'Version:':
-            continue
-        return comp
 
     if len(version_list) >= 2:
         version = version_list[-1]
@@ -287,7 +282,7 @@ def list_pkgs(regex_string=""):
 
     for line in out.split('\n'):
         cols = line.split()
-        if len(cols) and 'install' in cols[0] and 'installed' in cols[2]:
+        if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and 'installed' in cols[2]:
             ret[cols[3]] = cols[4]
 
     # If ret is empty at this point, check to see if the package is virtual.

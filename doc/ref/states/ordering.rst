@@ -210,3 +210,18 @@ set the order to ``last``:
     vim:
       pkg.installed:
         - order: last
+
+Remember that requisite statements override the order option. So the order
+option should be applied to the highest component of the requisite chain:
+
+.. code-block:: yaml
+
+    vim:
+      pkg.installed:
+        - order: last
+        - require:
+          - file: /etc/vimrc
+
+    /etc/vimrc:
+      file.managed:
+        - source: salt://edit/vimrc

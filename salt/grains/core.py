@@ -18,32 +18,38 @@ import socket
 import sys
 import re
 import platform
+import logging
+import locale
+
+# Extend the default list of supported distros. This will be used for the
+# /etc/DISTRO-release checking that is part of platform.linux_distribution()
+from platform import _supported_dists
+_supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
+                     'slamd64', 'enterprise', 'ovs', 'system')
+
+import salt.log
 import salt.utils
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-__salt__ = {'cmd.run': salt.modules.cmdmod._run_quiet}
+__salt__ = {
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
+}
 
+log = logging.getLogger(__name__)
 
-def _kernel():
-    '''
-    Return the kernel type
-    '''
-    # Provides:
-    # kernel
-    grains = {}
-    grains['kernel'] = __salt__['cmd.run']('uname -s').strip()
-
-    if grains['kernel'] == 'aix':
-        grains['kernelrelease'] = __salt__['cmd.run']('oslevel -s').strip()
-    else:
-        grains['kernelrelease'] = __salt__['cmd.run']('uname -r').strip()
-    if 'kernel' not in grains:
-        grains['kernel'] = 'Unknown'
-    if not grains['kernel']:
-        grains['kernel'] = 'Unknown'
-    return grains
+has_wmi = False
+if sys.platform.startswith('win'):
+    # attempt to import the python wmi module
+    # the Windows minion uses WMI for some of its grains
+    try:
+        import wmi
+        has_wmi = True
+    except ImportError:
+        log.exception("Unable to import Python wmi module, some core grains "
+                      "will be missing")
 
 
 def _windows_cpudata():
@@ -52,12 +58,15 @@ def _windows_cpudata():
     '''
     # Provides:
     #   cpuarch
-    #   num_cpus
     #   cpu_model
     grains = {}
-    grains['cpuarch'] = platform.machine()
     if 'NUMBER_OF_PROCESSORS' in os.environ:
-        grains['num_cpus'] = os.environ['NUMBER_OF_PROCESSORS']
+        # Cast to int so that the logic isn't broken when used as a
+        # conditional in templating. Also follows _linux_cpudata()
+        try:
+            grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
+        except ValueError:
+            grains['num_cpus'] = 1
     grains['cpu_model'] = platform.processor()
     return grains
 
@@ -67,25 +76,11 @@ def _linux_cpudata():
     Return the cpu information for Linux systems architecture
     '''
     # Provides:
-    #   cpuarch
     #   num_cpus
     #   cpu_model
     #   cpu_flags
     grains = {}
     cpuinfo = '/proc/cpuinfo'
-    # Grab the Arch
-    arch = __salt__['cmd.run']('uname -m').strip()
-    grains['cpuarch'] = arch
-    # Some systems such as Debian don't like uname -m
-    # so fallback gracefully to the processor type
-    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
-        arch = __salt__['cmd.run']('uname -p')
-        grains['cpuarch'] = arch
-    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
-        arch = __salt__['cmd.run']('uname -i')
-        grains['cpuarch'] = arch
-    if not grains['cpuarch'] or grains['cpuarch'] == 'unknown':
-        grains['cpuarch'] = 'Unknown'
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
         for line in open(cpuinfo, 'r').readlines():
@@ -126,9 +121,30 @@ def _bsd_cpudata(osdata):
     grains['cpu_flags'] = []
     try:
         grains['num_cpus'] = int(grains['num_cpus'])
-    except Exception:
-        grains['num_cpus'] = 0
+    except ValueError:
+        grains['num_cpus'] = 1
 
+    return grains
+
+
+def _sunos_cpudata(osdata):
+    '''
+    Return the cpu information for Solaris-like systems
+    '''
+    # Provides:
+    #   cpuarch
+    #   num_cpus
+    #   cpu_model
+    grains = {'num_cpus': 0}
+
+    grains['cpuarch'] = __salt__['cmd.run']('uname -p').strip()
+    for line in __salt__['cmd.run'](
+            '/usr/sbin/psrinfo 2>/dev/null'
+            ).split('\n'):
+        grains['num_cpus'] += 1
+    grains['cpu_model'] = __salt__['cmd.run'](
+            'kstat -p cpu_info:*:*:implementation'
+            ).split()[1].strip()
     return grains
 
 
@@ -154,15 +170,19 @@ def _memdata(osdata):
         if sysctl:
             mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl)).strip()
             grains['mem_total'] = str(int(mem) / 1024 / 1024)
-    elif osdata['kernel'] == 'Windows':
-        for line in __salt__['cmd.run']('SYSTEMINFO /FO LIST').split('\n'):
-            comps = line.split(':')
-            if not len(comps) > 1:
-                continue
-            if comps[0].strip() == 'Total Physical Memory':
-                # Windows XP use '.' as separator and Windows 2008 Server R2 use ','
-                grains['mem_total'] = int(comps[1].split()[0].replace('.', '').replace(',', ''))
-                break
+    elif osdata['kernel'] == 'SunOS':
+        for line in __salt__['cmd.run']('/usr/sbin/prtconf 2>/dev/null').split('\n'):
+            comps = line.split(' ')
+            if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
+                grains['mem_total'] = int(comps[2].strip())
+    elif osdata['kernel'] == 'Windows' and has_wmi:
+        wmi_c = wmi.WMI()
+        # this is a list of each stick of ram in a system
+        # WMI returns it as the string value of the number of bytes
+        tot_bytes = sum(map(lambda x: int(x.Capacity),
+                            wmi_c.Win32_PhysicalMemory()), 0)
+        # return memory info in gigabytes
+        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
 
 
@@ -178,36 +198,70 @@ def _virtual(osdata):
     lspci = salt.utils.which('lspci')
     dmidecode = salt.utils.which('dmidecode')
 
-    if dmidecode:
-        output = __salt__['cmd.run']('dmidecode')
-        # Product Name: VirtualBox
-        if 'Vendor: QEMU' in output:
-            # FIXME: Make this detect between kvm or qemu
-            grains['virtual'] = 'kvm'
-        if 'Vendor: Bochs' in output:
-            grains['virtual'] = 'kvm'
-        elif 'VirtualBox' in output:
-            grains['virtual'] = 'VirtualBox'
-        # Product Name: VMware Virtual Platform
-        elif 'VMware' in output:
-            grains['virtual'] = 'VMware'
-        # Manufacturer: Microsoft Corporation
-        # Product Name: Virtual Machine
-        elif 'Manufacturer: Microsoft' in output and 'Virtual Machine' in output:
-            grains['virtual'] = 'VirtualPC'
-    # Fall back to lspci if dmidecode isn't available
-    elif lspci:
-        model = __salt__['cmd.run']('lspci').lower()
-        if 'vmware' in model:
-            grains['virtual'] = 'VMware'
-        # 00:04.0 System peripheral: InnoTek Systemberatung GmbH VirtualBox Guest Service
-        elif 'virtualbox' in model:
-            grains['virtual'] = 'VirtualBox'
-        elif 'qemu' in model:
-            grains['virtual'] = 'kvm'
-        elif 'virtio' in model:
-            grains['virtual'] = 'kvm'
-    choices = ('Linux', 'OpenBSD', 'SunOS', 'HP-UX')
+    for command in ('dmidecode', 'lspci'):
+        which = salt.utils.which(command)
+
+        if which is None:
+            continue
+
+        ret = __salt__['cmd.run_all'](which)
+
+        if ret['retcode'] > 0:
+            if salt.log.is_logging_configured():
+                log.warn(
+                    'Although \'{0}\' was found in path, the current user '
+                    'cannot execute it. Grains output might not be '
+                    'accurate.'.format(command)
+                )
+            continue
+
+        output = ret['stdout']
+
+        if command == 'dmidecode':
+            # Product Name: VirtualBox
+            if 'Vendor: QEMU' in output:
+                # FIXME: Make this detect between kvm or qemu
+                grains['virtual'] = 'kvm'
+            if 'Vendor: Bochs' in output:
+                grains['virtual'] = 'kvm'
+            elif 'VirtualBox' in output:
+                grains['virtual'] = 'VirtualBox'
+            # Product Name: VMware Virtual Platform
+            elif 'VMware' in output:
+                grains['virtual'] = 'VMware'
+            # Manufacturer: Microsoft Corporation
+            # Product Name: Virtual Machine
+            elif 'Manufacturer: Microsoft' in output and 'Virtual Machine' in output:
+                grains['virtual'] = 'VirtualPC'
+            # Manufacturer: Parallels Software International Inc.
+            elif 'Parallels Software' in output:
+                grains['virtual'] = 'Parallels'
+            # Break out of the loop, lspci parsing is not necessary
+            break
+        elif command == 'lspci':
+            # dmidecode not available or the user does not have the necessary
+            # permissions
+            model = output.lower()
+            if 'vmware' in model:
+                grains['virtual'] = 'VMware'
+            # 00:04.0 System peripheral: InnoTek Systemberatung GmbH VirtualBox Guest Service
+            elif 'virtualbox' in model:
+                grains['virtual'] = 'VirtualBox'
+            elif 'qemu' in model:
+                grains['virtual'] = 'kvm'
+            elif 'virtio' in model:
+                grains['virtual'] = 'kvm'
+            # Break out of the loop so the next log message is not issued
+            break
+    else:
+        log.warn(
+            'Both \'dmidecode\' and \'lspci\' failed to execute, either '
+            'because they do not exist on the system of the user running '
+            'this instance does not have the necessary permissions to '
+            'execute them. Grains output might not be accurate.'
+        )
+
+    choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
     if osdata['kernel'] in choices:
         if isdir('/proc/vz'):
@@ -245,9 +299,7 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
-        elif isdir('/.SUNWnative'):
-            grains['virtual'] = 'zone'
-        elif os.path.isfile('/proc/cpuinfo'):
+        if os.path.isfile('/proc/cpuinfo'):
             if 'QEMU Virtual CPU' in open('/proc/cpuinfo', 'r').read():
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
@@ -264,6 +316,16 @@ def _virtual(osdata):
                 grains['virtual_subtype'] = 'jail'
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
+    elif osdata['kernel'] == 'SunOS':
+        # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
+        zonename = salt.utils.which('zonename')
+        if zonename:
+            zone = __salt__['cmd.run']('{0}'.format(zonename)).strip()
+            if zone != "global":
+                grains['virtual'] = 'zone'
+        # Check if it's a branded zone (i.e. Solaris 8/9 zone)
+        if isdir('/.SUNWnative'):
+            grains['virtual'] = 'zone'
     return grains
 
 
@@ -275,6 +337,8 @@ def _ps(osdata):
     bsd_choices = ('FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS')
     if osdata['os'] in bsd_choices:
         grains['ps'] = 'ps auxwww'
+    elif osdata['os_family'] == 'Solaris':
+        grains['ps'] = '/usr/ucb/ps auxwww'
     elif osdata['os'] == 'Windows':
         grains['ps'] = 'tasklist.exe'
     elif osdata.get('virtual', '') == 'openvzhn':
@@ -283,69 +347,49 @@ def _ps(osdata):
         grains['ps'] = 'ps -efH'
     return grains
 
-
-def _linux_platform_data(osdata):
-    '''
-    The platform module is very smart about figuring out linux distro
-    information. Instead of re-inventing the wheel, lets use it!
-    '''
-    # Provides:
-    #    osrelease
-    #    oscodename
-    grains = {}
-    (osname, osrelease, oscodename) = platform.dist()
-    if 'os' not in osdata and osname:
-        grains['os'] = osname
-    if osrelease:
-        grains['osrelease'] = osrelease
-    if oscodename:
-        grains['oscodename'] = oscodename
-    return grains
-
-
 def _windows_platform_data(osdata):
     '''
     Use the platform module for as much as we can.
     '''
     # Provides:
-    #    osrelease
-    #    osversion
     #    osmanufacturer
     #    manufacturer
     #    productname
     #    biosversion
     #    osfullname
-    #    inputlocale
     #    timezone
     #    windowsdomain
 
-    grains = {}
-    (osname, hostname, osrelease, osversion, machine, processor) = platform.uname()
-    if 'os' not in osdata and osname:
-        grains['os'] = osname
-    if osrelease:
-        grains['osrelease'] = osrelease
-    if osversion:
-        grains['osversion'] = osversion
-    get_these_grains = {
-        'OS Manufacturer': 'osmanufacturer',
-        'System Manufacturer': 'manufacturer',
-        'System Model': 'productname',
-        'BIOS Version': 'biosversion',
-        'OS Name': 'osfullname',
-        'Input Locale': 'inputlocale',
-        'Time Zone': 'timezone',
-        'Domain': 'windowsdomain',
-        }
-    systeminfo = __salt__['cmd.run']('SYSTEMINFO')
-    for line in  systeminfo.split('\n'):
-        comps = line.split(':', 1)
-        if not len(comps) > 1:
-            continue
-        item = comps[0].strip()
-        value = comps[1].strip()
-        if item in get_these_grains:
-            grains[get_these_grains[item]] = value
+    if not has_wmi:
+        return {}
+
+    wmi_c = wmi.WMI()
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394102%28v=vs.85%29.aspx
+    systeminfo = wmi_c.Win32_ComputerSystem()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394239%28v=vs.85%29.aspx
+    osinfo = wmi_c.Win32_OperatingSystem()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394077(v=vs.85).aspx
+    biosinfo = wmi_c.Win32_BIOS()[0]
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
+    timeinfo = wmi_c.Win32_TimeZone()[0]
+
+    # the name of the OS comes with a bunch of other data about the install
+    # location. For example:
+    # 'Microsoft Windows Server 2008 R2 Standard |C:\\Windows|\\Device\\Harddisk0\\Partition2'
+    (osfullname, _) = osinfo.Name.split('|', 1)
+    osfullname = osfullname.strip()
+    grains = {
+        'osmanufacturer': osinfo.Manufacturer,
+        'manufacturer': systeminfo.Manufacturer,
+        'productname': systeminfo.Model,
+        # bios name had a bunch of whitespace appended to it in my testing
+        # 'PhoenixBIOS 4.0 Release 6.0     '
+        'biosversion': biosinfo.Name.strip(),
+        'osfullname': osfullname,
+        'timezone': timeinfo.Description,
+        'windowsdomain': systeminfo.Domain,
+    }
+
     return grains
 
 
@@ -355,143 +399,135 @@ def id_():
     '''
     return {'id': __opts__['id']}
 
+# This maps (at most) the first ten characters (no spaces, lowercased) of
+# 'osfullname' to the 'os' grain that Salt traditionally uses.
+_os_name_map = {
+    'redhatente': 'RedHat',
+    'debian': 'Debian',
+    'arch': 'Arch',
+    'amazonlinu': 'Amazon',
+    'centoslinu': 'CentOS',
+}
+
+# Map the 'os' grain to the 'os_family' grain
+_os_family_map = {
+    'Ubuntu': 'Debian',
+    'Fedora': 'RedHat',
+    'CentOS': 'RedHat',
+    'GoOSe': 'RedHat',
+    'Scientific': 'RedHat',
+    'Amazon': 'RedHat',
+    'CloudLinux': 'RedHat',
+    'OVS': 'RedHat',
+    'OEL': 'RedHat',
+    'Mandrake': 'Mandriva',
+    'ESXi': 'VMWare',
+    'VMWareESX': 'VMWare',
+    'Bluewhite64': 'Bluewhite',
+    'Slamd64': 'Slackware',
+    'SLES': 'Suse',
+    'SLED': 'Suse',
+    'openSUSE': 'Suse',
+    'SUSE': 'Suse',
+    'Solaris': 'Solaris',
+    'SmartOS': 'Solaris',
+}
+
 
 def os_data():
     '''
     Return grains pertaining to the operating system
     '''
     grains = {}
-    if 'os' in os.environ:
-        if os.environ['os'].startswith('Windows'):
-            grains['os'] = 'Windows'
-            grains['os_family'] = 'Windows'
-            grains['kernel'] = 'Windows'
-            grains.update(_memdata(grains))
-            grains.update(_windows_platform_data(grains))
-            grains.update(_windows_cpudata())
-            grains.update(_ps(grains))
-            return grains
-    grains.update(_kernel())
-
-    if grains['kernel'] == 'Linux':
+    try:
+        (grains['defaultlanguage'],
+         grains['defaultencoding']) = locale.getdefaultlocale()
+    except Exception:
+        # locale.getdefaultlocale can ValueError!! Catch anything else it
+        # might do, per #2205
+        grains['defaultlanguage'] = 'unknown'
+        grains['defaultencoding'] = 'unknown'
+    # Windows Server 2008 64-bit
+    # ('Windows', 'MINIONNAME', '2008ServerR2', '6.1.7601', 'AMD64', 'Intel64 Fam ily 6 Model 23 Stepping 6, GenuineIntel')
+    # Ubuntu 10.04
+    # ('Linux', 'MINIONNAME', '2.6.32-38-server', '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
+    (grains['kernel'], grains['nodename'],
+     grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
+    if grains['kernel'] == 'Windows':
+        grains['osrelease'] = grains['kernelrelease']
+        grains['osversion'] = grains['kernelrelease'] = version
+        grains['os'] = 'Windows'
+        grains['os_family'] = 'Windows'
+        grains.update(_memdata(grains))
+        grains.update(_windows_platform_data(grains))
+        grains.update(_windows_cpudata())
+        grains.update(_ps(grains))
+        return grains
+    elif grains['kernel'] == 'Linux':
         # Add lsb grains on any distro with lsb-release
-        if os.path.isfile('/etc/lsb-release'):
-            for line in open('/etc/lsb-release').readlines():
-                # Matches any possible format:
-                #     DISTRIB_ID="Ubuntu"
-                #     DISTRIB_ID='Mageia'
-                #     DISTRIB_ID=Fedora
-                #     DISTRIB_RELEASE='10.10'
-                #     DISTRIB_CODENAME='squeeze'
-                #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
-                regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
-                match = regex.match(line)
-                if match:
-                    # Adds: lsb_distrib_{id,release,codename,description}
-                    grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         try:
             import lsb_release
             release = lsb_release.get_distro_information()
             for key, value in release.iteritems():
                 grains['lsb_{0}'.format(key.lower())] = value  # override /etc/lsb-release
         except ImportError:
-            pass
-        if os.path.isfile('/etc/arch-release'):
-            grains['os'] = 'Arch'
-            grains['os_family'] = 'Arch'
-        elif os.path.isfile('/etc/debian_version'):
-            grains['os'] = 'Debian'
-            grains['os_family'] = 'Debian'
-            if 'lsb_distrib_id' in grains:
-                if 'Ubuntu' in grains['lsb_distrib_id']:
-                    grains['os'] = 'Ubuntu'
-                elif os.path.isfile('/etc/issue.net') and \
-                  'Ubuntu' in open('/etc/issue.net').readline():
-                    grains['os'] = 'Ubuntu'
-        elif os.path.isfile('/etc/gentoo-release'):
-            grains['os'] = 'Gentoo'
-            grains['os_family'] = 'Gentoo'
-        elif os.path.isfile('/etc/fedora-release'):
-            grains['os'] = 'Fedora'
-            grains['os_family'] = 'RedHat'
-        elif os.path.isfile('/etc/mandriva-version'):
-            grains['os'] = 'Mandriva'
-            grains['os_family'] = 'Mandriva'
-        elif os.path.isfile('/etc/mandrake-version'):
-            grains['os'] = 'Mandrake'
-            grains['os_family'] = 'Mandriva'
-        elif os.path.isfile('/etc/mageia-version'):
-            grains['os'] = 'Mageia'
-            grains['os_family'] = 'Mageia'
-        elif os.path.isfile('/etc/meego-version'):
-            grains['os'] = 'MeeGo'
-            grains['os_family'] = 'MeeGo'
-        elif os.path.isfile('/etc/vmware-version'):
-            grains['os'] = 'VMWareESX'
-            grains['os_family'] = 'VMWare'
-        elif os.path.isfile('/etc/bluewhite64-version'):
-            grains['os'] = 'Bluewhite64'
-            grains['os_family'] = 'Bluewhite'
-        elif os.path.isfile('/etc/slamd64-version'):
-            grains['os'] = 'Slamd64'
-            grains['os_family'] = 'Slackware'
-        elif os.path.isfile('/etc/slackware-version'):
-            grains['os'] = 'Slackware'
-            grains['os_family'] = 'Slackware'
-        elif os.path.isfile('/etc/enterprise-release'):
-            grains['os_family'] = 'Oracle'
-            if os.path.isfile('/etc/ovs-release'):
-                grains['os'] = 'OVS'
-            else:
-                grains['os'] = 'OEL'
-        elif os.path.isfile('/etc/redhat-release'):
-            grains['os_family'] = 'RedHat'
-            data = open('/etc/redhat-release', 'r').read()
-            if 'centos' in data.lower():
-                grains['os'] = 'CentOS'
-            elif 'scientific' in data.lower():
-                grains['os'] = 'Scientific'
-            else:
-                grains['os'] = 'RedHat'
-        elif os.path.isfile('/etc/system-release'):
-            grains['os_family'] = 'RedHat'
-            data = open('/etc/system-release', 'r').read()
-            if 'amazon' in data.lower():
-                grains['os'] = 'Amazon'
-        elif os.path.isfile('/etc/SuSE-release'):
-            grains['os_family'] = 'Suse'
-            data = open('/etc/SuSE-release', 'r').read()
-            if 'SUSE LINUX Enterprise Server' in data:
-                grains['os'] = 'SLES'
-            elif 'SUSE LINUX Enterprise Desktop' in data:
-                grains['os'] = 'SLED'
-            elif 'openSUSE' in data:
-                grains['os'] = 'openSUSE'
-            else:
-                grains['os'] = 'SUSE'
+            # if the python library isn't available, default to regex
+            if os.path.isfile('/etc/lsb-release'):
+                for line in open('/etc/lsb-release').readlines():
+                    # Matches any possible format:
+                    #     DISTRIB_ID="Ubuntu"
+                    #     DISTRIB_ID='Mageia'
+                    #     DISTRIB_ID=Fedora
+                    #     DISTRIB_RELEASE='10.10'
+                    #     DISTRIB_CODENAME='squeeze'
+                    #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
+                    regex = re.compile('^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?([\w\s\.-_]+)(?:\'|")?')
+                    match = regex.match(line)
+                    if match:
+                        # Adds: lsb_distrib_{id,release,codename,description}
+                        grains['lsb_{0}'.format(match.groups()[0].lower())] = match.groups()[1].rstrip()
         # Use the already intelligent platform module to get distro info
-        grains.update(_linux_platform_data(grains))
-        # If the Linux version can not be determined
-        if not 'os' in grains:
-            grains['os'] = 'Unknown {0}'.format(grains['kernel'])
-            grains['os_family'] = 'Unknown'
-    elif grains['kernel'] == 'sunos':
+        (osname, osrelease, oscodename) = platform.linux_distribution(
+                                              supported_dists=_supported_dists)
+        # Try to assign these three names based on the lsb info, they tend to
+        # be more accurate than what python gets from /etc/DISTRO-release.
+        # It's worth noting that Ubuntu has patched their Python distribution
+        # so that platform.linux_distribution() does the /etc/lsb-release
+        # parsing, but we do it anyway here for the sake for full portability.
+        grains['osfullname'] = grains.get('lsb_distrib_id', osname)
+        grains['osrelease'] = grains.get('lsb_distrib_release', osrelease)
+        grains['oscodename'] = grains.get('lsb_distrib_codename', oscodename)
+        # return the first ten characters with no spaces, lowercased
+        shortname = grains['osfullname'].replace(' ', '').lower()[:10]
+        # this maps the long names from the /etc/DISTRO-release files to the
+        # traditional short names that Salt has used.
+        grains['os'] = _os_name_map.get(shortname, grains['osfullname'])
+        grains.update(_linux_cpudata())
+    elif grains['kernel'] == 'SunOS':
         grains['os'] = 'Solaris'
-        grains['os_family'] = 'Solaris'
+        if os.path.isfile('/etc/release'):
+            with open('/etc/release', 'r') as fp_:
+                rel_data = fp_.read()
+                if 'SmartOS' in rel_data:
+                    grains['os'] = 'SmartOS'
+        grains.update(_sunos_cpudata(grains))
     elif grains['kernel'] == 'VMkernel':
         grains['os'] = 'ESXi'
-        grains['os_family'] = 'VMWare'
     elif grains['kernel'] == 'Darwin':
         grains['os'] = 'MacOS'
-        grains['os_family'] = 'MacOS'
         grains.update(_bsd_cpudata(grains))
     else:
         grains['os'] = grains['kernel']
-        grains['os_family'] = grains['kernel']
-    if grains['kernel'] == 'Linux':
-        grains.update(_linux_cpudata())
-    elif grains['kernel'] in ('FreeBSD', 'OpenBSD'):
+    if grains['kernel'] in ('FreeBSD', 'OpenBSD'):
         grains.update(_bsd_cpudata(grains))
+    if not grains['os']:
+        grains['os'] = 'Unknown {0}'.format(grains['kernel'])
+        grains['os_family'] = 'Unknown'
+    else:
+        # this assigns family names based on the os name
+        # family defaults to the os name if not found
+        grains['os_family'] = _os_family_map.get(grains['os'],
+                                                 grains['os'])
 
     grains.update(_memdata(grains))
 
@@ -516,14 +552,9 @@ def hostname():
     #   localhost
     #   domain
     grains = {}
-    grains['fqdn'] = socket.getfqdn()
-    comps = grains['fqdn'].split('.')
-    grains['host'] = comps[0]
     grains['localhost'] = socket.gethostname()
-    if len(comps) > 1:
-        grains['domain'] = '.'.join(comps[1:])
-    else:
-        grains['domain'] = ''
+    grains['fqdn'] = socket.getfqdn()
+    (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
 
 

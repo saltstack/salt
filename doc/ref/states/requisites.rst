@@ -78,4 +78,94 @@ the service is reloaded or restarted.
 Use
 ---
 
-# This needs to be filled in
+The ``use`` requisite is used to inherit the arguments passed in another
+id declaration. This is useful when many files need to have the same defaults.
+
+The ``use`` statement was developed primarily for the networking states but
+can be used on any states in Salt. This made sense for the networking state
+because it can define a long list of options that need to be applied to
+multiple network interfaces.
+
+Require In
+----------
+
+The ``require_in`` requisite is the literal reverse of ``require``. If
+a state declaration needs to be required by another state declaration then
+require_in can accommodate it, so these two sls files would be the same in
+the end:
+
+Using ``require``
+
+.. code-block:: yaml
+
+    httpd:
+      pkg:
+        - installed
+      service:
+        - running
+        - require:
+          - pkg: httpd
+
+Using ``require_in``
+
+.. code-block:: yaml
+
+    httpd:
+      pkg:
+        - installed
+        - require_in:
+          - service: httpd
+      service:
+        - running
+
+The ``require_in`` statement is particularly useful when assigning a require
+in a sperate sls file. For instance it may be common for httpd to require
+components used to set up php or mod_python, but the http state does not need
+to be aware of the additional components that require it when it is set up:
+
+http.sls
+
+.. code-block:: yaml
+
+    httpd:
+      pkg:
+        - installed
+      service:
+        - running
+        - require:
+          - pkg: httpd
+
+php.sls
+
+.. code-block:: yaml
+
+    include:
+      - http
+
+    php:
+      pkg:
+        - installed
+        - require_in:
+          - service: httpd
+
+mod_python.sls
+
+.. code-block:: yaml
+
+    include:
+      - http
+
+    mod_python:
+      pkg:
+        - installed
+        - require_in:
+          - service: httpd
+
+Now the httpd server will only start if php or mod_python are first verified to
+be installed. Thus allowing for a requisite to be defined "after the fact".
+
+Watch In
+--------
+
+Watch in functions the same was as require in, but applies a watch statement
+rather than a require statement to the external state declaration.

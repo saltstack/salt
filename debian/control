@@ -10,7 +10,8 @@ Build-Depends: debhelper (>= 8),
                python-m2crypto,
                python-zmq (>= 2.1.9),
                libzmq-dev (>= 2.1.9),
-               python-jinja2
+               python-jinja2,
+               msgpack-python
 Standards-Version: 3.9.3
 Homepage: http://saltstack.org
 #Vcs-Git: git://git.debian.org/collab-maint/salt.git

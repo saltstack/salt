@@ -1,15 +1,16 @@
-%define _bindir /usr/local/bin
-%define _mandir /usr/local/share/man
+%define _prefix /usr/local
+%define _libdir %{_prefix}/lib
+%define _mandir %{_prefix}/share/man
+
 %define pybasever 2.7
-%define __python_ver 27
 %define __python %{_bindir}/python%{?pybasever}
 
-%global python_sitelib /usr/local/lib/python2.7/site-packages
-%global python_sitearch /usr/local/lib/python2.7/site-packages
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+
 
 Name: salt
-Version: 0.10.2dev
-Release: 3talkos
+Version: 0.10.4
+Release: 1%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -33,7 +34,7 @@ BuildArch: noarch
 
 BuildRequires: python27-pyzmq
 BuildRequires: python27-pycrypto
-BuildRequires: python27
+BuildRequires: python27-devel
 BuildRequires: python27-PyYAML
 BuildRequires: python27-M2Crypto
 BuildRequires: python27-msgpack
@@ -44,7 +45,6 @@ Requires: python27-pyzmq
 Requires: python27-Jinja2
 Requires: python27-PyYAML
 Requires: python27-M2Crypto
-Requires: python27-PyXML
 Requires: python27-msgpack
 
 Requires(post): chkconfig
@@ -142,42 +142,58 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/salt/master
 %config %{_sysconfdir}/salt/master.template
 
+
 %preun -n salt-master
-if [ $1 -eq 0 ] ; then
-    /sbin/service salt-master stop >/dev/null 2>&1
-    /sbin/service salt-syndic stop >/dev/null 2>&1
-    /sbin/chkconfig --del salt-master
-    /sbin/chkconfig --del salt-syndic
-fi
+  if [ $1 -eq 0 ] ; then
+      /sbin/service salt-master stop >/dev/null 2>&1
+      /sbin/service salt-syndic stop >/dev/null 2>&1
+      /sbin/chkconfig --del salt-master
+      /sbin/chkconfig --del salt-syndic
+  fi
 
 %preun -n salt-minion
-if [ $1 -eq 0 ] ; then
-    /sbin/service salt-minion stop >/dev/null 2>&1
-    /sbin/chkconfig --del salt-minion
-fi
+  if [ $1 -eq 0 ] ; then
+      /sbin/service salt-minion stop >/dev/null 2>&1
+      /sbin/chkconfig --del salt-minion
+  fi
 
 %post -n salt-master
-/sbin/chkconfig --add salt-master
-/sbin/chkconfig --add salt-syndic
+  /sbin/chkconfig --add salt-master
+  /sbin/chkconfig --add salt-syndic
 
 %post -n salt-minion
-/sbin/chkconfig --add salt-minion
+  /sbin/chkconfig --add salt-minion
 
 %postun -n salt-master
-if [ "$1" -ge "1" ] ; then
-    /sbin/service salt-master condrestart >/dev/null 2>&1 || :
-    /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
-fi
+  if [ "$1" -ge "1" ] ; then
+      /sbin/service salt-master condrestart >/dev/null 2>&1 || :
+      /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
+  fi
 
 %postun -n salt-minion
-if [ "$1" -ge "1" ] ; then
-    /sbin/service salt-master condrestart >/dev/null 2>&1 || :
-    /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
-fi
+  if [ "$1" -ge "1" ] ; then
+      /sbin/service salt-master condrestart >/dev/null 2>&1 || :
+      /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
+  fi
+
 
 %changelog
-* Sat Jun 16 2012 Clint Savage <herlo1@gmail.com> - 0.10.0-1
-- Moved to upstream release 0.10.0
+* Wed Oct 24 2012 Mike Chesnut <mikec@talksum.com> - 0.10.4-1
+- merge from upstream for 0.10.4 release
+
+* Tue Oct 2 2012 Clint Savage <herlo1@gmail.com> - 0.10.3-1
+- Moved to upstream release 0.10.3
+- Added systemd scriplets (RHBZ#850408)
+
+* Thu Aug 2 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-2
+- Fix upstream bug #1730 per RHBZ#845295
+
+* Sat Jul 31 2012 Clint Savage <herlo1@gmail.com> - 0.10.2-1
+- Moved to upstream release 0.10.2
+- Removed PyXML as a dependency
+
+* Sat Jun 16 2012 Clint Savage <herlo1@gmail.com> - 0.10.1-1
+- Moved to upstream release 0.10.1
 
 * Wed May 9 2012 Mike Chesnut <mikec@talksum.com> - 0.9.9dev-1talkos
 - customizing for TalkOS environment (package names, prereqs, initscripts)

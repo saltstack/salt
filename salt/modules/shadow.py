@@ -14,7 +14,7 @@ def __virtual__():
     '''
 
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] == 'Windows':
+    if __grains__['os'] == 'Windows' or __grains__['kernel'] == 'SunOS':
         return False
     return 'shadow'
 
@@ -146,3 +146,15 @@ def set_warndays(name, warndays):
     if post_info['warn'] != pre_info['warn']:
         return post_info['warn'] == warndays
     return False
+
+def set_date(name, date):
+    '''
+    sets the value for the date the password was last changed to the epoch (January 1, 1970). See man chage.
+
+    CLI Example::
+
+        salt '*' shadow.set_date username 0
+    '''
+    cmd = 'chage -d {0} {1}'.format(date, name)
+    __salt__['cmd.run'](cmd)
+    

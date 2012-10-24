@@ -9,6 +9,12 @@ Synopsis
 
     salt-call [options]
 
+Description
+===========
+
+The salt-call command is used to run module functions locally on a minion 
+instead of executing them from the master.
+
 Options
 =======
 

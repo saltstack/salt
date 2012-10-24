@@ -49,6 +49,17 @@ Options
     an explicit number of minions to execute at once, or a percentage of
     minions to execute on.
 
+.. option:: -a EAUTH, --auth=EAUTH
+
+    Pass in an external authentication medium to validate against. The
+    credentials will be prompted for. Can be used with the -T option.
+
+.. option:: -T, --make-token
+
+    Used in conjunction with the -a option. This creates a token that allows
+    for the authenticated user to send commands without needing to
+    re-authenticate.
+
 .. option:: --version
 
     Print the version of Salt that is running.
@@ -94,7 +105,11 @@ Options
 .. option:: -N, --nodegroup
 
     Use a predefined compound target defined in the Salt master configuration
-    file
+    file.
+
+.. option:: -S, --ipcidr
+
+    Match based on Subnet (CIDR notation) or IPv4 address.
 
 .. option:: -R, --range
 
@@ -108,7 +123,7 @@ Options
 .. option:: --return
 
     Chose an alternative returner to call on the minion, if an alternative
-    returner is used then the return will not come back tot he command line
+    returner is used then the return will not come back to the command line
     but will be sent to the specified return system.
 
 .. option:: -Q, --query

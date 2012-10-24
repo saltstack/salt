@@ -11,7 +11,7 @@ import random
 
 
 can_rename_open_file = False
-if os.name == 'nt': # pragma: no cover
+if os.name == 'nt':  # pragma: no cover
     _rename = lambda src, dst: False
     _rename_atomic = lambda src, dst: False
 
@@ -79,7 +79,7 @@ if os.name == 'nt': # pragma: no cover
         except OSError, e:
             if e.errno != errno.EEXIST:
                 raise
-            old = "%s-%08x" % (dst, random.randint(0, sys.maxint))
+            old = '{0}-{1:08x}'.format(dst, random.randint(0, sys.maxint))
             os.rename(dst, old)
             os.rename(src, dst)
             try:
@@ -123,7 +123,7 @@ class _AtomicWFile(object):
                 pass
 
     def __repr__(self):
-        return '<%s %s%r, mode %r>' % (
+        return '<{0} {1}{2}, mode {3}>'.format(
             self.__class__.__name__,
             self._f.closed and 'closed ' or '',
             self._filename,

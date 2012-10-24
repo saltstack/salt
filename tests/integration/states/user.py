@@ -5,7 +5,7 @@ user present
 user present with custom homedir
 '''
 import os
-from saltunittest import skipIf
+from saltunittest import skipIf, destructiveTest
 import integration
 import grp
 
@@ -24,7 +24,8 @@ class UserTest(integration.ModuleCase):
         result = ret[next(iter(ret))]['result']
         self.assertTrue(result)
 
-    @skipIf(not (os.geteuid()==0),'you must be this root to run this test')
+    @destructiveTest
+    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
     def test_user_not_present(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -36,7 +37,8 @@ class UserTest(integration.ModuleCase):
         self.assertTrue(result)
         ret = self.run_state('user.absent', name='salt_test')
 
-    @skipIf(not (os.geteuid()==0), 'you must be this root to run this test')
+    @destructiveTest
+    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
     def test_user_present_nondefault(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -48,7 +50,8 @@ class UserTest(integration.ModuleCase):
         self.assertTrue(os.stat('/var/lib/salt_test'))
         ret = self.run_state('user.absent', name='salt_test')
 
-    @skipIf(not (os.geteuid()==0), 'you must be this root to run this test')
+    @destructiveTest
+    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
     def test_user_present_gid_from_name_default(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -67,7 +70,8 @@ class UserTest(integration.ModuleCase):
         self.assertTrue(group_name == 'salt_test')
         ret = self.run_state('user.absent', name='salt_test')
 
-    @skipIf(not (os.geteuid()==0), 'you must be this root to run this test')
+    @destructiveTest
+    @skipIf(os.geteuid() is not 0, 'you must be this root to run this test')
     def test_user_present_gid_from_name(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.

@@ -112,10 +112,11 @@ def run(name, **kwargs):
     except Exception:
         ret['comment'] = 'Module function {0} threw an exception'.format(name)
         ret['result'] = False
+    else:
+        ret['changes']['ret'] = mret
 
     ret['comment'] = 'Module function {0} executed'.format(name)
     ret['result'] = True
-    ret['changes']['ret'] = mret
     return ret
 
 mod_watch = run

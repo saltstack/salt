@@ -49,7 +49,7 @@ def detail(device='/dev/md0'):
     '''
     ret = {}
     ret['members'] = {}
-    cmd = 'mdadm --detail %s' % device
+    cmd = 'mdadm --detail {0}'.format(device)
     for line in __salt__['cmd.run_stdout'](cmd).split('\n'):
         if line.startswith(device):
             continue

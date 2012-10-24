@@ -23,12 +23,13 @@ Here is a sample script::
     # Install saltstack
     add-apt-repository ppa:saltstack/salt -y
     apt-get update -y
-    apt-get install salt -y
+    apt-get install salt-minion -y
+    apt-get install salt-master -y
     apt-get upgrade -y
 
     # Set salt master location and start minion
     cp /etc/salt/minion.template /etc/salt/minion
-    sed -i '' -e 's/#master: salt/master: [salt_master_fqdn]' /etc/salt/minion
+    sed -i 's/#master: salt/master: [salt_master_fqdn]/' /etc/salt/minion
     salt-minion -d
 
 First the script adds the saltstack ppa and installs the package. Then

@@ -6,7 +6,7 @@ Salt 0.9.0 introduced the capability for Salt minions to publish commands. The
 intent of this feature is not for Salt minions to act as independent brokers
 one with another, but to allow Salt minions to pass commands to each other.
 
-In Salt 1.0 the ability to execute runners from the master was added. This
+In Salt 0.10.0 the ability to execute runners from the master was added. This
 allows for the master to return collective data from runners back to the
 minions via the peer interface.
 

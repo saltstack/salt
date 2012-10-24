@@ -3,10 +3,13 @@ Minion side functions for salt-cp
 '''
 # Import python libs
 import os
+import logging
 
 # Import salt libs
 import salt.minion
 import salt.fileclient
+
+log = logging.getLogger(__name__)
 
 
 def recv(files, dest):
@@ -195,6 +198,18 @@ def list_master(env='base'):
     '''
     client = salt.fileclient.get_file_client(__opts__)
     return client.file_list(env)
+
+
+def list_master_dirs(env='base'):
+    '''
+    List all of the directories stored on the master
+
+    CLI Exmaple::
+
+        salt '*' cp.list_master_dirs
+    '''
+    client = salt.fileclient.get_file_client(__opts__)
+    return client.dir_list(env)
 
 
 def list_minion(env='base'):

@@ -65,7 +65,8 @@ def inodeusage(args=None):
         salt '*' disk.inodeusage
     '''
     cmd = 'df -i'
-    cmd = cmd + ' -' + args
+    if args is not None:
+        cmd = cmd + ' -' + args
     ret = {}
     out = __salt__['cmd.run'](cmd).split('\n')
     for line in out:

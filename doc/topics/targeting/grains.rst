@@ -6,6 +6,12 @@ Salt comes with an interface to derive information about the underlying system.
 This is called the grains interface, because it presents salt with grains of
 information.
 
+.. glossary::
+
+    Grains
+        Static bits of information that a minion collects about the system when
+        the minion first starts.
+
 The grains interface is made available to Salt modules and components so that
 the right salt minion commands are automatically available on the right
 systems.

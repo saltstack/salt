@@ -2,12 +2,14 @@
 States tutorial, part 2
 =======================
 
-This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`. It is
-recommended that you begin there.
+.. note:: 
 
-In the last Salt States tutorial we covered the basics of installing a package.
-In this tutorial we will modify our ``webserver.sls`` file to be more
-complicated, have requirements, and use even more Salt States.
+  This tutorial builds on the topic covered in :doc:`part 1 <states_pt1>`.
+  It is recommended that you begin there.
+
+In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered
+the basics of installing a package. We will now modify our ``webserver.sls``
+file to have requirements, and use even more Salt States.
 
 Call multiple States
 ====================
@@ -158,4 +160,4 @@ Next steps
 ==========
 
 In :doc:`part 3 <states_pt3>` we will discuss how to use includes, extends and
-templating to make hugely complicated State Tree configurations dead-simple.
+templating to make a more complete State Tree configuration.

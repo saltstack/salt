@@ -53,7 +53,7 @@ def returner(ret):
                'id': ret['id']}
     if isinstance(ret['return'], dict):
         for key, value in ret['return'].items():
-            columns['return.%s' % (key,)] = str(value)
+            columns['return.{0}'.format(key)] = str(value)
     else:
         columns['return'] = str(ret['return'])
 

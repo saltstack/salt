@@ -14,11 +14,14 @@ Full Table of Contents
     topics/tutorials/modules
     topics/tutorials/starting_states
     topics/tutorials/states*
+    topics/eauth/*
     topics/tutorials/firewall
     topics/tutorials/bootstrap_ec2
+    topics/tutorials/esky
     topics/tutorials/preseed_key
     topics/tutorials/standalone_minion
     topics/pillar/index
+    topics/master_tops/index
     topics/jobs/index
     topics/nonroot
     topics/troubleshooting/index
@@ -26,6 +29,7 @@ Full Table of Contents
     topics/community
     topics/projects/index
     topics/event/index
+    topics/tests/*
 
     ref/index
     ref/modules/*
@@ -36,8 +40,13 @@ Full Table of Contents
     ref/states/all/index
     ref/renderers/*
     ref/renderers/all/index
-    ref/runners
+    ref/pillar/*
+    ref/pillar/all/index
+    ref/tops/*
+    ref/topstops/all/index
+    ref/runners/index
     ref/peer
+    ref/clientacl
     ref/syndic
     ref/python-api
     ref/file_server/index

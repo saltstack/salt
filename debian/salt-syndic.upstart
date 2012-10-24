@@ -6,7 +6,6 @@ start on (net-device-up
 stop on runlevel [!2345]
 
 respawn limit 10 5
+respawn
 
-script
-  exec /usr/bin/python /usr/bin/salt-syndic > /dev/null 2>&1
-end script
+exec /usr/bin/salt-syndic >/dev/null 2>&1

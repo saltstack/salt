@@ -188,7 +188,6 @@ def auth_keys(user, config='.ssh/authorized_keys'):
 
         salt '*' ssh.auth_keys root
     '''
-    ret = {}
     uinfo = __salt__['user.info'](user)
     full = os.path.join(uinfo['home'], config)
     if not os.path.isfile(full):
@@ -270,19 +269,12 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
                 # not an auth ssh key, perhaps a blank line
                 continue
 
-            opts = ln.group(1)
             comps = ln.group(2).split()
 
             if len(comps) < 2:
                 # Not a valid line
                 lines.append(line)
                 continue
-
-            if opts:
-                # It has options, grab them
-                options = opts.split(',')
-            else:
-                options = []
 
             pkey = comps[1]
 
@@ -345,12 +337,14 @@ def set_auth_key(
         options=[],
         config='.ssh/authorized_keys'):
     '''
-    Add a key to the authorized_keys file
+    Add a key to the authorized_keys file. The "key" parameter must only be the
+    string of text that is the encoded key. If the key begins with "ssh-rsa"
+    or ends with user@host, remove those from the key before passing it to this
+    function.
 
     CLI Example::
 
-        salt '*' ssh.set_auth_key <user> key='<key>' enc='dsa'\
-                comment='my key' options='[]' config='.ssh/authorized_keys'
+        salt '*' ssh.set_auth_key <user> '<key>' enc='dsa'
     '''
     if len(key.split()) > 1:
         return 'invalid'

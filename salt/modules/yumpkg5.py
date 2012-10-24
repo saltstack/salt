@@ -13,7 +13,7 @@ def __virtual__():
     '''
     # Return this for pkg on RHEL/Fedora based distros that do not ship with
     # python 2.6 or greater.
-    dists = ('CentOS', 'Scientific', 'RedHat')
+    dists = ('CentOS', 'Scientific', 'RedHat', 'CloudLinux')
     if __grains__['os'] == 'Fedora':
         if int(__grains__['osrelease'].split('.')[0]) < 11:
             return 'pkg'
@@ -134,7 +134,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     cmd = 'yum -q clean dbcache'
-    retcode = __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.retcode'](cmd)
     return True
 
 
@@ -171,7 +171,7 @@ def install(pkg, refresh=False, repo='', skip_verify=False, **kwargs):
 
     if refresh:
         refresh_db()
-    retcode = __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -205,7 +205,7 @@ def upgrade():
     '''
     old = list_pkgs()
     cmd = 'yum -q -y upgrade'
-    retcode = __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     pkgs = {}
     for npkg in new:
@@ -236,7 +236,7 @@ def remove(pkg):
     '''
     old = list_pkgs()
     cmd = 'yum -q -y remove ' + pkg
-    retcode = __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.retcode'](cmd)
     new = list_pkgs()
     return _list_removed(old, new)
 

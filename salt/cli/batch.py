@@ -29,22 +29,10 @@ class Batch(object):
                 [],
                 1,
                 ]
-        if self.opts['pcre']:
-            args.append('pcre')
-        elif self.opts['list']:
-            args.append('list')
-        elif self.opts['grain']:
-            args.append('grain')
-        elif self.opts['grain_pcre']:
-            args.append('grain_pcre')
-        elif self.opts['exsel']:
-            args.append('exsel')
-        elif self.opts['pillar']:
-            args.append('pillar')
-        elif self.opts['nodegroup']:
-            args.append('nodegroup')
-        elif self.opts['compound']:
-            args.append('compound')
+
+        selected_target_option = self.opts.get('selected_target_option', None)
+        if selected_target_option is not None:
+            args.append(selected_target_option)
         else:
             args.append('glob')
 
