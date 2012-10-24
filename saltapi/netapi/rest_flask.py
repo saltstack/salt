@@ -4,15 +4,10 @@ A REST interface for Salt using the Flask framework
 import itertools
 import json
 
-from flask import Flask
-from flask.globals import current_app
-from flask import jsonify
-from flask import redirect
-from flask import request
-from flask import Response
-from flask import url_for
-from flask.views import MethodView
-from werkzeug import exceptions
+import flask
+import flask.globals
+import flask.views
+import werkzeug.exceptions
 
 import salt.client
 import salt.log
@@ -32,7 +27,7 @@ def __virtual__():
 
     return 'rest'
 
-class SaltAPI(MethodView):
+class SaltAPI(flask.views.MethodView):
     '''
     Base class for salt objects
     '''
@@ -44,8 +39,8 @@ class SaltAPI(MethodView):
         '''
         Run a given function in a given client with the given args
         '''
-        lowvals = itertools.izip_longest(*[i[1] for i in request.form.lists()])
-        lowdata = [dict(zip(request.form.keys(), i)) for i in lowvals]
+        lowvals = itertools.izip_longest(*[i[1] for i in flask.request.form.lists()])
+        lowdata = [dict(zip(flask.request.form.keys(), i)) for i in lowvals]
         logger.debug("SaltAPI is passing LowData: %s", lowdata)
         ret = [self.api.run(chunk) for chunk in lowdata]
         return json_response(ret)
@@ -64,14 +59,14 @@ class JobsView(SaltAPI):
         Return the output from a previously run job
         '''
         ret = self.runner.cmd('jobs.lookup_jid', [jid])
-        return jsonify(ret)
+        return flask.jsonify(ret)
 
     def _get_jobs_list(self):
         '''
         Return a list of previously run jobs
         '''
         ret = self.runner.cmd('jobs.list_jobs', [])
-        return jsonify(ret)
+        return flask.jsonify(ret)
 
     def get(self, jid=None):
         '''
@@ -94,7 +89,7 @@ class MinionsView(SaltAPI):
         specified. This runs the :py:func:`salt.modules.grains.items` and
         :py:func:`salt.modules.sys.list_functions` commands.
         '''
-        return jsonify(self.local.cmd(mid or '*',
+        return flask.jsonify(self.local.cmd(mid or '*',
             ['sys.list_functions', 'grains.items'], [[], []]))
 
     def post(self):
@@ -104,27 +99,27 @@ class MinionsView(SaltAPI):
         function parameters *must* have a corresponding arguments parameter,
         even if it is empty.
         '''
-        tgt = request.form.get('tgt')
-        expr = request.form.get('expr', 'glob')
-        funs = request.form.getlist('fun')
+        tgt = flask.request.form.get('tgt')
+        expr = flask.request.form.get('expr', 'glob')
+        funs = flask.request.form.getlist('fun')
         args = []
 
         # Make a list & strip out empty strings: ['']
-        for i in request.form.getlist('arg'):
+        for i in flask.request.form.getlist('arg'):
             args.append([i] if i else [])
 
         if not tgt:
-            raise exceptions.BadRequest("Missing target.")
+            raise werkzeug.exceptions.BadRequest("Missing target.")
 
         if not funs:
-            raise exceptions.BadRequest("Missing command(s).")
+            raise werkzeug.exceptions.BadRequest("Missing command(s).")
 
         if len(funs) != len(args):
-            raise exceptions.BadRequest(
+            raise werkzeug.exceptions.BadRequest(
                     "Mismatched number of commands and args.")
 
         jid = self.local.run_job(tgt, funs, args, expr_form=expr).get('jid')
-        return redirect(url_for('jobs', jid=jid, _method='GET'))
+        return flask.redirect(flask.url_for('jobs', jid=jid, _method='GET'))
 
 class RunnersView(SaltAPI):
     '''
@@ -135,29 +130,29 @@ class RunnersView(SaltAPI):
         '''
         Return all available runners
         '''
-        return jsonify({'runners': self.runner.functions.keys()})
+        return flask.jsonify({'runners': self.runner.functions.keys()})
 
     def post(self):
         '''
         Execute a runner command and return the result
         '''
-        fun = request.form.get('fun')
-        arg = request.form.get('arg')
+        fun = flask.request.form.get('fun')
+        arg = flask.request.form.get('arg')
 
         # pylint: disable-msg=W0142
         ret = self.runner.cmd(fun, arg)
-        return jsonify({'return': ret})
+        return flask.jsonify({'return': ret})
 
 
 def json_response(obj):
-    return current_app.response_class(json.dumps(obj),
+    return flask.globals.current_app.response_class(json.dumps(obj),
             mimetype='application/json')
 
 def build_app():
     '''
     Build the Flask app
     '''
-    app = Flask(__name__)
+    app = flask.Flask(__name__)
 
     def make_json_error(ex):
         '''
@@ -165,7 +160,7 @@ def build_app():
         '''
         status = getattr(ex, 'code', 500)
 
-        response = jsonify(message='Error {0}: {1}'.format(
+        response = flask.jsonify(message='Error {0}: {1}'.format(
             status,
             ex if app.debug else 'Internal server error',
         ))
