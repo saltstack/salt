@@ -30,10 +30,10 @@ class PipStateTest(integration.ModuleCase):
 
             for key in ret.keys():
                 self.assertFalse(ret[key]['result'])
-                self.assertEqual(
+                self.assertRegexpMatches(
                     ret[key]['comment'],
-                    'Error installing \'supervisor\': /bin/bash: '
-                    '/tmp/pip-installed-errors: No such file or directory'
+                    'Error installing \'supervisor\': .* '
+                    '[nN]o such file or directory'
                 )
 
             # We now create the missing virtualenv

@@ -59,10 +59,21 @@ def _sync(form, env=None):
                 )
         log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
         for fn_ in cache:
-            relpath = os.path.relpath(fn_, local_cache_dir)
-            relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
-            remote.add(relpath)
-            dest = os.path.join(mod_dir, relpath)
+            if __opts__.get('file_client', '') == 'local':
+                for fn_root in __opts__['file_roots'].get(sub_env, []):
+                    if fn_.startswith(fn_root):
+                        relpath = os.path.relpath(fn_, fn_root)
+                        relpath = relpath[relpath.index('/') +1:]
+                        relname = os.path.splitext(relpath)[0].replace(
+                                os.sep,
+                                '.')
+                        remote.add(relpath)
+                        dest = os.path.join(mod_dir, relpath)
+            else:
+                relpath = os.path.relpath(fn_, local_cache_dir)
+                relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
+                remote.add(relpath)
+                dest = os.path.join(mod_dir, relpath)
             log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it

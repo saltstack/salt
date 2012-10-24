@@ -20,9 +20,15 @@ module detected for Arch Linux, the systemd module can be used:
         - enable: True
         - provider: systemd
 
-In this instance the systemd module will replace the service virtual module
-which is used by default on Arch Linux, and the httpd service will be set up
-using systemd.
+In this instance the :py:mod:`~salt.modules.systemd` module will replace the
+:py:mod:`~salt.modules.service` basic module which is used by default on Arch
+Linux, and the :program:`httpd` service will be set up using
+:program:`systemd`.
+
+.. note::
+
+    You can also set a provider globally in the minion config
+    :conf_minion:`providers`.
 
 Arbitrary Module Redirects
 ==========================
@@ -39,7 +45,8 @@ module can be used to provide certain functionality.
           - pkg: yumpkg5
           - cmd: customcmd
 
-In this example the default pkg module is being redirected to use the *yumpkg5*
-module (*yum* via shelling out instead of via the yum API), but is also using
-a custom module to invoke commands. This could be used to dramatically change
-the behavior of a given state.
+In this example the default :py:mod:`~salt.modules.pkg` module is being
+redirected to use the :py:mod:`~salt.modules.yumpkg5` module (:program:`yum`
+via shelling out instead of via the :program:`yum` Python API), but is also
+using a custom module to invoke commands. This could be used to dramatically
+change the behavior of a given state.

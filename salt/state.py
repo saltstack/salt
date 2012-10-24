@@ -29,7 +29,7 @@ import salt.fileclient
 from salt._compat import string_types, callable
 
 from salt.template import compile_template, compile_template_str
-from salt.exceptions import SaltReqTimeoutError
+from salt.exceptions import SaltReqTimeoutError, SaltException
 
 log = logging.getLogger(__name__)
 
@@ -263,6 +263,24 @@ class State(object):
                 _refresh()
         elif data['state'] == 'pkg':
             _refresh()
+
+    def verify_ret(self, ret):
+        '''
+        Verify the state return data
+        '''
+        if not isinstance(ret, dict):
+            raise SaltException(
+                    'Malformed state return, return must be a dict'
+                    )
+        bad = []
+        for val in ['name', 'result', 'changes', 'comment']:
+            if not val in ret:
+                bad.append(val)
+        if bad:
+            raise SaltException(
+                    ('The following keys were not present in the state '
+                     'return: {0}'
+                     ).format(','.join(bad)))
 
     def verify_data(self, data):
         '''
@@ -606,9 +624,10 @@ class State(object):
             for name, body in ext_chunk.items():
                 if name not in high:
                     errors.append(
-                        'Extension {0} is not part of the high state'.format(
-                            name
-                            )
+                        'Cannot extend ID {0} in "{1}:{2}". It is not part '
+                        'of the high state.'.format(name,
+                                                    body['__env__'],
+                                                    body['__sls__'])
                         )
                     continue
                 for state, run in body.items():
@@ -647,6 +666,10 @@ class State(object):
                                         # Replace the value
                                         high[name][state][hind] = arg
                                         update = True
+                                if (argfirst == 'name' and
+                                    next(iter(high[name][state][hind])) == 'names'):
+                                    # If names are overwritten by name use the name
+                                    high[name][state][hind] = arg
                         if not update:
                             high[name][state].append(arg)
         return high, errors
@@ -860,6 +883,7 @@ class State(object):
                     *cdata['args'], **cdata['kwargs'])
             else:
                 ret = self.states[cdata['full']](*cdata['args'])
+            self.verify_ret(ret)
         except Exception:
             trb = traceback.format_exc()
             ret = {
@@ -1568,9 +1592,11 @@ class BaseHighState(object):
                                 errors.append(('Detected conflicting IDs, SLS'
                                 ' IDs need to be globally unique.\n    The'
                                 ' conflicting ID is "{0}" and is found in SLS'
-                                ' "{1}" and SLS "{2}"').format(
+                                ' "{1}:{2}" and SLS "{3}:{4}"').format(
                                         id_,
+                                        highstate[id_]['__env__'],
                                         highstate[id_]['__sls__'],
+                                        state[id_]['__env__'],
                                         state[id_]['__sls__'])
                                 )
                     if state:

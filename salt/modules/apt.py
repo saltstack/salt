@@ -13,7 +13,6 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-
     return 'pkg' if __grains__['os'] in ('Debian', 'Ubuntu') else False
 
 
@@ -283,7 +282,7 @@ def list_pkgs(regex_string=""):
 
     for line in out.split('\n'):
         cols = line.split()
-        if len(cols) and 'install' in cols[0] and 'installed' in cols[2]:
+        if len(cols) and ('install' in cols[0] or 'hold' in cols[0]) and 'installed' in cols[2]:
             ret[cols[3]] = cols[4]
 
     # If ret is empty at this point, check to see if the package is virtual.

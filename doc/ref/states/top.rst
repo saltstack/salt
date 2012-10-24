@@ -10,10 +10,17 @@ matches systems should draw from.
 Environments
 ============
 
+.. glossary::
+
+    Environment
+        A configuration that allows conceptually organizing state tree
+        directories. Environments can be made to be self-contained or state
+        trees can be made to bleed through environments.
+
 The environments in the top file corresponds with the environments defined in
-the file_roots variable. In a simple, single environment setup you only have
-the base environment, and therefore only one state tree. Here is a simple
-example of file_roots in the master configuration:
+the :conf_master:`file_roots` variable. In a simple, single environment setup
+you only have the ``base`` environment, and therefore only one state tree. Here
+is a simple example of :conf_master:`file_roots` in the master configuration:
 
 .. code-block:: yaml
 
@@ -31,9 +38,9 @@ here is a simple, single environment top file:
         - core
         - edit
 
-This also means that /srv/salt has a state tree. But if you want to use
+This also means that :file:`/srv/salt` has a state tree. But if you want to use
 multiple environments, or partition the file server to serve more than
-just the state tree, then the file_roots option can be expanded:
+just the state tree, then the :conf_master:`file_roots` option can be expanded:
 
 .. code-block:: yaml
 
@@ -67,12 +74,12 @@ Then our top file could reference the environments:
       'db*prod*':
         - db
 
-In this setup we have state trees in 3 of the 4 environments, and no state
-tree in the base environment. Notice that the targets for the minions
+In this setup we have state trees in three of the four environments, and no
+state tree in the ``base`` environment. Notice that the targets for the minions
 specify environment data. In Salt the master determines who is in what
-environment, and many environments can be crossed together. For instance,
-a separate global state tree could be added to the base environment if
-it suits your deployment:
+environment, and many environments can be crossed together. For instance, a
+separate global state tree could be added to the ``base`` environment if it
+suits your deployment:
 
 .. code-block:: yaml
 

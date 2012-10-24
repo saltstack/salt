@@ -36,5 +36,5 @@ existing user keys and re-start the Salt master:
 
 .. code-block:: bash
 
-    rm /var/cache/salt/.*keys
+    rm /var/cache/salt/.*key
     service salt-master restart

@@ -1,4 +1,4 @@
-.TH "SALT" "7" "September 30, 2012" "0.10.3" "Salt"
+.TH "SALT" "7" "October 23, 2012" "0.10.4" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -1103,8 +1103,7 @@ git clone git://github.com/saltstack/salt.git
 .fi
 .INDENT 0.0
 .IP 2. 4
-Install \fI\%Microsoft Visual Studio 2008 Express\fP with the web installer.
-Or \fI\%download a full iso with the installer\fP .
+Install \fI\%Microsoft Visual Studio 2008 Express\fP.
 You must use Visual Studio 2008 Express, \fBnot\fP Visual Studio 2010 Express.
 .IP 3. 4
 Install \fI\%Python 2.7.x\fP
@@ -1243,9 +1242,19 @@ You should get the following response: {\(aqyour minion hostname\(aq: True}
 .fi
 .SS Solaris
 .sp
-Salt was added to the OpenCSW package repository in September of 2012 by Romeo Theriault <\fI\%romeot@hawaii.edu\fP> at version 0.10.2 of Salt. It has mainly been tested on Solaris 10 (sparc), though it is built for, and should work fine on Solaris 10 (x86), Solaris 9 (sparc/x86) and 11 (sparc/x86) also. Most of the testing has also just focused on the minion, though it has verified that the master starts up successfully on Solaris 10.
+Salt was added to the OpenCSW package repository in September of 2012 by Romeo Theriault <\fI\%romeot@hawaii.edu\fP> at version 0.10.2 of Salt. It has mainly been tested on Solaris 10 (sparc), though it is built for and has been tested minimally on Solaris 10 (x86), Solaris 9 (sparc/x86) and 11 (sparc/x86). (Please let me know if you\(aqre using it on these platforms!) Most of the testing has also just focused on the minion, though it has verified that the master starts up successfully on Solaris 10.
 .sp
-Comments and patches for better support on these platforms is very welcome. Currently at version 0.10.2 of salt, grain detection is weak but patches that very much improve the grain detection will be released in 0.10.3. Work is also underway to include support for services and packages in Solaris.
+Comments and patches for better support on these platforms is very welcome. Currently at version 0.10.3 of salt, remote execution works good, grain detection is good and service control with SMF is supported. Work is underway to fill in the remaining gaps by adding support for the following:
+.INDENT 0.0
+.IP 1. 3
+\(aqpkg\(aq states with pkgadd and pkgutil modules
+.IP 2. 3
+support for solaris cron
+.IP 3. 3
+support for user and group management
+.UNINDENT
+.sp
+We hope to have all of the above included in v0.10.4 of Salt.
 .sp
 Salt is dependent on the following additional packages. These will automatically be installed as
 dependencies of the \fBpy_salt\fP package.
@@ -1651,7 +1660,7 @@ line or assign \fBuser\fP in the
 .sp
 There is also a full \fBtroubleshooting guide\fP
 available.
-.SS Manage Salt public keys
+.SS Manage Salt Public Keys
 .sp
 Salt manages authentication with RSA public keys. The keys are managed on the
 \fImaster\fP via the \fBsalt\-key\fP command. Once a \fIminion\fP
@@ -1820,6 +1829,12 @@ salt \-L \(aqweb1,web2,web3\(aq test.ping
 Salt comes with an interface to derive information about the underlying system.
 This is called the grains interface, because it presents salt with grains of
 information.
+.INDENT 0.0
+.TP
+.B Grains
+Static bits of information that a minion collects about the system when
+the minion first starts.
+.UNINDENT
 .sp
 The grains interface is made available to Salt modules and components so that
 the right salt minion commands are automatically available on the right
@@ -1993,6 +2008,14 @@ T}	T{
 \fBI@pdata:foobar\fP
 T}
 _
+T{
+S
+T}	T{
+Subnet/IP addr match
+T}	T{
+\fBS@192.168.1.0/24\fP or \fBS@192.168.1.100\fP
+T}
+_
 .TE
 .sp
 Matchers can be joined using boolean \fBand\fP, \fBor\fP, and \fBnot\fP operators.
@@ -2148,6 +2171,16 @@ Space\-delimited arguments to the function:
 salt \(aq*\(aq cmd.exec_code python \(aqimport sys; print sys.version\(aq
 .ft P
 .fi
+.sp
+Optional, keyword arguments are also supported:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pip.install salt timeout=5 upgrade=True
+.ft P
+.fi
+.sp
+They are always in the form of \fBkwarg=argument\fP.
 .SH HOW DO I USE SALT STATES?
 .sp
 Simplicity, Simplicity, Simplicity
@@ -2434,11 +2467,11 @@ The default rendering system is the \fByaml_jinja\fP renderer. The
 templating system, and then through the YAML parser. The benefit here is that
 full programming constructs are available when creating SLS files.
 .sp
-Other renderers available are \fByaml_mako\fP which uses the \fI\%Mako\fP templating
-system rather than the jinja templating system, and more notably, the pure
-Python or \fBpy\fP renderer. The \fBpy\fP renderer allows for SLS files to be
-written in pure Python, allowing for the utmost level of flexibility and
-power when preparing SLS data.
+Other renderers available are \fByaml_mako\fP and \fByaml_wempy\fP which each use
+the \fI\%Mako\fP or \fI\%Wempy\fP templating system respectively rather than the jinja
+templating system, and more notably, the pure Python or \fBpy\fP renderer.
+The \fBpy\fP renderer allows for SLS files to be written in pure Python, allowing
+for the utmost level of flexibility and power when preparing SLS data.
 .SS Getting to Know the Default \- yaml_jinja
 .sp
 The default renderer \- \fByaml_jinja\fP, allows for the use of the jinja
@@ -2970,7 +3003,7 @@ is \fI\%Jinja2\fP  and may be configured by changing the \fBrenderer\fP
 value in the master config.
 .sp
 All states are passed through a templating system when they are initially read.
-To make use of the templating system, simple add some templating markup.
+To make use of the templating system, simply add some templating markup.
 An example of an sls module with templating markup may look like this:
 .sp
 .nf
@@ -3166,6 +3199,113 @@ state trees that you build and want to share!
 .sp
 If you have any questions, suggestions, or just want to chat with other people
 who are using Salt we have an \fBactive community\fP.
+.SH ACCESS CONTROL SYSTEM
+.sp
+New in version 0.10.4.
+.sp
+Salt maintains a standard system used to open granular control to non
+administrative users to execute Salt commands. The access control system
+has been applied to all systems used to configure access to non administrative
+control interfaces in Salt.These interfaces include, the \fBpeer\fP system, the
+\fBexternal auth\fP system and the \fBclient acl\fP system.
+.sp
+The access control system mandated a standard configuration syntax used in
+all of the three aforementioned systems. While this adds functionality to the
+configuration in 0.10.4, it does not negate the old configuration.
+.sp
+Now specific functions can be opened up to specific minions from specific users
+in the case of external auth and client acls, and for specific minions in the
+case of the peer system.
+.sp
+The access controls are manifest using matchers in these configurations:
+.sp
+.nf
+.ft C
+client_acl:
+  fred:
+    \- web\e*:
+      \- pkg.list_pkgs
+      \- test.*
+      \- apache.*
+.ft P
+.fi
+.sp
+In the above example, fred is able to send commands only to minions which match
+the specifieed glob target. This can be expanded to include other functions for
+other minions based on standard targets.
+.sp
+.nf
+.ft C
+external_auth:
+  pam:
+    dave:
+      \- mongo\e*:
+        \- network.*
+      \- log\e*:
+        \- network.*
+        \- pkg.*
+      \- \(aqG@os:RedHat\(aq:
+        \- kmod.*
+      \- test.ping
+.ft P
+.fi
+.sp
+The above allows for all minions to be hit by test.ping by dave, and adds a
+few functions for hitting other minions.
+.SH EXTERNAL AUTHENTICATION SYSTEM
+.sp
+Salt 0.10.4 comes with a fantastic new way to open up running Salt commands
+to users. This system allows for Salt itself to pass through authentication to
+any authentication system (The Unix PAM system was the first) to determine
+if a user has permission to execute a Salt command.
+.sp
+The external authentication system allows for specific users to be granted
+access to execute specific functions on specific minions. Access is configured
+in the master configuration file, and uses the new access control system:
+.sp
+.nf
+.ft C
+external_auth:
+  pam:
+    thatch:
+      \- \(aqweb*\(aq:
+        \- test.*
+        \- network.*
+.ft P
+.fi
+.sp
+So, the above allows the user thatch to execute functions in the test and
+network modules on the minions that match the web* target.
+.sp
+The external authentication system can then be used from the command line by
+any user on the same system as the master with the \fI\-a\fP option:
+.sp
+.nf
+.ft C
+$ salt \-a pam web\e* test.ping
+.ft P
+.fi
+.sp
+The system will ask the user for the credentials required buy the
+authentication system and then publish the command.
+.SS Tokens
+.sp
+With external authentication alone the authentication credentials will be
+required with every call to Salt. This can be alleviated with Salt tokens.
+.sp
+The tokens are short term authorizations and can be easily created by just
+adding a capital T option when authenticating:
+.sp
+.nf
+.ft C
+$ salt \-T \-a pam web\e* test.ping
+.ft P
+.fi
+.sp
+Now a token will be created that has a expiration of, by default, 12 hours.
+This token is stored in the active user\(aqs home directory and is now sent with
+all subsequent communications, so the authentication does not need to be
+declared again until the token expires.
 .SH OPENING THE FIREWALL UP FOR SALT
 .sp
 The Salt master communicates with the minions using an AES\-encrypted ZeroMQ
@@ -3232,8 +3372,8 @@ to allow traffic on \fBtcp/4505\fP and \fBtcp/4506\fP:
 .sp
 .nf
 .ft C
-+ \-A INPUT \-m state \-\-state new \-m tcp \-p tcp \-\-dport 4505 \-j ACCEPT
-+ \-A INPUT \-m state \-\-state new \-m tcp \-p tcp \-\-dport 4506 \-j ACCEPT
+\-A INPUT \-m state \-\-state new \-m tcp \-p tcp \-\-dport 4505 \-j ACCEPT
+\-A INPUT \-m state \-\-state new \-m tcp \-p tcp \-\-dport 4506 \-j ACCEPT
 .ft P
 .fi
 .sp
@@ -3257,8 +3397,8 @@ master.
 .sp
 .nf
 .ft C
-+ pass in on $int_if proto tcp from any to $int_if port 4505
-+ pass in on $int_if proto tcp from any to $int_if port 4506
+pass in on $int_if proto tcp from any to $int_if port 4505
+pass in on $int_if proto tcp from any to $int_if port 4506
 .ft P
 .fi
 .sp
@@ -3297,12 +3437,13 @@ Here is a sample script:
 # Install saltstack
 add\-apt\-repository ppa:saltstack/salt \-y
 apt\-get update \-y
-apt\-get install salt \-y
+apt\-get install salt\-minion \-y
+apt\-get install salt\-master \-y
 apt\-get upgrade \-y
 
 # Set salt master location and start minion
 cp /etc/salt/minion.template /etc/salt/minion
-sed \-i \(aq\(aq \-e \(aqs/#master: salt/master: [salt_master_fqdn]\(aq /etc/salt/minion
+sed \-i \(aqs/#master: salt/master: [salt_master_fqdn]/\(aq /etc/salt/minion
 salt\-minion \-d
 .ft P
 .fi
@@ -3338,6 +3479,76 @@ meantime, you can use the bootstrap to \fI\%build one\fP.
 It may also be useful to set the node\(aqs role during this phase. One option
 would be saving the node\(aqs role to a file and then using a custom Grain
 to select it.
+.SH AUTOMATIC UPDATES / FROZEN DEPLOYMENTS
+.sp
+New in version 0.10.3.d.
+.sp
+Salt has support for the
+\fI\%Esky\fP application freezing and update
+tool. This tool allows one to build a complete zipfile out of the salt scripts
+and all their dependencies \- including shared objects / DLLs.
+.SS Getting Started
+.sp
+To build frozen applications, you\(aqll need a suitable build environment for each
+of your platforms. You should probably set up a virtualenv in order to limit
+the scope of Q/A.
+.sp
+This process does work on Windows. Follow the directions at
+\fI\%https://github.com/saltstack/salt-windows-install\fP for details on
+installing Salt in Windows. Only the 32\-bit Python and dependencies have been
+tested, but they have been tested on 64\-bit Windows.
+.sp
+You will need to install \fBesky\fP and \fBbbfreeze\fP from Pypi in order to enable
+the \fBbdist_esky\fP command in \fBsetup.py\fP.
+.SS Building and Freezing
+.sp
+Once you have your tools installed and the environment configured, you can then
+\fBpython setup.py sdist\fP to get the eggs prepared. After that is done, run
+\fBpython setup.py bdist_esky\fP to have Esky traverse the module tree and pack
+all the scripts up into a redistributable. There will be an appropriately
+versioned \fBsalt\-VERSION.zip\fP in \fBdist/\fP if everything went smoothly.
+.SS Windows
+.sp
+You will need to add \fBC:\ePython27\elib\esite\-packages\ezmq\fP to your PATH
+variable. This helps bbfreeze find the zmq dll so it can pack it up.
+.SS Using the Frozen Build
+.sp
+Unpack the zip file in your desired install location. Scripts like
+\fBsalt\-minion\fP and \fBsalt\-call\fP will be in the root of the zip file. The
+associated libraries and bootstrapping will be in the directories at the same
+level. (Check the \fI\%Esky\fP documentation
+for more information)
+.sp
+To support updating your minions in the wild, put your builds on a web server
+that your minions can reach. \fBsalt.modules.saltutil.update()\fP will
+trigger an update and (optionally) a restart of the minion service under the
+new version.
+.SS Gotchas
+.SS My Windows minion isn\(aqt responding
+.sp
+The process dispatch on Windows is slower than it is on *nix. You may need to
+add \(aq\-t 15\(aq to your salt calls to give them plenty of time to return.
+.SS Windows and the Visual Studio Redist
+.sp
+You will need to install the Visual C++ 2008 32\-bit redistributable on all
+Windows minions. Esky has an option to pack the library into the zipfile,
+but OpenSSL does not seem to acknowledge the new location. If you get a
+\fBno OPENSSL_Applink\fP error on the console when trying to start your
+frozen minion, you have forgotten to install the redistributable.
+.SS Mixed Linux environments and Yum
+.sp
+The Yum Python module doesn\(aqt appear to be available on any of the standard
+Python package mirrors. If you need to support RHEL/CentOS systems, you
+should build on that platform to support all your Linux nodes. Also remember
+to build your virtualenv with \fB\-\-system\-site\-packages\fP so that the
+\fByum\fP module is included.
+.SS Automatic (Python) module discovery
+.sp
+Automatic (Python) module discovery does not work with the late\-loaded scheme that
+Salt uses for (Salt) modules. You will need to explicitly add any
+misbehaving modules to the \fBfreezer_includes\fP in Salt\(aqs \fBsetup.py\fP.
+Always check the zipped application to make sure that the necessary modules
+were included.
 .SH PRESEED MINION WITH ACCEPTED KEY
 .sp
 In some situations, it is not convenient to wait for a minion to start before
@@ -3613,6 +3824,26 @@ control and flexibility when targeting minions.
 .nf
 .ft C
 salt \-I \(aqsomekey:specialvalue\(aq test.ping
+.ft P
+.fi
+.SH MASTER TOPS SYSTEM
+.sp
+In 0.10.4 the \fIexternal_nodes\fP system was upgraded to allow for modular
+subsystems to be used to generate the top file data for a highstate run on
+the master.
+.sp
+The old \fIexternal_nodes\fP option still works, but will be removed in the
+future in favor of the new \fImaster_tops\fP option which uses the modular
+system instead. The master tops system contains a number of subsystems that
+are loaded via the Salt loader interfaces like modules, states, returners,
+runners, etc.
+.sp
+Using the new \fImaster_tops\fP option is simple:
+.sp
+.nf
+.ft C
+master_tops:
+  ext_nodes: cobbler\-external\-nodes
 .ft P
 .fi
 .SH JOB MANAGEMENT
@@ -4486,6 +4717,237 @@ for data in event.iter_events(tag=\(aqauth\(aq):
     print(data)
 .ft P
 .fi
+.SH WRITING TESTS
+.sp
+Salt uses a test platform to verify functionality of components in a simple
+way. Two testing systems exist to enable testing salt functions in somewhat
+real environments. The two subsystems available are integration tests and
+unit tests.
+.sp
+Salt uses the python standard library unittest2 system for testing.
+.SS Integration Tests
+.sp
+The integration tests start up a number of salt daemons to test functionality
+in a live environment. These daemons include 2 salt masters, 1 syndic and 2
+minions. This allows for the syndic interface to be tested and master/minion
+communication to be verified. All of the integration tests are executed as
+live salt commands sent through the started daemons.
+.INDENT 0.0
+.IP \(bu 2
+\fBWriting integration tests\fP
+.UNINDENT
+.sp
+Integration tests are particularly good at testing modules, states and shell
+commands.
+.SS Unit Tests
+.sp
+Direct unit tests are also available, these tests are good for internal
+functions.
+.SH INTEGRATION TESTS
+.sp
+The Salt integration tests come with a number of classes and methods which
+allow for components to be easily tested. These classes are generally inherited
+from and provide specific methods for hooking into the running integration test
+environment created by the integration tests.
+.sp
+It is noteworthy that since integration tests validate against a running
+environment that they are generally the preferred means to write tests.
+.sp
+The integration system is all located under tests/integration in the Salt
+source tree.
+.SS Integration Classes
+.sp
+The integration classes are located in tests/integration/__init__.py and
+can be extended therein. There are three classes available to extend:
+.SS ModuleCase
+.sp
+Used to define executions run via the master to minions and to call
+single modules and states.
+.sp
+The available methods are as follows:
+.INDENT 0.0
+.TP
+.B run_function:
+Run a single salt function and condition the return down to match the
+behavior of the raw function call. This will run the command and only
+return the results from a single minion to verify.
+.TP
+.B state_result:
+Return the result data from a single state return
+.TP
+.B run_state:
+Run the state.single command and return the state return structure
+.UNINDENT
+.SS SyndicCase
+.sp
+Used to execute remote commands via a syndic, only used to verify the
+capabilities of the Syndic.
+.sp
+The available methods are as follows:
+.INDENT 0.0
+.TP
+.B run_function:
+Run a single salt function and condition the return down to match the
+behavior of the raw function call. This will run the command and only
+return the results from a single minion to verify.
+.UNINDENT
+.SS ShellCase
+.sp
+Shell out to the scripts which ship with Salt.
+.sp
+The available methods are as follows:
+.INDENT 0.0
+.TP
+.B run_script:
+Execute a salt script with the given argument string
+.TP
+.B run_salt:
+Execute the salt command, pass in the argument string as it would be
+passed on the command line.
+.TP
+.B run_run:
+Execute the salt\-run command, pass in the argument string as it would be
+passed on the command line.
+.TP
+.B run_run_plus:
+Execute Salt run and the salt run function and return the data from
+each in a dict
+.TP
+.B run_key:
+Execute the salt\-key command, pass in the argument string as it would be
+passed on the command line.
+.TP
+.B run_cp:
+Execute salt\-cp, pass in the argument string as it would be
+passed on the command line.
+.TP
+.B run_call:
+Execute salt\-call, pass in the argument string as it would be
+passed on the command line.
+.UNINDENT
+.SS Examples
+.SS Module Example via ModuleCase Class
+.sp
+Import the integration module, this module is already added to the python path
+by the test execution. Inherit from the \fBintegration.ModuleCase\fP class. The
+tests that execute against salt modules should be placed in the
+\fItests/integration/modules\fP directory so that they will be detected by the test
+system.
+.sp
+Now the workhorse method \fBrun_function\fP can be used to test a module:
+.sp
+.nf
+.ft C
+import os
+import integration
+
+
+class TestModuleTest(integration.ModuleCase):
+    \(aq\(aq\(aq
+    Validate the test module
+    \(aq\(aq\(aq
+    def test_ping(self):
+        \(aq\(aq\(aq
+        test.ping
+        \(aq\(aq\(aq
+        self.assertTrue(self.run_function(\(aqtest.ping\(aq))
+
+    def test_echo(self):
+        \(aq\(aq\(aq
+        test.echo
+        \(aq\(aq\(aq
+        self.assertEqual(self.run_function(\(aqtest.echo\(aq, [\(aqtext\(aq]), \(aqtext\(aq)
+.ft P
+.fi
+.sp
+ModuleCase can also be used to test states, when testing states place the test
+module in the \fItests/integration/states\fP directory. The \fBstate_result\fP and
+the \fBrun_state\fP methods are the workhorse here:
+.sp
+.nf
+.ft C
+import os
+import shutil
+import integration
+
+HFILE = os.path.join(integration.TMP, \(aqhosts\(aq)
+
+class HostTest(integration.ModuleCase):
+    \(aq\(aq\(aq
+    Validate the host state
+    \(aq\(aq\(aq
+
+    def setUp(self):
+        shutil.copyfile(os.path.join(integration.FILES, \(aqhosts\(aq), HFILE)
+        super(HostTest, self).setUp()
+
+    def tearDown(self):
+        if os.path.exists(HFILE):
+            os.remove(HFILE)
+        super(HostTest, self).tearDown()
+
+    def test_present(self):
+        \(aq\(aq\(aq
+        host.present
+        \(aq\(aq\(aq
+        name = \(aqspam.bacon\(aq
+        ip = \(aq10.10.10.10\(aq
+        ret = self.run_state(\(aqhost.present\(aq, name=name, ip=ip)
+        result = self.state_result(ret)
+        self.assertTrue(result)
+        with open(HFILE) as fp_:
+            output = fp_.read()
+            self.assertIn(\(aq{0}\et\et{1}\(aq.format(ip, name), output)
+.ft P
+.fi
+.sp
+The above example also demonstrates using the integration files and the
+integration state tree. The variable \fIintegration.FILES\fP will point to the
+directory used to store files that can be used or added to to help enable tests
+that require files. The location \fIintegration.TMP\fP can also be used to store
+temporary files that the test system will clean up when the execution finishes.
+.sp
+The integration state tree can be found at \fItests/integration/files/file/base\fP.
+This is where the referenced \fIhost.present\fP sls file resides.
+.SS Shell Example via ShellCase
+.sp
+Validating the shell commands can be done via shell tests. Here are some
+examples:
+.sp
+.nf
+.ft C
+import sys
+import shutil
+import tempfile
+
+import integration
+
+class KeyTest(integration.ShellCase):
+    \(aq\(aq\(aq
+    Test salt\-key script
+    \(aq\(aq\(aq
+
+    _call_binary_ = \(aqsalt\-key\(aq
+
+    def test_list(self):
+        \(aq\(aq\(aq
+        test salt\-key \-L
+        \(aq\(aq\(aq
+        data = self.run_key(\(aq\-L\(aq)
+        expect = [
+                \(aqUnaccepted Keys:\(aq,
+                \(aqAccepted Keys:\(aq,
+                \(aqminion\(aq,
+                \(aqsub_minion\(aq,
+                \(aqRejected:\(aq, \(aq\(aq]
+        self.assertEqual(data, expect)
+.ft P
+.fi
+.sp
+This example verifies that the \fBsalt\-key\fP command executes and returns as
+expected by making use of the \fBrun_key\fP method.
+.sp
+All shell tests should be placed in the \fItests/integraion/shell\fP directory.
 .SH INTRODUCTION TO EXTENDING SALT
 .sp
 Salt is made to be used, and made to be extended. The primary goal of Salt is
@@ -4892,6 +5354,12 @@ A module to wrap archive calls
 T}
 _
 T{
+\fBat\fP
+T}	T{
+Wrapper module for at(1)
+T}
+_
+T{
 \fBaugeas_cfg\fP
 T}	T{
 Manages configuration files via augeas
@@ -4939,6 +5407,12 @@ A module for shelling out
 T}
 _
 T{
+\fBconfig\fP
+T}	T{
+Return config information
+T}
+_
+T{
 \fBcp\fP
 T}	T{
 Minion side functions for salt\-cp
@@ -4975,8 +5449,9 @@ Module for gathering disk information
 T}
 _
 T{
-\fBdjango\fP
+\fBdjangomod\fP
 T}	T{
+Manage Django sites
 T}
 _
 T{
@@ -5088,6 +5563,12 @@ Module for the management of MacOS systems that use launchd/launchctl
 T}
 _
 T{
+\fBldap\fP
+T}	T{
+Module to provide LDAP commands via salt.
+T}
+_
+T{
 \fBlinux_sysctl\fP
 T}	T{
 Module for viewing and modifying sysctl parameters
@@ -5097,6 +5578,12 @@ T{
 \fBmdadm\fP
 T}	T{
 Salt module to manage RAID arrays with mdadm
+T}
+_
+T{
+\fBmongodb\fP
+T}	T{
+Module to provide MongoDB functionality to Salt
 T}
 _
 T{
@@ -5166,6 +5653,12 @@ A module to wrap pacman calls, since Arch is the best
 T}
 _
 T{
+\fBpecl\fP
+T}	T{
+Manage PHP pecl extensions.
+T}
+_
+T{
 \fBpillar\fP
 T}	T{
 Extract the pillar data for this minion
@@ -5228,7 +5721,6 @@ _
 T{
 \fBrabbitmq_server\fP
 T}	T{
-Module to provide rabbitMQ compatibility to salt.
 T}
 _
 T{
@@ -5280,6 +5772,12 @@ Manage the shadow file
 T}
 _
 T{
+\fBsmf\fP
+T}	T{
+Service support for Solaris 10 and 11, should work with other systems
+T}
+_
+T{
 \fBsolr\fP
 T}	T{
 Apache Solr Salt Module
@@ -5307,6 +5805,12 @@ T{
 \fBstatus\fP
 T}	T{
 Module for returning various status data about a minion.
+T}
+_
+T{
+\fBsupervisord\fP
+T}	T{
+Provide the service module for supervisord
 T}
 _
 T{
@@ -5400,20 +5904,21 @@ Manage Windows users with the net user command
 T}
 _
 T{
-\fByumpkg5\fP
-T}	T{
-Support for YUM
-T}
-_
-T{
 \fByumpkg\fP
 T}	T{
 Support for YUM
 T}
 _
 T{
-\fBzfs\fP
+\fByumpkg5\fP
 T}	T{
+Support for YUM
+T}
+_
+T{
+\fBzpool\fP
+T}	T{
+zfs support.
 T}
 _
 T{
@@ -5907,6 +6412,76 @@ salt \(aq*\(aq archive.zip /tmp/zipfile.zip /tmp/sourcefile1 /tmp/sourcefile2
 .ft P
 .fi
 .UNINDENT
+.SS salt.modules.at
+.sp
+Wrapper module for at(1)
+.sp
+Also, a \(aqtag\(aq feature has been added to more
+easily tag jobs.
+.INDENT 0.0
+.TP
+.B salt.modules.at.at(*pargs, **kwargs)
+Add a job to the queue.
+.sp
+The \(aqtimespec\(aq follows the format documented in the
+at(1) manpage.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq at.at <timespec> <cmd> [tag=<tag>] [runas=<user>]
+salt \(aq*\(aq at.at 12:05am \(aq/sbin/reboot\(aq tag=reboot
+salt \(aq*\(aq at.at \(aq3:05am +3 days\(aq \(aqbin/myscript\(aq tag=nightly runas=jim
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.at.atc(jobid)
+Print the at(1) script that will run for the passed job
+id. This is mostly for debugging so the output will
+just be text.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq at.atc <jobid>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.at.atq(tag=None)
+List all queued and running jobs or only those with
+an optional \(aqtag\(aq.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq at.atq
+salt \(aq*\(aq at.atq [tag]
+salt \(aq*\(aq at.atq [job number]
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.at.atrm(*pargs)
+Remove jobs from the queue.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq at.atrm <jobid> <jobid> .. <jobid>
+salt \(aq*\(aq at.atrm all
+salt \(aq*\(aq at.atrm all [tag]
+.ft P
+.fi
+.UNINDENT
 .SS salt.modules.augeas_cfg
 .sp
 Manages configuration files via augeas
@@ -6319,7 +6894,11 @@ REQUIREMENT 2:
 Add the following values in /etc/salt/minion for the
 CA module to function properly:
 .sp
-ca.cert_base_path: \(aq/etc/pki/koji\(aq
+.nf
+.ft C
+ca.cert_base_path: \(aq/etc/pki\(aq
+.ft P
+.fi
 .INDENT 0.0
 .TP
 .B salt.modules.ca.create_ca(ca_name, bits=2048, days=365, CN=\(aqlocalhost\(aq, C=\(aqUS\(aq, ST=\(aqUtah\(aq, L=\(aqSalt Lake City\(aq, O=\(aqSalt Stack\(aq, OU=None, emailAddress=\(aqxyz@pdq.net\(aq)
@@ -6353,7 +6932,7 @@ organization, default is "Salt Stack"
 .B OU
 organizational unit, default is None
 .TP
-.B email
+.B emailAddress
 email address for the CA owner, default is \fI\%'xyz@pdq.net\fP\(aq
 .UNINDENT
 .sp
@@ -6788,6 +7367,25 @@ salt \(aq*\(aq cmd.which_bin \(aq[pip2, pip, pip\-python]\(aq
 .ft P
 .fi
 .UNINDENT
+.SS salt.modules.config
+.sp
+Return config information
+.INDENT 0.0
+.TP
+.B salt.modules.config.backup_mode(backup=\(aq\(aq)
+Return the backup mode
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.config.manage_mode(mode)
+Return a mode value, normalized to a string
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.config.valid_fileproto(uri)
+Returns a boolean value based on whether or not the URI passed has a valid
+remote file protocol designation
+.UNINDENT
 .SS salt.modules.cp
 .sp
 Minion side functions for salt\-cp
@@ -7118,6 +7716,11 @@ CLI Example:
 salt \(aq*\(aq cron.set_special @hourly \(aqecho foobar\(aq
 .ft P
 .fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.cron.write_cron_file(user, path)
+Writes the contents of a file to a user\(aqs crontab
 .UNINDENT
 .SS salt.modules.data
 .sp
@@ -7461,6 +8064,78 @@ salt \(aq*\(aq disk.usage
 .ft P
 .fi
 .UNINDENT
+.SS salt.modules.djangomod
+.sp
+Manage Django sites
+.INDENT 0.0
+.TP
+.B salt.modules.djangomod.collectstatic(settings_module, bin_env=None, no_post_process=False, ignore=None, dry_run=False, clear=False, link=False, no_default_ignore=False, pythonpath=None)
+Collect static files from each of your applications into a single location
+that can easily be served in production.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq django.collectstatic settings.py
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.djangomod.command(settings_module, command, bin_env=None, pythonpath=None, *args, **kwargs)
+Run arbitrary django management command
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.djangomod.createsuperuser(settings_module, username, email, bin_env=None, database=None, pythonpath=None)
+Create a super user for the database.
+This function defaults to use the \fB\-\-noinput\fP flag which prevents the
+creation of a password for the superuser.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq django.createsuperuser settings.py user user@example.com
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.djangomod.loaddata(settings_module, fixtures, bin_env=None, database=None, pythonpath=None)
+Load fixture data
+.INDENT 7.0
+.TP
+.B Fixtures:
+comma separated list of fixtures to load
+.UNINDENT
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq django.loaddata settings.py <comma delimited list of fixtures>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.djangomod.syncdb(settings_module, bin_env=None, migrate=False, database=None, pythonpath=None, noinput=True)
+Run syncdb
+.sp
+Execute the Django\-Admin syncdb command, if South is available on the
+minion the \fBmigrate\fP option can be passed as \fBTrue\fP calling the
+migrations to run after the syncdb completes
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq django.syncdb settings.py
+.ft P
+.fi
+.UNINDENT
 .SS salt.modules.ebuild
 .sp
 Support for Portage
@@ -7667,6 +8342,49 @@ salt \(aq*\(aq file.append /etc/motd \e
 .fi
 .sp
 New in version 0.9.5.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.check_file_meta(name, sfn, source, source_sum, user, group, mode, env)
+Check for the changes in the file metadata
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.check_hash(path, hash)
+Check if a file matches the given hash string
+.sp
+Returns true if the hash matched, otherwise false. Raises ValueError if
+the hash was not formatted correctly.
+.INDENT 7.0
+.TP
+.B path
+A file path
+.TP
+.B hash
+A string in the form <hash_type>=<hash_value>. For example:
+\fBmd5=e138491e9d5b97023cea823fe17bac22\fP
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.check_managed(name, source, source_hash, user, group, mode, template, makedirs, context, defaults, env, **kwargs)
+Check to see what changes need to be made for a file
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.check_perms(name, ret, user, group, mode)
+Check the permissions on files and chown if needed
+.INDENT 7.0
+.TP
+.B Note: \(aqmode\(aq here is expected to be either a string or an integer,
+in which case it will be converted into a base\-10 string.
+.sp
+What this means is that in your YAML salt file, you can specify
+mode as an integer(eg, 644) or as a string(eg, \(aq644\(aq). But, to
+specify mode 0777, for example, it must be specified as the string,
+\(aq0777\(aq otherwise, 0777 will be parsed as an octal and you\(aqd get 511
+instead.
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -7954,6 +8672,31 @@ salt \(aq*\(aq file.get_group /etc/passwd
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.file.get_hash(path, form=\(aqmd5\(aq, chunk_size=4096)
+Get the hash sum of a file
+.INDENT 7.0
+.TP
+.B This is better than \fBget_sum\fP for the following reasons:
+.INDENT 7.0
+.IP \(bu 2
+It does not read the entire file into memory.
+.IP \(bu 2
+.INDENT 2.0
+.TP
+.B It does not return a string on error. The returned value of
+\fBget_sum\fP cannot really be trusted since it is vulnerable to
+collisions: \fBget_sum(..., \(aqxyz\(aq) == \(aqHash xyz not supported\(aq\fP
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.get_managed(name, template, source, source_hash, user, group, mode, env, context, defaults, **kwargs)
+Return the managed file data for file.managed
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.file.get_mode(path)
 Return the mode of a file
 .sp
@@ -8043,6 +8786,57 @@ CLI Example:
 salt \(aq*\(aq file.group_to_gid root
 .ft P
 .fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.makedirs(path, user=None, group=None, mode=None)
+Ensure that the directory containing this path is available.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.makedirs_perms(name, user=None, group=None, mode=493)
+Taken and modified from os.makedirs to set user, group and mode for each
+directory created.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.manage_file(name, sfn, ret, source, source_sum, user, group, mode, env, backup)
+Checks the destination against what was retrieved with get_managed and
+makes the appropriate modifications (if necessary).
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.patch(originalfile, patchfile, options=\(aq\(aq, dry_run=False)
+Apply a patch to a file
+.sp
+Equivalent to:
+.sp
+.nf
+.ft C
+patch <options> <originalfile> <patchfile>
+.ft P
+.fi
+.INDENT 7.0
+.TP
+.B originalfile
+The full path to the file or directory to be patched
+.TP
+.B patchfile
+A patch file to apply to \fBoriginalfile\fP
+.TP
+.B options
+Options to pass to patch.
+.UNINDENT
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq file.patch /opt/file.txt /tmp/file.txt.patch
+.ft P
+.fi
+.sp
+New in version 0.10.4.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -8142,6 +8936,11 @@ CLI Example:
 salt \(aq*\(aq selinux.chcon path <role> <type> <range>
 .ft P
 .fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.file.source_list(source, source_hash, env)
+Check the source list and return the source to use
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -10083,6 +10882,83 @@ salt \(aq*\(aq service.stop <service name>
 .ft P
 .fi
 .UNINDENT
+.SS salt.modules.ldap
+.sp
+Module to provide LDAP commands via salt.
+.sp
+REQUIREMENT 1:
+.sp
+In order to connect to LDAP, certain configuration is required
+in the minion config on the LDAP server.
+The minimum configuration items that must be set are:
+.INDENT 0.0
+.INDENT 3.5
+ldap.basedn: dc=acme,dc=com (example values, adjust to suit)
+.UNINDENT
+.UNINDENT
+.sp
+If your LDAP server requires authentication then you must also set:
+.INDENT 0.0
+.INDENT 3.5
+ldap.binddn: admin
+ldap.bindpw: password
+.UNINDENT
+.UNINDENT
+.sp
+In addition, the following optional values may be set:
+.INDENT 0.0
+.INDENT 3.5
+ldap.server: localhost (default=localhost, see warning below)
+ldap.port: 389 (default=389, standard port)
+ldap.tls: False (default=False, no TLS)
+ldap.scope: 2 (default=2, ldap.SCOPE_SUBTREE)
+ldap.attrs: [saltAttr] (default=None, return all attributes)
+.UNINDENT
+.UNINDENT
+.sp
+WARNING:
+At the moment this module only recommends connection to LDAP services
+listening on \(aqlocalhost\(aq.  This is deliberate to avoid the potentially
+dangerous situation of multiple minions sending identical update commands to
+the same LDAP server.  It\(aqs easy enough to override this behaviour,
+but badness may ensue \- you have been warned.
+.sp
+REQUIREMENT 2:
+.sp
+Required python modules: ldap
+.INDENT 0.0
+.TP
+.B salt.modules.ldap.search(filter, dn=None, scope=None, attrs=None, **kwargs)
+Run an arbitrary LDAP query and return the results.
+.INDENT 7.0
+.TP
+.B CLI Examples::
+salt \(aqldaphost\(aq ldap.search "filter=cn=myhost"
+returns:
+.TP
+.B \(aqmyhost\(aq: { \(aqcount\(aq: 1,
+.INDENT 7.0
+.TP
+.B \(aqresults\(aq: [[\(aqcn=myhost,ou=hosts,o=acme,c=gb\(aq,
+.INDENT 7.0
+.TP
+.B {\(aqsaltKeyValue\(aq: [\(aqntpserver=ntp.acme.local\(aq, \(aqfoo=myfoo\(aq],
+\(aqsaltState\(aq: [\(aqfoo\(aq, \(aqbar\(aq]}]],
+.UNINDENT
+.UNINDENT
+.sp
+\(aqtime\(aq: {\(aqhuman\(aq: \(aq1.2ms\(aq, \(aqraw\(aq: \(aq0.00123\(aq}}}
+.UNINDENT
+.sp
+Search and connection options can be overridden by specifying the relevant
+option as key=value pairs, for example:
+.INDENT 7.0
+.INDENT 3.5
+salt \(aqldaphost\(aq ldap.search filter=cn=myhost dn=ou=hosts,o=acme,c=gb
+scope=1 attrs=\(aq\(aq server=\(aqlocalhost\(aq port=\(aq7393\(aq tls=True bindpw=\(aqssh\(aq
+.UNINDENT
+.UNINDENT
+.UNINDENT
 .SS salt.modules.linux_sysctl
 .sp
 Module for viewing and modifying sysctl parameters
@@ -10166,6 +11042,58 @@ CLI Example:
 salt \(aq*\(aq raid.list
 .ft P
 .fi
+.UNINDENT
+.SS salt.modules.mongodb
+.sp
+Module to provide MongoDB functionality to Salt
+.sp
+This module uses PyMongo, and accepts configuration details as parameters
+as well as configuration settings:
+.INDENT 0.0
+.INDENT 3.5
+mongodb.host: \(aqlocalhost\(aq
+mongodb.port: \(aq27017\(aq
+mongodb.user: \(aq\(aq
+mongodb.password: \(aq\(aq
+.UNINDENT
+.UNINDENT
+.sp
+This data can also be passed into pillar. Options passed into opts will
+overwrite options passed into pillar.
+.INDENT 0.0
+.TP
+.B salt.modules.mongodb.db_exists(name, user=None, password=None, host=None, port=None, database=\(aqadmin\(aq)
+Checks if a database exists in Mongodb
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.mongodb.db_list(user=None, password=None, host=None, port=None)
+List all Mongodb databases
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.mongodb.db_remove(name, user=None, password=None, host=None, port=None)
+Remove a Mongodb database
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.mongodb.user_create(name, passwd, user=None, password=None, host=None, port=None, database=\(aqadmin\(aq)
+Create a Mongodb user
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.mongodb.user_exists(name, user=None, password=None, host=None, port=None, database=\(aqadmin\(aq)
+Checks if a user exists in Mongodb
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.mongodb.user_list(user=None, password=None, host=None, port=None, database=\(aqadmin\(aq)
+List users of a Mongodb database
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.mongodb.user_remove(name, user=None, password=None, host=None, port=None, database=\(aqadmin\(aq)
+Remove a Mongodb user
 .UNINDENT
 .SS salt.modules.monit
 .sp
@@ -10762,6 +11690,18 @@ salt \(aq*\(aq network.interfaces
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.network.ip_addrs(include_loopback=False)
+Returns a list of IPv4 addresses assigned to the host. (127.0.0.1 is
+ignored, unless \(aqinclude_loopback=True\(aq is indicated)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.network.ip_addrs6(include_loopback=False)
+Returns a list of IPv6 addresses assigned to the host. (::1 is ignored,
+unless \(aqinclude_loopback=True\(aq is indicated)
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.network.netstat()
 Return information on open ports and states
 .sp
@@ -11312,6 +12252,44 @@ CLI Example:
 salt \(aq*\(aq pkg.version <package name>
 .ft P
 .fi
+.UNINDENT
+.SS salt.modules.pecl
+.sp
+Manage PHP pecl extensions.
+.INDENT 0.0
+.TP
+.B salt.modules.pecl.install(pecls)
+Installs one or several pecl extensions.
+.INDENT 7.0
+.TP
+.B pecls
+The pecl extensions to install.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pecl.list()
+List installed pecl extensions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pecl.uninstall(pecls)
+Uninstall one or several pecl extensions.
+.INDENT 7.0
+.TP
+.B pecls
+The pecl extensions to uninstall.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pecl.update(pecls)
+Update one or several pecl exntesions.
+.INDENT 7.0
+.TP
+.B pecls
+The pecl extensions to update.
+.UNINDENT
 .UNINDENT
 .SS salt.modules.pillar
 .sp
@@ -12265,7 +13243,7 @@ salt \(aq*\(aq puppet.facts
 .B salt.modules.puppet.noop(tags=None)
 Execute a puppet noop run and return a dict with the stderr, stdout,
 return code, etc. If an argument is specified, it is  treated  as  a
-comma separated list of tags passed to puppetd \-\-test \-\-noop   \-\-tags
+comma separated list of tags passed to puppet \-\-test \-\-noop   \-\-tags
 .sp
 CLI Example:
 .sp
@@ -12282,7 +13260,7 @@ salt \(aq*\(aq puppet.noop web::server,django::base
 .B salt.modules.puppet.run(tags=None)
 Execute a puppet run and return a dict with the stderr, stdout,
 return code, etc. If an argument is specified, it is treated as
-a comma separated list of tags passed to puppetd \-\-test \-\-tags:
+a comma separated list of tags passed to puppet \-\-test \-\-tags:
 \fI\%http://projects.puppetlabs.com/projects/1/wiki/Using_Tags\fP
 .sp
 CLI Examples:
@@ -12368,7 +13346,7 @@ salt \(aq*\(aq group.info foo
 Manage users with the useradd command
 .INDENT 0.0
 .TP
-.B salt.modules.pw_user.add(name, uid=None, gid=None, groups=None, home=True, shell=None, system=False, **kwargs)
+.B salt.modules.pw_user.add(name, uid=None, gid=None, groups=None, home=True, shell=None, unique=True, system=False, fullname=\(aq\(aq, roomnumber=\(aq\(aq, workphone=\(aq\(aq, homephone=\(aq\(aq, **kwargs)
 Add a user to the minion
 .sp
 CLI Example:
@@ -12376,6 +13354,19 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq user.add name <uid> <gid> <groups> <home> <shell>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pw_user.chfullname(name, fullname)
+Change the user\(aqs Full Name
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq user.chfullname foo "Foo Bar"
 .ft P
 .fi
 .UNINDENT
@@ -12422,6 +13413,32 @@ salt \(aq*\(aq user.chhome foo /home/users/foo True
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.pw_user.chhomephone(name, homephone)
+Change the user\(aqs Home Phone
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq user.chhomephone foo "7735551234"
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pw_user.chroomnumber(name, roomnumber)
+Change the user\(aqs Room Number
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq user.chroomnumber foo 123
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.pw_user.chshell(name, shell)
 Change the default shell of the user
 .sp
@@ -12443,6 +13460,19 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq user.chuid foo 4376
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.pw_user.chworkphone(name, workphone)
+Change the user\(aqs Work Phone
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq user.chworkphone foo "7735550123"
 .ft P
 .fi
 .UNINDENT
@@ -12495,114 +13525,6 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq user.list_groups foo
-.ft P
-.fi
-.UNINDENT
-.SS salt.modules.rabbitmq_server
-.sp
-Module to provide rabbitMQ compatibility to salt.
-Todo: A lot, need to add cluster support, logging, and minion configuration data.
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.add_user(name, password)
-Add a rabbitMQ user via rabbitmqctl user_add <user> <password>
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server.add_user \(aqmeow\(aq \(aqmix\(aq
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.add_vhost(vhost)
-Adds a vhost via rabbitmqctl add_vhost.
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server add_vhost \(aq<vhost_name>\(aq
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.delete_user(name)
-Deletes a user via rabbitmqctl delete_user.
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server.delete_user \(aqmeow\(aq
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.delete_vhost(vhost)
-Deletes a vhost rabbitmqctl delete_vhost.
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server.delete_vhost \(aq<vhost_name>\(aq
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.list_user_permissions(name)
-List permissions for a user via rabbitmqctl list_user_permissions
-.sp
-Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server.list_user_permissions \(aquser\(aq.
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.list_users()
-Return a list of users based off of rabbitmqctl user_list.
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server.list_users
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.list_vhosts()
-Return a list of vhost based of of rabbitmqctl list_vhosts.
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server.list_vhosts
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.rabbitmq_server.set_permissions(vhost, user, conf=\(aq.*\(aq, write=\(aq.*\(aq, read=\(aq.*\(aq)
-Sets permissions for vhost via rabbitmqctl set_permissions
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq rabbitmq\-server.set_permissions \(aqmyvhost\(aq \(aqmyuser\(aq
 .ft P
 .fi
 .UNINDENT
@@ -13626,6 +14548,154 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq shadow.set_warndays username 7
+.ft P
+.fi
+.UNINDENT
+.SS salt.modules.smf
+.sp
+Service support for Solaris 10 and 11, should work with other systems
+that use SMF also. (e.g. SmartOS)
+.INDENT 0.0
+.TP
+.B salt.modules.smf.disable(name)
+Disable the named service to start at boot
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.disable <service name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.disabled(name)
+Check to see if the named service is disabled to start on boot
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.disabled <service name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.enable(name)
+Enable the named service to start at boot
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.enable <service name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.enabled(name)
+Check to see if the named service is enabled to start on boot
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.enabled <service name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.get_all()
+Return all installed services
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.get_all
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.get_disabled()
+Return the disabled services
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.get_disabled
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.get_enabled()
+Return the enabled services
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.get_enabled
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.restart(name)
+Restart the named service
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.restart <service name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.start(name)
+Start the specified service
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.start <service name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.status(name, sig=None)
+Return the status for a service, returns a bool whether the service is
+running.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.status <service name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.smf.stop(name)
+Stop the specified service
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq service.stop <service name>
 .ft P
 .fi
 .UNINDENT
@@ -15019,9 +16089,52 @@ salt \(aq*\(aq status.w
 .ft P
 .fi
 .UNINDENT
+.SS salt.modules.supervisord
+.sp
+Provide the service module for supervisord
+.INDENT 0.0
+.TP
+.B salt.modules.supervisord.restart(name=\(aqall\(aq, user=None)
+Restart the named service.
+.INDENT 7.0
+.TP
+.B CLI Example::
+salt \(aq*\(aq supervisord.restart <service>
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.supervisord.start(name=\(aqall\(aq, user=None)
+Start the named service
+.INDENT 7.0
+.TP
+.B CLI Example::
+salt \(aq*\(aq supervisord.start <service>
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.supervisord.status(name=None, user=None)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.supervisord.stop(name=\(aqall\(aq, user=None)
+Stop the named service.
+.INDENT 7.0
+.TP
+.B CLI Example::
+salt \(aq*\(aq supervisord.stop <service>
+.UNINDENT
+.UNINDENT
 .SS salt.modules.systemd
 .sp
 Provide the service module for systemd
+.INDENT 0.0
+.TP
+.B salt.modules.systemd.available(name)
+Check that the given service is available taking into account
+template units.
+.UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.systemd.disable(name)
@@ -15574,7 +16687,7 @@ salt \(aq*\(aq service.stop <service name>
 Manage users with the useradd command
 .INDENT 0.0
 .TP
-.B salt.modules.useradd.add(name, uid=None, gid=None, groups=None, home=True, shell=None, fullname=None, roomnumber=None, workphone=None, homephone=None, other=None, unique=True, system=False)
+.B salt.modules.useradd.add(name, uid=None, gid=None, groups=None, home=True, shell=None, unique=True, system=False, fullname=\(aq\(aq, roomnumber=\(aq\(aq, workphone=\(aq\(aq, homephone=\(aq\(aq)
 Add a user to the minion
 .sp
 CLI Example:
@@ -15588,7 +16701,7 @@ salt \(aq*\(aq user.add name <uid> <gid> <groups> <home> <shell>
 .INDENT 0.0
 .TP
 .B salt.modules.useradd.chfullname(name, fullname)
-Change the users Full Name
+Change the user\(aqs Full Name
 .sp
 CLI Example:
 .sp
@@ -15649,19 +16762,6 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq user.chhomephone foo "7735551234"
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.useradd.chother(name, other)
-Change the user\(aqs "Other" GECOS field
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq user.chother foo "fax=7735555678"
 .ft P
 .fi
 .UNINDENT
@@ -17500,186 +18600,6 @@ salt \(aq*\(aq user.setpassword name password
 .ft P
 .fi
 .UNINDENT
-.SS salt.modules.yumpkg5
-.sp
-Support for YUM
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.available_version(name)
-The available version of the package in the repository
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.available_version <package name>
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.install(pkg, refresh=False, repo=\(aq\(aq, skip_verify=False, **kwargs)
-Install the passed package
-.INDENT 7.0
-.TP
-.B pkg
-The name of the package to be installed
-.TP
-.B refresh
-False
-Clean out the yum database before executing
-.TP
-.B repo
-(default)
-Specify a package repository to install from
-(e.g., \fByum \-\-enablerepo=somerepo\fP)
-.TP
-.B skip_verify
-False
-Skip the GPG verification check (e.g., \fB\-\-nogpgcheck\fP)
-.UNINDENT
-.sp
-Return a dict containing the new package names and versions:
-.sp
-.nf
-.ft C
-{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
-           \(aqnew\(aq: \(aq<new\-version>\(aq]}
-.ft P
-.fi
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.install <package name>
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.list_pkgs()
-List the packages currently installed in a dict:
-.sp
-.nf
-.ft C
-{\(aq<package_name>\(aq: \(aq<version>\(aq}
-.ft P
-.fi
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.list_pkgs
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.list_upgrades()
-Check whether or not an upgrade is available for all packages
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.list_upgrades
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.purge(pkg)
-Yum does not have a purge, this function calls remove
-.sp
-Return a list containing the removed packages:
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.purge <package name>
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.refresh_db()
-Since yum refreshes the database automatically, this runs a yum clean,
-so that the next yum operation will have a clean database
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.refresh_db
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.remove(pkg)
-Remove a single package with yum remove
-.sp
-Return a list containing the removed packages:
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.remove <package name>
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.upgrade()
-Run a full system upgrade, a yum upgrade
-.sp
-Return a dict containing the new package names and versions:
-.sp
-.nf
-.ft C
-{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
-           \(aqnew\(aq: \(aq<new\-version>\(aq]}
-.ft P
-.fi
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.upgrade
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.upgrade_available(name)
-Check whether or not an upgrade is available for a given package
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.upgrade_available <package name>
-.ft P
-.fi
-.UNINDENT
-.INDENT 0.0
-.TP
-.B salt.modules.yumpkg5.version(name)
-Returns a version if the package is installed, else returns an empty string
-.sp
-CLI Example:
-.sp
-.nf
-.ft C
-salt \(aq*\(aq pkg.version <package name>
-.ft P
-.fi
-.UNINDENT
 .SS salt.modules.yumpkg
 .sp
 New in version 0.9.4: This module replaces the "yum" module in previous releases. It is backward
@@ -17878,6 +18798,294 @@ CLI Example:
 salt \(aq*\(aq pkg.version <package name>
 .ft P
 .fi
+.UNINDENT
+.SS salt.modules.yumpkg5
+.sp
+Support for YUM
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.available_version(name)
+The available version of the package in the repository
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.available_version <package name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.install(pkg, refresh=False, repo=\(aq\(aq, skip_verify=False, **kwargs)
+Install the passed package
+.INDENT 7.0
+.TP
+.B pkg
+The name of the package to be installed
+.TP
+.B refresh
+False
+Clean out the yum database before executing
+.TP
+.B repo
+(default)
+Specify a package repository to install from
+(e.g., \fByum \-\-enablerepo=somerepo\fP)
+.TP
+.B skip_verify
+False
+Skip the GPG verification check (e.g., \fB\-\-nogpgcheck\fP)
+.UNINDENT
+.sp
+Return a dict containing the new package names and versions:
+.sp
+.nf
+.ft C
+{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
+           \(aqnew\(aq: \(aq<new\-version>\(aq]}
+.ft P
+.fi
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.install <package name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.list_pkgs()
+List the packages currently installed in a dict:
+.sp
+.nf
+.ft C
+{\(aq<package_name>\(aq: \(aq<version>\(aq}
+.ft P
+.fi
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.list_pkgs
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.list_upgrades()
+Check whether or not an upgrade is available for all packages
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.list_upgrades
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.purge(pkg)
+Yum does not have a purge, this function calls remove
+.sp
+Return a list containing the removed packages:
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.purge <package name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.refresh_db()
+Since yum refreshes the database automatically, this runs a yum clean,
+so that the next yum operation will have a clean database
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.refresh_db
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.remove(pkg)
+Remove a single package with yum remove
+.sp
+Return a list containing the removed packages:
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.remove <package name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.upgrade()
+Run a full system upgrade, a yum upgrade
+.sp
+Return a dict containing the new package names and versions:
+.sp
+.nf
+.ft C
+{\(aq<package>\(aq: {\(aqold\(aq: \(aq<old\-version>\(aq,
+           \(aqnew\(aq: \(aq<new\-version>\(aq]}
+.ft P
+.fi
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.upgrade
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.upgrade_available(name)
+Check whether or not an upgrade is available for a given package
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.upgrade_available <package name>
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.yumpkg5.version(name)
+Returns a version if the package is installed, else returns an empty string
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pkg.version <package name>
+.ft P
+.fi
+.UNINDENT
+.SS salt.modules.zpool
+.sp
+zfs support.
+.sp
+Assumes FreeBSD
+.sp
+requires: mkfile
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.add(pool_name, vdisk)
+Add a single device to mirror
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq zfs.add myzpool /disk2
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.create_file_vdevice(size, *names)
+creates file based \fBvirtual devices\fP for a zpool
+.sp
+\fB*names\fP is a list of full paths for mkfile to create
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq zfs.create_file_vdevice 7g /disk1 /disk2
+
+Depending on file size this may take a while to return
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.list_installed()
+returns a list of installed packages
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.pool_exists(pool_name)
+Check if a zfs storage pool is active
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.replace(pool_name, old, new)
+Replace a disk in a pool with another disk.
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq zfs.replace myzpool /disk1 /disk2
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.zpool_create(pool_name, *disks)
+Create a simple storage pool
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq zfs.zpool_create myzpool /disk1 /disk2
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.zpool_destory(pool_name)
+Destorys a storage pool
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq zfs.zpool_destory myzpool
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.zpool_detach(zpool, device)
+Detach a device from a storage pool
+.sp
+CLI Example:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq zfs.detach myzpool /disk1
+.ft P
+.fi
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.zpool_list()
+list zpool\(aqs size and usage
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.zpool.zpool_status(name=None)
 .UNINDENT
 .SS salt.modules.zypper
 .sp
@@ -18712,7 +19920,7 @@ components.
 
 <ID Declaration>:
   <State Declaration>:
-    \- <Function>:
+    \- <Function>
     \- <Function Arg>
     \- <Function Arg>
     \- <Function Arg>
@@ -19183,9 +20391,14 @@ httpd:
 .ft P
 .fi
 .sp
-In this instance the systemd module will replace the service virtual module
-which is used by default on Arch Linux, and the httpd service will be set up
-using systemd.
+In this instance the \fBsystemd\fP module will replace the
+\fBservice\fP basic module which is used by default on Arch
+Linux, and the \fBhttpd\fP service will be set up using
+\fBsystemd\fP.
+.IP Note
+You can also set a provider globally in the minion config
+\fBproviders\fP.
+.RE
 .SS Arbitrary Module Redirects
 .sp
 The provider statement can also be used for more powerful means, instead of
@@ -19202,10 +20415,11 @@ emacs:
 .ft P
 .fi
 .sp
-In this example the default pkg module is being redirected to use the \fIyumpkg5\fP
-module (\fIyum\fP via shelling out instead of via the yum API), but is also using
-a custom module to invoke commands. This could be used to dramatically change
-the behavior of a given state.
+In this example the default \fBpkg\fP module is being
+redirected to use the \fByumpkg5\fP module (\fByum\fP
+via shelling out instead of via the \fByum\fP Python API), but is also
+using a custom module to invoke commands. This could be used to dramatically
+change the behavior of a given state.
 .SH REQUISITES
 .sp
 The Salt requisite system is used to create relationships between states. The
@@ -19462,11 +20676,18 @@ the state system. The top file creates a few general abstractions. First it
 maps what nodes should pull from which environments, next it defines which
 matches systems should draw from.
 .SS Environments
+.INDENT 0.0
+.TP
+.B Environment
+A configuration that allows conceptually organizing state tree
+directories. Environments can be made to be self\-contained or state
+trees can be made to bleed through environments.
+.UNINDENT
 .sp
 The environments in the top file corresponds with the environments defined in
-the file_roots variable. In a simple, single environment setup you only have
-the base environment, and therefore only one state tree. Here is a simple
-example of file_roots in the master configuration:
+the \fBfile_roots\fP variable. In a simple, single environment setup
+you only have the \fBbase\fP environment, and therefore only one state tree. Here
+is a simple example of \fBfile_roots\fP in the master configuration:
 .sp
 .nf
 .ft C
@@ -19488,9 +20709,9 @@ base:
 .ft P
 .fi
 .sp
-This also means that /srv/salt has a state tree. But if you want to use
+This also means that \fB/srv/salt\fP has a state tree. But if you want to use
 multiple environments, or partition the file server to serve more than
-just the state tree, then the file_roots option can be expanded:
+just the state tree, then the \fBfile_roots\fP option can be expanded:
 .sp
 .nf
 .ft C
@@ -19528,12 +20749,12 @@ prod:
 .ft P
 .fi
 .sp
-In this setup we have state trees in 3 of the 4 environments, and no state
-tree in the base environment. Notice that the targets for the minions
+In this setup we have state trees in three of the four environments, and no
+state tree in the \fBbase\fP environment. Notice that the targets for the minions
 specify environment data. In Salt the master determines who is in what
-environment, and many environments can be crossed together. For instance,
-a separate global state tree could be added to the base environment if
-it suits your deployment:
+environment, and many environments can be crossed together. For instance, a
+separate global state tree could be added to the \fBbase\fP environment if it
+suits your deployment:
 .sp
 .nf
 .ft C
@@ -19864,6 +21085,12 @@ Management of user groups.
 T}
 _
 T{
+\fBhg\fP
+T}	T{
+Interaction with Mercurial repositories.
+T}
+_
+T{
 \fBhost\fP
 T}	T{
 Management of addresses and names in hosts file.
@@ -19879,6 +21106,18 @@ T{
 \fBmodule\fP
 T}	T{
 Execution of Salt modules from within states.
+T}
+_
+T{
+\fBmongodb_database\fP
+T}	T{
+Management of Mongodb databases
+T}
+_
+T{
+\fBmongodb_user\fP
+T}	T{
+Management of Mongodb users
 T}
 _
 T{
@@ -19912,21 +21151,27 @@ Configuration of network interfaces.
 T}
 _
 T{
+\fBpecl\fP
+T}	T{
+Installation of PHP pecl extensions.
+T}
+_
+T{
 \fBpip\fP
 T}	T{
 Installation of Python packages using pip.
 T}
 _
 T{
-\fBpkgng\fP
-T}	T{
-Manage package remote repo using FreeBSD pkgng.
-T}
-_
-T{
 \fBpkg\fP
 T}	T{
 Installation of packages using OS package managers such as yum or apt\-get.
+T}
+_
+T{
+\fBpkgng\fP
+T}	T{
+Manage package remote repo using FreeBSD pkgng.
 T}
 _
 T{
@@ -19969,6 +21214,12 @@ T{
 \fBssh_known_hosts\fP
 T}	T{
 Control of SSH known_hosts entries.
+T}
+_
+T{
+\fBsupervisord\fP
+T}	T{
+Interaction with the Supervisor daemon.
 T}
 _
 T{
@@ -20266,6 +21517,52 @@ The information to be set in the day of day of week section. Default is
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.states.cron.file(name, source_hash=\(aq\(aq, user=\(aqroot\(aq, template=None, context=None, replace=True, defaults=None, env=None, backup=\(aq\(aq, **kwargs)
+Provides file.managed\-like functionality (templating, etc.) for a pre\-made
+crontab file, to be assigned to a given user.
+.INDENT 7.0
+.TP
+.B name
+The source file to be used as the crontab. This source file can be
+hosted on either the salt master server, or on an http or ftp server.
+For files hosted on the salt file server, if the file is located on
+the master in the directory named spam, and is called eggs, the source
+string is salt://spam/eggs.
+.sp
+If the file is hosted on a http or ftp server then the source_hash
+argument is also required
+.TP
+.B source_hash
+This can be either a file which contains a source hash string for
+the source, or a source hash string. The source hash string is the
+hash algorithm followed by the hash of the file:
+md5=e138491e9d5b97023cea823fe17bac22
+.TP
+.B user
+The user to whome the crontab should be assigned. This defaults to
+root.
+.TP
+.B template
+If this setting is applied then the named templating engine will be
+used to render the downloaded file. Currently, jinja and mako are
+supported.
+.TP
+.B context
+Overrides default context variables passed to the template.
+.TP
+.B replace
+If the crontab should be replaced, if False then this command will
+be ignored if a crontab exists for the specified user. Default is True.
+.TP
+.B defaults
+Default context passed to the template.
+.TP
+.B backup
+Overrides the default backup mode for the user\(aqs crontab.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.states.cron.present(name, user=\(aqroot\(aq, minute=\(aq*\(aq, hour=\(aq*\(aq, daymonth=\(aq*\(aq, month=\(aq*\(aq, dayweek=\(aq*\(aq)
 Verifies that the specified cron job is present for the specified user.
 For more advanced information about what exactly can be set in the cron
@@ -20308,9 +21605,9 @@ of ways in which files can be managed.
 .sp
 Regular files can be enforced with the \fBmanaged\fP function. This function
 downloads files from the salt master and places them on the target system.
-The downloaded files can be rendered as a jinja or mako template adding
-a dynamic component to file management. An example of \fBfile.managed\fP which
-makes use of the jinja templating system would look like this:
+The downloaded files can be rendered as a jinja, mako, or wempy template
+adding a dynamic component to file management. An example of \fBfile.managed\fP
+which makes use of the jinja templating system would look like this:
 .sp
 .nf
 .ft C
@@ -20563,8 +21860,8 @@ The permissions to set on this file, aka 644, 0775, 4664
 .TP
 .B template
 If this setting is applied then the named templating engine will be
-used to render the downloaded file, currently jinja and mako are
-supported
+used to render the downloaded file, currently jinja, mako, and wempy
+are supported
 .TP
 .B makedirs
 If the file is located in a path without a parent directory, then
@@ -20586,6 +21883,48 @@ Default context passed to the template.
 .B backup
 Overrides the default backup mode for this specific file
 .UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.states.file.patch(name, source=None, hash=None, options=\(aq\(aq, dry_run_first=True, env=\(aqbase\(aq)
+Apply a patch to a file. Note: a suitable \fBpatch\fP executable must be
+available on the minion when using this state function.
+.INDENT 7.0
+.TP
+.B name
+The file to with the patch will be applied.
+.TP
+.B source
+The source patch to download to the minion, this source file must be
+hosted on the salt master server. If the file is located in the
+directory named spam, and is called eggs, the source string is
+salt://spam/eggs. A source is required.
+.TP
+.B hash
+Hash of the patched file. If the hash of the target file matches this
+value then the patch is assumed to have been applied. The hash string
+is the hash algorithm followed by the hash of the file:
+md5=e138491e9d5b97023cea823fe17bac22
+.TP
+.B options
+Extra options to pass to patch.
+.TP
+.B dry_run_first
+\fBTrue\fP
+Run patch with \fB\-\-dry\-run\fP first to check if it will apply cleanly.
+.UNINDENT
+.sp
+Usage:
+.sp
+.nf
+.ft C
+# Equivalent to \(ga\(gapatch \-\-forward /opt/file.txt file.patch\(ga\(ga
+/opt/file.txt:
+  file.patch:
+    \- source: salt://file.patch
+    \- hash: md5=e138491e9d5b97023cea823fe17bac22
+.ft P
+.fi
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -20915,6 +22254,45 @@ The group id to assign to the named group, if left empty then the next
 available group id will be assigned
 .UNINDENT
 .UNINDENT
+.SS salt.states.hg
+.SS Interaction with Mercurial repositories.
+.sp
+NOTE: This module is currently experimental. Most of this code is copied from
+git.py with changes to handle hg.
+.sp
+Before using hg over ssh, make sure the remote host fingerprint already exists
+in ~/.ssh/known_hosts, and the remote host has this host\(aqs public key.
+.sp
+.nf
+.ft C
+https://bitbucket.org/example_user/example_repo:
+    hg.latest:
+      \- rev: tip
+      \- target: /tmp/example_repo
+.ft P
+.fi
+.INDENT 0.0
+.TP
+.B salt.states.hg.latest(name, rev=None, target=None, runas=None, force=False)
+Make sure the repository is cloned to to given directory and is up to date
+.INDENT 7.0
+.TP
+.B name
+Address of the remote repository as passed to "hg clone"
+.TP
+.B rev
+The remote branch, tag, or revision hash to clone/pull
+.TP
+.B target
+Name of the target directory where repository is about to be cloned
+.TP
+.B runas
+Name of the user performing repository management operations
+.TP
+.B force
+Force hg to clone into pre\-existing directories (deletes contents)
+.UNINDENT
+.UNINDENT
 .SS salt.states.host
 .SS Management of addresses and names in hosts file.
 .sp
@@ -21050,6 +22428,89 @@ The module function to execute
 .TP
 .B \fB**kwargs\fP
 Pass any arguments needed to execute the function
+.UNINDENT
+.UNINDENT
+.SS salt.states.mongodb_database
+.sp
+Management of Mongodb databases
+.sp
+Only deletion is supported, creation doesnt make sense
+and can be done using mongodb_user.present
+.INDENT 0.0
+.TP
+.B salt.states.mongodb_database.absent(name, user=None, password=None, host=None, port=None)
+Ensure that the named database is absent
+.INDENT 7.0
+.TP
+.B name
+The name of the database to remove
+.TP
+.B user
+The user to connect as (must be able to create the user)
+.TP
+.B password
+The password of the user
+.TP
+.B host
+The host to connect to
+.TP
+.B port
+The port to connect to
+.UNINDENT
+.UNINDENT
+.SS salt.states.mongodb_user
+.SS Management of Mongodb users
+.INDENT 0.0
+.TP
+.B salt.states.mongodb_user.absent(name, user=None, password=None, host=None, port=None, database=\(aqadmin\(aq)
+Ensure that the named user is absent
+.INDENT 7.0
+.TP
+.B name
+The name of the user to remove
+.TP
+.B user
+The user to connect as (must be able to create the user)
+.TP
+.B password
+The password of the user
+.TP
+.B host
+The host to connect to
+.TP
+.B port
+The port to connect to
+.TP
+.B database
+The database to create the user in (if the db doesn\(aqt exist, it will be created)
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.states.mongodb_user.present(name, passwd, database=\(aqadmin\(aq, user=None, password=None, host=None, port=None)
+Ensure that the user is present with the specified properties
+.INDENT 7.0
+.TP
+.B name
+The name of the user to manage
+.TP
+.B passwd
+The password of the user
+.TP
+.B user
+The user to connect as (must be able to create the user)
+.TP
+.B password
+The password of the user
+.TP
+.B host
+The host to connect to
+.TP
+.B port
+The port to connect to
+.TP
+.B database
+The database to create the user in (if the db doesn\(aqt exist, it will be created)
 .UNINDENT
 .UNINDENT
 .SS salt.states.mount
@@ -21461,6 +22922,37 @@ Custom name to represent this configuration change.
 The global parameters for the system.
 .UNINDENT
 .UNINDENT
+.SS salt.states.pecl
+.SS Installation of PHP pecl extensions.
+.sp
+A state module to manage php pecl extensions.
+.sp
+.nf
+.ft C
+mongo:
+  pecl.installed
+.ft P
+.fi
+.INDENT 0.0
+.TP
+.B salt.states.pecl.installed(name)
+Make sure that a pecl extension is installed.
+.INDENT 7.0
+.TP
+.B name
+The pecl extension name to install
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.states.pecl.removed(name)
+Make sure that a pecl extension is not installed.
+.INDENT 7.0
+.TP
+.B name
+The pecl exntension name to uninstall
+.UNINDENT
+.UNINDENT
 .SS salt.states.pip
 .SS Installation of Python packages using pip.
 .sp
@@ -21508,25 +23000,6 @@ The name of the package to uninstall
 None
 the pip executable or virtualenenv to use
 .UNINDENT
-.UNINDENT
-.SS salt.states.pkgng
-.SS Manage package remote repo using FreeBSD pkgng.
-.sp
-Salt can manage the url pkgng pulls packages from.
-ATM the state and module are small so use cases are
-typically rather simple:
-.sp
-.nf
-.ft C
-pkgng_clients:
-  pkgng:
-    \- update_packaging_site
-    \- name: "http://192.168.0.2"
-.ft P
-.fi
-.INDENT 0.0
-.TP
-.B salt.states.pkgng.update_packaging_site(name)
 .UNINDENT
 .SS salt.states.pkg
 .SS Installation of packages using OS package managers such as yum or apt\-get.
@@ -21620,6 +23093,25 @@ the remove function in the salt pkg module for the platform.
 .B name
 The name of the package to be removed
 .UNINDENT
+.UNINDENT
+.SS salt.states.pkgng
+.SS Manage package remote repo using FreeBSD pkgng.
+.sp
+Salt can manage the url pkgng pulls packages from.
+ATM the state and module are small so use cases are
+typically rather simple:
+.sp
+.nf
+.ft C
+pkgng_clients:
+  pkgng:
+    \- update_packaging_site
+    \- name: "http://192.168.0.2"
+.ft P
+.fi
+.INDENT 0.0
+.TP
+.B salt.states.pkgng.update_packaging_site(name)
 .UNINDENT
 .SS salt.states.postgres_database
 .SS Management of PostgreSQL databases (schemas).
@@ -22157,6 +23649,48 @@ The location of the authorized keys file relative to the user\(aqs home
 directory, defaults to ".ssh/known_hosts"
 .UNINDENT
 .UNINDENT
+.SS salt.states.supervisord
+.SS Interaction with the Supervisor daemon.
+.sp
+.nf
+.ft C
+wsgi_server:
+  supervisord:
+    \- running
+    \- restart: False
+    \- require:
+        \- pkg: supervisor
+.ft P
+.fi
+.INDENT 0.0
+.TP
+.B salt.states.supervisord.dead(name, runas=None)
+Ensure the named service is dead (not running).
+.INDENT 7.0
+.TP
+.B name
+Service name as defined in the supervisor configuration file
+.TP
+.B runas
+Name of the user to run the supervisorctl command
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.states.supervisord.running(name, restart=False, runas=None)
+Ensure the named service is running.
+.INDENT 7.0
+.TP
+.B name
+Service name as defined in the supervisor configuration file
+.TP
+.B restart
+Whether to force a restart e.g. when updating a service
+.TP
+.B runas
+Name of the user to run the supervisorctl command
+.UNINDENT
+.UNINDENT
 .SS salt.states.sysctl
 .SS Configuration of the Linux kernel using sysctrl.
 .sp
@@ -22228,7 +23762,7 @@ option to True to remove the user even if they are logged in
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.user.present(name, uid=None, gid=None, gid_from_name=False, groups=None, home=True, password=None, enforce_password=True, shell=None, fullname=None, roomnumber=None, workphone=None, homephone=None, other=None, unique=True, system=False)
+.B salt.states.user.present(name, uid=None, gid=None, gid_from_name=False, groups=None, optional_groups=None, home=True, password=None, enforce_password=True, shell=None, unique=True, system=False, fullname=\(aq\(aq, roomnumber=\(aq\(aq, workphone=\(aq\(aq, homephone=\(aq\(aq)
 Ensure that the named user is present with the specified properties
 .INDENT 7.0
 .TP
@@ -22243,10 +23777,22 @@ will be assigned
 The default group id
 .TP
 .B gid_from_name
-If True, the default group id will be set to the id of the group with the same name as the user.
+If True, the default group id will be set to the id of the group with
+the same name as the user.
 .TP
 .B groups
-A list of groups to assign the user to, pass a list object
+A list of groups to assign the user to, pass a list object. If a group
+specified here does not exist on the minion, the state will fail.
+.TP
+.B optional_groups
+A list of groups to assign the user to, pass a list object. If a group
+specified here does not exist on the minion, the state will silently
+ignore it.
+.UNINDENT
+.sp
+NOTE: If the same group is specified in both "groups" and
+"optional_groups", then it will be assumed to be required and not optional.
+.INDENT 7.0
 .TP
 .B home
 The location of the home directory to manage
@@ -22262,9 +23808,15 @@ specified.
 .TP
 .B shell
 The login shell, defaults to the system default shell
+.TP
+.B unique
+Require a unique UID, True by default
+.TP
+.B system
+Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
 .UNINDENT
 .sp
-User comment field (GECOS) support (currently Linux\-only):
+User comment field (GECOS) support (currently Linux and FreeBSD only):
 .sp
 The below values should be specified as strings to avoid ambiguities when
 the values are loaded. (Especially the phone and room number fields which
@@ -22282,15 +23834,6 @@ The user\(aqs work phone number
 .TP
 .B homephone
 The user\(aqs home phone number
-.TP
-.B other
-The user\(aqs "other" GECOS field
-.TP
-.B unique
-Require a unique UID, True by default
-.TP
-.B system
-Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
 .UNINDENT
 .UNINDENT
 .SS salt.states.virtualenv
@@ -22335,10 +23878,10 @@ documents. But since the only thing the state system cares about is raw data,
 the SLS files can be any structured format that can be dreamed up.
 .sp
 Currently there is support for \fBJinja + YAML\fP, \fBMako + YAML\fP,
-\fBJinja + json\fP and \fBMako + json\fP. But renderers can be written to support
-anything. This means that the Salt states could be managed by xml files, html
-files, puppet files, or any format that can be translated into the data
-structure used by the state system.
+\fBWempy + YAML\fP, \fBJinja + json\fP \fBMako + json\fP and \fBWempy + json\fP. But
+renderers can be written to support anything. This means that the Salt states
+could be managed by xml files, html files, puppet files, or any format that
+can be translated into the data structure used by the state system.
 .SS Multiple Renderers
 .sp
 When deploying a state tree a default renderer is selected in the master
@@ -22431,12 +23974,6 @@ Process json with the Wempy templating engine
 T}
 _
 T{
-\fBpy\fP
-T}	T{
-Pure python state renderer
-T}
-_
-T{
 \fByaml_jinja\fP
 T}	T{
 The default rendering engine, process yaml with the jinja2 templating engine
@@ -22452,6 +23989,12 @@ T{
 \fByaml_wempy\fP
 T}	T{
 Process yaml with the Wempy templating engine
+T}
+_
+T{
+\fBpy\fP
+T}	T{
+Pure python state renderer
 T}
 _
 .TE
@@ -22488,17 +24031,6 @@ high data format for salt states.
 .B salt.renderers.json_wempy.render(template_file, env=\(aq\(aq, sls=\(aq\(aq)
 Render the data passing the functions and grains into the rendering system
 .UNINDENT
-.SS salt.renderers.py
-.sp
-Pure python state renderer
-.sp
-The sls file should contain a function called \fBrun\fP which returns high state
-data
-.INDENT 0.0
-.TP
-.B salt.renderers.py.render(template, env=\(aq\(aq, sls=\(aq\(aq)
-Render the python module\(aqs components
-.UNINDENT
 .SS salt.renderers.yaml_jinja
 .sp
 The default rendering engine, process yaml with the jinja2 templating engine
@@ -22532,6 +24064,17 @@ high data format for salt states.
 .B salt.renderers.yaml_wempy.render(template_file, env=\(aq\(aq, sls=\(aq\(aq)
 Render the data passing the functions and grains into the rendering system
 .UNINDENT
+.SS salt.renderers.py
+.sp
+Pure python state renderer
+.sp
+The sls file should contain a function called \fBrun\fP which returns high state
+data
+.INDENT 0.0
+.TP
+.B salt.renderers.py.render(template, env=\(aq\(aq, sls=\(aq\(aq)
+Render the python module\(aqs components
+.UNINDENT
 .SH PILLARS
 .sp
 Salt includes a number of built\-in external pillars, listed at
@@ -22540,7 +24083,7 @@ Salt includes a number of built\-in external pillars, listed at
 You may also wish to look at the standard pillar documentation, at
 \fIpillar\-configuration\fP
 .sp
-The source for the built\-in Salt returners can be found here:
+The source for the built\-in Salt pillars can be found here:
 \fI\%https://github.com/saltstack/salt/blob/develop/salt/pillar\fP
 .SH FULL LIST OF BUILTIN PILLARS
 .TS
@@ -22563,6 +24106,12 @@ T{
 \fBmongo\fP
 T}	T{
 Read pillar data from a mongodb collection.
+T}
+_
+T{
+\fBpillar_ldap\fP
+T}	T{
+This pillar module parses a config file (specified in the salt master config),
 T}
 _
 .TE
@@ -22675,7 +24224,31 @@ serializable. Defaults to \fBNone\fP.
 .UNINDENT
 .UNINDENT
 .UNINDENT
+.SS salt.pillar.pillar_ldap
+.sp
+This pillar module parses a config file (specified in the salt master config),
+and executes a series of LDAP searches based on that config.  Data returned by
+these searches is aggregrated, with data items found later in the LDAP search
+order overriding data found earlier on.
+The final result set is merged with the pillar data.
+.INDENT 0.0
+.TP
+.B salt.pillar.pillar_ldap.ext_pillar(config_file)
+Execute LDAP searches and return the aggregated data
+.UNINDENT
+.SH MASTER TOPS
+.sp
+Salt includes a number of built\-in subsystems to generate top file data, they
+are listed listed at
+\fIall\-salt.tops\fP.
+.sp
+The source for the built\-in Salt master tops can be found here:
+\fI\%https://github.com/saltstack/salt/blob/develop/salt/tops\fP
 .SH SALT RUNNERS
+.IP "See also"
+.sp
+\fIThe full list of runners\fP
+.RE
 .sp
 Salt runners are convenience applications executed with the salt\-run command.
 .sp
@@ -22878,7 +24451,7 @@ existing user keys and re\-start the Salt master:
 .sp
 .nf
 .ft C
-rm /var/cache/salt/.*keys
+rm /var/cache/salt/.*key
 service salt\-master restart
 .ft P
 .fi
@@ -23413,23 +24986,30 @@ option to local to make sure that the local file server interface is used.
 New in version 0.9.5.
 .sp
 Salt Python modules can be distributed automatically via the Salt file server.
-Under the root of any environment defined via the file_roots option on the
-master server directories corresponding to the type of module can be used.
+Under the root of any environment defined via the \fBfile_roots\fP
+option on the master server directories corresponding to the type of module can
+be used.
+.INDENT 0.0
+.TP
+.B Module sync
+Automatically transfer and load modules, grains, renderers, returners,
+states, etc from the master to the minions.
+.UNINDENT
 .sp
 The directories are prepended with an underscore:
 .INDENT 0.0
 .INDENT 3.5
 .INDENT 0.0
 .IP 1. 3
-_modules
+\fB_modules\fP
 .IP 2. 3
-_grains
+\fB_grains\fP
 .IP 3. 3
-_renderers
+\fB_renderers\fP
 .IP 4. 3
-_returners
+\fB_returners\fP
 .IP 5. 3
-_states
+\fB_states\fP
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -23482,8 +25062,8 @@ will sync all module types over to a minion. For more information see:
 #publish_port: 4505
 
 # Refresh the publisher connections when sending out commands, this is a fix
-# for zeromq losing some minion connections. Default: True
-#pub_refresh: True
+# for zeromq losing some minion connections. Default: False
+#pub_refresh: False
 
 # The user to run the salt\-master as. Salt will update all permissions to
 # allow the specified user to run the master. If the modified files cause
@@ -23613,7 +25193,14 @@ will sync all module types over to a minion. For more information see:
 #   larry:
 #     \- test.ping
 #     \- network.*
-
+#
+# The external auth system uses the Salt auth modules to authenticate and
+# validate users to access areas of the Salt system
+#
+# external_auth:
+#   pam:
+#     fred:
+#       \- test.*
 
 #####    Master Module Management    #####
 ##########################################
@@ -23633,6 +25220,17 @@ will sync all module types over to a minion. For more information see:
 # root of the base environment as defined in "File Server settings" below.
 #state_top: top.sls
 #
+# The master_tops option replaces the external_nodes option by creating
+# a plugable system for the generation of external top data. The external_nodes
+# option is deprecated by the master_tops option.
+# To gain the capabilities of the classic external_nodes system use the
+# following configuration
+#
+# master_tops:
+#   ext_nodes: <Shell command which returns yaml>
+#
+#master_tops: {}
+# 
 # The external_nodes option allows Salt to gather data that would normally be
 # placed in a top file. The external_nodes option is the executable that will
 # return the ENC data. Remember that Salt will look for external nodes AND top
@@ -23707,6 +25305,10 @@ will sync all module types over to a minion. For more information see:
 #  \- hiera: /etc/hiera.yaml
 #  \- cmd_yaml: cat /etc/salt/yaml
 #
+# The pillar_opts option adds the master configuration file data to a dict in
+# the pillar called "master". This is used to set simple configurations in the
+# master config file that can then be used on minions.
+#pillar_opts: True
 
 #####          Syndic settings       #####
 ##########################################
@@ -23773,11 +25375,16 @@ will sync all module types over to a minion. For more information see:
 #log_file: /var/log/salt/master
 #key_logfile: /var/log/salt/key
 #
-# The level of messages to send to the log file.
+# The level of messages to send to the console.
 # One of \(aqgarbage\(aq, \(aqtrace\(aq, \(aqdebug\(aq, info\(aq, \(aqwarning\(aq, \(aqerror\(aq, \(aqcritical\(aq.
 # Default: \(aqwarning\(aq
 #log_level: warning
+#
+# The level of messages to send to the log file.
+# One of \(aqgarbage\(aq, \(aqtrace\(aq, \(aqdebug\(aq, info\(aq, \(aqwarning\(aq, \(aqerror\(aq, \(aqcritical\(aq.
+# Default: \(aqwarning\(aq
 #log_level_logfile:
+
 #
 # The date and time format used in log messages. Allowed date/time formating
 # can be seen here:
@@ -23811,8 +25418,8 @@ will sync all module types over to a minion. For more information see:
 
 #####     Range Cluster settings     #####
 ##########################################
-# The range server (and optional port) that
-# serves your cluster information
+# The range server (and optional port) that serves your cluster information
+# https://github.com/grierj/range/wiki/Introduction\-to\-Range\-with\-YAML\-files
 #range_server: range:80
 
 .ft P
@@ -23976,20 +25583,16 @@ will sync all module types over to a minion. For more information see:
 # rendered from a jinja template, the available options are:
 # yaml_jinja
 # yaml_mako
+# yaml_wempy
 # json_jinja
 # json_mako
+# json_wempy
 #
 #renderer: yaml_jinja
 #
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
 #failhard: False
-#
-# state_verbose allows for the data returned from the minion to be more
-# verbose. Normally only states that fail or states that have changes are
-# returned, but setting state_verbose to True will return all states that
-# were checked
-#state_verbose: False
 #
 # autoload_dynamic_modules Turns on automatic loading of modules found in the
 # environments on the master. This is turned on by default, to turn of
@@ -24111,10 +25714,14 @@ will sync all module types over to a minion. For more information see:
 # The location of the minion log file
 #log_file: /var/log/salt/minion
 #
-# The level of messages to send to the log file.
+# The level of messages to send to the console.
 # One of \(aqgarbage\(aq, \(aqtrace\(aq, \(aqdebug\(aq, info\(aq, \(aqwarning\(aq, \(aqerror\(aq, \(aqcritical\(aq.
 # Default: \(aqwarning\(aq
 #log_level: warning
+#
+# The level of messages to send to the log file.
+# One of \(aqgarbage\(aq, \(aqtrace\(aq, \(aqdebug\(aq, info\(aq, \(aqwarning\(aq, \(aqerror\(aq, \(aqcritical\(aq.
+# Default: \(aqwarning\(aq
 #log_level_logfile:
 #
 # The date and time format used in log messages. Allowed date/time formating
@@ -24207,6 +25814,19 @@ The network port to set up the publication interface
 publish_port: 4505
 .ft P
 .fi
+.SS \fBpub_refresh\fP
+.sp
+Default: \fBFalse\fP
+.sp
+The pub_refresh system manually refreshed the master ZeroMQ publisher. It is
+used in some cases where the minions loose connection to the master and it
+is solved by restarting the master.
+.sp
+.nf
+.ft C
+pub_refresh: False
+.ft P
+.fi
 .SS \fBuser\fP
 .sp
 Default: \fBroot\fP
@@ -24216,6 +25836,38 @@ The user to run the Salt processes
 .nf
 .ft C
 user: root
+.ft P
+.fi
+.SS \fBmax_open_files\fP
+.sp
+Default: \fBmax_open_files\fP
+.sp
+Each minion connecting to the master uses AT LEAST one file descriptor, the
+master subscription connection. If enough minions connect you might start
+seeing on the console(and then salt\-master crashes):
+.INDENT 0.0
+.INDENT 3.5
+Too many open files (tcp_listener.cpp:335)
+Aborted (core dumped)
+.UNINDENT
+.UNINDENT
+.sp
+By default this value will be the one of \fIulimit \-Hn\fP, ie, the hard limit for
+max open files.
+.sp
+If you wish to set a different value than the default one, uncomment and
+configure this setting. Remember that this value CANNOT be higher than the
+hard limit. Raising the hard limit depends on your OS and/or distribution,
+a good way to find the limit is to search the internet for(for example):
+.INDENT 0.0
+.INDENT 3.5
+raise max open files hard limit debian
+.UNINDENT
+.UNINDENT
+.sp
+.nf
+.ft C
+max_open_files: 100000
 .ft P
 .fi
 .SS \fBworker_threads\fP
@@ -24241,6 +25893,17 @@ execution returns and command executions.
 .nf
 .ft C
 ret_port: 4506
+.ft P
+.fi
+.SS \fBpidfile\fP
+.sp
+Default: \fB/var/run/salt\-master.pid\fP
+.sp
+Specify the location of the master pidfile
+.sp
+.nf
+.ft C
+pidfile: /var/run/salt\-master.pid
 .ft P
 .fi
 .SS \fBroot_dir\fP
@@ -24907,6 +26570,13 @@ This setting requires that \fBgcc\fP and \fBcython\fP are installed on the minio
 cython_enable: False
 .ft P
 .fi
+.SS \fBproviders\fP
+.sp
+Default: (empty)
+.sp
+A module provider can be statically overwritten or extended for the minion via
+the providers option. This can be done on an individual basis in an SLS file or
+globally here in the minion config.
 .SS State Management Settings
 .SS \fBrenderer\fP
 .sp
@@ -25234,6 +26904,26 @@ nodegroups:
 .sp
 The function to call on the specified target is placed after the target
 specification.
+.sp
+New in version 0.9.8.
+.sp
+Functions may also accept arguments, space\-delimited:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.exec_code python \(aqimport sys; print sys.version\(aq
+.ft P
+.fi
+.sp
+Optional, keyword arguments are also supported:
+.sp
+.nf
+.ft C
+salt \(aq*\(aq pip.install salt timeout=5 upgrade=True
+.ft P
+.fi
+.sp
+They are always in the form of \fBkwarg=argument\fP.
 .SS Finding available minion functions
 .sp
 The Salt functions are self documenting, all of the function documentation can
@@ -25321,6 +27011,19 @@ minions to execute on.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-a EAUTH, \-\-auth=EAUTH
+Pass in an external authentication medium to validate against. The
+credentials will be prompted for. Can be used with the \-T option.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-T, \-\-make\-token
+Used in conjunction with the \-a option. This creates a token that allows
+for the authenticated user to send commands without needing to
+re\-authenticate.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-\-version
 Print the version of Salt that is running.
 .UNINDENT
@@ -25372,7 +27075,12 @@ Instead of using shell globs use the return code of a function.
 .TP
 .B \-N, \-\-nodegroup
 Use a predefined compound target defined in the Salt master configuration
-file
+file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-S, \-\-ipcidr
+Match based on Subnet (CIDR notation) or IPv4 address.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -25590,7 +27298,8 @@ Rejects all pending public keys.
 .INDENT 0.0
 .TP
 .B \-d DELETE, \-\-delete=DELETE
-Delete the named minion key for command execution.
+Delete the named minion key or minion keys matching a glob for command
+execution.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -26339,6 +28048,128 @@ file.append:
 A timing vulnerability was uncovered in the code which decrypts the AES
 messages sent over the network. This has been fixed and upgrading is
 strongly recommended.
+.SS Salt 0.10.4 Release Notes
+.sp
+Salt 0.10.4 is a monumental release for the Salt team, with two new module
+systems, many additions to allow granular access to Salt, improved platform
+support and much more.
+.sp
+This release is also exciting because we have been able to shorten the release
+cycle back to under a month. We are working hard to keep up the aggressive pace
+and look forward to having releases happen more frequently!
+.sp
+This release also includes a serious security fix and all users are very
+strongly recommended to upgrade. As usual, upgrade the master first, and then
+the minion to ensure that the process is smooth.
+.SS Major Features
+.SS External Authentication System
+.sp
+The new external authentication system allows for Salt to pass through
+authentication to any authentication system to determine if a user has
+permission to execute a Salt command. The Unix PAM system is the first
+supported system with more to come!
+.sp
+The external authentication system allows for specific users to be granted
+access to execute specific functions on specific minions. Access is configured
+in the master configuration file, and uses the new access control system:
+.sp
+.nf
+.ft C
+external_auth:
+  pam:
+    thatch:
+      \- \(aqweb*\(aq:
+        \- test.*
+        \- network.*
+.ft P
+.fi
+.sp
+The configuration above allows the user \fIthatch\fP to execute functions in the
+test and network modules on minions that match the web* target.
+.SS Access Control System
+.sp
+All Salt systems can now be configured to grant access to non\-administrative
+users in a granular way. The old configuration continues to work. Specific
+functions can be opened up to specific minions from specific users in the case
+of external auth and client acls, and for specific minions in the case of the
+peer system.
+.sp
+Access controls are configured like this:
+.sp
+.nf
+.ft C
+client_acl:
+  fred:
+    \- web\e*:
+      \- pkg.list_pkgs
+      \- test.*
+      \- apache.*
+.ft P
+.fi
+.SS Target by Network
+.sp
+A new matcher has been added to the system which allows for minions to be
+targeted by network. This new matcher can be called with the \fI\-S\fP flag on the
+command line and is available in all places that the matcher system is
+available. Using it is simple:
+.sp
+.nf
+.ft C
+$ salt \-S \(aq192.168.1.0/24\(aq test.ping
+$ salt \-S \(aq192.168.1.100\(aq test.ping
+.ft P
+.fi
+.SS Nodegroup Nesting
+.sp
+Previously a nodegroup was limited by not being able to include another
+nodegroup, this restraint has been lifted and now nodegroups will be expanded
+within other nodegroups with the \fIN@\fP classifier.
+.SS Salt Key Delete by Glob
+.sp
+The ability to delete minion keys by glob has been added to \fBsalt\-key\fP.  To
+delete all minion keys whose minion name starts with \(aqweb\(aq:
+.sp
+.nf
+.ft C
+$ salt\-key \-d \(aqweb*\(aq
+.ft P
+.fi
+.SS Master Tops System
+.sp
+The \fIexternal_nodes\fP system has been upgraded to allow for modular subsystems
+to be used to generate the top file data for a highstate run.
+.sp
+The \fIexternal_nodes\fP option still works but will be deprecated in the future in
+favor of the new \fImaster_tops\fP option.
+.sp
+Example of using \fImaster_tops\fP:
+.sp
+.nf
+.ft C
+master_tops:
+  ext_nodes: cobbler\-external\-nodes
+.ft P
+.fi
+.SS Next Level Solaris Support
+.sp
+A lot of work has been put into improved Solaris support by Romeo Theriault.
+Packaging modules (pkgadd/pkgrm and pkgutil) and states, cron support and user
+and group management have all been added and improved upon. These additions
+along with SMF (Service Management Facility) service support and improved
+Solaris grain detection in 0.10.3 add up to Salt becoming a great tool
+to manage Solaris servers with.
+.SS Security
+.sp
+A vulnerability in the security handshake was found and has been repaired, old
+minions should be able to connect to a new master, so as usual, the master
+should be updated first and then the minions.
+.SS Pillar Updates
+.sp
+The pillar communication has been updated to add some extra levels of
+verification so that the intended minion is the only one allowed to gather the
+data. Once all minions and the master are updated to salt 0.10.4 please
+activate pillar \fI2\fP by changing the \fIpillar_version\fP in the master config to
+\fI2\fP. This will be set to \fI2\fP by default in a future release.
 .SS Salt 0.6.0 release notes
 .sp
 The Salt remote execution manager has reached initial functionality! Salt is a
@@ -26793,11 +28624,7 @@ Here s the md5sum:
 .sp
 7d5aca4633bc22f59045f59e82f43b56
 .sp
-For instructions on how to set up Salt please see the 
-.nf
-\(gainstallation\(ga_
-.fi
-
+For instructions on how to set up Salt please see the \fIinstallation\fP
 instructions.
 .SS New Features
 .SS Salt Run
@@ -26904,11 +28731,7 @@ Here is the md5sum:
 .sp
 9a925da04981e65a0f237f2e77ddab37
 .sp
-For instructions on how to set up Salt please see the 
-.nf
-\(gainstallation\(ga_
-.fi
-
+For instructions on how to set up Salt please see the \fIinstallation\fP
 instructions.
 .SS New Features
 .SS Salt Syndic
@@ -27003,11 +28826,7 @@ Or from PiPy:
 .sp
 \fI\%http://pypi.python.org/packages/source/s/salt/salt-0.9.2.tar.gz\fP
 .sp
-For instructions on how to set up Salt please see the 
-.nf
-\(gainstallation\(ga_
-.fi
-
+For instructions on how to set up Salt please see the \fIinstallation\fP
 instructions.
 .SS New Features
 .SS Salt\-Call Additions
@@ -27070,11 +28889,7 @@ Or from PiPy:
 .sp
 \fI\%http://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz\fP
 .sp
-For instructions on how to set up Salt please see the 
-.nf
-\(gainstallation\(ga_
-.fi
-
+For instructions on how to set up Salt please see the \fIinstallation\fP
 instructions.
 .SS New Features
 .SS WAN Support
@@ -27360,11 +29175,7 @@ Or from PiPy:
 .sp
 \fI\%http://pypi.python.org/packages/source/s/salt/salt-0.9.4.tar.gz\fP
 .sp
-For instructions on how to set up Salt please see the 
-.nf
-\(gainstallation\(ga_
-.fi
-
+For instructions on how to set up Salt please see the \fIinstallation\fP
 instructions.
 .SS New Features
 .SS Failhard State Option

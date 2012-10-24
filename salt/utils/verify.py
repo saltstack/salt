@@ -134,7 +134,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
             continue
         if not os.path.isdir(dir_):
             try:
-                cumask = os.umask(63)  # 077
+                cumask = os.umask(18)  # 077
                 os.makedirs(dir_)
                 # If starting the process as root, chown the new dirs
                 if os.getuid() == 0:

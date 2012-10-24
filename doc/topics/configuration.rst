@@ -58,7 +58,7 @@ Running Salt
 There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`
 available.
 
-Manage Salt public keys
+Manage Salt Public Keys
 =======================
 
 Salt manages authentication with RSA public keys. The keys are managed on the

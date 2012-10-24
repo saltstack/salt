@@ -99,6 +99,10 @@ class SMinion(object):
     def __init__(self, opts):
         # Generate all of the minion side components
         self.opts = opts
+        # Late setup the of the opts grains, so we can log from the grains
+        # module
+        opts['grains'] = salt.loader.grains(opts)
+        self.opts = opts
         self.gen_modules()
 
     def gen_modules(self):
@@ -128,6 +132,9 @@ class Minion(object):
         '''
         Pass in the options dict
         '''
+        # Late setup the of the opts grains, so we can log from the grains
+        # module
+        opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self.__prep_mod_opts()
@@ -162,6 +169,20 @@ class Minion(object):
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts, functions)
         return functions, returners
+
+    def _fire_master(self, data, tag):
+        '''
+        Fire an event on the master
+        '''
+        load = {'id': self.opts['id'],
+                'tag': tag,
+                'data': data,
+                'cmd': '_minion_event'}
+        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        try:
+            sreq.send('aes', self.crypticle.dumps(load))
+        except:
+            pass
 
     def _handle_payload(self, payload):
         '''
@@ -570,6 +591,14 @@ class Minion(object):
         socket.connect(self.master_pub)
         poller.register(socket, zmq.POLLIN)
         epoller.register(epull_sock, zmq.POLLIN)
+        # Send an event to the master that the minion is live
+        self._fire_master(
+                'Minion {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                    ),
+                'minion_start'
+                )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -724,10 +753,9 @@ class Matcher(object):
     '''
     def __init__(self, opts, functions=None):
         self.opts = opts
-        if not functions:
+        if functions is None:
             functions = salt.loader.minion_mods(self.opts)
-        else:
-            self.functions = functions
+        self.functions = functions
 
     def confirm_top(self, match, data, nodegroups=None):
         '''
@@ -850,6 +878,25 @@ class Matcher(object):
             comps[1].lower(),
             ))
 
+    def ipcidr_match(self, tgt):
+        '''
+        Matches based on ip address or CIDR notation
+        '''
+        num_parts = len(tgt.split('/'))
+        if num_parts > 2:
+            return False
+        elif num_parts == 2:
+            return self.functions['network.in_subnet'](tgt)
+        else:
+            import socket
+            try:
+                socket.inet_aton(tgt)
+            except socket.error:
+                # Not a valid IPv4 address
+                return False
+            else:
+                return tgt in self.functions['network.ip_addrs']()
+
     def compound_match(self, tgt):
         '''
         Runs the compound target check
@@ -862,12 +909,13 @@ class Matcher(object):
                'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
+               'S': 'ipcidr',
                'E': 'pcre'}
         results = []
         opers = ['and', 'or', 'not']
         for match in tgt.split():
             # Try to match tokens from the compound target, first by using
-            # the 'G, X, I, L, E' matcher types, then by hostname glob.
+            # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
                 comps = match.split('@')
                 matcher = ref.get(comps[0])
@@ -895,5 +943,7 @@ class Matcher(object):
         matcher is used in states
         '''
         if tgt in nodegroups:
-            return self.compound_match(nodegroups[tgt])
+            return self.compound_match(
+                    salt.utils.nodegroup_comp(tgt, nodegroups)
+                    )
         return False

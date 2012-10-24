@@ -186,7 +186,7 @@ class EventPublisher(multiprocessing.Process):
         epull_sock.bind(epull_uri)
         # Restrict access to the sockets
         pub_mode = 448
-        if self.opts.get('client_acl'):
+        if self.opts.get('client_acl') or self.opts.get('external_auth'):
             pub_mode = 511
         os.chmod(
                 os.path.join(self.opts['sock_dir'],

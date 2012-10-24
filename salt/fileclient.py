@@ -729,7 +729,8 @@ class RemoteClient(Client):
         master.
         '''
         load = {'cmd': '_ext_nodes',
-                'id': self.opts['id']}
+                'id': self.opts['id'],
+                'opts': self.opts}
         try:
             return self.auth.crypticle.loads(
                     self.sreq.send(

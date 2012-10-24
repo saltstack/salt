@@ -22,7 +22,13 @@ salt_base_path = os.path.dirname(salt.__file__)
 loaded_base_name = 'salt.loaded'
 
 
-def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
+def _create_loader(
+        opts,
+        ext_type,
+        tag,
+        ext_dirs=True,
+        ext_type_dirs=None,
+        base_path=None):
     '''
     Creates Loader instance
 
@@ -31,8 +37,11 @@ def _create_loader(opts, ext_type, tag, ext_dirs=True, ext_type_dirs=None):
         extension types,
         base types.
     '''
+    if base_path:
+        sys_types = os.path.join(base_path, ext_type)
+    else:
+        sys_types = os.path.join(salt_base_path, ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
-    sys_types = os.path.join(salt_base_path, ext_type)
 
     ext_type_types = []
     if ext_dirs:
@@ -94,6 +103,22 @@ def pillars(opts, functions):
     return load.filter_func('ext_pillar', pack)
 
 
+def tops(opts):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'tops', 'top')
+    return load.filter_func('top')
+
+
+def auth(opts):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'auth', 'auth')
+    return load.gen_functions()
+
+
 def states(opts, functions):
     '''
     Returns the state modules
@@ -132,7 +157,7 @@ def grains(opts):
         salt.config.load_config(
             pre_opts, opts['conf_file'], 'SALT_MINION_CONFIG'
         )
-        default_include = pre_opts.get('default_include', [])
+        default_include = pre_opts.get('default_include', opts['default_include'])
         include = pre_opts.get('include', [])
         pre_opts = salt.config.include_config(
             default_include, pre_opts, opts['conf_file'], verbose=False
@@ -509,17 +534,17 @@ class Loader(object):
         Pass in a function object returned from get_functions to load in
         introspection functions.
         '''
-        funcs['sys.list_functions'] = lambda: self.list_funcs(funcs)
+        funcs['sys.list_functions'] = lambda module='': self.list_funcs(funcs, module)
         funcs['sys.list_modules'] = lambda: self.list_modules(funcs)
         funcs['sys.doc'] = lambda module = '': self.get_docs(funcs, module)
         funcs['sys.reload_modules'] = lambda: True
         return funcs
 
-    def list_funcs(self, funcs):
+    def list_funcs(self, funcs, module=''):
         '''
-        List the functions
+        List the functions.  Optionally, specify a module to list from.
         '''
-        return sorted(funcs)
+        return sorted(f for f in funcs if f.startswith(module + '.')) if module else sorted(funcs)
 
     def list_modules(self, funcs):
         '''

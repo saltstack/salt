@@ -129,6 +129,7 @@ class Auth(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.token = Crypticle.generate_key_string()
         self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
@@ -177,6 +178,11 @@ class Auth(object):
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
+        try:
+            pub = RSA.load_pub_key(os.path.join(self.opts['pki_dir'], self.mpub))
+            payload['load']['token'] = pub.public_encrypt(self.token, 4)
+        except Exception:
+            pass
         with open(tmp_pub, 'r') as fp_:
             payload['load']['pub'] = fp_.read()
         os.remove(tmp_pub)
@@ -218,12 +224,16 @@ class Auth(object):
                           'have been subverted, verify salt master\'s public '
                           'key')
                 return False
+            try:
+                if token and not self.decrypt_aes(token) == self.token:
+                    log.error('The master failed to decrypt the random minion token')
+                    return False
+            except Exception:
+                log.error('The master failed to decrypt the random minion token')
+                return False
+            return True
         else:
             open(m_pub_fn, 'w+').write(master_pub)
-        pub = RSA.load_pub_key(tmp_pub)
-        plaintext = pub.public_decrypt(token, 5)
-        os.remove(tmp_pub)
-        if plaintext == 'salty bacon':
             return True
         log.error('The salt master has failed verification for an unknown '
                   'reason, verify your salt keys')
@@ -275,6 +285,8 @@ class Auth(object):
         if not self.verify_master(payload['pub_key'], payload['token']):
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
+                'The master may need to be updated if it is a version of Salt '
+                'lower than 0.10.4, or\n'
                 'If you are confident that you are connecting to a valid Salt '
                 'Master, then remove the master public key and restart the '
                 'Salt Minion.\nThe master public key can be found '

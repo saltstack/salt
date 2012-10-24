@@ -54,10 +54,10 @@ Follow these instructions: http://wiki.debian.org/iptables
 Once you've found your firewall rules, you'll need to add the two lines below
 to allow traffic on ``tcp/4505`` and ``tcp/4506``:
 
-.. code-block:: diff
+::
 
-    + -A INPUT -m state --state new -m tcp -p tcp --dport 4505 -j ACCEPT
-    + -A INPUT -m state --state new -m tcp -p tcp --dport 4506 -j ACCEPT
+    -A INPUT -m state --state new -m tcp -p tcp --dport 4505 -j ACCEPT
+    -A INPUT -m state --state new -m tcp -p tcp --dport 4506 -j ACCEPT
 
 **Ubuntu**
 
@@ -77,10 +77,10 @@ The BSD-family of operating systems uses `packet filter (pf)`_. The following
 example describes the additions to ``pf.conf`` needed to access the Salt
 master.
 
-.. code-block:: diff
+::
 
-    + pass in on $int_if proto tcp from any to $int_if port 4505
-    + pass in on $int_if proto tcp from any to $int_if port 4506
+    pass in on $int_if proto tcp from any to $int_if port 4505
+    pass in on $int_if proto tcp from any to $int_if port 4506
 
 Once these additions have been made to the ``pf.conf`` the rules will need to
 be reloaded. This can be done using the ``pfctl`` command.

@@ -1,4 +1,4 @@
-.TH "SALT" "1" "September 30, 2012" "0.10.3" "Salt"
+.TH "SALT" "1" "October 23, 2012" "0.10.4" "Salt"
 .SH NAME
 salt \- salt
 .
@@ -78,6 +78,19 @@ minions to execute on.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-a EAUTH, \-\-auth=EAUTH
+Pass in an external authentication medium to validate against. The
+credentials will be prompted for. Can be used with the \-T option.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-T, \-\-make\-token
+Used in conjunction with the \-a option. This creates a token that allows
+for the authenticated user to send commands without needing to
+re\-authenticate.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-\-version
 Print the version of Salt that is running.
 .UNINDENT
@@ -129,7 +142,12 @@ Instead of using shell globs use the return code of a function.
 .TP
 .B \-N, \-\-nodegroup
 Use a predefined compound target defined in the Salt master configuration
-file
+file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-S, \-\-ipcidr
+Match based on Subnet (CIDR notation) or IPv4 address.
 .UNINDENT
 .INDENT 0.0
 .TP

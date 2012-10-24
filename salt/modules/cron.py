@@ -54,7 +54,25 @@ def _render_tab(lst):
     return ret
 
 
-def _write_cron(user, lines):
+def _get_cron_cmdstr(user, path):
+    '''
+    Returns a platform-specific format string, to be used to build a crontab
+    command.
+    '''
+    if __grains__['os'] == 'Solaris':
+        return 'su - {0} -c "crontab {1}"'.format(user,path)
+    else:
+        return 'crontab -u {0} {1}'.format(user,path)
+
+
+def write_cron_file(user, path):
+    '''
+    Writes the contents of a file to a user's crontab
+    '''
+    return __salt__['cmd.retcode'](_get_cron_cmdstr(user, path)) == 0
+
+
+def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
@@ -62,8 +80,9 @@ def _write_cron(user, lines):
     os.close(fd_)
     with open(path, 'w+') as fp_:
         fp_.writelines(lines)
-    cmd = 'crontab -u {0} {1}'.format(user, path)
-    ret = __salt__['cmd.run_all'](cmd)
+    if __grains__['os'] == 'Solaris' and user != "root":
+        __salt__['cmd.run']('chown {0} {1}'.format(user, path))
+    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(user, path))
     os.remove(path)
     return ret
 
@@ -76,7 +95,10 @@ def raw_cron(user):
 
         salt '*' cron.raw_cron root
     '''
-    cmd = 'crontab -l -u {0}'.format(user)
+    if __grains__['os'] == 'Solaris':
+        cmd = 'crontab -l {0}'.format(user)
+    else:
+        cmd = 'crontab -l -u {0}'.format(user)
     return __salt__['cmd.run_stdout'](cmd)
 
 
@@ -150,7 +172,7 @@ def set_special(user, special, cmd):
     spec = {'spec': special,
             'cmd': cmd}
     lst['special'].append(spec)
-    comdat = _write_cron(user, _render_tab(lst))
+    comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
         # Failed to commit, return the error
         return comdat['stderr']
@@ -193,7 +215,7 @@ def set_job(user, minute, hour, dom, month, dow, cmd):
             'dayweek': dow,
             'cmd': cmd}
     lst['crons'].append(cron)
-    comdat = _write_cron(user, _render_tab(lst))
+    comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
         # Failed to commit, return the error
         return comdat['stderr']
@@ -223,7 +245,7 @@ def rm_job(user, minute, hour, dom, month, dow, cmd):
     if rm_ is not None:
         lst['crons'].pop(rm_)
         ret = 'removed'
-    comdat = _write_cron(user, _render_tab(lst))
+    comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
         # Failed to commit, return the error
         return comdat['stderr']
@@ -254,7 +276,7 @@ def set_env(user, name, value=None):
     print(value)
     env = {'name': name, 'value': value}
     lst['env'].append(env)
-    comdat = _write_cron(user, _render_tab(lst))
+    comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
         # Failed to commit, return the error
         return comdat['stderr']
@@ -278,7 +300,7 @@ def rm_env(user, name):
     if rm_ is not None:
         lst['env'].pop(rm_)
         ret = 'removed'
-    comdat = _write_cron(user, _render_tab(lst))
+    comdat = _write_cron_lines(user, _render_tab(lst))
     if comdat['retcode']:
         # Failed to commit, return the error
         return comdat['stderr']

@@ -288,14 +288,15 @@ The default rendering system is the ``yaml_jinja`` renderer. The
 templating system, and then through the YAML parser. The benefit here is that
 full programming constructs are available when creating SLS files.
 
-Other renderers available are ``yaml_mako`` which uses the `Mako`_ templating
-system rather than the jinja templating system, and more notably, the pure
-Python or ``py`` renderer. The ``py`` renderer allows for SLS files to be
-written in pure Python, allowing for the utmost level of flexibility and
-power when preparing SLS data.
+Other renderers available are ``yaml_mako`` and ``yaml_wempy`` which each use
+the `Mako`_ or `Wempy`_ templating system respectively rather than the jinja
+templating system, and more notably, the pure Python or ``py`` renderer.
+The ``py`` renderer allows for SLS files to be written in pure Python, allowing
+for the utmost level of flexibility and power when preparing SLS data.
 
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`Mako`: http://www.makotemplates.org/
+.. _`Wempy`: http://www.wempy.org/
 
 Getting to Know the Default - yaml_jinja
 ----------------------------------------

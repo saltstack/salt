@@ -5,16 +5,23 @@ Dynamic Module Distribution
 .. versionadded:: 0.9.5
 
 Salt Python modules can be distributed automatically via the Salt file server.
-Under the root of any environment defined via the file_roots option on the
-master server directories corresponding to the type of module can be used.
+Under the root of any environment defined via the :conf_master:`file_roots`
+option on the master server directories corresponding to the type of module can
+be used.
+
+.. glossary::
+
+    Module sync
+        Automatically transfer and load modules, grains, renderers, returners,
+        states, etc from the master to the minions.
 
 The directories are prepended with an underscore:
 
-  1. _modules
-  2. _grains
-  3. _renderers
-  4. _returners
-  5. _states
+  1. :file:`_modules`
+  2. :file:`_grains`
+  3. :file:`_renderers`
+  4. :file:`_returners`
+  5. :file:`_states`
 
 The contents of these directories need to be synced over to the minions after
 Python modules have been created in them. There are a number of ways to sync

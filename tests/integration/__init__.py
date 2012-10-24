@@ -9,6 +9,7 @@ import os
 import sys
 import shutil
 import subprocess
+import tempfile
 try:
     import pwd
 except ImportError:
@@ -31,7 +32,7 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 
 PYEXEC = 'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
 
-TMP = os.path.join(INTEGRATION_TEST_DIR, 'tmp')
+TMP = os.path.join(tempfile.gettempdir(), 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 
@@ -127,8 +128,13 @@ class TestDaemon(object):
         ]
         # clean up the old files
         self._clean()
-        self.master_opts['hosts.file'] = os.path.join(TMP, 'hosts')
-        self.minion_opts['hosts.file'] = os.path.join(TMP, 'hosts')
+
+        # Point the config values to the correct temporary paths
+        for name in ('hosts', 'aliases'):
+            self.master_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
+            self.minion_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
+            self.sub_minion_opts['{0}.file'.format(name)] = os.path.join(TMP, name)
+
         verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
                     os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(self.master_opts['pki_dir'],
@@ -147,8 +153,10 @@ class TestDaemon(object):
                     self.smaster_opts['sock_dir'],
                     self.sub_minion_opts['sock_dir'],
                     self.minion_opts['sock_dir'],
+                    TMP
                     ],
-                   pwd.getpwuid(os.getuid())[0])
+                   pwd.getpwuid(os.getuid()).pw_name)
+
         # Set up PATH to mockbin
         self._enter_mockbin()
 
@@ -216,16 +224,8 @@ class TestDaemon(object):
             shutil.rmtree(self.master_opts['root_dir'])
         if os.path.isdir(self.smaster_opts['root_dir']):
             shutil.rmtree(self.smaster_opts['root_dir'])
-        for fn_ in os.listdir(TMP):
-            if fn_ == '_README':
-                continue
-            path = os.path.join(TMP, fn_)
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            elif os.path.isfile(path):
-                os.remove(path)
-            elif os.path.islink(path):
-                os.remove(path)
+        if os.path.isdir(TMP):
+            shutil.rmtree(TMP)
 
 
 class ModuleCase(TestCase):
@@ -240,6 +240,13 @@ class ModuleCase(TestCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
+    def minion_run(self, _function, *args, **kw):
+        '''
+        Run a single salt function on the 'minion' target and condition
+        the return down to match the behavior of the raw function call
+        '''
+        return self.run_function(_function, args, **kw)
+
     def run_function(self, function, arg=(), minion_tgt='minion', **kwargs):
         '''
         Run a single salt function and condition the return down to match the
@@ -247,26 +254,33 @@ class ModuleCase(TestCase):
         '''
         know_to_return_none = ('file.chown', 'file.chgrp')
         orig = self.client.cmd(
-            minion_tgt, function, arg, timeout=100, kwarg=kwargs
+            minion_tgt, function, arg, timeout=500, kwarg=kwargs
         )
 
         if minion_tgt not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
-                'from the minion \'{0}\''.format(minion_tgt)
+                'from the minion \'{0}\'. Command output: {1}'.format(
+                    minion_tgt, orig
+                )
             )
         elif orig[minion_tgt] is None and function not in know_to_return_none:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
-                'the minion \'{1}\''.format(function, minion_tgt)
+                'the minion \'{1}\'. Command output: {2}'.format(
+                    function, minion_tgt, orig
+                )
             )
         return orig[minion_tgt]
 
-    def state_result(self, ret):
+    def state_result(self, ret, raw=False):
         '''
         Return the result data from a single state return
         '''
-        return ret[next(iter(ret))]['result']
+        res = ret[next(iter(ret))]
+        if raw:
+            return res
+        return res['result']
 
     def run_state(self, function, **kwargs):
         '''
@@ -301,6 +315,20 @@ class ModuleCase(TestCase):
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
         )
 
+    def assert_success(self, ret):
+        try:
+            res = self.state_result(ret, raw=True)
+        except TypeError:
+            pass
+        else:
+            if isinstance(res, dict):
+                if res['result'] == True:
+                    return
+                if 'comment' in res:
+                    raise AssertionError(res['comment'])
+                ret = res
+        raise AssertionError('bad result: %r' % (ret))
+
 
 class SyndicCase(TestCase):
     '''
@@ -322,11 +350,11 @@ class SyndicCase(TestCase):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg)
+        orig = self.client.cmd('minion', function, arg, timeout=500)
         if 'minion' not in orig:
             self.skipTest(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
-                'from the minion. Received: \'{0}\''.format(orig)
+                'from the minion. Command output: {0}'.format(orig)
             )
         return orig['minion']
 

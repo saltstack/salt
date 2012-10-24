@@ -426,7 +426,7 @@ def user_exists(user, host='localhost'):
     db = connect()
     cur = db.cursor()
     query = ('SELECT User,Host FROM mysql.user WHERE User = \'{0}\' AND '
-             'Host = \'{0}\''.format(user, host))
+             'Host = \'{1}\''.format(user, host))
     log.debug('Doing query: {0}'.format(query))
     cur.execute(query)
     return cur.rowcount == 1

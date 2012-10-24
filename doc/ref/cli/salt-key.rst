@@ -49,7 +49,8 @@ Options
 
 .. option:: -d DELETE, --delete=DELETE
 
-    Delete the named minion key for command execution.
+    Delete the named minion key or minion keys matching a glob for command
+    execution.
 
 .. option:: -D, --delete-all
 

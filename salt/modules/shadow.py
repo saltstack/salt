@@ -14,7 +14,7 @@ def __virtual__():
     '''
 
     # Disable on Windows, a specific file module exists:
-    if __grains__['os'] == 'Windows':
+    if __grains__['os'] == 'Windows' or __grains__['kernel'] == 'SunOS':
         return False
     return 'shadow'
 

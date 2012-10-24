@@ -154,6 +154,10 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
+You will need a recent version of ``virtualenv``::
+
+    pip install "virtualenv>=1.8.2"
+
 You will need ``mock`` to run the tests::
 
     pip install mock

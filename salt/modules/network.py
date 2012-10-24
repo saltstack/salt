@@ -6,8 +6,7 @@ import sys
 import logging
 
 # Import Salt libs
-from salt.utils.interfaces import *
-from salt.utils.socket_util import *
+from salt.utils.socket_util import sanitize_host
 
 __outputter__ = {
     'dig':     'txt',
@@ -25,7 +24,7 @@ def __virtual__():
     # Disable on Windows, a specific file module exists:
     if __grains__['os'] in ('Windows',):
         return False
-    setattr(sys.modules['salt.utils.interfaces'], 'interfaces', interfaces)
+
     return 'network'
 
 
@@ -293,8 +292,6 @@ def in_subnet(cidr):
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
-    ifaces = interfaces()
-
     netstart_bin = _ipv4_to_bits(netstart)
 
     if netsize < 32 and len(netstart_bin.rstrip('0')) > netsize:
@@ -303,16 +300,44 @@ def in_subnet(cidr):
         return False
 
     netstart_leftbits = netstart_bin[0:netsize]
-    for ipv4_info in ifaces.values():
-        for ipv4 in ipv4_info.get('inet', []):
-            if ipv4['address'] == '127.0.0.1': continue
-            if netsize == 32:
-                if netstart == ipv4['address']: return True
-            else:
-                ip_leftbits = _ipv4_to_bits(ipv4['address'])[0:netsize]
-                if netstart_leftbits == ip_leftbits: return True
+    for ip_addr in ip_addrs():
+        if netsize == 32:
+            if netstart == ip_addr: return True
+        else:
+            ip_leftbits = _ipv4_to_bits(ip_addr)[0:netsize]
+            if netstart_leftbits == ip_leftbits: return True
 
     return False
+
+
+def ip_addrs(include_loopback=False):
+    '''
+    Returns a list of IPv4 addresses assigned to the host. (127.0.0.1 is
+    ignored, unless 'include_loopback=True' is indicated)
+    '''
+    ret = []
+    ifaces = interfaces()
+    for ipv4_info in ifaces.values():
+        for ipv4 in ipv4_info.get('inet',[]):
+            if ipv4['address'] != '127.0.0.1': ret.append(ipv4['address'])
+            else:
+                if include_loopback: ret.append(ipv4['address'])
+    return ret
+
+
+def ip_addrs6(include_loopback=False):
+    '''
+    Returns a list of IPv6 addresses assigned to the host. (::1 is ignored,
+    unless 'include_loopback=True' is indicated)
+    '''
+    ret = []
+    ifaces = interfaces()
+    for ipv6_info in ifaces.values():
+        for ipv6 in ipv6_info.get('inet6',[]):
+            if ipv6['address'] != '::1': ret.append(ipv6['address'])
+            else:
+                if include_loopback: ret.append(ipv6['address'])
+    return ret
 
 
 def ping(host):
@@ -323,7 +348,7 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -c 4 {0}'.format(_sanitize_host(host))
+    cmd = 'ping -c 4 {0}'.format(sanitize_host(host))
     return __salt__['cmd.run'](cmd)
 
 
@@ -376,7 +401,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'traceroute {0}'.format(_sanitize_host(host))
+    cmd = 'traceroute {0}'.format(sanitize_host(host))
     out = __salt__['cmd.run'](cmd)
 
     for line in out:
@@ -407,5 +432,5 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig {0}'.format(_sanitize_host(host))
+    cmd = 'dig {0}'.format(sanitize_host(host))
     return __salt__['cmd.run'](cmd)

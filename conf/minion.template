@@ -153,20 +153,16 @@
 # rendered from a jinja template, the available options are:
 # yaml_jinja
 # yaml_mako
+# yaml_wempy
 # json_jinja
 # json_mako
+# json_wempy
 #
 #renderer: yaml_jinja
 #
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
 #failhard: False
-#
-# state_verbose allows for the data returned from the minion to be more
-# verbose. Normally only states that fail or states that have changes are
-# returned, but setting state_verbose to True will return all states that
-# were checked
-#state_verbose: False
 #
 # autoload_dynamic_modules Turns on automatic loading of modules found in the
 # environments on the master. This is turned on by default, to turn of
@@ -288,10 +284,14 @@
 # The location of the minion log file
 #log_file: /var/log/salt/minion
 #
-# The level of messages to send to the log file.
+# The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 # Default: 'warning'
 #log_level: warning
+#
+# The level of messages to send to the log file.
+# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# Default: 'warning'
 #log_level_logfile:
 #
 # The date and time format used in log messages. Allowed date/time formating
