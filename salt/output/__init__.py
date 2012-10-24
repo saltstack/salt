@@ -13,6 +13,8 @@ def display_output(data, out, opts=None):
     '''
     if opts is None:
         opts = {}
+    if not 'color' in opts:
+        opts['color'] = not bool(opts.get('no_color', False))
     outputters = salt.loader.outputters(opts)
     if not out in outputters:
         outputters['pprint'](data)
@@ -26,8 +28,9 @@ def get_printout(out, opts=None, **kwargs):
     if opts is None:
         opts = {}
     opts.update(kwargs)
+    if not 'color' in opts:
+        opts['color'] = not bool(opts.get('no_color', False))
     outputters = salt.loader.outputters(opts)
     if not out in outputters:
         return None
     return outputters[out]
-
