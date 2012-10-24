@@ -21,7 +21,7 @@ their web interface:
     # The OpenStack compute region
     OPENSTACK.compute_region: az-1.region-a.geo-1
     # The OpenStack tenant name (not tenant ID)
-    OPENSTACK.tenant: myuser-tenent1
+    OPENSTACK.tenant: myuser-tenant1
     # The OpenStack user name
     OPENSTACK.user: myuser
     # The OpenStack password
@@ -110,8 +110,6 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
-    from pprint import pprint
-    pprint(data.__dict__)
     deployed = saltcloud.utils.deploy_script(
         host=data.public_ips[0],
         username='root',
