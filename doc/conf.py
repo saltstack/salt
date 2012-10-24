@@ -35,6 +35,20 @@ class Mock(object):
 # pylint: enable=R0903
 
 MOCK_MODULES = [
+    # third-party libs (for netapi modules)
+    'flask',
+    'flask.globals',
+    'flask.views',
+    'werkzeug',
+    'werkzeug.exceptions',
+
+    # salt libs
+    'salt',
+    'salt.client',
+    'salt.exceptions',
+    'salt.log',
+    'salt.runner',
+    'salt.utils',
 ]
 
 for mod_name in MOCK_MODULES:
