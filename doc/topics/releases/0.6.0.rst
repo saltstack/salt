@@ -1,0 +1,50 @@
+==============
+salt-api 0.6.0
+==============
+
+:program:`salt-api` inches closer to prime-time with 0.6.0. This release adds
+the beginnings of a universal interface for accessing Salt components via the
+tried and true method of passing low-data to functions (a core component of
+Salt's remote execution and state management).
+
+
+Low-data interface
+==================
+
+A new view accepts :http:post: requests at the root URL that accepts raw
+low-data as :http:post: data and passes that low-data along to a client
+interface in Salt. Currently only LocalClient and RunnerClient interfaces have
+been implemented in Salt with more coming in the next Salt release.
+
+External authentication
+-----------------------
+
+Raw low-data can contain authentication credentials that make use of Salt's new
+:conf_master:`external_auth` system.
+
+The following is a proof-of-concept of a working eauth call. (It bears
+repeating this is a pre-alpha release and this should not be used by anyone for
+anything real.)
+
+.. code-block:: bash
+
+    % curl -si localhost:8000 \
+        -d client=local \
+        -d tgt='*' \
+        -d fun='test.ping' \
+        -d arg \
+        -d eauth=pam \
+        -d username=saltdev \
+        -d password=saltdev
+
+Participation
+=============
+
+:program:`salt-api` is just getting off the ground so feedback, questions, and
+ideas are critical as we solidify how this project fits into the overall Salt
+infrastructure management stack. Please get involved by `filing issues`__ on
+GitHub, `discussing on the mailing list`__, and chatting in ``#salt-devel`` on
+Freenode.
+
+.. __: https://github.com/saltstack/salt-api/issues
+.. __: https://groups.google.com/forum/#!forum/salt-users
