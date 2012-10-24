@@ -55,12 +55,19 @@ def list():
     List installed pecl extensions.
     '''
 
+    pecls = {}
     lines = _pecl('list').splitlines()
     lines.pop(0)
+    '''
+    Only one line if no package installed:
+    (no packages installed from channel pecl.php.net)
+    '''
+    if not lines:
+        return pecls
+
     lines.pop(0)
     lines.pop(0)
 
-    pecls = {}
     for line in lines:
         m = re.match('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)', line)
         if m:
