@@ -3,6 +3,7 @@ Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 '''
 
+# Import salt utils
 import salt.loader
 
 def display_output(data, out, opts=None):
