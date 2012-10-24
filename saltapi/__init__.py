@@ -1,56 +1,53 @@
 '''
 Make api awesomeness
 '''
+# Import Python libs
 
-# Import python libs
-#
 # Import Salt libs
-import salt.utils
 import salt.client
 import salt.runner
+import salt.utils
+from salt.exceptions import SaltException
 
-class API(object):
+class APIClient(object):
     '''
+    Provide a uniform method of accessing the various *Client interfaces in
+    Salt in the form of LowData data structures.
+
+    >>> client = APIClient(__opts__)
+    >>> lowdata = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
+    >>> client.run(lowdata)
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.local = salt.client.LocalClient(opts['conf_file'])
 
     def run(self, low):
         '''
+        Execute the specified function in the specified client by passing the
+        LowData
         '''
+        # FIXME: the called *Client functions must be consistently
+        # asynchronous. this will need to be addressed across the board
+
         if not 'client' in low:
             raise SaltException('No client specified')
+
         l_fun = getattr(self, low['client'])
-        fcall = format_call(l_fun, low)
-        if 'kwargs' in fcall:
-            ret = l_fun(*fcall['args'], **fcall['kwargs'])
-        else:
-            ret = l_fun(*f_call['args'])
+        f_call = format_call(l_fun, low)
+
+        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
 
-    def cmd(
-            tgt,
-            fun,
-            arg=(),
-            expr_form='glob',
-            ret='',
-            timeout=None,
-            **kwargs):
+    def local(self, *args, **kwargs):
         '''
-        Wrap running a job
+        Wrap the LocalClient for running execution modules
         '''
-        return self.local.run_job(
-                tgt,
-                fun,
-                arg,
-                expr_form,
-                ret,
-                timeout,
-                **kwargs).get('jid')
+        local = salt.client.LocalClient(self.opts['conf_file'])
+        return local.cmd(*args, **kwargs)
 
-    def runner(fun, **kwargs):
+    def runner(self, *args, **kwargs):
         '''
+        Wrap the RunnerClient for executing runner modules
         '''
         runner = salt.runner.RunnerClient(opts)
         return salt.runner.low(fun, kwargs)

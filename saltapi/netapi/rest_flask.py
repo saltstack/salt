@@ -1,17 +1,27 @@
 '''
 A REST interface for Salt using the Flask framework
 '''
+import itertools
+import json
+
 from flask import Flask
+from flask.globals import current_app
 from flask import jsonify
 from flask import redirect
 from flask import request
+from flask import Response
 from flask import url_for
 from flask.views import MethodView
 from werkzeug import exceptions
 
 import salt.client
+import salt.log
 import salt.runner
 import salt.utils
+
+import saltapi
+
+logger = salt.log.logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -28,8 +38,21 @@ class SaltAPI(MethodView):
     '''
     def __init__(self, app, *args, **kwargs):
         self.app = app
-        self.local = salt.client.LocalClient(__opts__['conf_file'])
-        self.runner = salt.runner.RunnerClient(__opts__)
+        self.api = saltapi.APIClient(__opts__)
+
+    def post(self):
+        '''
+        Run a given function in a given client with the given args
+        '''
+        lowvals = itertools.izip_longest(*[i[1] for i in request.form.lists()])
+        lowdata = [dict(zip(request.form.keys(), i)) for i in lowvals]
+        logger.debug("SaltAPI is passing LowData: %s", lowdata)
+        ret = [self.api.run(chunk) for chunk in lowdata]
+        return json_response(ret)
+
+
+#FIXME: the subclasses below have not yet been updated to use the new low-data
+# interface. they may be updated or deleted outright. no promises
 
 class JobsView(SaltAPI):
     '''
@@ -125,6 +148,11 @@ class RunnersView(SaltAPI):
         ret = self.runner.cmd(fun, arg)
         return jsonify({'return': ret})
 
+
+def json_response(obj):
+    return current_app.response_class(json.dumps(obj),
+            mimetype='application/json')
+
 def build_app():
     '''
     Build the Flask app
@@ -162,6 +190,9 @@ def build_app():
 
     runners = RunnersView.as_view('runners', app=app)
     app.add_url_rule('/runners', view_func=runners, methods=['GET', 'POST'])
+
+    api = SaltAPI.as_view('api', app=app)
+    app.add_url_rule('/', view_func=api, methods=['POST'])
 
     return app
 
