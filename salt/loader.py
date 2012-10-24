@@ -111,6 +111,14 @@ def tops(opts):
     return load.filter_func('top')
 
 
+def outputters(opts):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'output', 'output')
+    return load.filter_func('output')
+
+
 def auth(opts):
     '''
     Returns the returner modules
