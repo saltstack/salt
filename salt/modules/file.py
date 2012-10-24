@@ -88,6 +88,8 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid root
     '''
+    if not group:
+        return ''
     try:
         return grp.getgrnam(group).gr_gid
     except KeyError:
