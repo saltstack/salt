@@ -14,9 +14,13 @@ def __virtual__():
     '''
     Only work on systems which default to systemd
     '''
+    enable = (
+            'Arch',
+            'openSUSE',
+            )
     if __grains__['os'] == 'Fedora' and __grains__['osrelease'] > 15:
         return 'service'
-    elif __grains__['os'] == 'openSUSE':
+    elif __grains__['os'] in enable:
         return 'service'
     return False
 

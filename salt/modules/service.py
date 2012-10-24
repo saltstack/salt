@@ -36,6 +36,7 @@ def __virtual__():
                'Gentoo',
                'Ubuntu',
                'Debian',
+               'Arch',
               ]
     if __grains__['os'] in disable:
         return False
