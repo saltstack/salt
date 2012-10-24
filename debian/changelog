@@ -1,4 +1,4 @@
-salt (0.10.4) precise; urgency=low
+salt (0.10.4-1precise1) precise; urgency=low
 
   * New upstream version
 
