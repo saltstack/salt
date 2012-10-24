@@ -1010,6 +1010,12 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
             help=('Return the documentation for the specified module or for '
                   'all modules if none are specified.')
         )
+        self.add_option(
+            '--local',
+            default=False,
+            action='store_true',
+            help='Run salt-call locally, as if there was no master running.'
+        )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:

@@ -222,6 +222,9 @@ class SaltCall(parsers.SaltCallOptionParser):
                 pki_dir=self.config['pki_dir'],
             )
 
+        if self.options.local:
+            self.config['file_client'] = 'local'
+
         caller = salt.cli.caller.Caller(self.config)
 
         if self.options.doc:
