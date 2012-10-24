@@ -167,7 +167,7 @@ def db_create(name,
             return False
 
     # Base query to create a database
-    query = 'CREATE DATABASE {0}'.format(name)
+    query = 'CREATE DATABASE "{0}"'.format(name)
 
     # "With"-options to create a database
     with_args = {
@@ -305,7 +305,7 @@ def user_create(username,
         log.info("User '{0}' already exists".format(username,))
         return False
 
-    sub_cmd = "CREATE USER {0} WITH".format(username, )
+    sub_cmd = 'CREATE USER "{0}" WITH'.format(username, )
     if password:
         escaped_password = password.replace("'", "''")
         sub_cmd = "{0} PASSWORD '{1}'".format(sub_cmd, escaped_password)
