@@ -156,7 +156,42 @@ class FileTest(integration.ModuleCase):
         self.assertFalse(os.path.isfile(os.path.join(name, '36', 'scene')))
         result = self.state_result(ret)
         self.assertIsNone(result)
-        os.removedirs(name)
+        self.assertFalse(os.path.exists(name))
+
+    def test_recurse_template(self):
+        '''
+        file.recurse with jinja template enabled
+        '''
+        _ts = 'TEMPLATE TEST STRING'
+        name = os.path.join(integration.TMP, 'recurse_template_dir')
+        ret = self.run_state(
+            'file.recurse', name=name, source='salt://grail',
+            # For some strange reason passing defaults as a map does not work
+            template='jinja', defaults={'spam': _ts}, spam=_ts)
+        result = self.state_result(ret)
+        self.assertTrue(result)
+        self.assertIn(_ts, open(os.path.join(name, 'scene33'), 'r').read())
+        shutil.rmtree(name, ignore_errors=True)
+
+    def test_recurse_clean(self):
+        '''
+        file.recurse with clean=True
+        '''
+        name = os.path.join(integration.TMP, 'recurse_clean_dir')
+        os.makedirs(name)
+        strayfile = os.path.join(name, 'strayfile')
+        open(strayfile, 'w').close()
+        # Corner cases: replacing file with a directory and vice versa
+        open(os.path.join(name, '36'), 'w').close()
+        os.makedirs(os.path.join(name, 'scene33'))
+        ret = self.run_state(
+            'file.recurse', name=name, source='salt://grail', clean=True)
+        result = self.state_result(ret)
+        self.assertTrue(result)
+        self.assertFalse(os.path.exists(strayfile))
+        self.assertTrue(os.path.isfile(os.path.join(name, '36', 'scene')))
+        self.assertTrue(os.path.isfile(os.path.join(name, 'scene33')))
+        shutil.rmtree(name, ignore_errors=True)
 
     def test_sed(self):
         '''
