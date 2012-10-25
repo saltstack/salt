@@ -27,5 +27,5 @@ def get_printout(out, opts=None, **kwargs):
         opts['color'] = not bool(opts.get('no_color', False))
     outputters = salt.loader.outputters(opts)
     if not out in outputters:
-        return None
+        return outputters['pprint']
     return outputters[out]
