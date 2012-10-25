@@ -4,7 +4,7 @@ include LICENSE
 include README.rst
 include requirements.txt
 include tests/*.py
-recursive-include tests *.py
+recursive-include tests *
 include tests/integration/modules/files/*
 include tests/integration/files/*
 include tests/unit/templates/files/*

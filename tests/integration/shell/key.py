@@ -35,7 +35,14 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --json-out')
         expect = [
-            '{"unaccepted": [], "accepted": ["minion", "sub_minion"], "rejected": []}',
+            '{',
+            '    "unaccepted": [], ',
+            '    "accepted": [',
+            '        "minion", ',
+            '        "sub_minion"',
+            '    ], ',
+            '    "rejected": []',
+            '}',
             ''
             ]
         self.assertEqual(data, expect)
@@ -60,10 +67,9 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --raw-out')
         expect = [
-            "{'unaccepted': [], 'accepted': ['minion', "
-            "'sub_minion'], 'rejected': []}",
+            "{'accepted': ['minion', 'sub_minion'], 'rejected': [], 'unaccepted': []}",
             ''
-        ]
+            ]
         self.assertEqual(data, expect)
 
     def test_list_acc(self):
