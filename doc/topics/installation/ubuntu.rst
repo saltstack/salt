@@ -50,6 +50,12 @@ After making any configuration changes, re-start the affected daemons:
 .. code-block:: bash
 
     sudo restart salt-master
+
+.. code-block:: bash
+
     sudo restart salt-minion
+
+.. code-block:: bash
+
     sudo restart salt-syndic
 
