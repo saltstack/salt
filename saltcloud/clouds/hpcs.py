@@ -56,7 +56,7 @@ def __virtual__():
                  , 'HPCLOUD.apikey'
                  , 'HPCLOUD.auth_endpoint'
                  , 'HPCLOUD.region'
-                 , 'HPCLOUD.key_name'
+                 , 'HPCLOUD.keyname'
                  , 'HPCLOUD.tenant_name'
                  ]
     have_values = 0 
@@ -81,7 +81,6 @@ def get_conn():
             ex_force_auth_version = '2.0_password',
             ex_force_service_name = 'Compute',
             ex_force_service_region = __opts__['HPCLOUD.region'],
-            ex_key_name = __opts__['HPCLOUD.key_name'],
             ex_tenant_name = __opts__['HPCLOUD.tenant_name']
             )
 
@@ -111,6 +110,7 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
+    kwargs['ex_keyname'] = __opts__['HPCLOUD.keyname']
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
