@@ -26,6 +26,7 @@ import sys
 import types
 import paramiko
 import tempfile
+import traceback
 
 # Import libcloud 
 from libcloud.compute.types import Provider
@@ -95,16 +96,31 @@ def create(vm_):
     kwargs = {}
     kwargs['name'] = vm_['name']
     kwargs['image'] = get_image(conn, vm_)
+    if not kwargs['image']:
+        err = ('Error creating {0} on HPCLOUD\n\n'
+               'Could not find image {1}\n').format(
+                       vm_['name'], vm_['image']
+                       )
+        sys.stderr.write(err)
+        return False
     kwargs['size'] = get_size(conn, vm_)
+    if not kwargs['size']:
+        err = ('Error creating {0} on HPCLOUD\n\n'
+               'Could not find size {1}\n').format(
+                       vm_['name'], vm_['size']
+                       )
+        sys.stderr.write(err)
+        return False
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
         err = ('Error creating {0} on HPCLOUD\n\n'
                'The following exception was thrown by libcloud when trying to '
-               'run the initial deployment: \n{1}').format(
+               'run the initial deployment: \n{1}\n').format(
                        vm_['name'], exc
                        )
         sys.stderr.write(err)
+	print traceback.format_exc()
         return False
     # NOTE
     # We need to insert a wait / poll until we have
