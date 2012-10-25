@@ -29,6 +29,8 @@ def get_printout(out, opts=None, **kwargs):
         if outputter in opts:
             if opts[outputter]:
                 out = outputter
+    if out is None:
+        out = 'pprint'
     if out.endswith('_out'):
         out = out[:-4]
     if opts is None:
