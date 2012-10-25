@@ -59,7 +59,7 @@ def refresh_db():
 
     CLI Example::
 
-    salt '*' pkgutil.refresh_db
+        salt '*' pkgutil.refresh_db
     '''
     return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U > /dev/null 2>&1') == 0
 
@@ -70,7 +70,7 @@ def upgrade_available(name):
 
     CLI Example::
 
-    salt '*' pkgutil.upgrade_available CSWpython
+        salt '*' pkgutil.upgrade_available CSWpython
     '''
     version = None
     cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(name)
@@ -91,7 +91,7 @@ def list_upgrades():
 
     CLI Example::
 
-    salt '*' pkgutil.list_upgrades
+        salt '*' pkgutil.list_upgrades
     '''
     upgrades = {}
     lines = __salt__['cmd.run_stdout']('/opt/csw/bin/pkgutil -A --parse').split('\n')
@@ -117,7 +117,7 @@ def upgrade(refresh=True, **kwargs):
 
     CLI Example::
 
-    salt '*' pkgutil.upgrade
+        salt '*' pkgutil.upgrade
     '''
     if refresh:
         refresh_db()
@@ -224,7 +224,8 @@ def install(name, refresh=False, version=None, **kwargs):
 
 def remove(name, **kwargs):
     '''
-    Remove a package and all its dependencies which are not in use by other packages.
+    Remove a package and all its dependencies which are not in use by other
+    packages.
 
     Returns a list containing the removed packages.
 
@@ -254,7 +255,8 @@ def remove(name, **kwargs):
 
 def purge(name, **kwargs):
     '''
-    Remove a package and all its dependencies which are not in use by other packages.
+    Remove a package and all its dependencies which are not in use by other
+    packages.
 
     Returns a list containing the removed packages.
 
