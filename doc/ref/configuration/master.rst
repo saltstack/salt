@@ -455,7 +455,7 @@ Pillar Configuration
 ``pillar_roots``
 ----------------
 
-Set the environments and directorirs used to hold pillar sls data. This
+Set the environments and directories used to hold pillar sls data. This
 configuration is the same as file_roots:
 
 Default: ``base: [/srv/pillar]``
