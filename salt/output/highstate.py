@@ -2,6 +2,8 @@
 Print out highstate data
 '''
 # Import salt libs
+import pprint
+# Import salt libs
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import SaltException
