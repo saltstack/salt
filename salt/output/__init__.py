@@ -9,7 +9,7 @@ import salt.loader
 
 STATIC = (
           'yaml_out',
-          'txt_out',
+          'text_out',
           'raw_out',
           'json_out',
           )
@@ -28,7 +28,10 @@ def get_printout(out, opts=None, **kwargs):
     for outputter in STATIC:
         if outputter in opts:
             if opts[outputter]:
-                out = outputter
+                if outputter == 'text_out':
+                    out = 'txt'
+                else:
+                    out = outputter
     if out is None:
         out = 'pprint'
     if out.endswith('_out'):
