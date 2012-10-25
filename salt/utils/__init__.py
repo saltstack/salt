@@ -17,6 +17,7 @@ import datetime
 import tempfile
 import shlex
 import shutil
+import subprocess
 import time
 import platform
 from calendar import month_abbr as months
@@ -461,6 +462,11 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         pass
     try:
         shutil.move(tgt, dest)
+        # If SELINUX is available run a restorecon on the file
+        rcon = which('restorecon')
+        if rcon:
+            cmd = [rcon, dest]
+            subprocess.call(cmd)
     except Exception:
         pass
     if os.path.isfile(tgt):
