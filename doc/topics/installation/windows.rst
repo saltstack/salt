@@ -128,6 +128,27 @@ Install on Windows XP 32bit
         You should get the following response: {'your minion hostname': True}
 
 
+Single command bootstrap script
+===============================
+
+For 64 bit windows the following script installs a salt-minion without any intervention:
+
+.. code-block:: bash
+
+        "PowerShell (New-Object System.Net.WebClient).DownloadFile('http://csa-net.dk/salt/bootstrap64.bat','C:\bootstrap.bat');(New-Object -com Shell.Application).ShellExecute('C:\bootstrap.bat');"
+
+All in one line. 
+
+To execute the above remotely from linux prefix with:
+
+.. code-block:: bash
+
+        winexe -U "administrator" //fqdn 
+
+For more info check `http://csa-net.dk/salt`_
+
+
+.. _http://csa-net.dk/salt: http://csa-net.dk/salt
 .. _msysgit: http://code.google.com/p/msysgit/downloads/list?can=3
 .. _Microsoft Visual Studio 2008 Express: http://www.microsoft.com/en-gb/download/details.aspx?id=20682
 .. _Python 2.7.x: http://www.python.org
