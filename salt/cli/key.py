@@ -168,9 +168,12 @@ class Key(object):
         List keys
         '''
         selected_output = self.opts.get('selected_output_option', None)
-        printout = salt.output.get_printout(
-            selected_output, self.opts, indent=2
-        )
+        if selected_output is None:
+            printout = None
+        else:
+            printout = salt.output.get_printout(
+                selected_output, self.opts, indent=2
+            )
 
         if name in ('pre', 'un', 'unaccept', 'unaccepted'):
             self._list_pre(header=False, printer=printout)
