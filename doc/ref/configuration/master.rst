@@ -483,7 +483,7 @@ Default: ``base: [/srv/pillar]``
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
 functions. The available ext_pillar functions are: hiera, cmd_yaml. By default
-the ext_pillar interface is not configued to run.
+the ext_pillar interface is not configured to run.
 
 Default:: ``None``
 
