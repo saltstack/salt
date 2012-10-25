@@ -171,17 +171,24 @@ class Cloud(object):
         handle them
         '''
         pmap = self.map_providers()
+
+        current_boxen = {}
+        for provider in pmap:
+            for box in pmap[provider]:
+                current_boxen[box] = provider
+
         found = False
         for name in self.opts['names']:
             for vm_ in self.opts['vm']:
                 if vm_['profile'] == self.opts['profile']:
                     # It all checks out, make the vm
                     found = True
-                    if name in pmap.get(self.provider(vm_), []):
+                    if name in current_boxen:
                         # The specified vm already exists, don't make it anew
-                        print("{0} already exists on {1}".format(name, self.provider(vm_)))
+                        print("{0} already exists on {1}".format(name, current_boxen[name]))
                         continue
                     vm_['name'] = name
+                    sys.exit(1)
                     if self.opts['parallel']:
                         multiprocessing.Process(
                                 target=lambda: self.create(vm_),
