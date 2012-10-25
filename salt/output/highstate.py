@@ -6,7 +6,6 @@ import pprint
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
-from salt.exceptions import SaltException
 
 
 def output(data):
@@ -31,7 +30,7 @@ def output(data):
             # Strip out the result: True, without changes returns if
             # state_verbose is False
             if not __opts__.get('state_verbose', False):
-                data[host] = strip_clean(data[host])
+                data[host] = _strip_clean(data[host])
             # Verify that the needed data is present
             for tname, info in data[host].items():
                 if not '__run_num__' in info:
@@ -109,4 +108,18 @@ def output(data):
         print(('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
         for hstr in hstrs:
             print(hstr)
+
+
+def _strip_clean(returns):
+    '''
+    Check for the state_verbose option and strip out the result=True
+    and changes={} members of the state return list.
+    '''
+    rm_tags = []
+    for tag in returns:
+        if returns[tag]['result'] and not returns[tag]['changes']:
+            rm_tags.append(tag)
+    for tag in rm_tags:
+        returns.pop(tag)
+    return returns
 
