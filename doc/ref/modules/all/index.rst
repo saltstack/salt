@@ -75,6 +75,7 @@ Full list of builtin modules
     pillar
     pip
     pkgng
+    pkgutil
     postgres
     poudriere
     ps
@@ -82,7 +83,7 @@ Full list of builtin modules
     puppet
     pw_group
     pw_user
-    rabbitmq_server
+    rabbitmq
     reg
     rh_ip
     rh_service
@@ -92,6 +93,10 @@ Full list of builtin modules
     service
     shadow
     smf
+    solaris_group
+    solarispkg
+    solaris_shadow
+    solaris_user
     solr
     sqlite3
     ssh
