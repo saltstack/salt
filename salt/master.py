@@ -1119,6 +1119,8 @@ class ClearFuncs(object):
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
+        # Make a wheel object
+        self.wheel = salt.wheel.Wheel(opts)
 
     def _send_cluster(self):
         '''
@@ -1428,7 +1430,7 @@ class ClearFuncs(object):
                 clear_load['fun'])
         if not good:
             return ''
-        return salt.wheel.call_func(
+        return self.wheel.call_func(
                 clear_load.pop('mod'),
                 clear_load.pop('fun'),
                 self.opts,
