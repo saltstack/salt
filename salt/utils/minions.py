@@ -276,19 +276,19 @@ class CkMinions(object):
                                 return True
         return False
 
-    def spec_check(self, auth_list, fun, tgt):
+    def wheel_check(self, auth_list, mod, fun):
         '''
         Check special api permissions
         '''
         for ind in auth_list:
             if isinstance(ind, str):
-                if ind.startswith('@') and ind[1:] == tgt:
+                if ind.startswith('@') and ind[1:] == mod:
                     return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
                 valid = ind.keys()[0]
-                if valid.startswith('@') and valid[1:] == tgt:
+                if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
                             return True
@@ -297,4 +297,3 @@ class CkMinions(object):
                             if self.match_check(regex, fun):
                                 return True
         return False
-
