@@ -275,3 +275,26 @@ class CkMinions(object):
                             if self.match_check(regex, fun):
                                 return True
         return False
+
+    def spec_check(self, auth_list, fun, tgt):
+        '''
+        Check special api permissions
+        '''
+        for ind in auth_list:
+            if isinstance(ind, str):
+                if ind.startswith('@') and ind[1:] == tgt:
+                    return True
+            elif isinstance(ind, dict):
+                if len(ind) != 1:
+                    continue
+                valid = ind.keys()[0]
+                if valid.startswith('@') and valid[1:] == tgt:
+                    if isinstance(ind[valid], str):
+                        if self.match_check(ind[valid], fun):
+                            return True
+                    elif isinstance(ind[valid], list):
+                        for regex in ind[valid]:
+                            if self.match_check(regex, fun):
+                                return True
+        return False
+
