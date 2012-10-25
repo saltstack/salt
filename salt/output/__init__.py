@@ -7,6 +7,13 @@ for managing outputters.
 import salt.loader
 
 
+STATIC = (
+          'yaml_out',
+          'txt_out',
+          'raw_out',
+          'json_out',
+          )
+
 def display_output(data, out, opts=None):
     '''
     Print the passed data using the desired output
@@ -18,6 +25,10 @@ def get_printout(out, opts=None, **kwargs):
     '''
     Return a printer function
     '''
+    for outputter in STATIC:
+        if outputter in opts:
+            if opts[outputter]:
+                out = outputter
     if out.endswith('_out'):
         out = out[:-4]
     if opts is None:
