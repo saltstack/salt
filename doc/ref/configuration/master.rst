@@ -80,7 +80,8 @@ Default: ``max_open_files``
 
 Each minion connecting to the master uses AT LEAST one file descriptor, the
 master subscription connection. If enough minions connect you might start
-seeing on the console(and then salt-master crashes):
+seeing on the console(and then salt-master crashes)::
+
   Too many open files (tcp_listener.cpp:335)
   Aborted (core dumped)
 
@@ -90,7 +91,8 @@ max open files.
 If you wish to set a different value than the default one, uncomment and
 configure this setting. Remember that this value CANNOT be higher than the
 hard limit. Raising the hard limit depends on your OS and/or distribution,
-a good way to find the limit is to search the internet for(for example):
+a good way to find the limit is to search the internet for(for example)::
+
   raise max open files hard limit debian
 
 .. code-block:: yaml

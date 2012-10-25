@@ -96,10 +96,9 @@ def version(name):
 
 def available_version(name):
     '''
-    The available version of the package in the repository
-    On Solaris with the pkg module this always returns the
-    version that is installed since pkgadd does not have
-    the concept of a repository.
+    The available version of the package in the repository On Solaris with the
+    pkg module this always returns the version that is installed since pkgadd
+    does not have the concept of a repository.
 
     CLI Example::
 
@@ -110,7 +109,8 @@ def available_version(name):
 
 def install(name, refresh=False, **kwargs):
     '''
-    Install the passed package. Can install packages from the following sources::
+    Install the passed package. Can install packages from the following
+    sources::
         
         * Locally (package already exists on the minion 
         * HTTP/HTTPS server
@@ -122,7 +122,8 @@ def install(name, refresh=False, **kwargs):
         {'<package>': {'old': '<old-version>',
                    'new': '<new-version>']}
 
-    CLI Example, installing a datastream pkg that already exists on the minion::
+    CLI Example, installing a datastream pkg that already exists on the
+    minion::
 
         salt '*' pkg.install <package name once installed> source=/dir/on/minion/<package filename>
         salt '*' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg
@@ -137,17 +138,19 @@ def install(name, refresh=False, **kwargs):
         salt '*' pkg.install <package name once installed> source='http://packages.server.com/<package filename>'
         salt '*' pkg.install SMClgcc346 source='http://packages.server.com/gcc-3.4.6-sol10-sparc-local.pkg'
 
-    If working with solaris zones and you want to install a package only in the global zone 
-    you can pass 'current_zone_only=True' to salt to have the package only installed in the
-    global zone. (Behind the scenes this is passing '-G' to the pkgadd command.) Solaris default
-    when installing a package in the global zone is to install it in all zones. This overrides
-    that and installs the package only in the global::
+    If working with solaris zones and you want to install a package only in the
+    global zone you can pass 'current_zone_only=True' to salt to have the
+    package only installed in the global zone. (Behind the scenes this is
+    passing '-G' to the pkgadd command.) Solaris default when installing a
+    package in the global zone is to install it in all zones. This overrides
+    that and installs the package only in the global.
     
     CLI Example, installing a datastream package only in the global zone::
     
-    salt 'global_zone' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg current_zone_only=True 
+        salt 'global_zone' pkg.install SMClgcc346 source=/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg current_zone_only=True 
     
-    By default salt automatically provides an adminfile, to automate package installation, with these options set:
+    By default salt automatically provides an adminfile, to automate package
+    installation, with these options set:
 
         email=
         instance=quit
@@ -161,30 +164,35 @@ def install(name, refresh=False, **kwargs):
         action=nocheck
         basedir=default
 
-    You can override any of these options in two ways. First you can optionally pass any of
-    the options as a kwarg to the module/state to override the default value or you can
-    optionally pass the 'admin_source' option providing your own adminfile to the minions.
+    You can override any of these options in two ways. First you can optionally
+    pass any of the options as a kwarg to the module/state to override the
+    default value or you can optionally pass the 'admin_source' option
+    providing your own adminfile to the minions.
 
-    Note: You can find all of the possible options to provide to the adminfile by reading the admin man page:
+    Note: You can find all of the possible options to provide to the adminfile
+    by reading the admin man page::
 
         man -s 4 admin
 
-    CLI Example - Overriding the 'instance' adminfile option when calling the module directly:
+    CLI Example - Overriding the 'instance' adminfile option when calling the
+    module directly::
 
         salt '*' pkg.install <package name once installed> source='salt://srv/salt/pkgs/<package filename>' instance="overwrite"
 
-    CLI Example - Overriding the 'instance' adminfile option when used in a state:
+    CLI Example - Overriding the 'instance' adminfile option when used in a
+    state::
 
         SMClgcc346:
           pkg.installed:
             - source: salt://srv/salt/pkgs/gcc-3.4.6-sol10-sparc-local.pkg
             - instance: overwrite
 
-    CLI Example - Providing your own adminfile when calling the module directly:
+    CLI Example - Providing your own adminfile when calling the module
+    directly::
 
         salt '*' pkg.install <package name once installed> source='salt://srv/salt/pkgs/<package filename>' admin_source='salt://srv/salt/pkgs/<adminfile filename>'
     
-    CLI Example - Providing your own adminfile when using states:
+    CLI Example - Providing your own adminfile when using states::
 
         <package name once installed>:
           pkg.installed:
@@ -263,7 +271,8 @@ def remove(name, **kwargs):
     '''
     Remove a single package with pkgrm
 
-    By default salt automatically provides an adminfile, to automate package removal, with these options set:
+    By default salt automatically provides an adminfile, to automate package
+    removal, with these options set::
 
         email=
         instance=quit
@@ -277,11 +286,13 @@ def remove(name, **kwargs):
         action=nocheck
         basedir=default
 
-    You can override any of these options in two ways. First you can optionally pass any of
-    the options as a kwarg to the module/state to override the default value or you can
-    optionally pass the 'admin_source' option providing your own adminfile to the minions.
+    You can override any of these options in two ways. First you can optionally
+    pass any of the options as a kwarg to the module/state to override the
+    default value or you can optionally pass the 'admin_source' option
+    providing your own adminfile to the minions.
 
-    Note: You can find all of the possible options to provide to the adminfile by reading the admin man page:
+    Note: You can find all of the possible options to provide to the adminfile
+    by reading the admin man page::
 
         man -s 4 admin
 
