@@ -23,7 +23,13 @@ may be given at a time:
 .. code-block:: bash
 
     sudo apt-get install salt-master 
+
+.. code-block:: bash
+
     sudo apt-get install salt-minion
+
+.. code-block:: bash
+
     sudo apt-get install salt-syndic
 
 .. _ubuntu-config:
