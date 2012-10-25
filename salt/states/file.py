@@ -186,66 +186,6 @@ def _error(ret, err_msg):
     return ret
 
 
-def _check_recurse(
-        name,
-        source,
-        clean,
-        require,
-        user,
-        group,
-        dir_mode,
-        file_mode,
-        env,
-        include_empty):
-    '''
-    Check what files will be changed by a recurse call
-    '''
-    vdir = set()
-    keep = set()
-    changes = {}
-    for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
-        if not fn_.strip():
-            continue
-        dest = _get_recurse_dest(name, fn_, source, env)
-        dirname = os.path.dirname(dest)
-        if not dirname in vdir:
-            # verify the directory perms if they are set
-            vdir.add(dirname)
-        if os.path.isfile(dest):
-            with open(fn_, 'r') as source_:
-                hsum = hashlib.md5(source_.read()).hexdigest()
-            source_sum = {'hash_type': 'md5',
-                          'hsum': hsum}
-            tchange = __salt__['file.check_file_meta'](
-                    dest,
-                    fn_,
-                    None,
-                    source_sum,
-                    user,
-                    group,
-                    file_mode,
-                    env)
-            if tchange:
-                changes[name] = tchange
-            keep.add(dest)
-        else:
-            keep.add(dest)
-            # The destination file is not present, make it
-            changes[name] = {'diff': 'New File'}
-    keep = list(keep)
-    if clean:
-        keep += _gen_keep_files(name, require)
-        for fn_ in _clean_dir(name, list(keep)):
-            changes[fn_] = {'diff': 'Remove'}
-    if changes:
-        comment = 'The following files are set to change:\n'
-        for fn_ in changes:
-            for key, val in changes[fn_].items():
-                comment += '{0}: {1} - {2}\n'.format(fn_, key, val)
-        return None, comment
-    return True, 'The directory {0} in in the correct state'.format(name)
-
-
 def _get_recurse_dest(prefix, fn_, source, env):
     '''
     Return the destination path to copy the file path, fn_(as returned by
@@ -881,6 +821,9 @@ def recurse(name,
         group=None,
         dir_mode=None,
         file_mode=None,
+        template=None,
+        context=None,
+        defaults=None,
         env=None,
         include_empty=False,
         backup='',
@@ -920,6 +863,17 @@ def recurse(name,
     file_mode
         The permissions mode to set any files created
 
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file, currently jinja, mako, and wempy
+        are supported
+
+    context
+        Overrides default context variables passed to the template.
+
+    defaults
+        Default context passed to the template.
+
     include_empty
         Set this to True if empty directories should also be created
         (default is False)
@@ -939,103 +893,139 @@ def recurse(name,
     if env is None:
         env = kwargs.get('__env__', 'base')
 
-    keep = set()
     # Verify the target directory
     if not os.path.isdir(name):
         if os.path.exists(name):
             # it is not a dir, but it exists - fail out
             return _error(
                 ret, 'The path {0} exists and is not a directory'.format(name))
-        __salt__['file.makedirs_perms'](
+        if not __opts__['test']:
+            __salt__['file.makedirs_perms'](
                 name, user, group, int(str(dir_mode), 8) if dir_mode else None)
 
-    if __opts__['test']:
-        ret['result'], ret['comment'] = _check_recurse(
-                name,
-                source,
-                clean,
-                require,
-                user,
-                group,
-                dir_mode,
-                file_mode,
-                env,
-                include_empty)
-        return ret
+    def add_comment(path, comment):
+        comments = ret['comment'].setdefault(path, [])
+        if isinstance(comment, basestring):
+            comments.append(comment)
+        else:
+            comments.extend(comment)
 
-    def update_changes_by_perms(path, mode, changetype='updated'):
-        _ret = {'name': name,
-                'changes': {},
-                'result': True,
-                'comment': []
-               }
-        __salt__['file.check_perms'](path, _ret, user, group, mode)
-        ret['result'] &= _ret['result'] # ie, once false, stay false.
-        if _ret['comment']:
-            comments = ret['comment'].setdefault(path, [])
-            comments.extend(_ret['comment'])
+    def merge_ret(path, _ret):
+        # Use the most "negative" result code (out of True, None, False)
+        if _ret['result'] == False or ret['result'] == True:
+            ret['result'] = _ret['result']
+
+        # Only include comments about files that changed
+        if _ret['result'] != True and _ret['comment']:
+            add_comment(path, _ret['comment'])
+
         if _ret['changes']:
-            ret['changes'][path] = changetype
+            ret['changes'][path] = _ret['changes']
+
+    def manage_file(path, source):
+        if clean and os.path.exists(path) and os.path.isdir(path):
+            _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+            if __opts__['test']:
+                _ret['comment'] = 'Replacing directory {0} with a file'.format(path)
+                _ret['result'] = None
+                merge_ret(path, _ret)
+                return
+            else:
+                shutil.rmtree(path)
+                _ret['changes'] = { 'diff': 'Replaced directory with a new file' }
+                merge_ret(path, _ret)
+
+        _ret = managed(
+            path,
+            source=source,
+            user=user,
+            group=group,
+            mode=file_mode,
+            template=template,
+            makedirs=True,
+            context=context,
+            replace=True,
+            defaults=defaults,
+            env=env,
+            backup=backup,
+            **kwargs)
+        merge_ret(path, _ret)
+
+    def manage_directory(path):
+        if clean and os.path.exists(path) and not os.path.isdir(path):
+            _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+            if __opts__['test']:
+                _ret['comment'] = 'Replacing {0} with a directory'.format(path)
+                _ret['result'] = None
+                merge_ret(path, _ret)
+                return
+            else:
+                os.remove(path)
+                _ret['changes'] = { 'diff': 'Replaced file with a directory' }
+                merge_ret(path, _ret)
+ 
+        _ret = directory(
+            path,
+            user=user,
+            group=group,
+            recurse=[],
+            mode=dir_mode,
+            makedirs=True,
+            clean=False,
+            require=None)
+        merge_ret(path, _ret)
 
     # If source is a list, find which in the list actually exists
     source, source_hash = __salt__['file.source_list'](source, '', env)
 
+    keep = set()
     vdir = set()
     for fn_ in __salt__['cp.cache_dir'](source, env, include_empty):
         if not fn_.strip():
             continue
         # fn_ here is the absolute source path of the file to copy from;
-        # it is either a normal file or an empty dir(if include_empthy==true).
+        # it is either a normal file or an empty dir(if include_empty==true).
 
         dest = _get_recurse_dest(name, fn_, source, env)
         dirname = os.path.dirname(dest)
         keep.add(dest)
-        if not os.path.isdir(dirname):
-            __salt__['file.makedirs'](dest, user=user, group=group)
+
         if not dirname in vdir:
             # verify the directory perms if they are set
-            update_changes_by_perms(dirname, dir_mode)
+            manage_directory(dirname)
             vdir.add(dirname)
-        if os.path.isfile(dest):
-            update_changes_by_perms(dest, file_mode)
-            srch = ''
-            dsth = ''
-            # The file is present, if the sum differes replace it
-            with nested(open(fn_, 'r'), open(dest, 'r')) as (src_, dst_):
-                srch = hashlib.md5(src_.read()).hexdigest()
-                dsth = hashlib.md5(dst_.read()).hexdigest()
-            if srch != dsth:
-                # The downloaded file differes, replace!
-                salt.utils.copyfile(
-                        fn_,
-                        dest,
-                        __salt__['config.backup_mode'](backup),
-                        __opts__['cachedir'])
-                update_changes_by_perms(dest, file_mode)
-        elif os.path.isdir(dest) and include_empty:
-            #check perms
-            update_changes_by_perms(dest, dir_mode)
+
+        if os.path.isdir(fn_) and include_empty:
+            #create empty dir
+            manage_directory(dest)
         else:
-            if os.path.isdir(fn_) and include_empty:
-                #create empty dir
-                os.mkdir(dest)
-                update_changes_by_perms(dest, dir_mode)
-            else:
-                # The destination file is not present, make it
-                salt.utils.copyfile(
-                        fn_,
-                        dest,
-                        __salt__['config.backup_mode'](backup),
-                        __opts__['cachedir'])
-                update_changes_by_perms(dest, file_mode)
-            ret['changes'][dest] = 'new'
+            src = source + _get_recurse_dest('/', fn_, source, env)
+            manage_file(dest, src)
+
     keep = list(keep)
     if clean:
+        # TODO: Use directory(clean=True) instead
         keep += _gen_keep_files(name, require)
         removed = _clean_dir(name, list(keep))
         if removed:
-            ret['changes']['removed'] = removed
-            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
+            if __opts__['test']:
+                if ret['result']: ret['result'] = None
+                add_comment('removed', removed)
+            else:
+              ret['changes']['removed'] = removed
+
+    # Flatten comments until salt command line client learns
+    # to display structured comments in a readable fashion
+    ret['comment'] = '\n'.join("\n#### %s ####\n%s" % (k,
+            v if isinstance(v, basestring) else '\n'.join(v))
+        for (k, v) in ret['comment'].iteritems()).strip()
+
+    if not ret['comment']:
+        ret['comment'] = 'Recursively updated {0}'.format(name)
+
+    if not ret['changes'] and ret['result']:
+        ret['comment'] = 'The directory {0} is in the correct state'.format(name)
+
     return ret
 
 
