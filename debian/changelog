@@ -1,4 +1,4 @@
-salt (0.10.4-1quantal1) quantal; urgency=low
+salt (0.10.4-1raring1) raring; urgency=low
 
   * New upstream version
 
