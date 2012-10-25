@@ -1407,7 +1407,38 @@ class ClearFuncs(object):
         self.event.fire_event(eload, 'auth')
         return ret
 
+    def wheel(self, clear_load):
+        '''
+        Send a master control function back to the wheel system
+        '''
+        # All wheel ops pass through eauth
+        if not 'eauth' in clear_load:
+            return ''
+        if not clear_load['eauth'] in self.opts['external_auth']:
+            # The eauth system is not enabled, fail
+            return ''
+        name = self.loadauth.load_name(clear_load)
+        if not name in self.opts['external_auth'][clear_load['eauth']]:
+            return ''
+        if not self.loadauth.time_auth(clear_load):
+            return ''
+        good = self.ckminions.wheel_check(
+                self.opts['external_auth'][clear_load['eauth']][name],
+                clear_load['mod'],
+                clear_load['fun'])
+        if not good:
+            return ''
+        return salt.wheel.call_func(
+                clear_load.pop('mod'),
+                clear_load.pop('fun'),
+                self.opts,
+                clear_load)
+
     def mk_token(self, clear_load):
+        '''
+        Create aand return an authentication token, the clear load needs to
+        contain the eauth key and the needed authentication creds.
+        '''
         if not 'eauth' in clear_load:
             return ''
         if not clear_load['eauth'] in self.opts['external_auth']:
