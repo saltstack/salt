@@ -131,9 +131,15 @@ def create(vm_):
         host_addr = data.public_ips[0]
     else:
         host_addr = None
+
+    if 'ssh_username' in vm_:
+	ssh_user = vm_['ssh_username']
+    else:
+        ssh_user = 'root'
+
     deployed = saltcloud.utils.deploy_script(
         host=host_addr,
-        username='root',
+        username=ssh_user,
         password=data.extra['password'],
         script=deploy_script.script,
         name=vm_['name'],
