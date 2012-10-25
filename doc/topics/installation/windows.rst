@@ -131,19 +131,20 @@ Install on Windows XP 32bit
 Single command bootstrap script
 ===============================
 
-For 64 bit windows the following script installs a salt-minion without any intervention:
+On a 64 bit Windows host the following script makes an unattended install of salt including all dependencies:
 
 .. code-block:: bash
 
         "PowerShell (New-Object System.Net.WebClient).DownloadFile('http://csa-net.dk/salt/bootstrap64.bat','C:\bootstrap.bat');(New-Object -com Shell.Application).ShellExecute('C:\bootstrap.bat');"
 
-All in one line. 
+	(All in one line.)
 
-To execute the above remotely from linux prefix with:
+You can execute the above command remotely from a linux host using winexe:
 
 .. code-block:: bash
 
-        winexe -U "administrator" //fqdn 
+        winexe -U "administrator" //fqdn "PowerShell (New-Object ......);"
+
 
 For more info check `http://csa-net.dk/salt`_
 
