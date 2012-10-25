@@ -1,3 +1,5 @@
+.. _configuration-salt-minion:
+
 ===========================
 Configuring the Salt Minion
 ===========================

@@ -1,3 +1,5 @@
+.. _configuration-salt-master:
+
 ===========================
 Configuring the Salt Master
 ===========================
