@@ -43,7 +43,7 @@ Full Table of Contents
     ref/pillar/*
     ref/pillar/all/index
     ref/tops/*
-    ref/topstops/all/index
+    ref/tops/all/index
     ref/runners/index
     ref/peer
     ref/clientacl
