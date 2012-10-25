@@ -59,6 +59,7 @@ MOCK_MODULES = [
     'psutil',
     'pycassa',
     'pymongo',
+    'rabbitmq_server',
     'redis',
     'rpm',
     'rpmUtils',
