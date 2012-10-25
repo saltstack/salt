@@ -9,11 +9,16 @@ import shutil
 import socket
 import tempfile
 import time
-import paramiko
 import subprocess
 import salt.utils.event
 import multiprocessing
 import time
+
+try:
+    import paramiko
+except:
+    print('Cannot import paramiko. Please make sure it is correctly installed.')
+    sys.exit(1)
 
 # Import salt libs
 import salt.crypt
