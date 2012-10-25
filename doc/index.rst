@@ -16,6 +16,11 @@ The core functionality for :command:`salt-api` lies in pluggable netapi modules
 that adhere to the simple interface of binding to a port and starting a
 service.
 
+.. toctree::
+    :maxdepth: 1
+
+    topics/netapis/writing
+
 Full list of netapi modules
 ---------------------------
 
