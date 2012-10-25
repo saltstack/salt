@@ -1,4 +1,16 @@
+salt (0.10.4-1oneiric1) oneiric; urgency=low
+
+  * New upstream version
+
+ -- Sean Channel <pentabular@gmail.com>  Wed, 24 Oct 2012 16:57:22 -0700
+
 salt (0.10.4-1raring1) raring; urgency=low
+
+  * New upstream version
+
+ -- Sean Channel <pentabular@gmail.com>  Wed, 24 Oct 2012 16:57:22 -0700
+
+salt (0.10.4-1quantal1) quantal; urgency=low
 
   * New upstream version
 
