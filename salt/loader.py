@@ -111,6 +111,14 @@ def tops(opts):
     return load.filter_func('top')
 
 
+def wheels(opts):
+    '''
+    Returns the returner modules
+    '''
+    load = _create_loader(opts, 'wheels', 'wheel')
+    return load.gen_functions()
+
+
 def outputters(opts):
     '''
     Returns the returner modules
