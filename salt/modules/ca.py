@@ -32,6 +32,15 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+cert_sample_meta = {
+    'CN': 'localhost',
+    'C': 'US',
+    'ST': 'Utah',
+    'L': 'Salt Lake City',
+    'O': 'Salt Stack',
+    'emailAddress': 'salt@saltstack.org',
+}
+
 def __virtual__():
     '''
     Only load this module if the ca config options are set
@@ -377,12 +386,41 @@ def create_csr(
                     )
 
 
-def create_self_signed_cert(bits=2048):
+def create_self_signed_cert(cert_file, key_file, bits=2048, **kwargs):
     '''
-    Create a Self-Signed Certificate (CERT) -- Not yet implemented
+    Create a Self-Signed Certificate (CERT)
     '''
-    pass
+    # http://blog.richardknop.com/2012/08/create-a-self-signed-x509-certificate-in-python/
 
+    # create a key pair
+    k = OpenSSL.crypto.PKey()
+    k.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
+
+    # create a self-signed cert
+    cert = OpenSSL.crypto.X509()
+
+    # Set default meta attributes or override with data from kwargs
+    cert_meta = dict(**cert_sample_meta)
+    cert_meta.update(kwargs)
+    for name, val in cert_meta.items():
+        setattr(cert.get_subject(), name, val)
+
+    cert.set_serial_number(1000)
+    cert.gmtime_adj_notBefore(0)
+    cert.gmtime_adj_notAfter(10*365*24*60*60)
+    cert.set_issuer(cert.get_subject())
+    cert.set_pubkey(k)
+    cert.sign(k, 'sha1')
+
+    open(cert_file, "wt").write(
+        OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert))
+    open(key_file, "wt").write(
+        OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, k))
+
+    return ("Wrote self-signed certificate to: {0}\n"
+            "Wrote private key for self-signed certificate to: {1}".format(
+                os.path.abspath(cert_file),
+                os.path.abspath(key_file)))
 
 def create_ca_signed_cert(ca_name, CN, days=365):
     '''
@@ -544,16 +582,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
                     )
 
 if __name__ == '__main__':
-    create_ca(
-            'koji',
-            days=365,
-            CN='localhost',
-            C='US',
-            ST='Utah',
-            L='Salt Lake City',
-            O='Salt Stack',
-            emailAddress='salt@saltstack.org'
-            )
+    create_ca('koji', days=365, **cert_sample_meta)
     create_csr(
             'koji',
             CN='test_system',
