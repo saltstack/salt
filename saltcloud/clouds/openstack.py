@@ -100,9 +100,29 @@ def create(vm_):
     deploy_script = script(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
-    kwargs['image'] = get_image(conn, vm_)
-    kwargs['size'] = get_size(conn, vm_)
+
+    try:
+        kwargs['image'] = get_image(conn, vm_)
+    except Exception as exc:
+        err = ('Error creating {0} on OPENSTACK\n\n'
+               'Could not find image {1}\n').format(
+                       vm_['name'], vm_['image']
+                       )
+        sys.stderr.write(err)
+        return False
+
+    try:
+        kwargs['size'] = get_size(conn, vm_)
+    except Exception as exc:
+        err = ('Error creating {0} on OPENSTACK\n\n'
+               'Could not find size {1}\n').format(
+                       vm_['name'], vm_['size']
+                       )
+        sys.stderr.write(err)
+        return False
+
     kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
