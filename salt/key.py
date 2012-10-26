@@ -73,6 +73,9 @@ class KeyCLI(object):
         Delete the matched keys
         '''
         matches = self.key.name_match(match)
+        if not matches:
+            print('No keys to delete.')
+            return
         if not self.opts.get('yes', False):
             print('The following keys are going to be deleted:')
             salt.output.display_output(
@@ -95,6 +98,11 @@ class KeyCLI(object):
         Reject the matched keys
         '''
         matches = self.key.name_match(match)
+        if 'minions_pre' in matches:
+            matches = {'minions_pre': matches['minions_pre']}
+        else:
+            print('No keys found to reject')
+            return
         if not self.opts.get('yes', False):
             print('The following keys are going to be rejected:')
             salt.output.display_output(
@@ -104,7 +112,7 @@ class KeyCLI(object):
             veri = raw_input('Proceed? [n/Y] ')
             if veri.lower().startswith('n'):
                 return
-        self.key.reject_key(match)
+        self.key.reject(match)
 
     def reject_all(self):
         '''
@@ -179,7 +187,7 @@ class KeyCLI(object):
         elif self.opts['delete_all']:
             self.delete_all()
         elif self.opts['finger']:
-            self.finger()
+            self.finger(self.opts['finger'])
         elif self.opts['finger_all']:
             self.finger_all()
         else:
@@ -222,13 +230,13 @@ class Key(object):
         Accept a glob which to match the of a key and return the key's location
         '''
         if full:
-            matches = self.list_all()
+            matches = self.all_keys()
         else:
             matches = self.list_keys()
         ret = {}
-        for status, keys in matches:
+        for status, keys in matches.items():
             for key in keys:
-                if fnmatch(key, match):
+                if fnmatch.fnmatch(key, match):
                     if not status in ret:
                         ret[status] = []
                     ret[status].append(key)
@@ -262,14 +270,16 @@ class Key(object):
         '''
         Merge managed keys with local keys
         '''
-        return self.list_keys().update(self.local_keys())
+        keys = self.list_keys()
+        keys.update(self.local_keys())
+        return keys
 
     def key_str(self, match):
         '''
         Return the specified public key or keys based on a glob
         '''
         ret = {}
-        for status, keys in self.name_match(match):
+        for status, keys in self.name_match(match).items():
             ret[status] = {}
             for key in keys:
                 path = os.path.join(self.opts['pki_dir'], status, key)
@@ -282,7 +292,7 @@ class Key(object):
         Return all managed key strings
         '''
         ret = {}
-        for status, keys in self.list_keys():
+        for status, keys in self.list_keys().items():
             ret[status] = {}
             for key in keys:
                 path = os.path.join(self.opts['pki_dir'], status, key)
@@ -346,7 +356,7 @@ class Key(object):
         '''
         Delete a single key or keys by glob
         '''
-        for status, keys in self.name_match(match):
+        for status, keys in self.name_match(match).items():
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
@@ -358,7 +368,7 @@ class Key(object):
         '''
         Delete all keys
         '''
-        for status, keys in self.list_keys():
+        for status, keys in self.list_keys().items():
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
@@ -426,7 +436,11 @@ class Key(object):
         for status, keys in matches.items():
             ret[status] = {}
             for key in keys:
-                ret[status][key] = salt.utils.pem_finger(key)
+                if status == 'local':
+                    path = os.path.join(self.opts['pki_dir'], key)
+                else:
+                    path = os.path.join(self.opts['pki_dir'], status, key)
+                ret[status][key] = salt.utils.pem_finger(path)
         return ret
 
     def finger_all(self):
@@ -434,8 +448,12 @@ class Key(object):
         Return fingerprins for all keys
         '''
         ret = {}
-        for status, keys in self.list_keys():
+        for status, keys in self.list_keys().items():
             ret[status] = {}
             for key in keys:
-                ret[status][key] = salt.utils.pem_finger(key)
+                if status == 'local':
+                    path = os.path.join(self.opts['pki_dir'], key)
+                else:
+                    path = os.path.join(self.opts['pki_dir'], status, key)
+                ret[status][key] = salt.utils.pem_finger(path)
         return ret
