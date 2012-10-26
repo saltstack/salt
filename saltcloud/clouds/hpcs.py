@@ -11,10 +11,18 @@ and requires that two configuration paramaters be set for use:
 
 .. code-block:: yaml
 
-    # The HP login user
+    # The login user
     HPCLOUD.user: fred
-    # The HP user's apikey
-    HPCLOUD.apikey: 901d3f579h23c8v73q9
+    # The user's password
+    HPCLOUD.password: mylittlesecret
+    # The auth endpoint url
+    HPCLOUD.auth_endpoint: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+    # The compute region
+    HPCLOUD.region: az-1.region-a.geo-1
+    # The keypair name
+    HPCLOUD.keyname: cloudKey
+    # The tenant name (not tenant ID)
+    HPCLOUD.tenant_name: fred-tenant1
 
 '''
 
@@ -53,7 +61,7 @@ def __virtual__():
     Set up the libcloud functions and check for HPCLOUD configs
     '''
     key_values = [ 'HPCLOUD.user'
-                 , 'HPCLOUD.apikey'
+                 , 'HPCLOUD.password'
                  , 'HPCLOUD.auth_endpoint'
                  , 'HPCLOUD.region'
                  , 'HPCLOUD.keyname'
@@ -76,7 +84,7 @@ def get_conn():
     driver = get_driver(Provider.OPENSTACK)
     return driver(
             __opts__['HPCLOUD.user'],
-            __opts__['HPCLOUD.apikey'],
+            __opts__['HPCLOUD.password'],
             ex_force_auth_url = __opts__['HPCLOUD.auth_endpoint'],
             ex_force_auth_version = '2.0_password',
             ex_force_service_name = 'Compute',
@@ -123,10 +131,9 @@ def create(vm_):
 	print traceback.format_exc()
         return False
     # NOTE
-    # We need to insert a wait / poll until we have
-    # public ips for our node.  Otherwise, we cannot
-    # complete the next step of deploying a script to the new
-    # server : (
+    # We need to insert a wait / poll into libcloud until we have
+    # public ips for our node.  Otherwise, we cannot complete the 
+    # next step of deploying a script to the new server :(
     if data.public_ips:
         host_addr = data.public_ips[0]
     else:

@@ -60,7 +60,7 @@ list_nodes_full = types.FunctionType(list_nodes_full.__code__, globals())
 # Only load in this module is the OPENSTACK configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for OPENSTACK configs
+    Set up the libcloud functions and check for OPENSTACK configs
     '''
     if 'OPENSTACK.user' in __opts__ and 'OPENSTACK.password' in __opts__:
         return 'openstack'
