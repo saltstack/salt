@@ -304,7 +304,7 @@ class Pillar(object):
                     errors += err
         return pillar, errors
 
-    def ext_pillar(self):
+    def ext_pillar(self, pillar={}):
         '''
         Render the external pillar data
         '''
@@ -326,11 +326,11 @@ class Pillar(object):
                     continue
                 try:
                     if isinstance(val, dict):
-                        ext.update(self.ext_pillars[key](**val))
+                        ext.update(self.ext_pillars[key](pillar=pillar, **val))
                     elif isinstance(val, list):
-                        ext.update(self.ext_pillars[key](*val))
+                        ext.update(self.ext_pillars[key](*val, pillar=pillar))
                     else:
-                        ext.update(self.ext_pillars[key](val))
+                        ext.update(self.ext_pillars[key](val, pillar=pillar))
                 except Exception:
                     log.exception('Failed to load ext_pillar {0}'.format(key))
         return ext
@@ -342,7 +342,7 @@ class Pillar(object):
         top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
-        pillar.update(self.ext_pillar())
+        pillar.update(self.ext_pillar(pillar=pillar))
         errors.extend(terrors)
         if self.opts.get('pillar_opts', False):
             pillar['master'] = self.opts
