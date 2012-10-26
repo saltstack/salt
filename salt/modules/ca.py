@@ -32,6 +32,15 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+cert_sample_meta = {
+    'CN': 'localhost',
+    'C': 'US',
+    'ST': 'Utah',
+    'L': 'Salt Lake City',
+    'O': 'Salt Stack',
+    'emailAddress': 'salt@saltstack.org',
+}
+
 def __virtual__():
     '''
     Only load this module if the ca config options are set
@@ -544,16 +553,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
                     )
 
 if __name__ == '__main__':
-    create_ca(
-            'koji',
-            days=365,
-            CN='localhost',
-            C='US',
-            ST='Utah',
-            L='Salt Lake City',
-            O='Salt Stack',
-            emailAddress='salt@saltstack.org'
-            )
+    create_ca('koji', days=365, **cert_sample_meta)
     create_csr(
             'koji',
             CN='test_system',
