@@ -16,7 +16,7 @@ class Wheel(object):
         self.opts = opts
         self.w_funcs = salt.loader.wheels(opts)
 
-    def call_func(self, mod, fun, opts, **kwargs):
+    def call_func(self, mod, fun, **kwargs):
         '''
         Execute a master control function
         '''

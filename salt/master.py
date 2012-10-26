@@ -1433,7 +1433,6 @@ class ClearFuncs(object):
         return self.wheel.call_func(
                 clear_load.pop('mod'),
                 clear_load.pop('fun'),
-                self.opts,
                 clear_load)
 
     def mk_token(self, clear_load):
