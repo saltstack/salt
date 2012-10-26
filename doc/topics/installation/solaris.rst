@@ -4,13 +4,17 @@ Solaris
 
 Salt was added to the OpenCSW package repository in September of 2012 by Romeo Theriault <romeot@hawaii.edu> at version 0.10.2 of Salt. It has mainly been tested on Solaris 10 (sparc), though it is built for and has been tested minimally on Solaris 10 (x86), Solaris 9 (sparc/x86) and 11 (sparc/x86). (Please let me know if you're using it on these platforms!) Most of the testing has also just focused on the minion, though it has verified that the master starts up successfully on Solaris 10.
 
-Comments and patches for better support on these platforms is very welcome. Currently at version 0.10.3 of salt, remote execution works good, grain detection is good and service control with SMF is supported. Work is underway to fill in the remaining gaps by adding support for the following: 
+Comments and patches for better support on these platforms is very welcome. 
 
-1.   'pkg' states with pkgadd and pkgutil modules
-2.   support for solaris cron
-3.   support for user and group management
+Currently at version 0.10.4, solaris is well supported under salt. With all of the following working well:
 
-We hope to have all of the above included in v0.10.4 of Salt.
+1.   remote execution
+2.   grain detection
+3.   service control with SMF 
+4.   'pkg' states with 'pkgadd' and 'pkgutil' modules
+5.   cron modules/states
+6.   user and group modules/states
+7.   shadow password management modules/states
 
 Salt is dependent on the following additional packages. These will automatically be installed as
 dependencies of the ``py_salt`` package. ::
