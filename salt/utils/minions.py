@@ -289,6 +289,8 @@ class CkMinions(object):
             if isinstance(ind, str):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
+                if ind == '@wheel':
+                    return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
