@@ -9,7 +9,6 @@ import sys
 # Import salt components
 import salt.cli.caller
 import salt.cli.cp
-import salt.cli.key
 import salt.cli.batch
 import salt.client
 import salt.output
