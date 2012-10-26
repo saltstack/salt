@@ -14,7 +14,83 @@ import salt.crypt
 import salt.utils
 import salt.utils.event
 
-log = logging.getLogger(__name__)
+
+class KeyCLI(object):
+    '''
+    Manage key cli operations
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        self.key = Key(opts)
+
+    def list_status(self, status):
+        '''
+        Print out the keys under a named status
+        '''
+        keys = self.key.list_keys()
+        if status.startswith('pre') or status.startswith('un'):
+            salt.output.display_output(
+                    {'minions_pre': keys['minions_pre']},
+                    'key',
+                    self.opts)
+
+    def list_all(self):
+        '''
+        Print out all keys
+        '''
+        salt.output.display_output(
+                self.key.list_keys(),
+                'key',
+                self.opts)
+
+    def accept(self, match):
+        '''
+        Accept the keys matched
+        '''
+        matches = self.key.name_match(match)
+        if not matches.get('minions_pre', False):
+            print(
+                'The key glob {0} dies not match any unaccepted keys.'.format(
+                    match
+                    )
+                )
+        after_match = self.key.accept(match)
+        if 'minions_pre' in after_match:
+            accepted = set(matches['minions_pre']).difference(
+                    set(after_match['minions_pre'])
+                    )
+        else:
+            accepted = matches['minions_pre']
+        for key in accepted:
+            print('Key for minion {0} accepted.'.format(key))
+
+    def accept_all(self):
+        '''
+        Accept all keys
+        '''
+        self.accept('*')
+
+    def delete(self, match):
+        '''
+        Delete the matched keys
+        '''
+        matches = self.key.name_match(match)
+        if not self.opts.get('yes', False):
+            print('The following keys are going to be deleted:')
+            salt.output.display_output(
+                    self.key.list_keys(),
+                    'key',
+                    self.opts)
+            veri = raw_input('Proceed? [n/Y] ')
+            if veri.lower().startswith('n'):
+                return
+        self.key.delete_key(match)
+
+    def delete_all(self):
+        '''
+        Delete all keys
+        '''
+        self.delete('*')
 
 
 class Key(object):
