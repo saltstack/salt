@@ -40,6 +40,7 @@ import salt.pillar
 import salt.state
 import salt.runner
 import salt.auth
+import salt.wheel
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
