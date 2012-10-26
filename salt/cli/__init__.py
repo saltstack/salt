@@ -196,7 +196,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
 
         self.setup_logfile_logger()
 
-        key = salt.cli.key.Key(self.config)
+        key = salt.key.KeyCLI(self.config)
         key.run()
 
 
