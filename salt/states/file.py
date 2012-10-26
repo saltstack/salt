@@ -84,6 +84,8 @@ import difflib
 import hashlib
 import logging
 import copy
+import re
+import fnmatch
 
 # Import Salt libs
 import salt.utils
@@ -145,10 +147,10 @@ def _check_file(name):
     return ret, msg
 
 
-def _clean_dir(root, keep):
+def _clean_dir(root, keep, exclude_pat):
     '''
     Clean out all of the files and directories in a directory (root) while
-    preserving the files in a list (keep)
+    preserving the files in a list (keep) and part of exclude_pat
     '''
     removed = set()
     real_keep = set()
@@ -168,12 +170,18 @@ def _clean_dir(root, keep):
         for name in files:
             nfn = os.path.join(roots, name)
             if not nfn in real_keep:
+                #-- check if this is a part of exclude_pat(only). No need to check include_pat
+                if not _check_include_exclude(nfn[len(root)+1:], None, exclude_pat):
+                    continue
                 removed.add(nfn)
                 if not __opts__['test']:
                     os.remove(nfn)
         for name in dirs:
             nfn = os.path.join(roots, name)
             if not nfn in real_keep:
+                #-- check if this is a part of exclude_pat(only). No need to check include_pat
+                if not _check_include_exclude(nfn[len(root)+1:], None, exclude_pat):
+                    continue
                 removed.add(nfn)
                 if not __opts__['test']:
                     shutil.rmtree(nfn)
@@ -324,6 +332,43 @@ def _symlink_check(name, target, force):
                                   name, target)
         return _error(ret, ('File or directory exists where the symlink {0} '
                             'should be. Did you mean to use force?'.format(name)))
+
+
+def _check_include_exclude(path_str,include_pat=None,exclude_pat=None):
+    '''
+     Check for glob or regexp patterns for include_pat and exclude_pat in the
+     'path_str' string and return True/False conditions as follows.
+      - Default: return 'True' if no include_pat or exclude_pat patterns are supplied
+      - If only include_pat or exclude_pat is supplied. Return 'True' if string passes 
+        the include_pat test or failed exclude_pat test respectively
+      - If both include_pat and exclude_pat are supplied, return Ture if include_pat
+        matches 'AND' exclude_pat does not matches
+    '''
+    ret = True    #-- default true
+    # Before pattern match, check if it is regexp (E@'') or glob(default)
+    if include_pat:
+        if re.match('E@',include_pat):
+            retchk_include = True if re.search(include_pat[2:], path_str) else False
+        else:
+            retchk_include = True if fnmatch.fnmatch(path_str,include_pat) else False
+ 
+    if exclude_pat:
+        if re.match('E@',exclude_pat):
+            retchk_exclude = False if re.search(exclude_pat[2:], path_str) else True
+        else:
+            retchk_exclude = False if fnmatch.fnmatch(path_str,exclude_pat) else True
+
+    # Now apply include/exclude conditions
+    if include_pat and not exclude_pat:  
+        ret = retchk_include
+    elif exclude_pat and not include_pat:
+        ret = retchk_exclude
+    elif include_pat and exclude_pat:
+        ret = retchk_include and retchk_exclude
+    else:
+	ret = True
+
+    return ret
 
 
 def symlink(name, target, force=False, makedirs=False):
@@ -634,7 +679,8 @@ def directory(name,
         mode=None,
         makedirs=False,
         clean=False,
-        require=None):
+        require=None,
+        exclude_pat=None):
     '''
     Ensure that a named directory is present and has the right perms
 
@@ -669,6 +715,9 @@ def directory(name,
     require
         Require other resources such as packages or files
 
+    exclude_pat
+        When 'clean' is set to True, exclude this pattern from removal list
+        and preserve in the destination.
     '''
     mode = __salt__['config.manage_mode'](mode)
     ret = {'name': name,
@@ -798,7 +847,7 @@ def directory(name,
 
     if clean:
         keep = _gen_keep_files(name, require)
-        removed = _clean_dir(name, list(keep))
+        removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
@@ -827,6 +876,8 @@ def recurse(name,
         env=None,
         include_empty=False,
         backup='',
+        include_pat=None,
+        exclude_pat=None,
         **kwargs):
     '''
     Recurse through a subdirectory on the master and copy said subdirecory
@@ -877,6 +928,25 @@ def recurse(name,
     include_empty
         Set this to True if empty directories should also be created
         (default is False)
+
+    include_pat
+	When copying, include only this pattern from the source. Default
+        is glob match , if prefixed with E@ then regexp match
+        Example:
+          - include_pat: hello*       :: glob matches 'hello01', 'hello02' ... but not 'otherhello'
+          - include_pat: E@hello      :: regexp matches 'otherhello', 'hello01' ...  
+
+    exclude_pat
+	When copying, exclude this pattern from the source. If both
+        include_pat and exclude_pat are supplied, then it will apply
+        conditions cumulatively. i.e. first select based on include_pat and
+        then with in that result, applies exclude_pat.
+        
+        Also when 'clean=True', exclude this pattern from the removal
+        list and preserve in the destination.
+        Example:
+          - exclude: APPDATA*               :: glob matches APPDATA.01, APPDATA.02,.. for exclusion
+          - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA or TEMPDATA for exclusion 
     '''
     ret = {'name': name,
            'changes': {},
@@ -987,6 +1057,9 @@ def recurse(name,
         # it is either a normal file or an empty dir(if include_empty==true).
 
         dest = _get_recurse_dest(name, fn_, source, env)
+        #- Check if it is to be excluded. Match only trailing part of the path after base directory
+        if not _check_include_exclude(dest[len(name)+1:], include_pat, exclude_pat):
+            continue
         dirname = os.path.dirname(dest)
         keep.add(dest)
 
@@ -1006,7 +1079,7 @@ def recurse(name,
     if clean:
         # TODO: Use directory(clean=True) instead
         keep += _gen_keep_files(name, require)
-        removed = _clean_dir(name, list(keep))
+        removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             if __opts__['test']:
                 if ret['result']: ret['result'] = None
