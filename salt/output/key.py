@@ -16,13 +16,18 @@ def output(data):
 
     cmap = {'minions_pre': color['RED'],
             'minions': color['GREEN'],
-            'minions_rejected': color['BLUE']}    
+            'minions_rejected': color['BLUE'],
+            'local': color['PURPLE']}
 
     trans = {'minions_pre': '{0}Unaccepted Keys:{1}'.format(color['LIGHT_RED'], color['ENDC']),
              'minions': '{0}Accepted Keys:{1}'.format(color['LIGHT_GREEN'], color['ENDC']),
-             'minions_rejected': '{0}Rejected Keys:{1}'.format(color['LIGHT_BLUE'], color['ENDC'])}
+             'minions_rejected': '{0}Rejected Keys:{1}'.format(color['LIGHT_BLUE'], color['ENDC']),
+             'local': '{0}Local Keys:{1}'.format(color['LIGHT_PURPLE'], color['ENDC'])}
 
     for status in sorted(data):
         print(trans[status])
         for key in data[status]:
-            print('{0}{1}{2}'.format(cmap[status], key, color['ENDC']))
+            if isinstance(data[status], list):
+                print('{0}{1}{2}'.format(cmap[status], key, color['ENDC']))
+            if isinstance(data[status], dict):
+                print('{0}{1}:  {2}{3}'.format(cmap[status], key, data[status][key], color['ENDC']))
