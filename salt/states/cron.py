@@ -113,7 +113,7 @@ def present(name,
         The information to be set in the day of day of week section. Default is
         ``*``
     '''
-    name = name.strip()
+    name = ' '.join(name.strip().split())
     ret = {'changes': {},
            'comment': '',
            'name': name,
