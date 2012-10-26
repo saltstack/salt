@@ -6,6 +6,49 @@ rest_flask
 
 .. py:currentmodule:: saltapi.netapi.rest_flask
 
+.. ............................................................................
+
+.. _rest-flask-config:
+
+Setup and configuration
+=======================
+
+The :py:mod:`rest_flask` module requires a few bits of configuration in the
+master config of the form:
+
+.. code-block:: yaml
+
+    saltapi:
+      rest_flask:
+        secret: \x87\x7f\x1b\xd5K\x8c\xd8=F\xafTJ%\xb4\xcem\x80\xc7E\xe9Mq\xf1N
+        cert: /path/to/selfsigned.crt
+        cert_priv: /path/to/private.key
+
+Secret
+------
+
+This value is used to salt session keys. Any string will do, just keep it
+secret. Use the following command to generate a suitable random string:
+
+.. code-block:: bash
+
+    % python -c 'import os; print repr(os.urandom(24))'
+
+SSL certificate
+---------------
+
+The REST interface requires a secure HTTPS connection. You must provide an SSL
+certificate to use. If you don't already have a certificate, or don't wish to
+buy one, you can generate a self-signed certificate using the
+:py:func:`~salt.modules.ca.create_self_signed_cert` function in Salt (you must
+have pyOpenSSL installed):
+
+.. code-block:: bash
+
+    % salt-call ca.create_self_signed_cert /path/to/selfsigned.crt /path/to/private.key
+
+.. ............................................................................
+
 .. _rest-flask-minions:
 
 Run commands and view minion details
