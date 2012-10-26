@@ -3,6 +3,10 @@ A REST interface for Salt using the Flask framework
 '''
 import itertools
 import json
+import os
+
+import cheroot.wsgi
+import cheroot.ssllib.ssl_builtin
 
 import flask
 import flask.globals
@@ -191,11 +195,39 @@ def build_app():
 
     return app
 
+def verify_certs(*args):
+    msg = ("Could not find a certificate: {0}\n"
+            "If you want to quickly generate a self-signed certificate, use "
+            "the ca.create_self_signed_cert function in Salt")
+
+    for arg in args:
+        if not os.path.exists(arg):
+            raise Exception(msg.format(arg))
 
 def start():
     '''
     Server loop here. Started in a multiprocess.
     '''
+    apiopts = __opts__.get('saltapi', {}).get(__name__.rsplit('.', 1)[-1], {})
+    debug = apiopts.get('debug', False)
+    port = apiopts.get('port', 8080)
+
+    cert = apiopts.get('cert', '')
+    cert_priv = apiopts.get('cert_priv', '')
+    verify_certs(cert, cert_priv)
+
     app = build_app()
-    # port = __opts__['port']
-    app.run(host='0.0.0.0', port=8000, debug=True)
+
+    if debug:
+        app.run(host='0.0.0.0', port=port, debug=True)
+    else:
+        ssl_a = cheroot.ssllib.ssl_builtin.BuiltinSSLAdapter(cert, cert_priv)
+        wsgi_d = cheroot.wsgi.WSGIPathInfoDispatcher({'/': app})
+        server = cheroot.wsgi.WSGIServer(('0.0.0.0', port),
+                wsgi_app=wsgi_d,
+                ssl_adapter=ssl_a)
+
+        try:
+            server.start()
+        except KeyboardInterrupt:
+            server.stop()
