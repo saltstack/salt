@@ -304,7 +304,7 @@ class Pillar(object):
                     errors += err
         return pillar, errors
 
-    def ext_pillar(self, pillar={}):
+    def ext_pillar(self, pillar):
         '''
         Render the external pillar data
         '''
@@ -313,7 +313,6 @@ class Pillar(object):
         if not isinstance(self.opts['ext_pillar'], list):
             log.critical('The "ext_pillar" option is malformed')
             return {}
-        ext = {}
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
@@ -326,14 +325,14 @@ class Pillar(object):
                     continue
                 try:
                     if isinstance(val, dict):
-                        ext.update(self.ext_pillars[key](pillar=pillar, **val))
+                        pillar.update(self.ext_pillars[key](pillar, **val))
                     elif isinstance(val, list):
-                        ext.update(self.ext_pillars[key](*val, pillar=pillar))
+                        pillar.update(self.ext_pillars[key](pillar, *val))
                     else:
-                        ext.update(self.ext_pillars[key](val, pillar=pillar))
+                        pillar.update(self.ext_pillars[key](pillar, val))
                 except Exception:
                     log.exception('Failed to load ext_pillar {0}'.format(key))
-        return ext
+        return pillar
 
     def compile_pillar(self):
         '''
@@ -342,7 +341,7 @@ class Pillar(object):
         top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
-        pillar.update(self.ext_pillar(pillar=pillar))
+        self.ext_pillar(pillar)
         errors.extend(terrors)
         if self.opts.get('pillar_opts', False):
             pillar['master'] = self.opts
