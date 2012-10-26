@@ -9,7 +9,7 @@ def list_all():
     List the keys under a named status
     '''
     skey = salt.key.Key(__opts__)
-    return skey.list_all()
+    return skey.all_keys()
 
 def accept(match):
     '''
