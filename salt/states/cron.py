@@ -202,6 +202,7 @@ def absent(name,
         The information to be set in the day of day of week section. Default is
         ``*``
     '''
+    name = ' '.join(name.strip().split())
     ret = {'name': name,
            'result': True,
            'changes': {},
