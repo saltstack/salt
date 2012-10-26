@@ -26,6 +26,8 @@ their web interface:
     OPENSTACK.user: myuser
     # The OpenStack password
     OPENSTACK.password: letmein
+    # The OpenStack keypair name
+    OPENSTACK.ssh_key_name
 
 '''
 
@@ -133,6 +135,7 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
+
     not_ready = True
     nr_count = 0
     while not_ready:
@@ -155,14 +158,26 @@ def create(vm_):
         if nr_count > 50:
             not_ready = False
         time.sleep(1)
+
+    deployargs = {
+        'host': data.public_ips[0],
+        'script': deploy_script.script,
+        'name': vm_['name'],
+	'sock_dir': __opts__['sock_dir']
+    }
+
+    if 'ssh_username' in vm_:
+	deployargs['username'] = vm_['ssh_username']
+    else:
+        deployargs['username'] = 'root'
+
+    if 'OPENSTACK.ssh_key_file' in __opts__:
+	deployargs['key_filename'] = __opts__['OPENSTACK.ssh_key_file']
+    elif 'password' in data.extra:
+	deployargs['password'] = data.extra['password']
+
     print('Running deploy script')
-    deployed = saltcloud.utils.deploy_script(
-        host=data.public_ips[0],
-        username='root',
-        key_filename=__opts__['OPENSTACK.ssh_key_file'],
-        script=deploy_script.script,
-        name=vm_['name'],
-        sock_dir=__opts__['sock_dir'])
+    deployed = saltcloud.utils.deploy_script(**deployargs)
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
     else:
