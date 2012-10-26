@@ -115,7 +115,7 @@ def wheels(opts):
     '''
     Returns the returner modules
     '''
-    load = _create_loader(opts, 'wheels', 'wheel')
+    load = _create_loader(opts, 'wheel', 'wheel')
     return load.gen_functions()
 
 
