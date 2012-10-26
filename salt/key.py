@@ -1,13 +1,11 @@
 '''
-The actual saltkey functional code
+The Salt Key backend api and interface used by the CLI. The Key class can be
+used to manage salt keys directly without interfacing with the cli.
 '''
 
 # Import python modules
 import os
 import shutil
-import sys
-import logging
-import glob
 import fnmatch
 # Import salt modules
 import salt.crypt
@@ -78,7 +76,7 @@ class KeyCLI(object):
         if not self.opts.get('yes', False):
             print('The following keys are going to be deleted:')
             salt.output.display_output(
-                    self.key.list_keys(),
+                    matches,
                     'key',
                     self.opts)
             veri = raw_input('Proceed? [n/Y] ')
@@ -91,6 +89,64 @@ class KeyCLI(object):
         Delete all keys
         '''
         self.delete('*')
+
+    def reject(self, match):
+        '''
+        Reject the matched keys
+        '''
+        matches = self.key.name_match(match)
+        if not self.opts.get('yes', False):
+            print('The following keys are going to be rejected:')
+            salt.output.display_output(
+                    matches,
+                    'key',
+                    self.opts)
+            veri = raw_input('Proceed? [n/Y] ')
+            if veri.lower().startswith('n'):
+                return
+        self.key.reject_key(match)
+
+    def reject_all(self):
+        '''
+        Reject all keys
+        '''
+        self.reject('*')
+
+    def print_key(self, match):
+        '''
+        Print out a single key
+        '''
+        matches = self.key.key_str(match)
+        salt.output.display_output(
+                matches,
+                'key',
+                self.opts)
+
+    def print_all(self):
+        '''
+        Print out all managed keys
+        '''
+        self.print_key('*')
+
+    def finger(self, match):
+        '''
+        Print out the fingerprints for the matched keys
+        '''
+        matches = self.key.finger(match)
+        salt.output.display_output(
+                matches,
+                'key',
+                self.opts)
+
+    def finger_all(self):
+        '''
+        Print out all fingerprints
+        '''
+        matches = self.key.finger('*')
+        salt.output.display_output(
+                matches,
+                'key',
+                self.opts)
 
 
 class Key(object):
@@ -157,7 +213,7 @@ class Key(object):
         '''
         Return a dict of managed keys and what the key status are
         '''
-        acc, pre, rej = _check_minions_directories()
+        acc, pre, rej = self._check_minions_directories()
         ret = {}
         for dir_ in acc, pre, rej:
             ret[os.path.basename(dir_)] = []
