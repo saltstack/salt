@@ -98,9 +98,10 @@ def accept_key(pki_dir, pub, id_):
             pki_dir,
             'minions_pre/{0}'.format(id_)
             )
-    with open(oldkey) as fp_:
-        if fp_.read() == pub:
-            os.remove(oldkey)
+    if os.path.isfile(oldkey):
+        with open(oldkey) as fp_:
+            if fp_.read() == pub:
+                os.remove(oldkey)
     
 
 def remove_key(pki_dir, id_):
