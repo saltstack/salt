@@ -141,7 +141,7 @@ def _do_search(conf):
     return result
 
 
-def ext_pillar(config_file):
+def ext_pillar(config_file, pillar={}):
     '''
     Execute LDAP searches and return the aggregated data
     '''
