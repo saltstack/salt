@@ -276,10 +276,15 @@ class CkMinions(object):
                                 return True
         return False
 
-    def wheel_check(self, auth_list, mod, fun):
+    def wheel_check(self, auth_list, fun):
         '''
         Check special api permissions
         '''
+        comps = fun.split('.')
+        if len(comps) != 2:
+            return False
+        mod = comps[0]
+        fun = comps[1]
         for ind in auth_list:
             if isinstance(ind, str):
                 if ind.startswith('@') and ind[1:] == mod:

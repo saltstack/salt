@@ -1427,12 +1427,10 @@ class ClearFuncs(object):
             return ''
         good = self.ckminions.wheel_check(
                 self.opts['external_auth'][clear_load['eauth']][name],
-                clear_load['mod'],
                 clear_load['fun'])
         if not good:
             return ''
         return self.wheel_.call_func(
-                clear_load.pop('mod'),
                 clear_load.pop('fun'),
                 **clear_load)
 
