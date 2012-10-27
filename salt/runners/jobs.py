@@ -9,6 +9,7 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
+import salt.output
 from salt._compat import string_types
 from salt.exceptions import SaltException
 
@@ -62,9 +63,8 @@ def lookup_jid(jid):
 
     ret = {}
     for mid, data in client.get_full_returns(jid, [], 0).items():
-        printout = salt.output.get_outputter(data.get('out', None))
         ret[mid] = data.get('ret')
-        printout({mid: ret[mid]})
+        salt.output.display_output({mid: ret[mid]}, data.get('out', None))
 
     return ret
 
@@ -124,5 +124,5 @@ def print_job(job_id):
                                     'Target': load['tgt'],
                                     'Target-type': load['tgt_type'],
                                     'Result': hosts_return}
-                        salt.output.get_outputter('yaml')(ret)
+                        salt.output.display_output(ret, 'yaml')
     return ret
