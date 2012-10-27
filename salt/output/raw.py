@@ -6,4 +6,4 @@ def ouput(data):
     '''
     Rather basic....
     '''
-    print(data)
+    return data

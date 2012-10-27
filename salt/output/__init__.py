@@ -18,7 +18,7 @@ def display_output(data, out, opts=None):
     '''
     Print the passed data using the desired output
     '''
-    get_printout(out, opts)(data)
+    print(get_printout(out, opts)(data).rstrip())
 
 
 def get_printout(out, opts=None, **kwargs):

@@ -9,16 +9,19 @@ def output(data):
     '''
     Output the data in lines, very nice for running commands
     '''
+    ret = ''
     if hasattr(data, 'keys'):
         for key in data:
             value = data[key]
             # Don't blow up on non-strings
             try:
                 for line in value.split('\n'):
-                    print('{0}: {1}'.format(key, line))
+                    ret += '{0}: {1}\n'.format(key, line)
             except AttributeError:
-                print('{0}: {1}'.format(key, value))
+                ret += '{0}: {1}\n'.format(key, value)
     else:
         # For non-dictionary data, just use print
-        pprint.pprint(data)
+        ret += '{0}\n'.format(pprint.pformat(data))
+
+    return ret
 

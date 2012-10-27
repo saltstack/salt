@@ -37,8 +37,8 @@ def output(data):
                     err = ('The State execution failed to record the order '
                            'in which all states were executed. The state '
                            'return missing data is:')
-                    print(err)
-                    pprint.pprint(info)
+                    hstrs.insert(0, pprint.pformat(info))
+                    hstrs.insert(0, err)
             # Everything rendered as it should display the output
             for tname in sorted(
                     data[host],
@@ -105,9 +105,8 @@ def output(data):
                                     '\n                   ')
                 hstrs.append(('{0}{1}{2[ENDC]}'
                               .format(tcolor, changes, colors)))
-        print(('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
-        for hstr in hstrs:
-            print(hstr)
+        hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
+        return '\n'.join(hstrs)
 
 
 def _strip_clean(returns):
