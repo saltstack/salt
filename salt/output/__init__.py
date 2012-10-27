@@ -45,3 +45,11 @@ def get_printout(out, opts=None, **kwargs):
     if not out in outputters:
         return outputters['pprint']
     return outputters[out]
+
+
+def out_format(data, out, opts=None):
+    '''
+    Return the formatted outputter string for the passed data
+    '''
+    return get_printout(out, opts)(data).rstrip()
+
