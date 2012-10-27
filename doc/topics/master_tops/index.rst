@@ -17,4 +17,4 @@ Using the new `master_tops` option is simple:
 .. code-block:: yaml
 
     master_tops:
-      ext_nodes: cobbler-external-nodes
+      - ext_nodes: cobbler-external-nodes
