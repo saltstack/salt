@@ -27,4 +27,4 @@ def output(data):
         log.debug(traceback.format_exc())
         # Return valid json for unserializable objects
         ret = json.dumps({})
-    print(ret)
+    return ret

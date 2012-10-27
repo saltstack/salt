@@ -24,10 +24,14 @@ def output(data):
              'minions_rejected': '{0}Rejected Keys:{1}'.format(color['LIGHT_BLUE'], color['ENDC']),
              'local': '{0}Local Keys:{1}'.format(color['LIGHT_PURPLE'], color['ENDC'])}
 
+    ret = ''
+
     for status in sorted(data):
-        print(trans[status])
+        ret += '{0}\n'.format(trans[status])
         for key in data[status]:
             if isinstance(data[status], list):
-                print('{0}{1}{2}'.format(cmap[status], key, color['ENDC']))
+                ret += '{0}{1}{2}\n'.format(cmap[status], key, color['ENDC'])
             if isinstance(data[status], dict):
-                print('{0}{1}:  {2}{3}'.format(cmap[status], key, data[status][key], color['ENDC']))
+                ret += '{0}{1}:  {2}{3}\n'.format(cmap[status], key, data[status][key], color['ENDC'])
+
+    return ret

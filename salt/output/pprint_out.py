@@ -15,4 +15,4 @@ def output(data):
     '''
     Print out via pretty print
     '''
-    pprint.pprint(data)
+    return pprint.pformat(data)
