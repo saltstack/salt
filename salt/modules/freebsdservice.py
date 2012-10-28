@@ -16,6 +16,7 @@ def __virtual__():
         return 'service'
     return False
 
+
 def get_enabled():
     '''
     Return what services are set to run on boot
@@ -28,18 +29,13 @@ def get_enabled():
     for rcfn in ('/etc/rc.conf', '/etc/rc.conf.local'):
         if os.path.isfile(rcfn):
             for line in open(rcfn, 'r').readlines():
-                if not line.strip():
+                clean_line = line.split('#',1)[0].strip()
+                if not '_enable=' in clean_line:
                     continue
-                if line.startswith('#'):
+                (service, enabled) = clean_line.split('=')
+                if enabled.strip('"\'').upper() != 'YES':
                     continue
-                if not '_enable' in line:
-                    continue
-                if not '=' in line:
-                    continue
-                comps = line.split('=')
-                if 'YES' in comps[1]:
-                    # Is enabled!
-                    ret.append(comps[0].split('_')[0])
+                ret.append(service.replace('_enable', ''))
     return ret
 
 
