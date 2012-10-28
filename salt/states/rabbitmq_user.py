@@ -41,6 +41,7 @@ def present(name,
         Name of the user to run the command
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    result = {}
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
@@ -71,9 +72,7 @@ def present(name,
                     name, runas=runas)
         else:
             log.debug('User exists, and force is not set - Abandoning')
-            result = {
-                'Error': 'User {0} exists and force is not set'.format(name)
-            }
+            ret['comment'] = 'User {0} is not going to be modified'.format(name)
 
         if 'Error' in result:
             ret['result'] = False
