@@ -184,7 +184,7 @@ class KeyCLI(object):
         elif self.opts['reject_all']:
             self.reject_all()
         elif self.opts['delete']:
-            self.delete_key(self.opts['delete'])
+            self.delete(self.opts['delete'])
         elif self.opts['delete_all']:
             self.delete_all()
         elif self.opts['finger']:
