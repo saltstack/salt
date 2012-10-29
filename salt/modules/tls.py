@@ -479,10 +479,10 @@ def create_self_signed_cert(
         _cert_base_path,
         tls_dir,
         CN)
-    ret += 'Created Certificate: {0}/{1}/certs/{2}.crt"').format(
+    ret.join('Created Certificate: {0}/{1}/certs/{2}.crt"'.format(
         _cert_base_path(),
         tls_dir,
-        CN)
+        CN))
 
     return ("Wrote self-signed certificate to: {0}\n"
             "Wrote private key for self-signed certificate to: {1}".format(
