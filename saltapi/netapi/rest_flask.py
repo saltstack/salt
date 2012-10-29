@@ -204,7 +204,7 @@ def build_app():
 def verify_certs(*args):
     msg = ("Could not find a certificate: {0}\n"
             "If you want to quickly generate a self-signed certificate, use "
-            "the ca.create_self_signed_cert function in Salt")
+            "the tls.create_self_signed_cert function in Salt")
 
     for arg in args:
         if not os.path.exists(arg):
