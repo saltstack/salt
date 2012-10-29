@@ -376,7 +376,6 @@ def create_csr(
                     CN
                     )
 
-
 def create_self_signed_cert(
         tls_dir='tls',
         bits=2048,
@@ -441,9 +440,19 @@ def create_self_signed_cert(
     # create certificate
     cert = OpenSSL.crypto.X509()
     cert.set_version(3)
-    cert.set_subject(req.get_subject())
+
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
+
+    cert.get_subject().C = C
+    cert.get_subject().ST = ST
+    cert.get_subject().L = L
+    cert.get_subject().O = O
+    if OU:
+        cert.get_subject().OU = OU
+    cert.get_subject().CN = CN
+    cert.get_subject().emailAddress = emailAddress
+
     cert.set_serial_number(_new_serial(tls_dir, CN))
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
