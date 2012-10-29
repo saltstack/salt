@@ -4,7 +4,6 @@ Render the pillar data
 
 # Import python libs
 import os
-import copy
 import collections
 import logging
 
@@ -15,6 +14,7 @@ import salt.minion
 import salt.crypt
 from salt._compat import string_types
 from salt.template import compile_template
+from salt.utils.dictupdate import update
 
 log = logging.getLogger(__name__)
 
@@ -325,13 +325,14 @@ class Pillar(object):
                     continue
                 try:
                     if isinstance(val, dict):
-                        pillar.update(self.ext_pillars[key](pillar, **val))
+                        ext = self.ext_pillars[key](pillar, **val)
                     elif isinstance(val, list):
-                        pillar.update(self.ext_pillars[key](pillar, *val))
+                        ext = self.ext_pillars[key](pillar, *val)
                     else:
-                        pillar.update(self.ext_pillars[key](pillar, val))
-                except Exception:
-                    log.exception('Failed to load ext_pillar {0}'.format(key))
+                        ext = self.ext_pillars[key](pillar, val)
+                    update(pillar, ext)
+                except Exception as exc:
+                    log.exception('Failed to load ext_pillar {0}: {1}'.format(key, exc))
         return pillar
 
     def compile_pillar(self):
