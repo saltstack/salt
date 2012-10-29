@@ -171,7 +171,9 @@ def db_create(name,
 
     # "With"-options to create a database
     with_args = {
-        'OWNER': owner,
+        # owner needs to be enclosed in double quotes so postgres
+        # doesn't get thrown by dashes in the name
+        'OWNER': owner and '"{0}"'.format(owner),
         'TEMPLATE': template,
         'ENCODING': encoding and "'{0}'".format(encoding),
         'LC_COLLATE': lc_collate and "'{0}'".format(lc_collate),
