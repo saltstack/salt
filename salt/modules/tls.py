@@ -378,7 +378,7 @@ def create_csr(
 
 
 def create_self_signed_cert(
-        tls_dir='tls'
+        tls_dir='tls',
         bits=2048,
         CN='localhost',
         C='US',
