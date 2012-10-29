@@ -48,10 +48,11 @@ class KeyCLI(object):
         matches = self.key.name_match(match)
         if not matches.get('minions_pre', False):
             print(
-                'The key glob {0} dies not match any unaccepted keys.'.format(
+                'The key glob {0} does not match any unaccepted keys.'.format(
                     match
                     )
                 )
+            return
         after_match = self.key.accept(match)
         if 'minions_pre' in after_match:
             accepted = set(matches['minions_pre']).difference(
