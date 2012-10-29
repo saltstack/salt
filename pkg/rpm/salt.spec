@@ -74,11 +74,14 @@ Requires(preun): initscripts
 Requires(postun): initscripts
 
 %else
-  %if 0%{?systemd_preun:1}
-    Requires(post): systemd-units
-    Requires(preun): systemd-units
-    Requires(postun): systemd-units
-  %endif
+
+%if 0%{?systemd_preun:1}
+
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
+
+%endif
 
 BuildRequires: systemd-units
 
