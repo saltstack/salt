@@ -457,7 +457,7 @@ def create_self_signed_cert(
     cert.set_serial_number(_new_serial(tls_dir, CN))
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
-    cert.sign(k, 'sha1')
+    cert.sign(key, 'sha1')
 
     # Write private key and cert
     priv_key = open(
