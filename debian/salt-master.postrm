@@ -1,3 +1,4 @@
+#!/bin/sh
 # Purge config files, logs, and directories created after package install.
 # Note that user-specified alternate locations for these are not affected.
 
