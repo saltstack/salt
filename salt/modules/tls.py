@@ -485,14 +485,14 @@ def create_self_signed_cert(
 
     _write_cert_to_database(tls_dir, cert)
 
-    ret = "Created Private Key: {0}/{1}/certs/{2}.key\n".format(
+    ret = 'Created Private Key: {0}/{1}/certs/{2}.key\n'.format(
         _cert_base_path(),
         tls_dir,
         CN)
-    ret.join('Created Certificate: {0}/{1}/certs/{2}.crt"'.format(
+    ret += 'Created Certificate: {0}/{1}/certs/{2}.crt'.format(
         _cert_base_path(),
         tls_dir,
-        CN))
+        CN)
 
     return ret
 
