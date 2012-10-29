@@ -212,16 +212,16 @@ def start():
     debug = apiopts.get('debug', False)
     port = apiopts.get('port', 8080)
 
-    cert = apiopts.get('cert', '')
-    cert_priv = apiopts.get('cert_priv', '')
-    verify_certs(cert, cert_priv)
+    ssl_crt = apiopts.get('ssl_crt', '')
+    ssl_key = apiopts.get('ssl_key', '')
+    verify_certs(ssl_crt, ssl_key)
 
     app = build_app()
 
     if debug:
         app.run(host='0.0.0.0', port=port, debug=True)
     else:
-        ssl_a = cheroot.ssllib.ssl_builtin.BuiltinSSLAdapter(cert, cert_priv)
+        ssl_a = cheroot.ssllib.ssl_builtin.BuiltinSSLAdapter(ssl_crt, ssl_key)
         wsgi_d = cheroot.wsgi.WSGIPathInfoDispatcher({'/': app})
         server = cheroot.wsgi.WSGIServer(('0.0.0.0', port),
                 wsgi_app=wsgi_d,
