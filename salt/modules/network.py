@@ -117,6 +117,7 @@ def _interfaces_ip(out):
             cols = line.split()
             if len(cols) >= 2:
                 type, value = tuple(cols[0:2])
+                iflabel = cols[-1:][0]
                 if type in ('inet', 'inet6'):
                     if 'secondary' not in cols:
                         ipaddr, netmask, broadcast = parse_network(value, cols)
@@ -127,6 +128,7 @@ def _interfaces_ip(out):
                             addr_obj['address'] = ipaddr
                             addr_obj['netmask'] = netmask
                             addr_obj['broadcast'] = broadcast
+                            addr_obj['label'] = iflabel
                             data['inet'].append(addr_obj)
                         elif type == 'inet6':
                             if 'inet6' not in data:
@@ -143,7 +145,8 @@ def _interfaces_ip(out):
                             'type': type,
                             'address': ip,
                             'netmask': mask,
-                            'broadcast': brd
+                            'broadcast': brd,
+                            'label': iflabel,
                             })
                         del ip, mask, brd
                 elif type.startswith('link'):
