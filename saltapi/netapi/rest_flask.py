@@ -223,6 +223,11 @@ def start():
     verify_certs(ssl_crt, ssl_key)
 
     app = build_app()
+    app.secret_key = apiopts.get('secret')
+
+    if not app.secret_key:
+        raise Exception("Config setting 'secret_key' must be set for '{0}'"
+                .format(__name__))
 
     if debug:
         app.run(host='0.0.0.0', port=port, debug=True)
