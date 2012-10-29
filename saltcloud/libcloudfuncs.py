@@ -89,6 +89,7 @@ def get_image(conn, vm_):
             return img
         if img.name == str(vm_['image']):
             return img
+    raise ValueError("The specified image could not be found.")
 
 
 def get_size(conn, vm_):
@@ -103,6 +104,7 @@ def get_size(conn, vm_):
             return size
         if str(size.name) == str(vm_['size']):
             return size
+    raise ValueError("The specified size could not be found.")
 
 
 def script(vm_):

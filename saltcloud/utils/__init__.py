@@ -85,7 +85,7 @@ def accept_key(pki_dir, pub, id_):
     '''
     If the master config was available then we will have a pki_dir key in
     the opts directory, this method places the pub key in the accepted
-    keys dir if that is the case.
+    keys dir and removes it from the unaccepted keys dir if that is the case.
     '''
     key = os.path.join(
             pki_dir,
@@ -93,6 +93,16 @@ def accept_key(pki_dir, pub, id_):
             )
     with open(key, 'w+') as fp_:
         fp_.write(pub)
+
+    oldkey = os.path.join(
+            pki_dir,
+            'minions_pre/{0}'.format(id_)
+            )
+    if os.path.isfile(oldkey):
+        with open(oldkey) as fp_:
+            if fp_.read() == pub:
+                os.remove(oldkey)
+    
 
 def remove_key(pki_dir, id_):
     '''

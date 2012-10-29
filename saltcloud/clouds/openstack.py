@@ -26,6 +26,8 @@ their web interface:
     OPENSTACK.user: myuser
     # The OpenStack password
     OPENSTACK.password: letmein
+    # The OpenStack keypair name
+    OPENSTACK.ssh_key_name
 
 '''
 
@@ -60,7 +62,7 @@ list_nodes_full = types.FunctionType(list_nodes_full.__code__, globals())
 # Only load in this module is the OPENSTACK configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud funcstions and check for OPENSTACK configs
+    Set up the libcloud functions and check for OPENSTACK configs
     '''
     if 'OPENSTACK.user' in __opts__ and 'OPENSTACK.password' in __opts__:
         return 'openstack'
@@ -100,9 +102,29 @@ def create(vm_):
     deploy_script = script(vm_)
     kwargs = {}
     kwargs['name'] = vm_['name']
-    kwargs['image'] = get_image(conn, vm_)
-    kwargs['size'] = get_size(conn, vm_)
+
+    try:
+        kwargs['image'] = get_image(conn, vm_)
+    except Exception as exc:
+        err = ('Error creating {0} on OPENSTACK\n\n'
+               'Could not find image {1}\n').format(
+                       vm_['name'], vm_['image']
+                       )
+        sys.stderr.write(err)
+        return False
+
+    try:
+        kwargs['size'] = get_size(conn, vm_)
+    except Exception as exc:
+        err = ('Error creating {0} on OPENSTACK\n\n'
+               'Could not find size {1}\n').format(
+                       vm_['name'], vm_['size']
+                       )
+        sys.stderr.write(err)
+        return False
+
     kwargs['ex_keyname'] = __opts__['OPENSTACK.ssh_key_name']
+
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -113,6 +135,7 @@ def create(vm_):
                        )
         sys.stderr.write(err)
         return False
+
     not_ready = True
     nr_count = 0
     while not_ready:
@@ -135,14 +158,26 @@ def create(vm_):
         if nr_count > 50:
             not_ready = False
         time.sleep(1)
+
+    deployargs = {
+        'host': data.public_ips[0],
+        'script': deploy_script.script,
+        'name': vm_['name'],
+	'sock_dir': __opts__['sock_dir']
+    }
+
+    if 'ssh_username' in vm_:
+	deployargs['username'] = vm_['ssh_username']
+    else:
+        deployargs['username'] = 'root'
+
+    if 'OPENSTACK.ssh_key_file' in __opts__:
+	deployargs['key_filename'] = __opts__['OPENSTACK.ssh_key_file']
+    elif 'password' in data.extra:
+	deployargs['password'] = data.extra['password']
+
     print('Running deploy script')
-    deployed = saltcloud.utils.deploy_script(
-        host=data.public_ips[0],
-        username='root',
-        key_filename=__opts__['OPENSTACK.ssh_key_file'],
-        script=deploy_script.script,
-        name=vm_['name'],
-        sock_dir=__opts__['sock_dir'])
+    deployed = saltcloud.utils.deploy_script(**deployargs)
     if deployed:
         print('Salt installed on {0}'.format(vm_['name']))
     else:
