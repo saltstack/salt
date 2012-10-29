@@ -206,7 +206,7 @@ def wait_for_passwd(host, port=22, timeout=900, username='root',
 
 def deploy_script(host, port=22, timeout=900, username='root',
                   password=None, key_filename=None, script=None,
-                  deploy_command='/tmp/deploy.sh', tty=None,
+                  deploy_command='bash /tmp/deploy.sh', tty=None,
                   name=None, pub_key=None, sock_dir=None):
     '''
     Copy a deploy script to a remote server, execute it, and remove it

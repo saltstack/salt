@@ -1,4 +1,4 @@
-#!/usr/bin/sudo bash
+#!/bin/bash
 
 mkdir -p /etc/salt/pki
 echo '{{ vm['priv_key'] }}' > /etc/salt/pki/minion.pem
