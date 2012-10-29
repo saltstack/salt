@@ -430,11 +430,10 @@ def create_self_signed_cert(
     if not os.path.exists('{0}/{1}/certs/'.format(_cert_base_path(), tls_dir)):
         os.makedirs("{0}/{1}/certs/".format(_cert_base_path(), tls_dir))
 
-    print '{0}/{1}/{2}.crt'.format(_cert_base_path(), tls_dir, CN)
     if os.path.exists(
             '{0}/{1}/certs/{2}.crt'.format(_cert_base_path(), tls_dir, CN)
             ):
-        return 'Certificate "{0}" already exists'.format(tls_dir)
+        return 'Certificate "{0}" already exists'.format(CN)
 
     key = OpenSSL.crypto.PKey()
     key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
