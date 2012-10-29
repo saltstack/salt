@@ -302,7 +302,7 @@ def install(pkgs=None,
     try:
         result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
     finally:
-        if treq:
+        if treq and requirements.startswith('salt://'):
             try:
                 os.remove(treq)
             except Exception:
@@ -404,7 +404,7 @@ def uninstall(pkgs=None,
 
     result = __salt__['cmd.run_all'](cmd, runas=runas, cwd=cwd)
 
-    if treq:
+    if treq and requirements.startswith('salt://'):
         try:
             os.remove(treq)
         except Exception:
