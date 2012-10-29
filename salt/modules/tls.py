@@ -485,7 +485,7 @@ def create_self_signed_cert(
 
     _write_cert_to_database(tls_dir, cert)
 
-    ret = "Created Private Key: {0}/{1}/certs/{2}.key".format(
+    ret = "Created Private Key: {0}/{1}/certs/{2}.key\n".format(
         _cert_base_path,
         tls_dir,
         CN)
@@ -494,10 +494,7 @@ def create_self_signed_cert(
         tls_dir,
         CN))
 
-    return ("Wrote self-signed certificate to: {0}\n"
-            "Wrote private key for self-signed certificate to: {1}".format(
-                os.path.abspath(cert_file),
-                os.path.abspath(key_file)))
+    return ret
 
 def create_ca_signed_cert(ca_name, CN, days=365):
     '''
