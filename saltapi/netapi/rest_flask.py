@@ -173,9 +173,15 @@ def build_app():
         return response
 
     # FIXME: Y U NO TRAILING SLASH?!
-    # Allow using custom error handler when debug=True
-    app.config['PROPAGATE_EXCEPTIONS'] = False
-    app.config['TRAP_HTTP_EXCEPTIONS'] = True
+
+    app.config.update({
+        # Allow using custom error handler when debug=True
+        'PROPAGATE_EXCEPTIONS' : False,
+        'TRAP_HTTP_EXCEPTIONS' : True,
+        # Only set cookies over SSL
+        'SESSION_COOKIE_SECURE': True,
+    })
+
     app.error_handler_spec[None][500] = make_json_error
 
     jobs = JobsView.as_view('jobs', app=app)
