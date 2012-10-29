@@ -40,12 +40,12 @@ SSL certificate
 The REST interface requires a secure HTTPS connection. You must provide an SSL
 certificate to use. If you don't already have a certificate, or don't wish to
 buy one, you can generate a self-signed certificate using the
-:py:func:`~salt.modules.ca.create_self_signed_cert` function in Salt (you must
-have pyOpenSSL installed):
+:py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note the
+setup requirements for this module):
 
 .. code-block:: bash
 
-    % salt-call ca.create_self_signed_cert /path/to/selfsigned.crt /path/to/private.key
+    % salt-call tls.create_self_signed_cert
 
 .. ............................................................................
 
