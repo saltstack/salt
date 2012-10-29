@@ -331,8 +331,8 @@ class Pillar(object):
                     else:
                         ext = self.ext_pillars[key](pillar, val)
                     update(pillar, ext)
-                except Exception:
-                    log.exception('Failed to load ext_pillar {0}'.format(key))
+                except Exception as exc:
+                    log.exception('Failed to load ext_pillar {0}: {1}'.format(key, exc))
         return pillar
 
     def compile_pillar(self):
