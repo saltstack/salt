@@ -49,15 +49,14 @@ def compile_template(template, renderers, default, env='', sls=''):
     input_data = StringIO(input_data)
     for render, argline in render_pipe:
         if argline:
-            ret = render(input_data, env, sls, renderers=renderers, argline=argline)
+            render_kwargs = dict(renderers=renderers, argline=argline)
         else:
-            ret = render(input_data, env, sls, renderers=renderers)
+            render_kwargs = dict(renderers=renderers)
+        ret = render(input_data, env, sls, **render_kwargs)
         if ret is None:
             # The file is empty or is being written elsewhere
             time.sleep(0.01)
-            ret = render(input_data, env, sls)
-            if ret is None:
-                ret = {}
+            ret = render(input_data, env, sls, **render_kwargs)
         input_data = ret
     return ret
 
