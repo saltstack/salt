@@ -21,9 +21,12 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     def test_default_output(self):
         out = self.run_call('test.fib 3')
-        self.assertEqual(
-            'local: !!python/tuple\n- [0, 1, 1, 2]', '\n'.join(out[:-2])
-        )
+        expect = ['local: !!python/tuple',
+                  '- - 0',
+                  '  - 1',
+                  '  - 1',
+                  '  - 2',]
+        self.assertEqual(expect, out[:-2])
 
     def test_text_output(self):
         out = self.run_call('--text-out test.fib 3')
