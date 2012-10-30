@@ -79,6 +79,23 @@ list of features provided by this module.
 """
 
 # TODO:
+#   - Generate a sls goal state that requires all the other states in the
+#     salt file.
+#
+#   - Optionally, add require's to states in the salt file to enforce
+#     the execution of the states in the order they are defined in the salt
+#     file. (use orderded dict for yaml map)
+#
+#   - sls meta/info state: Eg, 
+#       sls_info:
+#         author: Jack Kuan
+#         description: what the salt file does...
+#         version: 0.1.0
+#
+#   - version constraint for 'include'. Eg,
+#       include:
+#         - apache: >= 0.1.0
+#
 #   - support synthetic argument? Eg, 
 #
 #     apache:
