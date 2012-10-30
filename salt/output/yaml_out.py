@@ -1,5 +1,6 @@
 '''
-YAML Outputter
+Output data in YAML, this outputter defaults to printing in YAML block mode
+for better readability.
 '''
 
 # Third Party libs
@@ -12,6 +13,6 @@ def __virtual__():
 
 def output(data):
     '''
-    Print out YAML
+    Print out YAML using the block mode
     '''
-    return yaml.dump(data)
+    return yaml.dump(data, default_flow_style=False)
