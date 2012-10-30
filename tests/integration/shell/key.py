@@ -58,7 +58,9 @@ class KeyTest(integration.ShellCase,
         '''
         data = self.run_key('-L --yaml-out')
         expect = [
-            'minions: [minion, sub_minion]',
+            'minions:',
+            '- minion',
+            '- sub_minion',
             'minions_pre: []',
             'minions_rejected: []',
             '',
