@@ -62,7 +62,7 @@ def _getargs(func):
         aspec = inspect.getargspec(func)
     elif inspect.ismethod(func):
         aspec = inspect.getargspec(func)
-        del aspec.args[0] # self
+        del aspec.args[0]  # self
     elif isinstance(func, object):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
@@ -653,3 +653,16 @@ def istextfile(fp_, blocksize=512):
     nontext = block.translate(None, text_characters)
     return float(len(nontext)) / len(block) <= 0.30
 
+
+def isorted(to_sort):
+    """
+    Sort a list of strings ignoring case.
+
+    >>> L = ['foo', 'Foo', 'bar', 'Bar']
+    >>> sorted(L)
+    ['Bar', 'Foo', 'bar', 'foo']
+    >>> sorted(L, key=lambda x: x.lower())
+    ['bar', 'Bar', 'foo', 'Foo']
+    >>>
+    """
+    return sorted(to_sort, key=lambda x: x.lower())
