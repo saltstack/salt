@@ -26,7 +26,6 @@ Full list of builtin execution modules
     bluez
     brew
     butterkvm
-    ca
     cassandra
     cluster
     cmdmod
@@ -105,6 +104,7 @@ Full list of builtin execution modules
     supervisord
     systemd
     test
+    tls
     tomcat
     upstart
     useradd
