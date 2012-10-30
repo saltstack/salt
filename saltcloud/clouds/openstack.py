@@ -176,6 +176,9 @@ def create(vm_):
     elif 'password' in data.extra:
 	deployargs['password'] = data.extra['password']
 
+    if 'sudo' in vm_:
+        deployargs['sudo'] = vm_['sudo']
+
     print('Running deploy script')
     deployed = saltcloud.utils.deploy_script(**deployargs)
     if deployed:

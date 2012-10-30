@@ -10,3 +10,4 @@ apt-get install -y python-software-properties
 echo | add-apt-repository  ppa:saltstack/salt
 apt-get update
 apt-get install -y salt-minion
+service salt-minion start
