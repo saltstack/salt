@@ -21,7 +21,7 @@ def find(path, env='base'):
         full = os.path.join(root, path)
         if os.path.isfile(full):
             # Add it to the dict
-            with open(path, 'rb') as fp_:
+            with open(full, 'rb') as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append({full: 'txt'})
                 else:
@@ -78,9 +78,11 @@ def read(path, env='base'):
     ret = []
     files = find(path, env)
     for fn_ in files:
-        if fn_ == 'txt':
-            with open(fn_, 'rb') as fp_:
-                ret.append({fn_: fp_.read()})
+        full = fn_.keys()[0]
+        form = fn_[full]
+        if form == 'txt':
+            with open(full, 'rb') as fp_:
+                ret.append({full: fp_.read()})
     return ret
 
 
