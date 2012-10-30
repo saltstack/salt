@@ -6,6 +6,7 @@ wheel modules
 
 # Import Python libs
 import optparse
+import pprint
 
 # Import Salt Libs
 import salt.config
@@ -62,9 +63,9 @@ class Wheeler(object):
         '''
         Execute the wheel call
         '''
-        print self.wheel.master_call(**self.opts)
+        return self.wheel.master_call(**self.opts)
 
 
 if __name__ == '__main__':
     wheeler = Wheeler(parse())
-    wheeler.run()
+    pprint.pprint(wheeler.run())
