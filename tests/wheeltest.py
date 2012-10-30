@@ -23,14 +23,14 @@ def parse():
             '--function',
             dest='fun',
             help='The wheel function to execute')
-    parser.add_option('-auth',
-            '-a',
+    parser.add_option('-a',
+            '--auth',
             dest='eauth',
             help='The external authentication mechanism to use')
 
-    options, args = parser.parse_opts()
+    options, args = parser.parse_args()
 
-    cli = options.__dict__()
+    cli = options.__dict__
 
     for arg in args:
         if '=' in arg:
@@ -44,23 +44,25 @@ class Wheeler(object):
     Set up communication with the wheel interface
     '''
     def __init__(self, cli):
-        self.cli = cli
         self.opts = salt.config.master_config('/etc/salt')
+        self.opts.update(cli)
+        self.__eauth()
         self.wheel = salt.wheel.Wheel(self.opts)
 
-    def _eauth(self):
+    def __eauth(self):
         '''
         Fill in the blanks for the eauth system
         '''
-        if self.cli['eauth']:
-            res = resolver.cli(self.options.eauth)
-        self.cli.update(res)
+        if self.opts['eauth']:
+            resolver = salt.auth.Resolver(self.opts)
+            res = resolver.cli(self.opts['eauth'])
+        self.opts.update(res)
 
     def run(self):
         '''
         Execute the wheel call
         '''
-        print wheel.master(self.cli['fun'], **self.cli)
+        print self.wheel.master_call(**self.opts)
 
 
 if __name__ == '__main__':
