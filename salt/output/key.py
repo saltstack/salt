@@ -1,5 +1,7 @@
 '''
-The standard outputter used for keys
+Salt Key makes use of the outputter system to format information sent to the
+``salt-key`` command. This outputter is geared towards ingesting very specific
+data and should only be used with the salt-key command.
 '''
 
 # Import salt libs
@@ -19,10 +21,18 @@ def output(data):
             'minions_rejected': color['BLUE'],
             'local': color['PURPLE']}
 
-    trans = {'minions_pre': '{0}Unaccepted Keys:{1}'.format(color['LIGHT_RED'], color['ENDC']),
-             'minions': '{0}Accepted Keys:{1}'.format(color['LIGHT_GREEN'], color['ENDC']),
-             'minions_rejected': '{0}Rejected Keys:{1}'.format(color['LIGHT_BLUE'], color['ENDC']),
-             'local': '{0}Local Keys:{1}'.format(color['LIGHT_PURPLE'], color['ENDC'])}
+    trans = {'minions_pre': '{0}Unaccepted Keys:{1}'.format(
+                                color['LIGHT_RED'],
+                                color['ENDC']),
+             'minions': '{0}Accepted Keys:{1}'.format(
+                                color['LIGHT_GREEN'],
+                                color['ENDC']),
+             'minions_rejected': '{0}Rejected Keys:{1}'.format(
+                                color['LIGHT_BLUE'],
+                                color['ENDC']),
+             'local': '{0}Local Keys:{1}'.format(
+                                color['LIGHT_PURPLE'],
+                                color['ENDC'])}
 
     ret = ''
 
@@ -30,8 +40,14 @@ def output(data):
         ret += '{0}\n'.format(trans[status])
         for key in data[status]:
             if isinstance(data[status], list):
-                ret += '{0}{1}{2}\n'.format(cmap[status], key, color['ENDC'])
+                ret += '{0}{1}{2}\n'.format(
+                        cmap[status],
+                        key,
+                        color['ENDC'])
             if isinstance(data[status], dict):
-                ret += '{0}{1}:  {2}{3}\n'.format(cmap[status], key, data[status][key], color['ENDC'])
-
+                ret += '{0}{1}:  {2}{3}\n'.format(
+                        cmap[status],
+                        key,
+                        data[status][key],
+                        color['ENDC'])
     return ret
