@@ -10,7 +10,7 @@ from salt.utils.yaml import CustomLoader, load
 
 log = logging.getLogger(__name__)
 
-def render(yaml_data, env='', sls=''):
+def render(yaml_data, env='', sls='', **kws):
     if not isinstance(yaml_data, basestring):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:

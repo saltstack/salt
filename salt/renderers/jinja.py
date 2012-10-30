@@ -12,7 +12,7 @@ import salt.utils.templates
 
 
 
-def render(template_file, env='', sls=''):
+def render(template_file, env='', sls='', context=None, **kws):
     '''
     Render the template_file, passing the functions and grains into the
     rendering system. Return rendered content as a string.
@@ -23,7 +23,8 @@ def render(template_file, env='', sls=''):
                     opts=__opts__,
                     pillar=__pillar__,
                     env=env,
-                    sls=sls)
+                    sls=sls,
+                    context=context)
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in jinja renderer'))
