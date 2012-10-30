@@ -52,9 +52,9 @@ def run(tags=None):
     _check_puppet()
 
     if not tags:
-        cmd = 'puppet --test'
+        cmd = 'puppet agent --test'
     else:
-        cmd = 'puppet --test --tags "{0}"'.format(tags)
+        cmd = 'puppet agent --test --tags "{0}"'.format(tags)
 
     return __salt__['cmd.run_all'](cmd)
 
@@ -73,9 +73,9 @@ def noop(tags=None):
     _check_puppet()
 
     if not tags:
-        cmd = 'puppet --test --noop'
+        cmd = 'puppet agent --test --noop'
     else:
-        cmd = 'puppet --test --tags "{0}" --noop'.format(tags)
+        cmd = 'puppet agent --test --tags "{0}" --noop'.format(tags)
 
     return __salt__['cmd.run_all'](cmd)
 
