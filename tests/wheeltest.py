@@ -30,7 +30,13 @@ def parse():
 
     options, args = parser.parse_opts()
 
+    cli = options.__dict__()
 
+    for arg in args:
+        if '=' in arg:
+            comps = arg.split('=')
+            cli[comps[0]] = comps[1]
+    return cli
 
 
 class Wheeler(object):
@@ -38,6 +44,7 @@ class Wheeler(object):
     Set up communication with the wheel interface
     '''
     def __init__(self, cli):
+        self.cli = cli
         self.opts = salt.config.master_config('/etc/salt')
         self.wheel = salt.wheel.Wheel(self.opts)
 
@@ -45,20 +52,17 @@ class Wheeler(object):
         '''
         Fill in the blanks for the eauth system
         '''
-        if self.options.eauth:
-        resolver = salt.auth.Resolver(self.config)
-        res = resolver.cli(self.options.eauth)
-        if self.options.mktoken and res:
-            tok = resolver.token_cli(
-                    self.options.eauth,
-                    res
-                    )
-            if tok:
-                kwargs['token'] = tok.get('token', '')
-        if not res:
-            sys.exit(2)
-        kwargs.update(res)
-        kwargs['eauth'] = self.options.eauth
+        if self.cli['eauth']:
+            res = resolver.cli(self.options.eauth)
+        self.cli.update(res)
+
+    def run(self):
+        '''
+        Execute the wheel call
+        '''
+        print wheel.master(self.cli['fun'], **self.cli)
 
 
-print wheel.master_call('key.list_all', username='thatch', eauth='pam', password='idfsuhgsklfdn')
+if __name__ == '__main__':
+    wheeler = Wheeler(parse())
+    wheeler.run()
