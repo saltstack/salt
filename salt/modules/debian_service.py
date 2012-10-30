@@ -122,8 +122,8 @@ def status(name, sig=None):
         salt '*' service.status <service name> [service signature]
     '''
     sig = sig or name
-    cmd = 'pgrep {0}'.format(sig)
-    return __salt__['cmd.run'](cmd).strip()
+    cmd = 'pgrep -f {0}'.format(sig)
+    return __salt__['cmd.run'](cmd).strip().split('\n')
 
 def enable(name):
     '''
