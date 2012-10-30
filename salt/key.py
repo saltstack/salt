@@ -26,11 +26,25 @@ class KeyCLI(object):
         Print out the keys under a named status
         '''
         keys = self.key.list_keys()
-        if status.startswith('pre') or status.startswith('un'):
+        if status.startswith('acc'):
             salt.output.display_output(
-                    {'minions_pre': keys['minions_pre']},
-                    'key',
-                    self.opts)
+                {'minions': keys['minions']},
+                'key',
+                self.opts
+            )
+        elif status.startswith('pre') or status.startswith('un'):
+            salt.output.display_output(
+                {'minions_pre': keys['minions_pre']},
+                'key',
+                self.opts
+            )
+        elif status.startswith('rej'):
+            salt.output.display_output(
+                {'minions_rejected': keys['minions_rejected']},
+                'key',
+                self.opts
+            )
+
 
     def list_all(self):
         '''
@@ -236,7 +250,7 @@ class Key(object):
             matches = self.list_keys()
         ret = {}
         for status, keys in matches.items():
-            for key in keys:
+            for key in salt.utils.isorted(keys):
                 if fnmatch.fnmatch(key, match):
                     if not status in ret:
                         ret[status] = []
@@ -248,7 +262,7 @@ class Key(object):
         Return a dict of local keys
         '''
         ret = {'local': []}
-        for fn_ in os.listdir(self.opts['pki_dir']):
+        for fn_ in salt.utils.isorted(os.listdir(self.opts['pki_dir'])):
             if fn_.endswith('.pub') or fn_.endswith('.pem'):
                 path = os.path.join(self.opts['pki_dir'], fn_)
                 if os.path.isfile(path):
@@ -263,7 +277,7 @@ class Key(object):
         ret = {}
         for dir_ in acc, pre, rej:
             ret[os.path.basename(dir_)] = []
-            for fn_ in os.listdir(dir_):
+            for fn_ in salt.utils.isorted(os.listdir(dir_)):
                 ret[os.path.basename(dir_)].append(fn_)
         return ret
 
@@ -282,7 +296,7 @@ class Key(object):
         ret = {}
         for status, keys in self.name_match(match).items():
             ret[status] = {}
-            for key in keys:
+            for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with open(path, 'r') as fp_:
                     ret[status][key] = fp_.read()
@@ -295,7 +309,7 @@ class Key(object):
         ret = {}
         for status, keys in self.list_keys().items():
             ret[status] = {}
-            for key in keys:
+            for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
                 with open(path, 'r') as fp_:
                     ret[status][key] = fp_.read()
