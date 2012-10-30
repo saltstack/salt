@@ -2,6 +2,8 @@
 Control aspects of the grains data
 '''
 
+from math import floor
+
 # Seed the grains dict so cython will build
 __grains__ = {}
 
@@ -12,13 +14,16 @@ __outputter__ = {
 }
 
 
-def _str_sanitizer(instr):
-    return "{0}{1}".format(instr[:-4], 'X' * 4)
+def _serial_sanitizer(instr):
+    '''Replaces the last 1/4 of a string with X's'''
+    length = len(instr)
+    index = int(floor(length * .75))
+    return "{0}{1}".format(instr[:index], 'X' * (length - index))
 
 # A dictionary of grain -> function mappings for sanitizing grain output. This
 # is used when the 'sanitize' flag is given.
 _sanitizers = {
-    'serialnumber': _str_sanitizer,
+    'serialnumber': _serial_sanitizer,
     'domain': lambda x: 'domain',
     'fqdn': lambda x: 'minion.domain',
     'host': lambda x: 'minion',
