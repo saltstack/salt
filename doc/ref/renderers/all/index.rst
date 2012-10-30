@@ -1,8 +1,8 @@
 .. _all-salt.renderers:
 
-==============================
-Full list of builtin renderers
-==============================
+=====================================
+Full list of builtin renderer modules
+=====================================
 
 .. currentmodule:: salt.renderers
 

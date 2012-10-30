@@ -1,8 +1,8 @@
 .. _all-salt.modules:
 
-============================
-Full list of builtin modules
-============================
+======================================
+Full list of builtin execution modules
+======================================
 
 .. admonition:: Virtual modules
 
