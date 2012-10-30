@@ -54,7 +54,7 @@ def list_env(env='base'):
                     sub = sub[aroot]
             for dir_ in dirs:
                 sub[dir_] = {}
-            for fn_ in dirs:
+            for fn_ in files:
                 sub[fn_] = 'f'
     return ret
 
