@@ -32,6 +32,7 @@ Full list of builtin execution modules
     config
     cp
     cron
+    daemontools
     data
     debconfmod
     debian_service
