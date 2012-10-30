@@ -932,7 +932,8 @@ def recurse(name,
     include_pat
 	When copying, include only this pattern from the source. Default
         is glob match , if prefixed with E@ then regexp match
-        Example:
+        Example::
+
           - include_pat: hello*       :: glob matches 'hello01', 'hello02' ... but not 'otherhello'
           - include_pat: E@hello      :: regexp matches 'otherhello', 'hello01' ...  
 
@@ -944,7 +945,8 @@ def recurse(name,
         
         Also when 'clean=True', exclude this pattern from the removal
         list and preserve in the destination.
-        Example:
+        Example::
+
           - exclude: APPDATA*               :: glob matches APPDATA.01, APPDATA.02,.. for exclusion
           - exclude: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA or TEMPDATA for exclusion 
     '''
