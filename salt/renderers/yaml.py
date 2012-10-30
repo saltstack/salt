@@ -20,4 +20,4 @@ def render(yaml_data, env='', sls='', **kws):
                 log.warn(
                     "{warn} found in salt://{sls} environment={env}".format(
                     warn=item.message, sls=sls, env=env))
-        return data
+        return data if data else {}
