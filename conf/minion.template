@@ -202,6 +202,14 @@
 # you've given access to. This is potentially quite insecure.
 #permissive_pki_access: False
 
+# X509 Certificate Support.  This allows clients to provide an x509
+# certificate to the master, which the master can then use to auto-accept
+# the clients.
+#   client_cert: path to the minions client certificate
+# Example:
+#x509:
+#  client_cert: /path/to/minion/cert/minion.crt
+
 
 ######         Thread settings        #####
 ###########################################

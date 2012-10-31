@@ -11,10 +11,11 @@ import hmac
 import getpass
 import hashlib
 import logging
+import re
 import tempfile
 
 # Import Cryptography libs
-from M2Crypto import RSA
+from M2Crypto import RSA, X509
 from Crypto.Cipher import AES
 
 # Import zeromq libs
@@ -77,6 +78,85 @@ def gen_keys(keydir, keyname, keysize):
     os.chmod(priv, 256)
     return priv
 
+class X509CertificateAuth(object):
+    '''
+    Container for the x509 Certificate Authority.  This requires a patched
+    version of M2Crypto to work, as current versions of M2Crypto do not
+    expose all of the required Certificate verification functionality of
+    OpenSSL.
+
+    See the Pulp project for a patch to M2Crypto-0.21.1 here:
+    https://github.com/pulp/pulp/blob/master/deps/m2crypto/m2crypto-0.21.1-x509_crl.patch
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+        if 'x509' in opts:
+            # Create the Store for our Root CA Certificate
+            self.ca_cert_store = X509.X509_Store()
+            self.ca_cert_store.load_info(self.opts['x509']['ca_cert'])
+
+            if not hasattr(X509.X509_Store_Context, 'verify_cert'):
+                log.error(
+                    'x509 support requires a patched version of M2Crypto '
+                    'with certificate verification support.'
+                )
+                raise NotImplementedError()
+
+            # Create a CRL_Stack for any CRLs we are supporting
+            self.ca_crl_stack = X509.CRL_Stack()
+            if 'ca_crls' in opts['x509']:
+                for crl_file in opts['x509']['ca_crls']:
+                    crl = X509.load_crl(crl_file)
+                    self.ca_crl_stack.push(crl)
+            if len(self.ca_crl_stack) > 0:
+                self.ca_cert_store.set_flags(X509.m2.X509_V_FLAG_CRL_CHECK |
+                                             X509.m2.X509_V_FLAG_CRL_CHECK_ALL)
+
+            self.issuer_dn_match = None
+            if 'issuer_dn_match' in opts['x509']:
+                self.issuer_dn_match = re.compile(
+                    opts['x509']['issuer_dn_match']
+                )
+
+            self.subject_dn_match = None
+            if 'subject_dn_match' in opts['x509']:
+                self.subject_dn_match = re.compile(
+                    opts['x509']['subject_dn_match']
+                )
+
+
+    def verify_client_cert(self, client_cert_text):
+        '''
+        Returns True if the client certificate is valid and passes any issuer
+        or subject constraints.
+        '''
+        if not 'x509' in self.opts:
+            return False
+
+        log.debug('Loading client certificate...')
+        client_cert = X509.load_cert_string(client_cert_text)
+        store_ctx = X509.X509_Store_Context()
+        store_ctx.init(self.ca_cert_store, client_cert)
+        if len(self.ca_crl_stack) > 0:
+            log.debug('adding CRLs to x509 Store Context')
+            store_ctx.add_crls(self.ca_crl_stack)
+
+        log.debug('Verifying client certificate')
+        if not store_ctx.verify_cert():
+            log.error('Client certificate was not valid')
+            return False
+        # Cert is valid, is it appropriate?
+        if self.issuer_dn_match and \
+           not self.issuer_dn_match.match(
+               client_cert.get_issuer().as_text()):
+            log.error('Client certificate''s Issuer did not match')
+            return False
+        if self.subject_dn_match and \
+           not self.subject_dn_match.match(
+               client_cert.get_subject().as_text()):
+            log.error('Client certificate''s Subject did not match')
+            return False
+        return True
 
 class MasterKeys(dict):
     '''
@@ -181,6 +261,11 @@ class Auth(object):
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
+        if 'x509' in self.opts:
+            log.info('Sending client''s x509 certificate.')
+            with open(self.opts['x509']['client_cert'], 'r') as fp_:
+                payload['load']['x509'] = {}
+                payload['load']['x509']['client_cert'] = fp_.read()
         with open(tmp_pub, 'r') as fp_:
             payload['load']['pub'] = fp_.read()
         os.remove(tmp_pub)

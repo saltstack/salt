@@ -101,6 +101,25 @@
 # to that specific file.
 #permissive_pki_access: False
 
+# X509 Certificate Support.  This allows clients with valid x509 certificates
+# to be auto-accepted.
+#   ca_cert: path to your certifcate authority's PEM file [required]
+#   ca_crls: a list of CRL (Certificate Revokation List) files to check client
+#            certificates against. [optional]
+#   issuer_dn_match: a regular expression which will be matched against the
+#                    issuer's Distinguished Name (DN). [optional]
+#   subject_dn_match: a regular expression which will be matched against the
+#                     subject's Distinguished Name (DN)
+# Example:
+#x509:
+#  ca_cert: /path/to/certificate_authority/cacert.pem
+#  ca_crls:
+#    - /path/to/first/crl/cacrl.pem
+#    - /path/to/another/crl/cacrl.pem
+#  issuer_dn_match: "^.* CN=Name Of Your Root CA$"
+#  subject_dn_match: "^.* O=Your Organization, .* CN=(.*).example.com"
+
+
 
 #####    Master Module Management    #####
 ##########################################
