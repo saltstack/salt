@@ -276,6 +276,7 @@ def master_config(path):
             'ext_pillar': [],
             # TODO - Set this to 2 by default in 0.10.5
             'pillar_version': 1,
+            'pillar_opts': True,
             'syndic_master': '',
             'runner_dirs': [],
             'client_acl': {},
