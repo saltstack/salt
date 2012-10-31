@@ -40,6 +40,7 @@ def __virtual__():
         return False
     return 'mongo_return'
 
+
 def _remove_dots(d):
     output = {}
     for k, v in d.iteritems():
@@ -48,9 +49,10 @@ def _remove_dots(d):
         output[k.replace('.', '-')] = v
     return output
 
-def returner(ret):
+
+def _get_conn:
     '''
-    Return data to a mongodb server
+    Return a mongodb connection object
     '''
     conn = pymongo.Connection(__opts__['mongo.host'],
                               __opts__['mongo.port'])
@@ -61,7 +63,14 @@ def returner(ret):
 
     if user and password:
         db.authenticate(user, password)
+    return conn, db
 
+
+def returner(ret):
+    '''
+    Return data to a mongodb server
+    '''
+    conn, db = _get_con()
     col = db[ret['id']]
     back = {}
 
@@ -71,4 +80,33 @@ def returner(ret):
         back = ret['return']
 
     log.debug(back)
-    col.insert({ret['jid']: back})
+    sdata = {ret['jid']: back, 'fun': ret['fun']}
+    if 'out' in ret:
+        sdata['out': ret['out']]
+    col.insert(sdata)
+
+
+def get_jid(jid):
+    '''
+    Return the return information associated with a jid
+    '''
+    conn, db = _get_con()
+    ret = {}
+    for collection in db.collection_names():
+        rdata = db[collection].find_one({jid: {'$exists': 'true'}})
+        if rdata:
+            ret[collection] = rdata
+    return ret
+
+
+def get_fun(fun):
+    '''
+    Return the most recent jobs that have executed the named function
+    '''
+    conn, db = _get_con()
+    ret = {}
+    for collection in db.collection_names():
+        rdata = db[collection].find_one({'fun': fun})
+        if rdata:
+            ret[collection] = rdata
+    return ret
