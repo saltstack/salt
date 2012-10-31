@@ -368,7 +368,7 @@ class PidfileMixin(object):
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
-        set_pidfile(self.config['pidfile'])
+        set_pidfile(self.config['pidfile'], self.config['user'])
 
 
 class TargetOptionsMixIn(object):
