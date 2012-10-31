@@ -209,6 +209,16 @@ toolkit, consider this SSH example:
         - require:
           - pkg: openssh-server
 
+.. note:: 
+
+    You may notice that we use two similar ways of denoting that a file
+    is managed by Salt. In the `/etc/ssh/sshd_config` state section above,
+    we use the `file.managed` state declaration whereas with the
+    `/etc/ssh/banner` state section, we use the `file` state declaration
+    and add a `managed` attribute to that state declaration. Both ways
+    produce an identical result; the first way -- using `file.managed` --
+    is merely a shortcut.
+
 Now our State Tree looks like this: ::
 
     apache/init.sls
