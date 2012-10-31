@@ -162,7 +162,7 @@ toolkit, consider this SSH example:
     openssh-client:
       pkg.installed
 
-    /etc/ssh/ssh_config
+    /etc/ssh/ssh_config:
       file.managed:
         - user: root
         - group: root
