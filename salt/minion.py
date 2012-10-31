@@ -331,7 +331,9 @@ class Minion(object):
             for returner in set(data['ret'].split(',')):
                 ret['id'] = opts['id']
                 try:
-                    minion_instance.returners[returner](ret)
+                    minion_instance.returners['{0}.returner'.format(
+                        returner
+                        )](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(
@@ -387,7 +389,9 @@ class Minion(object):
             for returner in set(data['ret'].split(',')):
                 ret['id'] = opts['id']
                 try:
-                    minion_instance.returners[returner](ret)
+                    minion_instance.returners['{0}.returner'.format(
+                        returner
+                        )](ret)
                 except Exception as exc:
                     log.error(
                             'The return failed for job {0} {1}'.format(

@@ -76,7 +76,7 @@ class Caller(object):
             ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
             for returner in self.opts['return'].split(','):
                 try:
-                    self.minion.returners[returner](ret)
+                    self.minion.returners['{0}.returner'.format(returner)](ret)
                 except Exception as exc:
                     pass
         return ret
