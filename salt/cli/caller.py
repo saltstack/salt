@@ -74,11 +74,13 @@ class Caller(object):
         if self.opts.get('return', ''):
             ret['id'] = self.opts['id']
             ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+            ret['fun'] = fun
             for returner in self.opts['return'].split(','):
                 try:
                     self.minion.returners['{0}.returner'.format(returner)](ret)
                 except Exception as exc:
                     pass
+                    
         return ret
 
     def print_docs(self):
