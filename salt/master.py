@@ -1420,19 +1420,26 @@ class ClearFuncs(object):
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
             return ''
-        name = self.loadauth.load_name(clear_load)
-        if not name in self.opts['external_auth'][clear_load['eauth']]:
+        try:
+            name = self.loadauth.load_name(clear_load)
+            if not name in self.opts['external_auth'][clear_load['eauth']]:
+                return ''
+            if not self.loadauth.time_auth(clear_load):
+                return ''
+            good = self.ckminions.wheel_check(
+                    self.opts['external_auth'][clear_load['eauth']][name],
+                    clear_load['fun'])
+            if not good:
+                return ''
+            return self.wheel_.call_func(
+                    clear_load.pop('fun'),
+                    **clear_load)
+        except Exception as exc:
+            log.error(
+                    ('Exception occured in the wheel system: {0}'
+                        ).format(exc)
+                    )
             return ''
-        if not self.loadauth.time_auth(clear_load):
-            return ''
-        good = self.ckminions.wheel_check(
-                self.opts['external_auth'][clear_load['eauth']][name],
-                clear_load['fun'])
-        if not good:
-            return ''
-        return self.wheel_.call_func(
-                clear_load.pop('fun'),
-                **clear_load)
 
     def mk_token(self, clear_load):
         '''
@@ -1444,12 +1451,19 @@ class ClearFuncs(object):
         if not clear_load['eauth'] in self.opts['external_auth']:
             # The eauth system is not enabled, fail
             return ''
-        name = self.loadauth.load_name(clear_load)
-        if not name in self.opts['external_auth'][clear_load['eauth']]:
+        try:
+            name = self.loadauth.load_name(clear_load)
+            if not name in self.opts['external_auth'][clear_load['eauth']]:
+                return ''
+            if not self.loadauth.time_auth(clear_load):
+                return ''
+            return self.loadauth.mk_token(clear_load)
+        except Exception as exc:
+            log.error(
+                    ('Exception occured while authenticating: {0}'
+                        ).format(exc)
+                    )
             return ''
-        if not self.loadauth.time_auth(clear_load):
-            return ''
-        return self.loadauth.mk_token(clear_load)
 
     def publish(self, clear_load):
         '''
@@ -1460,7 +1474,14 @@ class ClearFuncs(object):
         # Check for external auth calls
         if extra.get('token', False):
             # A token was passwd, check it
-            token = self.loadauth.get_tok(extra['token'])
+            try:
+                token = self.loadauth.get_tok(extra['token'])
+            except Exception as exc:
+                log.error(
+                        ('Exception occured when generating auth token: {0}'
+                            ).format(exc)
+                        )
+                return ''
             if not token:
                 return ''
             if not token['eauth'] in self.opts['external_auth']:
@@ -1480,10 +1501,17 @@ class ClearFuncs(object):
             if not extra['eauth'] in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
                 return ''
-            name = self.loadauth.load_name(extra)
-            if not name in self.opts['external_auth'][extra['eauth']]:
-                return ''
-            if not self.loadauth.time_auth(extra):
+            try:
+                name = self.loadauth.load_name(extra)
+                if not name in self.opts['external_auth'][extra['eauth']]:
+                    return ''
+                if not self.loadauth.time_auth(extra):
+                    return ''
+            except Exception:
+                log.error(
+                        ('Exception occured while authenticating: {0}'
+                            ).format(exc)
+                        )
                 return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][extra['eauth']][name],

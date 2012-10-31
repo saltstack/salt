@@ -1018,6 +1018,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, LogLevelMixIn,
                   'all modules if none are specified.')
         )
         self.add_option(
+            '--return',
+            default='',
+            metavar='RETURNER',
+            help=('Set salt-call to pass the return data to one or many '
+                  'returner interfaces.')
+        )
+        self.add_option(
             '--local',
             default=False,
             action='store_true',
