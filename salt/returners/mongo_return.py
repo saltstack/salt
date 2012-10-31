@@ -27,13 +27,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# These options should be overridden in the minion config file
-__opts__ = {'mongo.db': 'salt',
-            'mongo.host': 'salt',
-            'mongo.password': '',
-            'mongo.port': 27017,
-            'mongo.user': ''}
-
 
 def __virtual__():
     if not has_pymongo:
@@ -54,12 +47,13 @@ def _get_conn():
     '''
     Return a mongodb connection object
     '''
-    conn = pymongo.Connection(__opts__['mongo.host'],
-                              __opts__['mongo.port'])
-    db = conn[__opts__['mongo.db']]
+    conn = pymongo.Connection(
+            __salt__['config.option']('mongo.host'),
+            __salt__['config.option']('mongo.port'))
+    db = conn[__salt__['config.option']('mongo.db')]
 
-    user = __opts__.get('mongo.user')
-    password = __opts__.get('mongo.password')
+    user = __salt__['config.option']('mongo.user')
+    password = __salt__['config.option']('mongo.password')
 
     if user and password:
         db.authenticate(user, password)
