@@ -50,7 +50,7 @@ def _remove_dots(d):
     return output
 
 
-def _get_conn:
+def _get_conn():
     '''
     Return a mongodb connection object
     '''
@@ -70,7 +70,7 @@ def returner(ret):
     '''
     Return data to a mongodb server
     '''
-    conn, db = _get_con()
+    conn, db = _get_conn()
     col = db[ret['id']]
     back = {}
 
@@ -90,7 +90,7 @@ def get_jid(jid):
     '''
     Return the return information associated with a jid
     '''
-    conn, db = _get_con()
+    conn, db = _get_conn()
     ret = {}
     for collection in db.collection_names():
         rdata = db[collection].find_one({jid: {'$exists': 'true'}})
@@ -103,7 +103,7 @@ def get_fun(fun):
     '''
     Return the most recent jobs that have executed the named function
     '''
-    conn, db = _get_con()
+    conn, db = _get_conn()
     ret = {}
     for collection in db.collection_names():
         rdata = db[collection].find_one({'fun': fun})
