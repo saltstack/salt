@@ -944,6 +944,6 @@ class Matcher(object):
         '''
         if tgt in nodegroups:
             return self.compound_match(
-                    salt.utils.nodegroup_comp(tgt, nodegroups)
+                    salt.utils.minions.nodegroup_comp(tgt, nodegroups)
                     )
         return False
