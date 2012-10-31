@@ -296,6 +296,7 @@ def master_config(path):
             'external_nodes': '',
             'order_masters': False,
             'job_cache': True,
+            'ext_job_cache': '',
             'minion_data_cache': True,
             'log_file': '/var/log/salt/master',
             'log_level': None,
