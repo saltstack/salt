@@ -4,6 +4,14 @@ Return config information
 
 import re
 
+# Set up the default values for all systems
+defaults = {'mongo.db': 'salt',
+            'mongo.host': 'salt',
+            'mongo.password': '',
+            'mongo.port': 27017,
+            'mongo.user': ''}
+
+
 def backup_mode(backup=''):
     '''
     Return the backup mode
@@ -41,3 +49,16 @@ def valid_fileproto(uri):
         return bool(re.match('^(?:salt|https?|ftp)://',uri))
     except:
         return False
+
+
+def option(value, opts=None):
+    '''
+    Pass in a generic option and recieve the value that will be assigned
+    '''
+    if value in __opts__:
+        return __opts__[value]
+    elif value in __pillar__.get('master', {}):
+        return __pillar__['master'][value]
+    elif value in defaults:
+        return defaults[value]
+    return ''
