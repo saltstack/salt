@@ -11,9 +11,9 @@ from salt._compat import string_types
 
 from cStringIO import StringIO as cStringIO
 from StringIO import StringIO as pyStringIO
-def StringIO(s=None):
+def StringIO(s=None): # cStringIO can't handle unicode
     try:
-        return cStringIO(s)
+        return cStringIO(bytes(s))
     except UnicodeEncodeError:
         return pyStringIO(s)
 
