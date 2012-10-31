@@ -13,7 +13,7 @@ from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
 
-def render(template, env='', sls='', **kws):
+def render(template, env='', sls=''):
     '''
     Render the python module's components
     '''
