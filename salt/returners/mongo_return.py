@@ -76,7 +76,7 @@ def returner(ret):
     log.debug(back)
     sdata = {ret['jid']: back, 'fun': ret['fun']}
     if 'out' in ret:
-        sdata['out': ret['out']]
+        sdata['out'] = ret['out']
     col.insert(sdata)
 
 
