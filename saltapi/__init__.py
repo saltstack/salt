@@ -7,6 +7,7 @@ import inspect
 # Import Salt libs
 import salt.client
 import salt.runner
+import salt.wheel
 import salt.utils
 from salt.exceptions import SaltException
 
@@ -53,6 +54,15 @@ class APIClient(object):
         runner = salt.runner.RunnerClient(self.opts)
         return runner.low(fun, kwargs)
 
+    def wheel(self, fun, **kwargs):
+        '''
+        Wrap the Wheel object to enable sending commands via the wheel system
+        '''
+        kwargs['fun'] = fun
+        wheel = salt.wheel.Wheel(self.opts)
+        return wheel.master_call(**kwargs)
+
+
 ### Remove when salt 0.10.5 is released!
 def _getargs(func):
     '''
@@ -73,6 +83,7 @@ def _getargs(func):
         raise TypeError("Cannot inspect argument list for '{0}'".format(func))
 
     return aspec
+
 
 def format_call(fun, data):
     '''
