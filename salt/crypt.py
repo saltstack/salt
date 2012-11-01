@@ -152,6 +152,7 @@ class X509CertificateAuth(object):
                client_cert.get_subject().as_text()):
             log.error('Client certificate''s Subject did not match')
             return False
+        log.debug('Client certificate verified')
         return True
 
 class MasterKeys(dict):

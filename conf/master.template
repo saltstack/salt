@@ -153,15 +153,15 @@
 #     fred:
 #       - test.*
 #
-# X509 Certificate Support.  This allows clients with valid x509 certificates
+# X509 Certificate Support.  This allows minions with valid x509 certificates
 # to be auto-accepted.
-#   ca_cert: path to your certifcate authority's PEM file [required]
-#   ca_crls: a list of CRL (Certificate Revokation List) files to check client
-#            certificates against. [optional]
-#   issuer_dn_match: a regular expression which will be matched against the
-#                    issuer's Distinguished Name (DN). [optional]
-#   subject_dn_match: a regular expression which will be matched against the
-#                     subject's Distinguished Name (DN)
+#   x509.ca_cert: path to your certificate authority's PEM file [required]
+#   x509.ca_crls: a list of CRL (Certificate Revocation List) files to check
+#                 client certificates against. [optional]
+#   x509.issuer_dn_match: a regular expression which will be matched against
+#                         the issuer's Distinguished Name (DN). [optional]
+#   x509.subject_dn_match: a regular expression which will be matched against
+#                          the subject's Distinguished Name (DN)
 # Example:
 # x509:
 #   ca_cert: /path/to/certificate_authority/cacert.pem

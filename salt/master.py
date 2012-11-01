@@ -1317,7 +1317,7 @@ class ClearFuncs(object):
                 log.error(
                     'X509 Authentication attempt from %(id)s failed, the '
                     'certificate was not valid. This may be an attempt to '
-                    'compromise the Salt cluster.', load
+                    'compromise the Salt cluster.'.format(**load)
                 )
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
