@@ -1116,6 +1116,9 @@ class ClearFuncs(object):
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
 
+        #x509 support
+        self.x509 = salt.crypt.X509CertificateAuth(self.opts)
+
     def _send_cluster(self):
         '''
         Send the cluster data out
@@ -1237,6 +1240,9 @@ class ClearFuncs(object):
 
         return False
 
+    def _verify_x509_cert(self, text_cert):
+        return self.x509.verify_client_cert(text_cert)
+
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the aes key
@@ -1292,6 +1298,23 @@ class ClearFuncs(object):
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
+                self.event.fire_event(eload, 'auth')
+                return ret
+        elif 'x509' in load and 'x509' in self.opts:
+            # Check if cert is valid
+            cert = load['x509']['client_cert']
+            if not self._verify_x509_cert(cert):
+                log.error(
+                    'X509 Authentication attempt from %(id)s failed, the '
+                    'certificate was not valid. This may be an attempt to '
+                    'compromise the Salt cluster.'.format(**load)
+                )
+                ret = {'enc': 'clear',
+                       'load': {'ret': False}}
+                eload = {'result': False,
+                         'id': load['id'],
+                         'pub': load['pub'],
+                         'x509': load['x509']}
                 self.event.fire_event(eload, 'auth')
                 return ret
         elif not os.path.isfile(pubfn_pend)\
