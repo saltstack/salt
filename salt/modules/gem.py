@@ -6,9 +6,6 @@ Manage ruby gems.
 import re
 
 
-__opts__ = {}
-__pillar__ = {}
-
 def _gem(command, ruby=None, runas=None):
     cmdline = 'gem {command}'.format(command=command)
     if __salt__['rvm.is_installed']():
@@ -16,7 +13,7 @@ def _gem(command, ruby=None, runas=None):
 
     ret = __salt__['cmd.run_all'](
         cmdline,
-        runas=runas or __opts__.get('rvm.runas') or __pillar__.get('rvm.runas')
+        runas=runas or __salt__['config.option']('rvm.runas')
         )
 
     if ret['retcode'] == 0:
