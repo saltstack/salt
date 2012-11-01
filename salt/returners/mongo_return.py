@@ -16,8 +16,10 @@ to the minion config files::
 
 '''
 
+# Import python libs
 import logging
 
+# Import third party libs
 try:
     import pymongo
     has_pymongo = True
