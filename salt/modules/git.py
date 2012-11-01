@@ -5,7 +5,7 @@ Support for the Git SCM
 import os
 from salt import utils
 
-def _git_run(**kwargs):
+def _git_run(cmd, cwd=None, **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -13,7 +13,7 @@ def _git_run(**kwargs):
     'cmd.run_all', and used as an alternative to 'cmd.run_all'. Some
     commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
     '''
-    result = __salt__['cmd.run_all'](**kwargs)
+    result = __salt__['cmd.run_all'](cmd, cwd=None, **kwargs)
 
     retcode = result['retcode']
 
