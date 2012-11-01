@@ -8,6 +8,8 @@ import re
 import stat
 import tempfile
 
+from salt.utils import which
+
 __ALIAS_RE = re.compile(r'([^:#]*)\s*:?\s*([^#]*?)(\s+#.*|$)')
 
 
@@ -72,9 +74,10 @@ def __write_aliases_file(lines):
     out.close()
     os.rename(out.name, afn)
 
-    newaliases_path = '/usr/bin/newaliases'
-    if os.path.exists(newaliases_path):
-        __salt__['cmd.run'](newaliases_path)
+    # Search $PATH for the newalises command
+    newaliases = which('newaliases')
+    if newaliases is not None:
+        __salt__['cmd.run'](newaliases)
 
     return True
 
