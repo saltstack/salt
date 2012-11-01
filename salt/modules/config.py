@@ -12,7 +12,8 @@ defaults = {'mongo.db': 'salt',
             'mongo.user': '',
             'redis.db': '0',
             'redis.host': 'salt',
-            'redis.port': 6379}
+            'redis.port': 6379,
+            'ca.cert_base_path': '/etc/pki'}
 
 
 def backup_mode(backup=''):
@@ -54,7 +55,7 @@ def valid_fileproto(uri):
         return False
 
 
-def option(value, opts=None):
+def option(value):
     '''
     Pass in a generic option and recieve the value that will be assigned
     '''
