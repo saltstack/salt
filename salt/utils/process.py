@@ -2,6 +2,7 @@ import logging
 import os
 import signal
 import time
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -36,8 +37,8 @@ def set_pidfile(pidfile, user):
         sys.exit(2)
     try:
         os.chown(pidfile, uid, gid)
-    except Error as e:
-        msg = ('Failed to set the pid to user {0}').format(ser)
+    except Exception as e:
+        msg = ('Failed to set the pid to user {0}').format(user)
         sys.stderr.write(msg)
         sys.exit(e.errno)
     log.debug(('Chowned pidfile: {0} to user: {1}').format(pidfile, user))
