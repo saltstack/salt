@@ -67,3 +67,18 @@ def option(value):
     elif value in defaults:
         return defaults[value]
     return ''
+
+
+def dot_vals(value):
+    '''
+    Pass in a configuration value that should be preceeded by the module name
+    and a dot, this will return a list of all read key/value pairs
+    '''
+    ret = {}
+    for key, val in __pillar__.get('master', {}).items():
+        if key.startswith('{0}.'.format(value)):
+            ret[key] = val
+    for key, val in __opts__.items():
+        if key.startswith('{0}.'.format(value)):
+            ret[key] = val
+    return ret
