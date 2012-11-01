@@ -68,20 +68,6 @@ import os
 import salt.utils
 from salt._compat import string_types, url_open
 
-#sane defaults
-__opts__ = {'solr.cores': [],
-            'solr.host': 'localhost',
-            'solr.port': '8983',
-            'solr.baseurl': '/solr',
-            'solr.type': 'master',
-            'solr.request_timeout': None,
-            'solr.init_script': '/etc/rc.d/solr',
-            'solr.dih.import_options': {'clean': False, 'optimize': True,
-                                        'commit': True, 'verbose': False},
-            'solr.backup_path': None,
-            'solr.num_backups': 1
-            }
-
 
 ########################## PRIVATE METHODS ##############################
 
@@ -135,7 +121,7 @@ def _check_for_cores():
 
         True if one or more cores defined in __opts__['solr.cores']
     '''
-    return len(__opts__['solr.cores']) > 0
+    return len(__salt__['config.option']('solr.cores')) > 0
 
 
 def _get_return_dict(success=True, data=None, errors=None, warnings=None):
@@ -217,9 +203,9 @@ def _format_url(handler, host=None, core_name=None, extra=None):
     '''
     extra = [] if extra is None else extra
     if _get_none_or_value(host) is None or host == 'None':
-        host = __opts__['solr.host']
-    port = __opts__['solr.port']
-    baseurl = __opts__['solr.baseurl']
+        host = __salt__['config.option']('solr.host')
+    port = __salt__['config.option']('solr.port')
+    baseurl = __salt__['config.option']('solr.baseurl')
     if _get_none_or_value(core_name) is None:
         if extra is None or len(extra) == 0:
             return "http://{0}:{1}{2}/{3}?wt=json".format(
@@ -253,7 +239,7 @@ def _http_request(url, request_timeout=None):
     '''
     try:
 
-        request_timeout = __opts__['solr.request_timeout']
+        request_timeout = __salt__['config.option']('solr.request_timeout')
         if request_timeout is None:
             data = json.load(url_open(url))
         else:
@@ -326,7 +312,7 @@ def _is_master():
 
         True if __opts__['solr.type'] = master
     '''
-    return __opts__['solr.type'] == 'master'
+    return __salt__['config.option']('solr.type') == 'master'
 
 
 def _merge_options(options):
@@ -344,7 +330,7 @@ def _merge_options(options):
 
         {option:boolean}
     '''
-    defaults = __opts__['solr.dih.import_options']
+    defaults = __salt__['config.option']('solr.dih.import_options')
     if isinstance(options, dict):
         defaults.update(options)
     for k, v in defaults.items():
@@ -464,7 +450,7 @@ def lucene_version(core_name=None):
     #do we want to check for all the cores?
     if _get_none_or_value(core_name) is None and _check_for_cores():
         success = True
-        for name in __opts__['solr.cores']:
+        for name in __salt__['config.option']('solr.cores'):
             resp = _get_admin_info('system', core_name=name)
             if resp['success']:
                 version = resp['data']['lucene']['lucene-spec-version']
@@ -555,7 +541,7 @@ def optimize(host=None, core_name=None):
 
     if _get_none_or_value(core_name) is None and _check_for_cores():
         success = True
-        for name in __opts__['solr.cores']:
+        for name in __salt__['config.option']('solr.cores'):
             url = _format_url('update', host=host, core_name=name,
                               extra=["optimize=true"])
             resp = _http_request(url)

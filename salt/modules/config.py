@@ -14,7 +14,20 @@ defaults = {'mongo.db': 'salt',
             'redis.host': 'salt',
             'redis.port': 6379,
             'test.foo': 'unconfigured',
-            'ca.cert_base_path': '/etc/pki'}
+            'ca.cert_base_path': '/etc/pki',
+            'solr.cores': [],
+            'solr.host': 'localhost',
+            'solr.port': '8983',
+            'solr.baseurl': '/solr',
+            'solr.type': 'master',
+            'solr.request_timeout': None,
+            'solr.init_script': '/etc/rc.d/solr',
+            'solr.dih.import_options': {'clean': False, 'optimize': True,
+                                        'commit': True, 'verbose': False},
+            'solr.backup_path': None,
+            'solr.num_backups': 1
+            }
+
 
 
 def backup_mode(backup=''):
