@@ -25,7 +25,9 @@ defaults = {'mongo.db': 'salt',
             'solr.dih.import_options': {'clean': False, 'optimize': True,
                                         'commit': True, 'verbose': False},
             'solr.backup_path': None,
-            'solr.num_backups': 1
+            'solr.num_backups': 1,
+            'poudriere.config': '/usr/local/etc/poudriere.conf',
+            'poudriere.config_dir': '/usr/local/etc/poudriere.d',
             }
 
 
