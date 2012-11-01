@@ -41,7 +41,6 @@ def returner(ret):
     Return data to a redis data store
     '''
     serv = _get_serv()
-    serv.sadd('{0}:jobs'.format(ret['id']))
-    serv.set('{0}:{1}'.format(ret['jid'], json.dumps(ret['return'])))
-    serv.sadd('jobs', ret['jid'])
-    serv.sadd(ret['jid'], ret['id'])
+    serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
+    serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
+    serv.sadd('minions', ret['id'])
