@@ -36,6 +36,7 @@ defaults = {'mongo.db': 'salt',
             'ldap.binddn': '',
             'ldap.bindpw': '',
             'hosts.file': '/etc/hosts',
+            'aliases.file': '/etc/aliases',
             }
 
 
