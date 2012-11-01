@@ -14,7 +14,6 @@ import cherrypy.wsgiserver.ssl_builtin
 import salt.auth
 import salt.log
 import salt.output
-from salt._compat import string_types
 
 # Import salt-api libs
 import saltapi
