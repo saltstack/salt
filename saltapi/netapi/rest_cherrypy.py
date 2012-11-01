@@ -3,6 +3,7 @@ A REST interface for Salt using the CherryPy framework
 '''
 # Import Python libs
 import itertools
+import signal
 import os
 
 # Import third-party libs
@@ -152,7 +153,5 @@ def start():
                 wsgi_app=wsgi_d,
                 ssl_adapter=ssl_a)
 
-        try:
-            server.start()
-        except KeyboardInterrupt:
-            server.stop()
+        signal.signal(signal.SIGINT, lambda *args: server.stop())
+        server.start()
