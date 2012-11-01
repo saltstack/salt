@@ -55,16 +55,20 @@ class LowDataAdapter(object):
 
         return lowdata
 
+    def exec_lowdata(self, lowdata):
+        '''
+        Pass lowdata to Salt to be executed
+        '''
+        # FIXME: change this to yield results from one of Salt's iterative returns
+        logger.debug("SaltAPI is passing low-data: %s", lowdata)
+        return [self.api.run(chunk) for chunk in lowdata]
+
     @cherrypy.tools.json_out()
     def POST(self, **kwargs):
         '''
         Run a given function in a given client with the given args
         '''
-        lowdata = self.fmt_lowdata(kwargs)
-        logger.debug("SaltAPI is passing LowData: %s", lowdata)
-
-        # FIXME: change this to yield results from one of Salt's iterative returns
-        return [self.api.run(chunk) for chunk in lowdata]
+        return self.exec_lowdata(self.fmt_lowdata(kwargs))
 
 class Login(LowDataAdapter):
     '''
