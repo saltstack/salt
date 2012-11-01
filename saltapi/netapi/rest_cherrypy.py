@@ -73,6 +73,13 @@ class Login(LowDataAdapter):
         auth = salt.auth.LoadAuth(self.opts)
         token = auth.mk_token(self.fmt_lowdata(kwargs)).get('token', False)
 
+def error_page_default():
+    cherrypy.response.status = 500
+    ret = {
+            'success': False,
+            'message': '{0}'.format(cherrypy._cperror.format_exc())}
+    cherrypy.response.body = [salt.output.out_format(ret, 'json_out', __opts__)]
+
 class API(object):
     url_map = {
         'index': LowDataAdapter,
@@ -110,6 +117,7 @@ class API(object):
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
                 'tools.trailing_slash.on': True,
+                'request.error_response': error_page_default,
             },
         }
 
