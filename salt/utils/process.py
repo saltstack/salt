@@ -39,6 +39,7 @@ def set_pidfile(pidfile, user):
         os.chown(pidfile, uid, gid)
     except Exception as e:
         msg = ('Failed to set the pid to user {0}').format(user)
+        log.debug(msg, exc_info=True)
         sys.stderr.write(msg)
         sys.exit(e.errno)
     log.debug(('Chowned pidfile: {0} to user: {1}').format(pidfile, user))
