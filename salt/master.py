@@ -1300,16 +1300,6 @@ class ClearFuncs(object):
                          'pub': load['pub']}
                 self.event.fire_event(eload, 'auth')
                 return ret
-        elif os.path.isfile(pubfn_rejected):
-            # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for %(id)s', load)
-            ret = {'enc': 'clear',
-                   'load': {'ret': False}}
-            eload = {'result': False,
-                     'id': load['id'],
-                     'pub': load['pub']}
-            self.event.fire_event(eload, 'auth')
-            return ret
         elif 'x509' in load and 'x509' in self.opts:
             # Check if cert is valid
             cert = load['x509']['client_cert']

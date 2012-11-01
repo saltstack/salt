@@ -145,12 +145,12 @@ class X509CertificateAuth(object):
         if self.issuer_dn_match and \
            not self.issuer_dn_match.match(
                client_cert.get_issuer().as_text()):
-            log.error('Client certificate''s Issuer did not match')
+            log.error('Client certificate\'s Issuer did not match')
             return False
         if self.subject_dn_match and \
            not self.subject_dn_match.match(
                client_cert.get_subject().as_text()):
-            log.error('Client certificate''s Subject did not match')
+            log.error('Client certificate\'s Subject did not match')
             return False
         log.debug('Client certificate verified')
         return True
@@ -265,7 +265,7 @@ class Auth(object):
         except Exception:
             pass
         if 'x509' in self.opts:
-            log.info('Sending client''s x509 certificate.')
+            log.info('Sending client\'s x509 certificate.')
             with open(self.opts['x509']['client_cert'], 'r') as fp_:
                 payload['load']['x509'] = {}
                 payload['load']['x509']['client_cert'] = fp_.read()
