@@ -112,7 +112,8 @@ def remove_key(pki_dir, id_):
             pki_dir,
             'minions/{0}'.format(id_)
             )
-    os.remove(key)
+    if os.path.isfile(key):
+        os.remove(key)
 
 def get_option(option, opts, vm_):
     '''
