@@ -3,7 +3,7 @@ Support for the Git SCM
 '''
 
 import os
-from salt import utils
+from salt import utils, exceptions
 
 def _git_run(cmd, cwd=None, **kwargs):
     '''
@@ -13,14 +13,14 @@ def _git_run(cmd, cwd=None, **kwargs):
     'cmd.run_all', and used as an alternative to 'cmd.run_all'. Some
     commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
     '''
-    result = __salt__['cmd.run_all'](cmd, cwd=None, **kwargs)
+    result = __salt__['cmd.run_all'](cmd, cwd=cwd, **kwargs)
 
     retcode = result['retcode']
 
     if retcode == 0:
         return result['stdout']
     else:
-        raise CommandExecutionError(result['stderr'])
+        raise exceptions.CommandExecutionError(result['stderr'])
 
 def _git_getdir(cwd, user=None):
     '''

@@ -65,6 +65,8 @@ class GitTest(integration.ModuleCase):
         git.present
         '''
         name = os.path.join(integration.TMP, 'salt_repo')
+        os.mkdir(name)
+        fname = os.path.join(name, 'stoptheprocess')
         with file(fname, 'a'):
             pass
         ret = self.run_state(
