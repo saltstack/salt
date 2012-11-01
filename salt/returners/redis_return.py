@@ -36,7 +36,6 @@ def _get_serv():
             db=__salt__['config.option']('redis.db'))
 
 
-
 def returner(ret):
     '''
     Return data to a redis data store
