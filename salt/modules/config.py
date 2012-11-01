@@ -47,13 +47,7 @@ def backup_mode(backup=''):
     '''
     if backup:
         return backup
-    if 'backup_mode' in __opts__:
-        return __opts__['backup_mode']
-    if 'master.backup_mode' in __pillar__:
-        return __pillar__['master.backup_mode']
-    id_conf = 'master.{0}.backup_mode'.format(__grains__['id'])
-    if id_conf in __pillar__:
-        return __pillar__[id_conf]
+    return option('backup_mode')
 
 
 def manage_mode(mode):
@@ -88,6 +82,8 @@ def option(value):
         return __opts__[value]
     elif value in __pillar__.get('master', {}):
         return __pillar__['master'][value]
+    elif value in __pillar__:
+        return __pillar__[value]
     elif value in defaults:
         return defaults[value]
     return ''
