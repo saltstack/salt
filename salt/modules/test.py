@@ -2,13 +2,10 @@
 Module for running arbitrary tests
 '''
 
+# Import Salt libs
 import time
 
 
-# Load in default options for the module
-__opts__ = {
-    'test.foo': 'foo'
-}
 # Load the outputters for the module
 __outputter__ = {
     'echo': 'txt',
@@ -65,7 +62,7 @@ def conf_test():
 
         salt '*' test.conf_test
     '''
-    return __opts__['test.foo']
+    return __salt__['config.option']('test.foo')
 
 
 def get_opts():

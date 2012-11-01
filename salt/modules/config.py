@@ -13,6 +13,7 @@ defaults = {'mongo.db': 'salt',
             'redis.db': '0',
             'redis.host': 'salt',
             'redis.port': 6379,
+            'test.foo': 'unconfigured',
             'ca.cert_base_path': '/etc/pki'}
 
 
