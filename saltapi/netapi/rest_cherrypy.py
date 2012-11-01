@@ -63,6 +63,7 @@ class LowDataAdapter(object):
         lowdata = self.fmt_lowdata(kwargs)
         logger.debug("SaltAPI is passing LowData: %s", lowdata)
 
+        # FIXME: change this to yield results from one of Salt's iterative returns
         return [self.api.run(chunk) for chunk in lowdata]
 
 class Login(LowDataAdapter):
@@ -122,8 +123,9 @@ class API(object):
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
-                'tools.trailing_slash.on': True,
                 'request.error_response': error_page_default,
+                # 'response.stream': True,
+                'tools.trailing_slash.on': True,
                 'tools.json_out.handler': json_out_handler,
             },
         }
