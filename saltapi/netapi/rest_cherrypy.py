@@ -80,6 +80,11 @@ def error_page_default():
             'message': '{0}'.format(cherrypy._cperror.format_exc())}
     cherrypy.response.body = [salt.output.out_format(ret, 'json_out', __opts__)]
 
+def json_out_handler(*args, **kwargs):
+    value = cherrypy.serving.request._json_inner_handler(*args, **kwargs)
+    return salt.output.out_format(value, 'json_out', __opts__)
+
+
 class API(object):
     url_map = {
         'index': LowDataAdapter,
@@ -118,6 +123,7 @@ class API(object):
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
                 'tools.trailing_slash.on': True,
                 'request.error_response': error_page_default,
+                'tools.json_out.handler': json_out_handler,
             },
         }
 
