@@ -20,7 +20,7 @@ def _git_run(cmd, cwd=None, **kwargs):
     if retcode == 0:
         return result['stdout']
     else:
-        raise Exception(result['stderr'])
+        raise CommandExecutionError(result['stderr'])
 
 def _git_getdir(cwd, user=None):
     '''
