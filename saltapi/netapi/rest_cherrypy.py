@@ -7,8 +7,8 @@ import os
 
 # Import third-party libs
 import cherrypy
-import cheroot.wsgi
-import cheroot.ssllib.ssl_builtin
+import cherrypy.wsgiserver as wsgiserver
+import cherrypy.wsgiserver.ssl_builtin
 
 # Import Salt libs
 import salt.auth
@@ -136,9 +136,9 @@ def start():
     if conf.get('global', {}).get('debug', False):
         cherrypy.quickstart(root, '/', conf)
     else:
-        ssl_a = cheroot.ssllib.ssl_builtin.BuiltinSSLAdapter(ssl_crt, ssl_key)
-        wsgi_d = cheroot.wsgi.WSGIPathInfoDispatcher({'/': app})
-        server = cheroot.wsgi.WSGIServer(('0.0.0.0', port),
+        ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(ssl_crt, ssl_key)
+        wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': app})
+        server = wsgiserver.CherryPyWSGIServer(('0.0.0.0', port),
                 wsgi_app=wsgi_d,
                 ssl_adapter=ssl_a)
 
