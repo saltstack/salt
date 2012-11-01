@@ -31,30 +31,38 @@ class LowDataAdapter(object):
 
     def __init__(self, opts):
         self.opts = opts
+        self.api = saltapi.APIClient(opts)
 
-    def get_lowdata(self):
-        args = [zip(
-            [k for i in range(len(v))], [v] if isinstance(v, string_types) else v)
-            for k,v in cherrypy.request.body.params.items()]
+    def fmt_lowdata(self, data):
+        '''
+        Take CherryPy body data from a POST (et al) request and format it into
+        lowdata. It will accept repeated parameters and pair and format those
+        into multiple lowdata chunks.
+        '''
+        pairs = []
+        for k,v in data.items():
+            # Ensure parameter is a list
+            argl = v if isinstance(v, list) else [v]
+            # Make pairs of (key, value) from {key: [*value]}
+            pairs.append(zip([k] * len(argl), argl))
 
-        try:
-            return [dict(i) for i in itertools.izip_longest(*args)]
-        except TypeError as exc:
-            msg = "Error trying to pair parameters in: %s"
-            logger.debug(msg, args, exc_info=exc)
-            raise Exception(msg % args)
+        lowdata = []
+        for i in itertools.izip_longest(*pairs):
+            if not all(i):
+                msg = "Error pairing parameters: %s"
+                raise Exception(msg % str(i))
+            lowdata.append(dict(i))
+
+        return lowdata
 
     def POST(self, **kwargs):
         '''
         Run a given function in a given client with the given args
         '''
-        lowdata = self.get_lowdata()
+        lowdata = self.fmt_lowdata(kwargs)
         logger.debug("SaltAPI is passing LowData: %s", lowdata)
 
-        # lowvals = itertools.izip_longest(*[i[1] for i in cherrypy.request.body.read()])
-        # lowdata = [dict(zip(cherrypy.request.body.read.keys(), i)) for i in lowvals]
-        # ret = [self.api.run(chunk) for chunk in lowdata]
-        # json_ret = salt.output.display_output(ret, 'json_out', __opts__)
+        return [self.api.run(chunk) for chunk in lowdata]
 
 class Login(LowDataAdapter):
     '''
@@ -63,7 +71,7 @@ class Login(LowDataAdapter):
 
     def POST(self, **kwargs):
         auth = salt.auth.LoadAuth(self.opts)
-        token = auth.mk_token(self.get_lowdata()).get('token', False)
+        token = auth.mk_token(self.fmt_lowdata(kwargs)).get('token', False)
 
 class API(object):
     url_map = {
