@@ -9,7 +9,10 @@ defaults = {'mongo.db': 'salt',
             'mongo.host': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
-            'mongo.user': ''}
+            'mongo.user': '',
+            'redis.db': '0',
+            'redis.host': 'salt',
+            'redis.port': 6379}
 
 
 def backup_mode(backup=''):
