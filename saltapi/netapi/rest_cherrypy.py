@@ -64,6 +64,15 @@ class LowDataAdapter(object):
         return [self.api.run(chunk) for chunk in lowdata]
 
     @cherrypy.tools.json_out()
+    def GET(self):
+        # FIXME: how to pass a compound command via lowdata?
+        lowdata = [
+            {'client': 'local', 'tgt': '*', 'fun': 'grains.items'},
+            {'client': 'local', 'tgt': '*', 'fun': 'sys.list_functions'},
+        ]
+        return self.exec_lowdata(lowdata)
+
+    @cherrypy.tools.json_out()
     def POST(self, **kwargs):
         '''
         Run a given function in a given client with the given args
