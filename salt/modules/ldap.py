@@ -50,15 +50,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# Defaults in the event that these are not found in the minion or pillar config
-__opts__ = {'ldap.server': 'localhost',
-            'ldap.port': '389',
-            'ldap.tls': False,
-            'ldap.scope': 2,
-            'ldap.attrs': None,
-            'ldap.binddn': '',
-            'ldap.bindpw': ''}
-
 
 def __virtual__():
     '''
@@ -80,9 +71,8 @@ def _config(name, key=None, **kwargs):
     if name in kwargs:
         value = kwargs[name]
     else:
-        try:
-            value = __opts__['ldap.{0}'.format(key)]
-        except KeyError:
+        value = __salt__['config.option']('ldap.{0}'.format(key))
+        if not value:
             msg = 'missing ldap.{0} in config or {1} in args'.format(key, name)
             raise SaltInvocationError(msg)
     return value

@@ -28,6 +28,13 @@ defaults = {'mongo.db': 'salt',
             'solr.num_backups': 1,
             'poudriere.config': '/usr/local/etc/poudriere.conf',
             'poudriere.config_dir': '/usr/local/etc/poudriere.d',
+            'ldap.server': 'localhost',
+            'ldap.port': '389',
+            'ldap.tls': False,
+            'ldap.scope': 2,
+            'ldap.attrs': None,
+            'ldap.binddn': '',
+            'ldap.bindpw': '',
             }
 
 
