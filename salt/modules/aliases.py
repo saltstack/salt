@@ -15,12 +15,7 @@ def __get_aliases_filename():
     '''
     Return the path to the appropriate aliases file
     '''
-    if 'aliases.file' in __opts__:
-        return __opts__['aliases.file']
-    elif 'aliases.file' in __pillar__:
-        return __pillar__['aliases.file']
-    else:
-        return '/etc/aliases'
+    return __salt__['config.option']('aliases.file')
 
 
 def __parse_aliases():
