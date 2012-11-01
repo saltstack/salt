@@ -1,19 +1,19 @@
 '''
 Manage the information in the hosts file
 '''
-
+# Import python libs
 import os
+
 
 def __get_hosts_filename():
     '''
     Return the path to the appropriate hosts file
     '''
-    if 'hosts.file' in __opts__:
-        return __opts__['hosts.file']
     if __grains__['kernel'].startswith('Windows'):
         return 'C:\Windows\System32\drivers\etc\hosts'
     else:
-        return '/etc/hosts'
+        return __salt__['config.option']('hosts.file')
+
 
 def list_hosts():
     '''
