@@ -99,32 +99,28 @@ def latest(name,
                     )
     else:
         if os.path.isdir(target):
-            # git clone is required, but target exists -- however it is empty
-            if not os.listdir(target):
-                log.debug(
-                    'target {0} found, but not a git repository. Since empty,'
-                    ' automatically deleting.'.format(target))
-                shutil.rmtree(target)
             # git clone is required, target exists but force is turned on
-            elif force:
+            if force:
                 log.debug(
                     'target {0} found, but not a git repository. Since force option'
                     ' is in use, deleting.'.format(target))
                 shutil.rmtree(target)
             # git clone is required, but target exists and is non-empty
-            else:
+            elif os.listdir(target):
                 return _fail(ret, 'Directory exists, is non-empty, and force '
                     'option not in use')
-        else:
-            # git clone is required
-            log.debug(
-                    'target {0} is not found, "git clone" is required'.format(
-                        target))
+
+        # git clone is required
+        log.debug(
+                'target {0} is not found, "git clone" is required'.format(
+                    target))
+
         if __opts__['test']:
             return _neutral_test(
                     ret,
                     'Repository {0} is about to be cloned to {1}'.format(
                         name, target))
+
         # make the clone
         result = __salt__['git.clone'](target, name, user=runas)
         if not os.path.isdir(target):
@@ -170,7 +166,7 @@ def present(name, bare=True, runas=None, force=False):
             return ret
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error
-        elif not force:
+        elif not force and os.listdir(name):
             return _fail(ret,
                          'Directory which does not contain a git repo '
                          'is already present at {0}. To delete this '
@@ -182,7 +178,7 @@ def present(name, bare=True, runas=None, force=False):
         ret['changes']['new repository'] = name
         return _neutral_test(ret, 'New git repo set for creation at {0}'.format(name))
 
-    if os.path.isdir(name) and force:
+    if force and os.path.isdir(name):
         shutil.rmtree(name)
 
     opts = '--bare' if bare else ''
