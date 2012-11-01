@@ -63,11 +63,12 @@ def latest(name,
                 'target {0} is found, "git pull" is probably required'.format(
                     target)
                 )
-        current_rev = __salt__['git.revision'](target, user=runas)
-        if not current_rev:
+        try:
+            current_rev = __salt__['git.revision'](target, user=runas)
+        except Exception, exception:
             return _fail(
                     ret,
-                    'Seems that {0} is not a valid git repo'.format(target))
+                    str(exception))
         if __opts__['test']:
             return _neutral_test(
                     ret,
@@ -76,13 +77,20 @@ def latest(name,
 
         pull_out = __salt__['git.pull'](target, user=runas)
 
-        if rev:
-            __salt__['git.checkout'](target, rev, user=runas)
+        try:
+            if rev:
+                __salt__['git.checkout'](target, rev, user=runas)
 
-        if submodules:
-            __salt__['git.submodule'](target, user=runas, opts='--recursive')
+            if submodules:
+                __salt__['git.submodule'](target, user=runas, opts='--recursive')
 
-        new_rev = __salt__['git.revision'](cwd=target, user=runas)
+            new_rev = __salt__['git.revision'](cwd=target, user=runas)
+
+        except Exception, exception:
+            return _fail(
+                    ret,
+                    str(exception))
+
         if current_rev != new_rev:
             log.info('Repository {0} updated: {1} => {2}'.format(target,
                                                                  current_rev,
@@ -90,13 +98,6 @@ def latest(name,
             ret['comment'] = 'Repository {0} updated'.format(target)
             ret['changes']['revision'] = '{0} => {1}'.format(
                     current_rev, new_rev)
-        else:
-            # Check that there was no error preventing the revision update
-            if 'error:' in pull_out:
-                return _fail(
-                    ret,
-                    'An error was thrown by git:\n{0}'.format(pull_out)
-                    )
     else:
         if os.path.isdir(target):
             # git clone is required, but target exists -- however it is empty
@@ -125,18 +126,22 @@ def latest(name,
                     ret,
                     'Repository {0} is about to be cloned to {1}'.format(
                         name, target))
-        # make the clone
-        result = __salt__['git.clone'](target, name, user=runas)
-        if not os.path.isdir(target):
-            return _fail(ret, result)
+        try:
+            # make the clone
+            result = __salt__['git.clone'](target, name, user=runas)
 
-        if rev:
-            __salt__['git.checkout'](target, rev, user=runas)
+            if rev:
+                __salt__['git.checkout'](target, rev, user=runas)
 
-        if submodules:
-            __salt__['git.submodule'](target, user=runas)
+            if submodules:
+                __salt__['git.submodule'](target, user=runas)
 
-        new_rev = __salt__['git.revision'](cwd=target, user=runas)
+            new_rev = __salt__['git.revision'](cwd=target, user=runas)
+
+        except Exception, exception:
+            return _fail(
+                    ret,
+                    str(exception))
 
         message = 'Repository {0} cloned to {1}'.format(name, target)
         log.info(message)
