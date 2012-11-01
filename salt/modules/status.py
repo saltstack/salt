@@ -82,14 +82,12 @@ def custom():
         salt '*' status.custom
     '''
     ret = {}
-    for opt in __opts__:
-        keys = opt.split('.')
-        if keys[0] != 'status':
-            continue
-        func = '{0}()'.format(keys[1])
+    conf = __salt__['config.dot_vals']('status')
+    for key, val in conf.items():
+        func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)
 
-        for item in __opts__[opt]:
+        for item in val:
             ret[item] = vals[item]
 
     return ret
