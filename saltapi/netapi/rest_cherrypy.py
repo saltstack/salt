@@ -135,9 +135,11 @@ def start():
     if conf.get('global', {}).get('debug', False):
         cherrypy.quickstart(root, '/', conf)
     else:
-        ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(ssl_crt, ssl_key)
-        wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': app})
-        server = wsgiserver.CherryPyWSGIServer(('0.0.0.0', port),
+        ssl_a = wsgiserver.ssl_builtin.BuiltinSSLAdapter(
+                conf['ssl_crt'], conf['ssl_key'])
+        wsgi_d = wsgiserver.WSGIPathInfoDispatcher({'/': root})
+        server = wsgiserver.CherryPyWSGIServer(
+                ('0.0.0.0', conf['server.socket_port']),
                 wsgi_app=wsgi_d,
                 ssl_adapter=ssl_a)
 
