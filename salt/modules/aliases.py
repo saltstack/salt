@@ -8,7 +8,15 @@ import re
 import stat
 import tempfile
 
-from salt.utils import which
+from salt.utils import which as _which
+
+__outputter__ = {
+    'rm_alias': 'txt',
+    'has_target': 'txt',
+    'get_target': 'txt',
+    'set_target': 'txt',
+    'list_aliases': 'yaml',
+}
 
 __ALIAS_RE = re.compile(r'([^:#]*)\s*:?\s*([^#]*?)(\s+#.*|$)')
 
@@ -75,7 +83,7 @@ def __write_aliases_file(lines):
     os.rename(out.name, afn)
 
     # Search $PATH for the newalises command
-    newaliases = which('newaliases')
+    newaliases = _which('newaliases')
     if newaliases is not None:
         __salt__['cmd.run'](newaliases)
 
