@@ -42,12 +42,8 @@ def __virtual__():
     '''
     Only load this module if the mysql config is set
     '''
-    if any(k.startswith('mysql.') for k in list(__opts__)):
-        if has_mysqldb:
-            return 'mysql'
-    elif any(k.startswith('mysql.') for k in list(__pillar__)):
-        if has_mysqldb:
-            return 'mysql'
+    if __salt__['config.dot_key']('mysql') and has_mysqldb:
+        return 'mysql'
     return False
 
 
@@ -100,10 +96,8 @@ def connect(**kwargs):
             key = name
         if name in kwargs:
             connargs[key] = kwargs[name]
-        elif 'mysql.{0}'.format(name) in __opts__:
-            connargs[key] = __opts__['mysql.{0}'.format(name)]
-        elif 'mysql.{0}'.format(name) in __pillar__:
-            connargs[key] = __pillar__['mysql.{0}'.format(name)]
+        else:
+            connargs[key] = __salt__['config.option']('mysql.{0}'.format(name))
 
     _connarg('host')
     _connarg('user')
