@@ -177,7 +177,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name>
     '''
-    cmd = 'systemctl is-active {0}'.format(name)
+    cmd = 'systemctl is-active {0}'.format(_canonical_unit_name(name))
     return not __salt__['cmd.retcode'](cmd)
 
 
