@@ -83,7 +83,8 @@ class LocalClient(object):
             if self.opts.get('user', 'root') != 'root':
                 key_user = self.opts.get('user', 'root')
         if key_user.startswith('sudo_'):
-            key_user = 'root'
+            if self.opts.get('user', 'root') != 'root':
+                key_user = self.opts.get('user', 'root')
         keyfile = os.path.join(
                 self.opts['cachedir'], '.{0}_key'.format(key_user)
                 )
